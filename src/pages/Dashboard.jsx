@@ -5,10 +5,10 @@ import AdminHeader from '../components/AdminHeader'
 import { TrendingUp, Filter, Download, ChevronLeft, ChevronRight, Plus } from 'lucide-react'
 
 const restaurants = [
-  { uid: '8472910472', name: 'THE GLOBAL FORK', status: 'RUNNING', date: 'Oct 24, 2023', tables: 42, payment: '$14,290.00', avatar: 'TG' },
-  { uid: '9203847561', name: 'VELVET LOUNGE', status: 'PENDING', date: 'Nov 12, 2023', tables: 18, payment: '$0.00', avatar: 'VL' },
-  { uid: '1049283746', name: 'KAI KITCHEN', status: 'RUNNING', date: 'Dec 05, 2023', tables: 112, payment: '$52,110.45', avatar: 'KK' },
-  { uid: '5561029384', name: 'SIMON PIZZERIA', status: 'RUNNING', date: 'Jan 14, 2024', tables: 24, payment: '$8,940.00', avatar: 'SP' },
+  { uid: '8472910472', name: 'THE GLOBAL FORK', status: 'RUNNING', date: 'Oct 24, 2023', tables: 42, payment: '₹11,92,400', avatar: 'TG' },
+  { uid: '9203847561', name: 'VELVET LOUNGE', status: 'PENDING', date: 'Nov 12, 2023', tables: 18, payment: '₹0.00', avatar: 'VL' },
+  { uid: '1049283746', name: 'KAI KITCHEN', status: 'RUNNING', date: 'Dec 05, 2023', tables: 112, payment: '₹43,50,820', avatar: 'KK' },
+  { uid: '5561029384', name: 'SIMON PIZZERIA', status: 'RUNNING', date: 'Jan 14, 2024', tables: 24, payment: '₹7,46,400', avatar: 'SP' },
 ]
 
 export default function Dashboard() {
@@ -28,8 +28,8 @@ export default function Dashboard() {
               badge="+12.5%"
               badgeIcon={<TrendingUp size={11} />}
             />
-            <KPICard label="TOTAL REVENUE" value="$2.4M" />
-            <KPICard label="AVG TICKET" value="$84.20" />
+            <KPICard label="TOTAL REVENUE" value="₹2.4Cr" />
+            <KPICard label="AVG TICKET" value="₹7,050" />
           </div>
 
           <div style={{

@@ -5,35 +5,35 @@ import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, 
 import { TrendingUp, Zap, Receipt, Wifi, Plus } from 'lucide-react'
 
 const weeklyData = [
-  { day: 'Mon', revenue: 18000 },
-  { day: 'Tue', revenue: 22000 },
-  { day: 'Wed', revenue: 19500 },
-  { day: 'Thu', revenue: 28000 },
-  { day: 'Fri', revenue: 42000 },
-  { day: 'Sat', revenue: 65000 },
-  { day: 'Sun', revenue: 55000 },
+  { day: 'Mon', revenue: 1500000 },
+  { day: 'Tue', revenue: 1850000 },
+  { day: 'Wed', revenue: 1620000 },
+  { day: 'Thu', revenue: 2350000 },
+  { day: 'Fri', revenue: 3500000 },
+  { day: 'Sat', revenue: 5420000 },
+  { day: 'Sun', revenue: 4600000 },
 ]
 
 const dailyData = [
-  { day: '9am', revenue: 2000 },
-  { day: '11am', revenue: 4500 },
-  { day: '1pm', revenue: 12000 },
-  { day: '3pm', revenue: 7000 },
-  { day: '5pm', revenue: 9000 },
-  { day: '7pm', revenue: 18000 },
-  { day: '9pm', revenue: 14000 },
+  { day: '9am', revenue: 165000 },
+  { day: '11am', revenue: 375000 },
+  { day: '1pm', revenue: 1000000 },
+  { day: '3pm', revenue: 585000 },
+  { day: '5pm', revenue: 750000 },
+  { day: '7pm', revenue: 1500000 },
+  { day: '9pm', revenue: 1165000 },
 ]
 
 const hubs = [
-  { location: 'Manhattan Central', abbr: 'NY', volume: '1.2k orders', status: 'PEAK', net: '$420k' },
-  { location: 'Beverly Hills Core', abbr: 'BH', volume: '890 orders', status: 'STABLE', net: '$310k' },
-  { location: 'Chicago Loop', abbr: 'CH', volume: '640 orders', status: 'PEAK', net: '$185k' },
+  { location: 'Mumbai Central', abbr: 'MU', volume: '1.2k orders', status: 'PEAK', net: '₹3.5Cr' },
+  { location: 'Delhi Connaught', abbr: 'DL', volume: '890 orders', status: 'STABLE', net: '₹2.6Cr' },
+  { location: 'Bengaluru Koramangala', abbr: 'BL', volume: '640 orders', status: 'PEAK', net: '₹1.54Cr' },
 ]
 
 const livePulse = [
-  { msg: 'New Order at Manhattan Central', time: '2 mins ago • $245.00', type: 'order' },
-  { msg: 'Network node Optimized in London', time: '5 mins ago', type: 'system' },
-  { msg: 'Menu updated: Beverly Hills', time: '12 mins ago', type: 'update' },
+  { msg: 'New Order at Mumbai Central', time: '2 mins ago • ₹20,450', type: 'order' },
+  { msg: 'Network node Optimised in Delhi', time: '5 mins ago', type: 'system' },
+  { msg: 'Menu updated: Bengaluru Koramangala', time: '12 mins ago', type: 'update' },
 ]
 
 export default function Analytics() {
@@ -48,9 +48,9 @@ export default function Analytics() {
         <AdminHeader subtitle="Performance Analytics" />
         <main style={{ flex: 1, overflowY: 'auto', padding: '32px' }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '14px', marginBottom: '24px' }}>
-            <StatCard icon={<Receipt size={16} />} label="TOTAL REVENUE" value="$4.2M" badge="+12.4%" />
+            <StatCard icon={<Receipt size={16} />} label="TOTAL REVENUE" value="₹35Cr" badge="+12.4%" />
             <StatCard icon={<Zap size={16} />} label="ACTIVE NODES" value="124" badge="LIVE" live />
-            <StatCard icon={<Receipt size={16} />} label="AVG TICKET" value="$84.50" badge="STABLE" neutral />
+            <StatCard icon={<Receipt size={16} />} label="AVG TICKET" value="₹7,050" badge="STABLE" neutral />
             <StatCard icon={<Wifi size={16} />} label="NETWORK UPTIME" value="99.9%" badge="OPTIMAL" good />
           </div>
 
@@ -102,7 +102,7 @@ export default function Analytics() {
                   <YAxis hide />
                   <Tooltip
                     contentStyle={{ background: '#1a1a1a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff', fontSize: '12px' }}
-                    formatter={(val) => [`$${(val / 1000).toFixed(1)}k`, 'Revenue']}
+                    formatter={(val) => [`₹${(val / 100000).toFixed(2)}L`, 'Revenue']}
                   />
                   <Area type="monotone" dataKey="revenue" stroke="#E8321A" strokeWidth={2.5} fill="url(#revenueGrad)" />
                 </AreaChart>

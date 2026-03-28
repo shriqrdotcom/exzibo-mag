@@ -5,19 +5,19 @@ import { Globe, Share2, AtSign, MessageCircle, Edit2, Trash2, Plus, Info, Copy }
 
 const initialMenuItems = {
   starters: [
-    { id: 1, name: 'Truffle Beef Carpaccio', desc: 'Thinly sliced wagyu, truffle oil, parmesan shavings, wild arugula.', price: 28, tags: ['Popular', 'Gluten Free'], img: '🥩' },
-    { id: 2, name: 'Atlantic Oysters', desc: 'Half dozen fresh oysters, mignonette sauce, lemon wedges.', price: 34, tags: ['Seasonal'], img: '🦪' },
-    { id: 3, name: 'Heirloom Burrata', desc: 'Creamy burrata, heirloom tomatoes, basil pesto, pine nuts.', price: 22, tags: ['Vegetarian'], img: '🧀' },
+    { id: 1, name: 'Truffle Beef Carpaccio', desc: 'Thinly sliced wagyu, truffle oil, parmesan shavings, wild arugula.', price: 2100, tags: ['Popular', 'Gluten Free'], img: '🥩' },
+    { id: 2, name: 'Atlantic Oysters', desc: 'Half dozen fresh oysters, mignonette sauce, lemon wedges.', price: 2850, tags: ['Seasonal'], img: '🦪' },
+    { id: 3, name: 'Heirloom Burrata', desc: 'Creamy burrata, heirloom tomatoes, basil pesto, pine nuts.', price: 1650, tags: ['Vegetarian'], img: '🧀' },
   ],
   mains: [
-    { id: 4, name: 'A5 Wagyu Ribeye', desc: 'Japanese A5 wagyu, roasted bone marrow, truffle jus, seasonal vegetables.', price: 185, tags: ['Popular'], img: '🥩' },
-    { id: 5, name: 'Lobster Thermidor', desc: 'Atlantic lobster, cognac cream, gruyère gratin, chive oil.', price: 95, tags: ['Seasonal'], img: '🦞' },
-    { id: 6, name: 'Forest Mushroom Risotto', desc: 'Arborio rice, porcini, chanterelle, truffle oil, aged parmesan.', price: 42, tags: ['Vegetarian', 'Gluten Free'], img: '🍄' },
+    { id: 4, name: 'A5 Wagyu Ribeye', desc: 'Japanese A5 wagyu, roasted bone marrow, truffle jus, seasonal vegetables.', price: 15500, tags: ['Popular'], img: '🥩' },
+    { id: 5, name: 'Lobster Thermidor', desc: 'Atlantic lobster, cognac cream, gruyère gratin, chive oil.', price: 7950, tags: ['Seasonal'], img: '🦞' },
+    { id: 6, name: 'Forest Mushroom Risotto', desc: 'Arborio rice, porcini, chanterelle, truffle oil, aged parmesan.', price: 3500, tags: ['Vegetarian', 'Gluten Free'], img: '🍄' },
   ],
   drinks: [
-    { id: 7, name: 'Noir Negroni', desc: 'Aged gin, Campari, premium vermouth, black walnut bitters.', price: 22, tags: ['Popular'], img: '🍸' },
-    { id: 8, name: 'Champagne Selection', desc: 'Curated vintage champagnes by the glass or bottle.', price: 45, tags: ['Seasonal'], img: '🥂' },
-    { id: 9, name: 'Pressed Botanicals', desc: 'House-pressed botanical blend, elderflower, cucumber, tonic.', price: 16, tags: ['Vegetarian'], img: '🌿' },
+    { id: 7, name: 'Noir Negroni', desc: 'Aged gin, Campari, premium vermouth, black walnut bitters.', price: 1850, tags: ['Popular'], img: '🍸' },
+    { id: 8, name: 'Champagne Selection', desc: 'Curated vintage champagnes by the glass or bottle.', price: 3750, tags: ['Seasonal'], img: '🥂' },
+    { id: 9, name: 'Pressed Botanicals', desc: 'House-pressed botanical blend, elderflower, cucumber, tonic.', price: 1350, tags: ['Vegetarian'], img: '🌿' },
   ],
 }
 
@@ -308,7 +308,7 @@ function MenuItem({ item, onDelete }) {
       <div style={{ flex: 1 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
           <span style={{ fontSize: '15px', fontWeight: 700 }}>{item.name}</span>
-          <span style={{ color: '#E8321A', fontWeight: 800, fontSize: '16px' }}>${item.price.toFixed(2)}</span>
+          <span style={{ color: '#E8321A', fontWeight: 800, fontSize: '16px' }}>₹{item.price.toLocaleString('en-IN')}</span>
         </div>
         <p style={{ color: '#666', fontSize: '12px', lineHeight: 1.6, marginBottom: '8px' }}>{item.desc}</p>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
