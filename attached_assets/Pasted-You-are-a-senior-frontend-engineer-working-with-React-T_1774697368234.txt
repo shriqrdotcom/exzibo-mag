@@ -1,0 +1,156 @@
+You are a senior frontend engineer working with React + Tailwind CSS.
+
+I already have a homepage with a button labeled:
+"CREATE YOUR WEBSITE"
+
+I have designed a premium dark-themed form (UI already created).
+Your job is to integrate this form into my existing project.
+
+---
+
+## 🎯 GOAL
+When the user clicks "CREATE YOUR WEBSITE":
+→ Open the restaurant creation form as a full-screen modal (or page transition)
+
+---
+
+## 🧩 IMPLEMENTATION REQUIREMENTS
+
+### 1. COMPONENT STRUCTURE
+Create a reusable component:
+- CreateWebsiteForm.jsx
+
+Break it into subcomponents:
+- FormHeader
+- LeftSection (inputs)
+- RightSection (image uploads + info cards)
+- SocialLinksSection
+- FooterCTA
+
+---
+
+### 2. MODAL / PAGE BEHAVIOR
+
+Option A (Preferred):
+- Full-screen modal overlay
+- Background blur (backdrop-blur)
+- Smooth animation:
+  - fade-in + scale (0.95 → 1)
+
+Option B:
+- Route-based navigation (/create)
+
+---
+
+### 3. STATE MANAGEMENT
+
+Use React hooks:
+- useState for:
+  - restaurantName
+  - phoneNumber
+  - gstDetails
+  - tableNumbers (array)
+  - description
+  - chefInfo
+  - servantInfo
+  - socialLinks
+  - rating
+  - location
+  - additionalInfo
+  - uploadedImages
+  - logo
+
+---
+
+### 4. IMAGE UPLOAD FEATURES
+
+- Drag & drop upload
+- Preview images before upload
+- Multiple uploads for restaurant images
+- Single upload for logo
+
+---
+
+### 5. UI STYLING (IMPORTANT)
+
+Match EXACT design:
+
+- Background: #0B0B0B
+- Accent: #FF3B30
+- Rounded-xl / 2xl
+- Soft shadows + glow effects
+- Input fields:
+  - Dark background
+  - Focus: red glow border
+
+Buttons:
+- Primary:
+  - Red gradient + glow
+- Secondary:
+  - Outline with red border
+
+---
+
+### 6. INTERACTIONS
+
+- Hover effects on buttons
+- Focus animation on inputs
+- Add table button → dynamically add table numbers
+- Toggle switch for "Digital Service Bell"
+
+---
+
+### 7. VALIDATION
+
+- Required fields:
+  - Restaurant Name
+  - At least 1 image
+- Show inline error messages
+
+---
+
+### 8. FINAL CTA
+
+Sticky bottom button:
+"GENERATE WEBSITE"
+
+On click:
+- console.log all form data (for now)
+
+---
+
+### 9. CONNECT BUTTON
+
+Find the button:
+"CREATE YOUR WEBSITE"
+
+Add onClick:
+→ open modal / navigate to form
+
+---
+
+### 10. CODE QUALITY
+
+- Clean, modular React code
+- Tailwind CSS only
+- No inline styles
+- Reusable components
+
+---
+
+## 🔥 BONUS
+
+Add:
+- Smooth scroll inside modal
+- Close button (top-right)
+- ESC key closes modal
+
+---
+
+## OUTPUT FORMAT
+
+- Provide full working code
+- Include:
+  - Main component
+  - Modal logic
+  - Example integration into homepage

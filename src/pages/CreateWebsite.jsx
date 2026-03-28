@@ -1,214 +1,715 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowRight, Zap, BarChart2, Layout } from 'lucide-react'
+import {
+  X, ArrowLeft, Upload, Plus, Trash2, Star,
+  Link, Link2, Globe, MapPin,
+  ChefHat, Users, Zap, Bell
+} from 'lucide-react'
 
 export default function CreateWebsite() {
   const navigate = useNavigate()
-  const [form, setForm] = useState({ name: '', owner: '', tables: '' })
-  const [creating, setCreating] = useState(false)
-  const [success, setSuccess] = useState(false)
 
-  const handleCreate = () => {
-    if (!form.name) return
-    setCreating(true)
+  const [form, setForm] = useState({
+    restaurantName: '',
+    phoneNumber: '',
+    gstDetails: '',
+    tableNumbers: [],
+    tableInput: '',
+    description: '',
+    chefInfo: '',
+    servantInfo: '',
+    socialLinks: { instagram: '', facebook: '', twitter: '', website: '' },
+    rating: '',
+    location: '',
+    additionalInfo: '',
+    digitalMenuLink: '',
+    digitalServiceBell: false,
+    uploadedImages: [],
+    logo: null,
+  })
+
+  const [errors, setErrors] = useState({})
+  const [submitting, setSubmitting] = useState(false)
+  const [success, setSuccess] = useState(false)
+  const [logoDragging, setLogoDragging] = useState(false)
+  const [imgDragging, setImgDragging] = useState(false)
+
+  const logoInputRef = useRef()
+  const imgInputRef = useRef()
+
+  useEffect(() => {
+    const handleKey = e => { if (e.key === 'Escape') navigate(-1) }
+    window.addEventListener('keydown', handleKey)
+    return () => window.removeEventListener('keydown', handleKey)
+  }, [])
+
+  const set = (field, value) => setForm(p => ({ ...p, [field]: value }))
+  const setSocial = (field, value) => setForm(p => ({ ...p, socialLinks: { ...p.socialLinks, [field]: value } }))
+
+  const addTable = () => {
+    const val = form.tableInput.trim()
+    if (!val || form.tableNumbers.includes(val)) return
+    set('tableNumbers', [...form.tableNumbers, val])
+    set('tableInput', '')
+  }
+  const removeTable = t => set('tableNumbers', form.tableNumbers.filter(x => x !== t))
+
+  const handleLogoFile = file => {
+    if (!file || !file.type.startsWith('image/')) return
+    const url = URL.createObjectURL(file)
+    set('logo', { file, url })
+  }
+
+  const handleImgFiles = files => {
+    const valid = Array.from(files).filter(f => f.type.startsWith('image/'))
+    const mapped = valid.map(f => ({ file: f, url: URL.createObjectURL(f) }))
+    set('uploadedImages', [...form.uploadedImages, ...mapped])
+  }
+
+  const removeImage = idx => set('uploadedImages', form.uploadedImages.filter((_, i) => i !== idx))
+
+  const validate = () => {
+    const e = {}
+    if (!form.restaurantName.trim()) e.restaurantName = 'Restaurant name is required'
+    if (form.uploadedImages.length === 0) e.uploadedImages = 'At least one image is required'
+    setErrors(e)
+    return Object.keys(e).length === 0
+  }
+
+  const handleGenerate = () => {
+    if (!validate()) return
+    setSubmitting(true)
+    const data = { ...form }
+    console.log('Form data:', data)
     setTimeout(() => {
       const existing = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
       const newRestaurant = {
         id: Date.now().toString(),
-        name: form.name,
-        owner: form.owner,
-        tables: form.tables,
+        name: form.restaurantName,
+        owner: '',
+        tables: form.tableNumbers.length.toString(),
+        phone: form.phoneNumber,
+        gst: form.gstDetails,
+        description: form.description,
+        chefInfo: form.chefInfo,
+        servantInfo: form.servantInfo,
+        socialLinks: form.socialLinks,
+        rating: form.rating,
+        location: form.location,
+        additionalInfo: form.additionalInfo,
+        digitalMenuLink: form.digitalMenuLink,
+        digitalServiceBell: form.digitalServiceBell,
         status: 'active',
         createdAt: new Date().toISOString(),
       }
       localStorage.setItem('exzibo_restaurants', JSON.stringify([...existing, newRestaurant]))
-      setCreating(false)
+      setSubmitting(false)
       setSuccess(true)
       setTimeout(() => navigate('/restaurants'), 2000)
     }, 2000)
   }
 
+  if (success) {
+    return (
+      <div style={{
+        minHeight: '100vh', background: '#0B0B0B',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}>
+        <div style={{
+          textAlign: 'center',
+          background: 'rgba(34,197,94,0.08)',
+          border: '1px solid rgba(34,197,94,0.2)',
+          borderRadius: '24px', padding: '60px 80px',
+        }}>
+          <div style={{ fontSize: '48px', marginBottom: '16px' }}>✓</div>
+          <div style={{ fontSize: '22px', fontWeight: 800, color: '#4ade80', marginBottom: '8px' }}>Website Generated!</div>
+          <div style={{ fontSize: '14px', color: '#555' }}>Redirecting to My Restaurants...</div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div style={{
       minHeight: '100vh',
-      background: 'radial-gradient(ellipse 70% 60% at 50% 20%, rgba(232,50,26,0.08) 0%, #0A0A0A 60%)',
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'flex-start',
-      padding: '60px 24px',
+      background: '#0B0B0B',
+      color: '#fff',
+      fontFamily: 'inherit',
+      position: 'relative',
     }}>
-      <div style={{ marginBottom: '20px', textAlign: 'center' }}>
-        <div style={{
-          display: 'inline-block',
-          padding: '8px 20px',
-          background: 'rgba(255,255,255,0.04)',
-          border: '1px dashed rgba(232,50,26,0.4)',
-          borderRadius: '8px',
-          fontSize: '14px', fontWeight: 900, letterSpacing: '0.1em',
-        }}>
-          EXZI<span style={{ color: '#E8321A' }}>BO</span>
-        </div>
-      </div>
+      <style>{`
+        .forge-input {
+          width: 100%;
+          padding: 13px 16px;
+          background: rgba(255,255,255,0.04);
+          border: 1px solid rgba(255,255,255,0.08);
+          border-radius: 12px;
+          color: #ccc;
+          font-size: 14px;
+          outline: none;
+          transition: border-color 0.2s, box-shadow 0.2s;
+          box-sizing: border-box;
+          font-family: inherit;
+        }
+        .forge-input::placeholder { color: #3a3a3a; }
+        .forge-input:focus {
+          border-color: rgba(255,59,48,0.5);
+          box-shadow: 0 0 0 3px rgba(255,59,48,0.1);
+        }
+        .forge-textarea {
+          width: 100%;
+          padding: 13px 16px;
+          background: rgba(255,255,255,0.04);
+          border: 1px solid rgba(255,255,255,0.08);
+          border-radius: 12px;
+          color: #ccc;
+          font-size: 14px;
+          outline: none;
+          resize: vertical;
+          min-height: 110px;
+          transition: border-color 0.2s, box-shadow 0.2s;
+          box-sizing: border-box;
+          font-family: inherit;
+          line-height: 1.6;
+        }
+        .forge-textarea::placeholder { color: #3a3a3a; }
+        .forge-textarea:focus {
+          border-color: rgba(255,59,48,0.5);
+          box-shadow: 0 0 0 3px rgba(255,59,48,0.1);
+        }
+        .forge-label {
+          display: block;
+          font-size: 9px;
+          font-weight: 700;
+          letter-spacing: 0.18em;
+          color: #555;
+          text-transform: uppercase;
+          margin-bottom: 8px;
+        }
+        .error-msg {
+          font-size: 11px;
+          color: #FF3B30;
+          margin-top: 5px;
+          font-weight: 500;
+        }
+        @keyframes fadeScale {
+          from { opacity: 0; transform: scale(0.97); }
+          to   { opacity: 1; transform: scale(1); }
+        }
+      `}</style>
 
-      <div style={{ textAlign: 'center', marginBottom: '48px' }}>
-        <div style={{ fontSize: '12px', fontWeight: 600, letterSpacing: '0.2em', color: '#E8321A', marginBottom: '16px', textTransform: 'uppercase' }}>
-          Deployment Console
+      <div style={{ animation: 'fadeScale 0.35s ease' }}>
+        <FormHeader onBack={() => navigate(-1)} />
+
+        <div style={{
+          maxWidth: '1120px',
+          margin: '0 auto',
+          padding: '0 40px 160px',
+        }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px', marginBottom: '40px' }}>
+            <LeftSection
+              form={form} set={set} errors={errors}
+              addTable={addTable} removeTable={removeTable}
+              logoInputRef={logoInputRef}
+              logoDragging={logoDragging} setLogoDragging={setLogoDragging}
+              handleLogoFile={handleLogoFile}
+            />
+            <RightSection
+              form={form} set={set} errors={errors}
+              imgInputRef={imgInputRef}
+              imgDragging={imgDragging} setImgDragging={setImgDragging}
+              handleImgFiles={handleImgFiles}
+              removeImage={removeImage}
+            />
+          </div>
+
+          <SocialLinksSection form={form} setSocial={setSocial} />
+
+          <BottomCards form={form} set={set} />
+
+          <AdditionalSection form={form} set={set} />
         </div>
-        <h1 style={{ fontSize: 'clamp(36px, 5vw, 56px)', fontWeight: 900, lineHeight: 1.1, marginBottom: '16px' }}>
-          Establish Your{' '}
-          <span style={{ color: '#E8321A', textShadow: '0 0 40px rgba(232,50,26,0.4)' }}>Digital</span>
-          <br />
-          <span style={{ color: '#E8321A', textShadow: '0 0 40px rgba(232,50,26,0.4)' }}>Presence</span>
+
+        <FooterCTA onGenerate={handleGenerate} submitting={submitting} />
+      </div>
+    </div>
+  )
+}
+
+function FormHeader({ onBack }) {
+  return (
+    <div style={{
+      padding: '28px 40px',
+      borderBottom: '1px solid rgba(255,255,255,0.05)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      maxWidth: '1120px',
+      margin: '0 auto',
+    }}>
+      <div>
+        <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.2em', color: '#FF3B30', textTransform: 'uppercase', marginBottom: '10px' }}>
+          Culinary Noir
+        </div>
+        <h1 style={{ fontSize: 'clamp(30px, 4vw, 46px)', fontWeight: 900, lineHeight: 1.05, marginBottom: '8px' }}>
+          Forge Your <span style={{ color: '#FF3B30', textShadow: '0 0 40px rgba(255,59,48,0.4)' }}>Legacy.</span>
         </h1>
-        <p style={{ fontSize: '15px', color: '#666', maxWidth: '380px', margin: '0 auto', lineHeight: 1.7 }}>
-          Configure your high-performance restaurant interface in seconds. Technical precision meets aesthetic excellence.
+        <p style={{ fontSize: '13px', color: '#555', maxWidth: '460px', lineHeight: 1.6 }}>
+          Transform your culinary vision into a high-performance digital presence.<br />
+          Provide your details below to generate your bespoke noir-themed experience.
         </p>
       </div>
-
-      {success ? (
-        <div style={{
-          background: 'rgba(34,197,94,0.1)',
-          border: '1px solid rgba(34,197,94,0.25)',
-          borderRadius: '20px',
-          padding: '40px 60px',
-          textAlign: 'center',
-          animation: 'fade-in 0.5s ease',
-        }}>
-          <div style={{ fontSize: '40px', marginBottom: '16px' }}>✓</div>
-          <div style={{ fontSize: '20px', fontWeight: 700, color: '#4ade80', marginBottom: '8px' }}>Website Created!</div>
-          <div style={{ fontSize: '14px', color: '#666' }}>Redirecting to My Restaurants...</div>
-        </div>
-      ) : (
-        <div style={{
-          background: 'rgba(255,255,255,0.03)',
-          border: '1px solid rgba(255,255,255,0.08)',
-          borderRadius: '24px',
-          padding: '40px',
-          width: '100%',
-          maxWidth: '520px',
-          backdropFilter: 'blur(10px)',
-          marginBottom: '40px',
-        }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            <FormField label="RESTAURANT NAME">
-              <input
-                value={form.name}
-                onChange={e => setForm(p => ({ ...p, name: e.target.value }))}
-                placeholder="e.g. L'Atelier Noir"
-                style={inputStyle}
-              />
-            </FormField>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-              <FormField label="OWNER NAME">
-                <input
-                  value={form.owner}
-                  onChange={e => setForm(p => ({ ...p, owner: e.target.value }))}
-                  placeholder="Full legal name"
-                  style={inputStyle}
-                />
-              </FormField>
-              <FormField label="NUMBER OF TABLES">
-                <input
-                  type="number"
-                  value={form.tables}
-                  onChange={e => setForm(p => ({ ...p, tables: e.target.value }))}
-                  placeholder="24"
-                  style={inputStyle}
-                />
-              </FormField>
-            </div>
-
-            <button
-              onClick={handleCreate}
-              disabled={creating || !form.name}
-              style={{
-                padding: '18px',
-                background: form.name ? '#E8321A' : 'rgba(232,50,26,0.3)',
-                border: `2px solid ${form.name ? '#E8321A' : 'rgba(232,50,26,0.3)'}`,
-                borderRadius: '12px',
-                color: '#fff',
-                fontSize: '14px', fontWeight: 800, letterSpacing: '0.1em',
-                cursor: form.name ? 'pointer' : 'default',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
-                boxShadow: form.name ? '0 0 30px rgba(232,50,26,0.4)' : 'none',
-                transition: 'all 0.25s',
-              }}
-            >
-              {creating ? (
-                <>
-                  <span style={{ width: '16px', height: '16px', border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.8s linear infinite', display: 'inline-block' }} />
-                  CONFIGURING...
-                </>
-              ) : (
-                <>
-                  CREATE MY WEBSITE
-                  <ArrowRight size={16} />
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-      )}
-
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px', width: '100%', maxWidth: '520px' }}>
-        {[
-          { icon: <Zap size={20} />, label: 'Instant Deploy' },
-          { icon: <BarChart2 size={20} />, label: 'Live Analytics' },
-          { icon: <Layout size={20} />, label: 'Custom Layout' },
-        ].map(({ icon, label }) => (
-          <div key={label} style={{
-            background: 'rgba(255,255,255,0.03)',
-            border: '1px solid rgba(255,255,255,0.06)',
-            borderRadius: '14px',
-            padding: '20px',
-            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px',
-          }}>
-            <div style={{
-              width: '44px', height: '44px', borderRadius: '10px',
-              background: 'rgba(232,50,26,0.1)',
-              border: '1px solid rgba(232,50,26,0.2)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: '#E8321A',
-            }}>{icon}</div>
-            <span style={{ fontSize: '12px', fontWeight: 600, color: '#777', textAlign: 'center' }}>{label}</span>
-          </div>
-        ))}
-      </div>
-
       <button
-        onClick={() => navigate('/')}
+        onClick={onBack}
         style={{
-          marginTop: '32px',
-          background: 'none', border: 'none',
-          color: '#555', fontSize: '13px',
-          cursor: 'pointer',
-          transition: 'color 0.2s',
+          display: 'flex', alignItems: 'center', gap: '6px',
+          background: 'rgba(255,255,255,0.04)',
+          border: '1px solid rgba(255,255,255,0.08)',
+          borderRadius: '10px',
+          color: '#666', fontSize: '12px', fontWeight: 600, letterSpacing: '0.08em',
+          padding: '10px 16px', cursor: 'pointer', transition: 'all 0.2s',
         }}
-        onMouseEnter={e => e.currentTarget.style.color = '#888'}
-        onMouseLeave={e => e.currentTarget.style.color = '#555'}
+        onMouseEnter={e => { e.currentTarget.style.color = '#fff'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)' }}
+        onMouseLeave={e => { e.currentTarget.style.color = '#666'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)' }}
       >
-        ← Back to home
+        <X size={14} /> ESC
       </button>
     </div>
   )
 }
 
-function FormField({ label, children }) {
+function LeftSection({ form, set, errors, addTable, removeTable, logoInputRef, logoDragging, setLogoDragging, handleLogoFile }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+      <SectionBlock label="Establishment Identity">
+        <input
+          className="forge-input"
+          placeholder="Enter restaurant name"
+          value={form.restaurantName}
+          onChange={e => set('restaurantName', e.target.value)}
+          style={{ fontSize: '15px' }}
+        />
+        {errors.restaurantName && <div className="error-msg">{errors.restaurantName}</div>}
+      </SectionBlock>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+        <SectionBlock label="Mobile Number">
+          <input className="forge-input" placeholder="+91 00000 00000" value={form.phoneNumber} onChange={e => set('phoneNumber', e.target.value)} />
+        </SectionBlock>
+        <SectionBlock label="GST Details (Optional)">
+          <input className="forge-input" placeholder="GSTIN/UIN" value={form.gstDetails} onChange={e => set('gstDetails', e.target.value)} />
+        </SectionBlock>
+      </div>
+
+      <SectionBlock label="Table Management">
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <input
+            className="forge-input"
+            placeholder="Table Number"
+            value={form.tableInput}
+            onChange={e => set('tableInput', e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && addTable()}
+            style={{ flex: 1 }}
+          />
+          <button
+            onClick={addTable}
+            style={{
+              padding: '0 20px',
+              background: '#FF3B30',
+              border: 'none', borderRadius: '10px',
+              color: '#fff', fontSize: '13px', fontWeight: 700,
+              cursor: 'pointer', whiteSpace: 'nowrap',
+              transition: 'box-shadow 0.2s',
+            }}
+            onMouseEnter={e => e.currentTarget.style.boxShadow = '0 0 20px rgba(255,59,48,0.5)'}
+            onMouseLeave={e => e.currentTarget.style.boxShadow = 'none'}
+          >
+            Add
+          </button>
+        </div>
+        {form.tableNumbers.length > 0 && (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '10px' }}>
+            {form.tableNumbers.map(t => (
+              <span key={t} style={{
+                display: 'inline-flex', alignItems: 'center', gap: '6px',
+                background: 'rgba(255,59,48,0.1)',
+                border: '1px solid rgba(255,59,48,0.25)',
+                borderRadius: '8px', padding: '5px 10px',
+                fontSize: '12px', fontWeight: 600, color: '#FF3B30',
+              }}>
+                {t}
+                <Trash2 size={11} style={{ cursor: 'pointer', opacity: 0.6 }} onClick={() => removeTable(t)} />
+              </span>
+            ))}
+          </div>
+        )}
+      </SectionBlock>
+
+      <SectionBlock label="Brand Mark">
+        <div
+          onDragOver={e => { e.preventDefault(); setLogoDragging(true) }}
+          onDragLeave={() => setLogoDragging(false)}
+          onDrop={e => { e.preventDefault(); setLogoDragging(false); handleLogoFile(e.dataTransfer.files[0]) }}
+          onClick={() => logoInputRef.current?.click()}
+          style={{
+            border: `2px dashed ${logoDragging ? 'rgba(255,59,48,0.6)' : 'rgba(255,255,255,0.08)'}`,
+            borderRadius: '14px',
+            padding: '28px',
+            textAlign: 'center',
+            cursor: 'pointer',
+            transition: 'all 0.2s',
+            background: logoDragging ? 'rgba(255,59,48,0.04)' : 'transparent',
+            position: 'relative',
+            overflow: 'hidden',
+          }}
+        >
+          {form.logo ? (
+            <img src={form.logo.url} alt="logo" style={{ height: '70px', objectFit: 'contain', borderRadius: '8px' }} />
+          ) : (
+            <>
+              <Upload size={22} color="#3a3a3a" style={{ marginBottom: '8px' }} />
+              <div style={{ fontSize: '12px', color: '#3a3a3a', fontWeight: 500 }}>Drop Logo</div>
+            </>
+          )}
+          <input ref={logoInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={e => handleLogoFile(e.target.files[0])} />
+        </div>
+      </SectionBlock>
+
+      <SectionBlock label="Culinary Philosophy">
+        <textarea
+          className="forge-textarea"
+          placeholder="Describe the atmosphere, the cuisine, and the soul of your restaurant..."
+          value={form.description}
+          onChange={e => set('description', e.target.value)}
+        />
+      </SectionBlock>
+    </div>
+  )
+}
+
+function RightSection({ form, set, errors, imgInputRef, imgDragging, setImgDragging, handleImgFiles, removeImage }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+      <SectionBlock label="Visual Atmosphere">
+        <div
+          onDragOver={e => { e.preventDefault(); setImgDragging(true) }}
+          onDragLeave={() => setImgDragging(false)}
+          onDrop={e => { e.preventDefault(); setImgDragging(false); handleImgFiles(e.dataTransfer.files) }}
+          onClick={() => form.uploadedImages.length === 0 && imgInputRef.current?.click()}
+          style={{
+            border: `2px dashed ${imgDragging ? 'rgba(255,59,48,0.6)' : errors.uploadedImages ? 'rgba(255,59,48,0.5)' : 'rgba(255,255,255,0.08)'}`,
+            borderRadius: '14px',
+            minHeight: '180px',
+            cursor: 'pointer',
+            transition: 'all 0.2s',
+            background: imgDragging ? 'rgba(255,59,48,0.04)' : 'transparent',
+            overflow: 'hidden',
+          }}
+        >
+          {form.uploadedImages.length === 0 ? (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '180px' }}>
+              <Upload size={24} color="#3a3a3a" style={{ marginBottom: '10px' }} />
+              <div style={{ fontSize: '13px', color: '#3a3a3a', fontWeight: 500 }}>Drop restaurant images here</div>
+              <div style={{ fontSize: '11px', color: '#2a2a2a', marginTop: '4px' }}>or click to browse</div>
+            </div>
+          ) : (
+            <div style={{ padding: '12px', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+              {form.uploadedImages.map((img, idx) => (
+                <div key={idx} style={{ position: 'relative', paddingTop: '66%', borderRadius: '8px', overflow: 'hidden' }}>
+                  <img src={img.url} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <button
+                    onClick={e => { e.stopPropagation(); removeImage(idx) }}
+                    style={{
+                      position: 'absolute', top: '4px', right: '4px',
+                      background: 'rgba(0,0,0,0.7)', border: 'none',
+                      borderRadius: '6px', color: '#fff', cursor: 'pointer',
+                      display: 'flex', padding: '4px',
+                    }}
+                  >
+                    <X size={10} />
+                  </button>
+                </div>
+              ))}
+              <div
+                onClick={e => { e.stopPropagation(); imgInputRef.current?.click() }}
+                style={{
+                  paddingTop: '66%',
+                  borderRadius: '8px',
+                  border: '1px dashed rgba(255,59,48,0.3)',
+                  background: 'rgba(255,59,48,0.04)',
+                  position: 'relative', cursor: 'pointer',
+                }}
+              >
+                <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Plus size={18} color="rgba(255,59,48,0.5)" />
+                </div>
+              </div>
+            </div>
+          )}
+          <input ref={imgInputRef} type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={e => handleImgFiles(e.target.files)} />
+        </div>
+        {errors.uploadedImages && <div className="error-msg">{errors.uploadedImages}</div>}
+      </SectionBlock>
+
+      <InfoCard icon={<ChefHat size={14} />} label="Executive Chef Bio">
+        <textarea
+          className="forge-textarea"
+          placeholder="Tell the chef's journey..."
+          value={form.chefInfo}
+          onChange={e => set('chefInfo', e.target.value)}
+          style={{ minHeight: '88px' }}
+        />
+      </InfoCard>
+
+      <InfoCard icon={<Users size={14} />} label="Hospitality Standard">
+        <textarea
+          className="forge-textarea"
+          placeholder="Describe the interaction, service and guest experience..."
+          value={form.servantInfo}
+          onChange={e => set('servantInfo', e.target.value)}
+          style={{ minHeight: '88px' }}
+        />
+      </InfoCard>
+    </div>
+  )
+}
+
+function SocialLinksSection({ form, setSocial }) {
+  const links = [
+    { key: 'instagram', icon: <Link size={13} />, placeholder: 'Instagram Profile Link' },
+    { key: 'facebook', icon: <Link2 size={13} />, placeholder: 'Facebook Page Link' },
+    { key: 'twitter', icon: <Link size={13} />, placeholder: 'X / Twitter Handle Link' },
+    { key: 'website', icon: <Globe size={13} />, placeholder: 'Official Website URL' },
+  ]
+  return (
+    <div style={{
+      marginBottom: '28px',
+      background: 'rgba(255,255,255,0.02)',
+      border: '1px solid rgba(255,255,255,0.05)',
+      borderRadius: '18px',
+      padding: '24px 28px',
+    }}>
+      <div style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '0.2em', color: '#555', textTransform: 'uppercase', textAlign: 'center', marginBottom: '18px' }}>
+        Connect Digital Footprint
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
+        {links.map(({ key, icon, placeholder }) => (
+          <div key={key} style={{ position: 'relative' }}>
+            <div style={{
+              position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)',
+              color: '#444', pointerEvents: 'none', display: 'flex',
+            }}>{icon}</div>
+            <input
+              className="forge-input"
+              placeholder={placeholder}
+              value={form.socialLinks[key]}
+              onChange={e => setSocial(key, e.target.value)}
+              style={{ paddingLeft: '32px', fontSize: '12px' }}
+            />
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function BottomCards({ form, set }) {
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '28px' }}>
+      <Card label="Automation">
+        <div style={{ marginBottom: '14px' }}>
+          <label className="forge-label">Digital Menu Link</label>
+          <input
+            className="forge-input"
+            placeholder="Your service portal (Swiggy, etc.)"
+            value={form.digitalMenuLink}
+            onChange={e => set('digitalMenuLink', e.target.value)}
+            style={{ fontSize: '12px' }}
+          />
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span style={{ fontSize: '13px', fontWeight: 700, color: '#ccc' }}>Digital Service Bell</span>
+          <Toggle
+            value={form.digitalServiceBell}
+            onChange={v => set('digitalServiceBell', v)}
+          />
+        </div>
+      </Card>
+
+      <Card label="Reputation">
+        <label className="forge-label">Google Rating</label>
+        <div style={{ position: 'relative' }}>
+          <div style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#FFB800', display: 'flex' }}>
+            <Star size={13} fill="#FFB800" />
+          </div>
+          <input
+            className="forge-input"
+            placeholder="e.g. 4/5"
+            value={form.rating}
+            onChange={e => set('rating', e.target.value)}
+            style={{ paddingLeft: '32px', fontSize: '12px' }}
+          />
+        </div>
+      </Card>
+
+      <Card label="Map Anchor">
+        <label className="forge-label">Location</label>
+        <div style={{ position: 'relative' }}>
+          <div style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#555', display: 'flex' }}>
+            <MapPin size={13} />
+          </div>
+          <input
+            className="forge-input"
+            placeholder="e.g. Cyber City, Gurugram"
+            value={form.location}
+            onChange={e => set('location', e.target.value)}
+            style={{ paddingLeft: '32px', fontSize: '12px' }}
+          />
+        </div>
+      </Card>
+    </div>
+  )
+}
+
+function AdditionalSection({ form, set }) {
+  return (
+    <div style={{ marginBottom: '12px' }}>
+      <label className="forge-label">Additional Intelligence</label>
+      <textarea
+        className="forge-textarea"
+        placeholder="Dietary preferences, dress code, valet parking instructions, or local landmarks..."
+        value={form.additionalInfo}
+        onChange={e => set('additionalInfo', e.target.value)}
+        style={{ minHeight: '90px' }}
+      />
+    </div>
+  )
+}
+
+function FooterCTA({ onGenerate, submitting }) {
+  const [hovered, setHovered] = useState(false)
+  return (
+    <div style={{
+      position: 'fixed',
+      bottom: 0, left: 0, right: 0,
+      padding: '20px 40px',
+      background: 'linear-gradient(to top, #0B0B0B 70%, transparent)',
+      display: 'flex',
+      justifyContent: 'center',
+      zIndex: 50,
+    }}>
+      <button
+        onClick={onGenerate}
+        disabled={submitting}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+        style={{
+          display: 'flex', alignItems: 'center', gap: '10px',
+          padding: '18px 56px',
+          background: submitting ? 'rgba(255,59,48,0.5)' : '#FF3B30',
+          border: '2px solid #FF3B30',
+          borderRadius: '50px',
+          color: '#fff',
+          fontSize: '14px', fontWeight: 800, letterSpacing: '0.12em',
+          cursor: submitting ? 'default' : 'pointer',
+          boxShadow: hovered && !submitting ? '0 0 50px rgba(255,59,48,0.55)' : '0 0 30px rgba(255,59,48,0.3)',
+          transition: 'all 0.25s',
+          textTransform: 'uppercase',
+        }}
+      >
+        {submitting ? (
+          <>
+            <span style={{
+              width: '16px', height: '16px',
+              border: '2px solid rgba(255,255,255,0.3)',
+              borderTopColor: '#fff', borderRadius: '50%',
+              animation: 'spin 0.8s linear infinite', display: 'inline-block',
+            }} />
+            GENERATING...
+          </>
+        ) : (
+          <>
+            <Zap size={16} />
+            GENERATE WEBSITE
+          </>
+        )}
+      </button>
+    </div>
+  )
+}
+
+function Toggle({ value, onChange }) {
+  return (
+    <div
+      onClick={() => onChange(!value)}
+      style={{
+        width: '44px', height: '24px',
+        borderRadius: '12px',
+        background: value ? '#FF3B30' : 'rgba(255,255,255,0.1)',
+        cursor: 'pointer',
+        position: 'relative',
+        transition: 'background 0.2s',
+        boxShadow: value ? '0 0 12px rgba(255,59,48,0.4)' : 'none',
+      }}
+    >
+      <div style={{
+        position: 'absolute',
+        top: '3px',
+        left: value ? '23px' : '3px',
+        width: '18px', height: '18px',
+        borderRadius: '50%',
+        background: '#fff',
+        transition: 'left 0.2s',
+        boxShadow: '0 1px 4px rgba(0,0,0,0.4)',
+      }} />
+    </div>
+  )
+}
+
+function SectionBlock({ label, children }) {
   return (
     <div>
-      <label style={{ display: 'block', fontSize: '10px', fontWeight: 700, letterSpacing: '0.15em', color: '#555', marginBottom: '8px', textTransform: 'uppercase' }}>{label}</label>
+      {label && <label className="forge-label">{label}</label>}
       {children}
     </div>
   )
 }
 
-const inputStyle = {
-  width: '100%',
-  padding: '13px 16px',
-  background: 'rgba(255,255,255,0.05)',
-  border: '1px solid rgba(255,255,255,0.1)',
-  borderRadius: '10px',
-  color: '#ccc',
-  fontSize: '14px',
+function Card({ label, children }) {
+  return (
+    <div style={{
+      background: 'rgba(255,255,255,0.02)',
+      border: '1px solid rgba(255,255,255,0.05)',
+      borderRadius: '16px',
+      padding: '20px',
+    }}>
+      <div style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '0.2em', color: '#555', textTransform: 'uppercase', marginBottom: '16px' }}>
+        {label}
+      </div>
+      {children}
+    </div>
+  )
+}
+
+function InfoCard({ icon, label, children }) {
+  return (
+    <div style={{
+      background: 'rgba(255,255,255,0.02)',
+      border: '1px solid rgba(255,255,255,0.05)',
+      borderRadius: '16px',
+      padding: '18px 20px',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+        <div style={{
+          color: '#FF3B30',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          width: '26px', height: '26px',
+          background: 'rgba(255,59,48,0.1)',
+          borderRadius: '8px',
+        }}>{icon}</div>
+        <span style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.1em', color: '#888', textTransform: 'uppercase' }}>{label}</span>
+      </div>
+      {children}
+    </div>
+  )
 }
