@@ -11,7 +11,16 @@ export default function Restaurants() {
     setRestaurants(saved)
   }, [])
 
+  const toggleStatus = (id) => {
+    const updated = restaurants.map(r =>
+      r.id === id ? { ...r, status: r.status === 'active' ? 'paused' : 'active' } : r
+    )
+    setRestaurants(updated)
+    localStorage.setItem('exzibo_restaurants', JSON.stringify(updated))
+  }
+
   const active = restaurants.filter(r => r.status === 'active')
+  const paused = restaurants.filter(r => r.status === 'paused')
   const drafts = restaurants.filter(r => r.status === 'draft')
 
   return (
@@ -98,14 +107,21 @@ export default function Restaurants() {
             {active.length > 0 && (
               <Section title="ACTIVE" count={active.length}>
                 {active.map(r => (
-                  <RestaurantCard key={r.id} restaurant={r} onClick={() => navigate(`/restaurant/${r.id}`)} />
+                  <RestaurantCard key={r.id} restaurant={r} onClick={() => navigate(`/restaurant/${r.id}`)} onToggle={() => toggleStatus(r.id)} />
+                ))}
+              </Section>
+            )}
+            {paused.length > 0 && (
+              <Section title="PAUSED" count={paused.length}>
+                {paused.map(r => (
+                  <RestaurantCard key={r.id} restaurant={r} onClick={() => navigate(`/restaurant/${r.id}`)} onToggle={() => toggleStatus(r.id)} />
                 ))}
               </Section>
             )}
             {drafts.length > 0 && (
               <Section title="DRAFTS" count={drafts.length}>
                 {drafts.map(r => (
-                  <RestaurantCard key={r.id} restaurant={r} onClick={() => navigate(`/restaurant/${r.id}`)} />
+                  <RestaurantCard key={r.id} restaurant={r} onClick={() => navigate(`/restaurant/${r.id}`)} onToggle={() => toggleStatus(r.id)} />
                 ))}
               </Section>
             )}
@@ -149,8 +165,9 @@ function Section({ title, count, children }) {
   )
 }
 
-function RestaurantCard({ restaurant, onClick }) {
+function RestaurantCard({ restaurant, onClick, onToggle }) {
   const [hovered, setHovered] = useState(false)
+  const isActive = restaurant.status === 'active'
 
   const initials = restaurant.name
     .split(' ')
@@ -204,9 +221,55 @@ function RestaurantCard({ restaurant, onClick }) {
         {restaurant.owner || 'No owner set'}
       </div>
 
-      <div style={{ display: 'flex', gap: '20px' }}>
-        <Stat icon={<LayoutGrid size={12} />} label={`${restaurant.tables || '—'} tables`} />
-        <Stat icon={<Utensils size={12} />} label="Menu active" />
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', gap: '20px' }}>
+          <Stat icon={<LayoutGrid size={12} />} label={`${restaurant.tables || '—'} tables`} />
+          <Stat icon={<Utensils size={12} />} label="Menu active" />
+        </div>
+
+        <div
+          onClick={e => { e.stopPropagation(); onToggle() }}
+          style={{
+            display: 'flex', alignItems: 'center', gap: '8px',
+            background: isActive ? 'rgba(74,222,128,0.08)' : 'rgba(255,255,255,0.04)',
+            border: isActive ? '1px solid rgba(74,222,128,0.2)' : '1px solid rgba(255,255,255,0.08)',
+            borderRadius: '50px',
+            padding: '5px 10px 5px 6px',
+            cursor: 'pointer',
+            transition: 'all 0.2s',
+          }}
+          onMouseEnter={e => e.currentTarget.style.opacity = '0.8'}
+          onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+        >
+          <div style={{
+            width: '28px', height: '16px',
+            borderRadius: '8px',
+            background: isActive ? '#4ade80' : 'rgba(255,255,255,0.12)',
+            position: 'relative',
+            transition: 'background 0.2s',
+            flexShrink: 0,
+            boxShadow: isActive ? '0 0 8px rgba(74,222,128,0.4)' : 'none',
+          }}>
+            <div style={{
+              position: 'absolute',
+              top: '2px',
+              left: isActive ? '14px' : '2px',
+              width: '12px', height: '12px',
+              borderRadius: '50%',
+              background: '#fff',
+              transition: 'left 0.2s',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+            }} />
+          </div>
+          <span style={{
+            fontSize: '11px', fontWeight: 700,
+            letterSpacing: '0.05em',
+            color: isActive ? '#4ade80' : '#555',
+            transition: 'color 0.2s',
+          }}>
+            {isActive ? 'Active' : 'Paused'}
+          </span>
+        </div>
       </div>
     </div>
   )
