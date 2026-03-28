@@ -1,19 +1,72 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import Sidebar from '../components/Sidebar'
 import AdminHeader from '../components/AdminHeader'
-import { Lock, Shield, Smartphone, Save, X, ChevronDown } from 'lucide-react'
+import { Lock, Shield, ChevronDown, Check } from 'lucide-react'
+
+const DEFAULTS = {
+  profile: { name: 'Julian Vercetti', email: 'j.vercetti@exzibo.com', role: 'General Manager', company: 'Exzibo Group' },
+  twoFactor: true,
+  theme: 'dark',
+  language: 'English',
+  notifications: { orders: true, system: true, updates: false },
+}
+
+function getInitials(name) {
+  return name.trim().split(/\s+/).slice(0, 2).map(w => w[0]?.toUpperCase() || '').join('') || '??'
+}
 
 export default function Settings() {
-  const [profile, setProfile] = useState({ name: 'Julian Vercetti', email: 'j.vercetti@exzibo.com', role: 'General Manager', company: 'Exzibo Group' })
-  const [twoFactor, setTwoFactor] = useState(true)
-  const [theme, setTheme] = useState('dark')
-  const [language, setLanguage] = useState('English')
-  const [notifications, setNotifications] = useState({ orders: true, system: true, updates: false })
+  const [profile, setProfile] = useState(DEFAULTS.profile)
+  const [twoFactor, setTwoFactor] = useState(DEFAULTS.twoFactor)
+  const [theme, setTheme] = useState(DEFAULTS.theme)
+  const [language, setLanguage] = useState(DEFAULTS.language)
+  const [notifications, setNotifications] = useState(DEFAULTS.notifications)
   const [saved, setSaved] = useState(false)
+  const [dirty, setDirty] = useState(false)
+  const saveTimer = useRef(null)
+
+  useEffect(() => {
+    const stored = localStorage.getItem('exzibo_settings')
+    if (stored) {
+      const s = JSON.parse(stored)
+      if (s.profile) setProfile(s.profile)
+      if (s.twoFactor !== undefined) setTwoFactor(s.twoFactor)
+      if (s.theme) setTheme(s.theme)
+      if (s.language) setLanguage(s.language)
+      if (s.notifications) setNotifications(s.notifications)
+    }
+  }, [])
+
+  const markDirty = (setter) => (...args) => {
+    setter(...args)
+    setDirty(true)
+  }
+
+  const handleDiscard = () => {
+    const stored = localStorage.getItem('exzibo_settings')
+    if (stored) {
+      const s = JSON.parse(stored)
+      if (s.profile) setProfile(s.profile)
+      if (s.twoFactor !== undefined) setTwoFactor(s.twoFactor)
+      if (s.theme) setTheme(s.theme)
+      if (s.language) setLanguage(s.language)
+      if (s.notifications) setNotifications(s.notifications)
+    } else {
+      setProfile(DEFAULTS.profile)
+      setTwoFactor(DEFAULTS.twoFactor)
+      setTheme(DEFAULTS.theme)
+      setLanguage(DEFAULTS.language)
+      setNotifications(DEFAULTS.notifications)
+    }
+    setDirty(false)
+  }
 
   const handleSave = () => {
+    localStorage.setItem('exzibo_settings', JSON.stringify({ profile, twoFactor, theme, language, notifications }))
+    setDirty(false)
     setSaved(true)
-    setTimeout(() => setSaved(false), 2500)
+    clearTimeout(saveTimer.current)
+    saveTimer.current = setTimeout(() => setSaved(false), 2500)
   }
 
   return (
@@ -44,9 +97,11 @@ export default function Settings() {
                   width: '80px', height: '80px', borderRadius: '50%',
                   background: 'linear-gradient(135deg, #E8321A, #8a1a1a)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: '28px', fontWeight: 800,
+                  fontSize: '26px', fontWeight: 800,
                   border: '3px solid rgba(232,50,26,0.3)',
-                }}>JV</div>
+                  transition: 'all 0.2s',
+                  letterSpacing: '0.02em',
+                }}>{getInitials(profile.name)}</div>
                 <button style={{
                   position: 'absolute', bottom: 0, right: 0,
                   width: '24px', height: '24px', borderRadius: '50%',
@@ -56,15 +111,17 @@ export default function Settings() {
                 }}>✎</button>
               </div>
               <div>
-                <div style={{ fontSize: '18px', fontWeight: 700 }}>{profile.name}</div>
-                <div style={{ fontSize: '13px', color: '#666', marginTop: '2px' }}>{profile.role} • {profile.company}</div>
+                <div style={{ fontSize: '18px', fontWeight: 700, transition: 'all 0.15s' }}>{profile.name || 'Your Name'}</div>
+                <div style={{ fontSize: '13px', color: '#666', marginTop: '2px', transition: 'all 0.15s' }}>
+                  {profile.role || 'Role'}{profile.company ? ` • ${profile.company}` : ''}
+                </div>
               </div>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-              <SettingsField label="FULL NAME" value={profile.name} onChange={v => setProfile(p => ({ ...p, name: v }))} />
-              <SettingsField label="EMAIL ADDRESS" value={profile.email} onChange={v => setProfile(p => ({ ...p, email: v }))} />
-              <SettingsField label="ROLE" value={profile.role} onChange={v => setProfile(p => ({ ...p, role: v }))} />
-              <SettingsField label="COMPANY" value={profile.company} onChange={v => setProfile(p => ({ ...p, company: v }))} />
+              <SettingsField label="FULL NAME" value={profile.name} onChange={v => { setProfile(p => ({ ...p, name: v })); setDirty(true) }} />
+              <SettingsField label="EMAIL ADDRESS" value={profile.email} onChange={v => { setProfile(p => ({ ...p, email: v })); setDirty(true) }} />
+              <SettingsField label="ROLE" value={profile.role} onChange={v => { setProfile(p => ({ ...p, role: v })); setDirty(true) }} />
+              <SettingsField label="COMPANY" value={profile.company} onChange={v => { setProfile(p => ({ ...p, company: v })); setDirty(true) }} />
             </div>
           </Section>
 
@@ -74,7 +131,7 @@ export default function Settings() {
               title="Two-Factor Authentication"
               desc="Add an extra layer of security to your management console."
               value={twoFactor}
-              onChange={setTwoFactor}
+              onChange={v => { setTwoFactor(v); setDirty(true) }}
             />
             <div style={{ height: '1px', background: 'rgba(255,255,255,0.05)', margin: '4px 0' }} />
             <ActionRow
@@ -124,7 +181,7 @@ export default function Settings() {
                 <label style={{ display: 'block', fontSize: '10px', fontWeight: 600, letterSpacing: '0.1em', color: '#555', marginBottom: '8px', textTransform: 'uppercase' }}>Interface Theme</label>
                 <div style={{ display: 'flex', gap: '8px' }}>
                   {['dark', 'deeper'].map(t => (
-                    <button key={t} onClick={() => setTheme(t)} style={{
+                    <button key={t} onClick={() => { setTheme(t); setDirty(true) }} style={{
                       padding: '10px 20px',
                       borderRadius: '8px',
                       background: theme === t ? '#E8321A' : 'rgba(255,255,255,0.04)',
@@ -141,7 +198,7 @@ export default function Settings() {
               <div>
                 <label style={{ display: 'block', fontSize: '10px', fontWeight: 600, letterSpacing: '0.1em', color: '#555', marginBottom: '8px', textTransform: 'uppercase' }}>Language</label>
                 <div style={{ position: 'relative' }}>
-                  <select value={language} onChange={e => setLanguage(e.target.value)} style={{
+                  <select value={language} onChange={e => { setLanguage(e.target.value); setDirty(true) }} style={{
                     width: '100%', padding: '10px 16px',
                     background: 'rgba(255,255,255,0.04)',
                     border: '1px solid rgba(255,255,255,0.08)',
@@ -173,32 +230,43 @@ export default function Settings() {
                     <div style={{ fontSize: '13px', fontWeight: 600 }}>{label}</div>
                     <div style={{ fontSize: '12px', color: '#555', marginTop: '2px' }}>{desc}</div>
                   </div>
-                  <Toggle value={notifications[key]} onChange={v => setNotifications(p => ({ ...p, [key]: v }))} />
+                  <Toggle value={notifications[key]} onChange={v => { setNotifications(p => ({ ...p, [key]: v })); setDirty(true) }} />
                 </div>
               ))}
             </div>
           </Section>
 
-          <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', paddingBottom: '32px' }}>
-            <button style={{
+          <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', alignItems: 'center', paddingBottom: '32px' }}>
+            {dirty && (
+              <span style={{ fontSize: '12px', color: '#555', marginRight: '4px' }}>
+                ● Unsaved changes
+              </span>
+            )}
+            <button onClick={handleDiscard} style={{
               padding: '12px 28px',
               background: 'transparent',
-              border: '1px solid rgba(255,255,255,0.1)',
+              border: `1px solid ${dirty ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.08)'}`,
               borderRadius: '10px',
-              color: '#888', fontSize: '13px', fontWeight: 600,
-              cursor: 'pointer',
+              color: dirty ? '#ccc' : '#555', fontSize: '13px', fontWeight: 600,
+              cursor: dirty ? 'pointer' : 'default',
+              transition: 'all 0.2s',
             }}>DISCARD</button>
             <button onClick={handleSave} style={{
+              display: 'flex', alignItems: 'center', gap: '8px',
               padding: '12px 32px',
-              background: '#E8321A',
-              border: 'none',
+              background: saved ? 'rgba(34,197,94,0.15)' : '#E8321A',
+              border: saved ? '1px solid rgba(34,197,94,0.3)' : 'none',
               borderRadius: '10px',
-              color: '#fff', fontSize: '13px', fontWeight: 700,
+              color: saved ? '#4ade80' : '#fff',
+              fontSize: '13px', fontWeight: 700,
               cursor: 'pointer',
               letterSpacing: '0.04em',
-              boxShadow: '0 0 20px rgba(232,50,26,0.4)',
-              transition: 'box-shadow 0.2s',
-            }}>SAVE CHANGES</button>
+              boxShadow: saved ? '0 0 16px rgba(34,197,94,0.2)' : '0 0 20px rgba(232,50,26,0.4)',
+              transition: 'all 0.3s ease',
+              minWidth: '155px', justifyContent: 'center',
+            }}>
+              {saved ? <><Check size={14} /> SAVED!</> : 'SAVE CHANGES'}
+            </button>
           </div>
         </main>
       </div>
