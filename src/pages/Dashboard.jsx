@@ -4,13 +4,6 @@ import Sidebar from '../components/Sidebar'
 import AdminHeader from '../components/AdminHeader'
 import { TrendingUp, Filter, Download, ChevronLeft, ChevronRight, Plus } from 'lucide-react'
 
-const STATIC_RESTAURANTS = [
-  { uid: '8472910472', name: 'THE GLOBAL FORK', status: 'RUNNING', date: 'Oct 24, 2023', tables: 42, payment: '₹11,92,400', avatar: 'TG' },
-  { uid: '9203847561', name: 'VELVET LOUNGE', status: 'PENDING', date: 'Nov 12, 2023', tables: 18, payment: '₹0.00', avatar: 'VL' },
-  { uid: '1049283746', name: 'KAI KITCHEN', status: 'RUNNING', date: 'Dec 05, 2023', tables: 112, payment: '₹43,50,820', avatar: 'KK' },
-  { uid: '5561029384', name: 'SIMON PIZZERIA', status: 'RUNNING', date: 'Jan 14, 2024', tables: 24, payment: '₹7,46,400', avatar: 'SP' },
-]
-
 function getAvatarFromName(name) {
   return name.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase()
 }
@@ -22,7 +15,7 @@ function formatDate(iso) {
 export default function Dashboard() {
   const navigate = useNavigate()
   const [currentPage, setCurrentPage] = useState(1)
-  const [restaurants, setRestaurants] = useState(STATIC_RESTAURANTS)
+  const [restaurants, setRestaurants] = useState([])
 
   useEffect(() => {
     const saved = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
@@ -34,9 +27,8 @@ export default function Dashboard() {
       tables: parseInt(r.tables) || 0,
       payment: '₹0.00',
       avatar: getAvatarFromName(r.name),
-      isNew: true,
     }))
-    setRestaurants([...mapped, ...STATIC_RESTAURANTS])
+    setRestaurants(mapped)
   }, [])
 
   return (
@@ -75,6 +67,41 @@ export default function Dashboard() {
               </div>
             </div>
 
+            {restaurants.length === 0 ? (
+              <div style={{
+                display: 'flex', flexDirection: 'column',
+                alignItems: 'center', justifyContent: 'center',
+                padding: '80px 24px', textAlign: 'center',
+                borderTop: '1px solid rgba(255,255,255,0.05)',
+              }}>
+                <div style={{
+                  width: '60px', height: '60px', borderRadius: '18px',
+                  background: 'rgba(232,50,26,0.08)',
+                  border: '2px dashed rgba(232,50,26,0.2)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: '26px', marginBottom: '20px',
+                }}>🍽️</div>
+                <div style={{ fontSize: '16px', fontWeight: 700, marginBottom: '8px' }}>No Restaurants Yet</div>
+                <p style={{ fontSize: '13px', color: '#555', maxWidth: '280px', lineHeight: 1.6, marginBottom: '24px' }}>
+                  Add your first restaurant to see it appear here as an enterprise partner.
+                </p>
+                <button
+                  onClick={() => navigate('/create-website')}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '7px',
+                    padding: '11px 22px',
+                    background: '#E8321A',
+                    border: 'none', borderRadius: '50px',
+                    color: '#fff', fontSize: '12px', fontWeight: 700, letterSpacing: '0.08em',
+                    cursor: 'pointer',
+                    boxShadow: '0 0 20px rgba(232,50,26,0.4)',
+                  }}
+                >
+                  <Plus size={13} /> ADD RESTAURANT
+                </button>
+              </div>
+            ) : (
+            <>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
@@ -166,6 +193,8 @@ export default function Dashboard() {
                 <PageBtn icon={<ChevronRight size={14} />} onClick={() => setCurrentPage(p => Math.min(3, p + 1))} />
               </div>
             </div>
+            </>
+            )}
           </div>
         </main>
       </div>
