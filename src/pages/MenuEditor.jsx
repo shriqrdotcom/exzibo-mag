@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useParams } from 'react-router-dom'
 import Sidebar from '../components/Sidebar'
 import AdminHeader from '../components/AdminHeader'
-import { Globe, Share2, AtSign, MessageCircle, Edit2, Trash2, Plus, Info, Copy, Star, ExternalLink } from 'lucide-react'
+import { Globe, Share2, AtSign, MessageCircle, Edit2, Trash2, Plus, Info, Copy, Star, ExternalLink, Save, Check } from 'lucide-react'
 
 const initialMenuItems = {
   starters: [
@@ -40,6 +40,8 @@ export default function MenuEditor() {
   const [editingId, setEditingId] = useState(null)
   const [resolvedName, setResolvedName] = useState(null)
   const [notFound, setNotFound] = useState(false)
+  const [saved, setSaved] = useState(false)
+  const saveTimer = useRef(null)
 
   useEffect(() => {
     if (!uid) return
@@ -58,10 +60,30 @@ export default function MenuEditor() {
       }))
       setIsActive(match.status === 'active')
       setNotFound(false)
+      const savedMenu = localStorage.getItem(`exzibo_menu_${uid}`)
+      if (savedMenu) setMenuItems(JSON.parse(savedMenu))
     } else {
       setNotFound(true)
     }
   }, [uid])
+
+  const saveChanges = () => {
+    if (uid) {
+      localStorage.setItem(`exzibo_menu_${uid}`, JSON.stringify(menuItems))
+      const all = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
+      const updated = all.map(r => r.id === uid
+        ? { ...r, status: isActive ? 'active' : 'paused', name: restInfo.name, tables: restInfo.tables,
+            socialLinks: { website: restInfo.website, facebook: restInfo.facebook, instagram: restInfo.instagram, twitter: restInfo.twitter } }
+        : r
+      )
+      localStorage.setItem('exzibo_restaurants', JSON.stringify(updated))
+    } else {
+      localStorage.setItem('exzibo_menu_default', JSON.stringify(menuItems))
+    }
+    setSaved(true)
+    clearTimeout(saveTimer.current)
+    saveTimer.current = setTimeout(() => setSaved(false), 2500)
+  }
 
   const tabMap = { starters: 'starters', mains: 'mains', drinks: 'drinks' }
   const tabLabels = [
@@ -119,6 +141,24 @@ export default function MenuEditor() {
               </p>
             </div>
             <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+              <button
+                onClick={saveChanges}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '7px',
+                  padding: '10px 22px',
+                  background: saved ? 'rgba(34,197,94,0.15)' : '#E8321A',
+                  border: saved ? '1px solid rgba(34,197,94,0.3)' : 'none',
+                  borderRadius: '10px',
+                  color: saved ? '#4ade80' : '#fff',
+                  fontSize: '12px', fontWeight: 700, letterSpacing: '0.07em',
+                  cursor: 'pointer',
+                  boxShadow: saved ? '0 0 16px rgba(34,197,94,0.2)' : '0 0 20px rgba(232,50,26,0.35)',
+                  transition: 'all 0.3s ease',
+                  minWidth: '148px', justifyContent: 'center',
+                }}
+              >
+                {saved ? <><Check size={13} /> SAVED!</> : <><Save size={13} /> SAVE CHANGES</>}
+              </button>
               <button style={{
                 display: 'flex', alignItems: 'center', gap: '7px',
                 padding: '10px 18px',
