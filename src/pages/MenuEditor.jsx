@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import Sidebar from '../components/Sidebar'
 import AdminHeader from '../components/AdminHeader'
-import { Globe, Share2, AtSign, MessageCircle, Edit2, Trash2, Plus, Info, Copy } from 'lucide-react'
+import { Globe, Share2, AtSign, MessageCircle, Edit2, Trash2, Plus, Info, Copy, Star, ExternalLink } from 'lucide-react'
 
 const initialMenuItems = {
   starters: [
@@ -32,7 +32,7 @@ export default function MenuEditor() {
   const [activeTab, setActiveTab] = useState('starters')
   const [isActive, setIsActive] = useState(true)
   const [menuItems, setMenuItems] = useState(initialMenuItems)
-  const [restInfo, setRestInfo] = useState({ name: 'Crimson Luxe Brasserie', tables: 24, website: 'https://www.crimsonluxe.com', facebook: 'crimson.luxe.official', instagram: '@crimsonluxe', twitter: '@crimsonluxe_x' })
+  const [restInfo, setRestInfo] = useState({ name: 'Crimson Luxe Brasserie', tables: 24, website: 'https://www.crimsonluxe.com', facebook: 'crimson.luxe.official', instagram: '@crimsonluxe', twitter: '@crimsonluxe_x', googleReview: '' })
   const [showAddModal, setShowAddModal] = useState(false)
   const [newItem, setNewItem] = useState({ name: '', desc: '', price: '', tags: [] })
   const [editingId, setEditingId] = useState(null)
@@ -141,6 +141,75 @@ export default function MenuEditor() {
                   <SocialInput icon={<MessageCircle size={13} />} value={restInfo.twitter} onChange={v => setRestInfo(p => ({ ...p, twitter: v }))} />
                 </FormField>
               </InfoPanel>
+
+              <div style={{
+                background: 'linear-gradient(135deg, rgba(232,50,26,0.06) 0%, rgba(16,16,16,1) 60%)',
+                border: '1px solid rgba(232,50,26,0.2)',
+                borderRadius: '18px',
+                padding: '20px',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                  <div style={{
+                    width: '28px', height: '28px', borderRadius: '7px',
+                    background: 'rgba(232,50,26,0.15)',
+                    border: '1px solid rgba(232,50,26,0.25)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    <Star size={13} color="#E8321A" fill="rgba(232,50,26,0.4)" />
+                  </div>
+                  <span style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.12em', color: '#E8321A', textTransform: 'uppercase' }}>
+                    Google Reviews
+                  </span>
+                </div>
+                <p style={{ fontSize: '10px', color: '#555', letterSpacing: '0.05em', marginBottom: '14px', textTransform: 'uppercase' }}>
+                  Link your Google review page for customers
+                </p>
+                <FormField label="GOOGLE REVIEW LINK">
+                  <div style={{ position: 'relative' }}>
+                    <div style={{
+                      display: 'flex', alignItems: 'center', gap: '8px',
+                      background: 'rgba(255,255,255,0.04)',
+                      border: '1px solid rgba(232,50,26,0.2)',
+                      borderRadius: '8px',
+                      padding: '9px 12px',
+                      transition: 'border-color 0.2s',
+                    }}>
+                      <Star size={13} color="#E8321A" />
+                      <input
+                        value={restInfo.googleReview}
+                        onChange={e => setRestInfo(p => ({ ...p, googleReview: e.target.value }))}
+                        placeholder="https://g.page/r/your-review-link"
+                        style={{
+                          background: 'transparent', border: 'none',
+                          color: '#ccc', fontSize: '12px', flex: 1,
+                        }}
+                      />
+                      {restInfo.googleReview && (
+                        <a
+                          href={restInfo.googleReview}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ color: '#E8321A', display: 'flex', flexShrink: 0 }}
+                          title="Open link"
+                        >
+                          <ExternalLink size={12} />
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                </FormField>
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: '6px',
+                  marginTop: '12px',
+                  padding: '8px 10px',
+                  background: 'rgba(232,50,26,0.06)',
+                  borderRadius: '8px',
+                }}>
+                  <span style={{ fontSize: '10px', color: '#666', lineHeight: 1.5 }}>
+                    Paste your Google Business review URL. Customers will be directed here to leave a review.
+                  </span>
+                </div>
+              </div>
             </div>
 
             <div style={{
@@ -238,8 +307,8 @@ export default function MenuEditor() {
               <FormField label="DESCRIPTION">
                 <textarea value={newItem.desc} onChange={e => setNewItem(p => ({ ...p, desc: e.target.value }))} placeholder="Describe the dish..." rows={3} style={{ ...inputStyle, resize: 'vertical' }} />
               </FormField>
-              <FormField label="PRICE ($)">
-                <input type="number" value={newItem.price} onChange={e => setNewItem(p => ({ ...p, price: e.target.value }))} placeholder="0.00" style={inputStyle} />
+              <FormField label="PRICE (₹)">
+                <input type="number" value={newItem.price} onChange={e => setNewItem(p => ({ ...p, price: e.target.value }))} placeholder="0" style={inputStyle} />
               </FormField>
               <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                 {['Popular', 'Gluten Free', 'Vegetarian', 'Seasonal'].map(tag => {
