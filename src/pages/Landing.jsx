@@ -28,33 +28,7 @@ export default function Landing() {
           EXZI<span style={{ color: '#E8321A' }}>BO</span>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-          {['Dashboard', 'Experience', 'Analytics'].map((item, i) => (
-            <button
-              key={item}
-              onClick={() => {
-                if (item === 'Dashboard') navigate('/dashboard')
-                else if (item === 'Analytics') navigate('/analytics')
-              }}
-              style={{
-                padding: '8px 18px',
-                background: 'transparent',
-                border: i === 0 || i === 2 ? '1px dashed rgba(232,50,26,0.4)' : 'none',
-                borderRadius: '6px',
-                color: '#ccc',
-                fontSize: '13px',
-                fontWeight: 600,
-                letterSpacing: '0.06em',
-                cursor: 'pointer',
-                transition: 'all 0.2s',
-              }}
-              onMouseEnter={e => { e.currentTarget.style.color = '#fff'; e.currentTarget.style.borderColor = '#E8321A' }}
-              onMouseLeave={e => { e.currentTarget.style.color = '#ccc'; e.currentTarget.style.borderColor = i === 0 || i === 2 ? 'rgba(232,50,26,0.4)' : 'transparent' }}
-            >
-              {item}
-            </button>
-          ))}
-        </div>
+        <div />
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
           <div style={{
