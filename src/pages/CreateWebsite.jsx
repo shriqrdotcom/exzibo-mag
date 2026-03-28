@@ -37,7 +37,7 @@ export default function CreateWebsite() {
           borderRadius: '8px',
           fontSize: '14px', fontWeight: 900, letterSpacing: '0.1em',
         }}>
-          CRIMSON<span style={{ color: '#E8321A' }}>LUXE</span>
+          EXZI<span style={{ color: '#E8321A' }}>BO</span>
         </div>
       </div>
 

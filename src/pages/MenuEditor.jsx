@@ -32,7 +32,7 @@ export default function MenuEditor() {
   const [activeTab, setActiveTab] = useState('starters')
   const [isActive, setIsActive] = useState(true)
   const [menuItems, setMenuItems] = useState(initialMenuItems)
-  const [restInfo, setRestInfo] = useState({ name: 'Crimson Luxe Brasserie', tables: 24, website: 'https://www.crimsonluxe.com', facebook: 'crimson.luxe.official', instagram: '@crimsonluxe', twitter: '@crimsonluxe_x', googleReview: '' })
+  const [restInfo, setRestInfo] = useState({ name: 'Exzibo Brasserie', tables: 24, website: 'https://www.exzibo.com', facebook: 'exzibo.official', instagram: '@exzibo', twitter: '@exzibo_x', googleReview: '' })
   const [showAddModal, setShowAddModal] = useState(false)
   const [newItem, setNewItem] = useState({ name: '', desc: '', price: '', tags: [] })
   const [editingId, setEditingId] = useState(null)

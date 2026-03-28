@@ -4,7 +4,7 @@ import AdminHeader from '../components/AdminHeader'
 import { Lock, Shield, Smartphone, Save, X, ChevronDown } from 'lucide-react'
 
 export default function Settings() {
-  const [profile, setProfile] = useState({ name: 'Julian Vercetti', email: 'j.vercetti@crimsonluxe.c', role: 'General Manager', company: 'Crimson Luxe Group' })
+  const [profile, setProfile] = useState({ name: 'Julian Vercetti', email: 'j.vercetti@exzibo.com', role: 'General Manager', company: 'Exzibo Group' })
   const [twoFactor, setTwoFactor] = useState(true)
   const [theme, setTheme] = useState('dark')
   const [language, setLanguage] = useState('English')

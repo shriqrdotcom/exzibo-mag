@@ -25,7 +25,7 @@ export default function Landing() {
         borderBottom: '1px solid rgba(255,255,255,0.05)',
       }}>
         <div style={{ fontSize: '20px', fontWeight: 900, letterSpacing: '0.05em' }}>
-          CRIMSON<span style={{ color: '#E8321A' }}>LUXE</span>
+          EXZI<span style={{ color: '#E8321A' }}>BO</span>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>

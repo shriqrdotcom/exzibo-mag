@@ -28,7 +28,7 @@ export default function Sidebar() {
     }}>
       <div style={{ marginBottom: '40px', paddingLeft: '8px' }}>
         <div style={{ fontSize: '20px', fontWeight: 900, letterSpacing: '0.05em', color: '#fff' }}>
-          CRIMSON<span style={{ color: '#E8321A' }}>LUXE</span>
+          EXZI<span style={{ color: '#E8321A' }}>BO</span>
         </div>
         <div style={{ fontSize: '10px', fontWeight: 500, letterSpacing: '0.2em', color: '#555', marginTop: '4px', textTransform: 'uppercase' }}>
           Premium Management
