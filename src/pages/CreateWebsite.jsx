@@ -12,9 +12,19 @@ export default function CreateWebsite() {
     if (!form.name) return
     setCreating(true)
     setTimeout(() => {
+      const existing = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
+      const newRestaurant = {
+        id: Date.now().toString(),
+        name: form.name,
+        owner: form.owner,
+        tables: form.tables,
+        status: 'active',
+        createdAt: new Date().toISOString(),
+      }
+      localStorage.setItem('exzibo_restaurants', JSON.stringify([...existing, newRestaurant]))
       setCreating(false)
       setSuccess(true)
-      setTimeout(() => navigate('/dashboard'), 2000)
+      setTimeout(() => navigate('/restaurants'), 2000)
     }, 2000)
   }
 
@@ -67,7 +77,7 @@ export default function CreateWebsite() {
         }}>
           <div style={{ fontSize: '40px', marginBottom: '16px' }}>✓</div>
           <div style={{ fontSize: '20px', fontWeight: 700, color: '#4ade80', marginBottom: '8px' }}>Website Created!</div>
-          <div style={{ fontSize: '14px', color: '#666' }}>Redirecting to dashboard...</div>
+          <div style={{ fontSize: '14px', color: '#666' }}>Redirecting to My Restaurants...</div>
         </div>
       ) : (
         <div style={{

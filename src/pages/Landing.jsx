@@ -122,7 +122,7 @@ export default function Landing() {
           <CTAButton onClick={() => navigate('/dashboard')} icon={<ArrowRight size={15} />} primary>
             OPEN DASHBOARD
           </CTAButton>
-          <CTAButton onClick={() => navigate('/menu-editor')} icon={<Utensils size={15} />}>
+          <CTAButton onClick={() => navigate('/restaurants')} icon={<Utensils size={15} />}>
             VIEW CUSTOMER MENU
           </CTAButton>
           <CTAButton onClick={() => navigate('/create-website')} icon={<Wrench size={15} />} dashed>
