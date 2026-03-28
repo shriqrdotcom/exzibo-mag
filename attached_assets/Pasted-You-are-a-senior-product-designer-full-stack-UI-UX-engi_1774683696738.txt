@@ -1,0 +1,204 @@
+You are a senior product designer + full-stack UI/UX engineer + creative director specializing in luxury SaaS platforms.
+
+Your task: Build a high-end, dark-themed restaurant management web platform called "CRIMSONLUXE" with a cinematic, premium aesthetic and enterprise-grade functionality.
+
+---
+
+## CORE PRODUCT VISION
+
+Create a luxury restaurant management ecosystem that combines:
+- Admin dashboard (analytics + operations)
+- Menu editor (real-time updates)
+- Public-facing restaurant experience (optional)
+- Brand identity: "precision dining, elite performance"
+
+Design language:
+- Dark UI (obsidian/black base)
+- Accent: glowing crimson red
+- Soft gradients, glassmorphism, depth
+- Premium typography (bold, wide tracking, modern)
+- Subtle animations (hover glow, pulse, transitions)
+
+---
+
+## SITE STRUCTURE
+
+### 1. LANDING PAGE (Hero Experience)
+- Full-width cinematic hero
+- Headline: “THE ART OF PRECISION DINING.”
+- Subtext: refined, minimal luxury tone
+- Status badge: “Live Management Active”
+- CTA buttons:
+  - Open Dashboard
+  - View Customer Menu
+  - Create Your Website
+
+Top navigation:
+- Dashboard
+- Experience
+- Analytics
+- Search bar
+- Notification + profile icons
+
+---
+
+### 2. ADMIN DASHBOARD
+
+Layout:
+- Left sidebar navigation:
+  - Dashboard
+  - Menu Editor
+  - Analytics
+  - Settings
+- Main panel: cards + data table
+
+Components:
+- KPI Cards:
+  - Active Operations (with % growth)
+  - Total Revenue
+  - Avg Ticket
+- Enterprise Partners Table:
+  Columns:
+  - Restaurant UID
+  - Status (Running / Pending)
+  - Activation Date
+  - Total Tables
+  - Total Payment
+  - Actions (Edit Menu)
+
+Features:
+- Pagination
+- Filter + Export
+- Status indicators (glowing dots)
+
+---
+
+### 3. MENU EDITOR (CORE FEATURE)
+
+Purpose: Real-time restaurant menu control
+
+Layout:
+- Header: “Menu Editor”
+- Toggle: Active / Pause
+- Paste UID button
+
+Left Panel:
+- General Info:
+  - Restaurant Name
+  - Table Count
+  - Status (Online)
+- Presence & Reach:
+  - Website URL
+  - Social links (Facebook, Instagram, X)
+
+Main Panel:
+- Category Tabs:
+  - Starters
+  - Main Course
+  - Drinks
+
+Menu Items:
+Each item includes:
+- Image
+- Name
+- Description
+- Price
+- Tags (Popular, Gluten Free, Vegetarian, Seasonal)
+- Edit/Delete icons
+
+Floating action button:
+- Add New Item (+)
+
+---
+
+### 4. ANALYTICS SECTION
+
+Components:
+- Revenue Growth Trends (chart)
+- Category Split visualization
+- Toggle: Daily / Weekly
+
+Style:
+- Smooth animated graphs
+- Glowing data lines
+
+---
+
+## DESIGN SYSTEM
+
+Colors:
+- Background: #0A0A0A / deep black
+- Primary Accent: Crimson red (#FF3B30 style glow)
+- Secondary: muted gray gradients
+
+UI Elements:
+- Rounded cards (20–30px radius)
+- Soft shadows + inner glow
+- Glass blur panels
+- Neon edge highlights on hover
+
+Buttons:
+- Pill-shaped
+- Red glow on hover
+- Micro-interactions
+
+Typography:
+- Bold headings (large, spaced)
+- Clean sans-serif body
+- High contrast readability
+
+---
+
+## INTERACTIONS & ANIMATIONS
+
+- Smooth page transitions
+- Hover glow effects
+- Floating action buttons
+- Real-time updates in menu editor
+- Subtle loading animations
+
+---
+
+## FUNCTIONAL REQUIREMENTS
+
+- Responsive (desktop-first, tablet adaptive)
+- Modular component system
+- Clean state management
+- Scalable architecture
+
+Optional (if supported):
+- Live data simulation
+- Editable CMS-like menu system
+- Multi-restaurant management
+
+---
+
+## OUTPUT FORMAT
+
+Generate:
+1. Full UI layout structure
+2. Component hierarchy
+3. Styling system (tokens, colors, spacing)
+4. Interaction behaviors
+5. Page-by-page breakdown
+6. Optional: code-ready structure (React or similar)
+
+---
+
+## TONE & STYLE
+
+Everything should feel:
+- Premium
+- Minimal
+- Powerful
+- Precise
+- Futuristic luxury SaaS
+
+Avoid:
+- Clutter
+- Bright/light themes
+- Playful or casual styling
+
+---
+
+Deliver a complete, production-quality design system and UI implementation plan.
