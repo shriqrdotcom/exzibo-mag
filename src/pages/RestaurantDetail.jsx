@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, Utensils, LayoutGrid, BarChart2, Settings, Users, Edit3 } from 'lucide-react'
+import { ArrowLeft, Utensils, LayoutGrid, BarChart2, Settings, Users, Edit3, ExternalLink } from 'lucide-react'
 
 export default function RestaurantDetail() {
   const { id } = useParams()
@@ -60,33 +60,38 @@ export default function RestaurantDetail() {
 
       <div style={{ padding: '60px 48px', maxWidth: '1100px', margin: '0 auto' }}>
         <div style={{
-          display: 'flex', alignItems: 'center', gap: '24px', marginBottom: '60px',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          gap: '24px', marginBottom: '60px', flexWrap: 'wrap',
         }}>
-          <div style={{
-            width: '72px', height: '72px',
-            borderRadius: '20px',
-            background: 'rgba(232,50,26,0.15)',
-            border: '1px solid rgba(232,50,26,0.3)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: '24px', fontWeight: 900, color: '#E8321A',
-          }}>
-            {initials}
-          </div>
-          <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
             <div style={{
-              fontSize: '11px', fontWeight: 700, letterSpacing: '0.2em',
-              color: '#E8321A', textTransform: 'uppercase', marginBottom: '6px',
+              width: '72px', height: '72px',
+              borderRadius: '20px',
+              background: 'rgba(232,50,26,0.15)',
+              border: '1px solid rgba(232,50,26,0.3)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: '24px', fontWeight: 900, color: '#E8321A',
             }}>
-              Restaurant
+              {initials}
             </div>
-            <h1 style={{ fontSize: 'clamp(28px, 4vw, 44px)', fontWeight: 900, lineHeight: 1.05, marginBottom: '6px' }}>
-              {restaurant.name}
-            </h1>
-            <div style={{ fontSize: '13px', color: '#555' }}>
-              {restaurant.owner ? `Owned by ${restaurant.owner}` : 'No owner set'}&nbsp;&nbsp;·&nbsp;&nbsp;
-              {restaurant.tables ? `${restaurant.tables} tables` : 'Tables not set'}
+            <div>
+              <div style={{
+                fontSize: '11px', fontWeight: 700, letterSpacing: '0.2em',
+                color: '#E8321A', textTransform: 'uppercase', marginBottom: '6px',
+              }}>
+                Restaurant
+              </div>
+              <h1 style={{ fontSize: 'clamp(28px, 4vw, 44px)', fontWeight: 900, lineHeight: 1.05, marginBottom: '6px' }}>
+                {restaurant.name}
+              </h1>
+              <div style={{ fontSize: '13px', color: '#555' }}>
+                {restaurant.owner ? `Owned by ${restaurant.owner}` : 'No owner set'}&nbsp;&nbsp;·&nbsp;&nbsp;
+                {restaurant.tables ? `${restaurant.tables} tables` : 'Tables not set'}
+              </div>
             </div>
           </div>
+
+          <VisitButton restaurantName={restaurant.name} />
         </div>
 
         <div style={{
@@ -182,5 +187,37 @@ function DetailItem({ label, value, highlight }) {
         {value}
       </div>
     </div>
+  )
+}
+
+function VisitButton({ restaurantName }) {
+  const [hovered, setHovered] = useState(false)
+  const slug = restaurantName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
+
+  return (
+    <a
+      href={`https://${slug}.exzibo.com`}
+      target="_blank"
+      rel="noopener noreferrer"
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        display: 'inline-flex', alignItems: 'center', gap: '10px',
+        padding: '14px 26px',
+        background: hovered ? '#E8321A' : 'transparent',
+        border: `2px solid ${hovered ? '#E8321A' : 'rgba(232,50,26,0.4)'}`,
+        borderRadius: '50px',
+        color: '#fff',
+        fontSize: '13px', fontWeight: 700, letterSpacing: '0.08em',
+        textDecoration: 'none',
+        cursor: 'pointer',
+        transition: 'all 0.25s ease',
+        boxShadow: hovered ? '0 0 30px rgba(232,50,26,0.4)' : 'none',
+        whiteSpace: 'nowrap',
+      }}
+    >
+      <ExternalLink size={15} />
+      VISIT YOUR WEBSITE
+    </a>
   )
 }
