@@ -1,8 +1,16 @@
 import React, { useState } from 'react'
-import { Bell, User, Search } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { Bell, User, Search, ArrowRight } from 'lucide-react'
 
 export default function AdminHeader({ title, subtitle, showSearch = true }) {
   const [searchVal, setSearchVal] = useState('')
+  const [focused, setFocused] = useState(false)
+  const navigate = useNavigate()
+
+  const handleSearch = () => {
+    const val = searchVal.trim()
+    if (val) navigate(`/menu-editor/${val}`)
+  }
 
   return (
     <header style={{
@@ -37,24 +45,50 @@ export default function AdminHeader({ title, subtitle, showSearch = true }) {
             alignItems: 'center',
             gap: '8px',
             background: 'rgba(255,255,255,0.04)',
-            border: '1px solid rgba(255,255,255,0.06)',
+            border: `1px solid ${focused ? 'rgba(232,50,26,0.4)' : 'rgba(255,255,255,0.06)'}`,
             borderRadius: '8px',
-            padding: '8px 14px',
-            width: '220px',
+            padding: '8px 10px 8px 14px',
+            width: '240px',
+            transition: 'border-color 0.2s',
           }}>
-            <Search size={14} color="#555" />
+            <Search size={14} color="#555" style={{ flexShrink: 0 }} />
             <input
               value={searchVal}
               onChange={e => setSearchVal(e.target.value)}
-              placeholder="Search Restaurant UID"
+              onFocus={() => setFocused(true)}
+              onBlur={() => setFocused(false)}
+              onKeyDown={e => e.key === 'Enter' && handleSearch()}
+              placeholder="Paste Restaurant UID..."
               style={{
                 background: 'transparent',
                 border: 'none',
                 color: '#999',
                 fontSize: '13px',
-                width: '100%',
+                flex: 1,
+                minWidth: 0,
+                outline: 'none',
               }}
             />
+            {searchVal && (
+              <button
+                onClick={handleSearch}
+                style={{
+                  background: '#E8321A',
+                  border: 'none',
+                  borderRadius: '5px',
+                  color: '#fff',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  padding: '4px 6px',
+                  flexShrink: 0,
+                  transition: 'box-shadow 0.2s',
+                }}
+                onMouseEnter={e => e.currentTarget.style.boxShadow = '0 0 10px rgba(232,50,26,0.5)'}
+                onMouseLeave={e => e.currentTarget.style.boxShadow = 'none'}
+              >
+                <ArrowRight size={12} />
+              </button>
+            )}
           </div>
         )}
 

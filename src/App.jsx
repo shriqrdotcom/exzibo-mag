@@ -16,6 +16,7 @@ export default function App() {
         <Route path="/" element={<Landing />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/menu-editor" element={<MenuEditor />} />
+        <Route path="/menu-editor/:uid" element={<MenuEditor />} />
         <Route path="/analytics" element={<Analytics />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/create-website" element={<CreateWebsite />} />

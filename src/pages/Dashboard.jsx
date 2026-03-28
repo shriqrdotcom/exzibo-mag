@@ -134,7 +134,7 @@ export default function Dashboard() {
                       <td style={{ padding: '20px 28px', color: '#ccc', fontSize: '14px', fontWeight: 600 }}>{r.tables}</td>
                       <td style={{ padding: '20px 28px', color: '#ccc', fontSize: '14px', fontWeight: 600 }}>{r.payment}</td>
                       <td style={{ padding: '20px 28px' }}>
-                        <EditMenuBtn onClick={() => navigate('/menu-editor')} active={r.status === 'RUNNING'} />
+                        <EditMenuBtn onClick={() => navigate(`/menu-editor/${r.uid}`)} active={r.status === 'RUNNING'} />
                       </td>
                     </tr>
                   )

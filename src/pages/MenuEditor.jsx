@@ -1,4 +1,5 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
+import { useParams } from 'react-router-dom'
 import Sidebar from '../components/Sidebar'
 import AdminHeader from '../components/AdminHeader'
 import { Globe, Share2, AtSign, MessageCircle, Edit2, Trash2, Plus, Info, Copy, Star, ExternalLink } from 'lucide-react'
@@ -29,6 +30,7 @@ const tagColors = {
 }
 
 export default function MenuEditor() {
+  const { uid } = useParams()
   const [activeTab, setActiveTab] = useState('starters')
   const [isActive, setIsActive] = useState(true)
   const [menuItems, setMenuItems] = useState(initialMenuItems)
@@ -36,6 +38,30 @@ export default function MenuEditor() {
   const [showAddModal, setShowAddModal] = useState(false)
   const [newItem, setNewItem] = useState({ name: '', desc: '', price: '', tags: [] })
   const [editingId, setEditingId] = useState(null)
+  const [resolvedName, setResolvedName] = useState(null)
+  const [notFound, setNotFound] = useState(false)
+
+  useEffect(() => {
+    if (!uid) return
+    const all = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
+    const match = all.find(r => r.id === uid)
+    if (match) {
+      setResolvedName(match.name)
+      setRestInfo(prev => ({
+        ...prev,
+        name: match.name,
+        tables: parseInt(match.tables) || prev.tables,
+        website: match.socialLinks?.website || prev.website,
+        facebook: match.socialLinks?.facebook || prev.facebook,
+        instagram: match.socialLinks?.instagram || prev.instagram,
+        twitter: match.socialLinks?.twitter || prev.twitter,
+      }))
+      setIsActive(match.status === 'active')
+      setNotFound(false)
+    } else {
+      setNotFound(true)
+    }
+  }, [uid])
 
   const tabMap = { starters: 'starters', mains: 'mains', drinks: 'drinks' }
   const tabLabels = [
@@ -65,11 +91,29 @@ export default function MenuEditor() {
     <div style={{ display: 'flex', height: '100vh', background: '#0A0A0A', overflow: 'hidden' }}>
       <Sidebar />
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        <AdminHeader subtitle="Menu Configuration" />
+        <AdminHeader subtitle={resolvedName ? `Menu · ${resolvedName}` : uid ? `Menu · UID ${uid}` : 'Menu Configuration'} />
         <main style={{ flex: 1, overflowY: 'auto', padding: '32px' }}>
+          {notFound && (
+            <div style={{
+              background: 'rgba(232,50,26,0.06)',
+              border: '1px solid rgba(232,50,26,0.2)',
+              borderRadius: '14px',
+              padding: '16px 20px',
+              marginBottom: '24px',
+              display: 'flex', alignItems: 'center', gap: '10px',
+            }}>
+              <span style={{ fontSize: '18px' }}>⚠️</span>
+              <div>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: '#E8321A', marginBottom: '2px' }}>Restaurant Not Found</div>
+                <div style={{ fontSize: '12px', color: '#666' }}>UID <code style={{ color: '#aaa' }}>{uid}</code> doesn't match any restaurant in your account. Editing default template instead.</div>
+              </div>
+            </div>
+          )}
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '32px', flexWrap: 'wrap', gap: '16px' }}>
             <div>
-              <h1 style={{ fontSize: '36px', fontWeight: 800, marginBottom: '8px' }}>Menu Editor</h1>
+              <h1 style={{ fontSize: '36px', fontWeight: 800, marginBottom: '8px' }}>
+                {resolvedName ? resolvedName : 'Menu Editor'}
+              </h1>
               <p style={{ color: '#666', fontSize: '14px', maxWidth: '380px', lineHeight: 1.6 }}>
                 Orchestrate your culinary offerings with precision. Changes are reflected in real-time across all guest interfaces.
               </p>
