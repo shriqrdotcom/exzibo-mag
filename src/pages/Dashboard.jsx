@@ -1,19 +1,43 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Sidebar from '../components/Sidebar'
 import AdminHeader from '../components/AdminHeader'
 import { TrendingUp, Filter, Download, ChevronLeft, ChevronRight, Plus } from 'lucide-react'
 
-const restaurants = [
+const STATIC_RESTAURANTS = [
   { uid: '8472910472', name: 'THE GLOBAL FORK', status: 'RUNNING', date: 'Oct 24, 2023', tables: 42, payment: '₹11,92,400', avatar: 'TG' },
   { uid: '9203847561', name: 'VELVET LOUNGE', status: 'PENDING', date: 'Nov 12, 2023', tables: 18, payment: '₹0.00', avatar: 'VL' },
   { uid: '1049283746', name: 'KAI KITCHEN', status: 'RUNNING', date: 'Dec 05, 2023', tables: 112, payment: '₹43,50,820', avatar: 'KK' },
   { uid: '5561029384', name: 'SIMON PIZZERIA', status: 'RUNNING', date: 'Jan 14, 2024', tables: 24, payment: '₹7,46,400', avatar: 'SP' },
 ]
 
+function getAvatarFromName(name) {
+  return name.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase()
+}
+
+function formatDate(iso) {
+  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })
+}
+
 export default function Dashboard() {
   const navigate = useNavigate()
   const [currentPage, setCurrentPage] = useState(1)
+  const [restaurants, setRestaurants] = useState(STATIC_RESTAURANTS)
+
+  useEffect(() => {
+    const saved = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
+    const mapped = saved.map(r => ({
+      uid: r.id,
+      name: r.name.toUpperCase(),
+      status: r.status === 'active' ? 'RUNNING' : r.status === 'paused' ? 'PAUSED' : 'PENDING',
+      date: formatDate(r.createdAt),
+      tables: parseInt(r.tables) || 0,
+      payment: '₹0.00',
+      avatar: getAvatarFromName(r.name),
+      isNew: true,
+    }))
+    setRestaurants([...mapped, ...STATIC_RESTAURANTS])
+  }, [])
 
   return (
     <div style={{ display: 'flex', height: '100vh', background: '#0A0A0A', overflow: 'hidden' }}>
@@ -68,50 +92,53 @@ export default function Dashboard() {
                 </tr>
               </thead>
               <tbody>
-                {restaurants.map((r, i) => (
-                  <tr key={r.uid} style={{
-                    borderBottom: i < restaurants.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none',
-                    transition: 'background 0.2s',
-                  }}
-                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.02)'}
-                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                  >
-                    <td style={{ padding: '20px 28px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <div style={{
-                          width: '36px', height: '36px', borderRadius: '10px',
-                          background: 'linear-gradient(135deg, #333, #222)',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          fontSize: '10px', fontWeight: 700, color: '#888',
-                        }}>{r.avatar}</div>
-                        <div>
-                          <div style={{ fontSize: '14px', fontWeight: 700 }}>{r.uid}</div>
-                          <div style={{ fontSize: '11px', color: '#555', marginTop: '2px' }}>{r.name}</div>
+                {restaurants.map((r, i) => {
+                  const dotColor = r.status === 'RUNNING' ? '#E8321A' : r.status === 'PAUSED' ? '#FFB800' : '#555'
+                  const labelColor = r.status === 'RUNNING' ? '#E8321A' : r.status === 'PAUSED' ? '#FFB800' : '#666'
+                  return (
+                    <tr key={r.uid + i} style={{
+                      borderBottom: i < restaurants.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none',
+                      transition: 'background 0.2s',
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.02)'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                    >
+                      <td style={{ padding: '20px 28px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                          <div style={{
+                            width: '36px', height: '36px', borderRadius: '10px',
+                            background: r.isNew ? 'rgba(232,50,26,0.15)' : 'linear-gradient(135deg, #333, #222)',
+                            border: r.isNew ? '1px solid rgba(232,50,26,0.25)' : 'none',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontSize: '10px', fontWeight: 700,
+                            color: r.isNew ? '#E8321A' : '#888',
+                          }}>{r.avatar}</div>
+                          <div>
+                            <div style={{ fontSize: '13px', fontWeight: 700 }}>{r.uid}</div>
+                            <div style={{ fontSize: '11px', color: '#555', marginTop: '2px' }}>{r.name}</div>
+                          </div>
                         </div>
-                      </div>
-                    </td>
-                    <td style={{ padding: '20px 28px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
-                        <span style={{
-                          width: '7px', height: '7px', borderRadius: '50%',
-                          background: r.status === 'RUNNING' ? '#E8321A' : '#555',
-                          boxShadow: r.status === 'RUNNING' ? '0 0 8px #E8321A' : 'none',
-                          display: 'inline-block',
-                        }} />
-                        <span style={{
-                          fontSize: '12px', fontWeight: 600,
-                          color: r.status === 'RUNNING' ? '#E8321A' : '#666',
-                        }}>{r.status}</span>
-                      </div>
-                    </td>
-                    <td style={{ padding: '20px 28px', color: '#888', fontSize: '13px' }}>{r.date}</td>
-                    <td style={{ padding: '20px 28px', color: '#ccc', fontSize: '14px', fontWeight: 600 }}>{r.tables}</td>
-                    <td style={{ padding: '20px 28px', color: '#ccc', fontSize: '14px', fontWeight: 600 }}>{r.payment}</td>
-                    <td style={{ padding: '20px 28px' }}>
-                      <EditMenuBtn onClick={() => navigate('/menu-editor')} active={r.status === 'RUNNING'} />
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td style={{ padding: '20px 28px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
+                          <span style={{
+                            width: '7px', height: '7px', borderRadius: '50%',
+                            background: dotColor,
+                            boxShadow: r.status !== 'PENDING' ? `0 0 8px ${dotColor}` : 'none',
+                            display: 'inline-block',
+                          }} />
+                          <span style={{ fontSize: '12px', fontWeight: 600, color: labelColor }}>{r.status}</span>
+                        </div>
+                      </td>
+                      <td style={{ padding: '20px 28px', color: '#888', fontSize: '13px' }}>{r.date}</td>
+                      <td style={{ padding: '20px 28px', color: '#ccc', fontSize: '14px', fontWeight: 600 }}>{r.tables}</td>
+                      <td style={{ padding: '20px 28px', color: '#ccc', fontSize: '14px', fontWeight: 600 }}>{r.payment}</td>
+                      <td style={{ padding: '20px 28px' }}>
+                        <EditMenuBtn onClick={() => navigate('/menu-editor')} active={r.status === 'RUNNING'} />
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
 
@@ -122,7 +149,7 @@ export default function Dashboard() {
               padding: '18px 28px',
               borderTop: '1px solid rgba(255,255,255,0.05)',
             }}>
-              <span style={{ fontSize: '12px', color: '#555' }}>Showing 4 of 284 restaurants</span>
+              <span style={{ fontSize: '12px', color: '#555' }}>Showing {restaurants.length} restaurants</span>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <PageBtn icon={<ChevronLeft size={14} />} onClick={() => setCurrentPage(p => Math.max(1, p - 1))} />
                 {[1, 2, 3].map(p => (
@@ -143,19 +170,21 @@ export default function Dashboard() {
         </main>
       </div>
 
-      <button style={{
-        position: 'fixed', bottom: '28px', right: '28px',
-        width: '52px', height: '52px', borderRadius: '50%',
-        background: '#E8321A',
-        border: 'none',
-        color: '#fff',
-        cursor: 'pointer',
-        boxShadow: '0 0 30px rgba(232,50,26,0.5)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        transition: 'transform 0.2s, box-shadow 0.2s',
-      }}
-      onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.08)'; e.currentTarget.style.boxShadow = '0 0 40px rgba(232,50,26,0.7)' }}
-      onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.boxShadow = '0 0 30px rgba(232,50,26,0.5)' }}
+      <button
+        onClick={() => navigate('/create-website')}
+        style={{
+          position: 'fixed', bottom: '28px', right: '28px',
+          width: '52px', height: '52px', borderRadius: '50%',
+          background: '#E8321A',
+          border: 'none',
+          color: '#fff',
+          cursor: 'pointer',
+          boxShadow: '0 0 30px rgba(232,50,26,0.5)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          transition: 'transform 0.2s, box-shadow 0.2s',
+        }}
+        onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.08)'; e.currentTarget.style.boxShadow = '0 0 40px rgba(232,50,26,0.7)' }}
+        onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.boxShadow = '0 0 30px rgba(232,50,26,0.5)' }}
       >
         <Plus size={22} />
       </button>
