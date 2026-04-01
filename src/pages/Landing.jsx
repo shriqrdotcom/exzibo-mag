@@ -122,16 +122,8 @@ export default function Landing() {
           <CTAButton onClick={() => navigate('/dashboard')} icon={<ArrowRight size={15} />} primary>
             OPEN DASHBOARD
           </CTAButton>
-          <CTAButton onClick={() => {
-            const saved = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
-            const first = saved.find(r => r.status === 'active') || saved[0]
-            if (first) {
-              window.open(`/restaurant/${first.slug || first.id}`, '_blank')
-            } else {
-              navigate('/restaurant/demo')
-            }
-          }} icon={<Utensils size={15} />}>
-            VIEW CUSTOMER MENU
+          <CTAButton onClick={() => navigate('/restaurants')} icon={<Utensils size={15} />}>
+            MY RESTAURANTS
           </CTAButton>
           <CTAButton onClick={() => navigate('/create-website')} icon={<Wrench size={15} />} dashed>
             CREATE YOUR WEBSITE
