@@ -91,7 +91,7 @@ export default function RestaurantDetail() {
             </div>
           </div>
 
-          <VisitButton restaurantId={restaurant.id} />
+          <VisitButton restaurant={restaurant} />
         </div>
 
         <div style={{
@@ -190,12 +190,13 @@ function DetailItem({ label, value, highlight }) {
   )
 }
 
-function VisitButton({ restaurantId }) {
+function VisitButton({ restaurant }) {
   const [hovered, setHovered] = useState(false)
+  const urlKey = restaurant.slug || restaurant.id
 
   return (
     <a
-      href={`/r/${restaurantId}`}
+      href={`/r/${urlKey}`}
       target="_blank"
       rel="noopener noreferrer"
       onMouseEnter={() => setHovered(true)}

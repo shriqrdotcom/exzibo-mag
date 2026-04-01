@@ -23,7 +23,7 @@ export default function App() {
         <Route path="/create-website" element={<CreateWebsite />} />
         <Route path="/restaurants" element={<Restaurants />} />
         <Route path="/restaurant/:id" element={<RestaurantDetail />} />
-        <Route path="/r/:id" element={<RestaurantWebsite />} />
+        <Route path="/r/:slug" element={<RestaurantWebsite />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

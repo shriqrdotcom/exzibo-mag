@@ -76,15 +76,27 @@ export default function CreateWebsite() {
     return Object.keys(e).length === 0
   }
 
+  const generateSlug = (name, existingSlugs) => {
+    const base = name.toLowerCase().trim().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
+    let slug = base || 'restaurant'
+    let counter = 2
+    while (existingSlugs.includes(slug)) {
+      slug = `${base}-${counter}`
+      counter++
+    }
+    return slug
+  }
+
   const handleGenerate = () => {
     if (!validate()) return
     setSubmitting(true)
-    const data = { ...form }
-    console.log('Form data:', data)
     setTimeout(() => {
       const existing = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
+      const existingSlugs = existing.map(r => r.slug).filter(Boolean)
+      const slug = generateSlug(form.restaurantName, existingSlugs)
       const newRestaurant = {
         id: Date.now().toString(),
+        slug,
         name: form.restaurantName,
         owner: '',
         tables: form.tableNumbers.length.toString(),

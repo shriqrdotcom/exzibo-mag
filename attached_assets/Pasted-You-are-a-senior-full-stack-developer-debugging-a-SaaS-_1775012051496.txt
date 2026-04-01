@@ -1,0 +1,144 @@
+You are a senior full-stack developer debugging a SaaS restaurant platform.
+
+Current issue:
+After creating a restaurant, clicking "Visit Your Website" redirects to a dynamic URL (e.g. /restaurant/dd), but it shows:
+
+404 - Restaurant not found
+
+--------------------------------------------------
+
+🎯 GOAL:
+
+Fix dynamic routing and data fetching so that each restaurant website loads correctly.
+
+--------------------------------------------------
+
+🧠 ROOT CAUSE (likely):
+
+One or more of these is broken:
+1. Route is not defined properly
+2. Slug/ID mismatch
+3. Restaurant data is not being fetched correctly
+4. Frontend route exists but backend/API does not return data
+
+--------------------------------------------------
+
+✅ IMPLEMENT THE FIX
+
+1. 🔗 CREATE DYNAMIC ROUTE
+
+If using React Router:
+- Add route:
+
+<Route path="/restaurant/:slug" element={<RestaurantWebsite />} />
+
+--------------------------------------------------
+
+2. 🧾 PASS CORRECT SLUG
+
+When creating a restaurant:
+
+- Generate slug from name:
+  Example:
+    name: "DD Restaurant"
+    slug: "dd-restaurant"
+
+- Save slug in database
+
+--------------------------------------------------
+
+3. 🔘 FIX "VISIT YOUR WEBSITE" BUTTON
+
+Update button logic:
+
+onClick={() => {
+  window.open(`/restaurant/${restaurant.slug}`, "_blank");
+}}
+
+Make sure:
+- slug exists
+- URL matches route exactly
+
+--------------------------------------------------
+
+4. 📡 FETCH RESTAURANT DATA
+
+Inside RestaurantWebsite component:
+
+- Extract slug from URL:
+
+const { slug } = useParams();
+
+- Fetch restaurant:
+
+useEffect(() => {
+  fetch(`/api/restaurants/${slug}`)
+    .then(res => res.json())
+    .then(data => setRestaurant(data));
+}, [slug]);
+
+--------------------------------------------------
+
+5. 🛠 BACKEND ROUTE
+
+Create API endpoint:
+
+GET /api/restaurants/:slug
+
+Logic:
+- Find restaurant by slug
+- Return restaurant data
+
+Example:
+
+app.get("/api/restaurants/:slug", async (req, res) => {
+  const restaurant = await db.findOne({ slug: req.params.slug });
+
+  if (!restaurant) {
+    return res.status(404).json({ message: "Restaurant not found" });
+  }
+
+  res.json(restaurant);
+});
+
+--------------------------------------------------
+
+6. 🧱 HANDLE LOADING + ERROR
+
+In frontend:
+
+if (!restaurant) return <Loading />
+if (error) return <NotFound />
+
+--------------------------------------------------
+
+7. 🚫 REMOVE FAKE 404 TRIGGER
+
+Ensure:
+- 404 only shows when API returns not found
+- NOT because of missing route
+
+--------------------------------------------------
+
+✨ FINAL RESULT
+
+After fix:
+- Create restaurant → works
+- Click "Visit Your Website" →
+  ✅ Opens correct URL
+  ✅ Loads restaurant data
+  ✅ Displays full website (no 404)
+
+--------------------------------------------------
+
+⚠️ IMPORTANT CHECKLIST
+
+✔ Slug saved in DB  
+✔ Route path matches URL  
+✔ API endpoint exists  
+✔ Frontend fetch works  
+✔ Button uses correct slug  
+
+--------------------------------------------------
+
+Fix everything cleanly and ensure production-level behavior.

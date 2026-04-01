@@ -25,7 +25,7 @@ const BESTSELLERS_FALLBACK = [
 ]
 
 export default function RestaurantWebsite() {
-  const { id } = useParams()
+  const { slug } = useParams()
   const [restaurant, setRestaurant] = useState(null)
   const [notFound, setNotFound] = useState(false)
   const [menuItems, setMenuItems] = useState([])
@@ -40,26 +40,27 @@ export default function RestaurantWebsite() {
 
   useEffect(() => {
     const restaurants = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
-    const found = restaurants.find(r => r.id === id)
-    if (found) setRestaurant(found)
-    else setNotFound(true)
-
-    const saved = localStorage.getItem(`exzibo_menu_${id}`)
-    if (saved) {
-      const parsed = JSON.parse(saved)
-      setMenuData({
-        starters: parsed.starters || [],
-        mains: parsed.mains || [],
-        drinks: parsed.drinks || [],
-      })
-      const all = [
-        ...(parsed.starters || []),
-        ...(parsed.mains || []),
-        ...(parsed.drinks || []),
-      ]
-      setMenuItems(all)
+    const found = restaurants.find(r => r.slug === slug || r.id === slug)
+    if (found) {
+      setRestaurant(found)
+      const saved = localStorage.getItem(`exzibo_menu_${found.id}`)
+      if (saved) {
+        const parsed = JSON.parse(saved)
+        setMenuData({
+          starters: parsed.starters || [],
+          mains: parsed.mains || [],
+          drinks: parsed.drinks || [],
+        })
+        setMenuItems([
+          ...(parsed.starters || []),
+          ...(parsed.mains || []),
+          ...(parsed.drinks || []),
+        ])
+      }
+    } else {
+      setNotFound(true)
     }
-  }, [id])
+  }, [slug])
 
   useEffect(() => {
     const interval = setInterval(() => {
