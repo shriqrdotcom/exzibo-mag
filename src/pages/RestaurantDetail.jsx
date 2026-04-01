@@ -196,7 +196,7 @@ function VisitButton({ restaurant }) {
 
   return (
     <a
-      href={`/r/${urlKey}`}
+      href={`/restaurant/${urlKey}`}
       target="_blank"
       rel="noopener noreferrer"
       onMouseEnter={() => setHovered(true)}

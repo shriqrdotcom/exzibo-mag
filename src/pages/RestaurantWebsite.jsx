@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useParams } from 'react-router-dom'
 import {
-  Phone, Star, Globe,
-  ChevronLeft, ChevronRight, Home, UtensilsCrossed,
-  ShoppingCart, ClipboardList, CalendarDays, ArrowUp,
-  MapPin, ExternalLink, AtSign, Share2, MessageCircle
+  Phone, Star, Globe, ChevronLeft, ChevronRight,
+  Home, UtensilsCrossed, ShoppingCart, ClipboardList,
+  CalendarDays, MapPin, AtSign, Share2, MessageCircle,
+  Search, Bell, ChevronRight as ArrowRight, Heart,
+  Flame, Award, Leaf, Clock, Users, ExternalLink, ArrowUp
 } from 'lucide-react'
 
-const HERO_IMAGES = [
+const FALLBACK_IMAGES = [
   '/menu/wagyu-ribeye.png',
   '/menu/lobster-thermidor.png',
   '/menu/truffle-beef-carpaccio.png',
@@ -16,29 +17,64 @@ const HERO_IMAGES = [
 ]
 
 const BESTSELLERS_FALLBACK = [
-  { name: 'Truffle Beef Carpaccio', price: 2100, img: '/menu/truffle-beef-carpaccio.png', tag: 'Popular' },
-  { name: 'A5 Wagyu Ribeye', price: 15500, img: '/menu/wagyu-ribeye.png', tag: 'Chef\'s Pick' },
-  { name: 'Lobster Thermidor', price: 7950, img: '/menu/lobster-thermidor.png', tag: 'Seasonal' },
-  { name: 'Heirloom Burrata', price: 1650, img: '/menu/heirloom-burrata.png', tag: 'Vegetarian' },
-  { name: 'Noir Negroni', price: 1850, img: '/menu/noir-negroni.png', tag: 'Popular' },
-  { name: 'Forest Mushroom Risotto', price: 3500, img: '/menu/mushroom-risotto.png', tag: 'Gluten Free' },
+  { name: 'Truffle Beef Carpaccio', price: 2100, img: '/menu/truffle-beef-carpaccio.png', rating: 4.9, tag: 'Popular', tags: ['Popular'] },
+  { name: 'A5 Wagyu Ribeye', price: 15500, img: '/menu/wagyu-ribeye.png', rating: 4.8, tag: "Chef's Pick", tags: ['Popular'] },
+  { name: 'Lobster Thermidor', price: 7950, img: '/menu/lobster-thermidor.png', rating: 4.7, tag: 'Seasonal', tags: ['Seasonal'] },
+  { name: 'Heirloom Burrata', price: 1650, img: '/menu/heirloom-burrata.png', rating: 4.6, tag: 'Vegetarian', tags: ['Vegetarian'] },
+  { name: 'Noir Negroni', price: 1850, img: '/menu/noir-negroni.png', rating: 4.8, tag: 'Popular', tags: ['Popular'] },
+  { name: 'Forest Mushroom Risotto', price: 3500, img: '/menu/mushroom-risotto.png', rating: 4.5, tag: 'Gluten Free', tags: ['Gluten Free'] },
 ]
+
+const MENU_FALLBACK = {
+  starters: [
+    { name: 'Truffle Beef Carpaccio', price: 2100, img: '/menu/truffle-beef-carpaccio.png', description: 'Thin-sliced wagyu with black truffle and aged parmesan', tags: ['Popular'] },
+    { name: 'Atlantic Oysters', price: 2800, img: '/menu/atlantic-oysters.png', description: 'Half dozen with mignonette and lemon', tags: ['Seasonal'] },
+    { name: 'Heirloom Burrata', price: 1650, img: '/menu/heirloom-burrata.png', description: 'Fresh burrata with heirloom tomatoes and basil oil', tags: ['Vegetarian'] },
+  ],
+  mains: [
+    { name: 'A5 Wagyu Ribeye', price: 15500, img: '/menu/wagyu-ribeye.png', description: 'Japanese A5 Wagyu with bone marrow butter', tags: ['Popular'] },
+    { name: 'Lobster Thermidor', price: 7950, img: '/menu/lobster-thermidor.png', description: 'Whole Maine lobster in cognac cream sauce', tags: ['Seasonal'] },
+    { name: 'Forest Mushroom Risotto', price: 3500, img: '/menu/mushroom-risotto.png', description: 'Arborio rice with wild porcini and truffle oil', tags: ['Vegetarian', 'Gluten Free'] },
+  ],
+  drinks: [
+    { name: 'Noir Negroni', price: 1850, img: '/menu/noir-negroni.png', description: 'Gin, Campari, vermouth with activated charcoal', tags: ['Popular'] },
+    { name: 'Smoke & Mirrors', price: 1600, img: '/menu/noir-negroni.png', description: 'Mezcal, jalapeño, lime, smoked salt rim', tags: [] },
+  ],
+}
 
 export default function RestaurantWebsite() {
   const { slug } = useParams()
   const [restaurant, setRestaurant] = useState(null)
   const [notFound, setNotFound] = useState(false)
-  const [menuItems, setMenuItems] = useState([])
   const [menuData, setMenuData] = useState({ starters: [], mains: [], drinks: [] })
   const [activeNav, setActiveNav] = useState('home')
   const [carouselIdx, setCarouselIdx] = useState(0)
   const [showTop, setShowTop] = useState(false)
-  const carouselRef = useRef(null)
+  const [activeTab, setActiveTab] = useState('starters')
+  const [liked, setLiked] = useState({})
+
+  const heroRef = useRef(null)
   const menuRef = useRef(null)
   const aboutRef = useRef(null)
-  const scrollRef = useRef(null)
 
   useEffect(() => {
+    if (slug === 'demo') {
+      setRestaurant({
+        id: 'demo',
+        slug: 'demo',
+        name: 'La Maison Noire',
+        location: 'Cyber City, Gurugram',
+        description: 'An uncompromising culinary experience rooted in craft, quality, and atmosphere. Every dish is a conversation between heritage and innovation.',
+        chefInfo: 'Chef Marcus Aurélius, trained in Paris and Tokyo, brings 20 years of Michelin-star experience to every plate.',
+        rating: '4.9',
+        phone: '+91 98765 43210',
+        tables: '24',
+        images: FALLBACK_IMAGES,
+        socialLinks: { instagram: '#', facebook: '#', twitter: '#', website: '#' },
+      })
+      setMenuData(MENU_FALLBACK)
+      return
+    }
     const restaurants = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
     const found = restaurants.find(r => r.slug === slug || r.id === slug)
     if (found) {
@@ -47,15 +83,12 @@ export default function RestaurantWebsite() {
       if (saved) {
         const parsed = JSON.parse(saved)
         setMenuData({
-          starters: parsed.starters || [],
-          mains: parsed.mains || [],
-          drinks: parsed.drinks || [],
+          starters: parsed.starters?.length ? parsed.starters : MENU_FALLBACK.starters,
+          mains: parsed.mains?.length ? parsed.mains : MENU_FALLBACK.mains,
+          drinks: parsed.drinks?.length ? parsed.drinks : MENU_FALLBACK.drinks,
         })
-        setMenuItems([
-          ...(parsed.starters || []),
-          ...(parsed.mains || []),
-          ...(parsed.drinks || []),
-        ])
+      } else {
+        setMenuData(MENU_FALLBACK)
       }
     } else {
       setNotFound(true)
@@ -63,11 +96,14 @@ export default function RestaurantWebsite() {
   }, [slug])
 
   useEffect(() => {
+    if (!restaurant) return
+    const images = getCarouselImages(restaurant)
+    if (images.length <= 1) return
     const interval = setInterval(() => {
-      setCarouselIdx(i => (i + 1) % HERO_IMAGES.length)
-    }, 3500)
+      setCarouselIdx(i => (i + 1) % images.length)
+    }, 4000)
     return () => clearInterval(interval)
-  }, [])
+  }, [restaurant])
 
   useEffect(() => {
     const onScroll = () => setShowTop(window.scrollY > 400)
@@ -75,548 +111,675 @@ export default function RestaurantWebsite() {
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
+  const getCarouselImages = (r) => {
+    if (r?.images?.length) return r.images
+    return FALLBACK_IMAGES
+  }
+
   const scrollTo = (ref, nav) => {
     setActiveNav(nav)
     ref?.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
-  const taggedItems = menuItems.filter(m => m.tags?.includes('Popular') || m.tags?.includes('Seasonal'))
-  const bestsellers = menuItems.length > 0
-    ? (taggedItems.length > 0 ? taggedItems : menuItems).slice(0, 6)
-    : BESTSELLERS_FALLBACK
+  const allMenuItems = [...menuData.starters, ...menuData.mains, ...menuData.drinks]
+  const tagged = allMenuItems.filter(m => m.tags?.some(t => ['Popular', 'Seasonal', "Chef's Pick"].includes(t)))
+  const bestsellers = (tagged.length > 0 ? tagged : allMenuItems).slice(0, 6)
+  const activeMenuItems = menuData[activeTab] || []
 
   if (notFound) {
     return (
-      <div style={{ minHeight: '100vh', background: '#080808', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '16px' }}>
-        <div style={{ fontSize: '48px', fontWeight: 900, color: 'rgba(255,255,255,0.07)' }}>404</div>
-        <div style={{ fontSize: '16px', fontWeight: 700, color: '#555' }}>Restaurant not found</div>
-        <a href="/" style={{ fontSize: '13px', color: '#E8321A', textDecoration: 'none', fontWeight: 600 }}>← Back to home</a>
+      <div style={{ minHeight: '100vh', background: '#080808', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '16px', fontFamily: "'Inter', sans-serif" }}>
+        <div style={{ fontSize: '64px', fontWeight: 900, color: 'rgba(255,255,255,0.05)' }}>404</div>
+        <div style={{ fontSize: '18px', fontWeight: 700, color: '#444' }}>Restaurant not found</div>
+        <a href="/" style={{ fontSize: '13px', color: '#E8321A', textDecoration: 'none', fontWeight: 600, letterSpacing: '0.05em' }}>← Back to Home</a>
       </div>
     )
   }
 
   if (!restaurant) {
     return (
-      <div style={{ minHeight: '100vh', background: '#080808', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ minHeight: '100vh', background: '#080808', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Inter', sans-serif" }}>
         <div style={{ textAlign: 'center' }}>
-          <div style={{ width: '40px', height: '40px', border: '3px solid rgba(232,50,26,0.3)', borderTopColor: '#E8321A', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto 16px' }} />
+          <div style={{ width: '44px', height: '44px', border: '3px solid rgba(232,50,26,0.2)', borderTopColor: '#E8321A', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto 16px' }} />
           <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
-          <div style={{ color: '#444', fontSize: '13px' }}>Loading restaurant...</div>
+          <div style={{ color: '#555', fontSize: '13px', letterSpacing: '0.05em' }}>Loading...</div>
         </div>
       </div>
     )
   }
 
+  const carouselImages = getCarouselImages(restaurant)
+
   return (
-    <div style={{ background: '#080808', color: '#fff', minHeight: '100vh', fontFamily: "'Inter', -apple-system, sans-serif", paddingBottom: '80px' }}>
+    <div style={{
+      background: '#0A0A0A',
+      color: '#fff',
+      minHeight: '100vh',
+      fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+      paddingBottom: '80px',
+      maxWidth: '480px',
+      margin: '0 auto',
+      position: 'relative',
+    }}>
       <style>{`
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        ::-webkit-scrollbar { width: 4px; height: 4px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: rgba(232,50,26,0.4); border-radius: 4px; }
-        @keyframes slideIn { from { opacity: 0; transform: translateY(28px); } to { opacity: 1; transform: translateY(0); } }
+        ::-webkit-scrollbar { display: none; }
+        html { scroll-behavior: smooth; }
+        @keyframes spin { to { transform: rotate(360deg) } }
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes scaleIn { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }
-        @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
-        .food-card:hover .food-card-img { transform: scale(1.07); }
-        .food-card:hover { transform: translateY(-4px); box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
-        .nav-icon-btn:hover { color: #E8321A !important; }
-        .action-btn-primary:hover { background: #ff4d35 !important; box-shadow: 0 0 30px rgba(232,50,26,0.5) !important; transform: translateY(-2px); }
-        .action-btn-secondary:hover { background: rgba(255,255,255,0.1) !important; transform: translateY(-2px); }
-        .social-icon:hover { color: #E8321A !important; transform: scale(1.2); }
+        @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .food-card { transition: transform 0.25s ease, box-shadow 0.25s ease; }
+        .food-card:active { transform: scale(0.97); }
+        .menu-item-row { transition: background 0.2s ease; }
+        .menu-item-row:active { background: rgba(232,50,26,0.06) !important; }
+        .nav-btn { transition: color 0.2s ease; }
+        .section-fade { animation: fadeUp 0.5s ease both; }
+        .tab-btn { transition: all 0.25s ease; }
       `}</style>
 
-      {/* ─── HEADER ─── */}
-      <header ref={carouselRef} style={{ position: 'relative', height: '100svh', minHeight: '580px', maxHeight: '820px', overflow: 'hidden' }}>
-        {HERO_IMAGES.map((src, i) => (
-          <div key={i} style={{
-            position: 'absolute', inset: 0,
-            backgroundImage: `url(${src})`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            opacity: i === carouselIdx ? 1 : 0,
-            transition: 'opacity 1.2s ease',
-            zIndex: i === carouselIdx ? 1 : 0,
-          }} />
-        ))}
-        <div style={{
-          position: 'absolute', inset: 0, zIndex: 2,
-          background: 'linear-gradient(to bottom, rgba(8,8,8,0.55) 0%, rgba(8,8,8,0.2) 40%, rgba(8,8,8,0.85) 85%, #080808 100%)',
-        }} />
-
-        {/* Carousel dots */}
-        <div style={{ position: 'absolute', bottom: '120px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '8px', zIndex: 5 }}>
-          {HERO_IMAGES.map((_, i) => (
-            <button key={i} onClick={() => setCarouselIdx(i)} style={{
-              width: i === carouselIdx ? '24px' : '6px', height: '6px',
-              borderRadius: '3px', background: i === carouselIdx ? '#E8321A' : 'rgba(255,255,255,0.3)',
-              border: 'none', cursor: 'pointer', transition: 'all 0.35s ease', padding: 0,
-            }} />
-          ))}
-        </div>
-
-        {/* Carousel arrows */}
-        <button onClick={() => setCarouselIdx(i => (i - 1 + HERO_IMAGES.length) % HERO_IMAGES.length)} style={{
-          position: 'absolute', left: '20px', top: '50%', transform: 'translateY(-50%)',
-          background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.1)',
-          borderRadius: '50%', width: '40px', height: '40px', display: 'flex', alignItems: 'center',
-          justifyContent: 'center', color: '#fff', cursor: 'pointer', zIndex: 5, transition: 'all 0.2s',
-        }}>
-          <ChevronLeft size={18} />
-        </button>
-        <button onClick={() => setCarouselIdx(i => (i + 1) % HERO_IMAGES.length)} style={{
-          position: 'absolute', right: '20px', top: '50%', transform: 'translateY(-50%)',
-          background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.1)',
-          borderRadius: '50%', width: '40px', height: '40px', display: 'flex', alignItems: 'center',
-          justifyContent: 'center', color: '#fff', cursor: 'pointer', zIndex: 5, transition: 'all 0.2s',
-        }}>
-          <ChevronRight size={18} />
-        </button>
-
-        {/* Header content */}
-        <div style={{
-          position: 'absolute', bottom: '60px', left: 0, right: 0, zIndex: 4,
-          padding: '0 24px', textAlign: 'center',
-          animation: 'slideIn 0.8s ease both',
-        }}>
-          {restaurant.rating && (
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', background: 'rgba(255,184,0,0.15)', border: '1px solid rgba(255,184,0,0.3)', borderRadius: '20px', padding: '4px 12px', marginBottom: '14px' }}>
-              <Star size={12} fill="#FFB800" color="#FFB800" />
-              <span style={{ fontSize: '12px', fontWeight: 700, color: '#FFB800' }}>{restaurant.rating}</span>
+      {/* ── TOP BAR ── */}
+      <header style={{
+        position: 'sticky', top: 0, zIndex: 50,
+        background: 'rgba(10,10,10,0.92)',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
+        borderBottom: '1px solid rgba(255,255,255,0.05)',
+        padding: '14px 20px',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+          <div>
+            <div style={{ fontSize: '10px', color: '#555', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <MapPin size={10} color="#E8321A" />
+              {restaurant.location || 'Fine Dining'}
             </div>
-          )}
-          <h1 style={{ fontSize: 'clamp(38px, 8vw, 80px)', fontWeight: 900, lineHeight: 1, letterSpacing: '-0.02em', textShadow: '0 4px 30px rgba(0,0,0,0.7)', marginBottom: '10px' }}>
-            {restaurant.name}
-          </h1>
-          {restaurant.description && (
-            <p style={{ fontSize: 'clamp(13px, 2vw, 15px)', color: 'rgba(255,255,255,0.65)', maxWidth: '480px', margin: '0 auto 16px', lineHeight: 1.6 }}>
-              {restaurant.description.slice(0, 100)}{restaurant.description.length > 100 ? '…' : ''}
-            </p>
-          )}
-          {restaurant.location && (
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', color: 'rgba(255,255,255,0.45)', fontSize: '12px' }}>
-              <MapPin size={12} /> {restaurant.location}
+            <div style={{ fontSize: '17px', fontWeight: 800, letterSpacing: '-0.01em', lineHeight: 1.1 }}>
+              {restaurant.name}
             </div>
-          )}
-        </div>
-
-        {/* Sticky top bar */}
-        <div style={{
-          position: 'absolute', top: 0, left: 0, right: 0, zIndex: 6,
-          padding: '18px 24px',
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        }}>
-          <div style={{ fontSize: '15px', fontWeight: 900, letterSpacing: '0.1em' }}>
-            EXZI<span style={{ color: '#E8321A' }}>BO</span>
           </div>
-          {restaurant.phone && (
-            <a href={`tel:${restaurant.phone}`} style={{
-              display: 'flex', alignItems: 'center', gap: '7px',
-              background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(10px)',
-              border: '1px solid rgba(255,255,255,0.12)',
-              borderRadius: '50px', padding: '9px 18px',
-              color: '#fff', fontSize: '12px', fontWeight: 700, textDecoration: 'none',
-              transition: 'all 0.25s',
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            {restaurant.rating && (
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: '4px',
+                background: 'rgba(255,184,0,0.1)', border: '1px solid rgba(255,184,0,0.2)',
+                borderRadius: '20px', padding: '4px 10px',
+              }}>
+                <Star size={11} fill="#FFB800" color="#FFB800" />
+                <span style={{ fontSize: '12px', fontWeight: 700, color: '#FFB800' }}>{restaurant.rating}</span>
+              </div>
+            )}
+            <div style={{
+              width: '36px', height: '36px', borderRadius: '12px',
+              background: 'rgba(255,255,255,0.05)',
+              border: '1px solid rgba(255,255,255,0.08)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer',
             }}>
-              <Phone size={13} />
-              {restaurant.phone}
-            </a>
-          )}
+              <Bell size={16} color="#888" />
+            </div>
+          </div>
+        </div>
+
+        {/* Search bar */}
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: '10px',
+          background: 'rgba(255,255,255,0.04)',
+          border: '1px solid rgba(255,255,255,0.07)',
+          borderRadius: '14px', padding: '10px 14px',
+        }}>
+          <Search size={15} color="#555" />
+          <span style={{ fontSize: '13px', color: '#444', fontWeight: 500 }}>Search menu items...</span>
         </div>
       </header>
 
-      {/* ─── ACTION BUTTONS ─── */}
-      <section style={{ padding: '28px 20px', display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap', animation: 'scaleIn 0.5s ease 0.2s both' }}>
+      {/* ── HERO CAROUSEL ── */}
+      <section ref={heroRef} style={{ position: 'relative', height: '260px', overflow: 'hidden', margin: '16px' }}>
+        <div style={{ position: 'relative', height: '100%', borderRadius: '20px', overflow: 'hidden' }}>
+          {carouselImages.map((src, i) => (
+            <div key={i} style={{
+              position: 'absolute', inset: 0,
+              backgroundImage: `url(${src})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              opacity: i === carouselIdx ? 1 : 0,
+              transition: 'opacity 1s ease',
+            }} />
+          ))}
+
+          <div style={{
+            position: 'absolute', inset: 0,
+            background: 'linear-gradient(135deg, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.6) 100%)',
+            borderRadius: '20px',
+          }} />
+
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', padding: '20px' }}>
+            <div style={{
+              display: 'inline-flex', alignItems: 'center', gap: '5px',
+              background: 'rgba(232,50,26,0.9)',
+              borderRadius: '8px', padding: '4px 10px', marginBottom: '8px',
+              width: 'fit-content',
+            }}>
+              <Flame size={11} color="#fff" />
+              <span style={{ fontSize: '10px', fontWeight: 800, color: '#fff', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                Premium Dining
+              </span>
+            </div>
+            <div style={{ fontSize: '22px', fontWeight: 900, lineHeight: 1.15, textShadow: '0 2px 12px rgba(0,0,0,0.8)', marginBottom: '6px' }}>
+              An Unforgettable<br />Culinary Experience
+            </div>
+            <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.7)', lineHeight: 1.4 }}>
+              {restaurant.description?.slice(0, 60) || 'Crafted with passion, served with precision'}
+              {(restaurant.description?.length || 0) > 60 ? '…' : ''}
+            </div>
+          </div>
+
+          {/* Carousel nav arrows */}
+          {carouselImages.length > 1 && (
+            <>
+              <button
+                onClick={() => setCarouselIdx(i => (i - 1 + carouselImages.length) % carouselImages.length)}
+                style={{
+                  position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)',
+                  background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(8px)',
+                  border: '1px solid rgba(255,255,255,0.12)', borderRadius: '50%',
+                  width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  color: '#fff', cursor: 'pointer',
+                }}
+              >
+                <ChevronLeft size={16} />
+              </button>
+              <button
+                onClick={() => setCarouselIdx(i => (i + 1) % carouselImages.length)}
+                style={{
+                  position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)',
+                  background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(8px)',
+                  border: '1px solid rgba(255,255,255,0.12)', borderRadius: '50%',
+                  width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  color: '#fff', cursor: 'pointer',
+                }}
+              >
+                <ChevronRight size={16} />
+              </button>
+            </>
+          )}
+
+          {/* Dots */}
+          {carouselImages.length > 1 && (
+            <div style={{ position: 'absolute', bottom: '12px', right: '16px', display: 'flex', gap: '5px' }}>
+              {carouselImages.map((_, i) => (
+                <button key={i} onClick={() => setCarouselIdx(i)} style={{
+                  width: i === carouselIdx ? '18px' : '5px', height: '5px',
+                  borderRadius: '3px', background: i === carouselIdx ? '#fff' : 'rgba(255,255,255,0.4)',
+                  border: 'none', cursor: 'pointer', transition: 'all 0.3s ease', padding: 0,
+                }} />
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* ── ACTION BUTTONS ── */}
+      <section style={{ padding: '4px 16px 20px', display: 'flex', gap: '10px' }}>
         <button
-          className="action-btn-primary"
           onClick={() => scrollTo(menuRef, 'menu')}
           style={{
-            display: 'flex', alignItems: 'center', gap: '10px',
-            background: '#E8321A', border: 'none', borderRadius: '50px',
-            padding: '15px 32px', color: '#fff', fontSize: '14px', fontWeight: 800,
-            cursor: 'pointer', letterSpacing: '0.05em', transition: 'all 0.25s ease',
-            boxShadow: '0 8px 25px rgba(232,50,26,0.35)',
+            flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+            background: '#E8321A', border: 'none', borderRadius: '14px',
+            padding: '14px', color: '#fff', fontSize: '13px', fontWeight: 700,
+            cursor: 'pointer', letterSpacing: '0.03em',
+            boxShadow: '0 6px 20px rgba(232,50,26,0.4)',
           }}
         >
           <UtensilsCrossed size={16} />
-          VIEW MENU
+          View Menu
         </button>
-        {restaurant.phone && (
+        {restaurant.phone ? (
           <a
             href={`tel:${restaurant.phone}`}
-            className="action-btn-secondary"
             style={{
-              display: 'flex', alignItems: 'center', gap: '10px',
-              background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)',
-              borderRadius: '50px', padding: '15px 32px', color: '#fff', fontSize: '14px',
-              fontWeight: 800, cursor: 'pointer', letterSpacing: '0.05em', textDecoration: 'none',
-              transition: 'all 0.25s ease', backdropFilter: 'blur(8px)',
+              flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+              background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
+              borderRadius: '14px', padding: '14px', color: '#fff', fontSize: '13px',
+              fontWeight: 700, cursor: 'pointer', letterSpacing: '0.03em', textDecoration: 'none',
+              backdropFilter: 'blur(10px)',
             }}
           >
             <Phone size={16} />
-            CALL STAFF
+            Call Staff
           </a>
+        ) : (
+          <button
+            onClick={() => scrollTo(aboutRef, 'about')}
+            style={{
+              flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+              background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
+              borderRadius: '14px', padding: '14px', color: '#fff', fontSize: '13px',
+              fontWeight: 700, cursor: 'pointer', letterSpacing: '0.03em',
+            }}
+          >
+            <Users size={16} />
+            About Us
+          </button>
         )}
         {restaurant.digitalMenuLink && (
           <a
             href={restaurant.digitalMenuLink}
             target="_blank"
             rel="noopener noreferrer"
-            className="action-btn-secondary"
             style={{
-              display: 'flex', alignItems: 'center', gap: '10px',
-              background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)',
-              borderRadius: '50px', padding: '15px 32px', color: '#fff', fontSize: '14px',
-              fontWeight: 800, cursor: 'pointer', letterSpacing: '0.05em', textDecoration: 'none',
-              transition: 'all 0.25s ease', backdropFilter: 'blur(8px)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
+              borderRadius: '14px', padding: '14px 16px', color: '#fff',
+              cursor: 'pointer', textDecoration: 'none',
             }}
           >
             <ExternalLink size={16} />
-            ORDER ONLINE
           </a>
         )}
       </section>
 
-      {/* ─── BEST SELLERS ─── */}
-      <section style={{ padding: '10px 0 40px', animation: 'slideIn 0.6s ease 0.3s both' }}>
-        <SectionTitle label="Best Sellers" sub="Crowd favourites, every single time" />
-        <div ref={scrollRef} style={{
-          display: 'flex', gap: '16px', overflowX: 'auto', padding: '8px 24px 16px',
-          scrollbarWidth: 'none', msOverflowStyle: 'none',
+      {/* ── QUICK STATS ── */}
+      <section style={{ padding: '0 16px 24px' }}>
+        <div style={{
+          display: 'flex', gap: '10px',
+          background: 'rgba(255,255,255,0.02)',
+          border: '1px solid rgba(255,255,255,0.05)',
+          borderRadius: '16px', padding: '14px 16px',
         }}>
-          {bestsellers.map((item, i) => (
-            <FoodCard key={i} item={item} />
+          {[
+            { icon: <Award size={16} color="#FFB800" />, label: restaurant.rating ? `${restaurant.rating} Rating` : 'Top Rated', sub: 'Google Reviews' },
+            { icon: <Clock size={16} color="#60a5fa" />, label: '12pm – 11pm', sub: 'Open Today' },
+            { icon: <UtensilsCrossed size={16} color="#4ade80" />, label: restaurant.tables ? `${restaurant.tables} Tables` : 'Fine Dining', sub: 'Capacity' },
+          ].map((stat, i) => (
+            <React.Fragment key={i}>
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                {stat.icon}
+                <div style={{ fontSize: '12px', fontWeight: 700, color: '#ddd', textAlign: 'center', lineHeight: 1.2 }}>{stat.label}</div>
+                <div style={{ fontSize: '10px', color: '#555', textAlign: 'center' }}>{stat.sub}</div>
+              </div>
+              {i < 2 && <div style={{ width: '1px', background: 'rgba(255,255,255,0.06)' }} />}
+            </React.Fragment>
           ))}
         </div>
       </section>
 
-      {/* ─── FULL MENU ─── */}
-      <section ref={menuRef} style={{ padding: '10px 20px 40px', maxWidth: '960px', margin: '0 auto', animation: 'slideIn 0.6s ease 0.4s both' }}>
-        <SectionTitle label="Our Menu" sub="Crafted with precision and passion" />
-        <MenuSection title="Starters" items={menuData.starters.length ? menuData.starters : BESTSELLERS_FALLBACK.slice(0, 3)} />
-        <MenuSection title="Mains" items={menuData.mains.length ? menuData.mains : BESTSELLERS_FALLBACK.slice(1, 4)} />
-        <MenuSection title="Drinks" items={menuData.drinks.length ? menuData.drinks : BESTSELLERS_FALLBACK.slice(3, 6)} />
-      </section>
-
-      {/* ─── ABOUT ─── */}
-      <section ref={aboutRef} style={{ padding: '10px 20px 50px', maxWidth: '960px', margin: '0 auto' }}>
-        <SectionTitle label="Our Story" sub="Where every plate tells a story" />
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
-          <div style={{
-            background: 'linear-gradient(135deg, rgba(232,50,26,0.08) 0%, rgba(255,255,255,0.02) 100%)',
-            border: '1px solid rgba(232,50,26,0.15)',
-            borderRadius: '24px', padding: '32px', animation: 'slideIn 0.6s ease both',
-          }}>
-            <div style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.2em', color: '#E8321A', textTransform: 'uppercase', marginBottom: '14px' }}>
-              The Philosophy
-            </div>
-            <p style={{ fontSize: '15px', lineHeight: 1.75, color: '#aaa' }}>
-              {restaurant.description || 'An uncompromising culinary experience rooted in craft, quality, and atmosphere. Every dish is a conversation between heritage and innovation.'}
-            </p>
-            {restaurant.additionalInfo && (
-              <p style={{ fontSize: '13px', lineHeight: 1.7, color: '#666', marginTop: '14px' }}>
-                {restaurant.additionalInfo}
-              </p>
-            )}
+      {/* ── BEST SELLERS ── */}
+      <section className="section-fade" style={{ paddingBottom: '28px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px 14px' }}>
+          <div>
+            <div style={{ fontSize: '16px', fontWeight: 800, letterSpacing: '-0.01em' }}>Best Sellers</div>
+            <div style={{ fontSize: '11px', color: '#555', marginTop: '2px' }}>Crowd favourites, every time</div>
           </div>
+          <button
+            onClick={() => scrollTo(menuRef, 'menu')}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '4px',
+              background: 'none', border: 'none', color: '#E8321A',
+              fontSize: '12px', fontWeight: 700, cursor: 'pointer', letterSpacing: '0.02em',
+            }}
+          >
+            View all <ArrowRight size={13} />
+          </button>
+        </div>
 
-          {restaurant.chefInfo && (
-            <div style={{
-              background: 'rgba(255,255,255,0.02)',
-              border: '1px solid rgba(255,255,255,0.06)',
-              borderRadius: '24px', padding: '32px',
-            }}>
-              <div style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.2em', color: '#888', textTransform: 'uppercase', marginBottom: '14px' }}>
-                Executive Chef
-              </div>
-              <p style={{ fontSize: '15px', lineHeight: 1.75, color: '#aaa' }}>
-                {restaurant.chefInfo}
-              </p>
-            </div>
-          )}
-
-          {restaurant.servantInfo && (
-            <div style={{
-              background: 'rgba(255,255,255,0.02)',
-              border: '1px solid rgba(255,255,255,0.06)',
-              borderRadius: '24px', padding: '32px',
-            }}>
-              <div style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.2em', color: '#888', textTransform: 'uppercase', marginBottom: '14px' }}>
-                Hospitality
-              </div>
-              <p style={{ fontSize: '15px', lineHeight: 1.75, color: '#aaa' }}>
-                {restaurant.servantInfo}
-              </p>
-            </div>
-          )}
-
-          <div style={{
-            background: 'rgba(255,255,255,0.02)',
-            border: '1px solid rgba(255,255,255,0.06)',
-            borderRadius: '24px', padding: '32px',
-            display: 'flex', flexDirection: 'column', gap: '18px',
-          }}>
-            <div style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.2em', color: '#888', textTransform: 'uppercase', marginBottom: '4px' }}>
-              Quick Info
-            </div>
-            {restaurant.location && (
-              <InfoRow icon={<MapPin size={15} />} label="Location" value={restaurant.location} />
-            )}
-            {restaurant.tables && (
-              <InfoRow icon={<UtensilsCrossed size={15} />} label="Capacity" value={`${restaurant.tables} Tables`} />
-            )}
-            {restaurant.phone && (
-              <InfoRow icon={<Phone size={15} />} label="Reservations" value={restaurant.phone} />
-            )}
-            {restaurant.rating && (
-              <InfoRow icon={<Star size={15} />} label="Rating" value={restaurant.rating} />
-            )}
-          </div>
+        <div style={{ display: 'flex', gap: '14px', overflowX: 'auto', padding: '0 20px 4px', scrollbarWidth: 'none' }}>
+          {bestsellers.map((item, i) => (
+            <BestsellerCard key={i} item={item} liked={liked[i]} onLike={() => setLiked(l => ({ ...l, [i]: !l[i] }))} />
+          ))}
         </div>
       </section>
 
-      {/* ─── FOOTER ─── */}
-      <footer style={{
-        borderTop: '1px solid rgba(255,255,255,0.05)',
-        padding: '50px 24px 30px',
-        textAlign: 'center',
-        background: 'linear-gradient(to bottom, transparent, rgba(232,50,26,0.04))',
-      }}>
-        <div style={{ fontSize: '28px', fontWeight: 900, letterSpacing: '0.05em', marginBottom: '6px' }}>
-          {restaurant.name}
+      {/* ── FULL MENU ── */}
+      <section ref={menuRef} className="section-fade" style={{ padding: '0 0 28px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px 16px' }}>
+          <div>
+            <div style={{ fontSize: '16px', fontWeight: 800, letterSpacing: '-0.01em' }}>Our Menu</div>
+            <div style={{ fontSize: '11px', color: '#555', marginTop: '2px' }}>Crafted with precision & passion</div>
+          </div>
         </div>
-        {restaurant.location && (
-          <div style={{ fontSize: '12px', color: '#444', marginBottom: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}>
-            <MapPin size={11} /> {restaurant.location}
+
+        {/* Tabs */}
+        <div style={{ display: 'flex', gap: '8px', padding: '0 20px 18px', overflowX: 'auto', scrollbarWidth: 'none' }}>
+          {[
+            { id: 'starters', label: 'Starters', icon: <Leaf size={12} /> },
+            { id: 'mains', label: 'Mains', icon: <UtensilsCrossed size={12} /> },
+            { id: 'drinks', label: 'Drinks', icon: <Flame size={12} /> },
+          ].map(tab => (
+            <button
+              key={tab.id}
+              className="tab-btn"
+              onClick={() => setActiveTab(tab.id)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '6px',
+                padding: '8px 16px', borderRadius: '10px', border: 'none',
+                background: activeTab === tab.id ? '#E8321A' : 'rgba(255,255,255,0.05)',
+                color: activeTab === tab.id ? '#fff' : '#666',
+                fontSize: '12px', fontWeight: 700, cursor: 'pointer',
+                whiteSpace: 'nowrap', letterSpacing: '0.02em',
+                boxShadow: activeTab === tab.id ? '0 4px 14px rgba(232,50,26,0.35)' : 'none',
+              }}
+            >
+              {tab.icon}
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        <div style={{ padding: '0 16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          {activeMenuItems.map((item, i) => (
+            <MenuItemCard key={i} item={item} />
+          ))}
+          {activeMenuItems.length === 0 && (
+            <div style={{ textAlign: 'center', padding: '40px 20px', color: '#444', fontSize: '13px' }}>
+              No items in this category yet
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* ── ABOUT ── */}
+      <section ref={aboutRef} className="section-fade" style={{ padding: '0 16px 32px' }}>
+        <div style={{ marginBottom: '16px' }}>
+          <div style={{ fontSize: '16px', fontWeight: 800, letterSpacing: '-0.01em' }}>Our Story</div>
+          <div style={{ fontSize: '11px', color: '#555', marginTop: '2px' }}>Where every plate tells a story</div>
+        </div>
+
+        {/* Hero about image */}
+        {carouselImages.length > 1 && (
+          <div style={{
+            height: '160px', borderRadius: '16px', overflow: 'hidden',
+            marginBottom: '14px',
+            backgroundImage: `url(${carouselImages[1] || carouselImages[0]})`,
+            backgroundSize: 'cover', backgroundPosition: 'center',
+            position: 'relative',
+          }}>
+            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.7), transparent)' }} />
           </div>
         )}
 
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '20px', marginBottom: '32px', flexWrap: 'wrap' }}>
-          {restaurant.socialLinks?.instagram && (
-            <a href={restaurant.socialLinks.instagram} target="_blank" rel="noopener noreferrer" className="social-icon" style={{ color: '#555', transition: 'all 0.2s', display: 'flex' }}>
-              <AtSign size={22} />
-            </a>
-          )}
-          {restaurant.socialLinks?.facebook && (
-            <a href={restaurant.socialLinks.facebook} target="_blank" rel="noopener noreferrer" className="social-icon" style={{ color: '#555', transition: 'all 0.2s', display: 'flex' }}>
-              <Share2 size={22} />
-            </a>
-          )}
-          {restaurant.socialLinks?.twitter && (
-            <a href={restaurant.socialLinks.twitter} target="_blank" rel="noopener noreferrer" className="social-icon" style={{ color: '#555', transition: 'all 0.2s', display: 'flex' }}>
-              <MessageCircle size={22} />
-            </a>
-          )}
-          {restaurant.socialLinks?.website && (
-            <a href={restaurant.socialLinks.website} target="_blank" rel="noopener noreferrer" className="social-icon" style={{ color: '#555', transition: 'all 0.2s', display: 'flex' }}>
-              <Globe size={22} />
-            </a>
+        <div style={{
+          background: 'linear-gradient(135deg, rgba(232,50,26,0.07) 0%, rgba(255,255,255,0.02) 100%)',
+          border: '1px solid rgba(232,50,26,0.12)',
+          borderRadius: '16px', padding: '20px', marginBottom: '10px',
+        }}>
+          <div style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '0.2em', color: '#E8321A', textTransform: 'uppercase', marginBottom: '10px' }}>
+            The Philosophy
+          </div>
+          <p style={{ fontSize: '14px', lineHeight: 1.75, color: '#bbb' }}>
+            {restaurant.description || 'An uncompromising culinary experience rooted in craft, quality, and atmosphere. Every dish is a conversation between heritage and innovation, served in a setting that commands reverence.'}
+          </p>
+          {restaurant.additionalInfo && (
+            <p style={{ fontSize: '12px', lineHeight: 1.7, color: '#666', marginTop: '12px', paddingTop: '12px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+              {restaurant.additionalInfo}
+            </p>
           )}
         </div>
 
+        {restaurant.chefInfo && (
+          <div style={{
+            background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)',
+            borderRadius: '16px', padding: '20px', marginBottom: '10px',
+          }}>
+            <div style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '0.2em', color: '#888', textTransform: 'uppercase', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Award size={11} /> Executive Chef
+            </div>
+            <p style={{ fontSize: '14px', lineHeight: 1.75, color: '#bbb' }}>{restaurant.chefInfo}</p>
+          </div>
+        )}
+
+        {/* Info grid */}
+        <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '16px', padding: '20px' }}>
+          <div style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '0.2em', color: '#888', textTransform: 'uppercase', marginBottom: '16px' }}>
+            Quick Info
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            {restaurant.location && (
+              <InfoRow icon={<MapPin size={14} color="#E8321A" />} label="Location" value={restaurant.location} />
+            )}
+            {restaurant.tables && (
+              <InfoRow icon={<UtensilsCrossed size={14} color="#4ade80" />} label="Capacity" value={`${restaurant.tables} Tables`} />
+            )}
+            {restaurant.phone && (
+              <InfoRow icon={<Phone size={14} color="#60a5fa" />} label="Reservations" value={restaurant.phone} />
+            )}
+            {restaurant.rating && (
+              <InfoRow icon={<Star size={14} color="#FFB800" fill="#FFB800" />} label="Rating" value={`${restaurant.rating} / 5`} />
+            )}
+          </div>
+        </div>
+      </section>
+
+      {/* ── FOOTER ── */}
+      <footer style={{
+        margin: '0 16px 16px',
+        background: 'rgba(255,255,255,0.02)',
+        border: '1px solid rgba(255,255,255,0.05)',
+        borderRadius: '20px',
+        padding: '28px 20px',
+        textAlign: 'center',
+      }}>
+        <div style={{ fontSize: '22px', fontWeight: 900, letterSpacing: '0.03em', marginBottom: '4px' }}>
+          {restaurant.name}
+        </div>
+        {restaurant.location && (
+          <div style={{ fontSize: '11px', color: '#444', marginBottom: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
+            <MapPin size={10} /> {restaurant.location}
+          </div>
+        )}
+
+        {/* Social links */}
+        {(restaurant.socialLinks?.instagram || restaurant.socialLinks?.facebook || restaurant.socialLinks?.twitter || restaurant.socialLinks?.website) && (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', marginBottom: '20px' }}>
+            {restaurant.socialLinks?.instagram && (
+              <SocialBtn href={restaurant.socialLinks.instagram} icon={<AtSign size={18} />} />
+            )}
+            {restaurant.socialLinks?.facebook && (
+              <SocialBtn href={restaurant.socialLinks.facebook} icon={<Share2 size={18} />} />
+            )}
+            {restaurant.socialLinks?.twitter && (
+              <SocialBtn href={restaurant.socialLinks.twitter} icon={<MessageCircle size={18} />} />
+            )}
+            {restaurant.socialLinks?.website && (
+              <SocialBtn href={restaurant.socialLinks.website} icon={<Globe size={18} />} />
+            )}
+          </div>
+        )}
+
         <a
-          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(restaurant.name)}`}
+          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(restaurant.name + ' ' + (restaurant.location || ''))}`}
           target="_blank"
           rel="noopener noreferrer"
           style={{
-            display: 'inline-flex', alignItems: 'center', gap: '8px',
-            background: 'rgba(255,184,0,0.1)', border: '1px solid rgba(255,184,0,0.25)',
-            borderRadius: '50px', padding: '11px 24px', color: '#FFB800', fontSize: '13px', fontWeight: 700,
-            textDecoration: 'none', letterSpacing: '0.05em', transition: 'all 0.25s',
+            display: 'inline-flex', alignItems: 'center', gap: '7px',
+            background: 'rgba(255,184,0,0.08)', border: '1px solid rgba(255,184,0,0.2)',
+            borderRadius: '50px', padding: '10px 20px', color: '#FFB800',
+            fontSize: '12px', fontWeight: 700, textDecoration: 'none', letterSpacing: '0.05em',
           }}
-          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,184,0,0.18)'; e.currentTarget.style.transform = 'translateY(-2px)' }}
-          onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,184,0,0.1)'; e.currentTarget.style.transform = 'none' }}
         >
-          <Star size={14} fill="#FFB800" /> RATE US ON GOOGLE
+          <Star size={12} fill="#FFB800" /> Rate Us on Google
         </a>
 
-        <div style={{ marginTop: '40px', fontSize: '11px', color: '#2a2a2a', letterSpacing: '0.08em' }}>
-          POWERED BY EXZIBO · PREMIUM DINING PLATFORM
+        <div style={{ marginTop: '20px', fontSize: '10px', color: '#222', letterSpacing: '0.12em', textTransform: 'uppercase' }}>
+          Powered by EXZIBO
         </div>
       </footer>
 
-      {/* ─── BOTTOM NAV ─── */}
+      {/* ── BOTTOM NAV ── */}
       <nav style={{
-        position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 100,
-        background: 'rgba(10,10,10,0.85)',
-        backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)',
+        position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)',
+        width: '100%', maxWidth: '480px', zIndex: 100,
+        background: 'rgba(8,8,8,0.92)',
+        backdropFilter: 'blur(24px)',
+        WebkitBackdropFilter: 'blur(24px)',
         borderTop: '1px solid rgba(255,255,255,0.06)',
         borderRadius: '20px 20px 0 0',
-        padding: '10px 8px 14px',
+        padding: '10px 8px env(safe-area-inset-bottom, 10px)',
         display: 'flex', justifyContent: 'space-around', alignItems: 'center',
-        boxShadow: '0 -10px 40px rgba(0,0,0,0.5)',
+        boxShadow: '0 -8px 32px rgba(0,0,0,0.6)',
       }}>
         {[
-          { id: 'home', icon: <Home size={20} />, label: 'Home', action: () => { scrollTo(carouselRef, 'home'); window.scrollTo({ top: 0, behavior: 'smooth' }) } },
-          { id: 'menu', icon: <UtensilsCrossed size={20} />, label: 'Menu', action: () => scrollTo(menuRef, 'menu') },
-          { id: 'cart', icon: <ShoppingCart size={20} />, label: 'Cart', action: () => {} },
-          { id: 'orders', icon: <ClipboardList size={20} />, label: 'Orders', action: () => {} },
-          { id: 'booking', icon: <CalendarDays size={20} />, label: 'Book', action: () => {} },
+          { id: 'home', icon: <Home size={22} />, label: 'Home', action: () => window.scrollTo({ top: 0, behavior: 'smooth' }) },
+          { id: 'menu', icon: <UtensilsCrossed size={22} />, label: 'Menu', action: () => scrollTo(menuRef, 'menu') },
+          { id: 'cart', icon: <ShoppingCart size={22} />, label: 'Cart', action: () => {} },
+          { id: 'orders', icon: <ClipboardList size={22} />, label: 'Orders', action: () => {} },
+          { id: 'booking', icon: <CalendarDays size={22} />, label: 'Book', action: () => {} },
         ].map(({ id, icon, label, action }) => (
           <button
             key={id}
-            className="nav-icon-btn"
+            className="nav-btn"
             onClick={() => { setActiveNav(id); action() }}
             style={{
-              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px',
               background: 'none', border: 'none', cursor: 'pointer',
-              color: activeNav === id ? '#E8321A' : '#444',
-              transition: 'color 0.2s', padding: '4px 12px',
-              position: 'relative',
+              color: activeNav === id ? '#E8321A' : '#3a3a3a',
+              padding: '4px 14px', position: 'relative',
             }}
           >
             {activeNav === id && (
               <div style={{
                 position: 'absolute', top: '-10px', left: '50%', transform: 'translateX(-50%)',
-                width: '28px', height: '3px', background: '#E8321A', borderRadius: '0 0 3px 3px',
+                width: '24px', height: '3px', background: '#E8321A', borderRadius: '0 0 3px 3px',
               }} />
             )}
             {icon}
-            <span style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{label}</span>
+            <span style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase' }}>{label}</span>
           </button>
         ))}
       </nav>
 
-      {/* ─── SCROLL TO TOP ─── */}
+      {/* ── SCROLL TO TOP ── */}
       {showTop && (
         <button
           onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
           style={{
             position: 'fixed', bottom: '90px', right: '20px', zIndex: 90,
-            width: '42px', height: '42px', borderRadius: '50%',
+            width: '40px', height: '40px', borderRadius: '50%',
             background: '#E8321A', border: 'none',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: '#fff', cursor: 'pointer', boxShadow: '0 4px 20px rgba(232,50,26,0.4)',
-            animation: 'scaleIn 0.2s ease',
+            color: '#fff', cursor: 'pointer',
+            boxShadow: '0 4px 16px rgba(232,50,26,0.5)',
+            animation: 'fadeIn 0.2s ease',
           }}
         >
-          <ArrowUp size={18} />
+          <ArrowUp size={16} />
         </button>
       )}
     </div>
   )
 }
 
-function SectionTitle({ label, sub }) {
-  return (
-    <div style={{ padding: '0 0 24px', textAlign: 'center' }}>
-      <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.25em', color: '#E8321A', textTransform: 'uppercase', marginBottom: '8px' }}>
-        {sub}
-      </div>
-      <h2 style={{ fontSize: 'clamp(24px, 5vw, 36px)', fontWeight: 900, letterSpacing: '-0.02em' }}>
-        {label}
-      </h2>
-    </div>
-  )
-}
-
-function FoodCard({ item }) {
+function BestsellerCard({ item, liked, onLike }) {
+  const fallbackImg = '/menu/wagyu-ribeye.png'
   return (
     <div className="food-card" style={{
-      flexShrink: 0, width: '200px',
+      flexShrink: 0, width: '160px',
       background: 'rgba(255,255,255,0.03)',
       border: '1px solid rgba(255,255,255,0.07)',
-      borderRadius: '20px', overflow: 'hidden',
-      cursor: 'pointer', transition: 'all 0.3s ease',
+      borderRadius: '16px', overflow: 'hidden',
+      cursor: 'pointer',
     }}>
-      <div style={{ height: '150px', overflow: 'hidden', background: 'rgba(255,255,255,0.03)' }}>
+      <div style={{ height: '120px', overflow: 'hidden', position: 'relative', background: 'rgba(255,255,255,0.03)' }}>
         <img
-          className="food-card-img"
-          src={item.img || '/menu/wagyu-ribeye.png'}
+          src={item.img || fallbackImg}
           alt={item.name}
-          style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.4s ease', display: 'block' }}
-          onError={e => { e.target.src = '/menu/wagyu-ribeye.png' }}
+          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+          onError={e => { e.target.src = fallbackImg }}
         />
-      </div>
-      <div style={{ padding: '14px' }}>
-        {item.tag && (
+        <button
+          onClick={e => { e.stopPropagation(); onLike() }}
+          style={{
+            position: 'absolute', top: '8px', right: '8px',
+            width: '28px', height: '28px', borderRadius: '50%',
+            background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)',
+            border: 'none', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}
+        >
+          <Heart size={13} fill={liked ? '#E8321A' : 'transparent'} color={liked ? '#E8321A' : '#aaa'} />
+        </button>
+        {(item.tag || item.tags?.[0]) && (
           <div style={{
-            display: 'inline-block', marginBottom: '7px',
-            background: 'rgba(232,50,26,0.15)', border: '1px solid rgba(232,50,26,0.25)',
-            borderRadius: '6px', padding: '2px 8px',
-            fontSize: '9px', fontWeight: 700, color: '#E8321A', letterSpacing: '0.08em', textTransform: 'uppercase',
+            position: 'absolute', bottom: '8px', left: '8px',
+            background: 'rgba(232,50,26,0.85)', backdropFilter: 'blur(6px)',
+            borderRadius: '6px', padding: '2px 7px',
+            fontSize: '9px', fontWeight: 800, color: '#fff', letterSpacing: '0.06em',
           }}>
-            {item.tag || (item.tags?.[0])}
+            {item.tag || item.tags[0]}
           </div>
         )}
-        <div style={{ fontSize: '13px', fontWeight: 700, lineHeight: 1.3, marginBottom: '6px' }}>{item.name}</div>
-        <div style={{ fontSize: '14px', fontWeight: 800, color: '#E8321A' }}>
-          ₹{(item.price || 0).toLocaleString('en-IN')}
+      </div>
+      <div style={{ padding: '10px 12px' }}>
+        <div style={{ fontSize: '12px', fontWeight: 700, lineHeight: 1.3, marginBottom: '4px', color: '#e0e0e0' }}>
+          {item.name}
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ fontSize: '13px', fontWeight: 800, color: '#E8321A' }}>
+            ₹{(item.price || 0).toLocaleString('en-IN')}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+            <Star size={10} fill="#FFB800" color="#FFB800" />
+            <span style={{ fontSize: '10px', fontWeight: 700, color: '#FFB800' }}>{item.rating || '4.8'}</span>
+          </div>
         </div>
       </div>
     </div>
   )
 }
 
-function MenuSection({ title, items }) {
-  if (!items || items.length === 0) return null
-  return (
-    <div style={{ marginBottom: '36px' }}>
-      <div style={{
-        fontSize: '11px', fontWeight: 700, letterSpacing: '0.2em', color: '#555',
-        textTransform: 'uppercase', marginBottom: '16px', paddingLeft: '4px',
-        display: 'flex', alignItems: 'center', gap: '10px',
-      }}>
-        <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.05)' }} />
-        {title}
-        <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.05)' }} />
-      </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-        {items.map((item, i) => <MenuRow key={i} item={item} />)}
-      </div>
-    </div>
-  )
-}
-
-function MenuRow({ item }) {
-  const [hovered, setHovered] = useState(false)
-  const tagColorMap = {
-    Popular: '#E8321A',
-    Seasonal: '#fbbf24',
-    Vegetarian: '#4ade80',
-    'Gluten Free': '#60a5fa',
+function MenuItemCard({ item }) {
+  const fallbackImg = '/menu/wagyu-ribeye.png'
+  const tagColor = {
+    Popular: '#E8321A', Seasonal: '#fbbf24', Vegetarian: '#4ade80', 'Gluten Free': '#60a5fa',
   }
-  const firstTag = item.tags?.[0]
-  const tagColor = tagColorMap[firstTag] || '#888'
-
   return (
-    <div
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{
-        display: 'flex', alignItems: 'center', gap: '14px',
-        background: hovered ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.02)',
-        border: `1px solid ${hovered ? 'rgba(232,50,26,0.2)' : 'rgba(255,255,255,0.04)'}`,
-        borderRadius: '14px', padding: '12px 16px',
-        transition: 'all 0.2s ease', cursor: 'default',
-      }}
-    >
-      <div style={{ width: '56px', height: '56px', borderRadius: '12px', overflow: 'hidden', flexShrink: 0, background: 'rgba(255,255,255,0.04)' }}>
+    <div className="menu-item-row" style={{
+      display: 'flex', alignItems: 'center', gap: '12px',
+      background: 'rgba(255,255,255,0.02)',
+      border: '1px solid rgba(255,255,255,0.05)',
+      borderRadius: '14px', padding: '12px',
+      cursor: 'pointer',
+    }}>
+      <div style={{ width: '70px', height: '70px', borderRadius: '12px', overflow: 'hidden', flexShrink: 0 }}>
         <img
-          src={item.img || '/menu/wagyu-ribeye.png'}
+          src={item.img || fallbackImg}
           alt={item.name}
-          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-          onError={e => { e.target.src = '/menu/wagyu-ribeye.png' }}
+          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+          onError={e => { e.target.src = fallbackImg }}
         />
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px', flexWrap: 'wrap' }}>
-          <span style={{ fontSize: '14px', fontWeight: 700 }}>{item.name}</span>
-          {firstTag && (
-            <span style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '0.08em', color: tagColor, textTransform: 'uppercase', background: `${tagColor}18`, border: `1px solid ${tagColor}30`, borderRadius: '4px', padding: '2px 6px' }}>
-              {firstTag}
-            </span>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px', marginBottom: '4px' }}>
+          <div style={{ fontSize: '13px', fontWeight: 700, color: '#e0e0e0', lineHeight: 1.3 }}>{item.name}</div>
+          {item.tags?.[0] && (
+            <div style={{
+              flexShrink: 0,
+              background: `${tagColor[item.tags[0]] || '#888'}18`,
+              border: `1px solid ${tagColor[item.tags[0]] || '#888'}35`,
+              borderRadius: '6px', padding: '2px 7px',
+              fontSize: '9px', fontWeight: 700, color: tagColor[item.tags[0]] || '#888',
+              letterSpacing: '0.06em',
+            }}>
+              {item.tags[0]}
+            </div>
           )}
         </div>
-        {item.desc && (
-          <div style={{ fontSize: '12px', color: '#555', lineHeight: 1.5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {item.desc}
+        {item.description && (
+          <div style={{ fontSize: '11px', color: '#555', lineHeight: 1.4, marginBottom: '6px' }}>
+            {item.description?.slice(0, 60)}{(item.description?.length || 0) > 60 ? '…' : ''}
           </div>
         )}
-      </div>
-      <div style={{ fontSize: '15px', fontWeight: 800, color: '#fff', flexShrink: 0 }}>
-        ₹{(item.price || 0).toLocaleString('en-IN')}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ fontSize: '14px', fontWeight: 800, color: '#E8321A' }}>
+            ₹{(item.price || 0).toLocaleString('en-IN')}
+          </div>
+          <button style={{
+            background: 'rgba(232,50,26,0.12)', border: '1px solid rgba(232,50,26,0.25)',
+            borderRadius: '8px', padding: '4px 12px', color: '#E8321A',
+            fontSize: '11px', fontWeight: 700, cursor: 'pointer',
+          }}>
+            Add +
+          </button>
+        </div>
       </div>
     </div>
   )
@@ -624,12 +787,38 @@ function MenuRow({ item }) {
 
 function InfoRow({ icon, label, value }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
-      <div style={{ color: '#E8321A', marginTop: '1px', flexShrink: 0 }}>{icon}</div>
+    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+      <div style={{
+        width: '32px', height: '32px', borderRadius: '10px',
+        background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+      }}>
+        {icon}
+      </div>
       <div>
-        <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', color: '#444', textTransform: 'uppercase', marginBottom: '3px' }}>{label}</div>
-        <div style={{ fontSize: '14px', color: '#bbb', fontWeight: 500 }}>{value}</div>
+        <div style={{ fontSize: '10px', color: '#555', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{label}</div>
+        <div style={{ fontSize: '13px', fontWeight: 600, color: '#ccc', marginTop: '1px' }}>{value}</div>
       </div>
     </div>
+  )
+}
+
+function SocialBtn({ href, icon }) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      style={{
+        width: '40px', height: '40px', borderRadius: '12px',
+        background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        color: '#666', textDecoration: 'none', transition: 'all 0.2s',
+      }}
+      onMouseEnter={e => { e.currentTarget.style.color = '#E8321A'; e.currentTarget.style.borderColor = 'rgba(232,50,26,0.3)' }}
+      onMouseLeave={e => { e.currentTarget.style.color = '#666'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)' }}
+    >
+      {icon}
+    </a>
   )
 }

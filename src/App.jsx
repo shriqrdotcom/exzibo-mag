@@ -22,7 +22,8 @@ export default function App() {
         <Route path="/settings" element={<Settings />} />
         <Route path="/create-website" element={<CreateWebsite />} />
         <Route path="/restaurants" element={<Restaurants />} />
-        <Route path="/restaurant/:id" element={<RestaurantDetail />} />
+        <Route path="/manage/:id" element={<RestaurantDetail />} />
+        <Route path="/restaurant/:slug" element={<RestaurantWebsite />} />
         <Route path="/r/:slug" element={<RestaurantWebsite />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

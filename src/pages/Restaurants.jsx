@@ -107,21 +107,21 @@ export default function Restaurants() {
             {active.length > 0 && (
               <Section title="ACTIVE" count={active.length}>
                 {active.map(r => (
-                  <RestaurantCard key={r.id} restaurant={r} onClick={() => navigate(`/restaurant/${r.id}`)} onToggle={() => toggleStatus(r.id)} />
+                  <RestaurantCard key={r.id} restaurant={r} onClick={() => navigate(`/manage/${r.id}`)} onToggle={() => toggleStatus(r.id)} />
                 ))}
               </Section>
             )}
             {paused.length > 0 && (
               <Section title="PAUSED" count={paused.length}>
                 {paused.map(r => (
-                  <RestaurantCard key={r.id} restaurant={r} onClick={() => navigate(`/restaurant/${r.id}`)} onToggle={() => toggleStatus(r.id)} />
+                  <RestaurantCard key={r.id} restaurant={r} onClick={() => navigate(`/manage/${r.id}`)} onToggle={() => toggleStatus(r.id)} />
                 ))}
               </Section>
             )}
             {drafts.length > 0 && (
               <Section title="DRAFTS" count={drafts.length}>
                 {drafts.map(r => (
-                  <RestaurantCard key={r.id} restaurant={r} onClick={() => navigate(`/restaurant/${r.id}`)} onToggle={() => toggleStatus(r.id)} />
+                  <RestaurantCard key={r.id} restaurant={r} onClick={() => navigate(`/manage/${r.id}`)} onToggle={() => toggleStatus(r.id)} />
                 ))}
               </Section>
             )}

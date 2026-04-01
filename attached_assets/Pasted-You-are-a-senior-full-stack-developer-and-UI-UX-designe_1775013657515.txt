@@ -1,0 +1,147 @@
+You are a senior full-stack developer and UI/UX designer.
+
+Your task is to build a production-level feature for a SaaS restaurant admin dashboard.
+
+-----------------------------------
+🔷 CORE FUNCTIONALITY
+-----------------------------------
+
+When a Super Admin creates a new restaurant using the "Create Restaurant Form":
+
+1. A unique restaurant website should be automatically generated.
+2. Assign a unique URL for each restaurant like:
+   /restaurant/{restaurantSlug}
+
+3. The "Visit Your Website" button on the dashboard MUST:
+   - Dynamically link to that restaurant’s live website
+   - Open the generated restaurant page
+   - Work without reload errors or broken routing
+
+-----------------------------------
+🔷 TECH REQUIREMENTS
+-----------------------------------
+
+- Use React (Vite or Next.js preferred)
+- Use React Router (or Next routing if Next.js)
+- Store restaurant data in a simple state/store (or mock DB)
+- Each restaurant must have:
+  - name
+  - slug (auto-generated from name)
+  - images (array)
+  - menu items
+  - description
+
+-----------------------------------
+🔷 ROUTING LOGIC
+-----------------------------------
+
+- After form submission:
+   → redirect to admin restaurant dashboard page
+
+- "Visit Your Website" button:
+   → should route to: /restaurant/{slug}
+
+- Ensure:
+   ✔ No blank page
+   ✔ No console errors
+   ✔ Works on refresh
+
+-----------------------------------
+🔷 RESTAURANT WEBSITE UI (VERY IMPORTANT)
+-----------------------------------
+
+Design a **premium, modern restaurant website** (NOT AI-looking, must feel like real product like Zomato-level UI).
+
+-----------------------------------
+🎨 THEME
+-----------------------------------
+
+- Dark luxury theme (black + subtle gradients)
+- Smooth animations
+- Glassmorphism or soft shadows
+- Clean typography (Inter / Poppins)
+
+-----------------------------------
+🔶 PAGE STRUCTURE
+-----------------------------------
+
+1. 🔥 HEADER
+   - Full-width black header
+   - Restaurant name (dynamic)
+   - Optional subtitle/tagline
+
+2. 🖼 IMAGE CAROUSEL
+   - Smooth sliding banner
+   - High-quality food/restaurant images
+   - Auto-scroll + manual navigation
+
+3. 🎯 ACTION BUTTONS
+   - "View Menu"
+   - "Call Staff"
+   - Styled professionally (rounded, glowing hover)
+
+4. 🍽 BEST SELLING ITEMS
+   - Horizontal scroll section
+   - Food cards with:
+       - Image
+       - Name
+       - Price
+       - Rating (optional)
+
+5. 👨‍🍳 ABOUT SECTION
+   - Professional description
+   - Chef images
+   - Clean layout (image + text split)
+
+6. 📱 BOTTOM NAVIGATION BAR (Mobile-style)
+   Fixed bottom nav with icons:
+   - Home
+   - Menu
+   - Cart
+   - Orders
+   - Booking
+
+7. 📌 FOOTER
+   - Restaurant name
+   - Social media icons
+   - "Rate Us" button
+   - Clean spacing
+
+-----------------------------------
+🔷 UX REQUIREMENTS
+-----------------------------------
+
+- Fully responsive (mobile-first)
+- Smooth transitions
+- No clutter
+- Proper spacing hierarchy
+- Real product feel (NOT template-like)
+
+-----------------------------------
+🔷 EXTRA DETAILS
+-----------------------------------
+
+- Add hover animations
+- Use reusable components
+- Clean folder structure
+- No hardcoded broken links
+- Use dummy images if needed
+- Ensure everything works end-to-end
+
+-----------------------------------
+🔷 FINAL EXPECTATION
+-----------------------------------
+
+Deliver:
+✔ Fully working routing
+✔ Functional "Visit Your Website" button
+✔ Professional restaurant website UI
+✔ Clean and scalable code
+
+Avoid:
+❌ Basic UI
+❌ Broken navigation
+❌ Placeholder-looking design
+❌ AI-generated feel
+
+Make it look like a real startup product.

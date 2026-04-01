@@ -87,38 +87,50 @@ export default function CreateWebsite() {
     return slug
   }
 
-  const handleGenerate = () => {
+  const fileToBase64 = (file) => new Promise((resolve) => {
+    const reader = new FileReader()
+    reader.onload = (e) => resolve(e.target.result)
+    reader.readAsDataURL(file)
+  })
+
+  const handleGenerate = async () => {
     if (!validate()) return
     setSubmitting(true)
-    setTimeout(() => {
-      const existing = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
-      const existingSlugs = existing.map(r => r.slug).filter(Boolean)
-      const slug = generateSlug(form.restaurantName, existingSlugs)
-      const newRestaurant = {
-        id: Date.now().toString(),
-        slug,
-        name: form.restaurantName,
-        owner: '',
-        tables: form.tableNumbers.length.toString(),
-        phone: form.phoneNumber,
-        gst: form.gstDetails,
-        description: form.description,
-        chefInfo: form.chefInfo,
-        servantInfo: form.servantInfo,
-        socialLinks: form.socialLinks,
-        rating: form.rating,
-        location: form.location,
-        additionalInfo: form.additionalInfo,
-        digitalMenuLink: form.digitalMenuLink,
-        digitalServiceBell: form.digitalServiceBell,
-        status: 'active',
-        createdAt: new Date().toISOString(),
-      }
-      localStorage.setItem('exzibo_restaurants', JSON.stringify([...existing, newRestaurant]))
-      setSubmitting(false)
-      setSuccess(true)
-      setTimeout(() => navigate('/restaurants'), 2000)
-    }, 2000)
+    const base64Images = await Promise.all(
+      form.uploadedImages.map(img => img.file ? fileToBase64(img.file) : Promise.resolve(img.url))
+    )
+    const logoBase64 = form.logo?.file ? await fileToBase64(form.logo.file) : form.logo?.url || null
+
+    const existing = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
+    const existingSlugs = existing.map(r => r.slug).filter(Boolean)
+    const slug = generateSlug(form.restaurantName, existingSlugs)
+    const newRestaurant = {
+      id: Date.now().toString(),
+      slug,
+      name: form.restaurantName,
+      logo: logoBase64,
+      images: base64Images,
+      owner: '',
+      tables: form.tableNumbers.length.toString(),
+      tableNumbers: form.tableNumbers,
+      phone: form.phoneNumber,
+      gst: form.gstDetails,
+      description: form.description,
+      chefInfo: form.chefInfo,
+      servantInfo: form.servantInfo,
+      socialLinks: form.socialLinks,
+      rating: form.rating,
+      location: form.location,
+      additionalInfo: form.additionalInfo,
+      digitalMenuLink: form.digitalMenuLink,
+      digitalServiceBell: form.digitalServiceBell,
+      status: 'active',
+      createdAt: new Date().toISOString(),
+    }
+    localStorage.setItem('exzibo_restaurants', JSON.stringify([...existing, newRestaurant]))
+    setSubmitting(false)
+    setSuccess(true)
+    setTimeout(() => navigate('/restaurants'), 2000)
   }
 
   if (success) {
