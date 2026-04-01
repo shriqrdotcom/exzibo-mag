@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Plus, Utensils, Users, LayoutGrid, ChevronRight } from 'lucide-react'
+import { ArrowLeft, Plus, Utensils, Users, LayoutGrid, ChevronRight, ExternalLink } from 'lucide-react'
 
 export default function Restaurants() {
   const navigate = useNavigate()
@@ -220,6 +220,26 @@ function RestaurantCard({ restaurant, onClick, onToggle }) {
       <div style={{ fontSize: '12px', color: '#555', marginBottom: '20px' }}>
         {restaurant.owner || 'No owner set'}
       </div>
+
+      {/* Visit Website link */}
+      <a
+        href={`/restaurant/${restaurant.slug || restaurant.id}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={e => e.stopPropagation()}
+        style={{
+          display: 'inline-flex', alignItems: 'center', gap: '6px',
+          background: 'rgba(232,50,26,0.08)', border: '1px solid rgba(232,50,26,0.2)',
+          borderRadius: '8px', padding: '6px 12px', marginBottom: '16px',
+          color: '#E8321A', fontSize: '11px', fontWeight: 700, letterSpacing: '0.05em',
+          textDecoration: 'none', transition: 'all 0.2s',
+        }}
+        onMouseEnter={e => { e.currentTarget.style.background = 'rgba(232,50,26,0.15)' }}
+        onMouseLeave={e => { e.currentTarget.style.background = 'rgba(232,50,26,0.08)' }}
+      >
+        <ExternalLink size={11} />
+        VISIT WEBSITE
+      </a>
 
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', gap: '20px' }}>

@@ -128,10 +128,45 @@ export default function RestaurantWebsite() {
 
   if (notFound) {
     return (
-      <div style={{ minHeight: '100vh', background: '#080808', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '16px', fontFamily: "'Inter', sans-serif" }}>
-        <div style={{ fontSize: '64px', fontWeight: 900, color: 'rgba(255,255,255,0.05)' }}>404</div>
-        <div style={{ fontSize: '18px', fontWeight: 700, color: '#444' }}>Restaurant not found</div>
-        <a href="/" style={{ fontSize: '13px', color: '#E8321A', textDecoration: 'none', fontWeight: 600, letterSpacing: '0.05em' }}>← Back to Home</a>
+      <div style={{ minHeight: '100vh', background: '#080808', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '0', fontFamily: "'Inter', sans-serif", padding: '24px' }}>
+        <div style={{ fontSize: '80px', fontWeight: 900, color: 'rgba(255,255,255,0.04)', lineHeight: 1 }}>404</div>
+        <div style={{ fontSize: '20px', fontWeight: 800, color: '#fff', marginTop: '-8px', marginBottom: '8px' }}>Restaurant not found</div>
+        <div style={{ fontSize: '13px', color: '#555', marginBottom: '32px', textAlign: 'center', maxWidth: '280px', lineHeight: 1.6 }}>
+          No restaurant matches this URL. Try viewing the demo or create your first restaurant.
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', width: '100%', maxWidth: '280px' }}>
+          <a
+            href="/restaurant/demo"
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+              background: '#E8321A', border: 'none', borderRadius: '12px', padding: '14px',
+              color: '#fff', fontSize: '13px', fontWeight: 700, textDecoration: 'none',
+              letterSpacing: '0.04em', boxShadow: '0 6px 20px rgba(232,50,26,0.4)',
+            }}
+          >
+            View Demo Restaurant
+          </a>
+          <a
+            href="/create-website"
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+              background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
+              borderRadius: '12px', padding: '14px',
+              color: '#ccc', fontSize: '13px', fontWeight: 600, textDecoration: 'none',
+            }}
+          >
+            Create a Restaurant
+          </a>
+          <a
+            href="/"
+            style={{
+              textAlign: 'center', fontSize: '12px', color: '#444',
+              textDecoration: 'none', paddingTop: '4px', fontWeight: 600,
+            }}
+          >
+            ← Back to Home
+          </a>
+        </div>
       </div>
     )
   }
