@@ -86,7 +86,12 @@ export default function Restaurants() {
             gap: '20px',
           }}>
             {restaurants.map(r => (
-              <RestaurantCard key={r.id} restaurant={r} onAdmin={() => navigate(`/manage/${r.id}`)} />
+              <RestaurantCard
+                key={r.id}
+                restaurant={r}
+                onCustomer={() => navigate(`/restaurant/${r.slug || r.id}`)}
+                onAdmin={() => navigate(`/manage/${r.id}`)}
+              />
             ))}
           </div>
         )}
@@ -95,7 +100,7 @@ export default function Restaurants() {
   )
 }
 
-function RestaurantCard({ restaurant, onAdmin }) {
+function RestaurantCard({ restaurant, onAdmin, onCustomer }) {
   const slug = restaurant.slug || restaurant.id
   const initials = restaurant.name
     .split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase()
@@ -204,16 +209,13 @@ function RestaurantCard({ restaurant, onAdmin }) {
 
         {/* TWO ACTION BUTTONS */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-          <a
-            href={`/restaurant/${slug}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={e => e.stopPropagation()}
+          <button
+            onClick={onCustomer}
             style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '7px',
               background: '#E8321A', border: 'none', borderRadius: '12px',
               padding: '12px 8px', color: '#fff', fontSize: '12px', fontWeight: 700,
-              textDecoration: 'none', letterSpacing: '0.04em',
+              cursor: 'pointer', letterSpacing: '0.04em',
               boxShadow: '0 4px 14px rgba(232,50,26,0.35)',
               transition: 'all 0.2s',
             }}
@@ -222,7 +224,7 @@ function RestaurantCard({ restaurant, onAdmin }) {
           >
             <ExternalLink size={13} />
             Customer Page
-          </a>
+          </button>
 
           <button
             onClick={onAdmin}

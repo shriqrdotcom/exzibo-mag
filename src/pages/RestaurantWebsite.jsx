@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import {
   Phone, Star, Globe, ChevronLeft, ChevronRight,
   Home, UtensilsCrossed, ShoppingCart, ClipboardList,
@@ -44,6 +44,7 @@ const MENU_FALLBACK = {
 
 export default function RestaurantWebsite() {
   const { slug } = useParams()
+  const navigate = useNavigate()
   const [restaurant, setRestaurant] = useState(null)
   const [notFound, setNotFound] = useState(false)
   const [menuData, setMenuData] = useState({ starters: [], mains: [], drinks: [] })
@@ -212,6 +213,28 @@ export default function RestaurantWebsite() {
         .section-fade { animation: fadeUp 0.5s ease both; }
         .tab-btn { transition: all 0.25s ease; }
       `}</style>
+
+      {/* ── ADMIN BACK BAR (hidden from customers, only for navigation context) ── */}
+      {slug !== 'demo' && (
+        <div style={{
+          background: 'rgba(232,50,26,0.08)', borderBottom: '1px solid rgba(232,50,26,0.18)',
+          padding: '8px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        }}>
+          <button
+            onClick={() => navigate('/restaurants')}
+            style={{
+              background: 'none', border: 'none', color: '#E8321A',
+              fontSize: '11px', fontWeight: 700, cursor: 'pointer',
+              letterSpacing: '0.06em', display: 'flex', alignItems: 'center', gap: '5px',
+            }}
+          >
+            ← MY RESTAURANTS
+          </button>
+          <span style={{ fontSize: '10px', color: '#444', letterSpacing: '0.04em' }}>
+            ADMIN PREVIEW
+          </span>
+        </div>
+      )}
 
       {/* ── TOP BAR ── */}
       <header style={{
