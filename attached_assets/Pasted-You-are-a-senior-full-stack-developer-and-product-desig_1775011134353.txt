@@ -1,0 +1,137 @@
+You are a senior full-stack developer and product designer.
+
+I already have a Super Admin Dashboard where I can create restaurants.
+After submitting the "Create Restaurant Form", I land on a restaurant dashboard page.
+
+Now I want to implement the following feature:
+
+--------------------------------------------------
+
+🎯 CORE FUNCTIONALITY:
+
+Each restaurant should have its own live website.
+
+When I click the button "Visit Your Website" on the restaurant dashboard:
+→ It should open a NEW URL
+→ That URL should display a fully designed, professional restaurant website
+→ The website must be dynamically generated using the restaurant's data
+
+Example:
+If restaurant name = "DD"
+Then URL can be:
+  /restaurant/dd
+or
+  /r/dd
+
+Make sure:
+- Each restaurant has a unique URL
+- The page is publicly accessible
+- It works like a real deployed product (not a mock screen)
+
+--------------------------------------------------
+
+🎨 WEBSITE UI REQUIREMENTS (IMPORTANT)
+
+The design must look modern, premium, and production-level.
+Do NOT make it look like a basic or AI-generated UI.
+
+Style inspiration:
+- Clean like Zomato / premium SaaS
+- Dark + elegant theme
+- Smooth spacing, rounded cards, subtle shadows
+
+--------------------------------------------------
+
+📱 PAGE STRUCTURE
+
+1. 🔝 HEADER SECTION
+- Full-width black/dark header
+- Restaurant name (bold, large)
+- Optional tagline
+- Right side: Call / Action buttons
+- Below header → Image carousel (auto sliding)
+  - Show restaurant / food images
+  - Smooth animation
+
+--------------------------------------------------
+
+2. 🎯 ACTION BUTTONS (Below Header)
+- "View Menu" button (primary)
+- "Call Staff" button (secondary)
+- Buttons should look modern (rounded, glowing hover effect)
+
+--------------------------------------------------
+
+3. 🔥 BEST SELLING ITEMS
+- Horizontal scroll slider
+- Show food cards:
+  - Image
+  - Name
+  - Price
+- Smooth swipe/scroll animation
+
+--------------------------------------------------
+
+4. 📖 ABOUT SECTION
+- Clean layout with:
+  - Short professional description
+  - Chef / kitchen images
+- Typography should look premium
+
+--------------------------------------------------
+
+5. 📍 FOOTER
+- Restaurant name/logo
+- Social media icons (Instagram, Facebook, etc.)
+- "Rate Us" button (highlighted)
+- Clean spacing and modern design
+
+--------------------------------------------------
+
+6. 📱 BOTTOM NAVIGATION BAR (Mobile Style)
+
+Fixed bottom navigation with icons:
+
+- Home
+- Menu
+- Cart
+- Orders
+- Booking
+
+Design:
+- Rounded top edges
+- Glass / blur effect (optional)
+- Active tab highlight
+
+--------------------------------------------------
+
+⚙️ TECHNICAL REQUIREMENTS
+
+- Use React (or existing stack in my Replit project)
+- Use reusable components
+- Dynamic routing (based on restaurant ID or slug)
+- Store restaurant data and pass it to the website
+- Ensure fast loading and responsive design
+
+--------------------------------------------------
+
+🔗 BUTTON LOGIC (IMPORTANT)
+
+"Visit Your Website" button must:
+- Dynamically generate URL
+- Open the restaurant page
+- Work for every restaurant created
+
+--------------------------------------------------
+
+✨ FINAL EXPECTATION
+
+The output should:
+- Look like a real startup product
+- Be visually polished
+- Not feel like a template or AI-generated UI
+- Be clean, modern, and smooth
+
+--------------------------------------------------
+
+Build this feature end-to-end with proper structure and clean code.

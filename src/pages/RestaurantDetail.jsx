@@ -91,7 +91,7 @@ export default function RestaurantDetail() {
             </div>
           </div>
 
-          <VisitButton restaurantName={restaurant.name} />
+          <VisitButton restaurantId={restaurant.id} />
         </div>
 
         <div style={{
@@ -190,13 +190,12 @@ function DetailItem({ label, value, highlight }) {
   )
 }
 
-function VisitButton({ restaurantName }) {
+function VisitButton({ restaurantId }) {
   const [hovered, setHovered] = useState(false)
-  const slug = restaurantName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
 
   return (
     <a
-      href={`https://${slug}.exzibo.com`}
+      href={`/r/${restaurantId}`}
       target="_blank"
       rel="noopener noreferrer"
       onMouseEnter={() => setHovered(true)}

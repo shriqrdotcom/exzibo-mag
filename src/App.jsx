@@ -8,6 +8,7 @@ import Settings from './pages/Settings'
 import CreateWebsite from './pages/CreateWebsite'
 import Restaurants from './pages/Restaurants'
 import RestaurantDetail from './pages/RestaurantDetail'
+import RestaurantWebsite from './pages/RestaurantWebsite'
 
 export default function App() {
   return (
@@ -22,6 +23,7 @@ export default function App() {
         <Route path="/create-website" element={<CreateWebsite />} />
         <Route path="/restaurants" element={<Restaurants />} />
         <Route path="/restaurant/:id" element={<RestaurantDetail />} />
+        <Route path="/r/:id" element={<RestaurantWebsite />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
