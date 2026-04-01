@@ -31,6 +31,7 @@ export default function CreateWebsite() {
   const [errors, setErrors] = useState({})
   const [submitting, setSubmitting] = useState(false)
   const [success, setSuccess] = useState(false)
+  const [createdSlug, setCreatedSlug] = useState('')
   const [logoDragging, setLogoDragging] = useState(false)
   const [imgDragging, setImgDragging] = useState(false)
 
@@ -129,25 +130,77 @@ export default function CreateWebsite() {
     }
     localStorage.setItem('exzibo_restaurants', JSON.stringify([...existing, newRestaurant]))
     setSubmitting(false)
+    setCreatedSlug(slug)
     setSuccess(true)
-    setTimeout(() => navigate('/restaurants'), 2000)
   }
 
   if (success) {
+    const websiteUrl = `/restaurant/${createdSlug}`
     return (
       <div style={{
         minHeight: '100vh', background: '#0B0B0B',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontFamily: "'Inter', sans-serif", padding: '24px',
       }}>
         <div style={{
-          textAlign: 'center',
-          background: 'rgba(34,197,94,0.08)',
-          border: '1px solid rgba(34,197,94,0.2)',
-          borderRadius: '24px', padding: '60px 80px',
+          textAlign: 'center', maxWidth: '420px', width: '100%',
+          background: 'rgba(255,255,255,0.02)',
+          border: '1px solid rgba(255,255,255,0.08)',
+          borderRadius: '24px', padding: '48px 40px',
         }}>
-          <div style={{ fontSize: '48px', marginBottom: '16px' }}>✓</div>
-          <div style={{ fontSize: '22px', fontWeight: 800, color: '#4ade80', marginBottom: '8px' }}>Website Generated!</div>
-          <div style={{ fontSize: '14px', color: '#555' }}>Redirecting to My Restaurants...</div>
+          <div style={{
+            width: '64px', height: '64px', borderRadius: '20px',
+            background: 'rgba(74,222,128,0.12)', border: '1px solid rgba(74,222,128,0.25)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: '28px', margin: '0 auto 20px',
+          }}>✓</div>
+          <div style={{ fontSize: '22px', fontWeight: 900, color: '#fff', marginBottom: '8px' }}>
+            Restaurant Created!
+          </div>
+          <div style={{ fontSize: '14px', color: '#555', marginBottom: '28px', lineHeight: 1.6 }}>
+            Your restaurant website is live. The details you filled in are now connected to your customer page.
+          </div>
+
+          {/* URL Preview */}
+          <div style={{
+            background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)',
+            borderRadius: '10px', padding: '10px 14px', marginBottom: '24px',
+            display: 'flex', alignItems: 'center', gap: '8px',
+          }}>
+            <span style={{ fontSize: '11px', color: '#555' }}>Your URL:</span>
+            <span style={{ fontSize: '12px', color: '#E8321A', fontFamily: 'monospace', fontWeight: 600 }}>
+              {websiteUrl}
+            </span>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <a
+              href={websiteUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                background: '#E8321A', borderRadius: '12px', padding: '14px',
+                color: '#fff', fontSize: '14px', fontWeight: 700,
+                textDecoration: 'none', letterSpacing: '0.04em',
+                boxShadow: '0 6px 20px rgba(232,50,26,0.4)',
+              }}
+            >
+              View Customer Page →
+            </a>
+            <button
+              onClick={() => navigate('/restaurants')}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
+                borderRadius: '12px', padding: '14px',
+                color: '#ccc', fontSize: '14px', fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              My Restaurants
+            </button>
+          </div>
         </div>
       </div>
     )
