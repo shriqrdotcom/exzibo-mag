@@ -42,6 +42,75 @@ const MENU_FALLBACK = {
   ],
 }
 
+const THEMES = [
+  {
+    id: 'crimson-dark',
+    name: 'Crimson Dark',
+    label: 'DEFAULT',
+    available: true,
+    bg: '#0A0A0A',
+    accent: '#E8321A',
+    card: '#111111',
+    desc: 'Obsidian black with crimson red accents. The signature Exzibo look.',
+    colors: ['#0A0A0A', '#E8321A', '#111111'],
+  },
+  {
+    id: 'ocean-blue',
+    name: 'Ocean Blue',
+    label: 'COMING SOON',
+    available: false,
+    bg: '#050D1A',
+    accent: '#2563EB',
+    card: '#0D1A2E',
+    desc: 'Deep navy with electric blue highlights. Perfect for seafood & coastal dining.',
+    colors: ['#050D1A', '#2563EB', '#0D1A2E'],
+  },
+  {
+    id: 'forest-green',
+    name: 'Forest Green',
+    label: 'COMING SOON',
+    available: false,
+    bg: '#050E08',
+    accent: '#16A34A',
+    card: '#0A1A0D',
+    desc: 'Earthy dark tones with lush green. Ideal for farm-to-table & organic menus.',
+    colors: ['#050E08', '#16A34A', '#0A1A0D'],
+  },
+  {
+    id: 'golden-luxury',
+    name: 'Golden Luxury',
+    label: 'COMING SOON',
+    available: false,
+    bg: '#0A0800',
+    accent: '#D97706',
+    card: '#1A1400',
+    desc: 'Midnight black with champagne gold. The ultimate fine-dining statement.',
+    colors: ['#0A0800', '#D97706', '#1A1400'],
+  },
+  {
+    id: 'midnight-purple',
+    name: 'Midnight Purple',
+    label: 'COMING SOON',
+    available: false,
+    bg: '#07050F',
+    accent: '#7C3AED',
+    card: '#110D1E',
+    desc: 'Dark moody purples for bars, lounges & cocktail experiences.',
+    colors: ['#07050F', '#7C3AED', '#110D1E'],
+  },
+  {
+    id: 'slate-modern',
+    name: 'Slate Modern',
+    label: 'COMING SOON',
+    available: false,
+    bg: '#0D0F12',
+    accent: '#94A3B8',
+    card: '#161A1F',
+    desc: 'Cool slate greys for a minimal, editorial dining aesthetic.',
+    colors: ['#0D0F12', '#94A3B8', '#161A1F'],
+  },
+]
+
 export default function RestaurantWebsite() {
   const { slug } = useParams()
   const navigate = useNavigate()
@@ -53,6 +122,8 @@ export default function RestaurantWebsite() {
   const [showTop, setShowTop] = useState(false)
   const [activeTab, setActiveTab] = useState('starters')
   const [liked, setLiked] = useState({})
+  const [showThemes, setShowThemes] = useState(false)
+  const [activeTheme, setActiveTheme] = useState('crimson-dark')
 
   const heroRef = useRef(null)
   const menuRef = useRef(null)
@@ -214,12 +285,162 @@ export default function RestaurantWebsite() {
         .tab-btn { transition: all 0.25s ease; }
       `}</style>
 
-      {/* ── ADMIN BACK BAR (hidden from customers, only for navigation context) ── */}
-      {slug !== 'demo' && (
-        <div style={{
-          background: 'rgba(232,50,26,0.08)', borderBottom: '1px solid rgba(232,50,26,0.18)',
-          padding: '8px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        }}>
+      {/* ── THEMES PANEL OVERLAY ── */}
+      {showThemes && (
+        <div
+          onClick={() => setShowThemes(false)}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 200,
+            background: 'rgba(0,0,0,0.7)',
+            backdropFilter: 'blur(6px)',
+            WebkitBackdropFilter: 'blur(6px)',
+            animation: 'fadeIn 0.2s ease',
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              position: 'absolute', bottom: 0, left: '50%', transform: 'translateX(-50%)',
+              width: '100%', maxWidth: '480px',
+              background: '#111',
+              border: '1px solid rgba(255,255,255,0.08)',
+              borderRadius: '24px 24px 0 0',
+              padding: '0 0 env(safe-area-inset-bottom, 20px)',
+              animation: 'slideUp 0.3s cubic-bezier(0.34,1.1,0.64,1)',
+              maxHeight: '88vh',
+              display: 'flex', flexDirection: 'column',
+            }}
+          >
+            <style>{`@keyframes slideUp { from { transform: translateX(-50%) translateY(100%); } to { transform: translateX(-50%) translateY(0); } }`}</style>
+
+            {/* Handle */}
+            <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0 0' }}>
+              <div style={{ width: '36px', height: '4px', borderRadius: '2px', background: 'rgba(255,255,255,0.12)' }} />
+            </div>
+
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px 12px' }}>
+              <div>
+                <div style={{ fontSize: '17px', fontWeight: 800, letterSpacing: '-0.01em' }}>Website Themes</div>
+                <div style={{ fontSize: '11px', color: '#555', marginTop: '2px' }}>Choose how your restaurant looks to guests</div>
+              </div>
+              <button
+                onClick={() => setShowThemes(false)}
+                style={{
+                  width: '32px', height: '32px', borderRadius: '10px',
+                  background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)',
+                  color: '#888', fontSize: '16px', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}
+              >✕</button>
+            </div>
+
+            {/* Theme Cards */}
+            <div style={{ overflowY: 'auto', padding: '4px 16px 24px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {THEMES.map(theme => {
+                const isActive = activeTheme === theme.id
+                return (
+                  <div
+                    key={theme.id}
+                    onClick={() => theme.available && setActiveTheme(theme.id)}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: '14px',
+                      padding: '14px 16px',
+                      borderRadius: '16px',
+                      background: isActive ? 'rgba(232,50,26,0.08)' : 'rgba(255,255,255,0.02)',
+                      border: `1px solid ${isActive ? 'rgba(232,50,26,0.35)' : 'rgba(255,255,255,0.06)'}`,
+                      cursor: theme.available ? 'pointer' : 'default',
+                      transition: 'all 0.2s ease',
+                      opacity: theme.available ? 1 : 0.55,
+                      position: 'relative',
+                    }}
+                  >
+                    {/* Color swatch */}
+                    <div style={{
+                      width: '52px', height: '52px', borderRadius: '14px',
+                      flexShrink: 0, overflow: 'hidden',
+                      background: theme.bg,
+                      border: `1px solid ${isActive ? theme.accent + '60' : 'rgba(255,255,255,0.1)'}`,
+                      display: 'flex', flexDirection: 'column',
+                      boxShadow: isActive ? `0 0 14px ${theme.accent}40` : 'none',
+                      transition: 'all 0.25s',
+                    }}>
+                      <div style={{ flex: 1, background: theme.bg }} />
+                      <div style={{ height: '14px', background: theme.accent }} />
+                    </div>
+
+                    {/* Info */}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '3px' }}>
+                        <div style={{ fontSize: '13px', fontWeight: 700, color: isActive ? '#fff' : '#ccc' }}>
+                          {theme.name}
+                        </div>
+                        <div style={{
+                          fontSize: '9px', fontWeight: 800, letterSpacing: '0.08em',
+                          padding: '2px 7px', borderRadius: '20px',
+                          background: theme.available
+                            ? (isActive ? 'rgba(232,50,26,0.2)' : 'rgba(255,255,255,0.07)')
+                            : 'rgba(255,255,255,0.05)',
+                          color: theme.available
+                            ? (isActive ? '#E8321A' : '#666')
+                            : '#444',
+                          border: `1px solid ${theme.available ? (isActive ? 'rgba(232,50,26,0.3)' : 'rgba(255,255,255,0.08)') : 'rgba(255,255,255,0.05)'}`,
+                        }}>
+                          {isActive ? 'ACTIVE' : theme.label}
+                        </div>
+                      </div>
+                      <div style={{ fontSize: '11px', color: '#555', lineHeight: 1.4 }}>
+                        {theme.desc}
+                      </div>
+                    </div>
+
+                    {/* Checkmark for active */}
+                    {isActive && (
+                      <div style={{
+                        width: '22px', height: '22px', borderRadius: '50%',
+                        background: '#E8321A', flexShrink: 0,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: '11px', color: '#fff', fontWeight: 900,
+                        boxShadow: '0 0 12px rgba(232,50,26,0.5)',
+                      }}>✓</div>
+                    )}
+
+                    {/* Lock icon for unavailable */}
+                    {!theme.available && (
+                      <div style={{
+                        width: '22px', height: '22px', borderRadius: '50%',
+                        background: 'rgba(255,255,255,0.04)', flexShrink: 0,
+                        border: '1px solid rgba(255,255,255,0.07)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: '12px',
+                      }}>🔒</div>
+                    )}
+                  </div>
+                )
+              })}
+
+              {/* More slots hint */}
+              <div style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                padding: '14px',
+                borderRadius: '16px',
+                background: 'rgba(255,255,255,0.01)',
+                border: '1px dashed rgba(255,255,255,0.07)',
+              }}>
+                <span style={{ fontSize: '14px' }}>✦</span>
+                <span style={{ fontSize: '11px', color: '#333', letterSpacing: '0.04em', fontWeight: 600 }}>More themes arriving soon</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── ADMIN BACK BAR ── */}
+      <div style={{
+        background: 'rgba(232,50,26,0.08)', borderBottom: '1px solid rgba(232,50,26,0.18)',
+        padding: '8px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      }}>
+        {slug !== 'demo' ? (
           <button
             onClick={() => navigate('/restaurants')}
             style={{
@@ -230,11 +451,29 @@ export default function RestaurantWebsite() {
           >
             ← MY RESTAURANTS
           </button>
-          <span style={{ fontSize: '10px', color: '#444', letterSpacing: '0.04em' }}>
-            ADMIN PREVIEW
-          </span>
-        </div>
-      )}
+        ) : (
+          <span style={{ fontSize: '10px', color: '#444', letterSpacing: '0.04em', fontWeight: 600 }}>ADMIN PREVIEW</span>
+        )}
+        <button
+          onClick={() => setShowThemes(true)}
+          style={{
+            display: 'flex', alignItems: 'center', gap: '6px',
+            padding: '6px 14px',
+            background: 'rgba(232,50,26,0.12)',
+            border: '1px solid rgba(232,50,26,0.25)',
+            borderRadius: '20px',
+            color: '#E8321A',
+            fontSize: '11px', fontWeight: 700, letterSpacing: '0.06em',
+            cursor: 'pointer',
+            transition: 'all 0.2s',
+          }}
+          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(232,50,26,0.22)'; e.currentTarget.style.boxShadow = '0 0 14px rgba(232,50,26,0.3)' }}
+          onMouseLeave={e => { e.currentTarget.style.background = 'rgba(232,50,26,0.12)'; e.currentTarget.style.boxShadow = 'none' }}
+        >
+          <span style={{ fontSize: '13px' }}>◑</span>
+          THEMES
+        </button>
+      </div>
 
       {/* ── TOP BAR ── */}
       <header style={{
