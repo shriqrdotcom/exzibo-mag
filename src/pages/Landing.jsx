@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowRight, Utensils, Wrench, Bell, User, Search, Palette, X, Check } from 'lucide-react'
+import { ArrowRight, Utensils, Wrench, Bell, User, Search, Palette, X, ExternalLink } from 'lucide-react'
 
 const THEMES = [
   {
@@ -8,60 +8,60 @@ const THEMES = [
     name: 'Crimson Dark',
     badge: 'DEFAULT',
     available: true,
-    bg: '#0A0A0A',
+    preview: '/theme-preview-crimson-dark.png',
     accent: '#E8321A',
-    card: '#111111',
-    desc: 'Obsidian black with crimson red accents. The signature Exzibo look.',
+    desc: 'Obsidian black with crimson red accents.',
+    link: '/restaurant/demo',
   },
   {
     id: 'ocean-blue',
     name: 'Ocean Blue',
     badge: 'COMING SOON',
     available: false,
-    bg: '#050D1A',
+    preview: null,
     accent: '#2563EB',
-    card: '#0D1A2E',
-    desc: 'Deep navy with electric blue highlights. Perfect for seafood & coastal dining.',
+    desc: 'Deep navy with electric blue highlights.',
+    link: null,
   },
   {
     id: 'forest-green',
     name: 'Forest Green',
     badge: 'COMING SOON',
     available: false,
-    bg: '#050E08',
+    preview: null,
     accent: '#16A34A',
-    card: '#0A1A0D',
-    desc: 'Earthy dark tones with lush green. Ideal for farm-to-table & organic menus.',
+    desc: 'Earthy dark tones with lush green.',
+    link: null,
   },
   {
     id: 'golden-luxury',
     name: 'Golden Luxury',
     badge: 'COMING SOON',
     available: false,
-    bg: '#0A0800',
+    preview: null,
     accent: '#D97706',
-    card: '#1A1400',
-    desc: 'Midnight black with champagne gold. The ultimate fine-dining statement.',
+    desc: 'Midnight black with champagne gold.',
+    link: null,
   },
   {
     id: 'midnight-purple',
     name: 'Midnight Purple',
     badge: 'COMING SOON',
     available: false,
-    bg: '#07050F',
+    preview: null,
     accent: '#7C3AED',
-    card: '#110D1E',
-    desc: 'Dark moody purples for bars, lounges & cocktail experiences.',
+    desc: 'Dark moody purples for bars & lounges.',
+    link: null,
   },
   {
     id: 'slate-modern',
     name: 'Slate Modern',
     badge: 'COMING SOON',
     available: false,
-    bg: '#0D0F12',
+    preview: null,
     accent: '#94A3B8',
-    card: '#161A1F',
-    desc: 'Cool slate greys for a minimal, editorial dining aesthetic.',
+    desc: 'Cool slate greys for a minimal aesthetic.',
+    link: null,
   },
 ]
 
@@ -69,7 +69,6 @@ export default function Landing() {
   const navigate = useNavigate()
   const [loaded, setLoaded] = useState(false)
   const [showThemes, setShowThemes] = useState(false)
-  const [activeTheme, setActiveTheme] = useState('crimson-dark')
 
   useEffect(() => {
     setTimeout(() => setLoaded(true), 100)
@@ -92,9 +91,7 @@ export default function Landing() {
         <div style={{ fontSize: '20px', fontWeight: 900, letterSpacing: '0.05em' }}>
           EXZI<span style={{ color: '#E8321A' }}>BO</span>
         </div>
-
         <div />
-
         <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
           <div style={{
             display: 'flex', alignItems: 'center', gap: '8px',
@@ -131,20 +128,14 @@ export default function Landing() {
         transition: 'all 0.8s ease',
       }}>
         <div style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: '8px',
+          display: 'inline-flex', alignItems: 'center', gap: '8px',
           background: 'rgba(255,255,255,0.05)',
           border: '1px solid rgba(255,255,255,0.1)',
-          borderRadius: '50px',
-          padding: '6px 16px',
-          marginBottom: '48px',
+          borderRadius: '50px', padding: '6px 16px', marginBottom: '48px',
         }}>
           <span style={{
             width: '7px', height: '7px', borderRadius: '50%',
-            background: '#E8321A',
-            boxShadow: '0 0 8px #E8321A',
-            display: 'inline-block',
+            background: '#E8321A', boxShadow: '0 0 8px #E8321A', display: 'inline-block',
             animation: 'pulse-glow 2s ease-in-out infinite',
           }} />
           <span style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.15em', color: '#ccc', textTransform: 'uppercase' }}>
@@ -153,31 +144,17 @@ export default function Landing() {
         </div>
 
         <h1 style={{
-          fontSize: 'clamp(52px, 8vw, 96px)',
-          fontWeight: 900,
-          lineHeight: 1.0,
-          letterSpacing: '-0.01em',
-          marginBottom: '28px',
-          maxWidth: '900px',
+          fontSize: 'clamp(52px, 8vw, 96px)', fontWeight: 900, lineHeight: 1.0,
+          letterSpacing: '-0.01em', marginBottom: '28px', maxWidth: '900px',
         }}>
           THE ART OF{' '}
-          <span style={{
-            color: '#E8321A',
-            textShadow: '0 0 60px rgba(232,50,26,0.4)',
-          }}>
-            PRECISION
-          </span>
-          <br />
-          DINING.
+          <span style={{ color: '#E8321A', textShadow: '0 0 60px rgba(232,50,26,0.4)' }}>PRECISION</span>
+          <br />DINING.
         </h1>
 
         <p style={{
-          fontSize: '16px',
-          color: '#888',
-          maxWidth: '480px',
-          lineHeight: 1.7,
-          marginBottom: '52px',
-          fontWeight: 400,
+          fontSize: '16px', color: '#888', maxWidth: '480px',
+          lineHeight: 1.7, marginBottom: '52px', fontWeight: 400,
         }}>
           Elevate your culinary establishment with an administrative suite crafted
           for excellence. Obsidian depth meets crimson performance.
@@ -205,62 +182,59 @@ export default function Landing() {
           onClick={() => setShowThemes(false)}
           style={{
             position: 'fixed', inset: 0, zIndex: 300,
-            background: 'rgba(0,0,0,0.75)',
-            backdropFilter: 'blur(8px)',
-            WebkitBackdropFilter: 'blur(8px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
+            background: 'rgba(0,0,0,0.82)',
+            backdropFilter: 'blur(10px)',
+            WebkitBackdropFilter: 'blur(10px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
             padding: '24px',
             animation: 'fadeInModal 0.2s ease',
           }}
         >
           <style>{`
             @keyframes fadeInModal { from { opacity: 0; } to { opacity: 1; } }
-            @keyframes scaleInModal { from { opacity: 0; transform: scale(0.95) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+            @keyframes scaleInModal { from { opacity: 0; transform: scale(0.96) translateY(12px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+            .theme-card-hover:hover .theme-card-overlay { opacity: 1 !important; }
+            .theme-card-hover:hover img { transform: scale(1.04); }
           `}</style>
           <div
             onClick={e => e.stopPropagation()}
             style={{
-              width: '100%',
-              maxWidth: '560px',
-              maxHeight: '85vh',
-              background: '#111',
+              width: '100%', maxWidth: '720px', maxHeight: '88vh',
+              background: '#0e0e0e',
               border: '1px solid rgba(255,255,255,0.08)',
               borderRadius: '24px',
-              display: 'flex',
-              flexDirection: 'column',
-              animation: 'scaleInModal 0.25s cubic-bezier(0.34,1.1,0.64,1)',
+              display: 'flex', flexDirection: 'column',
+              animation: 'scaleInModal 0.28s cubic-bezier(0.34,1.1,0.64,1)',
               overflow: 'hidden',
             }}
           >
             {/* Header */}
             <div style={{
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              padding: '24px 24px 20px',
+              padding: '22px 24px 18px',
               borderBottom: '1px solid rgba(255,255,255,0.06)',
               flexShrink: 0,
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <div style={{
                   width: '40px', height: '40px', borderRadius: '12px',
-                  background: 'rgba(232,50,26,0.12)',
-                  border: '1px solid rgba(232,50,26,0.2)',
+                  background: 'rgba(232,50,26,0.12)', border: '1px solid rgba(232,50,26,0.2)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}>
                   <Palette size={18} color="#E8321A" />
                 </div>
                 <div>
                   <div style={{ fontSize: '18px', fontWeight: 800, letterSpacing: '-0.01em' }}>Website Themes</div>
-                  <div style={{ fontSize: '12px', color: '#555', marginTop: '1px' }}>Choose how your restaurant site looks to guests</div>
+                  <div style={{ fontSize: '12px', color: '#555', marginTop: '1px' }}>
+                    Pick a look for your restaurant website
+                  </div>
                 </div>
               </div>
               <button
                 onClick={() => setShowThemes(false)}
                 style={{
                   width: '34px', height: '34px', borderRadius: '10px',
-                  background: 'rgba(255,255,255,0.05)',
-                  border: '1px solid rgba(255,255,255,0.08)',
+                  background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)',
                   color: '#666', cursor: 'pointer',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   transition: 'all 0.2s',
@@ -272,138 +246,186 @@ export default function Landing() {
               </button>
             </div>
 
-            {/* Theme list */}
-            <div style={{ overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {THEMES.map(theme => {
-                const isActive = activeTheme === theme.id
-                return (
-                  <div
-                    key={theme.id}
-                    onClick={() => theme.available && setActiveTheme(theme.id)}
-                    style={{
-                      display: 'flex', alignItems: 'center', gap: '16px',
-                      padding: '16px',
-                      borderRadius: '16px',
-                      background: isActive ? 'rgba(232,50,26,0.07)' : 'rgba(255,255,255,0.02)',
-                      border: `1px solid ${isActive ? 'rgba(232,50,26,0.3)' : 'rgba(255,255,255,0.06)'}`,
-                      cursor: theme.available ? 'pointer' : 'default',
-                      opacity: theme.available ? 1 : 0.5,
-                      transition: 'all 0.2s ease',
-                    }}
-                    onMouseEnter={e => { if (theme.available && !isActive) e.currentTarget.style.background = 'rgba(255,255,255,0.04)' }}
-                    onMouseLeave={e => { if (theme.available && !isActive) e.currentTarget.style.background = 'rgba(255,255,255,0.02)' }}
-                  >
-                    {/* Color swatch */}
-                    <div style={{
-                      width: '56px', height: '56px', borderRadius: '14px',
-                      flexShrink: 0, overflow: 'hidden',
-                      background: theme.bg,
-                      border: `1px solid ${isActive ? theme.accent + '55' : 'rgba(255,255,255,0.1)'}`,
-                      boxShadow: isActive ? `0 0 16px ${theme.accent}35` : 'none',
-                      display: 'flex', flexDirection: 'column',
-                      transition: 'all 0.25s',
-                    }}>
-                      <div style={{ flex: 1, background: theme.bg }} />
-                      <div style={{ height: '16px', background: theme.accent }} />
-                    </div>
+            {/* Grid */}
+            <div style={{
+              overflowY: 'auto', padding: '20px',
+              display: 'grid',
+              gridTemplateColumns: 'repeat(3, 1fr)',
+              gap: '14px',
+            }}>
+              {THEMES.map(theme => (
+                <ThemeCard
+                  key={theme.id}
+                  theme={theme}
+                  onClick={() => {
+                    if (theme.available && theme.link) {
+                      setShowThemes(false)
+                      navigate(theme.link)
+                    }
+                  }}
+                />
+              ))}
 
-                    {/* Text */}
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                        <span style={{ fontSize: '14px', fontWeight: 700, color: isActive ? '#fff' : '#ccc' }}>
-                          {theme.name}
-                        </span>
-                        <span style={{
-                          fontSize: '9px', fontWeight: 800, letterSpacing: '0.08em',
-                          padding: '2px 8px', borderRadius: '20px',
-                          background: isActive
-                            ? 'rgba(232,50,26,0.18)'
-                            : (theme.available ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.04)'),
-                          color: isActive ? '#E8321A' : (theme.available ? '#888' : '#444'),
-                          border: `1px solid ${isActive ? 'rgba(232,50,26,0.25)' : 'rgba(255,255,255,0.07)'}`,
-                        }}>
-                          {isActive ? 'ACTIVE' : theme.badge}
-                        </span>
-                      </div>
-                      <div style={{ fontSize: '12px', color: '#555', lineHeight: 1.5 }}>
-                        {theme.desc}
-                      </div>
-                    </div>
-
-                    {/* Right indicator */}
-                    <div style={{ flexShrink: 0 }}>
-                      {isActive ? (
-                        <div style={{
-                          width: '26px', height: '26px', borderRadius: '50%',
-                          background: '#E8321A',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          boxShadow: '0 0 14px rgba(232,50,26,0.5)',
-                        }}>
-                          <Check size={13} color="#fff" strokeWidth={3} />
-                        </div>
-                      ) : (
-                        <div style={{
-                          width: '26px', height: '26px', borderRadius: '50%',
-                          background: 'rgba(255,255,255,0.03)',
-                          border: '1px solid rgba(255,255,255,0.08)',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          fontSize: '13px',
-                        }}>
-                          {theme.available ? '' : '🔒'}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )
-              })}
-
-              {/* Empty slot hint */}
+              {/* Add more slot */}
               <div style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                padding: '16px',
                 borderRadius: '16px',
+                border: '2px dashed rgba(255,255,255,0.07)',
                 background: 'rgba(255,255,255,0.01)',
-                border: '1px dashed rgba(255,255,255,0.06)',
+                display: 'flex', flexDirection: 'column',
+                alignItems: 'center', justifyContent: 'center',
+                gap: '8px', padding: '32px 16px',
+                minHeight: '160px',
               }}>
-                <span style={{ fontSize: '16px', opacity: 0.4 }}>✦</span>
-                <span style={{ fontSize: '12px', color: '#2a2a2a', letterSpacing: '0.05em', fontWeight: 600 }}>
-                  More themes arriving soon
+                <span style={{ fontSize: '24px', opacity: 0.2 }}>✦</span>
+                <span style={{ fontSize: '11px', color: '#2e2e2e', fontWeight: 700, letterSpacing: '0.06em', textAlign: 'center' }}>
+                  MORE THEMES<br />ARRIVING SOON
                 </span>
               </div>
             </div>
 
             {/* Footer */}
             <div style={{
-              padding: '16px 24px',
+              padding: '14px 24px',
               borderTop: '1px solid rgba(255,255,255,0.05)',
               flexShrink: 0,
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             }}>
-              <span style={{ fontSize: '12px', color: '#444' }}>
-                {THEMES.filter(t => t.available).length} of {THEMES.length} themes available
+              <span style={{ fontSize: '12px', color: '#3a3a3a' }}>
+                {THEMES.filter(t => t.available).length} of {THEMES.length + 1} themes available
               </span>
               <button
                 onClick={() => setShowThemes(false)}
                 style={{
-                  padding: '10px 24px',
-                  background: '#E8321A',
-                  border: 'none',
-                  borderRadius: '50px',
-                  color: '#fff',
-                  fontSize: '12px', fontWeight: 700, letterSpacing: '0.08em',
-                  cursor: 'pointer',
-                  boxShadow: '0 0 20px rgba(232,50,26,0.35)',
-                  transition: 'all 0.2s',
+                  padding: '10px 28px', background: '#E8321A', border: 'none',
+                  borderRadius: '50px', color: '#fff', fontSize: '12px',
+                  fontWeight: 700, letterSpacing: '0.08em', cursor: 'pointer',
+                  boxShadow: '0 0 20px rgba(232,50,26,0.35)', transition: 'all 0.2s',
                 }}
                 onMouseEnter={e => e.currentTarget.style.boxShadow = '0 0 28px rgba(232,50,26,0.55)'}
                 onMouseLeave={e => e.currentTarget.style.boxShadow = '0 0 20px rgba(232,50,26,0.35)'}
               >
-                DONE
+                CLOSE
               </button>
             </div>
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+function ThemeCard({ theme, onClick }) {
+  const [hovered, setHovered] = useState(false)
+
+  return (
+    <div
+      className="theme-card-hover"
+      onClick={onClick}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        borderRadius: '16px',
+        border: `1px solid ${hovered && theme.available ? theme.accent + '55' : 'rgba(255,255,255,0.07)'}`,
+        background: '#111',
+        overflow: 'hidden',
+        cursor: theme.available ? 'pointer' : 'default',
+        transition: 'all 0.25s ease',
+        boxShadow: hovered && theme.available ? `0 8px 28px ${theme.accent}25` : 'none',
+        opacity: theme.available ? 1 : 0.45,
+        position: 'relative',
+      }}
+    >
+      {/* Preview image area */}
+      <div style={{
+        height: '180px', overflow: 'hidden', position: 'relative',
+        background: '#080808',
+      }}>
+        {theme.preview ? (
+          <>
+            <img
+              src={theme.preview}
+              alt={theme.name}
+              style={{
+                width: '100%', height: '100%', objectFit: 'cover',
+                objectPosition: 'top',
+                transition: 'transform 0.4s ease',
+                transform: hovered ? 'scale(1.04)' : 'scale(1)',
+                display: 'block',
+              }}
+            />
+            {/* Hover overlay with "Preview" CTA */}
+            <div className="theme-card-overlay" style={{
+              position: 'absolute', inset: 0,
+              background: 'rgba(0,0,0,0.55)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              opacity: hovered ? 1 : 0,
+              transition: 'opacity 0.25s ease',
+            }}>
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: '7px',
+                background: theme.accent, borderRadius: '50px',
+                padding: '9px 20px',
+                fontSize: '12px', fontWeight: 800, color: '#fff',
+                letterSpacing: '0.06em',
+                boxShadow: `0 4px 18px ${theme.accent}60`,
+              }}>
+                <ExternalLink size={13} />
+                OPEN THEME
+              </div>
+            </div>
+          </>
+        ) : (
+          /* Placeholder for upcoming themes */
+          <div style={{
+            width: '100%', height: '100%',
+            background: `linear-gradient(135deg, #0a0a0a 0%, ${theme.accent}18 100%)`,
+            display: 'flex', flexDirection: 'column',
+            alignItems: 'center', justifyContent: 'center', gap: '8px',
+          }}>
+            <div style={{
+              width: '36px', height: '36px', borderRadius: '50%',
+              background: `${theme.accent}20`, border: `1px solid ${theme.accent}30`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: '16px',
+            }}>🔒</div>
+            <div style={{
+              width: '60px', height: '4px', borderRadius: '2px',
+              background: theme.accent, opacity: 0.3,
+            }} />
+            <div style={{
+              width: '40px', height: '4px', borderRadius: '2px',
+              background: 'rgba(255,255,255,0.08)',
+            }} />
+          </div>
+        )}
+      </div>
+
+      {/* Info bar */}
+      <div style={{
+        padding: '12px 14px',
+        background: hovered && theme.available ? `${theme.accent}0e` : 'transparent',
+        transition: 'background 0.25s',
+        borderTop: '1px solid rgba(255,255,255,0.05)',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
+          <span style={{ fontSize: '13px', fontWeight: 700, color: theme.available ? '#e0e0e0' : '#555' }}>
+            {theme.name}
+          </span>
+          <span style={{
+            fontSize: '9px', fontWeight: 800, letterSpacing: '0.07em',
+            padding: '2px 8px', borderRadius: '20px',
+            background: theme.available ? `${theme.accent}20` : 'rgba(255,255,255,0.04)',
+            color: theme.available ? theme.accent : '#444',
+            border: `1px solid ${theme.available ? theme.accent + '35' : 'rgba(255,255,255,0.06)'}`,
+            whiteSpace: 'nowrap',
+          }}>
+            {theme.badge}
+          </span>
+        </div>
+        <div style={{ fontSize: '11px', color: '#444', marginTop: '3px', lineHeight: 1.4 }}>
+          {theme.desc}
+        </div>
+      </div>
     </div>
   )
 }
@@ -416,21 +438,14 @@ function CTAButton({ children, onClick, icon, primary, dashed }) {
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '10px',
-        padding: '16px 32px',
-        borderRadius: '50px',
+        display: 'flex', alignItems: 'center', gap: '10px',
+        padding: '16px 32px', borderRadius: '50px',
         background: hovered || primary ? '#E8321A' : 'transparent',
         border: dashed
           ? `2px dashed ${hovered ? '#E8321A' : 'rgba(232,50,26,0.5)'}`
           : `2px solid ${hovered || primary ? '#E8321A' : 'rgba(232,50,26,0.5)'}`,
-        color: '#fff',
-        fontSize: '13px',
-        fontWeight: 700,
-        letterSpacing: '0.1em',
-        cursor: 'pointer',
-        transition: 'all 0.25s ease',
+        color: '#fff', fontSize: '13px', fontWeight: 700, letterSpacing: '0.1em',
+        cursor: 'pointer', transition: 'all 0.25s ease',
         boxShadow: hovered || primary ? '0 0 30px rgba(232,50,26,0.4)' : 'none',
       }}
     >
