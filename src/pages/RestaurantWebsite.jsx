@@ -4,7 +4,7 @@ import {
   Phone, Star, Globe, ChevronLeft, ChevronRight,
   Home, UtensilsCrossed, ShoppingCart, ClipboardList,
   CalendarDays, MapPin, AtSign, Share2, MessageCircle,
-  Search, Bell, ChevronRight as ArrowRight, Heart,
+  Bell, ChevronRight as ArrowRight, Heart,
   Flame, Award, Leaf, Clock, Users, ExternalLink, ArrowUp
 } from 'lucide-react'
 
@@ -275,17 +275,6 @@ export default function RestaurantWebsite() {
               <Bell size={16} color="#888" />
             </div>
           </div>
-        </div>
-
-        {/* Search bar */}
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: '10px',
-          background: 'rgba(255,255,255,0.04)',
-          border: '1px solid rgba(255,255,255,0.07)',
-          borderRadius: '14px', padding: '10px 14px',
-        }}>
-          <Search size={15} color="#555" />
-          <span style={{ fontSize: '13px', color: '#444', fontWeight: 500 }}>Search menu items...</span>
         </div>
       </header>
 
