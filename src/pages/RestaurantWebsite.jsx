@@ -47,8 +47,9 @@ function buildTheme(dark) {
     cardBg: dark ? '#1c1c1c' : '#fff',
     cardBorder: dark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)',
     cardShadow: dark ? '0 2px 16px rgba(0,0,0,0.4)' : '0 2px 16px rgba(0,0,0,0.07)',
-    tabBarBg: dark ? '#1a1a1a' : '#fff',
+    tabBarBg: dark ? '#1e1e1e' : '#fff',
     tabBarBorder: dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.07)',
+    tabBarShadow: dark ? '0 4px 24px rgba(0,0,0,0.5)' : '0 4px 24px rgba(0,0,0,0.10)',
     tabInactiveBg: dark ? 'rgba(255,255,255,0.06)' : '#f0f0f0',
     tabInactiveColor: dark ? '#888' : '#888',
     itemName: dark ? '#f0f0f0' : '#111',
@@ -266,37 +267,43 @@ export default function RestaurantWebsite() {
       {/* ── CATEGORY TABS ── */}
       <div style={{
         position: 'sticky', top: '64px', zIndex: 40,
-        background: theme.tabBarBg,
-        borderBottom: `1px solid ${theme.tabBarBorder}`,
-        padding: '12px 18px',
-        display: 'flex', gap: '8px',
-        overflowX: 'auto', scrollbarWidth: 'none',
+        padding: '12px 16px',
+        background: theme.pageBg,
         transition: 'background 0.3s ease',
       }}>
-        {TABS.map(tab => {
-          const active = activeTab === tab.id
-          return (
-            <button
-              key={tab.id}
-              className="tab-pill"
-              onClick={() => setActiveTab(tab.id)}
-              style={{
-                padding: '7px 18px',
-                borderRadius: '50px',
-                border: 'none',
-                background: active ? '#E8321A' : theme.tabInactiveBg,
-                color: active ? '#fff' : theme.tabInactiveColor,
-                fontSize: '11px', fontWeight: 800,
-                cursor: 'pointer', letterSpacing: '0.06em',
-                whiteSpace: 'nowrap',
-                boxShadow: active ? '0 4px 14px rgba(232,50,26,0.35)' : 'none',
-                flexShrink: 0,
-              }}
-            >
-              {tab.label}
-            </button>
-          )
-        })}
+        <div style={{
+          display: 'flex', alignItems: 'center',
+          background: theme.tabBarBg,
+          borderRadius: '18px',
+          boxShadow: theme.tabBarShadow,
+          padding: '6px',
+        }}>
+          {TABS.map(tab => {
+            const active = activeTab === tab.id
+            return (
+              <button
+                key={tab.id}
+                className="tab-pill"
+                onClick={() => setActiveTab(tab.id)}
+                style={{
+                  flex: 1,
+                  padding: '10px 8px',
+                  borderRadius: '14px',
+                  border: 'none',
+                  background: active ? '#E8321A' : 'transparent',
+                  color: active ? '#fff' : theme.tabInactiveColor,
+                  fontSize: '11px', fontWeight: 800,
+                  cursor: 'pointer', letterSpacing: '0.05em',
+                  whiteSpace: 'nowrap',
+                  textAlign: 'center',
+                  boxShadow: active ? '0 4px 14px rgba(232,50,26,0.35)' : 'none',
+                }}
+              >
+                {tab.label}
+              </button>
+            )
+          })}
+        </div>
       </div>
 
       {/* ── MENU CARDS ── */}
