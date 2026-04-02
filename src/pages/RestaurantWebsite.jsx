@@ -1,12 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
-  Phone, Star, Globe, ChevronLeft, ChevronRight,
-  Home, UtensilsCrossed, ShoppingCart, ClipboardList,
-  CalendarDays, MapPin, AtSign, Share2, MessageCircle,
-  Bell, ChevronRight as ArrowRight, Heart,
-  Flame, Award, Leaf, Clock, Users, ExternalLink, ArrowUp,
-  Sun, Moon
+  Star, MapPin, Bell, ShoppingCart, Home,
+  UtensilsCrossed, ClipboardList, CalendarDays,
+  Heart, Moon, Sun, ChevronRight
 } from 'lucide-react'
 
 const FALLBACK_IMAGES = [
@@ -17,87 +14,67 @@ const FALLBACK_IMAGES = [
   '/menu/atlantic-oysters.png',
 ]
 
-const BESTSELLERS_FALLBACK = [
-  { name: 'Truffle Beef Carpaccio', price: 2100, img: '/menu/truffle-beef-carpaccio.png', rating: 4.9, tag: 'Popular', tags: ['Popular'] },
-  { name: 'A5 Wagyu Ribeye', price: 15500, img: '/menu/wagyu-ribeye.png', rating: 4.8, tag: "Chef's Pick", tags: ['Popular'] },
-  { name: 'Lobster Thermidor', price: 7950, img: '/menu/lobster-thermidor.png', rating: 4.7, tag: 'Seasonal', tags: ['Seasonal'] },
-  { name: 'Heirloom Burrata', price: 1650, img: '/menu/heirloom-burrata.png', rating: 4.6, tag: 'Vegetarian', tags: ['Vegetarian'] },
-  { name: 'Noir Negroni', price: 1850, img: '/menu/noir-negroni.png', rating: 4.8, tag: 'Popular', tags: ['Popular'] },
-  { name: 'Forest Mushroom Risotto', price: 3500, img: '/menu/mushroom-risotto.png', rating: 4.5, tag: 'Gluten Free', tags: ['Gluten Free'] },
-]
-
 const MENU_FALLBACK = {
   starters: [
-    { name: 'Truffle Beef Carpaccio', price: 2100, img: '/menu/truffle-beef-carpaccio.png', description: 'Thin-sliced wagyu with black truffle and aged parmesan', tags: ['Popular'] },
-    { name: 'Atlantic Oysters', price: 2800, img: '/menu/atlantic-oysters.png', description: 'Half dozen with mignonette and lemon', tags: ['Seasonal'] },
-    { name: 'Heirloom Burrata', price: 1650, img: '/menu/heirloom-burrata.png', description: 'Fresh burrata with heirloom tomatoes and basil oil', tags: ['Vegetarian'] },
+    { name: 'Truffle Beef Carpaccio', price: 2100, oldPrice: 3150, img: '/menu/truffle-beef-carpaccio.png', description: 'Thin-sliced wagyu with black truffle and aged parmesan', tags: ['Popular'], veg: false },
+    { name: 'Atlantic Oysters', price: 2800, oldPrice: 4200, img: '/menu/atlantic-oysters.png', description: 'Half dozen with mignonette and lemon', tags: ['Seasonal'], veg: false },
+    { name: 'Heirloom Burrata', price: 1650, oldPrice: 2475, img: '/menu/heirloom-burrata.png', description: 'Fresh burrata with heirloom tomatoes and basil oil', tags: ['Vegetarian'], veg: true },
   ],
   mains: [
-    { name: 'A5 Wagyu Ribeye', price: 15500, img: '/menu/wagyu-ribeye.png', description: 'Japanese A5 Wagyu with bone marrow butter', tags: ['Popular'] },
-    { name: 'Lobster Thermidor', price: 7950, img: '/menu/lobster-thermidor.png', description: 'Whole Maine lobster in cognac cream sauce', tags: ['Seasonal'] },
-    { name: 'Forest Mushroom Risotto', price: 3500, img: '/menu/mushroom-risotto.png', description: 'Arborio rice with wild porcini and truffle oil', tags: ['Vegetarian', 'Gluten Free'] },
+    { name: 'A5 Wagyu Ribeye', price: 15500, oldPrice: 23250, img: '/menu/wagyu-ribeye.png', description: 'Japanese A5 Wagyu with bone marrow butter', tags: ['Popular'], veg: false },
+    { name: 'Lobster Thermidor', price: 7950, oldPrice: 11925, img: '/menu/lobster-thermidor.png', description: 'Whole Maine lobster in cognac cream sauce', tags: ['Seasonal'], veg: false },
+    { name: 'Forest Mushroom Risotto', price: 3500, oldPrice: 5250, img: '/menu/mushroom-risotto.png', description: 'Arborio rice with wild porcini and truffle oil', tags: ['Vegetarian', 'Gluten Free'], veg: true },
   ],
   drinks: [
-    { name: 'Noir Negroni', price: 1850, img: '/menu/noir-negroni.png', description: 'Gin, Campari, vermouth with activated charcoal', tags: ['Popular'] },
-    { name: 'Smoke & Mirrors', price: 1600, img: '/menu/noir-negroni.png', description: 'Mezcal, jalapeño, lime, smoked salt rim', tags: [] },
+    { name: 'Noir Negroni', price: 1850, oldPrice: 2775, img: '/menu/noir-negroni.png', description: 'Gin, Campari, vermouth with activated charcoal', tags: ['Popular'], veg: true },
+    { name: 'Smoke & Mirrors', price: 1600, oldPrice: 2400, img: '/menu/noir-negroni.png', description: 'Mezcal, jalapeño, lime, smoked salt rim', tags: [], veg: true },
   ],
 }
 
+const TABS = [
+  { id: 'starters', label: 'STARTERS' },
+  { id: 'mains', label: 'MAIN COURSE' },
+  { id: 'drinks', label: 'DRINKS' },
+]
+
 function buildTheme(dark) {
   return {
-    bg: dark ? '#0A0A0A' : '#F5F5F5',
-    color: dark ? '#fff' : '#0A0A0A',
-    headerBg: dark ? 'rgba(10,10,10,0.92)' : 'rgba(245,245,245,0.96)',
-    headerBorder: dark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.08)',
-    textMuted: dark ? '#555' : '#777',
-    textSub: dark ? '#555' : '#888',
-    textDim: dark ? '#bbb' : '#444',
-    textLight: dark ? '#ccc' : '#555',
-    textFaint: dark ? '#ddd' : '#333',
-    cardBg: dark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.03)',
-    cardBg2: dark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.04)',
-    cardBg3: dark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.07)',
-    cardBorder: dark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.08)',
-    cardBorder2: dark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.10)',
-    cardBorder3: dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.12)',
-    divider: dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.08)',
-    navBg: dark ? 'rgba(8,8,8,0.95)' : 'rgba(245,245,245,0.97)',
-    navBorder: dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.10)',
-    navInactiveColor: dark ? '#3a3a3a' : '#aaa',
-    iconBg: dark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.06)',
-    iconBorder: dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.10)',
+    pageBg: dark ? '#0f0f0f' : '#f2f2f2',
+    headerBg: dark ? 'rgba(15,15,15,0.95)' : 'rgba(255,255,255,0.97)',
+    headerBorder: dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.07)',
+    color: dark ? '#fff' : '#111',
+    locationColor: dark ? '#888' : '#777',
+    cardBg: dark ? '#1c1c1c' : '#fff',
+    cardBorder: dark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)',
+    cardShadow: dark ? '0 2px 16px rgba(0,0,0,0.4)' : '0 2px 16px rgba(0,0,0,0.07)',
+    tabBarBg: dark ? '#1a1a1a' : '#fff',
+    tabBarBorder: dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.07)',
+    tabInactiveBg: dark ? 'rgba(255,255,255,0.06)' : '#f0f0f0',
+    tabInactiveColor: dark ? '#888' : '#888',
+    itemName: dark ? '#f0f0f0' : '#111',
+    priceNew: dark ? '#f0f0f0' : '#111',
+    priceOld: dark ? '#555' : '#aaa',
+    offerColor: dark ? '#4ade80' : '#1a7a4a',
+    viewCartBg: dark ? 'transparent' : 'transparent',
+    viewCartBorder: dark ? 'rgba(74,222,128,0.5)' : '#2ecc71',
+    viewCartColor: dark ? '#4ade80' : '#1a7a4a',
+    vegDot: '#2ecc71',
+    nonVegDot: '#e53935',
+    bannerText: dark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)',
+    bannerHeart: '#e53935',
+    brandText: dark ? '#333' : '#ccc',
+    navBg: dark ? 'rgba(15,15,15,0.97)' : '#fff',
+    navBorder: dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.07)',
+    navInactive: dark ? '#444' : '#bbb',
+    toggleBg: dark ? 'rgba(255,255,255,0.08)' : '#f0f0f0',
+    toggleBorder: dark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.10)',
+    ratingBg: dark ? 'rgba(255,184,0,0.12)' : 'rgba(255,184,0,0.12)',
+    ratingBorder: dark ? 'rgba(255,184,0,0.25)' : 'rgba(255,184,0,0.3)',
+    bellBg: dark ? 'rgba(255,255,255,0.07)' : '#f0f0f0',
+    bellBorder: dark ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.08)',
     bellColor: dark ? '#888' : '#888',
-    tabInactiveBg: dark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.06)',
-    tabInactiveColor: dark ? '#666' : '#888',
-    statsText: dark ? '#ddd' : '#333',
-    btnSecBg: dark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.06)',
-    btnSecBorder: dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.10)',
-    btnSecColor: dark ? '#fff' : '#0A0A0A',
-    footerBg: dark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.03)',
-    footerBorder: dark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.08)',
-    footerLocation: dark ? '#444' : '#888',
-    poweredBy: dark ? '#222' : '#aaa',
-    socialBg: dark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.05)',
-    socialBorder: dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.10)',
-    socialColor: dark ? '#666' : '#888',
-    infoRowBg: dark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.05)',
-    infoRowBorder: dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.08)',
-    infoLabel: dark ? '#555' : '#888',
-    infoValue: dark ? '#ccc' : '#333',
-    noItems: dark ? '#444' : '#aaa',
-    adminBg: dark ? 'rgba(232,50,26,0.08)' : 'rgba(232,50,26,0.06)',
-    adminBorder: dark ? 'rgba(232,50,26,0.18)' : 'rgba(232,50,26,0.14)',
-    adminTime: dark ? '#444' : '#999',
-    aboutCard: dark
-      ? 'linear-gradient(135deg, rgba(232,50,26,0.07) 0%, rgba(255,255,255,0.02) 100%)'
-      : 'linear-gradient(135deg, rgba(232,50,26,0.05) 0%, rgba(0,0,0,0.02) 100%)',
-    aboutCardBorder: dark ? 'rgba(232,50,26,0.12)' : 'rgba(232,50,26,0.14)',
-    aboutText: dark ? '#bbb' : '#444',
-    additionalText: dark ? '#666' : '#888',
-    additionalBorder: dark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.08)',
-    toggleBg: dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.07)',
-    toggleBorder: dark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.13)',
-    toggleColor: dark ? '#FFB800' : '#555',
+    cartDot: '#E8321A',
+    imgOverlay: dark ? 'rgba(0,0,0,0.15)' : 'rgba(0,0,0,0.04)',
   }
 }
 
@@ -107,33 +84,22 @@ export default function RestaurantWebsite() {
   const [restaurant, setRestaurant] = useState(null)
   const [notFound, setNotFound] = useState(false)
   const [menuData, setMenuData] = useState({ starters: [], mains: [], drinks: [] })
-  const [activeNav, setActiveNav] = useState('home')
-  const [carouselIdx, setCarouselIdx] = useState(0)
-  const [showTop, setShowTop] = useState(false)
   const [activeTab, setActiveTab] = useState('starters')
-  const [liked, setLiked] = useState({})
-  const [darkMode, setDarkMode] = useState(true)
+  const [darkMode, setDarkMode] = useState(false)
+  const [activeNav, setActiveNav] = useState('menu')
+  const [cartCount] = useState(2)
 
   const theme = buildTheme(darkMode)
-
-  const heroRef = useRef(null)
-  const menuRef = useRef(null)
-  const aboutRef = useRef(null)
 
   useEffect(() => {
     if (slug === 'demo') {
       setRestaurant({
-        id: 'demo',
-        slug: 'demo',
+        id: 'demo', slug: 'demo',
         name: 'La Maison Noire',
         location: 'Cyber City, Gurugram',
-        description: 'An uncompromising culinary experience rooted in craft, quality, and atmosphere. Every dish is a conversation between heritage and innovation.',
-        chefInfo: 'Chef Marcus Aurélius, trained in Paris and Tokyo, brings 20 years of Michelin-star experience to every plate.',
         rating: '4.9',
         phone: '+91 98765 43210',
         tables: '24',
-        images: FALLBACK_IMAGES,
-        socialLinks: { instagram: '#', facebook: '#', twitter: '#', website: '#' },
       })
       setMenuData(MENU_FALLBACK)
       return
@@ -146,9 +112,9 @@ export default function RestaurantWebsite() {
       if (saved) {
         const parsed = JSON.parse(saved)
         setMenuData({
-          starters: parsed.starters?.length ? parsed.starters : MENU_FALLBACK.starters,
-          mains: parsed.mains?.length ? parsed.mains : MENU_FALLBACK.mains,
-          drinks: parsed.drinks?.length ? parsed.drinks : MENU_FALLBACK.drinks,
+          starters: parsed.starters?.length ? parsed.starters.map(injectOldPrice) : MENU_FALLBACK.starters,
+          mains: parsed.mains?.length ? parsed.mains.map(injectOldPrice) : MENU_FALLBACK.mains,
+          drinks: parsed.drinks?.length ? parsed.drinks.map(injectOldPrice) : MENU_FALLBACK.drinks,
         })
       } else {
         setMenuData(MENU_FALLBACK)
@@ -158,172 +124,111 @@ export default function RestaurantWebsite() {
     }
   }, [slug])
 
-  useEffect(() => {
-    if (!restaurant) return
-    const images = getCarouselImages(restaurant)
-    if (images.length <= 1) return
-    const interval = setInterval(() => {
-      setCarouselIdx(i => (i + 1) % images.length)
-    }, 4000)
-    return () => clearInterval(interval)
-  }, [restaurant])
-
-  useEffect(() => {
-    const onScroll = () => setShowTop(window.scrollY > 400)
-    window.addEventListener('scroll', onScroll)
-    return () => window.removeEventListener('scroll', onScroll)
-  }, [])
-
-  const getCarouselImages = (r) => {
-    if (r?.images?.length) return r.images
-    return FALLBACK_IMAGES
+  function injectOldPrice(item) {
+    return { ...item, oldPrice: item.oldPrice || Math.round(item.price * 1.5) }
   }
-
-  const scrollTo = (ref, nav) => {
-    setActiveNav(nav)
-    ref?.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  }
-
-  const allMenuItems = [...menuData.starters, ...menuData.mains, ...menuData.drinks]
-  const tagged = allMenuItems.filter(m => m.tags?.some(t => ['Popular', 'Seasonal', "Chef's Pick"].includes(t)))
-  const bestsellers = (tagged.length > 0 ? tagged : allMenuItems).slice(0, 6)
-  const activeMenuItems = menuData[activeTab] || []
 
   if (notFound) {
     return (
-      <div style={{ minHeight: '100vh', background: '#080808', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '0', fontFamily: "'Inter', sans-serif", padding: '24px' }}>
-        <div style={{ fontSize: '80px', fontWeight: 900, color: 'rgba(255,255,255,0.04)', lineHeight: 1 }}>404</div>
-        <div style={{ fontSize: '20px', fontWeight: 800, color: '#fff', marginTop: '-8px', marginBottom: '8px' }}>Restaurant not found</div>
-        <div style={{ fontSize: '13px', color: '#555', marginBottom: '32px', textAlign: 'center', maxWidth: '280px', lineHeight: 1.6 }}>
-          No restaurant matches this URL. Try viewing the demo or create your first restaurant.
+      <div style={{ minHeight: '100vh', background: '#f2f2f2', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '0', fontFamily: "'Inter', sans-serif", padding: '24px' }}>
+        <div style={{ fontSize: '80px', fontWeight: 900, color: 'rgba(0,0,0,0.06)', lineHeight: 1 }}>404</div>
+        <div style={{ fontSize: '20px', fontWeight: 800, color: '#111', marginTop: '-8px', marginBottom: '8px' }}>Restaurant not found</div>
+        <div style={{ fontSize: '13px', color: '#888', marginBottom: '32px', textAlign: 'center', maxWidth: '280px', lineHeight: 1.6 }}>
+          No restaurant matches this URL.
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', width: '100%', maxWidth: '280px' }}>
-          <a
-            href="/restaurant/demo"
-            style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-              background: '#E8321A', border: 'none', borderRadius: '12px', padding: '14px',
-              color: '#fff', fontSize: '13px', fontWeight: 700, textDecoration: 'none',
-              letterSpacing: '0.04em', boxShadow: '0 6px 20px rgba(232,50,26,0.4)',
-            }}
-          >
-            View Demo Restaurant
-          </a>
-          <a
-            href="/create-website"
-            style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-              background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
-              borderRadius: '12px', padding: '14px',
-              color: '#ccc', fontSize: '13px', fontWeight: 600, textDecoration: 'none',
-            }}
-          >
-            Create a Restaurant
-          </a>
-          <a
-            href="/"
-            style={{
-              textAlign: 'center', fontSize: '12px', color: '#444',
-              textDecoration: 'none', paddingTop: '4px', fontWeight: 600,
-            }}
-          >
-            ← Back to Home
-          </a>
-        </div>
+        <a href="/restaurant/demo" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#E8321A', borderRadius: '12px', padding: '14px 28px', color: '#fff', fontSize: '13px', fontWeight: 700, textDecoration: 'none' }}>
+          View Demo Restaurant
+        </a>
+        <a href="/" style={{ textAlign: 'center', fontSize: '12px', color: '#aaa', textDecoration: 'none', paddingTop: '12px', fontWeight: 600 }}>← Back to Home</a>
       </div>
     )
   }
 
   if (!restaurant) {
     return (
-      <div style={{ minHeight: '100vh', background: '#080808', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Inter', sans-serif" }}>
+      <div style={{ minHeight: '100vh', background: '#f2f2f2', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Inter', sans-serif" }}>
         <div style={{ textAlign: 'center' }}>
-          <div style={{ width: '44px', height: '44px', border: '3px solid rgba(232,50,26,0.2)', borderTopColor: '#E8321A', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto 16px' }} />
+          <div style={{ width: '40px', height: '40px', border: '3px solid rgba(232,50,26,0.2)', borderTopColor: '#E8321A', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto 14px' }} />
           <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
-          <div style={{ color: '#555', fontSize: '13px', letterSpacing: '0.05em' }}>Loading...</div>
+          <div style={{ color: '#aaa', fontSize: '13px' }}>Loading…</div>
         </div>
       </div>
     )
   }
 
-  const carouselImages = getCarouselImages(restaurant)
+  const activeItems = menuData[activeTab] || []
 
   return (
     <div style={{
-      background: theme.bg,
-      color: theme.color,
+      background: theme.pageBg,
       minHeight: '100vh',
       fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
-      paddingBottom: '80px',
       maxWidth: '480px',
       margin: '0 auto',
+      paddingBottom: '80px',
       position: 'relative',
-      transition: 'background 0.3s ease, color 0.3s ease',
+      transition: 'background 0.3s ease',
     }}>
       <style>{`
         * { box-sizing: border-box; margin: 0; padding: 0; }
         ::-webkit-scrollbar { display: none; }
-        html { scroll-behavior: smooth; }
         @keyframes spin { to { transform: rotate(360deg) } }
-        @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
-        .food-card { transition: transform 0.25s ease, box-shadow 0.25s ease; }
-        .food-card:active { transform: scale(0.97); }
-        .menu-item-row { transition: background 0.2s ease; }
-        .menu-item-row:active { background: rgba(232,50,26,0.06) !important; }
-        .nav-btn { transition: color 0.2s ease; }
-        .section-fade { animation: fadeUp 0.5s ease both; }
-        .tab-btn { transition: all 0.25s ease; }
-        .theme-toggle-btn { transition: background 0.2s ease, border-color 0.2s ease, transform 0.15s ease; }
-        .theme-toggle-btn:active { transform: scale(0.9); }
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+        .menu-card { animation: fadeUp 0.35s ease both; }
+        .menu-card:nth-child(1) { animation-delay: 0ms; }
+        .menu-card:nth-child(2) { animation-delay: 60ms; }
+        .menu-card:nth-child(3) { animation-delay: 120ms; }
+        .menu-card:nth-child(4) { animation-delay: 180ms; }
+        .menu-card:nth-child(5) { animation-delay: 240ms; }
+        .view-cart-btn { transition: background 0.2s ease, transform 0.15s ease; }
+        .view-cart-btn:hover { background: rgba(46,204,113,0.08) !important; }
+        .view-cart-btn:active { transform: scale(0.96); }
+        .tab-pill { transition: background 0.2s ease, color 0.2s ease; }
+        .toggle-btn { transition: background 0.2s ease, transform 0.15s ease; }
+        .toggle-btn:active { transform: scale(0.9); }
       `}</style>
 
       {/* ── ADMIN BACK BAR ── */}
       {slug !== 'demo' && (
         <div style={{
-          background: theme.adminBg, borderBottom: `1px solid ${theme.adminBorder}`,
+          background: 'rgba(232,50,26,0.07)', borderBottom: '1px solid rgba(232,50,26,0.15)',
           padding: '8px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         }}>
-          <button
-            onClick={() => navigate('/restaurants')}
-            style={{
-              background: 'none', border: 'none', color: '#E8321A',
-              fontSize: '11px', fontWeight: 700, cursor: 'pointer',
-              letterSpacing: '0.06em', display: 'flex', alignItems: 'center', gap: '5px',
-            }}
-          >
+          <button onClick={() => navigate('/restaurants')} style={{ background: 'none', border: 'none', color: '#E8321A', fontSize: '11px', fontWeight: 700, cursor: 'pointer', letterSpacing: '0.06em' }}>
             ← MY RESTAURANTS
           </button>
-          <span style={{ fontSize: '10px', color: theme.adminTime, letterSpacing: '0.04em' }}>ADMIN PREVIEW</span>
+          <span style={{ fontSize: '10px', color: '#aaa', letterSpacing: '0.04em' }}>ADMIN PREVIEW</span>
         </div>
       )}
 
-      {/* ── TOP BAR ── */}
+      {/* ── STICKY HEADER ── */}
       <header style={{
         position: 'sticky', top: 0, zIndex: 50,
         background: theme.headerBg,
         backdropFilter: 'blur(20px)',
         WebkitBackdropFilter: 'blur(20px)',
         borderBottom: `1px solid ${theme.headerBorder}`,
-        padding: '14px 20px',
+        padding: '12px 18px',
         transition: 'background 0.3s ease, border-color 0.3s ease',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          {/* Left: location + name */}
           <div>
-            <div style={{ fontSize: '10px', color: theme.textMuted, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <MapPin size={10} color="#E8321A" />
+            <div style={{ fontSize: '10px', color: theme.locationColor, fontWeight: 500, letterSpacing: '0.04em', marginBottom: '2px', display: 'flex', alignItems: 'center', gap: '3px' }}>
+              <MapPin size={9} color="#E8321A" />
               {restaurant.location || 'Fine Dining'}
             </div>
-            <div style={{ fontSize: '17px', fontWeight: 800, letterSpacing: '-0.01em', lineHeight: 1.1, color: theme.color }}>
+            <div style={{ fontSize: '18px', fontWeight: 800, color: theme.color, letterSpacing: '-0.01em', lineHeight: 1.1 }}>
               {restaurant.name}
             </div>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+
+          {/* Right: rating + toggle + bell */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             {restaurant.rating && (
               <div style={{
                 display: 'flex', alignItems: 'center', gap: '4px',
-                background: 'rgba(255,184,0,0.1)', border: '1px solid rgba(255,184,0,0.2)',
+                background: theme.ratingBg, border: `1px solid ${theme.ratingBorder}`,
                 borderRadius: '20px', padding: '4px 10px',
               }}>
                 <Star size={11} fill="#FFB800" color="#FFB800" />
@@ -331,626 +236,240 @@ export default function RestaurantWebsite() {
               </div>
             )}
 
-            {/* Theme Toggle Button */}
+            {/* Theme toggle */}
             <button
-              className="theme-toggle-btn"
+              className="toggle-btn"
               onClick={() => setDarkMode(d => !d)}
-              title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+              title={darkMode ? 'Light mode' : 'Dark mode'}
               style={{
-                width: '36px', height: '36px', borderRadius: '12px',
-                background: theme.toggleBg,
-                border: `1px solid ${theme.toggleBorder}`,
+                width: '34px', height: '34px', borderRadius: '10px',
+                background: theme.toggleBg, border: `1px solid ${theme.toggleBorder}`,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 cursor: 'pointer',
               }}
             >
-              {darkMode
-                ? <Sun size={16} color="#FFB800" />
-                : <Moon size={16} color="#555" />
-              }
+              {darkMode ? <Sun size={15} color="#FFB800" /> : <Moon size={15} color="#888" />}
             </button>
 
+            {/* Bell */}
             <div style={{
-              width: '36px', height: '36px', borderRadius: '12px',
-              background: theme.iconBg,
-              border: `1px solid ${theme.iconBorder}`,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              cursor: 'pointer',
+              width: '34px', height: '34px', borderRadius: '10px',
+              background: theme.bellBg, border: `1px solid ${theme.bellBorder}`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
             }}>
-              <Bell size={16} color={theme.bellColor} />
+              <Bell size={15} color={theme.bellColor} />
             </div>
           </div>
         </div>
       </header>
 
-      {/* ── HERO CAROUSEL ── */}
-      <section ref={heroRef} style={{ position: 'relative', height: '260px', overflow: 'hidden', margin: '16px' }}>
-        <div style={{ position: 'relative', height: '100%', borderRadius: '20px', overflow: 'hidden' }}>
-          {carouselImages.map((src, i) => (
-            <div key={i} style={{
-              position: 'absolute', inset: 0,
-              backgroundImage: `url(${src})`,
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-              opacity: i === carouselIdx ? 1 : 0,
-              transition: 'opacity 1s ease',
-            }} />
-          ))}
-
-          <div style={{
-            position: 'absolute', inset: 0,
-            background: 'linear-gradient(135deg, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.6) 100%)',
-            borderRadius: '20px',
-          }} />
-
-          <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', padding: '20px' }}>
-            <div style={{
-              display: 'inline-flex', alignItems: 'center', gap: '5px',
-              background: 'rgba(232,50,26,0.9)',
-              borderRadius: '8px', padding: '4px 10px', marginBottom: '8px',
-              width: 'fit-content',
-            }}>
-              <Flame size={11} color="#fff" />
-              <span style={{ fontSize: '10px', fontWeight: 800, color: '#fff', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-                Premium Dining
-              </span>
-            </div>
-            <div style={{ fontSize: '22px', fontWeight: 900, lineHeight: 1.15, textShadow: '0 2px 12px rgba(0,0,0,0.8)', marginBottom: '6px', color: '#fff' }}>
-              An Unforgettable<br />Culinary Experience
-            </div>
-            <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.7)', lineHeight: 1.4 }}>
-              {restaurant.description?.slice(0, 60) || 'Crafted with passion, served with precision'}
-              {(restaurant.description?.length || 0) > 60 ? '…' : ''}
-            </div>
-          </div>
-
-          {/* Carousel nav arrows */}
-          {carouselImages.length > 1 && (
-            <>
-              <button
-                onClick={() => setCarouselIdx(i => (i - 1 + carouselImages.length) % carouselImages.length)}
-                style={{
-                  position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)',
-                  background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(8px)',
-                  border: '1px solid rgba(255,255,255,0.12)', borderRadius: '50%',
-                  width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  color: '#fff', cursor: 'pointer',
-                }}
-              >
-                <ChevronLeft size={16} />
-              </button>
-              <button
-                onClick={() => setCarouselIdx(i => (i + 1) % carouselImages.length)}
-                style={{
-                  position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)',
-                  background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(8px)',
-                  border: '1px solid rgba(255,255,255,0.12)', borderRadius: '50%',
-                  width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  color: '#fff', cursor: 'pointer',
-                }}
-              >
-                <ChevronRight size={16} />
-              </button>
-            </>
-          )}
-
-          {/* Dots */}
-          {carouselImages.length > 1 && (
-            <div style={{ position: 'absolute', bottom: '12px', right: '16px', display: 'flex', gap: '5px' }}>
-              {carouselImages.map((_, i) => (
-                <button key={i} onClick={() => setCarouselIdx(i)} style={{
-                  width: i === carouselIdx ? '18px' : '5px', height: '5px',
-                  borderRadius: '3px', background: i === carouselIdx ? '#fff' : 'rgba(255,255,255,0.4)',
-                  border: 'none', cursor: 'pointer', transition: 'all 0.3s ease', padding: 0,
-                }} />
-              ))}
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* ── ACTION BUTTONS ── */}
-      <section style={{ padding: '4px 16px 20px', display: 'flex', gap: '10px' }}>
-        <button
-          onClick={() => scrollTo(menuRef, 'menu')}
-          style={{
-            flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-            background: '#E8321A', border: 'none', borderRadius: '14px',
-            padding: '14px', color: '#fff', fontSize: '13px', fontWeight: 700,
-            cursor: 'pointer', letterSpacing: '0.03em',
-            boxShadow: '0 6px 20px rgba(232,50,26,0.4)',
-          }}
-        >
-          <UtensilsCrossed size={16} />
-          View Menu
-        </button>
-        {restaurant.phone ? (
-          <a
-            href={`tel:${restaurant.phone}`}
-            style={{
-              flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-              background: theme.btnSecBg, border: `1px solid ${theme.btnSecBorder}`,
-              borderRadius: '14px', padding: '14px', color: theme.btnSecColor, fontSize: '13px',
-              fontWeight: 700, cursor: 'pointer', letterSpacing: '0.03em', textDecoration: 'none',
-              backdropFilter: 'blur(10px)',
-            }}
-          >
-            <Phone size={16} />
-            Call Staff
-          </a>
-        ) : (
-          <button
-            onClick={() => scrollTo(aboutRef, 'about')}
-            style={{
-              flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-              background: theme.btnSecBg, border: `1px solid ${theme.btnSecBorder}`,
-              borderRadius: '14px', padding: '14px', color: theme.btnSecColor, fontSize: '13px',
-              fontWeight: 700, cursor: 'pointer', letterSpacing: '0.03em',
-            }}
-          >
-            <Users size={16} />
-            About Us
-          </button>
-        )}
-        {restaurant.digitalMenuLink && (
-          <a
-            href={restaurant.digitalMenuLink}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: theme.btnSecBg, border: `1px solid ${theme.btnSecBorder}`,
-              borderRadius: '14px', padding: '14px 16px', color: theme.btnSecColor,
-              cursor: 'pointer', textDecoration: 'none',
-            }}
-          >
-            <ExternalLink size={16} />
-          </a>
-        )}
-      </section>
-
-      {/* ── QUICK STATS ── */}
-      <section style={{ padding: '0 16px 24px' }}>
-        <div style={{
-          display: 'flex', gap: '10px',
-          background: theme.cardBg,
-          border: `1px solid ${theme.cardBorder}`,
-          borderRadius: '16px', padding: '14px 16px',
-        }}>
-          {[
-            { icon: <Award size={16} color="#FFB800" />, label: restaurant.rating ? `${restaurant.rating} Rating` : 'Top Rated', sub: 'Google Reviews' },
-            { icon: <Clock size={16} color="#60a5fa" />, label: '12pm – 11pm', sub: 'Open Today' },
-            { icon: <UtensilsCrossed size={16} color="#4ade80" />, label: restaurant.tables ? `${restaurant.tables} Tables` : 'Fine Dining', sub: 'Capacity' },
-          ].map((stat, i) => (
-            <React.Fragment key={i}>
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-                {stat.icon}
-                <div style={{ fontSize: '12px', fontWeight: 700, color: theme.statsText, textAlign: 'center', lineHeight: 1.2 }}>{stat.label}</div>
-                <div style={{ fontSize: '10px', color: theme.textMuted, textAlign: 'center' }}>{stat.sub}</div>
-              </div>
-              {i < 2 && <div style={{ width: '1px', background: theme.divider }} />}
-            </React.Fragment>
-          ))}
-        </div>
-      </section>
-
-      {/* ── BEST SELLERS ── */}
-      <section className="section-fade" style={{ paddingBottom: '28px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px 14px' }}>
-          <div>
-            <div style={{ fontSize: '16px', fontWeight: 800, letterSpacing: '-0.01em', color: theme.color }}>Best Sellers</div>
-            <div style={{ fontSize: '11px', color: theme.textMuted, marginTop: '2px' }}>Crowd favourites, every time</div>
-          </div>
-          <button
-            onClick={() => scrollTo(menuRef, 'menu')}
-            style={{
-              display: 'flex', alignItems: 'center', gap: '4px',
-              background: 'none', border: 'none', color: '#E8321A',
-              fontSize: '12px', fontWeight: 700, cursor: 'pointer', letterSpacing: '0.02em',
-            }}
-          >
-            View all <ArrowRight size={13} />
-          </button>
-        </div>
-
-        <div style={{ display: 'flex', gap: '14px', overflowX: 'auto', padding: '0 20px 4px', scrollbarWidth: 'none' }}>
-          {bestsellers.map((item, i) => (
-            <BestsellerCard key={i} item={item} liked={liked[i]} onLike={() => setLiked(l => ({ ...l, [i]: !l[i] }))} theme={theme} />
-          ))}
-        </div>
-      </section>
-
-      {/* ── FULL MENU ── */}
-      <section ref={menuRef} className="section-fade" style={{ padding: '0 0 28px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px 16px' }}>
-          <div>
-            <div style={{ fontSize: '16px', fontWeight: 800, letterSpacing: '-0.01em', color: theme.color }}>Our Menu</div>
-            <div style={{ fontSize: '11px', color: theme.textMuted, marginTop: '2px' }}>Crafted with precision & passion</div>
-          </div>
-        </div>
-
-        {/* Tabs */}
-        <div style={{ display: 'flex', gap: '8px', padding: '0 20px 18px', overflowX: 'auto', scrollbarWidth: 'none' }}>
-          {[
-            { id: 'starters', label: 'Starters', icon: <Leaf size={12} /> },
-            { id: 'mains', label: 'Mains', icon: <UtensilsCrossed size={12} /> },
-            { id: 'drinks', label: 'Drinks', icon: <Flame size={12} /> },
-          ].map(tab => (
+      {/* ── CATEGORY TABS ── */}
+      <div style={{
+        position: 'sticky', top: '64px', zIndex: 40,
+        background: theme.tabBarBg,
+        borderBottom: `1px solid ${theme.tabBarBorder}`,
+        padding: '12px 18px',
+        display: 'flex', gap: '8px',
+        overflowX: 'auto', scrollbarWidth: 'none',
+        transition: 'background 0.3s ease',
+      }}>
+        {TABS.map(tab => {
+          const active = activeTab === tab.id
+          return (
             <button
               key={tab.id}
-              className="tab-btn"
+              className="tab-pill"
               onClick={() => setActiveTab(tab.id)}
               style={{
-                display: 'flex', alignItems: 'center', gap: '6px',
-                padding: '8px 16px', borderRadius: '10px', border: 'none',
-                background: activeTab === tab.id ? '#E8321A' : theme.tabInactiveBg,
-                color: activeTab === tab.id ? '#fff' : theme.tabInactiveColor,
-                fontSize: '12px', fontWeight: 700, cursor: 'pointer',
-                whiteSpace: 'nowrap', letterSpacing: '0.02em',
-                boxShadow: activeTab === tab.id ? '0 4px 14px rgba(232,50,26,0.35)' : 'none',
+                padding: '7px 18px',
+                borderRadius: '50px',
+                border: 'none',
+                background: active ? '#E8321A' : theme.tabInactiveBg,
+                color: active ? '#fff' : theme.tabInactiveColor,
+                fontSize: '11px', fontWeight: 800,
+                cursor: 'pointer', letterSpacing: '0.06em',
+                whiteSpace: 'nowrap',
+                boxShadow: active ? '0 4px 14px rgba(232,50,26,0.35)' : 'none',
+                flexShrink: 0,
               }}
             >
-              {tab.icon}
               {tab.label}
             </button>
-          ))}
-        </div>
+          )
+        })}
+      </div>
 
-        <div style={{ padding: '0 16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          {activeMenuItems.map((item, i) => (
-            <MenuItemCard key={i} item={item} theme={theme} />
-          ))}
-          {activeMenuItems.length === 0 && (
-            <div style={{ textAlign: 'center', padding: '40px 20px', color: theme.noItems, fontSize: '13px' }}>
-              No items in this category yet
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* ── ABOUT ── */}
-      <section ref={aboutRef} className="section-fade" style={{ padding: '0 16px 32px' }}>
-        <div style={{ marginBottom: '16px' }}>
-          <div style={{ fontSize: '16px', fontWeight: 800, letterSpacing: '-0.01em', color: theme.color }}>Our Story</div>
-          <div style={{ fontSize: '11px', color: theme.textMuted, marginTop: '2px' }}>Where every plate tells a story</div>
-        </div>
-
-        {/* Hero about image */}
-        {carouselImages.length > 1 && (
-          <div style={{
-            height: '160px', borderRadius: '16px', overflow: 'hidden',
-            marginBottom: '14px',
-            backgroundImage: `url(${carouselImages[1] || carouselImages[0]})`,
-            backgroundSize: 'cover', backgroundPosition: 'center',
-            position: 'relative',
-          }}>
-            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.7), transparent)' }} />
+      {/* ── MENU CARDS ── */}
+      <div style={{ padding: '16px 16px 8px' }}>
+        {activeItems.length === 0 && (
+          <div style={{ textAlign: 'center', padding: '60px 20px', color: theme.tabInactiveColor, fontSize: '13px' }}>
+            No items in this category yet
           </div>
         )}
+        {activeItems.map((item, i) => (
+          <MenuCard key={`${activeTab}-${i}`} item={item} theme={theme} />
+        ))}
+      </div>
 
+      {/* ── BOTTOM BANNER ── */}
+      <div style={{ padding: '24px 20px 16px', position: 'relative', overflow: 'hidden' }}>
         <div style={{
-          background: theme.aboutCard,
-          border: `1px solid ${theme.aboutCardBorder}`,
-          borderRadius: '16px', padding: '20px', marginBottom: '10px',
+          fontSize: '52px', fontWeight: 900, lineHeight: 1.1,
+          color: theme.bannerText,
+          letterSpacing: '-0.02em',
+          userSelect: 'none',
         }}>
-          <div style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '0.2em', color: '#E8321A', textTransform: 'uppercase', marginBottom: '10px' }}>
-            The Philosophy
-          </div>
-          <p style={{ fontSize: '14px', lineHeight: 1.75, color: theme.aboutText }}>
-            {restaurant.description || 'An uncompromising culinary experience rooted in craft, quality, and atmosphere. Every dish is a conversation between heritage and innovation, served in a setting that commands reverence.'}
-          </p>
-          {restaurant.additionalInfo && (
-            <p style={{ fontSize: '12px', lineHeight: 1.7, color: theme.additionalText, marginTop: '12px', paddingTop: '12px', borderTop: `1px solid ${theme.additionalBorder}` }}>
-              {restaurant.additionalInfo}
-            </p>
-          )}
+          Explore the menus, taste the city
         </div>
-
-        {restaurant.chefInfo && (
-          <div style={{
-            background: theme.cardBg, border: `1px solid ${theme.cardBorder}`,
-            borderRadius: '16px', padding: '20px', marginBottom: '10px',
-          }}>
-            <div style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '0.2em', color: theme.textSub, textTransform: 'uppercase', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <Award size={11} /> Executive Chef
-            </div>
-            <p style={{ fontSize: '14px', lineHeight: 1.75, color: theme.aboutText }}>{restaurant.chefInfo}</p>
-          </div>
-        )}
-
-        {/* Info grid */}
-        <div style={{ background: theme.cardBg, border: `1px solid ${theme.cardBorder}`, borderRadius: '16px', padding: '20px' }}>
-          <div style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '0.2em', color: theme.textSub, textTransform: 'uppercase', marginBottom: '16px' }}>
-            Quick Info
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            {restaurant.location && (
-              <InfoRow icon={<MapPin size={14} color="#E8321A" />} label="Location" value={restaurant.location} theme={theme} />
-            )}
-            {restaurant.tables && (
-              <InfoRow icon={<UtensilsCrossed size={14} color="#4ade80" />} label="Capacity" value={`${restaurant.tables} Tables`} theme={theme} />
-            )}
-            {restaurant.phone && (
-              <InfoRow icon={<Phone size={14} color="#60a5fa" />} label="Reservations" value={restaurant.phone} theme={theme} />
-            )}
-            {restaurant.rating && (
-              <InfoRow icon={<Star size={14} color="#FFB800" fill="#FFB800" />} label="Rating" value={`${restaurant.rating} / 5`} theme={theme} />
-            )}
-          </div>
+        <div style={{
+          position: 'absolute', right: '28px', top: '28px',
+          opacity: 0.75,
+        }}>
+          <Heart size={36} fill={theme.bannerHeart} color={theme.bannerHeart} />
         </div>
-      </section>
+      </div>
 
-      {/* ── FOOTER ── */}
-      <footer style={{
-        margin: '0 16px 16px',
-        background: theme.footerBg,
-        border: `1px solid ${theme.footerBorder}`,
-        borderRadius: '20px',
-        padding: '28px 20px',
-        textAlign: 'center',
-      }}>
-        <div style={{ fontSize: '22px', fontWeight: 900, letterSpacing: '0.03em', marginBottom: '4px', color: theme.color }}>
-          {restaurant.name}
-        </div>
-        {restaurant.location && (
-          <div style={{ fontSize: '11px', color: theme.footerLocation, marginBottom: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
-            <MapPin size={10} /> {restaurant.location}
-          </div>
-        )}
-
-        {/* Social links */}
-        {(restaurant.socialLinks?.instagram || restaurant.socialLinks?.facebook || restaurant.socialLinks?.twitter || restaurant.socialLinks?.website) && (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', marginBottom: '20px' }}>
-            {restaurant.socialLinks?.instagram && (
-              <SocialBtn href={restaurant.socialLinks.instagram} icon={<AtSign size={18} />} theme={theme} />
-            )}
-            {restaurant.socialLinks?.facebook && (
-              <SocialBtn href={restaurant.socialLinks.facebook} icon={<Share2 size={18} />} theme={theme} />
-            )}
-            {restaurant.socialLinks?.twitter && (
-              <SocialBtn href={restaurant.socialLinks.twitter} icon={<MessageCircle size={18} />} theme={theme} />
-            )}
-            {restaurant.socialLinks?.website && (
-              <SocialBtn href={restaurant.socialLinks.website} icon={<Globe size={18} />} theme={theme} />
-            )}
-          </div>
-        )}
-
-        <a
-          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(restaurant.name + ' ' + (restaurant.location || ''))}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{
-            display: 'inline-flex', alignItems: 'center', gap: '7px',
-            background: 'rgba(255,184,0,0.08)', border: '1px solid rgba(255,184,0,0.2)',
-            borderRadius: '50px', padding: '10px 20px', color: '#FFB800',
-            fontSize: '12px', fontWeight: 700, textDecoration: 'none', letterSpacing: '0.05em',
-          }}
-        >
-          <Star size={12} fill="#FFB800" /> Rate Us on Google
-        </a>
-
-        <div style={{ marginTop: '20px', fontSize: '10px', color: theme.poweredBy, letterSpacing: '0.12em', textTransform: 'uppercase' }}>
-          Powered by EXZIBO
-        </div>
-      </footer>
+      {/* Brand line */}
+      <div style={{ padding: '0 20px 24px', fontSize: '11px', fontWeight: 700, color: theme.brandText, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+        Exzibo
+      </div>
 
       {/* ── BOTTOM NAV ── */}
       <nav style={{
         position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)',
         width: '100%', maxWidth: '480px', zIndex: 100,
         background: theme.navBg,
-        backdropFilter: 'blur(24px)',
-        WebkitBackdropFilter: 'blur(24px)',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
         borderTop: `1px solid ${theme.navBorder}`,
-        borderRadius: '20px 20px 0 0',
         padding: '10px 8px env(safe-area-inset-bottom, 10px)',
         display: 'flex', justifyContent: 'space-around', alignItems: 'center',
-        boxShadow: darkMode ? '0 -8px 32px rgba(0,0,0,0.6)' : '0 -8px 32px rgba(0,0,0,0.08)',
         transition: 'background 0.3s ease, border-color 0.3s ease',
       }}>
         {[
-          { id: 'home', icon: <Home size={22} />, label: 'Home', action: () => window.scrollTo({ top: 0, behavior: 'smooth' }) },
-          { id: 'menu', icon: <UtensilsCrossed size={22} />, label: 'Menu', action: () => scrollTo(menuRef, 'menu') },
-          { id: 'cart', icon: <ShoppingCart size={22} />, label: 'Cart', action: () => {} },
-          { id: 'orders', icon: <ClipboardList size={22} />, label: 'Orders', action: () => {} },
-          { id: 'booking', icon: <CalendarDays size={22} />, label: 'Book', action: () => {} },
-        ].map(({ id, icon, label, action }) => (
+          { id: 'home', icon: <Home size={22} />, label: 'Home' },
+          { id: 'menu', icon: <UtensilsCrossed size={22} />, label: 'Menu' },
+          {
+            id: 'cart', label: 'Cart',
+            icon: (
+              <div style={{ position: 'relative', display: 'inline-flex' }}>
+                <ShoppingCart size={22} />
+                {cartCount > 0 && (
+                  <span style={{
+                    position: 'absolute', top: '-5px', right: '-6px',
+                    width: '14px', height: '14px', borderRadius: '50%',
+                    background: '#E8321A', color: '#fff',
+                    fontSize: '8px', fontWeight: 800,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>{cartCount}</span>
+                )}
+              </div>
+            ),
+          },
+          { id: 'orders', icon: <ClipboardList size={22} />, label: 'Order' },
+          { id: 'booking', icon: <CalendarDays size={22} />, label: 'Book' },
+        ].map(({ id, icon, label }) => (
           <button
             key={id}
-            className="nav-btn"
-            onClick={() => { setActiveNav(id); action() }}
+            onClick={() => setActiveNav(id)}
             style={{
               display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px',
               background: 'none', border: 'none', cursor: 'pointer',
-              color: activeNav === id ? '#E8321A' : theme.navInactiveColor,
-              padding: '4px 14px', position: 'relative',
+              color: activeNav === id ? '#E8321A' : theme.navInactive,
+              padding: '4px 12px',
+              transition: 'color 0.2s ease',
             }}
           >
-            {activeNav === id && (
-              <div style={{
-                position: 'absolute', top: '-10px', left: '50%', transform: 'translateX(-50%)',
-                width: '24px', height: '3px', background: '#E8321A', borderRadius: '0 0 3px 3px',
-              }} />
-            )}
             {icon}
-            <span style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase' }}>{label}</span>
+            <span style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '0.03em', textTransform: 'uppercase' }}>{label}</span>
           </button>
         ))}
       </nav>
-
-      {/* ── SCROLL TO TOP ── */}
-      {showTop && (
-        <button
-          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-          style={{
-            position: 'fixed', bottom: '90px', right: '20px', zIndex: 90,
-            width: '40px', height: '40px', borderRadius: '50%',
-            background: '#E8321A', border: 'none',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: '#fff', cursor: 'pointer',
-            boxShadow: '0 4px 16px rgba(232,50,26,0.5)',
-            animation: 'fadeIn 0.2s ease',
-          }}
-        >
-          <ArrowUp size={16} />
-        </button>
-      )}
     </div>
   )
 }
 
-function BestsellerCard({ item, liked, onLike, theme }) {
+function MenuCard({ item, theme }) {
   const fallbackImg = '/menu/wagyu-ribeye.png'
+  const oldPrice = item.oldPrice || Math.round((item.price || 0) * 1.5)
+
   return (
-    <div className="food-card" style={{
-      flexShrink: 0, width: '160px',
-      background: theme.cardBg2,
-      border: `1px solid ${theme.cardBorder2}`,
-      borderRadius: '16px', overflow: 'hidden',
-      cursor: 'pointer',
+    <div className="menu-card" style={{
+      background: theme.cardBg,
+      border: `1px solid ${theme.cardBorder}`,
+      borderRadius: '18px',
+      overflow: 'hidden',
+      marginBottom: '14px',
+      boxShadow: theme.cardShadow,
     }}>
-      <div style={{ height: '120px', overflow: 'hidden', position: 'relative', background: theme.cardBg2 }}>
+      {/* Food image */}
+      <div style={{ position: 'relative', width: '100%', height: '200px', overflow: 'hidden' }}>
         <img
           src={item.img || fallbackImg}
           alt={item.name}
           style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
           onError={e => { e.target.src = fallbackImg }}
+          loading="lazy"
         />
-        <button
-          onClick={e => { e.stopPropagation(); onLike() }}
-          style={{
-            position: 'absolute', top: '8px', right: '8px',
-            width: '28px', height: '28px', borderRadius: '50%',
-            background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)',
-            border: 'none', cursor: 'pointer',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}
-        >
-          <Heart size={13} fill={liked ? '#E8321A' : 'transparent'} color={liked ? '#E8321A' : '#aaa'} />
-        </button>
-        {(item.tag || item.tags?.[0]) && (
-          <div style={{
-            position: 'absolute', bottom: '8px', left: '8px',
-            background: 'rgba(232,50,26,0.85)', backdropFilter: 'blur(6px)',
-            borderRadius: '6px', padding: '2px 7px',
-            fontSize: '9px', fontWeight: 800, color: '#fff', letterSpacing: '0.06em',
-          }}>
-            {item.tag || item.tags[0]}
-          </div>
-        )}
+        <div style={{ position: 'absolute', inset: 0, background: theme.imgOverlay }} />
       </div>
-      <div style={{ padding: '10px 12px' }}>
-        <div style={{ fontSize: '12px', fontWeight: 700, lineHeight: 1.3, marginBottom: '4px', color: theme.textFaint }}>
-          {item.name}
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ fontSize: '13px', fontWeight: 800, color: '#E8321A' }}>
-            ₹{(item.price || 0).toLocaleString('en-IN')}
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
-            <Star size={10} fill="#FFB800" color="#FFB800" />
-            <span style={{ fontSize: '10px', fontWeight: 700, color: '#FFB800' }}>{item.rating || '4.8'}</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
 
-function MenuItemCard({ item, theme }) {
-  const fallbackImg = '/menu/wagyu-ribeye.png'
-  const tagColor = {
-    Popular: '#E8321A', Seasonal: '#fbbf24', Vegetarian: '#4ade80', 'Gluten Free': '#60a5fa',
-  }
-  return (
-    <div className="menu-item-row" style={{
-      display: 'flex', alignItems: 'center', gap: '12px',
-      background: theme.cardBg,
-      border: `1px solid ${theme.cardBorder}`,
-      borderRadius: '14px', padding: '12px',
-      cursor: 'pointer',
-    }}>
-      <div style={{ width: '70px', height: '70px', borderRadius: '12px', overflow: 'hidden', flexShrink: 0 }}>
-        <img
-          src={item.img || fallbackImg}
-          alt={item.name}
-          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-          onError={e => { e.target.src = fallbackImg }}
-        />
-      </div>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px', marginBottom: '4px' }}>
-          <div style={{ fontSize: '13px', fontWeight: 700, color: theme.textFaint, lineHeight: 1.3 }}>{item.name}</div>
-          {item.tags?.[0] && (
-            <div style={{
-              flexShrink: 0,
-              background: `${tagColor[item.tags[0]] || '#888'}18`,
-              border: `1px solid ${tagColor[item.tags[0]] || '#888'}35`,
-              borderRadius: '6px', padding: '2px 7px',
-              fontSize: '9px', fontWeight: 700, color: tagColor[item.tags[0]] || '#888',
-              letterSpacing: '0.06em',
-            }}>
-              {item.tags[0]}
-            </div>
-          )}
-        </div>
-        {item.description && (
-          <div style={{ fontSize: '11px', color: theme.textMuted, lineHeight: 1.4, marginBottom: '6px' }}>
-            {item.description?.slice(0, 60)}{(item.description?.length || 0) > 60 ? '…' : ''}
-          </div>
-        )}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ fontSize: '14px', fontWeight: 800, color: '#E8321A' }}>
-            ₹{(item.price || 0).toLocaleString('en-IN')}
-          </div>
-          <button style={{
-            background: 'rgba(232,50,26,0.12)', border: '1px solid rgba(232,50,26,0.25)',
-            borderRadius: '8px', padding: '4px 12px', color: '#E8321A',
-            fontSize: '11px', fontWeight: 700, cursor: 'pointer',
+      {/* Card body */}
+      <div style={{ padding: '14px 16px 16px' }}>
+        {/* Veg / Non-veg indicator + Name */}
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', marginBottom: '10px' }}>
+          <div style={{
+            flexShrink: 0, marginTop: '3px',
+            width: '14px', height: '14px', borderRadius: '3px',
+            border: `1.5px solid ${item.veg !== false ? theme.vegDot : theme.nonVegDot}`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
-            Add +
+            <div style={{
+              width: '7px', height: '7px', borderRadius: '50%',
+              background: item.veg !== false ? theme.vegDot : theme.nonVegDot,
+            }} />
+          </div>
+          <div style={{ fontSize: '14px', fontWeight: 700, color: theme.itemName, lineHeight: 1.35 }}>
+            1 x {item.name}
+          </div>
+        </div>
+
+        {/* Price row + View cart button */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div>
+            {/* Price */}
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginBottom: '4px' }}>
+              <span style={{ fontSize: '16px', fontWeight: 800, color: theme.priceNew }}>
+                ₹{(item.price || 0).toLocaleString('en-IN')}
+              </span>
+              <span style={{ fontSize: '13px', fontWeight: 500, color: theme.priceOld, textDecoration: 'line-through' }}>
+                ₹{(oldPrice).toLocaleString('en-IN')}
+              </span>
+            </div>
+            {/* Offer text */}
+            <div style={{ fontSize: '11px', fontWeight: 600, color: theme.offerColor }}>
+              Best offer applied
+            </div>
+          </div>
+
+          {/* View cart button */}
+          <button
+            className="view-cart-btn"
+            style={{
+              display: 'flex', alignItems: 'center', gap: '5px',
+              padding: '9px 16px', borderRadius: '10px',
+              background: theme.viewCartBg,
+              border: `1.5px solid ${theme.viewCartBorder}`,
+              color: theme.viewCartColor,
+              fontSize: '12px', fontWeight: 700,
+              cursor: 'pointer', letterSpacing: '0.02em',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            View cart <ChevronRight size={13} />
           </button>
         </div>
       </div>
     </div>
-  )
-}
-
-function InfoRow({ icon, label, value, theme }) {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-      <div style={{
-        width: '32px', height: '32px', borderRadius: '10px',
-        background: theme.infoRowBg, border: `1px solid ${theme.infoRowBorder}`,
-        display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-      }}>
-        {icon}
-      </div>
-      <div>
-        <div style={{ fontSize: '10px', color: theme.infoLabel, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{label}</div>
-        <div style={{ fontSize: '13px', fontWeight: 600, color: theme.infoValue, marginTop: '1px' }}>{value}</div>
-      </div>
-    </div>
-  )
-}
-
-function SocialBtn({ href, icon, theme }) {
-  return (
-    <a
-      href={href}
-      target="_blank"
-      rel="noopener noreferrer"
-      style={{
-        width: '40px', height: '40px', borderRadius: '12px',
-        background: theme.socialBg, border: `1px solid ${theme.socialBorder}`,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        color: theme.socialColor, textDecoration: 'none', transition: 'all 0.2s',
-      }}
-      onMouseEnter={e => { e.currentTarget.style.color = '#E8321A'; e.currentTarget.style.borderColor = 'rgba(232,50,26,0.3)' }}
-      onMouseLeave={e => { e.currentTarget.style.color = theme.socialColor; e.currentTarget.style.borderColor = theme.socialBorder }}
-    >
-      {icon}
-    </a>
   )
 }

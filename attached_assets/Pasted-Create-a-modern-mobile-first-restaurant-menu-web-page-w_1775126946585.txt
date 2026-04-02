@@ -1,0 +1,125 @@
+Create a modern, mobile-first restaurant menu web page with a premium UI (inspired by apps like Zomato but WITHOUT delivery features).
+
+Use React + Tailwind CSS (or clean HTML/CSS if React not available).
+
+-------------------------
+🔹 PAGE STRUCTURE
+-------------------------
+
+1. HEADER SECTION
+- Top small text: "Cyber City, Gurugram" (light gray, small font)
+- Below it: Restaurant Name (bold, large font) → "La Maison Noire"
+- On right side:
+  - Rating badge (⭐ 4.9) with soft yellow background
+  - Two icons: search and notification (minimal style)
+
+Sticky header with slight blur effect.
+
+-------------------------
+2. CATEGORY TABS
+-------------------------
+- Horizontal pill-style tabs:
+  - STARTERS (active, red background)
+  - MAIN COURSE (inactive)
+  - DRINKS (inactive)
+
+Design:
+- Rounded full pills
+- Active tab = red (#ff3b30), white text
+- Inactive = light gray background
+- Smooth sliding animation when switching tabs
+
+-------------------------
+3. FOOD CARD LIST
+-------------------------
+
+Each menu item should be a card with:
+
+🔸 Food Image
+- Large, rounded corners (top)
+- Full width
+- Slight shadow
+
+🔸 Item Info Section
+- Veg icon (small green dot)
+- Item name (bold):
+  Example: "Mumbai Style Double Layer Veg Sandwich"
+
+- Price row:
+  - New price: ₹179.98 (bold, dark)
+  - Old price: ₹271.41 (strikethrough, gray)
+  
+- Offer text:
+  "Best offer applied" (small, blue or green text)
+
+- Right side button:
+  "View cart →"
+  - Rounded button
+  - Light green border
+  - Subtle hover effect
+
+Card style:
+- White background
+- Rounded corners (xl)
+- Soft shadow
+- Spacing between cards
+
+-------------------------
+4. EXTRA SECTION (BOTTOM BANNER)
+-------------------------
+- Large faded text:
+  "Explore the menus, taste the city"
+- Light gray typography
+- Minimal heart icon floating on right
+
+-------------------------
+5. BOTTOM NAVIGATION BAR
+-------------------------
+Fixed bottom navbar with 5 items:
+
+- Home
+- Menu (active, red icon)
+- Cart (with small red notification dot)
+- Order
+- Book
+
+Design:
+- Minimal icons + labels
+- Active tab highlighted in red
+- Clean white background with top border
+
+-------------------------
+🎨 DESIGN STYLE
+-------------------------
+- Theme: Minimal + Premium
+- Colors:
+  - Primary: Red (#ff3b30)
+  - Background: Off-white / light gray
+  - Text: Dark gray / black
+- Font: Clean modern (Inter / Poppins)
+- Spacing: Generous padding, breathable layout
+- Shadows: Soft and subtle
+
+-------------------------
+✨ INTERACTIONS
+-------------------------
+- Hover effects on buttons
+- Smooth tab switching
+- Slight card lift on hover
+- Responsive for mobile (priority) + desktop
+
+-------------------------
+⚡ IMPROVEMENTS (IMPORTANT)
+-------------------------
+- Add subtle animations (fade-in cards)
+- Add skeleton loading for menu items
+- Add smooth scrolling
+- Optimize image loading
+- Clean spacing alignment like premium apps
+
+-------------------------
+🎯 OUTPUT
+-------------------------
+- Fully working menu page
+- Clean, reusable components
+- Easy to plug into dynamic backend later
