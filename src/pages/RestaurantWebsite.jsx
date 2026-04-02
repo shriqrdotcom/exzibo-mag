@@ -572,8 +572,8 @@ function MenuCard({ item, theme }) {
   const fallbackImg = '/menu/wagyu-ribeye.png'
   const oldPrice = item.oldPrice || Math.round((item.price || 0) * 1.5)
   return (
-    <div className="menu-card" style={{ background: theme.cardBg, border: `1px solid ${theme.cardBorder}`, borderRadius: '18px', overflow: 'hidden', marginBottom: '14px', boxShadow: theme.cardShadow }}>
-      <div style={{ position: 'relative', width: '100%', height: '200px', overflow: 'hidden' }}>
+    <div className="menu-card" style={{ background: theme.cardBg, border: `1px solid ${theme.cardBorder}`, borderRadius: '18px', marginBottom: '14px', boxShadow: theme.cardShadow, padding: '10px 10px 0' }}>
+      <div style={{ position: 'relative', width: '100%', height: '200px', overflow: 'hidden', borderRadius: '12px' }}>
         <img src={item.img || fallbackImg} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} onError={e => { e.target.src = fallbackImg }} loading="lazy" />
       </div>
       <div style={{ padding: '14px 16px 16px' }}>
