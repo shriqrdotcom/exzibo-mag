@@ -3,7 +3,6 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import Landing from './pages/Landing'
 import Dashboard from './pages/Dashboard'
 import MenuEditor from './pages/MenuEditor'
-import Analytics from './pages/Analytics'
 import Settings from './pages/Settings'
 import CreateWebsite from './pages/CreateWebsite'
 import Restaurants from './pages/Restaurants'
@@ -18,7 +17,6 @@ export default function App() {
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/menu-editor" element={<MenuEditor />} />
         <Route path="/menu-editor/:uid" element={<MenuEditor />} />
-        <Route path="/analytics" element={<Analytics />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/create-website" element={<CreateWebsite />} />
         <Route path="/restaurants" element={<Restaurants />} />

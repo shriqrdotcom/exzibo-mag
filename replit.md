@@ -6,7 +6,6 @@ A luxury dark-themed restaurant management web platform with a cinematic, premiu
 
 - **Frontend**: React + Vite (single-page app, no backend)
 - **Routing**: React Router DOM
-- **Charts**: Recharts
 - **Icons**: Lucide React
 - **Port**: 5000 (dev server)
 
@@ -17,7 +16,6 @@ A luxury dark-themed restaurant management web platform with a cinematic, premiu
 | `/` | Landing page — cinematic hero with CTA buttons |
 | `/dashboard` | Admin dashboard with KPI cards and enterprise partners table |
 | `/menu-editor` | Real-time menu editor with categories, item CRUD, restaurant info |
-| `/analytics` | Revenue trends chart, category split donut, live pulse feed |
 | `/settings` | Profile, security, preferences, session management |
 | `/create-website` | Deployment console for onboarding new restaurants |
 
