@@ -730,69 +730,79 @@ export default function RestaurantWebsite() {
                   )}
                 </div>
 
-                {/* Pricing rows */}
-                <div style={{ padding: '14px 16px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                    <span style={{ fontSize: '13px', color: theme.locationColor, fontWeight: 500 }}>Subtotal</span>
-                    <span style={{ fontSize: '13px', fontWeight: 600, color: theme.color }}>₹{subtotal.toLocaleString('en-IN')}</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                    <span style={{ fontSize: '13px', color: theme.locationColor, fontWeight: 500 }}>GST (5%)</span>
-                    <span style={{ fontSize: '13px', fontWeight: 600, color: theme.color }}>₹{gstAmt.toLocaleString('en-IN')}</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                    <span style={{ fontSize: '13px', color: theme.locationColor, fontWeight: 500 }}>Delivery</span>
-                    <span style={{ fontSize: '13px', fontWeight: 600, color: deliveryFee === 0 ? '#22c55e' : theme.color }}>
-                      {deliveryFee === 0 ? 'FREE' : `₹${deliveryFee}`}
-                    </span>
-                  </div>
-                  {couponApplied && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                      <span style={{ fontSize: '13px', color: '#22c55e', fontWeight: 600 }}>Discount (SPICE10)</span>
-                      <span style={{ fontSize: '13px', fontWeight: 700, color: '#22c55e' }}>−₹{discountAmt.toLocaleString('en-IN')}</span>
-                    </div>
-                  )}
-                  <div style={{ height: '1px', background: theme.cardBorder, margin: '12px 0' }} />
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: '15px', fontWeight: 800, color: theme.color }}>Grand Total</span>
-                    <span style={{ fontSize: '18px', fontWeight: 900, color: '#E8321A' }}>₹{grandTotal.toLocaleString('en-IN')}</span>
-                  </div>
-                  {deliveryFee === 0 && subtotal > 0 && (
-                    <div style={{ marginTop: '8px', fontSize: '11px', color: '#22c55e', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <CheckCircle size={11} /> Free delivery on orders above ₹500
-                    </div>
-                  )}
-                </div>
               </div>
             </div>
 
-            {/* Inline Checkout Button */}
-            <div style={{ padding: '16px 14px 8px' }}>
-              <button
-                className="checkout-btn"
-                style={{
-                  width: '100%',
-                  background: 'linear-gradient(135deg, #E8321A 0%, #c42a14 100%)',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: '18px',
-                  padding: '17px 24px',
-                  fontSize: '15px',
-                  fontWeight: 800,
-                  cursor: 'pointer',
-                  letterSpacing: '0.01em',
-                  boxShadow: '0 8px 28px rgba(232,50,26,0.42)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                }}
-              >
-                <span style={{ background: 'rgba(255,255,255,0.18)', borderRadius: '8px', padding: '4px 10px', fontSize: '13px', fontWeight: 700 }}>
-                  {cartCount} item{cartCount > 1 ? 's' : ''}
-                </span>
-                <span>Proceed to Checkout</span>
-                <span style={{ fontSize: '15px', fontWeight: 900 }}>₹{grandTotal.toLocaleString('en-IN')}</span>
-              </button>
+            {/* Dark Order Summary + Place Order Card */}
+            <div style={{ padding: '14px 14px 8px' }}>
+              <div style={{
+                background: 'linear-gradient(160deg, #1e1e1e 0%, #141414 100%)',
+                borderRadius: '22px',
+                padding: '20px 20px 6px',
+                boxShadow: '0 8px 32px rgba(0,0,0,0.35)',
+                border: '1px solid rgba(255,255,255,0.07)',
+              }}>
+                {/* Subtotal row */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                  <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.55)', fontWeight: 500 }}>Subtotal</span>
+                  <span style={{ fontSize: '13px', fontWeight: 600, color: 'rgba(255,255,255,0.85)' }}>₹{subtotal.toLocaleString('en-IN')}</span>
+                </div>
+                {/* GST row */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                  <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.55)', fontWeight: 500 }}>GST (5%)</span>
+                  <span style={{ fontSize: '13px', fontWeight: 600, color: 'rgba(255,255,255,0.85)' }}>₹{gstAmt.toLocaleString('en-IN')}</span>
+                </div>
+                {/* Delivery row */}
+                {deliveryFee > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                    <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.55)', fontWeight: 500 }}>Delivery</span>
+                    <span style={{ fontSize: '13px', fontWeight: 600, color: 'rgba(255,255,255,0.85)' }}>₹{deliveryFee}</span>
+                  </div>
+                )}
+                {/* Discount row */}
+                {couponApplied && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                    <span style={{ fontSize: '13px', color: '#22c55e', fontWeight: 600 }}>Discount (SPICE10)</span>
+                    <span style={{ fontSize: '13px', fontWeight: 700, color: '#22c55e' }}>−₹{discountAmt.toLocaleString('en-IN')}</span>
+                  </div>
+                )}
+                {/* Divider */}
+                <div style={{ height: '1px', background: 'rgba(255,255,255,0.08)', margin: '6px 0 14px' }} />
+                {/* Grand Total */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
+                  <span style={{ fontSize: '17px', fontWeight: 900, color: '#fff' }}>Grand Total</span>
+                  <span style={{ fontSize: '20px', fontWeight: 900, color: '#FFB800' }}>₹{grandTotal.toLocaleString('en-IN')}</span>
+                </div>
+                {/* Place Order button */}
+                <button
+                  className="checkout-btn"
+                  style={{
+                    width: '100%',
+                    background: '#E8321A',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '16px',
+                    padding: '16px',
+                    fontSize: '15px',
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                    letterSpacing: '0.01em',
+                    boxShadow: '0 6px 24px rgba(232,50,26,0.45)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    marginBottom: '14px',
+                  }}
+                >
+                  Place Order <span style={{ fontSize: '16px' }}>→</span>
+                </button>
+                {deliveryFee === 0 && subtotal > 0 && (
+                  <div style={{ textAlign: 'center', fontSize: '11px', color: '#22c55e', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', paddingBottom: '4px' }}>
+                    <CheckCircle size={11} /> Free delivery applied on this order
+                  </div>
+                )}
+              </div>
             </div>
             </>
           )}
