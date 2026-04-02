@@ -354,10 +354,10 @@ export default function RestaurantWebsite() {
         transition: 'background 0.3s ease, border-color 0.3s ease',
       }}>
         {[
-          { id: 'home', icon: <Home size={22} />, label: 'Home' },
-          { id: 'menu', icon: <UtensilsCrossed size={22} />, label: 'Menu' },
+          { id: 'home', icon: <Home size={22} />, label: 'Home', action: () => navigate('/') },
+          { id: 'menu', icon: <UtensilsCrossed size={22} />, label: 'Menu', action: null },
           {
-            id: 'cart', label: 'Cart',
+            id: 'cart', label: 'Cart', action: null,
             icon: (
               <div style={{ position: 'relative', display: 'inline-flex' }}>
                 <ShoppingCart size={22} />
@@ -373,12 +373,12 @@ export default function RestaurantWebsite() {
               </div>
             ),
           },
-          { id: 'orders', icon: <ClipboardList size={22} />, label: 'Order' },
-          { id: 'booking', icon: <CalendarDays size={22} />, label: 'Book' },
-        ].map(({ id, icon, label }) => (
+          { id: 'orders', icon: <ClipboardList size={22} />, label: 'Order', action: null },
+          { id: 'booking', icon: <CalendarDays size={22} />, label: 'Book', action: null },
+        ].map(({ id, icon, label, action }) => (
           <button
             key={id}
-            onClick={() => setActiveNav(id)}
+            onClick={() => { setActiveNav(id); action && action() }}
             style={{
               display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px',
               background: 'none', border: 'none', cursor: 'pointer',
