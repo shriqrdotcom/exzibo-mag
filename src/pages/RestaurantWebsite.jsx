@@ -5,7 +5,8 @@ import {
   UtensilsCrossed, ClipboardList, CalendarDays,
   Heart, Moon, Sun, ChevronRight, ChevronLeft,
   Phone, Flame, Award, Clock, Users, AtSign,
-  Share2, MessageCircle, Globe, Leaf, ExternalLink
+  Share2, MessageCircle, Globe, Leaf, ExternalLink,
+  Trash2, Minus, Plus, Tag, CheckCircle, ShoppingBag
 } from 'lucide-react'
 
 const FALLBACK_IMAGES = [
@@ -124,7 +125,47 @@ export default function RestaurantWebsite() {
   const [darkMode, setDarkMode] = useState(false)
   const [carouselIdx, setCarouselIdx] = useState(0)
   const [liked, setLiked] = useState({})
-  const [cartCount] = useState(2)
+  const [cartItems, setCartItems] = useState([
+    { id: 1, name: 'Hara Bhara Kebab', price: 249, qty: 1, img: '/menu/heirloom-burrata.png' },
+    { id: 2, name: 'Dahi Puri', price: 179, qty: 1, img: '/menu/mushroom-risotto.png' },
+  ])
+  const [couponInput, setCouponInput] = useState('')
+  const [couponApplied, setCouponApplied] = useState(false)
+  const [couponError, setCouponError] = useState('')
+  const VALID_COUPON = 'SPICE10'
+  const COUPON_DISCOUNT_PCT = 10
+
+  const cartCount = cartItems.reduce((s, i) => s + i.qty, 0)
+  const subtotal = cartItems.reduce((s, i) => s + i.price * i.qty, 0)
+  const deliveryFee = subtotal > 500 ? 0 : 40
+  const gstAmt = +(subtotal * 0.05).toFixed(2)
+  const discountAmt = couponApplied ? +(subtotal * COUPON_DISCOUNT_PCT / 100).toFixed(2) : 0
+  const grandTotal = +(subtotal + gstAmt + deliveryFee - discountAmt).toFixed(2)
+
+  function updateQty(id, delta) {
+    setCartItems(prev => prev.map(item =>
+      item.id === id ? { ...item, qty: Math.max(1, item.qty + delta) } : item
+    ))
+  }
+  function removeItem(id) {
+    setCartItems(prev => prev.filter(item => item.id !== id))
+  }
+  function handleApplyCoupon() {
+    if (couponApplied) return
+    if (couponInput.trim().toUpperCase() === VALID_COUPON) {
+      setCouponApplied(true)
+      setCouponError('')
+    } else {
+      setCouponError('Invalid coupon code')
+    }
+  }
+  function addToCart(item) {
+    setCartItems(prev => {
+      const existing = prev.find(c => c.name === item.name)
+      if (existing) return prev.map(c => c.name === item.name ? { ...c, qty: c.qty + 1 } : c)
+      return [...prev, { id: Date.now(), name: item.name, price: item.price, qty: 1, img: item.img || '/menu/wagyu-ribeye.png' }]
+    })
+  }
 
   const theme = buildTheme(darkMode)
 
@@ -478,9 +519,18 @@ export default function RestaurantWebsite() {
             {activeMenuItems.length === 0 && (
               <div style={{ textAlign: 'center', padding: '60px 20px', color: theme.tabInactiveColor, fontSize: '13px' }}>No items in this category yet</div>
             )}
-            {activeMenuItems.map((item, i) => (
-              <MenuCard key={`${activeMenuTab}-${i}`} item={item} theme={theme} />
-            ))}
+            {activeMenuItems.map((item, i) => {
+              const inCart = cartItems.find(c => c.name === item.name)
+              return (
+                <MenuCard
+                  key={`${activeMenuTab}-${i}`}
+                  item={item}
+                  theme={theme}
+                  onAddToCart={addToCart}
+                  cartQty={inCart ? inCart.qty : 0}
+                />
+              )
+            })}
           </div>
 
           {/* Banner */}
@@ -496,7 +546,297 @@ export default function RestaurantWebsite() {
         </div>
       )}
 
-      {/* ── BOTTOM NAV ── */}
+      {/* ── FLOATING VIEW CART (menu view) ── */}
+      {activeNav === 'menu' && cartCount > 0 && (
+        <div style={{
+          position: 'fixed', bottom: '78px', left: '50%', transform: 'translateX(-50%)',
+          zIndex: 80, pointerEvents: 'none', width: '100%', maxWidth: '480px', padding: '0 14px',
+        }}>
+          <button
+            onClick={() => setActiveNav('cart')}
+            style={{
+              pointerEvents: 'all', width: '100%', background: '#111', color: '#fff', border: 'none',
+              borderRadius: '16px', padding: '14px 20px', fontSize: '14px', fontWeight: 700,
+              cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              boxShadow: '0 8px 28px rgba(0,0,0,0.35)',
+            }}
+          >
+            <span style={{ background: '#E8321A', borderRadius: '7px', padding: '3px 9px', fontSize: '12px', fontWeight: 800 }}>{cartCount}</span>
+            <span>View Cart</span>
+            <span style={{ color: '#E8321A', fontWeight: 800 }}>₹{subtotal.toLocaleString('en-IN')}</span>
+          </button>
+        </div>
+      )}
+
+      {/* ── CART VIEW ── */}
+      {activeNav === 'cart' && (
+        <div style={{ animation: 'fadeIn 0.3s ease', paddingBottom: '100px' }}>
+          <style>{`
+            .cart-item-card { transition: box-shadow 0.2s ease, transform 0.15s ease; }
+            .cart-item-card:hover { box-shadow: 0 6px 24px rgba(0,0,0,0.13) !important; }
+            .qty-btn { transition: background 0.15s ease, transform 0.1s ease; }
+            .qty-btn:active { transform: scale(0.88); }
+            .delete-btn { transition: color 0.15s ease, background 0.15s ease; }
+            .delete-btn:hover { background: rgba(232,50,26,0.10) !important; color: #E8321A !important; }
+            .coupon-apply-btn { transition: background 0.15s ease, transform 0.1s ease; }
+            .coupon-apply-btn:active { transform: scale(0.96); }
+            .checkout-btn { transition: opacity 0.15s ease, transform 0.12s ease, box-shadow 0.15s ease; }
+            .checkout-btn:hover { opacity: 0.92; box-shadow: 0 12px 32px rgba(232,50,26,0.50) !important; }
+            .checkout-btn:active { transform: scale(0.98); }
+          `}</style>
+
+          {/* Section title */}
+          <div style={{ padding: '22px 18px 8px' }}>
+            <div style={{ fontSize: '22px', fontWeight: 900, color: theme.color, letterSpacing: '-0.01em' }}>Your Order</div>
+          </div>
+
+          {/* Empty state */}
+          {cartItems.length === 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 24px', gap: '14px', animation: 'fadeIn 0.4s ease' }}>
+              <div style={{ width: '72px', height: '72px', borderRadius: '50%', background: darkMode ? 'rgba(255,255,255,0.05)' : '#f0ece8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <ShoppingBag size={32} color={darkMode ? '#555' : '#ccc'} />
+              </div>
+              <div style={{ fontSize: '16px', fontWeight: 800, color: theme.color }}>Your cart is empty</div>
+              <div style={{ fontSize: '13px', color: theme.locationColor, textAlign: 'center', lineHeight: 1.6, maxWidth: '220px' }}>Browse the menu and add your favourite dishes!</div>
+              <button
+                onClick={() => setActiveNav('menu')}
+                style={{ marginTop: '8px', background: '#E8321A', color: '#fff', border: 'none', borderRadius: '14px', padding: '12px 28px', fontSize: '13px', fontWeight: 700, cursor: 'pointer', boxShadow: '0 6px 20px rgba(232,50,26,0.35)' }}
+              >
+                Browse Menu
+              </button>
+            </div>
+          )}
+
+          {/* Cart items */}
+          {cartItems.length > 0 && (
+            <div style={{ padding: '4px 14px 0' }}>
+              {cartItems.map(item => (
+                <div
+                  key={item.id}
+                  className="cart-item-card"
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '12px',
+                    background: theme.cardBg,
+                    border: `1px solid ${theme.cardBorder}`,
+                    borderRadius: '18px',
+                    padding: '14px',
+                    marginBottom: '12px',
+                    boxShadow: theme.cardShadow,
+                    position: 'relative',
+                  }}
+                >
+                  {/* Food image */}
+                  <div style={{ flexShrink: 0, width: '72px', height: '72px', borderRadius: '13px', overflow: 'hidden', background: darkMode ? '#222' : '#f5f1ee' }}>
+                    <img
+                      src={item.img}
+                      alt={item.name}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                      onError={e => { e.target.src = '/menu/wagyu-ribeye.png' }}
+                    />
+                  </div>
+
+                  {/* Details */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '6px' }}>
+                      <div style={{ fontSize: '14px', fontWeight: 700, color: theme.color, lineHeight: 1.3, flex: 1 }}>{item.name}</div>
+                      <button
+                        className="delete-btn"
+                        onClick={() => removeItem(item.id)}
+                        style={{ flexShrink: 0, background: darkMode ? 'rgba(255,255,255,0.06)' : '#f5f1ee', border: 'none', borderRadius: '8px', width: '30px', height: '30px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: darkMode ? '#666' : '#bbb', cursor: 'pointer' }}
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                    <div style={{ fontSize: '15px', fontWeight: 800, color: '#E8321A', marginTop: '4px' }}>₹{(item.price * item.qty).toLocaleString('en-IN')}</div>
+
+                    {/* Quantity stepper */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '2px', marginTop: '8px', width: 'fit-content' }}>
+                      <button
+                        className="qty-btn"
+                        onClick={() => updateQty(item.id, -1)}
+                        style={{ width: '28px', height: '28px', borderRadius: '8px', border: `1.5px solid ${darkMode ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.10)'}`, background: darkMode ? 'rgba(255,255,255,0.05)' : '#f5f5f5', color: theme.color, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                      >
+                        <Minus size={12} strokeWidth={2.5} />
+                      </button>
+                      <span style={{ minWidth: '28px', textAlign: 'center', fontSize: '14px', fontWeight: 700, color: theme.color }}>{item.qty}</span>
+                      <button
+                        className="qty-btn"
+                        onClick={() => updateQty(item.id, 1)}
+                        style={{ width: '28px', height: '28px', borderRadius: '8px', border: 'none', background: '#E8321A', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                      >
+                        <Plus size={12} strokeWidth={2.5} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Coupon + Summary card */}
+          {cartItems.length > 0 && (
+            <div style={{ padding: '4px 14px 0' }}>
+              <div style={{
+                background: theme.cardBg,
+                border: `1px solid ${theme.cardBorder}`,
+                borderRadius: '20px',
+                overflow: 'hidden',
+                boxShadow: theme.cardShadow,
+              }}>
+
+                {/* Coupon section */}
+                <div style={{ padding: '16px 16px 14px', borderBottom: `1px solid ${theme.cardBorder}` }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
+                    <Tag size={13} color="#E8321A" strokeWidth={2.5} />
+                    <span style={{ fontSize: '11px', fontWeight: 800, letterSpacing: '0.12em', color: '#E8321A', textTransform: 'uppercase' }}>Apply Coupon</span>
+                  </div>
+                  {couponApplied ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(34,197,94,0.08)', border: '1.5px solid rgba(34,197,94,0.25)', borderRadius: '12px', padding: '11px 14px' }}>
+                      <CheckCircle size={16} color="#22c55e" />
+                      <span style={{ fontSize: '13px', fontWeight: 700, color: '#22c55e', flex: 1 }}>SPICE10 applied — 10% off!</span>
+                      <button
+                        onClick={() => { setCouponApplied(false); setCouponInput('') }}
+                        style={{ background: 'none', border: 'none', color: '#aaa', fontSize: '11px', fontWeight: 600, cursor: 'pointer', padding: '0' }}
+                      >Remove</button>
+                    </div>
+                  ) : (
+                    <>
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <input
+                          value={couponInput}
+                          onChange={e => { setCouponInput(e.target.value); setCouponError('') }}
+                          onKeyDown={e => e.key === 'Enter' && handleApplyCoupon()}
+                          placeholder="Enter code (SPICE10)"
+                          style={{
+                            flex: 1, background: darkMode ? 'rgba(255,255,255,0.05)' : '#f7f3f0',
+                            border: `1.5px solid ${couponError ? 'rgba(232,50,26,0.4)' : (darkMode ? 'rgba(255,255,255,0.09)' : 'rgba(0,0,0,0.09)')}`,
+                            borderRadius: '12px', padding: '11px 14px', fontSize: '13px', color: theme.color,
+                            outline: 'none', fontFamily: 'inherit', transition: 'border-color 0.2s',
+                          }}
+                        />
+                        <button
+                          className="coupon-apply-btn"
+                          onClick={handleApplyCoupon}
+                          style={{ background: '#E8321A', color: '#fff', border: 'none', borderRadius: '12px', padding: '11px 18px', fontSize: '13px', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: '0 4px 14px rgba(232,50,26,0.30)' }}
+                        >
+                          Apply
+                        </button>
+                      </div>
+                      {couponError && (
+                        <div style={{ fontSize: '11px', color: '#E8321A', marginTop: '6px', fontWeight: 600, paddingLeft: '2px' }}>{couponError}</div>
+                      )}
+                    </>
+                  )}
+                </div>
+
+                {/* Pricing rows */}
+                <div style={{ padding: '14px 16px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                    <span style={{ fontSize: '13px', color: theme.locationColor, fontWeight: 500 }}>Subtotal</span>
+                    <span style={{ fontSize: '13px', fontWeight: 600, color: theme.color }}>₹{subtotal.toLocaleString('en-IN')}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                    <span style={{ fontSize: '13px', color: theme.locationColor, fontWeight: 500 }}>GST (5%)</span>
+                    <span style={{ fontSize: '13px', fontWeight: 600, color: theme.color }}>₹{gstAmt.toLocaleString('en-IN')}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                    <span style={{ fontSize: '13px', color: theme.locationColor, fontWeight: 500 }}>Delivery</span>
+                    <span style={{ fontSize: '13px', fontWeight: 600, color: deliveryFee === 0 ? '#22c55e' : theme.color }}>
+                      {deliveryFee === 0 ? 'FREE' : `₹${deliveryFee}`}
+                    </span>
+                  </div>
+                  {couponApplied && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                      <span style={{ fontSize: '13px', color: '#22c55e', fontWeight: 600 }}>Discount (SPICE10)</span>
+                      <span style={{ fontSize: '13px', fontWeight: 700, color: '#22c55e' }}>−₹{discountAmt.toLocaleString('en-IN')}</span>
+                    </div>
+                  )}
+                  <div style={{ height: '1px', background: theme.cardBorder, margin: '12px 0' }} />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: '15px', fontWeight: 800, color: theme.color }}>Grand Total</span>
+                    <span style={{ fontSize: '18px', fontWeight: 900, color: '#E8321A' }}>₹{grandTotal.toLocaleString('en-IN')}</span>
+                  </div>
+                  {deliveryFee === 0 && subtotal > 0 && (
+                    <div style={{ marginTop: '8px', fontSize: '11px', color: '#22c55e', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <CheckCircle size={11} /> Free delivery on orders above ₹500
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── ORDERS VIEW ── */}
+      {activeNav === 'orders' && (
+        <div style={{ animation: 'fadeIn 0.3s ease', padding: '22px 18px' }}>
+          <div style={{ fontSize: '22px', fontWeight: 900, color: theme.color, marginBottom: '20px', letterSpacing: '-0.01em' }}>Your Orders</div>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 24px', gap: '12px' }}>
+            <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: darkMode ? 'rgba(255,255,255,0.05)' : '#f0ece8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <ClipboardList size={28} color={darkMode ? '#555' : '#ccc'} />
+            </div>
+            <div style={{ fontSize: '15px', fontWeight: 800, color: theme.color }}>No orders yet</div>
+            <div style={{ fontSize: '13px', color: theme.locationColor, textAlign: 'center', lineHeight: 1.6 }}>Your past orders will show up here</div>
+          </div>
+        </div>
+      )}
+
+      {/* ── BOOKING VIEW ── */}
+      {activeNav === 'booking' && (
+        <div style={{ animation: 'fadeIn 0.3s ease', padding: '22px 18px' }}>
+          <div style={{ fontSize: '22px', fontWeight: 900, color: theme.color, marginBottom: '20px', letterSpacing: '-0.01em' }}>Reserve a Table</div>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 24px', gap: '12px' }}>
+            <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: darkMode ? 'rgba(255,255,255,0.05)' : '#f0ece8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <CalendarDays size={28} color={darkMode ? '#555' : '#ccc'} />
+            </div>
+            <div style={{ fontSize: '15px', fontWeight: 800, color: theme.color }}>Coming soon</div>
+            <div style={{ fontSize: '13px', color: theme.locationColor, textAlign: 'center', lineHeight: 1.6 }}>Online table reservations will be available soon</div>
+            {restaurant.phone && (
+              <a href={`tel:${restaurant.phone}`} style={{ marginTop: '8px', background: '#E8321A', color: '#fff', borderRadius: '14px', padding: '12px 28px', fontSize: '13px', fontWeight: 700, textDecoration: 'none', boxShadow: '0 6px 20px rgba(232,50,26,0.35)' }}>
+                Call to Reserve
+              </a>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── STICKY CHECKOUT BAR ── */}
+      {activeNav === 'cart' && cartItems.length > 0 && (
+        <div style={{
+          position: 'fixed', bottom: '68px', left: '50%', transform: 'translateX(-50%)',
+          width: '100%', maxWidth: '480px', padding: '0 14px',
+          zIndex: 90, pointerEvents: 'none',
+        }}>
+          <button
+            className="checkout-btn"
+            style={{
+              width: '100%',
+              background: 'linear-gradient(135deg, #E8321A 0%, #c42a14 100%)',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '18px',
+              padding: '17px 24px',
+              fontSize: '15px',
+              fontWeight: 800,
+              cursor: 'pointer',
+              letterSpacing: '0.01em',
+              boxShadow: '0 8px 28px rgba(232,50,26,0.42)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              pointerEvents: 'all',
+            }}
+          >
+            <span style={{ background: 'rgba(255,255,255,0.18)', borderRadius: '8px', padding: '4px 10px', fontSize: '13px', fontWeight: 700 }}>
+              {cartCount} item{cartCount > 1 ? 's' : ''}
+            </span>
+            <span>Proceed to Checkout</span>
+            <span style={{ fontSize: '15px', fontWeight: 900 }}>₹{grandTotal.toLocaleString('en-IN')}</span>
+          </button>
+        </div>
+      )}
+
       <nav style={{
         position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)',
         width: '100%', maxWidth: '480px', zIndex: 100,
@@ -568,7 +908,7 @@ function BestsellerCard({ item, liked, onLike, theme }) {
   )
 }
 
-function MenuCard({ item, theme }) {
+function MenuCard({ item, theme, onAddToCart, cartQty }) {
   const fallbackImg = '/menu/wagyu-ribeye.png'
   const oldPrice = item.oldPrice || Math.round((item.price || 0) * 1.5)
   return (
@@ -581,18 +921,22 @@ function MenuCard({ item, theme }) {
           <div style={{ flexShrink: 0, marginTop: '3px', width: '14px', height: '14px', borderRadius: '3px', border: `1.5px solid ${item.veg !== false ? theme.vegDot : theme.nonVegDot}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: item.veg !== false ? theme.vegDot : theme.nonVegDot }} />
           </div>
-          <div style={{ fontSize: '14px', fontWeight: 700, color: theme.itemName, lineHeight: 1.35 }}>1 x {item.name}</div>
+          <div style={{ fontSize: '14px', fontWeight: 700, color: theme.itemName, lineHeight: 1.35 }}>{item.name}</div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginBottom: '4px' }}>
-              <span style={{ fontSize: '16px', fontWeight: 800, color: theme.priceNew }}>₹{(item.price || 0).toLocaleString('en-IN')}</span>
+              <span style={{ fontSize: '16px', fontWeight: 800, color: '#E8321A' }}>₹{(item.price || 0).toLocaleString('en-IN')}</span>
               <span style={{ fontSize: '13px', fontWeight: 500, color: theme.priceOld, textDecoration: 'line-through' }}>₹{oldPrice.toLocaleString('en-IN')}</span>
             </div>
             <div style={{ fontSize: '11px', fontWeight: 600, color: theme.offerColor }}>Best offer applied</div>
           </div>
-          <button className="view-cart-btn" style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '9px 16px', borderRadius: '10px', background: 'transparent', border: `1.5px solid ${theme.viewCartBorder}`, color: theme.viewCartColor, fontSize: '12px', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>
-            View cart <ChevronRight size={13} />
+          <button
+            className="view-cart-btn"
+            onClick={() => onAddToCart && onAddToCart(item)}
+            style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '9px 16px', borderRadius: '10px', background: cartQty > 0 ? 'rgba(232,50,26,0.10)' : 'transparent', border: `1.5px solid #E8321A`, color: '#E8321A', fontSize: '12px', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
+          >
+            {cartQty > 0 ? `In cart (${cartQty})` : <><Plus size={12} strokeWidth={3} /> Add</>}
           </button>
         </div>
       </div>
