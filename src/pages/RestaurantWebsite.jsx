@@ -675,6 +675,7 @@ export default function RestaurantWebsite() {
 
           {/* Coupon + Summary card */}
           {cartItems.length > 0 && (
+            <>
             <div style={{ padding: '4px 14px 0' }}>
               <div style={{
                 background: theme.cardBg,
@@ -764,6 +765,36 @@ export default function RestaurantWebsite() {
                 </div>
               </div>
             </div>
+
+            {/* Inline Checkout Button */}
+            <div style={{ padding: '16px 14px 8px' }}>
+              <button
+                className="checkout-btn"
+                style={{
+                  width: '100%',
+                  background: 'linear-gradient(135deg, #E8321A 0%, #c42a14 100%)',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '18px',
+                  padding: '17px 24px',
+                  fontSize: '15px',
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  letterSpacing: '0.01em',
+                  boxShadow: '0 8px 28px rgba(232,50,26,0.42)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                }}
+              >
+                <span style={{ background: 'rgba(255,255,255,0.18)', borderRadius: '8px', padding: '4px 10px', fontSize: '13px', fontWeight: 700 }}>
+                  {cartCount} item{cartCount > 1 ? 's' : ''}
+                </span>
+                <span>Proceed to Checkout</span>
+                <span style={{ fontSize: '15px', fontWeight: 900 }}>₹{grandTotal.toLocaleString('en-IN')}</span>
+              </button>
+            </div>
+            </>
           )}
         </div>
       )}
@@ -801,41 +832,6 @@ export default function RestaurantWebsite() {
         </div>
       )}
 
-      {/* ── STICKY CHECKOUT BAR ── */}
-      {activeNav === 'cart' && cartItems.length > 0 && (
-        <div style={{
-          position: 'fixed', bottom: '68px', left: '50%', transform: 'translateX(-50%)',
-          width: '100%', maxWidth: '480px', padding: '0 14px',
-          zIndex: 90, pointerEvents: 'none',
-        }}>
-          <button
-            className="checkout-btn"
-            style={{
-              width: '100%',
-              background: 'linear-gradient(135deg, #E8321A 0%, #c42a14 100%)',
-              color: '#fff',
-              border: 'none',
-              borderRadius: '18px',
-              padding: '17px 24px',
-              fontSize: '15px',
-              fontWeight: 800,
-              cursor: 'pointer',
-              letterSpacing: '0.01em',
-              boxShadow: '0 8px 28px rgba(232,50,26,0.42)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              pointerEvents: 'all',
-            }}
-          >
-            <span style={{ background: 'rgba(255,255,255,0.18)', borderRadius: '8px', padding: '4px 10px', fontSize: '13px', fontWeight: 700 }}>
-              {cartCount} item{cartCount > 1 ? 's' : ''}
-            </span>
-            <span>Proceed to Checkout</span>
-            <span style={{ fontSize: '15px', fontWeight: 900 }}>₹{grandTotal.toLocaleString('en-IN')}</span>
-          </button>
-        </div>
-      )}
 
       <nav style={{
         position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)',
@@ -867,7 +863,7 @@ export default function RestaurantWebsite() {
           <button
             key={id}
             onClick={() => setActiveNav(id)}
-            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', background: 'none', border: 'none', cursor: 'pointer', color: activeNav === id ? '#E8321A' : theme.navInactive, padding: '4px 12px', transition: 'color 0.2s ease' }}
+            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', border: 'none', cursor: 'pointer', color: activeNav === id ? '#E8321A' : theme.navInactive, padding: '6px 14px', borderRadius: '12px', background: activeNav === id ? (darkMode ? 'rgba(232,50,26,0.14)' : 'rgba(0,0,0,0.07)') : 'none', transition: 'color 0.2s ease, background 0.2s ease' }}
           >
             {icon}
             <span style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '0.03em', textTransform: 'uppercase' }}>{label}</span>
