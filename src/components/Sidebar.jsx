@@ -4,7 +4,7 @@ import { LayoutDashboard, UtensilsCrossed, Settings, Zap } from 'lucide-react'
 
 const navItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
-  { icon: UtensilsCrossed, label: 'Menu Editor', path: '/menu-editor' },
+  { icon: UtensilsCrossed, label: 'Restaurant Editor', path: '/menu-editor' },
   { icon: Settings, label: 'Settings', path: '/settings' },
 ]
 
