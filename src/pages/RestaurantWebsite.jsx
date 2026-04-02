@@ -1,9 +1,11 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   Star, MapPin, Bell, ShoppingCart, Home,
   UtensilsCrossed, ClipboardList, CalendarDays,
-  Heart, Moon, Sun, ChevronRight
+  Heart, Moon, Sun, ChevronRight, ChevronLeft,
+  Phone, Flame, Award, Clock, Users, AtSign,
+  Share2, MessageCircle, Globe, Leaf, ExternalLink
 } from 'lucide-react'
 
 const FALLBACK_IMAGES = [
@@ -31,7 +33,7 @@ const MENU_FALLBACK = {
   ],
 }
 
-const TABS = [
+const MENU_TABS = [
   { id: 'starters', label: 'STARTERS' },
   { id: 'mains', label: 'MAIN COURSE' },
   { id: 'drinks', label: 'DRINKS' },
@@ -50,13 +52,11 @@ function buildTheme(dark) {
     tabBarBg: dark ? '#1e1e1e' : '#fff',
     tabBarBorder: dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.07)',
     tabBarShadow: dark ? '0 4px 24px rgba(0,0,0,0.5)' : '0 4px 24px rgba(0,0,0,0.10)',
-    tabInactiveBg: dark ? 'rgba(255,255,255,0.06)' : '#f0f0f0',
     tabInactiveColor: dark ? '#888' : '#888',
     itemName: dark ? '#f0f0f0' : '#111',
     priceNew: dark ? '#f0f0f0' : '#111',
     priceOld: dark ? '#555' : '#aaa',
     offerColor: dark ? '#4ade80' : '#1a7a4a',
-    viewCartBg: dark ? 'transparent' : 'transparent',
     viewCartBorder: dark ? 'rgba(74,222,128,0.5)' : '#2ecc71',
     viewCartColor: dark ? '#4ade80' : '#1a7a4a',
     vegDot: '#2ecc71',
@@ -69,14 +69,32 @@ function buildTheme(dark) {
     navInactive: dark ? '#444' : '#bbb',
     toggleBg: dark ? 'rgba(255,255,255,0.08)' : '#f0f0f0',
     toggleBorder: dark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.10)',
-    ratingBg: dark ? 'rgba(255,184,0,0.12)' : 'rgba(255,184,0,0.12)',
-    ratingBorder: dark ? 'rgba(255,184,0,0.25)' : 'rgba(255,184,0,0.3)',
+    ratingBg: 'rgba(255,184,0,0.12)',
+    ratingBorder: 'rgba(255,184,0,0.3)',
     bellBg: dark ? 'rgba(255,255,255,0.07)' : '#f0f0f0',
     bellBorder: dark ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.08)',
-    bellColor: dark ? '#888' : '#888',
-    cartDot: '#E8321A',
-    imgOverlay: dark ? 'rgba(0,0,0,0.15)' : 'rgba(0,0,0,0.04)',
+    bellColor: '#888',
+    // Home view specific
+    statsBg: dark ? 'rgba(255,255,255,0.03)' : '#fff',
+    statsBorder: dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.07)',
+    statsDivider: dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.07)',
+    statsLabel: dark ? '#555' : '#aaa',
+    statsValue: dark ? '#ddd' : '#222',
+    sectionTitle: dark ? '#fff' : '#111',
+    sectionSub: dark ? '#555' : '#aaa',
+    bestsellerBg: dark ? '#1c1c1c' : '#fff',
+    bestsellerBorder: dark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)',
+    bestsellerName: dark ? '#e0e0e0' : '#111',
+    btnSecBg: dark ? 'rgba(255,255,255,0.06)' : '#fff',
+    btnSecBorder: dark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)',
+    btnSecColor: dark ? '#fff' : '#111',
+    adminBg: dark ? 'rgba(232,50,26,0.08)' : 'rgba(232,50,26,0.06)',
+    adminBorder: dark ? 'rgba(232,50,26,0.18)' : 'rgba(232,50,26,0.14)',
   }
+}
+
+function injectOldPrice(item) {
+  return { ...item, oldPrice: item.oldPrice || Math.round(item.price * 1.5) }
 }
 
 export default function RestaurantWebsite() {
@@ -85,9 +103,11 @@ export default function RestaurantWebsite() {
   const [restaurant, setRestaurant] = useState(null)
   const [notFound, setNotFound] = useState(false)
   const [menuData, setMenuData] = useState({ starters: [], mains: [], drinks: [] })
-  const [activeTab, setActiveTab] = useState('starters')
+  const [activeNav, setActiveNav] = useState('home')
+  const [activeMenuTab, setActiveMenuTab] = useState('starters')
   const [darkMode, setDarkMode] = useState(false)
-  const [activeNav, setActiveNav] = useState('menu')
+  const [carouselIdx, setCarouselIdx] = useState(0)
+  const [liked, setLiked] = useState({})
   const [cartCount] = useState(2)
 
   const theme = buildTheme(darkMode)
@@ -98,9 +118,13 @@ export default function RestaurantWebsite() {
         id: 'demo', slug: 'demo',
         name: 'La Maison Noire',
         location: 'Cyber City, Gurugram',
+        description: 'An uncompromising culinary experience rooted in craft, quality, and atmosphere. Every dish is a conversation between heritage and innovation.',
+        chefInfo: 'Chef Marcus Aurélius, trained in Paris and Tokyo, brings 20 years of Michelin-star experience to every plate.',
         rating: '4.9',
         phone: '+91 98765 43210',
         tables: '24',
+        images: FALLBACK_IMAGES,
+        socialLinks: { instagram: '#', facebook: '#', twitter: '#', website: '#' },
       })
       setMenuData(MENU_FALLBACK)
       return
@@ -125,22 +149,29 @@ export default function RestaurantWebsite() {
     }
   }, [slug])
 
-  function injectOldPrice(item) {
-    return { ...item, oldPrice: item.oldPrice || Math.round(item.price * 1.5) }
-  }
+  useEffect(() => {
+    const images = restaurant?.images?.length ? restaurant.images : FALLBACK_IMAGES
+    if (images.length <= 1) return
+    const interval = setInterval(() => setCarouselIdx(i => (i + 1) % images.length), 4000)
+    return () => clearInterval(interval)
+  }, [restaurant])
+
+  const carouselImages = restaurant?.images?.length ? restaurant.images : FALLBACK_IMAGES
+  const allItems = [...menuData.starters, ...menuData.mains, ...menuData.drinks]
+  const tagged = allItems.filter(m => m.tags?.some(t => ['Popular', 'Seasonal', "Chef's Pick"].includes(t)))
+  const bestsellers = (tagged.length > 0 ? tagged : allItems).slice(0, 6)
+  const activeMenuItems = menuData[activeMenuTab] || []
 
   if (notFound) {
     return (
-      <div style={{ minHeight: '100vh', background: '#f2f2f2', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '0', fontFamily: "'Inter', sans-serif", padding: '24px' }}>
+      <div style={{ minHeight: '100vh', background: '#f2f2f2', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', fontFamily: "'Inter', sans-serif", padding: '24px', gap: '0' }}>
         <div style={{ fontSize: '80px', fontWeight: 900, color: 'rgba(0,0,0,0.06)', lineHeight: 1 }}>404</div>
         <div style={{ fontSize: '20px', fontWeight: 800, color: '#111', marginTop: '-8px', marginBottom: '8px' }}>Restaurant not found</div>
-        <div style={{ fontSize: '13px', color: '#888', marginBottom: '32px', textAlign: 'center', maxWidth: '280px', lineHeight: 1.6 }}>
-          No restaurant matches this URL.
-        </div>
-        <a href="/restaurant/demo" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#E8321A', borderRadius: '12px', padding: '14px 28px', color: '#fff', fontSize: '13px', fontWeight: 700, textDecoration: 'none' }}>
+        <div style={{ fontSize: '13px', color: '#888', marginBottom: '32px', textAlign: 'center', maxWidth: '280px', lineHeight: 1.6 }}>No restaurant matches this URL.</div>
+        <a href="/restaurant/demo" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#E8321A', borderRadius: '12px', padding: '14px 28px', color: '#fff', fontSize: '13px', fontWeight: 700, textDecoration: 'none', marginBottom: '12px' }}>
           View Demo Restaurant
         </a>
-        <a href="/" style={{ textAlign: 'center', fontSize: '12px', color: '#aaa', textDecoration: 'none', paddingTop: '12px', fontWeight: 600 }}>← Back to Home</a>
+        <a href="/" style={{ fontSize: '12px', color: '#aaa', textDecoration: 'none', fontWeight: 600 }}>← Back to Home</a>
       </div>
     )
   }
@@ -156,8 +187,6 @@ export default function RestaurantWebsite() {
       </div>
     )
   }
-
-  const activeItems = menuData[activeTab] || []
 
   return (
     <div style={{
@@ -175,26 +204,25 @@ export default function RestaurantWebsite() {
         ::-webkit-scrollbar { display: none; }
         @keyframes spin { to { transform: rotate(360deg) } }
         @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         .menu-card { animation: fadeUp 0.35s ease both; }
         .menu-card:nth-child(1) { animation-delay: 0ms; }
         .menu-card:nth-child(2) { animation-delay: 60ms; }
         .menu-card:nth-child(3) { animation-delay: 120ms; }
         .menu-card:nth-child(4) { animation-delay: 180ms; }
-        .menu-card:nth-child(5) { animation-delay: 240ms; }
         .view-cart-btn { transition: background 0.2s ease, transform 0.15s ease; }
         .view-cart-btn:hover { background: rgba(46,204,113,0.08) !important; }
         .view-cart-btn:active { transform: scale(0.96); }
         .tab-pill { transition: background 0.2s ease, color 0.2s ease; }
         .toggle-btn { transition: background 0.2s ease, transform 0.15s ease; }
         .toggle-btn:active { transform: scale(0.9); }
+        .food-card { transition: transform 0.2s ease; }
+        .food-card:active { transform: scale(0.97); }
       `}</style>
 
       {/* ── ADMIN BACK BAR ── */}
       {slug !== 'demo' && (
-        <div style={{
-          background: 'rgba(232,50,26,0.07)', borderBottom: '1px solid rgba(232,50,26,0.15)',
-          padding: '8px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        }}>
+        <div style={{ background: theme.adminBg, borderBottom: `1px solid ${theme.adminBorder}`, padding: '8px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <button onClick={() => navigate('/restaurants')} style={{ background: 'none', border: 'none', color: '#E8321A', fontSize: '11px', fontWeight: 700, cursor: 'pointer', letterSpacing: '0.06em' }}>
             ← MY RESTAURANTS
           </button>
@@ -206,14 +234,12 @@ export default function RestaurantWebsite() {
       <header style={{
         position: 'sticky', top: 0, zIndex: 50,
         background: theme.headerBg,
-        backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)',
+        backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
         borderBottom: `1px solid ${theme.headerBorder}`,
         padding: '12px 18px',
         transition: 'background 0.3s ease, border-color 0.3s ease',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          {/* Left: location + name */}
           <div>
             <div style={{ fontSize: '10px', color: theme.locationColor, fontWeight: 500, letterSpacing: '0.04em', marginBottom: '2px', display: 'flex', alignItems: 'center', gap: '3px' }}>
               <MapPin size={9} color="#E8321A" />
@@ -223,169 +249,207 @@ export default function RestaurantWebsite() {
               {restaurant.name}
             </div>
           </div>
-
-          {/* Right: rating + toggle + bell */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             {restaurant.rating && (
-              <div style={{
-                display: 'flex', alignItems: 'center', gap: '4px',
-                background: theme.ratingBg, border: `1px solid ${theme.ratingBorder}`,
-                borderRadius: '20px', padding: '4px 10px',
-              }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: theme.ratingBg, border: `1px solid ${theme.ratingBorder}`, borderRadius: '20px', padding: '4px 10px' }}>
                 <Star size={11} fill="#FFB800" color="#FFB800" />
                 <span style={{ fontSize: '12px', fontWeight: 700, color: '#FFB800' }}>{restaurant.rating}</span>
               </div>
             )}
-
-            {/* Theme toggle */}
-            <button
-              className="toggle-btn"
-              onClick={() => setDarkMode(d => !d)}
-              title={darkMode ? 'Light mode' : 'Dark mode'}
-              style={{
-                width: '34px', height: '34px', borderRadius: '10px',
-                background: theme.toggleBg, border: `1px solid ${theme.toggleBorder}`,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                cursor: 'pointer',
-              }}
-            >
+            <button className="toggle-btn" onClick={() => setDarkMode(d => !d)} title={darkMode ? 'Light mode' : 'Dark mode'} style={{ width: '34px', height: '34px', borderRadius: '10px', background: theme.toggleBg, border: `1px solid ${theme.toggleBorder}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
               {darkMode ? <Sun size={15} color="#FFB800" /> : <Moon size={15} color="#888" />}
             </button>
-
-            {/* Bell */}
-            <div style={{
-              width: '34px', height: '34px', borderRadius: '10px',
-              background: theme.bellBg, border: `1px solid ${theme.bellBorder}`,
-              display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
-            }}>
+            <div style={{ width: '34px', height: '34px', borderRadius: '10px', background: theme.bellBg, border: `1px solid ${theme.bellBorder}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
               <Bell size={15} color={theme.bellColor} />
             </div>
           </div>
         </div>
       </header>
 
-      {/* ── CATEGORY TABS ── */}
-      <div style={{
-        position: 'sticky', top: '64px', zIndex: 40,
-        padding: '12px 16px',
-        background: theme.pageBg,
-        transition: 'background 0.3s ease',
-      }}>
-        <div style={{
-          display: 'flex', alignItems: 'center',
-          background: theme.tabBarBg,
-          borderRadius: '18px',
-          boxShadow: theme.tabBarShadow,
-          padding: '6px',
-        }}>
-          {TABS.map(tab => {
-            const active = activeTab === tab.id
-            return (
-              <button
-                key={tab.id}
-                className="tab-pill"
-                onClick={() => setActiveTab(tab.id)}
-                style={{
-                  flex: 1,
-                  padding: '10px 8px',
-                  borderRadius: '14px',
-                  border: 'none',
-                  background: active ? '#E8321A' : 'transparent',
-                  color: active ? '#fff' : theme.tabInactiveColor,
-                  fontSize: '11px', fontWeight: 800,
-                  cursor: 'pointer', letterSpacing: '0.05em',
-                  whiteSpace: 'nowrap',
-                  textAlign: 'center',
-                  boxShadow: active ? '0 4px 14px rgba(232,50,26,0.35)' : 'none',
-                }}
-              >
-                {tab.label}
+      {/* ── HOME VIEW ── */}
+      {activeNav === 'home' && (
+        <div style={{ animation: 'fadeIn 0.3s ease' }}>
+
+          {/* Hero Carousel */}
+          <section style={{ position: 'relative', height: '240px', overflow: 'hidden', margin: '14px 14px 0' }}>
+            <div style={{ position: 'relative', height: '100%', borderRadius: '20px', overflow: 'hidden' }}>
+              {carouselImages.map((src, i) => (
+                <div key={i} style={{ position: 'absolute', inset: 0, backgroundImage: `url(${src})`, backgroundSize: 'cover', backgroundPosition: 'center', opacity: i === carouselIdx ? 1 : 0, transition: 'opacity 1s ease' }} />
+              ))}
+              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.65) 100%)', borderRadius: '20px' }} />
+              <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', padding: '18px' }}>
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', background: 'rgba(232,50,26,0.9)', borderRadius: '8px', padding: '4px 10px', marginBottom: '8px', width: 'fit-content' }}>
+                  <Flame size={10} color="#fff" />
+                  <span style={{ fontSize: '10px', fontWeight: 800, color: '#fff', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Premium Dining</span>
+                </div>
+                <div style={{ fontSize: '20px', fontWeight: 900, color: '#fff', lineHeight: 1.2, marginBottom: '5px', textShadow: '0 2px 12px rgba(0,0,0,0.8)' }}>
+                  An Unforgettable<br />Culinary Experience
+                </div>
+                <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.7)', lineHeight: 1.4 }}>
+                  {(restaurant.description || '').slice(0, 60)}{(restaurant.description?.length || 0) > 60 ? '…' : ''}
+                </div>
+              </div>
+              {carouselImages.length > 1 && (
+                <>
+                  <button onClick={() => setCarouselIdx(i => (i - 1 + carouselImages.length) % carouselImages.length)} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(6px)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '50%', width: '30px', height: '30px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', cursor: 'pointer' }}>
+                    <ChevronLeft size={15} />
+                  </button>
+                  <button onClick={() => setCarouselIdx(i => (i + 1) % carouselImages.length)} style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(6px)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '50%', width: '30px', height: '30px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', cursor: 'pointer' }}>
+                    <ChevronRight size={15} />
+                  </button>
+                  <div style={{ position: 'absolute', bottom: '10px', right: '14px', display: 'flex', gap: '4px' }}>
+                    {carouselImages.map((_, i) => (
+                      <button key={i} onClick={() => setCarouselIdx(i)} style={{ width: i === carouselIdx ? '16px' : '5px', height: '5px', borderRadius: '3px', background: i === carouselIdx ? '#fff' : 'rgba(255,255,255,0.4)', border: 'none', cursor: 'pointer', padding: 0, transition: 'all 0.3s ease' }} />
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          </section>
+
+          {/* Action Buttons */}
+          <section style={{ padding: '14px 14px 0', display: 'flex', gap: '10px' }}>
+            <button
+              onClick={() => setActiveNav('menu')}
+              style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', background: '#E8321A', border: 'none', borderRadius: '14px', padding: '14px', color: '#fff', fontSize: '13px', fontWeight: 700, cursor: 'pointer', boxShadow: '0 6px 20px rgba(232,50,26,0.4)' }}
+            >
+              <UtensilsCrossed size={16} /> View Menu
+            </button>
+            {restaurant.phone ? (
+              <a href={`tel:${restaurant.phone}`} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', background: theme.btnSecBg, border: `1px solid ${theme.btnSecBorder}`, borderRadius: '14px', padding: '14px', color: theme.btnSecColor, fontSize: '13px', fontWeight: 700, textDecoration: 'none' }}>
+                <Phone size={16} /> Call Staff
+              </a>
+            ) : (
+              <button style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', background: theme.btnSecBg, border: `1px solid ${theme.btnSecBorder}`, borderRadius: '14px', padding: '14px', color: theme.btnSecColor, fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}>
+                <Users size={16} /> About Us
               </button>
-            )
-          })}
-        </div>
-      </div>
+            )}
+          </section>
 
-      {/* ── MENU CARDS ── */}
-      <div style={{ padding: '16px 16px 8px' }}>
-        {activeItems.length === 0 && (
-          <div style={{ textAlign: 'center', padding: '60px 20px', color: theme.tabInactiveColor, fontSize: '13px' }}>
-            No items in this category yet
+          {/* Quick Stats */}
+          <section style={{ padding: '14px 14px 0' }}>
+            <div style={{ display: 'flex', background: theme.statsBg, border: `1px solid ${theme.statsBorder}`, borderRadius: '16px', padding: '14px 16px', boxShadow: theme.cardShadow }}>
+              {[
+                { icon: <Award size={16} color="#FFB800" />, label: restaurant.rating ? `${restaurant.rating} Rating` : 'Top Rated', sub: 'Google Reviews' },
+                { icon: <Clock size={16} color="#60a5fa" />, label: '12pm – 11pm', sub: 'Open Today' },
+                { icon: <UtensilsCrossed size={16} color="#4ade80" />, label: restaurant.tables ? `${restaurant.tables} Tables` : 'Fine Dining', sub: 'Capacity' },
+              ].map((stat, i) => (
+                <React.Fragment key={i}>
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                    {stat.icon}
+                    <div style={{ fontSize: '11px', fontWeight: 700, color: theme.statsValue, textAlign: 'center', lineHeight: 1.2 }}>{stat.label}</div>
+                    <div style={{ fontSize: '9px', color: theme.statsLabel, textAlign: 'center' }}>{stat.sub}</div>
+                  </div>
+                  {i < 2 && <div style={{ width: '1px', background: theme.statsDivider }} />}
+                </React.Fragment>
+              ))}
+            </div>
+          </section>
+
+          {/* Best Sellers */}
+          <section style={{ padding: '20px 0 0' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 18px 12px' }}>
+              <div>
+                <div style={{ fontSize: '16px', fontWeight: 800, color: theme.sectionTitle, letterSpacing: '-0.01em' }}>Best Sellers</div>
+                <div style={{ fontSize: '11px', color: theme.sectionSub, marginTop: '2px' }}>Crowd favourites, every time</div>
+              </div>
+              <button onClick={() => setActiveNav('menu')} style={{ display: 'flex', alignItems: 'center', gap: '3px', background: 'none', border: 'none', color: '#E8321A', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}>
+                View all <ChevronRight size={13} />
+              </button>
+            </div>
+            <div style={{ display: 'flex', gap: '12px', overflowX: 'auto', padding: '0 18px 4px', scrollbarWidth: 'none' }}>
+              {bestsellers.map((item, i) => (
+                <BestsellerCard key={i} item={item} liked={liked[i]} onLike={() => setLiked(l => ({ ...l, [i]: !l[i] }))} theme={theme} />
+              ))}
+            </div>
+          </section>
+
+          {/* Banner */}
+          <div style={{ padding: '28px 20px 8px', position: 'relative', overflow: 'hidden' }}>
+            <div style={{ fontSize: '48px', fontWeight: 900, lineHeight: 1.1, color: theme.bannerText, letterSpacing: '-0.02em', userSelect: 'none' }}>
+              Explore the menus, taste the city
+            </div>
+            <div style={{ position: 'absolute', right: '28px', top: '32px', opacity: 0.8 }}>
+              <Heart size={34} fill={theme.bannerHeart} color={theme.bannerHeart} />
+            </div>
           </div>
-        )}
-        {activeItems.map((item, i) => (
-          <MenuCard key={`${activeTab}-${i}`} item={item} theme={theme} />
-        ))}
-      </div>
-
-      {/* ── BOTTOM BANNER ── */}
-      <div style={{ padding: '24px 20px 16px', position: 'relative', overflow: 'hidden' }}>
-        <div style={{
-          fontSize: '52px', fontWeight: 900, lineHeight: 1.1,
-          color: theme.bannerText,
-          letterSpacing: '-0.02em',
-          userSelect: 'none',
-        }}>
-          Explore the menus, taste the city
+          <div style={{ padding: '0 20px 24px', fontSize: '11px', fontWeight: 700, color: theme.brandText, letterSpacing: '0.1em', textTransform: 'uppercase' }}>Exzibo</div>
         </div>
-        <div style={{
-          position: 'absolute', right: '28px', top: '28px',
-          opacity: 0.75,
-        }}>
-          <Heart size={36} fill={theme.bannerHeart} color={theme.bannerHeart} />
-        </div>
-      </div>
+      )}
 
-      {/* Brand line */}
-      <div style={{ padding: '0 20px 24px', fontSize: '11px', fontWeight: 700, color: theme.brandText, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-        Exzibo
-      </div>
+      {/* ── MENU VIEW ── */}
+      {activeNav === 'menu' && (
+        <div style={{ animation: 'fadeIn 0.3s ease' }}>
+
+          {/* Category Tabs */}
+          <div style={{ position: 'sticky', top: '64px', zIndex: 40, padding: '12px 14px', background: theme.pageBg, transition: 'background 0.3s ease' }}>
+            <div style={{ display: 'flex', alignItems: 'center', background: theme.tabBarBg, borderRadius: '18px', boxShadow: theme.tabBarShadow, padding: '6px' }}>
+              {MENU_TABS.map(tab => {
+                const active = activeMenuTab === tab.id
+                return (
+                  <button key={tab.id} className="tab-pill" onClick={() => setActiveMenuTab(tab.id)} style={{ flex: 1, padding: '10px 8px', borderRadius: '14px', border: 'none', background: active ? '#E8321A' : 'transparent', color: active ? '#fff' : theme.tabInactiveColor, fontSize: '11px', fontWeight: 800, cursor: 'pointer', letterSpacing: '0.05em', whiteSpace: 'nowrap', textAlign: 'center', boxShadow: active ? '0 4px 14px rgba(232,50,26,0.35)' : 'none' }}>
+                    {tab.label}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Menu Cards */}
+          <div style={{ padding: '4px 14px 8px' }}>
+            {activeMenuItems.length === 0 && (
+              <div style={{ textAlign: 'center', padding: '60px 20px', color: theme.tabInactiveColor, fontSize: '13px' }}>No items in this category yet</div>
+            )}
+            {activeMenuItems.map((item, i) => (
+              <MenuCard key={`${activeMenuTab}-${i}`} item={item} theme={theme} />
+            ))}
+          </div>
+
+          {/* Banner */}
+          <div style={{ padding: '24px 20px 8px', position: 'relative', overflow: 'hidden' }}>
+            <div style={{ fontSize: '48px', fontWeight: 900, lineHeight: 1.1, color: theme.bannerText, letterSpacing: '-0.02em', userSelect: 'none' }}>
+              Explore the menus, taste the city
+            </div>
+            <div style={{ position: 'absolute', right: '28px', top: '28px', opacity: 0.8 }}>
+              <Heart size={34} fill={theme.bannerHeart} color={theme.bannerHeart} />
+            </div>
+          </div>
+          <div style={{ padding: '0 20px 24px', fontSize: '11px', fontWeight: 700, color: theme.brandText, letterSpacing: '0.1em', textTransform: 'uppercase' }}>Exzibo</div>
+        </div>
+      )}
 
       {/* ── BOTTOM NAV ── */}
       <nav style={{
         position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)',
         width: '100%', maxWidth: '480px', zIndex: 100,
         background: theme.navBg,
-        backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)',
+        backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
         borderTop: `1px solid ${theme.navBorder}`,
         padding: '10px 8px env(safe-area-inset-bottom, 10px)',
         display: 'flex', justifyContent: 'space-around', alignItems: 'center',
         transition: 'background 0.3s ease, border-color 0.3s ease',
       }}>
         {[
-          { id: 'home', icon: <Home size={22} />, label: 'Home', action: () => navigate('/') },
-          { id: 'menu', icon: <UtensilsCrossed size={22} />, label: 'Menu', action: null },
+          { id: 'home', icon: <Home size={22} />, label: 'Home' },
+          { id: 'menu', icon: <UtensilsCrossed size={22} />, label: 'Menu' },
           {
-            id: 'cart', label: 'Cart', action: null,
+            id: 'cart', label: 'Cart',
             icon: (
               <div style={{ position: 'relative', display: 'inline-flex' }}>
                 <ShoppingCart size={22} />
                 {cartCount > 0 && (
-                  <span style={{
-                    position: 'absolute', top: '-5px', right: '-6px',
-                    width: '14px', height: '14px', borderRadius: '50%',
-                    background: '#E8321A', color: '#fff',
-                    fontSize: '8px', fontWeight: 800,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  }}>{cartCount}</span>
+                  <span style={{ position: 'absolute', top: '-5px', right: '-6px', width: '14px', height: '14px', borderRadius: '50%', background: '#E8321A', color: '#fff', fontSize: '8px', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{cartCount}</span>
                 )}
               </div>
             ),
           },
-          { id: 'orders', icon: <ClipboardList size={22} />, label: 'Order', action: null },
-          { id: 'booking', icon: <CalendarDays size={22} />, label: 'Book', action: null },
-        ].map(({ id, icon, label, action }) => (
+          { id: 'orders', icon: <ClipboardList size={22} />, label: 'Order' },
+          { id: 'booking', icon: <CalendarDays size={22} />, label: 'Book' },
+        ].map(({ id, icon, label }) => (
           <button
             key={id}
-            onClick={() => { setActiveNav(id); action && action() }}
-            style={{
-              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px',
-              background: 'none', border: 'none', cursor: 'pointer',
-              color: activeNav === id ? '#E8321A' : theme.navInactive,
-              padding: '4px 12px',
-              transition: 'color 0.2s ease',
-            }}
+            onClick={() => setActiveNav(id)}
+            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', background: 'none', border: 'none', cursor: 'pointer', color: activeNav === id ? '#E8321A' : theme.navInactive, padding: '4px 12px', transition: 'color 0.2s ease' }}
           >
             {icon}
             <span style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '0.03em', textTransform: 'uppercase' }}>{label}</span>
@@ -396,83 +460,60 @@ export default function RestaurantWebsite() {
   )
 }
 
+function BestsellerCard({ item, liked, onLike, theme }) {
+  const fallbackImg = '/menu/wagyu-ribeye.png'
+  const tagColors = { Popular: '#E8321A', Seasonal: '#fbbf24', Vegetarian: '#4ade80', "Chef's Pick": '#a78bfa' }
+  return (
+    <div className="food-card" style={{ flexShrink: 0, width: '155px', background: theme.bestsellerBg, border: `1px solid ${theme.bestsellerBorder}`, borderRadius: '16px', overflow: 'hidden', cursor: 'pointer', boxShadow: theme.cardShadow }}>
+      <div style={{ height: '115px', overflow: 'hidden', position: 'relative' }}>
+        <img src={item.img || fallbackImg} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} onError={e => { e.target.src = fallbackImg }} />
+        <button onClick={e => { e.stopPropagation(); onLike() }} style={{ position: 'absolute', top: '7px', right: '7px', width: '26px', height: '26px', borderRadius: '50%', background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Heart size={12} fill={liked ? '#E8321A' : 'transparent'} color={liked ? '#E8321A' : '#aaa'} />
+        </button>
+        {(item.tag || item.tags?.[0]) && (
+          <div style={{ position: 'absolute', bottom: '7px', left: '7px', background: tagColors[item.tag || item.tags?.[0]] ? `${tagColors[item.tag || item.tags[0]]}dd` : 'rgba(232,50,26,0.88)', backdropFilter: 'blur(6px)', borderRadius: '6px', padding: '2px 7px', fontSize: '9px', fontWeight: 800, color: '#fff', letterSpacing: '0.05em' }}>
+            {item.tag || item.tags[0]}
+          </div>
+        )}
+      </div>
+      <div style={{ padding: '9px 11px' }}>
+        <div style={{ fontSize: '12px', fontWeight: 700, color: theme.bestsellerName, lineHeight: 1.3, marginBottom: '5px' }}>{item.name}</div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ fontSize: '13px', fontWeight: 800, color: '#E8321A' }}>₹{(item.price || 0).toLocaleString('en-IN')}</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+            <Star size={9} fill="#FFB800" color="#FFB800" />
+            <span style={{ fontSize: '9px', fontWeight: 700, color: '#FFB800' }}>{item.rating || '4.8'}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function MenuCard({ item, theme }) {
   const fallbackImg = '/menu/wagyu-ribeye.png'
   const oldPrice = item.oldPrice || Math.round((item.price || 0) * 1.5)
-
   return (
-    <div className="menu-card" style={{
-      background: theme.cardBg,
-      border: `1px solid ${theme.cardBorder}`,
-      borderRadius: '18px',
-      overflow: 'hidden',
-      marginBottom: '14px',
-      boxShadow: theme.cardShadow,
-    }}>
-      {/* Food image */}
+    <div className="menu-card" style={{ background: theme.cardBg, border: `1px solid ${theme.cardBorder}`, borderRadius: '18px', overflow: 'hidden', marginBottom: '14px', boxShadow: theme.cardShadow }}>
       <div style={{ position: 'relative', width: '100%', height: '200px', overflow: 'hidden' }}>
-        <img
-          src={item.img || fallbackImg}
-          alt={item.name}
-          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-          onError={e => { e.target.src = fallbackImg }}
-          loading="lazy"
-        />
-        <div style={{ position: 'absolute', inset: 0, background: theme.imgOverlay }} />
+        <img src={item.img || fallbackImg} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} onError={e => { e.target.src = fallbackImg }} loading="lazy" />
       </div>
-
-      {/* Card body */}
       <div style={{ padding: '14px 16px 16px' }}>
-        {/* Veg / Non-veg indicator + Name */}
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', marginBottom: '10px' }}>
-          <div style={{
-            flexShrink: 0, marginTop: '3px',
-            width: '14px', height: '14px', borderRadius: '3px',
-            border: `1.5px solid ${item.veg !== false ? theme.vegDot : theme.nonVegDot}`,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>
-            <div style={{
-              width: '7px', height: '7px', borderRadius: '50%',
-              background: item.veg !== false ? theme.vegDot : theme.nonVegDot,
-            }} />
+          <div style={{ flexShrink: 0, marginTop: '3px', width: '14px', height: '14px', borderRadius: '3px', border: `1.5px solid ${item.veg !== false ? theme.vegDot : theme.nonVegDot}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: item.veg !== false ? theme.vegDot : theme.nonVegDot }} />
           </div>
-          <div style={{ fontSize: '14px', fontWeight: 700, color: theme.itemName, lineHeight: 1.35 }}>
-            1 x {item.name}
-          </div>
+          <div style={{ fontSize: '14px', fontWeight: 700, color: theme.itemName, lineHeight: 1.35 }}>1 x {item.name}</div>
         </div>
-
-        {/* Price row + View cart button */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
-            {/* Price */}
             <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginBottom: '4px' }}>
-              <span style={{ fontSize: '16px', fontWeight: 800, color: theme.priceNew }}>
-                ₹{(item.price || 0).toLocaleString('en-IN')}
-              </span>
-              <span style={{ fontSize: '13px', fontWeight: 500, color: theme.priceOld, textDecoration: 'line-through' }}>
-                ₹{(oldPrice).toLocaleString('en-IN')}
-              </span>
+              <span style={{ fontSize: '16px', fontWeight: 800, color: theme.priceNew }}>₹{(item.price || 0).toLocaleString('en-IN')}</span>
+              <span style={{ fontSize: '13px', fontWeight: 500, color: theme.priceOld, textDecoration: 'line-through' }}>₹{oldPrice.toLocaleString('en-IN')}</span>
             </div>
-            {/* Offer text */}
-            <div style={{ fontSize: '11px', fontWeight: 600, color: theme.offerColor }}>
-              Best offer applied
-            </div>
+            <div style={{ fontSize: '11px', fontWeight: 600, color: theme.offerColor }}>Best offer applied</div>
           </div>
-
-          {/* View cart button */}
-          <button
-            className="view-cart-btn"
-            style={{
-              display: 'flex', alignItems: 'center', gap: '5px',
-              padding: '9px 16px', borderRadius: '10px',
-              background: theme.viewCartBg,
-              border: `1.5px solid ${theme.viewCartBorder}`,
-              color: theme.viewCartColor,
-              fontSize: '12px', fontWeight: 700,
-              cursor: 'pointer', letterSpacing: '0.02em',
-              whiteSpace: 'nowrap',
-            }}
-          >
+          <button className="view-cart-btn" style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '9px 16px', borderRadius: '10px', background: 'transparent', border: `1.5px solid ${theme.viewCartBorder}`, color: theme.viewCartColor, fontSize: '12px', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>
             View cart <ChevronRight size={13} />
           </button>
         </div>
