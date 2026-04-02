@@ -5,7 +5,8 @@ import {
   Home, UtensilsCrossed, ShoppingCart, ClipboardList,
   CalendarDays, MapPin, AtSign, Share2, MessageCircle,
   Bell, ChevronRight as ArrowRight, Heart,
-  Flame, Award, Leaf, Clock, Users, ExternalLink, ArrowUp
+  Flame, Award, Leaf, Clock, Users, ExternalLink, ArrowUp,
+  Sun, Moon
 } from 'lucide-react'
 
 const FALLBACK_IMAGES = [
@@ -42,6 +43,63 @@ const MENU_FALLBACK = {
   ],
 }
 
+function buildTheme(dark) {
+  return {
+    bg: dark ? '#0A0A0A' : '#F5F5F5',
+    color: dark ? '#fff' : '#0A0A0A',
+    headerBg: dark ? 'rgba(10,10,10,0.92)' : 'rgba(245,245,245,0.96)',
+    headerBorder: dark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.08)',
+    textMuted: dark ? '#555' : '#777',
+    textSub: dark ? '#555' : '#888',
+    textDim: dark ? '#bbb' : '#444',
+    textLight: dark ? '#ccc' : '#555',
+    textFaint: dark ? '#ddd' : '#333',
+    cardBg: dark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.03)',
+    cardBg2: dark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.04)',
+    cardBg3: dark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.07)',
+    cardBorder: dark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.08)',
+    cardBorder2: dark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.10)',
+    cardBorder3: dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.12)',
+    divider: dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.08)',
+    navBg: dark ? 'rgba(8,8,8,0.95)' : 'rgba(245,245,245,0.97)',
+    navBorder: dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.10)',
+    navInactiveColor: dark ? '#3a3a3a' : '#aaa',
+    iconBg: dark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.06)',
+    iconBorder: dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.10)',
+    bellColor: dark ? '#888' : '#888',
+    tabInactiveBg: dark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.06)',
+    tabInactiveColor: dark ? '#666' : '#888',
+    statsText: dark ? '#ddd' : '#333',
+    btnSecBg: dark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.06)',
+    btnSecBorder: dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.10)',
+    btnSecColor: dark ? '#fff' : '#0A0A0A',
+    footerBg: dark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.03)',
+    footerBorder: dark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.08)',
+    footerLocation: dark ? '#444' : '#888',
+    poweredBy: dark ? '#222' : '#aaa',
+    socialBg: dark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.05)',
+    socialBorder: dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.10)',
+    socialColor: dark ? '#666' : '#888',
+    infoRowBg: dark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.05)',
+    infoRowBorder: dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.08)',
+    infoLabel: dark ? '#555' : '#888',
+    infoValue: dark ? '#ccc' : '#333',
+    noItems: dark ? '#444' : '#aaa',
+    adminBg: dark ? 'rgba(232,50,26,0.08)' : 'rgba(232,50,26,0.06)',
+    adminBorder: dark ? 'rgba(232,50,26,0.18)' : 'rgba(232,50,26,0.14)',
+    adminTime: dark ? '#444' : '#999',
+    aboutCard: dark
+      ? 'linear-gradient(135deg, rgba(232,50,26,0.07) 0%, rgba(255,255,255,0.02) 100%)'
+      : 'linear-gradient(135deg, rgba(232,50,26,0.05) 0%, rgba(0,0,0,0.02) 100%)',
+    aboutCardBorder: dark ? 'rgba(232,50,26,0.12)' : 'rgba(232,50,26,0.14)',
+    aboutText: dark ? '#bbb' : '#444',
+    additionalText: dark ? '#666' : '#888',
+    additionalBorder: dark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.08)',
+    toggleBg: dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.07)',
+    toggleBorder: dark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.13)',
+    toggleColor: dark ? '#FFB800' : '#555',
+  }
+}
 
 export default function RestaurantWebsite() {
   const { slug } = useParams()
@@ -54,6 +112,9 @@ export default function RestaurantWebsite() {
   const [showTop, setShowTop] = useState(false)
   const [activeTab, setActiveTab] = useState('starters')
   const [liked, setLiked] = useState({})
+  const [darkMode, setDarkMode] = useState(true)
+
+  const theme = buildTheme(darkMode)
 
   const heroRef = useRef(null)
   const menuRef = useRef(null)
@@ -189,14 +250,15 @@ export default function RestaurantWebsite() {
 
   return (
     <div style={{
-      background: '#0A0A0A',
-      color: '#fff',
+      background: theme.bg,
+      color: theme.color,
       minHeight: '100vh',
       fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
       paddingBottom: '80px',
       maxWidth: '480px',
       margin: '0 auto',
       position: 'relative',
+      transition: 'background 0.3s ease, color 0.3s ease',
     }}>
       <style>{`
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -213,12 +275,14 @@ export default function RestaurantWebsite() {
         .nav-btn { transition: color 0.2s ease; }
         .section-fade { animation: fadeUp 0.5s ease both; }
         .tab-btn { transition: all 0.25s ease; }
+        .theme-toggle-btn { transition: background 0.2s ease, border-color 0.2s ease, transform 0.15s ease; }
+        .theme-toggle-btn:active { transform: scale(0.9); }
       `}</style>
 
       {/* ── ADMIN BACK BAR ── */}
       {slug !== 'demo' && (
         <div style={{
-          background: 'rgba(232,50,26,0.08)', borderBottom: '1px solid rgba(232,50,26,0.18)',
+          background: theme.adminBg, borderBottom: `1px solid ${theme.adminBorder}`,
           padding: '8px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         }}>
           <button
@@ -231,26 +295,27 @@ export default function RestaurantWebsite() {
           >
             ← MY RESTAURANTS
           </button>
-          <span style={{ fontSize: '10px', color: '#444', letterSpacing: '0.04em' }}>ADMIN PREVIEW</span>
+          <span style={{ fontSize: '10px', color: theme.adminTime, letterSpacing: '0.04em' }}>ADMIN PREVIEW</span>
         </div>
       )}
 
       {/* ── TOP BAR ── */}
       <header style={{
         position: 'sticky', top: 0, zIndex: 50,
-        background: 'rgba(10,10,10,0.92)',
+        background: theme.headerBg,
         backdropFilter: 'blur(20px)',
         WebkitBackdropFilter: 'blur(20px)',
-        borderBottom: '1px solid rgba(255,255,255,0.05)',
+        borderBottom: `1px solid ${theme.headerBorder}`,
         padding: '14px 20px',
+        transition: 'background 0.3s ease, border-color 0.3s ease',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
-            <div style={{ fontSize: '10px', color: '#555', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <div style={{ fontSize: '10px', color: theme.textMuted, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
               <MapPin size={10} color="#E8321A" />
               {restaurant.location || 'Fine Dining'}
             </div>
-            <div style={{ fontSize: '17px', fontWeight: 800, letterSpacing: '-0.01em', lineHeight: 1.1 }}>
+            <div style={{ fontSize: '17px', fontWeight: 800, letterSpacing: '-0.01em', lineHeight: 1.1, color: theme.color }}>
               {restaurant.name}
             </div>
           </div>
@@ -265,14 +330,34 @@ export default function RestaurantWebsite() {
                 <span style={{ fontSize: '12px', fontWeight: 700, color: '#FFB800' }}>{restaurant.rating}</span>
               </div>
             )}
+
+            {/* Theme Toggle Button */}
+            <button
+              className="theme-toggle-btn"
+              onClick={() => setDarkMode(d => !d)}
+              title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+              style={{
+                width: '36px', height: '36px', borderRadius: '12px',
+                background: theme.toggleBg,
+                border: `1px solid ${theme.toggleBorder}`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer',
+              }}
+            >
+              {darkMode
+                ? <Sun size={16} color="#FFB800" />
+                : <Moon size={16} color="#555" />
+              }
+            </button>
+
             <div style={{
               width: '36px', height: '36px', borderRadius: '12px',
-              background: 'rgba(255,255,255,0.05)',
-              border: '1px solid rgba(255,255,255,0.08)',
+              background: theme.iconBg,
+              border: `1px solid ${theme.iconBorder}`,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               cursor: 'pointer',
             }}>
-              <Bell size={16} color="#888" />
+              <Bell size={16} color={theme.bellColor} />
             </div>
           </div>
         </div>
@@ -310,7 +395,7 @@ export default function RestaurantWebsite() {
                 Premium Dining
               </span>
             </div>
-            <div style={{ fontSize: '22px', fontWeight: 900, lineHeight: 1.15, textShadow: '0 2px 12px rgba(0,0,0,0.8)', marginBottom: '6px' }}>
+            <div style={{ fontSize: '22px', fontWeight: 900, lineHeight: 1.15, textShadow: '0 2px 12px rgba(0,0,0,0.8)', marginBottom: '6px', color: '#fff' }}>
               An Unforgettable<br />Culinary Experience
             </div>
             <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.7)', lineHeight: 1.4 }}>
@@ -384,8 +469,8 @@ export default function RestaurantWebsite() {
             href={`tel:${restaurant.phone}`}
             style={{
               flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-              background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
-              borderRadius: '14px', padding: '14px', color: '#fff', fontSize: '13px',
+              background: theme.btnSecBg, border: `1px solid ${theme.btnSecBorder}`,
+              borderRadius: '14px', padding: '14px', color: theme.btnSecColor, fontSize: '13px',
               fontWeight: 700, cursor: 'pointer', letterSpacing: '0.03em', textDecoration: 'none',
               backdropFilter: 'blur(10px)',
             }}
@@ -398,8 +483,8 @@ export default function RestaurantWebsite() {
             onClick={() => scrollTo(aboutRef, 'about')}
             style={{
               flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-              background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
-              borderRadius: '14px', padding: '14px', color: '#fff', fontSize: '13px',
+              background: theme.btnSecBg, border: `1px solid ${theme.btnSecBorder}`,
+              borderRadius: '14px', padding: '14px', color: theme.btnSecColor, fontSize: '13px',
               fontWeight: 700, cursor: 'pointer', letterSpacing: '0.03em',
             }}
           >
@@ -414,8 +499,8 @@ export default function RestaurantWebsite() {
             rel="noopener noreferrer"
             style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
-              borderRadius: '14px', padding: '14px 16px', color: '#fff',
+              background: theme.btnSecBg, border: `1px solid ${theme.btnSecBorder}`,
+              borderRadius: '14px', padding: '14px 16px', color: theme.btnSecColor,
               cursor: 'pointer', textDecoration: 'none',
             }}
           >
@@ -428,8 +513,8 @@ export default function RestaurantWebsite() {
       <section style={{ padding: '0 16px 24px' }}>
         <div style={{
           display: 'flex', gap: '10px',
-          background: 'rgba(255,255,255,0.02)',
-          border: '1px solid rgba(255,255,255,0.05)',
+          background: theme.cardBg,
+          border: `1px solid ${theme.cardBorder}`,
           borderRadius: '16px', padding: '14px 16px',
         }}>
           {[
@@ -440,10 +525,10 @@ export default function RestaurantWebsite() {
             <React.Fragment key={i}>
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
                 {stat.icon}
-                <div style={{ fontSize: '12px', fontWeight: 700, color: '#ddd', textAlign: 'center', lineHeight: 1.2 }}>{stat.label}</div>
-                <div style={{ fontSize: '10px', color: '#555', textAlign: 'center' }}>{stat.sub}</div>
+                <div style={{ fontSize: '12px', fontWeight: 700, color: theme.statsText, textAlign: 'center', lineHeight: 1.2 }}>{stat.label}</div>
+                <div style={{ fontSize: '10px', color: theme.textMuted, textAlign: 'center' }}>{stat.sub}</div>
               </div>
-              {i < 2 && <div style={{ width: '1px', background: 'rgba(255,255,255,0.06)' }} />}
+              {i < 2 && <div style={{ width: '1px', background: theme.divider }} />}
             </React.Fragment>
           ))}
         </div>
@@ -453,8 +538,8 @@ export default function RestaurantWebsite() {
       <section className="section-fade" style={{ paddingBottom: '28px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px 14px' }}>
           <div>
-            <div style={{ fontSize: '16px', fontWeight: 800, letterSpacing: '-0.01em' }}>Best Sellers</div>
-            <div style={{ fontSize: '11px', color: '#555', marginTop: '2px' }}>Crowd favourites, every time</div>
+            <div style={{ fontSize: '16px', fontWeight: 800, letterSpacing: '-0.01em', color: theme.color }}>Best Sellers</div>
+            <div style={{ fontSize: '11px', color: theme.textMuted, marginTop: '2px' }}>Crowd favourites, every time</div>
           </div>
           <button
             onClick={() => scrollTo(menuRef, 'menu')}
@@ -470,7 +555,7 @@ export default function RestaurantWebsite() {
 
         <div style={{ display: 'flex', gap: '14px', overflowX: 'auto', padding: '0 20px 4px', scrollbarWidth: 'none' }}>
           {bestsellers.map((item, i) => (
-            <BestsellerCard key={i} item={item} liked={liked[i]} onLike={() => setLiked(l => ({ ...l, [i]: !l[i] }))} />
+            <BestsellerCard key={i} item={item} liked={liked[i]} onLike={() => setLiked(l => ({ ...l, [i]: !l[i] }))} theme={theme} />
           ))}
         </div>
       </section>
@@ -479,8 +564,8 @@ export default function RestaurantWebsite() {
       <section ref={menuRef} className="section-fade" style={{ padding: '0 0 28px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px 16px' }}>
           <div>
-            <div style={{ fontSize: '16px', fontWeight: 800, letterSpacing: '-0.01em' }}>Our Menu</div>
-            <div style={{ fontSize: '11px', color: '#555', marginTop: '2px' }}>Crafted with precision & passion</div>
+            <div style={{ fontSize: '16px', fontWeight: 800, letterSpacing: '-0.01em', color: theme.color }}>Our Menu</div>
+            <div style={{ fontSize: '11px', color: theme.textMuted, marginTop: '2px' }}>Crafted with precision & passion</div>
           </div>
         </div>
 
@@ -498,8 +583,8 @@ export default function RestaurantWebsite() {
               style={{
                 display: 'flex', alignItems: 'center', gap: '6px',
                 padding: '8px 16px', borderRadius: '10px', border: 'none',
-                background: activeTab === tab.id ? '#E8321A' : 'rgba(255,255,255,0.05)',
-                color: activeTab === tab.id ? '#fff' : '#666',
+                background: activeTab === tab.id ? '#E8321A' : theme.tabInactiveBg,
+                color: activeTab === tab.id ? '#fff' : theme.tabInactiveColor,
                 fontSize: '12px', fontWeight: 700, cursor: 'pointer',
                 whiteSpace: 'nowrap', letterSpacing: '0.02em',
                 boxShadow: activeTab === tab.id ? '0 4px 14px rgba(232,50,26,0.35)' : 'none',
@@ -513,10 +598,10 @@ export default function RestaurantWebsite() {
 
         <div style={{ padding: '0 16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
           {activeMenuItems.map((item, i) => (
-            <MenuItemCard key={i} item={item} />
+            <MenuItemCard key={i} item={item} theme={theme} />
           ))}
           {activeMenuItems.length === 0 && (
-            <div style={{ textAlign: 'center', padding: '40px 20px', color: '#444', fontSize: '13px' }}>
+            <div style={{ textAlign: 'center', padding: '40px 20px', color: theme.noItems, fontSize: '13px' }}>
               No items in this category yet
             </div>
           )}
@@ -526,8 +611,8 @@ export default function RestaurantWebsite() {
       {/* ── ABOUT ── */}
       <section ref={aboutRef} className="section-fade" style={{ padding: '0 16px 32px' }}>
         <div style={{ marginBottom: '16px' }}>
-          <div style={{ fontSize: '16px', fontWeight: 800, letterSpacing: '-0.01em' }}>Our Story</div>
-          <div style={{ fontSize: '11px', color: '#555', marginTop: '2px' }}>Where every plate tells a story</div>
+          <div style={{ fontSize: '16px', fontWeight: 800, letterSpacing: '-0.01em', color: theme.color }}>Our Story</div>
+          <div style={{ fontSize: '11px', color: theme.textMuted, marginTop: '2px' }}>Where every plate tells a story</div>
         </div>
 
         {/* Hero about image */}
@@ -544,18 +629,18 @@ export default function RestaurantWebsite() {
         )}
 
         <div style={{
-          background: 'linear-gradient(135deg, rgba(232,50,26,0.07) 0%, rgba(255,255,255,0.02) 100%)',
-          border: '1px solid rgba(232,50,26,0.12)',
+          background: theme.aboutCard,
+          border: `1px solid ${theme.aboutCardBorder}`,
           borderRadius: '16px', padding: '20px', marginBottom: '10px',
         }}>
           <div style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '0.2em', color: '#E8321A', textTransform: 'uppercase', marginBottom: '10px' }}>
             The Philosophy
           </div>
-          <p style={{ fontSize: '14px', lineHeight: 1.75, color: '#bbb' }}>
+          <p style={{ fontSize: '14px', lineHeight: 1.75, color: theme.aboutText }}>
             {restaurant.description || 'An uncompromising culinary experience rooted in craft, quality, and atmosphere. Every dish is a conversation between heritage and innovation, served in a setting that commands reverence.'}
           </p>
           {restaurant.additionalInfo && (
-            <p style={{ fontSize: '12px', lineHeight: 1.7, color: '#666', marginTop: '12px', paddingTop: '12px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+            <p style={{ fontSize: '12px', lineHeight: 1.7, color: theme.additionalText, marginTop: '12px', paddingTop: '12px', borderTop: `1px solid ${theme.additionalBorder}` }}>
               {restaurant.additionalInfo}
             </p>
           )}
@@ -563,33 +648,33 @@ export default function RestaurantWebsite() {
 
         {restaurant.chefInfo && (
           <div style={{
-            background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)',
+            background: theme.cardBg, border: `1px solid ${theme.cardBorder}`,
             borderRadius: '16px', padding: '20px', marginBottom: '10px',
           }}>
-            <div style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '0.2em', color: '#888', textTransform: 'uppercase', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <div style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '0.2em', color: theme.textSub, textTransform: 'uppercase', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
               <Award size={11} /> Executive Chef
             </div>
-            <p style={{ fontSize: '14px', lineHeight: 1.75, color: '#bbb' }}>{restaurant.chefInfo}</p>
+            <p style={{ fontSize: '14px', lineHeight: 1.75, color: theme.aboutText }}>{restaurant.chefInfo}</p>
           </div>
         )}
 
         {/* Info grid */}
-        <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '16px', padding: '20px' }}>
-          <div style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '0.2em', color: '#888', textTransform: 'uppercase', marginBottom: '16px' }}>
+        <div style={{ background: theme.cardBg, border: `1px solid ${theme.cardBorder}`, borderRadius: '16px', padding: '20px' }}>
+          <div style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '0.2em', color: theme.textSub, textTransform: 'uppercase', marginBottom: '16px' }}>
             Quick Info
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
             {restaurant.location && (
-              <InfoRow icon={<MapPin size={14} color="#E8321A" />} label="Location" value={restaurant.location} />
+              <InfoRow icon={<MapPin size={14} color="#E8321A" />} label="Location" value={restaurant.location} theme={theme} />
             )}
             {restaurant.tables && (
-              <InfoRow icon={<UtensilsCrossed size={14} color="#4ade80" />} label="Capacity" value={`${restaurant.tables} Tables`} />
+              <InfoRow icon={<UtensilsCrossed size={14} color="#4ade80" />} label="Capacity" value={`${restaurant.tables} Tables`} theme={theme} />
             )}
             {restaurant.phone && (
-              <InfoRow icon={<Phone size={14} color="#60a5fa" />} label="Reservations" value={restaurant.phone} />
+              <InfoRow icon={<Phone size={14} color="#60a5fa" />} label="Reservations" value={restaurant.phone} theme={theme} />
             )}
             {restaurant.rating && (
-              <InfoRow icon={<Star size={14} color="#FFB800" fill="#FFB800" />} label="Rating" value={`${restaurant.rating} / 5`} />
+              <InfoRow icon={<Star size={14} color="#FFB800" fill="#FFB800" />} label="Rating" value={`${restaurant.rating} / 5`} theme={theme} />
             )}
           </div>
         </div>
@@ -598,17 +683,17 @@ export default function RestaurantWebsite() {
       {/* ── FOOTER ── */}
       <footer style={{
         margin: '0 16px 16px',
-        background: 'rgba(255,255,255,0.02)',
-        border: '1px solid rgba(255,255,255,0.05)',
+        background: theme.footerBg,
+        border: `1px solid ${theme.footerBorder}`,
         borderRadius: '20px',
         padding: '28px 20px',
         textAlign: 'center',
       }}>
-        <div style={{ fontSize: '22px', fontWeight: 900, letterSpacing: '0.03em', marginBottom: '4px' }}>
+        <div style={{ fontSize: '22px', fontWeight: 900, letterSpacing: '0.03em', marginBottom: '4px', color: theme.color }}>
           {restaurant.name}
         </div>
         {restaurant.location && (
-          <div style={{ fontSize: '11px', color: '#444', marginBottom: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
+          <div style={{ fontSize: '11px', color: theme.footerLocation, marginBottom: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
             <MapPin size={10} /> {restaurant.location}
           </div>
         )}
@@ -617,16 +702,16 @@ export default function RestaurantWebsite() {
         {(restaurant.socialLinks?.instagram || restaurant.socialLinks?.facebook || restaurant.socialLinks?.twitter || restaurant.socialLinks?.website) && (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', marginBottom: '20px' }}>
             {restaurant.socialLinks?.instagram && (
-              <SocialBtn href={restaurant.socialLinks.instagram} icon={<AtSign size={18} />} />
+              <SocialBtn href={restaurant.socialLinks.instagram} icon={<AtSign size={18} />} theme={theme} />
             )}
             {restaurant.socialLinks?.facebook && (
-              <SocialBtn href={restaurant.socialLinks.facebook} icon={<Share2 size={18} />} />
+              <SocialBtn href={restaurant.socialLinks.facebook} icon={<Share2 size={18} />} theme={theme} />
             )}
             {restaurant.socialLinks?.twitter && (
-              <SocialBtn href={restaurant.socialLinks.twitter} icon={<MessageCircle size={18} />} />
+              <SocialBtn href={restaurant.socialLinks.twitter} icon={<MessageCircle size={18} />} theme={theme} />
             )}
             {restaurant.socialLinks?.website && (
-              <SocialBtn href={restaurant.socialLinks.website} icon={<Globe size={18} />} />
+              <SocialBtn href={restaurant.socialLinks.website} icon={<Globe size={18} />} theme={theme} />
             )}
           </div>
         )}
@@ -645,7 +730,7 @@ export default function RestaurantWebsite() {
           <Star size={12} fill="#FFB800" /> Rate Us on Google
         </a>
 
-        <div style={{ marginTop: '20px', fontSize: '10px', color: '#222', letterSpacing: '0.12em', textTransform: 'uppercase' }}>
+        <div style={{ marginTop: '20px', fontSize: '10px', color: theme.poweredBy, letterSpacing: '0.12em', textTransform: 'uppercase' }}>
           Powered by EXZIBO
         </div>
       </footer>
@@ -654,14 +739,15 @@ export default function RestaurantWebsite() {
       <nav style={{
         position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)',
         width: '100%', maxWidth: '480px', zIndex: 100,
-        background: 'rgba(8,8,8,0.92)',
+        background: theme.navBg,
         backdropFilter: 'blur(24px)',
         WebkitBackdropFilter: 'blur(24px)',
-        borderTop: '1px solid rgba(255,255,255,0.06)',
+        borderTop: `1px solid ${theme.navBorder}`,
         borderRadius: '20px 20px 0 0',
         padding: '10px 8px env(safe-area-inset-bottom, 10px)',
         display: 'flex', justifyContent: 'space-around', alignItems: 'center',
-        boxShadow: '0 -8px 32px rgba(0,0,0,0.6)',
+        boxShadow: darkMode ? '0 -8px 32px rgba(0,0,0,0.6)' : '0 -8px 32px rgba(0,0,0,0.08)',
+        transition: 'background 0.3s ease, border-color 0.3s ease',
       }}>
         {[
           { id: 'home', icon: <Home size={22} />, label: 'Home', action: () => window.scrollTo({ top: 0, behavior: 'smooth' }) },
@@ -677,7 +763,7 @@ export default function RestaurantWebsite() {
             style={{
               display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px',
               background: 'none', border: 'none', cursor: 'pointer',
-              color: activeNav === id ? '#E8321A' : '#3a3a3a',
+              color: activeNav === id ? '#E8321A' : theme.navInactiveColor,
               padding: '4px 14px', position: 'relative',
             }}
           >
@@ -714,17 +800,17 @@ export default function RestaurantWebsite() {
   )
 }
 
-function BestsellerCard({ item, liked, onLike }) {
+function BestsellerCard({ item, liked, onLike, theme }) {
   const fallbackImg = '/menu/wagyu-ribeye.png'
   return (
     <div className="food-card" style={{
       flexShrink: 0, width: '160px',
-      background: 'rgba(255,255,255,0.03)',
-      border: '1px solid rgba(255,255,255,0.07)',
+      background: theme.cardBg2,
+      border: `1px solid ${theme.cardBorder2}`,
       borderRadius: '16px', overflow: 'hidden',
       cursor: 'pointer',
     }}>
-      <div style={{ height: '120px', overflow: 'hidden', position: 'relative', background: 'rgba(255,255,255,0.03)' }}>
+      <div style={{ height: '120px', overflow: 'hidden', position: 'relative', background: theme.cardBg2 }}>
         <img
           src={item.img || fallbackImg}
           alt={item.name}
@@ -755,7 +841,7 @@ function BestsellerCard({ item, liked, onLike }) {
         )}
       </div>
       <div style={{ padding: '10px 12px' }}>
-        <div style={{ fontSize: '12px', fontWeight: 700, lineHeight: 1.3, marginBottom: '4px', color: '#e0e0e0' }}>
+        <div style={{ fontSize: '12px', fontWeight: 700, lineHeight: 1.3, marginBottom: '4px', color: theme.textFaint }}>
           {item.name}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -772,7 +858,7 @@ function BestsellerCard({ item, liked, onLike }) {
   )
 }
 
-function MenuItemCard({ item }) {
+function MenuItemCard({ item, theme }) {
   const fallbackImg = '/menu/wagyu-ribeye.png'
   const tagColor = {
     Popular: '#E8321A', Seasonal: '#fbbf24', Vegetarian: '#4ade80', 'Gluten Free': '#60a5fa',
@@ -780,8 +866,8 @@ function MenuItemCard({ item }) {
   return (
     <div className="menu-item-row" style={{
       display: 'flex', alignItems: 'center', gap: '12px',
-      background: 'rgba(255,255,255,0.02)',
-      border: '1px solid rgba(255,255,255,0.05)',
+      background: theme.cardBg,
+      border: `1px solid ${theme.cardBorder}`,
       borderRadius: '14px', padding: '12px',
       cursor: 'pointer',
     }}>
@@ -795,7 +881,7 @@ function MenuItemCard({ item }) {
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px', marginBottom: '4px' }}>
-          <div style={{ fontSize: '13px', fontWeight: 700, color: '#e0e0e0', lineHeight: 1.3 }}>{item.name}</div>
+          <div style={{ fontSize: '13px', fontWeight: 700, color: theme.textFaint, lineHeight: 1.3 }}>{item.name}</div>
           {item.tags?.[0] && (
             <div style={{
               flexShrink: 0,
@@ -810,7 +896,7 @@ function MenuItemCard({ item }) {
           )}
         </div>
         {item.description && (
-          <div style={{ fontSize: '11px', color: '#555', lineHeight: 1.4, marginBottom: '6px' }}>
+          <div style={{ fontSize: '11px', color: theme.textMuted, lineHeight: 1.4, marginBottom: '6px' }}>
             {item.description?.slice(0, 60)}{(item.description?.length || 0) > 60 ? '…' : ''}
           </div>
         )}
@@ -831,25 +917,25 @@ function MenuItemCard({ item }) {
   )
 }
 
-function InfoRow({ icon, label, value }) {
+function InfoRow({ icon, label, value, theme }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
       <div style={{
         width: '32px', height: '32px', borderRadius: '10px',
-        background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)',
+        background: theme.infoRowBg, border: `1px solid ${theme.infoRowBorder}`,
         display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
       }}>
         {icon}
       </div>
       <div>
-        <div style={{ fontSize: '10px', color: '#555', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{label}</div>
-        <div style={{ fontSize: '13px', fontWeight: 600, color: '#ccc', marginTop: '1px' }}>{value}</div>
+        <div style={{ fontSize: '10px', color: theme.infoLabel, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{label}</div>
+        <div style={{ fontSize: '13px', fontWeight: 600, color: theme.infoValue, marginTop: '1px' }}>{value}</div>
       </div>
     </div>
   )
 }
 
-function SocialBtn({ href, icon }) {
+function SocialBtn({ href, icon, theme }) {
   return (
     <a
       href={href}
@@ -857,12 +943,12 @@ function SocialBtn({ href, icon }) {
       rel="noopener noreferrer"
       style={{
         width: '40px', height: '40px', borderRadius: '12px',
-        background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
+        background: theme.socialBg, border: `1px solid ${theme.socialBorder}`,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        color: '#666', textDecoration: 'none', transition: 'all 0.2s',
+        color: theme.socialColor, textDecoration: 'none', transition: 'all 0.2s',
       }}
       onMouseEnter={e => { e.currentTarget.style.color = '#E8321A'; e.currentTarget.style.borderColor = 'rgba(232,50,26,0.3)' }}
-      onMouseLeave={e => { e.currentTarget.style.color = '#666'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)' }}
+      onMouseLeave={e => { e.currentTarget.style.color = theme.socialColor; e.currentTarget.style.borderColor = theme.socialBorder }}
     >
       {icon}
     </a>
