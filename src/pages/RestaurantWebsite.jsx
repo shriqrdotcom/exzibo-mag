@@ -87,6 +87,22 @@ function buildTheme(dark) {
     bestsellerName: dark ? '#e0e0e0' : '#111',
     btnSecBg: dark ? 'rgba(255,255,255,0.06)' : '#fff',
     btnSecBorder: dark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)',
+    // About & footer
+    aboutCardBg: dark ? 'linear-gradient(135deg,rgba(232,50,26,0.08) 0%,rgba(255,255,255,0.02) 100%)' : 'linear-gradient(135deg,rgba(232,50,26,0.05) 0%,rgba(0,0,0,0.02) 100%)',
+    aboutCardBorder: dark ? 'rgba(232,50,26,0.14)' : 'rgba(232,50,26,0.16)',
+    aboutText: dark ? '#bbb' : '#444',
+    aboutSub: dark ? '#666' : '#888',
+    aboutSubBorder: dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.08)',
+    infoRowBg: dark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)',
+    infoRowBorder: dark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.08)',
+    infoLabel: dark ? '#555' : '#999',
+    infoValue: dark ? '#ccc' : '#222',
+    footerBg: dark ? 'rgba(255,255,255,0.02)' : '#fff',
+    footerBorder: dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.07)',
+    footerLocation: dark ? '#444' : '#999',
+    socialBg: dark ? 'rgba(255,255,255,0.05)' : '#f5f5f5',
+    socialBorder: dark ? 'rgba(255,255,255,0.09)' : 'rgba(0,0,0,0.08)',
+    socialColor: dark ? '#666' : '#888',
     btnSecColor: dark ? '#fff' : '#111',
     adminBg: dark ? 'rgba(232,50,26,0.08)' : 'rgba(232,50,26,0.06)',
     adminBorder: dark ? 'rgba(232,50,26,0.18)' : 'rgba(232,50,26,0.14)',
@@ -364,16 +380,78 @@ export default function RestaurantWebsite() {
             </div>
           </section>
 
-          {/* Banner */}
-          <div style={{ padding: '28px 20px 8px', position: 'relative', overflow: 'hidden' }}>
-            <div style={{ fontSize: '48px', fontWeight: 900, lineHeight: 1.1, color: theme.bannerText, letterSpacing: '-0.02em', userSelect: 'none' }}>
-              Explore the menus, taste the city
+          {/* ── OUR STORY ── */}
+          <section style={{ padding: '24px 14px 0' }}>
+            <div style={{ marginBottom: '14px' }}>
+              <div style={{ fontSize: '16px', fontWeight: 800, color: theme.sectionTitle, letterSpacing: '-0.01em' }}>Our Story</div>
+              <div style={{ fontSize: '11px', color: theme.sectionSub, marginTop: '2px' }}>Where every plate tells a story</div>
             </div>
-            <div style={{ position: 'absolute', right: '28px', top: '32px', opacity: 0.8 }}>
-              <Heart size={34} fill={theme.bannerHeart} color={theme.bannerHeart} />
+
+            {/* About hero image */}
+            {carouselImages.length > 1 && (
+              <div style={{ height: '155px', borderRadius: '16px', overflow: 'hidden', marginBottom: '12px', backgroundImage: `url(${carouselImages[1] || carouselImages[0]})`, backgroundSize: 'cover', backgroundPosition: 'center', position: 'relative' }}>
+                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.6), transparent)' }} />
+              </div>
+            )}
+
+            {/* Philosophy card */}
+            <div style={{ background: theme.aboutCardBg, border: `1px solid ${theme.aboutCardBorder}`, borderRadius: '16px', padding: '18px', marginBottom: '10px' }}>
+              <div style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '0.2em', color: '#E8321A', textTransform: 'uppercase', marginBottom: '10px' }}>The Philosophy</div>
+              <p style={{ fontSize: '14px', lineHeight: 1.75, color: theme.aboutText }}>
+                {restaurant.description || 'An uncompromising culinary experience rooted in craft, quality, and atmosphere. Every dish is a conversation between heritage and innovation, served in a setting that commands reverence.'}
+              </p>
+              {restaurant.additionalInfo && (
+                <p style={{ fontSize: '12px', lineHeight: 1.7, color: theme.aboutSub, marginTop: '12px', paddingTop: '12px', borderTop: `1px solid ${theme.aboutSubBorder}` }}>
+                  {restaurant.additionalInfo}
+                </p>
+              )}
             </div>
-          </div>
-          <div style={{ padding: '0 20px 24px', fontSize: '11px', fontWeight: 700, color: theme.brandText, letterSpacing: '0.1em', textTransform: 'uppercase' }}>Exzibo</div>
+
+            {/* Quick Info */}
+            <div style={{ background: theme.statsBg, border: `1px solid ${theme.statsBorder}`, borderRadius: '16px', padding: '18px', marginBottom: '10px' }}>
+              <div style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '0.18em', color: theme.infoLabel, textTransform: 'uppercase', marginBottom: '14px' }}>Quick Info</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                {restaurant.location && (
+                  <InfoRow icon={<MapPin size={14} color="#E8321A" />} label="Location" value={restaurant.location} theme={theme} />
+                )}
+                {restaurant.tables && (
+                  <InfoRow icon={<UtensilsCrossed size={14} color="#4ade80" />} label="Capacity" value={`${restaurant.tables} Tables`} theme={theme} />
+                )}
+                {restaurant.phone && (
+                  <InfoRow icon={<Phone size={14} color="#60a5fa" />} label="Reservations" value={restaurant.phone} theme={theme} />
+                )}
+                {restaurant.rating && (
+                  <InfoRow icon={<Star size={14} color="#FFB800" fill="#FFB800" />} label="Rating" value={`${restaurant.rating} / 5`} theme={theme} />
+                )}
+              </div>
+            </div>
+          </section>
+
+          {/* ── FOOTER ── */}
+          <footer style={{ margin: '16px 14px', background: theme.footerBg, border: `1px solid ${theme.footerBorder}`, borderRadius: '20px', padding: '24px 18px', textAlign: 'center', boxShadow: theme.cardShadow }}>
+            <div style={{ fontSize: '20px', fontWeight: 900, letterSpacing: '0.02em', color: theme.sectionTitle, marginBottom: '4px' }}>{restaurant.name}</div>
+            {restaurant.location && (
+              <div style={{ fontSize: '11px', color: theme.footerLocation, marginBottom: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
+                <MapPin size={10} /> {restaurant.location}
+              </div>
+            )}
+            {(restaurant.socialLinks?.instagram || restaurant.socialLinks?.facebook || restaurant.socialLinks?.twitter || restaurant.socialLinks?.website) && (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', marginBottom: '18px' }}>
+                {restaurant.socialLinks?.instagram && <SocialBtn href={restaurant.socialLinks.instagram} icon={<AtSign size={17} />} theme={theme} />}
+                {restaurant.socialLinks?.facebook && <SocialBtn href={restaurant.socialLinks.facebook} icon={<Share2 size={17} />} theme={theme} />}
+                {restaurant.socialLinks?.twitter && <SocialBtn href={restaurant.socialLinks.twitter} icon={<MessageCircle size={17} />} theme={theme} />}
+                {restaurant.socialLinks?.website && <SocialBtn href={restaurant.socialLinks.website} icon={<Globe size={17} />} theme={theme} />}
+              </div>
+            )}
+            <a
+              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(restaurant.name + ' ' + (restaurant.location || ''))}`}
+              target="_blank" rel="noopener noreferrer"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'rgba(255,184,0,0.1)', border: '1px solid rgba(255,184,0,0.25)', borderRadius: '50px', padding: '10px 20px', color: '#FFB800', fontSize: '12px', fontWeight: 700, textDecoration: 'none', letterSpacing: '0.04em' }}
+            >
+              <Star size={12} fill="#FFB800" /> Rate Us on Google
+            </a>
+            <div style={{ marginTop: '18px', fontSize: '10px', color: theme.footerLocation, letterSpacing: '0.12em', textTransform: 'uppercase' }}>Powered by EXZIBO</div>
+          </footer>
         </div>
       )}
 
@@ -519,5 +597,34 @@ function MenuCard({ item, theme }) {
         </div>
       </div>
     </div>
+  )
+}
+
+function InfoRow({ icon, label, value, theme }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+      <div style={{ width: '32px', height: '32px', borderRadius: '10px', background: theme.infoRowBg, border: `1px solid ${theme.infoRowBorder}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+        {icon}
+      </div>
+      <div>
+        <div style={{ fontSize: '10px', color: theme.infoLabel, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{label}</div>
+        <div style={{ fontSize: '13px', fontWeight: 600, color: theme.infoValue, marginTop: '1px' }}>{value}</div>
+      </div>
+    </div>
+  )
+}
+
+function SocialBtn({ href, icon, theme }) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      style={{ width: '38px', height: '38px', borderRadius: '11px', background: theme.socialBg, border: `1px solid ${theme.socialBorder}`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: theme.socialColor, textDecoration: 'none', transition: 'all 0.2s' }}
+      onMouseEnter={e => { e.currentTarget.style.color = '#E8321A'; e.currentTarget.style.borderColor = 'rgba(232,50,26,0.3)' }}
+      onMouseLeave={e => { e.currentTarget.style.color = theme.socialColor; e.currentTarget.style.borderColor = theme.socialBorder }}
+    >
+      {icon}
+    </a>
   )
 }
