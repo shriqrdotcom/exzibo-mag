@@ -126,10 +126,7 @@ export default function RestaurantWebsite() {
   const [darkMode, setDarkMode] = useState(false)
   const [carouselIdx, setCarouselIdx] = useState(0)
   const [liked, setLiked] = useState({})
-  const [cartItems, setCartItems] = useState([
-    { id: 1, name: 'Hara Bhara Kebab', price: 249, qty: 1, img: '/menu/heirloom-burrata.png' },
-    { id: 2, name: 'Dahi Puri', price: 179, qty: 1, img: '/menu/mushroom-risotto.png' },
-  ])
+  const [cartItems, setCartItems] = useState([])
   const [couponInput, setCouponInput] = useState('')
   const [couponApplied, setCouponApplied] = useState(false)
   const [couponError, setCouponError] = useState('')
