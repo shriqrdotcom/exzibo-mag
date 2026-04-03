@@ -941,9 +941,6 @@ export default function RestaurantWebsite() {
                       </button>
                     </div>
                   </div>
-                  <div style={{ flexShrink: 0, background: '#22c55e', color: '#fff', borderRadius: '10px', padding: '8px 14px', fontSize: '11px', fontWeight: 800, letterSpacing: '0.06em', fontFamily: 'inherit' }}>
-                    DELIVERED
-                  </div>
                 </div>
                 {/* Full tracker (all done) */}
                 <div>
