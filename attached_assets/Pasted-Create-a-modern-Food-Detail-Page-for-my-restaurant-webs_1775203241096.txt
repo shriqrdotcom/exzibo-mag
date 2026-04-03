@@ -1,0 +1,137 @@
+Create a modern "Food Detail Page" for my restaurant website that opens when a user clicks any food item from the menu.
+
+IMPORTANT: This page must dynamically load data based on the clicked item (image, name, price, description, etc.).
+
+---
+
+🔹 PAGE NAVIGATION LOGIC
+
+- When user clicks any food card in Menu:
+  → Navigate to /food/:id (dynamic route)
+  → Pass food data (or fetch from state)
+
+- Add smooth transition animation (scale + fade)
+
+---
+
+🔹 PAGE UI STRUCTURE
+
+1. TOP IMAGE SECTION
+- Large rounded image (hero style)
+- Full width with padding
+- Overlay elements:
+  - Back button (top-left, circular blur background)
+  - Share / favorite icon (top-right)
+- Bottom-left overlay text:
+  - Food Name (e.g., "Signature Butter Chicken")
+  - Small dot indicator below
+
+---
+
+2. DETAILS CARD (UNDER IMAGE)
+- Glassmorphism card (blur + shadow)
+- Content inside:
+
+⭐ Rating Section
+- 4.5 stars + "(40 Reviews)"
+
+📄 Description
+- Bullet points:
+  - Creamy tomato-based curry
+  - Chef’s recommendation
+  - Spice level: Medium
+
+💰 Price Section
+- Bold price (₹299 style)
+- Currency in INR
+
+---
+
+3. ADD TO ORDER BUTTON
+- Bottom-right sticky button
+- Rounded pill style
+- Icon + text: "Add to Order"
+- Gradient color (orange/red like food apps)
+- Hover: scale + glow
+
+---
+
+4. EXTRA MENU OPTIONS (IMPORTANT FEATURE)
+Add a horizontal scroll section at the bottom:
+
+Title: "You may also like"
+
+- Show 4–6 food items
+- Each item:
+  - Small image
+  - Name
+  - Price
+- Click → opens that item's detail page (same page reuse)
+
+---
+
+5. OPTIONAL ADD-ONS SECTION (UPGRADE FEATURE)
+- Section title: "Customize your dish"
+- Options:
+  - Extra cheese (+₹50)
+  - Butter naan (+₹40)
+  - Cold drink (+₹60)
+- Use checkboxes
+- Update total price dynamically
+
+---
+
+🔹 FUNCTIONAL LOGIC
+
+- Store selected food in state (React useState / Context / localStorage)
+- Add to cart button:
+  → Adds item + selected add-ons
+  → Updates cart count
+  → Shows mini success toast ("Added to cart")
+
+---
+
+🔹 ANIMATIONS
+
+- Page load: fade + slide up
+- Image: zoom-in effect
+- Button: hover scale (1.05)
+- Cards: soft shadow + lift on hover
+
+---
+
+🔹 DESIGN RULES
+
+- Match my existing restaurant theme
+- Use glassmorphism (blur, transparency)
+- Rounded corners (20px+)
+- Soft shadows
+- Font: Poppins / Inter
+- Colors: dark + warm food tones (orange/red gradients)
+
+---
+
+🔹 TECH STACK
+
+- React + Tailwind CSS
+- React Router (for dynamic routing)
+- Framer Motion (for animations)
+
+---
+
+🔹 RESPONSIVENESS
+
+- Must look perfect on mobile (priority)
+- Touch-friendly UI
+
+---
+
+🔹 BONUS (MAKE IT PREMIUM)
+
+- Add loading skeleton before content loads
+- Add heart (favorite) toggle animation
+- Add "veg/non-veg" indicator dot
+
+---
+
+Ensure the page feels smooth, premium, and fast — like Zomato-level UI.
