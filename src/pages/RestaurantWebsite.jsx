@@ -136,6 +136,26 @@ export default function RestaurantWebsite() {
   const [orderStatus, setOrderStatus] = useState(1)
   const [orderHistory, setOrderHistory] = useState([])
   const [viewingHistoryOrder, setViewingHistoryOrder] = useState(null)
+
+  const [bookingForm, setBookingForm] = useState({ name: '', phone: '', email: '', date: '', time: '19:00', guests: 2, occasion: 'Casual Dining', seating: 'Indoor', notes: '' })
+  const [bookingSubmitted, setBookingSubmitted] = useState(false)
+  const [bookingErrors, setBookingErrors] = useState({})
+
+  function handleBookingChange(field, value) {
+    setBookingForm(prev => ({ ...prev, [field]: value }))
+    setBookingErrors(prev => ({ ...prev, [field]: '' }))
+  }
+
+  function handleBookingSubmit() {
+    const errs = {}
+    if (!bookingForm.name.trim()) errs.name = 'Required'
+    if (!bookingForm.phone.trim()) errs.phone = 'Required'
+    if (!bookingForm.email.trim()) errs.email = 'Required'
+    if (!bookingForm.date) errs.date = 'Required'
+    if (Object.keys(errs).length) { setBookingErrors(errs); return }
+    setBookingSubmitted(true)
+  }
+
   const VALID_COUPON = 'SPICE10'
   const COUPON_DISCOUNT_PCT = 10
 
@@ -1201,20 +1221,151 @@ export default function RestaurantWebsite() {
 
       {/* ── BOOKING VIEW ── */}
       {activeNav === 'booking' && (
-        <div style={{ animation: 'fadeIn 0.3s ease', padding: '22px 18px' }}>
-          <div style={{ fontSize: '22px', fontWeight: 900, color: theme.color, marginBottom: '20px', letterSpacing: '-0.01em' }}>Reserve a Table</div>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 24px', gap: '12px' }}>
-            <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: darkMode ? 'rgba(255,255,255,0.05)' : '#f0ece8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <CalendarDays size={28} color={darkMode ? '#555' : '#ccc'} />
+        <div style={{ animation: 'fadeIn 0.3s ease', padding: '24px 16px 110px', minHeight: '100vh' }}>
+          <style>{`
+            .book-input { width: 100%; background: ${darkMode ? 'rgba(255,255,255,0.06)' : '#f5f3f1'}; border: 1.5px solid ${darkMode ? 'rgba(255,255,255,0.10)' : '#e5e0db'}; border-radius: 16px; padding: 15px 16px; font-size: 14px; color: ${darkMode ? '#fff' : '#111'}; font-family: inherit; outline: none; transition: border-color 0.2s ease; box-sizing: border-box; }
+            .book-input::placeholder { color: ${darkMode ? 'rgba(255,255,255,0.32)' : '#bbb'}; }
+            .book-input:focus { border-color: #E8321A; }
+            .book-input-err { border-color: #E8321A !important; }
+            .book-input option { background: ${darkMode ? '#1a1a1a' : '#fff'}; color: ${darkMode ? '#fff' : '#111'}; }
+            .reserve-btn { transition: transform 0.15s ease, box-shadow 0.15s ease; }
+            .reserve-btn:hover { transform: scale(1.02); box-shadow: 0 10px 32px rgba(232,50,26,0.5) !important; }
+            .reserve-btn:active { transform: scale(0.97); }
+            .seat-pill { transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease; cursor: pointer; }
+          `}</style>
+
+          {bookingSubmitted ? (
+            /* ── SUCCESS STATE ── */
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 24px', gap: '18px', textAlign: 'center', animation: 'fadeIn 0.4s ease' }}>
+              <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: 'rgba(232,50,26,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <CalendarDays size={36} color="#E8321A" />
+              </div>
+              <div style={{ fontSize: '22px', fontWeight: 900, color: theme.color, letterSpacing: '-0.01em' }}>Table Reserved!</div>
+              <div style={{ fontSize: '14px', color: theme.locationColor, lineHeight: 1.7, maxWidth: '260px' }}>
+                Your table for <strong style={{ color: theme.color }}>{bookingForm.guests}</strong> on <strong style={{ color: theme.color }}>{bookingForm.date}</strong> at <strong style={{ color: theme.color }}>{bookingForm.time}</strong> has been confirmed.
+              </div>
+              <div style={{ background: theme.cardBg, border: `1px solid ${theme.cardBorder}`, borderRadius: '16px', padding: '16px 20px', width: '100%', maxWidth: '320px' }}>
+                {[
+                  { label: 'Name', value: bookingForm.name },
+                  { label: 'Seating', value: bookingForm.seating },
+                  { label: 'Occasion', value: bookingForm.occasion },
+                ].map(({ label, value }) => (
+                  <div key={label} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: `1px solid ${theme.cardBorder}` }}>
+                    <span style={{ fontSize: '12px', color: theme.locationColor }}>{label}</span>
+                    <span style={{ fontSize: '13px', fontWeight: 700, color: theme.color }}>{value}</span>
+                  </div>
+                ))}
+              </div>
+              <button onClick={() => { setBookingSubmitted(false); setBookingForm({ name: '', phone: '', email: '', date: '', time: '19:00', guests: 2, occasion: 'Casual Dining', seating: 'Indoor', notes: '' }) }}
+                style={{ background: '#E8321A', color: '#fff', border: 'none', borderRadius: '14px', padding: '13px 32px', fontSize: '14px', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 6px 20px rgba(232,50,26,0.35)', marginTop: '8px' }}>
+                Make Another Booking
+              </button>
             </div>
-            <div style={{ fontSize: '15px', fontWeight: 800, color: theme.color }}>Coming soon</div>
-            <div style={{ fontSize: '13px', color: theme.locationColor, textAlign: 'center', lineHeight: 1.6 }}>Online table reservations will be available soon</div>
-            {restaurant.phone && (
-              <a href={`tel:${restaurant.phone}`} style={{ marginTop: '8px', background: '#E8321A', color: '#fff', borderRadius: '14px', padding: '12px 28px', fontSize: '13px', fontWeight: 700, textDecoration: 'none', boxShadow: '0 6px 20px rgba(232,50,26,0.35)' }}>
-                Call to Reserve
-              </a>
-            )}
-          </div>
+          ) : (
+            <>
+              {/* Title */}
+              <div style={{ marginBottom: '6px', fontSize: '26px', fontWeight: 900, color: theme.color, letterSpacing: '-0.02em' }}>Book a Table</div>
+              <div style={{ fontSize: '13px', color: theme.locationColor, marginBottom: '24px', lineHeight: 1.5 }}>Join us for an unforgettable culinary journey.</div>
+
+              {/* Full Name */}
+              <div style={{ marginBottom: '12px' }}>
+                <input className={`book-input${bookingErrors.name ? ' book-input-err' : ''}`} type="text" placeholder="Full Name" value={bookingForm.name} onChange={e => handleBookingChange('name', e.target.value)} />
+                {bookingErrors.name && <div style={{ fontSize: '11px', color: '#E8321A', marginTop: '4px', paddingLeft: '4px' }}>Name is required</div>}
+              </div>
+
+              {/* Phone */}
+              <div style={{ marginBottom: '12px' }}>
+                <input className={`book-input${bookingErrors.phone ? ' book-input-err' : ''}`} type="tel" placeholder="Phone Number" value={bookingForm.phone} onChange={e => handleBookingChange('phone', e.target.value)} />
+                {bookingErrors.phone && <div style={{ fontSize: '11px', color: '#E8321A', marginTop: '4px', paddingLeft: '4px' }}>Phone is required</div>}
+              </div>
+
+              {/* Email */}
+              <div style={{ marginBottom: '16px' }}>
+                <input className={`book-input${bookingErrors.email ? ' book-input-err' : ''}`} type="email" placeholder="Email Address" value={bookingForm.email} onChange={e => handleBookingChange('email', e.target.value)} />
+                {bookingErrors.email && <div style={{ fontSize: '11px', color: '#E8321A', marginTop: '4px', paddingLeft: '4px' }}>Email is required</div>}
+              </div>
+
+              {/* Date + Time */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '12px' }}>
+                <div>
+                  <div style={{ fontSize: '10px', fontWeight: 700, color: theme.locationColor, letterSpacing: '0.12em', marginBottom: '6px', paddingLeft: '2px' }}>DATE</div>
+                  <div style={{ position: 'relative' }}>
+                    <input className={`book-input${bookingErrors.date ? ' book-input-err' : ''}`} type="date"
+                      value={bookingForm.date}
+                      min={new Date().toISOString().split('T')[0]}
+                      onChange={e => handleBookingChange('date', e.target.value)}
+                      style={{ paddingLeft: '36px', colorScheme: darkMode ? 'dark' : 'light' }}
+                    />
+                    <CalendarDays size={15} color={theme.locationColor} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '10px', fontWeight: 700, color: theme.locationColor, letterSpacing: '0.12em', marginBottom: '6px', paddingLeft: '2px' }}>TIME</div>
+                  <div style={{ position: 'relative' }}>
+                    <input className="book-input" type="time" value={bookingForm.time} onChange={e => handleBookingChange('time', e.target.value)} style={{ paddingLeft: '36px', colorScheme: darkMode ? 'dark' : 'light' }} />
+                    <Clock size={15} color="#E8321A" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
+                  </div>
+                </div>
+              </div>
+
+              {/* Guests */}
+              <div style={{ marginBottom: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                  <div style={{ fontSize: '10px', fontWeight: 700, color: theme.locationColor, letterSpacing: '0.12em' }}>NUMBER OF GUESTS</div>
+                  <span style={{ fontSize: '13px', fontWeight: 700, color: theme.color }}>{bookingForm.guests}</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', background: darkMode ? 'rgba(255,255,255,0.06)' : '#f5f3f1', border: `1.5px solid ${darkMode ? 'rgba(255,255,255,0.10)' : '#e5e0db'}`, borderRadius: '16px', overflow: 'hidden' }}>
+                  <button onClick={() => handleBookingChange('guests', Math.max(1, bookingForm.guests - 1))} style={{ width: '52px', height: '50px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '20px', color: theme.color, fontWeight: 300, fontFamily: 'inherit', flexShrink: 0 }}>−</button>
+                  <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                    <Users size={16} color={theme.locationColor} />
+                    <span style={{ fontSize: '16px', fontWeight: 700, color: theme.color }}>{bookingForm.guests}</span>
+                  </div>
+                  <button onClick={() => handleBookingChange('guests', Math.min(20, bookingForm.guests + 1))} style={{ width: '52px', height: '50px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '20px', color: '#E8321A', fontWeight: 300, fontFamily: 'inherit', flexShrink: 0 }}>+</button>
+                </div>
+              </div>
+
+              {/* Occasion */}
+              <div style={{ marginBottom: '16px' }}>
+                <div style={{ fontSize: '10px', fontWeight: 700, color: theme.locationColor, letterSpacing: '0.12em', marginBottom: '6px', paddingLeft: '2px' }}>OCCASION</div>
+                <div style={{ position: 'relative' }}>
+                  <select className="book-input" value={bookingForm.occasion} onChange={e => handleBookingChange('occasion', e.target.value)} style={{ paddingLeft: '36px', appearance: 'none', WebkitAppearance: 'none', cursor: 'pointer' }}>
+                    {['Casual Dining', 'Birthday Celebration', 'Anniversary', 'Business Dinner', 'Date Night', 'Family Gathering', 'Other'].map(o => <option key={o}>{o}</option>)}
+                  </select>
+                  <Star size={15} color="#E8321A" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
+                  <ChevronRight size={15} color={theme.locationColor} style={{ position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%) rotate(90deg)', pointerEvents: 'none' }} />
+                </div>
+              </div>
+
+              {/* Seating Preference */}
+              <div style={{ marginBottom: '16px' }}>
+                <div style={{ fontSize: '10px', fontWeight: 700, color: theme.locationColor, letterSpacing: '0.12em', marginBottom: '10px' }}>SEATING PREFERENCE</div>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  {['Indoor', 'Outdoor', 'Private'].map(s => {
+                    const active = bookingForm.seating === s
+                    return (
+                      <button key={s} className="seat-pill" onClick={() => handleBookingChange('seating', s)}
+                        style={{ flex: 1, padding: '11px 8px', borderRadius: '14px', border: `1.5px solid ${active ? '#E8321A' : (darkMode ? 'rgba(255,255,255,0.12)' : '#e0dbd6')}`, background: active ? '#E8321A' : (darkMode ? 'rgba(255,255,255,0.05)' : '#f5f3f1'), color: active ? '#fff' : theme.color, fontSize: '13px', fontWeight: active ? 700 : 500, cursor: 'pointer', fontFamily: 'inherit' }}>
+                        {s}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* Special Requests */}
+              <div style={{ marginBottom: '28px' }}>
+                <div style={{ fontSize: '10px', fontWeight: 700, color: theme.locationColor, letterSpacing: '0.12em', marginBottom: '6px' }}>SPECIAL REQUESTS</div>
+                <textarea className="book-input" rows={4} placeholder="Any allergies or special requirements?" value={bookingForm.notes} onChange={e => handleBookingChange('notes', e.target.value)}
+                  style={{ resize: 'none', lineHeight: 1.6 }} />
+              </div>
+
+              {/* Submit Button */}
+              <button className="reserve-btn" onClick={handleBookingSubmit}
+                style={{ width: '100%', background: 'linear-gradient(135deg, #E8321A 0%, #ff6b35 100%)', color: '#fff', border: 'none', borderRadius: '20px', padding: '18px', fontSize: '16px', fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit', letterSpacing: '0.01em', boxShadow: '0 8px 28px rgba(232,50,26,0.42)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
+                Reserve My Table <ChevronRight size={18} />
+              </button>
+            </>
+          )}
         </div>
       )}
 
