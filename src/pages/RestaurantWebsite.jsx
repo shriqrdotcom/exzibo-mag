@@ -429,79 +429,109 @@ export default function RestaurantWebsite() {
         </div>
       )}
 
-      {/* ── STICKY HEADER ── */}
+      {/* ── STICKY HEADER CARD ── */}
       {(() => {
-        const scrolled = scrollY > 60
-        const showSearch = !scrolled || scrollDir === 'up'
+        const scrolled = scrollY > 50
         return (
           <header style={{
             position: 'sticky', top: 0, zIndex: 50,
-            background: scrolled ? (darkMode ? 'rgba(10,10,10,0.97)' : 'rgba(255,255,255,0.98)') : theme.headerBg,
-            backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
-            borderBottom: `1px solid ${theme.headerBorder}`,
-            padding: scrolled ? '8px 18px' : '12px 18px',
-            boxShadow: scrolled ? '0 4px 24px rgba(0,0,0,0.18)' : 'none',
-            transition: 'padding 0.35s ease, box-shadow 0.35s ease, background 0.35s ease',
+            background: darkMode ? '#111' : '#1a1a1a',
+            borderRadius: '0 0 22px 22px',
+            padding: scrolled ? '10px 16px 14px' : '14px 16px 18px',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.35)',
+            transition: 'padding 0.35s ease',
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div>
-                <div style={{
-                  fontSize: '10px', color: theme.locationColor, fontWeight: 500, letterSpacing: '0.04em',
-                  marginBottom: '2px', display: 'flex', alignItems: 'center', gap: '3px',
-                  opacity: scrolled ? 0 : 1, maxHeight: scrolled ? '0' : '16px',
-                  overflow: 'hidden', transition: 'opacity 0.3s ease, max-height 0.3s ease',
-                }}>
+            {/* Row 1: Logo + Name/Location + Bell */}
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: '12px',
+              overflow: 'hidden',
+              maxHeight: scrolled ? '0px' : '64px',
+              opacity: scrolled ? 0 : 1,
+              marginBottom: scrolled ? '0' : '14px',
+              transition: 'max-height 0.35s ease, opacity 0.25s ease, margin-bottom 0.35s ease',
+            }}>
+              {/* Logo avatar */}
+              <div style={{
+                width: '46px', height: '46px', borderRadius: '14px', flexShrink: 0,
+                background: 'linear-gradient(135deg, #E8321A 0%, #ff6b35 100%)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                boxShadow: '0 4px 14px rgba(232,50,26,0.4)',
+                overflow: 'hidden',
+              }}>
+                {carouselImages[0] ? (
+                  <img src={carouselImages[0]} alt={restaurant.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ) : (
+                  <UtensilsCrossed size={20} color="#fff" />
+                )}
+              </div>
+              {/* Name + Location */}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: '17px', fontWeight: 800, color: '#fff', letterSpacing: '-0.01em', lineHeight: 1.15, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {restaurant.name}
+                </div>
+                <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '3px', marginTop: '2px' }}>
                   <MapPin size={9} color="#E8321A" />
                   {restaurant.location || 'Fine Dining'}
                 </div>
-                <div style={{ fontSize: scrolled ? '15px' : '18px', fontWeight: 800, color: theme.color, letterSpacing: '-0.01em', lineHeight: 1.1, transition: 'font-size 0.35s ease' }}>
-                  {restaurant.name}
-                </div>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                {restaurant.rating && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: theme.ratingBg, border: `1px solid ${theme.ratingBorder}`, borderRadius: '20px', padding: '4px 10px' }}>
-                    <Star size={11} fill="#FFB800" color="#FFB800" />
-                    <span style={{ fontSize: '12px', fontWeight: 700, color: '#FFB800' }}>{restaurant.rating}</span>
-                  </div>
-                )}
-                <button className="toggle-btn" onClick={() => setDarkMode(d => !d)} title={darkMode ? 'Light mode' : 'Dark mode'} style={{ width: '34px', height: '34px', borderRadius: '10px', background: theme.toggleBg, border: `1px solid ${theme.toggleBorder}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                  {darkMode ? <Sun size={15} color="#FFB800" /> : <Moon size={15} color="#888" />}
+              {/* Bell + Dark toggle */}
+              <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
+                <button className="toggle-btn" onClick={() => setDarkMode(d => !d)} style={{ width: '36px', height: '36px', borderRadius: '12px', background: 'rgba(255,255,255,0.10)', border: '1px solid rgba(255,255,255,0.14)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                  {darkMode ? <Sun size={15} color="#FFB800" /> : <Moon size={15} color="rgba(255,255,255,0.7)" />}
                 </button>
-                <div style={{ width: '34px', height: '34px', borderRadius: '10px', background: theme.bellBg, border: `1px solid ${theme.bellBorder}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                  <Bell size={15} color={theme.bellColor} />
+                <div style={{ width: '36px', height: '36px', borderRadius: '12px', background: 'rgba(255,255,255,0.10)', border: '1px solid rgba(255,255,255,0.14)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', position: 'relative' }}>
+                  <Bell size={15} color="rgba(255,255,255,0.7)" />
+                  {restaurant.rating && (
+                    <div style={{ position: 'absolute', top: '-4px', right: '-4px', background: '#E8321A', borderRadius: '50%', width: '16px', height: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Star size={8} fill="#fff" color="#fff" />
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
-            {/* Search bar — fades out on scroll down, reappears on scroll up */}
-            <div style={{
-              overflow: 'hidden',
-              maxHeight: showSearch ? '52px' : '0px',
-              opacity: showSearch ? 1 : 0,
-              marginTop: showSearch ? '10px' : '0',
-              transition: 'max-height 0.35s ease, opacity 0.3s ease, margin-top 0.35s ease',
-            }}>
-              <div style={{ position: 'relative' }}>
+
+            {/* Collapsed name shown when scrolled */}
+            {scrolled && (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px', animation: 'fadeIn 0.2s ease' }}>
+                <div style={{ fontSize: '15px', fontWeight: 800, color: '#fff' }}>{restaurant.name}</div>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button className="toggle-btn" onClick={() => setDarkMode(d => !d)} style={{ width: '30px', height: '30px', borderRadius: '9px', background: 'rgba(255,255,255,0.10)', border: '1px solid rgba(255,255,255,0.14)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                    {darkMode ? <Sun size={13} color="#FFB800" /> : <Moon size={13} color="rgba(255,255,255,0.7)" />}
+                  </button>
+                  <div style={{ width: '30px', height: '30px', borderRadius: '9px', background: 'rgba(255,255,255,0.10)', border: '1px solid rgba(255,255,255,0.14)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                    <Bell size={13} color="rgba(255,255,255,0.7)" />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Row 2: Search bar + Filter button */}
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <div style={{ flex: 1, position: 'relative' }}>
                 <input
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
                   placeholder="Search dishes, drinks..."
                   style={{
                     width: '100%', boxSizing: 'border-box',
-                    background: darkMode ? 'rgba(255,255,255,0.07)' : '#f5f5f5',
-                    border: `1.5px solid ${darkMode ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.08)'}`,
-                    borderRadius: '14px', padding: '10px 14px 10px 40px',
-                    fontSize: '13px', color: theme.color, fontFamily: 'inherit', outline: 'none',
-                    transition: 'border-color 0.2s ease, background 0.3s ease',
+                    background: 'rgba(255,255,255,0.10)',
+                    border: '1.5px solid rgba(255,255,255,0.12)',
+                    borderRadius: '14px', padding: '11px 14px 11px 40px',
+                    fontSize: '13px', color: '#fff', fontFamily: 'inherit', outline: 'none',
+                    transition: 'border-color 0.2s ease, background 0.2s ease',
                   }}
-                  onFocus={e => { e.target.style.borderColor = '#E8321A' }}
-                  onBlur={e => { e.target.style.borderColor = darkMode ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.08)' }}
+                  onFocus={e => { e.target.style.borderColor = '#E8321A'; e.target.style.background = 'rgba(255,255,255,0.15)' }}
+                  onBlur={e => { e.target.style.borderColor = 'rgba(255,255,255,0.12)'; e.target.style.background = 'rgba(255,255,255,0.10)' }}
                 />
-                <svg style={{ position: 'absolute', left: '13px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                <svg style={{ position: 'absolute', left: '13px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
                 {searchQuery && (
-                  <button onClick={() => setSearchQuery('')} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#888', cursor: 'pointer', fontSize: '16px', lineHeight: 1, padding: '0' }}>×</button>
+                  <button onClick={() => setSearchQuery('')} style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)', cursor: 'pointer', fontSize: '16px', lineHeight: 1, padding: '0' }}>×</button>
                 )}
               </div>
+              {/* Filter button */}
+              <button style={{ flexShrink: 0, width: '42px', height: '42px', borderRadius: '14px', background: '#E8321A', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 4px 14px rgba(232,50,26,0.4)' }}>
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/></svg>
+              </button>
             </div>
           </header>
         )
@@ -523,34 +553,11 @@ export default function RestaurantWebsite() {
                   <Flame size={10} color="#fff" />
                   <span style={{ fontSize: '10px', fontWeight: 800, color: '#fff', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Premium Dining</span>
                 </div>
-                <div style={{ fontSize: '20px', fontWeight: 900, color: '#fff', lineHeight: 1.2, marginBottom: '5px', textShadow: '0 2px 12px rgba(0,0,0,0.8)' }}>
+                <div style={{ fontSize: '22px', fontWeight: 900, color: '#fff', lineHeight: 1.2, marginBottom: '6px', textShadow: '0 2px 12px rgba(0,0,0,0.8)' }}>
                   An Unforgettable<br />Culinary Experience
                 </div>
-                <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.7)', lineHeight: 1.4, marginBottom: '14px' }}>
-                  {(restaurant.description || '').slice(0, 60)}{(restaurant.description?.length || 0) > 60 ? '…' : ''}
-                </div>
-                {/* Hero Search Bar */}
-                <div style={{ position: 'relative' }}>
-                  <input
-                    value={searchQuery}
-                    onChange={e => setSearchQuery(e.target.value)}
-                    placeholder="Search dishes, drinks..."
-                    style={{
-                      width: '100%', boxSizing: 'border-box',
-                      background: 'rgba(255,255,255,0.15)',
-                      backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
-                      border: '1.5px solid rgba(255,255,255,0.3)',
-                      borderRadius: '14px', padding: '11px 40px 11px 40px',
-                      fontSize: '13px', color: '#fff', fontFamily: 'inherit', outline: 'none',
-                      transition: 'border-color 0.2s ease, background 0.2s ease',
-                    }}
-                    onFocus={e => { e.target.style.borderColor = '#E8321A'; e.target.style.background = 'rgba(255,255,255,0.22)' }}
-                    onBlur={e => { e.target.style.borderColor = 'rgba(255,255,255,0.3)'; e.target.style.background = 'rgba(255,255,255,0.15)' }}
-                  />
-                  <svg style={{ position: 'absolute', left: '13px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-                  {searchQuery && (
-                    <button onClick={() => setSearchQuery('')} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: '50%', width: '20px', height: '20px', color: '#fff', cursor: 'pointer', fontSize: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
-                  )}
+                <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.7)', lineHeight: 1.5 }}>
+                  {(restaurant.description || '').slice(0, 70)}{(restaurant.description?.length || 0) > 70 ? '…' : ''}
                 </div>
               </div>
               {carouselImages.length > 1 && (
@@ -591,46 +598,98 @@ export default function RestaurantWebsite() {
             )}
           </section>
 
-          {/* ── CATEGORY PILLS ── */}
-          <section style={{ padding: '16px 0 0' }}>
-            <div style={{ overflowX: 'auto', scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}>
-              <div style={{ display: 'flex', gap: '8px', padding: '0 14px', width: 'max-content' }}>
-                {[
-                  { id: 'all', label: '✦ All', icon: null },
-                  { id: 'starters', label: '🥗 Starters', icon: null },
-                  { id: 'mains', label: '🍽 Mains', icon: null },
-                  { id: 'drinks', label: '🍹 Drinks', icon: null },
-                  { id: 'popular', label: '🔥 Popular', icon: null },
-                  { id: 'veg', label: '🌿 Veg', icon: null },
-                ].map(cat => {
-                  const active = activeCategory === cat.id
-                  return (
-                    <button
-                      key={cat.id}
-                      onClick={() => setActiveCategory(cat.id)}
-                      className="category-pill"
-                      style={{
-                        padding: '9px 18px',
-                        borderRadius: '50px',
-                        border: `1.5px solid ${active ? '#E8321A' : (darkMode ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.10)')}`,
-                        background: active ? '#E8321A' : (darkMode ? 'rgba(255,255,255,0.05)' : '#fff'),
-                        color: active ? '#fff' : theme.color,
-                        fontSize: '12px', fontWeight: active ? 700 : 500, cursor: 'pointer',
-                        whiteSpace: 'nowrap', fontFamily: 'inherit',
-                        boxShadow: active ? '0 4px 16px rgba(232,50,26,0.35)' : (darkMode ? 'none' : '0 2px 8px rgba(0,0,0,0.06)'),
-                        transition: 'all 0.2s ease',
-                      }}
-                    >
-                      {cat.label}
-                    </button>
-                  )
-                })}
+          {/* ── CATEGORY ROW: Thumbnail + Pill selector (wireframe style) ── */}
+          {(() => {
+            const CATS = [
+              { id: 'all', label: 'Best Sellers', img: bestsellers[0]?.img },
+              { id: 'starters', label: 'Starters', img: menuData.starters[0]?.img },
+              { id: 'mains', label: 'Main Course', img: menuData.mains[0]?.img },
+              { id: 'drinks', label: 'Drinks', img: menuData.drinks[0]?.img },
+              { id: 'popular', label: '🔥 Popular', img: null },
+              { id: 'veg', label: '🌿 Veg', img: null },
+            ]
+            const activeCat = CATS.find(c => c.id === activeCategory) || CATS[0]
+            const nextCat = () => {
+              const idx = CATS.findIndex(c => c.id === activeCategory)
+              setActiveCategory(CATS[(idx + 1) % CATS.length].id)
+            }
+            return (
+              <section style={{ padding: '16px 14px 0' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  {/* Thumbnail */}
+                  <div style={{
+                    width: '56px', height: '56px', borderRadius: '14px', flexShrink: 0,
+                    background: darkMode ? '#2a2a2a' : '#e8e8e8', overflow: 'hidden',
+                    border: `2px solid ${darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)'}`,
+                  }}>
+                    {activeCat.img ? (
+                      <img src={activeCat.img} alt={activeCat.label} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.target.style.display = 'none' }} />
+                    ) : (
+                      <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <UtensilsCrossed size={22} color={darkMode ? '#444' : '#bbb'} />
+                      </div>
+                    )}
+                  </div>
+                  {/* Scrollable category pills */}
+                  <div style={{ flex: 1, overflowX: 'auto', scrollbarWidth: 'none' }}>
+                    <div style={{ display: 'flex', gap: '8px', width: 'max-content' }}>
+                      {CATS.map(cat => {
+                        const active = activeCategory === cat.id
+                        return (
+                          <button
+                            key={cat.id}
+                            onClick={() => setActiveCategory(cat.id)}
+                            className="category-pill"
+                            style={{
+                              padding: '10px 20px',
+                              borderRadius: '50px',
+                              border: `1.5px solid ${active ? '#E8321A' : (darkMode ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.10)')}`,
+                              background: active ? '#E8321A' : (darkMode ? 'rgba(255,255,255,0.05)' : '#fff'),
+                              color: active ? '#fff' : theme.color,
+                              fontSize: '12px', fontWeight: active ? 700 : 500, cursor: 'pointer',
+                              whiteSpace: 'nowrap', fontFamily: 'inherit',
+                              boxShadow: active ? '0 4px 16px rgba(232,50,26,0.35)' : (darkMode ? 'none' : '0 2px 8px rgba(0,0,0,0.06)'),
+                              transition: 'all 0.25s ease',
+                            }}
+                          >
+                            {cat.label}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                </div>
+              </section>
+            )
+          })()}
+
+          {/* ── 3-COLUMN FOOD GRID (wireframe) ── */}
+          <section style={{ padding: '16px 14px 0' }} className="reveal reveal-3">
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+              <div style={{ fontSize: '16px', fontWeight: 800, color: theme.sectionTitle, letterSpacing: '-0.01em' }}>
+                {activeCategory === 'all' ? 'Best Sellers' :
+                 activeCategory === 'starters' ? 'Starters' :
+                 activeCategory === 'mains' ? 'Main Course' :
+                 activeCategory === 'drinks' ? 'Drinks' :
+                 activeCategory === 'popular' ? 'Popular Picks' : 'Vegetarian'}
               </div>
+              <button onClick={() => setActiveNav('menu')} style={{ display: 'flex', alignItems: 'center', gap: '3px', background: 'none', border: 'none', color: '#E8321A', fontSize: '12px', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                View all <ChevronRight size={13} />
+              </button>
             </div>
+            {bestsellers.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '32px 24px', color: theme.sectionSub, fontSize: '13px' }}>No items match your search</div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
+                {bestsellers.slice(0, 6).map((item, i) => (
+                  <GridFoodCard key={`${activeCategory}-${i}`} item={item} liked={liked[i]} onLike={e => { e.stopPropagation(); setLiked(l => ({ ...l, [i]: !l[i] })) }} theme={theme} darkMode={darkMode} onPress={() => navigate(`/restaurant/${slug}/food/${encodeURIComponent(item.name)}`, { state: { item, returnTab: activeNav, darkMode } })} />
+                ))}
+              </div>
+            )}
           </section>
 
-          {/* Quick Stats */}
-          <section style={{ padding: '14px 14px 0' }} className="reveal reveal-2">
+          {/* Quick Stats (moved below grid) */}
+          <section style={{ padding: '16px 14px 0' }} className="reveal reveal-2">
             <div className="stat-card" style={{ display: 'flex', background: theme.statsBg, border: `1px solid ${theme.statsBorder}`, borderRadius: '16px', padding: '14px 16px', boxShadow: theme.cardShadow }}>
               {[
                 { icon: <Award size={16} color="#FFB800" />, label: restaurant.rating ? `${restaurant.rating} Rating` : 'Top Rated', sub: 'Google Reviews' },
@@ -647,38 +706,6 @@ export default function RestaurantWebsite() {
                 </React.Fragment>
               ))}
             </div>
-          </section>
-
-          {/* Best Sellers */}
-          <section style={{ padding: '20px 0 0' }} className="reveal reveal-3">
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 18px 12px' }}>
-              <div>
-                <div style={{ fontSize: '16px', fontWeight: 800, color: theme.sectionTitle, letterSpacing: '-0.01em' }}>
-                  {activeCategory === 'all' ? 'Best Sellers' :
-                   activeCategory === 'starters' ? 'Starters' :
-                   activeCategory === 'mains' ? 'Main Course' :
-                   activeCategory === 'drinks' ? 'Drinks' :
-                   activeCategory === 'popular' ? '🔥 Popular Picks' : '🌿 Vegetarian'}
-                </div>
-                <div style={{ fontSize: '11px', color: theme.sectionSub, marginTop: '2px' }}>
-                  {bestsellers.length === 0 ? 'No items found' : `${bestsellers.length} items`}
-                </div>
-              </div>
-              <button onClick={() => setActiveNav('menu')} style={{ display: 'flex', alignItems: 'center', gap: '3px', background: 'none', border: 'none', color: '#E8321A', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}>
-                View all <ChevronRight size={13} />
-              </button>
-            </div>
-            {bestsellers.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '32px 24px', color: theme.sectionSub, fontSize: '13px' }}>
-                No items match your search
-              </div>
-            ) : (
-              <div style={{ display: 'flex', gap: '12px', overflowX: 'auto', padding: '0 18px 4px', scrollbarWidth: 'none' }}>
-                {bestsellers.map((item, i) => (
-                  <BestsellerCard key={`${activeCategory}-${i}`} item={item} liked={liked[i]} onLike={() => setLiked(l => ({ ...l, [i]: !l[i] }))} theme={theme} onPress={() => navigate(`/restaurant/${slug}/food/${encodeURIComponent(item.name)}`, { state: { item, returnTab: activeNav, darkMode } })} />
-                ))}
-              </div>
-            )}
           </section>
 
           {/* ── OUR STORY ── */}
@@ -1649,6 +1676,57 @@ export default function RestaurantWebsite() {
           </button>
         ))}
       </nav>
+    </div>
+  )
+}
+
+function GridFoodCard({ item, liked, onLike, theme, darkMode, onPress }) {
+  const fallbackImg = '/menu/wagyu-ribeye.png'
+  const tagColors = { Popular: '#E8321A', Seasonal: '#fbbf24', Vegetarian: '#4ade80', "Chef's Pick": '#a78bfa' }
+  return (
+    <div
+      className="bestseller-card"
+      onClick={onPress}
+      style={{
+        background: theme.bestsellerBg,
+        border: `1px solid ${theme.bestsellerBorder}`,
+        borderRadius: '16px',
+        overflow: 'hidden',
+        cursor: 'pointer',
+        boxShadow: theme.cardShadow,
+      }}
+    >
+      {/* Image */}
+      <div style={{ height: '100px', overflow: 'hidden', position: 'relative' }}>
+        <img
+          src={item.img || fallbackImg}
+          alt={item.name}
+          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', transition: 'transform 0.35s ease' }}
+          onError={e => { e.target.src = fallbackImg }}
+          onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.07)' }}
+          onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)' }}
+        />
+        <button
+          onClick={e => { e.stopPropagation(); onLike(e) }}
+          style={{ position: 'absolute', top: '6px', right: '6px', width: '24px', height: '24px', borderRadius: '50%', background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+        >
+          <Heart size={10} fill={liked ? '#E8321A' : 'transparent'} color={liked ? '#E8321A' : '#aaa'} />
+        </button>
+        {(item.tags?.[0]) && (
+          <div style={{ position: 'absolute', bottom: '5px', left: '5px', background: `${tagColors[item.tags[0]] || '#E8321A'}dd`, backdropFilter: 'blur(4px)', borderRadius: '5px', padding: '2px 5px', fontSize: '8px', fontWeight: 800, color: '#fff', letterSpacing: '0.04em' }}>
+            {item.tags[0]}
+          </div>
+        )}
+      </div>
+      {/* Info */}
+      <div style={{ padding: '8px 9px 10px' }}>
+        <div style={{ fontSize: '11px', fontWeight: 700, color: theme.bestsellerName, lineHeight: 1.3, marginBottom: '4px', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+          {item.name}
+        </div>
+        <div style={{ fontSize: '12px', fontWeight: 800, color: '#E8321A' }}>
+          ₹{(item.price || 0).toLocaleString('en-IN')}
+        </div>
+      </div>
     </div>
   )
 }
