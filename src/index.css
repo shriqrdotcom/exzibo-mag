@@ -147,34 +147,46 @@ img {
   box-shadow: 0 0 8px rgba(34, 197, 94, 0.5);
 }
 
-/* Header scroll animation — class-based so React re-renders can't override */
+/* ── Restaurant header: GPU-composited sticky header ── */
 .restaurant-header {
+  position: sticky;
+  top: 0;
+  will-change: transform;
   transform: translateZ(0);
   -webkit-transform: translateZ(0);
-  will-change: transform;
-  contain: layout style;
   -webkit-backface-visibility: hidden;
   backface-visibility: hidden;
+  transition: background 0.3s ease;
 }
+
+/* Top info row — always visible, fixed height to prevent layout shift */
 .header-top-row {
   min-height: 44px;
   margin-bottom: 12px;
-  transition: margin-bottom 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: margin-bottom 0.25s ease;
 }
-.header-top-row.search-hidden {
+.restaurant-header.header--compact .header-top-row {
   margin-bottom: 0;
 }
+
+/* Search row — GPU-animated via transform + opacity, never display:none */
 .header-search-row {
-  overflow: hidden;
-  max-height: 54px;
+  will-change: transform, opacity;
+  transition: transform 0.25s ease, opacity 0.25s ease, max-height 0.25s ease;
+  transform: translateY(0);
   opacity: 1;
-  will-change: opacity, max-height;
-  transition: max-height 0.28s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease;
+  max-height: 54px;
+  overflow: hidden;
+  pointer-events: auto;
 }
-.header-search-row.search-hidden {
-  max-height: 0;
+.restaurant-header.header--compact .header-search-row {
+  transform: translateY(-12px);
   opacity: 0;
+  max-height: 0;
+  pointer-events: none;
 }
+
+/* Page-level scroll optimisation */
 .restaurant-page {
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-y: contain;

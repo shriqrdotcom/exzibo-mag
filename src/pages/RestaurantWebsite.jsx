@@ -162,43 +162,60 @@ export default function RestaurantWebsite() {
 
   const [searchQuery, setSearchQuery] = useState('')
   const [activeCategory, setActiveCategory] = useState('all')
-  const prevScrollRef = useRef(0)
-  const rafRef = useRef(null)
-  const isSearchHiddenRef = useRef(false)
-  const searchRowRef = useRef(null)
-  const topRowMarginRef = useRef(null)
+  const headerRef = useRef(null)
+  const lastScrollYRef = useRef(0)
+  const tickingRef = useRef(false)
+  const isCompactRef = useRef(false)
 
   useEffect(() => {
-    function onScroll() {
-      if (rafRef.current) return
-      rafRef.current = requestAnimationFrame(() => {
-        rafRef.current = null
-        const current = window.scrollY
-        const prev = prevScrollRef.current
-        const delta = current - prev
-        prevScrollRef.current = current
+    function handleScroll() {
+      const currentScrollY = window.scrollY
 
-        if (current < 50) {
-          // Always show at the top
-          isSearchHiddenRef.current = false
-        } else if (delta > 4) {
-          // Scrolling down meaningfully — hide
-          isSearchHiddenRef.current = true
-        } else if (delta < -4) {
-          // Scrolling up meaningfully — show
-          isSearchHiddenRef.current = false
+      // 15px threshold — ignore micro-movements to prevent jitter
+      if (Math.abs(currentScrollY - lastScrollYRef.current) < 15) {
+        tickingRef.current = false
+        return
+      }
+
+      const header = headerRef.current
+      if (header) {
+        if (currentScrollY < 50) {
+          // Near top — always expand
+          if (isCompactRef.current) {
+            header.classList.remove('header--compact')
+            header.classList.add('header--expanded')
+            isCompactRef.current = false
+          }
+        } else if (currentScrollY > lastScrollYRef.current) {
+          // Scrolling down — go compact
+          if (!isCompactRef.current) {
+            header.classList.add('header--compact')
+            header.classList.remove('header--expanded')
+            isCompactRef.current = true
+          }
+        } else {
+          // Scrolling up — expand
+          if (isCompactRef.current) {
+            header.classList.remove('header--compact')
+            header.classList.add('header--expanded')
+            isCompactRef.current = false
+          }
         }
-        // Small movements / stopped: keep current state
+      }
 
-        searchRowRef.current?.classList.toggle('search-hidden', isSearchHiddenRef.current)
-        topRowMarginRef.current?.classList.toggle('search-hidden', isSearchHiddenRef.current)
-      })
+      lastScrollYRef.current = currentScrollY
+      tickingRef.current = false
     }
+
+    function onScroll() {
+      if (!tickingRef.current) {
+        window.requestAnimationFrame(handleScroll)
+        tickingRef.current = true
+      }
+    }
+
     window.addEventListener('scroll', onScroll, { passive: true })
-    return () => {
-      window.removeEventListener('scroll', onScroll)
-      if (rafRef.current) cancelAnimationFrame(rafRef.current)
-    }
+    return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
   const [bookingForm, setBookingForm] = useState({ name: '', phone: '', email: '', date: '', time: '19:00', guests: 2, occasion: 'Casual Dining', seating: 'Indoor', notes: '' })
@@ -452,15 +469,15 @@ export default function RestaurantWebsite() {
       )}
 
       {/* ── STICKY HEADER CARD ── */}
-      <header className="restaurant-header" style={{
-        position: 'sticky', top: 0, zIndex: 50,
+      <header ref={headerRef} className="restaurant-header header--expanded" style={{
+        zIndex: 50,
         background: darkMode ? '#111' : '#1a1a1a',
         borderRadius: '0 0 22px 22px',
         padding: '12px 16px',
         boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
       }}>
         {/* Row 1: Logo + Name/Location + Buttons — ALWAYS VISIBLE */}
-        <div ref={topRowMarginRef} className="header-top-row" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div className="header-top-row" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           {/* Logo avatar with glow */}
           <div style={{
             width: '44px', height: '44px', borderRadius: '13px', flexShrink: 0,
@@ -501,8 +518,8 @@ export default function RestaurantWebsite() {
           </div>
         </div>
 
-        {/* Row 2: Search bar + Filter — class toggled by scroll handler, never overridden by React */}
-        <div ref={searchRowRef} className="header-search-row">
+        {/* Row 2: Search bar + Filter — GPU-animated via class on parent header */}
+        <div className="header-search-row">
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
             <div style={{ flex: 1, position: 'relative' }}>
               <input
