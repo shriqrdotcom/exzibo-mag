@@ -1052,7 +1052,7 @@ export default function RestaurantWebsite() {
                     </div>
                   </div>
                   {/* Menu button */}
-                  <button onClick={() => setActiveNav('menu')} style={{ flexShrink: 0, background: 'linear-gradient(135deg, #3b82f6, #06b6d4)', color: '#fff', border: 'none', borderRadius: '10px', padding: '8px 16px', fontSize: '12px', fontWeight: 800, cursor: 'pointer', letterSpacing: '0.06em', boxShadow: '0 4px 14px rgba(59,130,246,0.35)' }}>
+                  <button onClick={() => setActiveNav('menu')} style={{ flexShrink: 0, background: '#E8321A', color: '#fff', border: 'none', borderRadius: '10px', padding: '8px 16px', fontSize: '12px', fontWeight: 800, cursor: 'pointer', letterSpacing: '0.06em', fontFamily: 'inherit', boxShadow: '0 4px 14px rgba(232,50,26,0.40)' }}>
                     MENU
                   </button>
                 </div>
