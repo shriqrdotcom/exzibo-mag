@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import {
-  ArrowLeft, Share2, Heart, Star, ShoppingBag, Plus, Minus,
-  CheckCircle, Leaf, Flame, ChevronRight
+  ArrowLeft, Share2, Heart, ShoppingBag, Plus, Minus,
+  CheckCircle, ChevronRight
 } from 'lucide-react'
 
 const FALLBACK_IMG = '/menu/wagyu-ribeye.png'
@@ -197,7 +197,6 @@ export default function FoodDetail() {
     title:         darkMode ? '#fff'                      : '#111',
     subtitle:      darkMode ? '#555'                      : '#888',
     bullet:        darkMode ? 'rgba(255,255,255,0.7)'     : 'rgba(0,0,0,0.62)',
-    reviewColor:   darkMode ? '#666'                      : '#888',
     divider:       darkMode ? 'rgba(255,255,255,0.07)'    : 'rgba(0,0,0,0.07)',
     qtyBg:         darkMode ? 'rgba(255,255,255,0.05)'    : 'rgba(0,0,0,0.04)',
     qtyBorder:     darkMode ? 'rgba(255,255,255,0.08)'    : 'rgba(0,0,0,0.08)',
@@ -401,30 +400,6 @@ export default function FoodDetail() {
           padding: '20px 20px 18px',
           boxShadow: t.cardShadow,
         }}>
-          {/* Rating section */}
-          {loading ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-              <div className="shimmer" style={{ width: '100px', height: '20px', background: t.shimmer }} />
-              <div className="shimmer" style={{ width: '80px', height: '16px', background: t.shimmer }} />
-            </div>
-          ) : (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
-              <div style={{ display: 'flex', gap: '3px' }}>
-                {[1,2,3,4,5].map(s => (
-                  <Star
-                    key={s}
-                    size={16}
-                    fill={s <= 4 ? '#FFB800' : 'transparent'}
-                    color={s <= 4 ? '#FFB800' : (darkMode ? '#444' : '#ccc')}
-                    strokeWidth={s === 5 ? 1.5 : 2}
-                  />
-                ))}
-              </div>
-              <span style={{ fontSize: '14px', fontWeight: 700, color: '#FFB800' }}>4.5</span>
-              <span style={{ fontSize: '12px', color: t.reviewColor, fontWeight: 500 }}>(40 Reviews)</span>
-            </div>
-          )}
-
           {/* Description bullets */}
           {loading ? (
             <div style={{ marginBottom: '18px' }}>
