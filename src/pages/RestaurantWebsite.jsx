@@ -124,7 +124,9 @@ export default function RestaurantWebsite() {
   const [menuData, setMenuData] = useState({ starters: [], mains: [], drinks: [] })
   const [activeNav, setActiveNav] = useState(location.state?.activeNav || 'home')
   const [activeMenuTab, setActiveMenuTab] = useState('starters')
-  const [darkMode, setDarkMode] = useState(false)
+  const [darkMode, setDarkMode] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('exzibo_darkmode') || 'false') } catch { return false }
+  })
   const [carouselIdx, setCarouselIdx] = useState(0)
   const [liked, setLiked] = useState({})
   const [cartItems, setCartItems] = useState([])
@@ -153,6 +155,10 @@ export default function RestaurantWebsite() {
     const cartKey = `exzibo_cart_${slug}`
     localStorage.setItem(cartKey, JSON.stringify(cartItems))
   }, [cartItems, slug])
+
+  useEffect(() => {
+    localStorage.setItem('exzibo_darkmode', JSON.stringify(darkMode))
+  }, [darkMode])
 
   const [bookingForm, setBookingForm] = useState({ name: '', phone: '', email: '', date: '', time: '19:00', guests: 2, occasion: 'Casual Dining', seating: 'Indoor', notes: '' })
   const [bookingSubmitted, setBookingSubmitted] = useState(false)
@@ -496,7 +502,7 @@ export default function RestaurantWebsite() {
             </div>
             <div style={{ display: 'flex', gap: '12px', overflowX: 'auto', padding: '0 18px 4px', scrollbarWidth: 'none' }}>
               {bestsellers.map((item, i) => (
-                <BestsellerCard key={i} item={item} liked={liked[i]} onLike={() => setLiked(l => ({ ...l, [i]: !l[i] }))} theme={theme} onPress={() => navigate(`/restaurant/${slug}/food/${encodeURIComponent(item.name)}`, { state: { item, returnTab: activeNav } })} />
+                <BestsellerCard key={i} item={item} liked={liked[i]} onLike={() => setLiked(l => ({ ...l, [i]: !l[i] }))} theme={theme} onPress={() => navigate(`/restaurant/${slug}/food/${encodeURIComponent(item.name)}`, { state: { item, returnTab: activeNav, darkMode } })} />
               ))}
             </div>
           </section>
@@ -608,7 +614,7 @@ export default function RestaurantWebsite() {
                   theme={theme}
                   onAddToCart={addToCart}
                   cartQty={inCart ? inCart.qty : 0}
-                  onPress={() => navigate(`/restaurant/${slug}/food/${encodeURIComponent(item.name)}`, { state: { item, returnTab: activeNav } })}
+                  onPress={() => navigate(`/restaurant/${slug}/food/${encodeURIComponent(item.name)}`, { state: { item, returnTab: activeNav, darkMode } })}
                 />
               )
             })}

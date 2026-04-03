@@ -71,7 +71,10 @@ export default function FoodDetail() {
   const [imgLoaded, setImgLoaded] = useState(false)
   const [heartBounce, setHeartBounce] = useState(false)
   const [addBtnScale, setAddBtnScale] = useState(false)
-  const [darkMode, setDarkMode] = useState(false)
+  const [darkMode] = useState(() => {
+    if (location.state?.darkMode !== undefined) return location.state.darkMode
+    try { return JSON.parse(localStorage.getItem('exzibo_darkmode') || 'false') } catch { return false }
+  })
   const toastTimer = useRef(null)
 
   useEffect(() => {
@@ -182,9 +185,46 @@ export default function FoodDetail() {
   const tag = item?.tags?.[0] || null
   const tagColors = { Popular: '#E8321A', Seasonal: '#fbbf24', Vegetarian: '#4ade80', 'Gluten Free': '#22c55e', "Chef's Pick": '#a78bfa' }
 
+  const t = {
+    pageBg:        darkMode ? '#0f0f0f'                   : '#f2f2f2',
+    cardBg:        darkMode ? 'rgba(28,28,28,0.97)'       : 'rgba(255,255,255,0.98)',
+    cardBorder:    darkMode ? 'rgba(255,255,255,0.08)'    : 'rgba(0,0,0,0.07)',
+    cardShadow:    darkMode ? '0 8px 40px rgba(0,0,0,0.6)' : '0 4px 20px rgba(0,0,0,0.08)',
+    addonBg:       darkMode ? 'rgba(22,22,22,0.98)'       : '#fff',
+    addonBorder:   darkMode ? 'rgba(255,255,255,0.07)'    : 'rgba(0,0,0,0.07)',
+    addonDivider:  darkMode ? 'rgba(255,255,255,0.06)'    : 'rgba(0,0,0,0.06)',
+    addonRowDiv:   darkMode ? 'rgba(255,255,255,0.04)'    : 'rgba(0,0,0,0.04)',
+    title:         darkMode ? '#fff'                      : '#111',
+    subtitle:      darkMode ? '#555'                      : '#888',
+    bullet:        darkMode ? 'rgba(255,255,255,0.7)'     : 'rgba(0,0,0,0.62)',
+    reviewColor:   darkMode ? '#666'                      : '#888',
+    divider:       darkMode ? 'rgba(255,255,255,0.07)'    : 'rgba(0,0,0,0.07)',
+    qtyBg:         darkMode ? 'rgba(255,255,255,0.05)'    : 'rgba(0,0,0,0.04)',
+    qtyBorder:     darkMode ? 'rgba(255,255,255,0.08)'    : 'rgba(0,0,0,0.08)',
+    qtyBtnBg:      darkMode ? 'rgba(255,255,255,0.06)'    : '#f0f0f0',
+    qtyBtnBorder:  darkMode ? 'rgba(255,255,255,0.10)'    : 'rgba(0,0,0,0.10)',
+    qtyText:       darkMode ? '#fff'                      : '#111',
+    oldPrice:      darkMode ? '#555'                      : '#aaa',
+    addonCheck:    darkMode ? 'rgba(255,255,255,0.15)'    : 'rgba(0,0,0,0.18)',
+    addonLabel:    darkMode ? 'rgba(255,255,255,0.85)'    : '#111',
+    addonPrice:    darkMode ? '#555'                      : '#999',
+    addonTotal:    darkMode ? 'rgba(255,255,255,0.6)'     : 'rgba(0,0,0,0.55)',
+    sugBg:         darkMode ? 'rgba(22,22,22,0.98)'       : '#fff',
+    sugBorder:     darkMode ? 'rgba(255,255,255,0.07)'    : 'rgba(0,0,0,0.07)',
+    sugName:       darkMode ? 'rgba(255,255,255,0.88)'    : '#111',
+    shimmer:       darkMode
+      ? 'linear-gradient(90deg,#1c1c1c 25%,#2a2a2a 50%,#1c1c1c 75%)'
+      : 'linear-gradient(90deg,#e8e8e8 25%,#f0f0f0 50%,#e8e8e8 75%)',
+    toastBg:       darkMode ? 'rgba(20,20,20,0.97)'       : 'rgba(255,255,255,0.98)',
+    toastBorder:   darkMode ? 'rgba(255,255,255,0.10)'    : 'rgba(0,0,0,0.10)',
+    toastTitle:    darkMode ? '#fff'                      : '#111',
+    toastSub:      darkMode ? '#666'                      : '#888',
+    toastShadow:   darkMode ? '0 8px 32px rgba(0,0,0,0.6)' : '0 8px 32px rgba(0,0,0,0.12)',
+  }
+
   return (
     <div style={{
-      background: '#0f0f0f',
+      background: t.pageBg,
       minHeight: '100vh',
       maxWidth: '480px',
       margin: '0 auto',
@@ -233,7 +273,6 @@ export default function FoodDetail() {
         .sug-card { transition: transform 0.18s ease; cursor: pointer; }
         .sug-card:active { transform: scale(0.96); }
         .shimmer {
-          background: linear-gradient(90deg, #1c1c1c 25%, #2a2a2a 50%, #1c1c1c 75%);
           background-size: 400px 100%;
           animation: shimmer 1.4s infinite linear;
           border-radius: 12px;
@@ -244,7 +283,7 @@ export default function FoodDetail() {
       <div style={{ position: 'relative', width: '100%', height: '320px', overflow: 'hidden' }}>
         {/* Skeleton while loading */}
         {(loading || !imgLoaded) && (
-          <div className="shimmer" style={{ position: 'absolute', inset: 0, borderRadius: 0, zIndex: 1 }} />
+          <div className="shimmer" style={{ position: 'absolute', inset: 0, borderRadius: 0, zIndex: 1, background: t.shimmer }} />
         )}
         {!loading && item && (
           <img
@@ -346,8 +385,8 @@ export default function FoodDetail() {
         )}
         {loading && (
           <div style={{ position: 'absolute', bottom: '18px', left: '18px', right: '18px' }}>
-            <div className="shimmer" style={{ height: '28px', width: '60%', marginBottom: '8px' }} />
-            <div className="shimmer" style={{ height: '16px', width: '35%' }} />
+            <div className="shimmer" style={{ height: '28px', width: '60%', marginBottom: '8px', background: t.shimmer }} />
+            <div className="shimmer" style={{ height: '16px', width: '35%', background: t.shimmer }} />
           </div>
         )}
       </div>
@@ -355,18 +394,18 @@ export default function FoodDetail() {
       {/* ── DETAILS CARD ── */}
       <div className="fd-card" style={{ margin: '14px 14px 0', position: 'relative' }}>
         <div style={{
-          background: 'rgba(28,28,28,0.96)',
+          background: t.cardBg,
           backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
-          border: '1px solid rgba(255,255,255,0.08)',
+          border: `1px solid ${t.cardBorder}`,
           borderRadius: '22px',
           padding: '20px 20px 18px',
-          boxShadow: '0 8px 40px rgba(0,0,0,0.6)',
+          boxShadow: t.cardShadow,
         }}>
           {/* Rating section */}
           {loading ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-              <div className="shimmer" style={{ width: '100px', height: '20px' }} />
-              <div className="shimmer" style={{ width: '80px', height: '16px' }} />
+              <div className="shimmer" style={{ width: '100px', height: '20px', background: t.shimmer }} />
+              <div className="shimmer" style={{ width: '80px', height: '16px', background: t.shimmer }} />
             </div>
           ) : (
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
@@ -376,13 +415,13 @@ export default function FoodDetail() {
                     key={s}
                     size={16}
                     fill={s <= 4 ? '#FFB800' : 'transparent'}
-                    color={s <= 4 ? '#FFB800' : '#444'}
+                    color={s <= 4 ? '#FFB800' : (darkMode ? '#444' : '#ccc')}
                     strokeWidth={s === 5 ? 1.5 : 2}
                   />
                 ))}
               </div>
               <span style={{ fontSize: '14px', fontWeight: 700, color: '#FFB800' }}>4.5</span>
-              <span style={{ fontSize: '12px', color: '#666', fontWeight: 500 }}>(40 Reviews)</span>
+              <span style={{ fontSize: '12px', color: t.reviewColor, fontWeight: 500 }}>(40 Reviews)</span>
             </div>
           )}
 
@@ -390,7 +429,7 @@ export default function FoodDetail() {
           {loading ? (
             <div style={{ marginBottom: '18px' }}>
               {[1,2,3].map(i => (
-                <div key={i} className="shimmer" style={{ height: '14px', width: i === 3 ? '50%' : '80%', marginBottom: '8px' }} />
+                <div key={i} className="shimmer" style={{ height: '14px', width: i === 3 ? '50%' : '80%', marginBottom: '8px', background: t.shimmer }} />
               ))}
             </div>
           ) : (
@@ -398,40 +437,40 @@ export default function FoodDetail() {
               {bullets.map((b, i) => (
                 <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', marginBottom: '7px' }}>
                   <div style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#E8321A', marginTop: '6px', flexShrink: 0 }} />
-                  <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.7)', lineHeight: 1.5 }}>{b}</span>
+                  <span style={{ fontSize: '13px', color: t.bullet, lineHeight: 1.5 }}>{b}</span>
                 </div>
               ))}
             </div>
           )}
 
           {/* Divider */}
-          <div style={{ height: '1px', background: 'rgba(255,255,255,0.07)', margin: '0 0 16px' }} />
+          <div style={{ height: '1px', background: t.divider, margin: '0 0 16px' }} />
 
           {/* Price + Qty row */}
           {loading ? (
-            <div className="shimmer" style={{ height: '36px', width: '160px' }} />
+            <div className="shimmer" style={{ height: '36px', width: '160px', background: t.shimmer }} />
           ) : (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div>
-                <div style={{ fontSize: '11px', color: '#666', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '4px' }}>Base Price</div>
+                <div style={{ fontSize: '11px', color: t.subtitle, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '4px' }}>Base Price</div>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
                   <span style={{ fontSize: '26px', fontWeight: 900, color: '#E8321A' }}>₹{(item?.price || 0).toLocaleString('en-IN')}</span>
                   {item?.oldPrice && (
-                    <span style={{ fontSize: '14px', fontWeight: 500, color: '#444', textDecoration: 'line-through' }}>
+                    <span style={{ fontSize: '14px', fontWeight: 500, color: t.oldPrice, textDecoration: 'line-through' }}>
                       ₹{item.oldPrice.toLocaleString('en-IN')}
                     </span>
                   )}
                 </div>
               </div>
               {/* Quantity stepper */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(255,255,255,0.05)', borderRadius: '14px', padding: '6px 8px', border: '1px solid rgba(255,255,255,0.08)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: t.qtyBg, borderRadius: '14px', padding: '6px 8px', border: `1px solid ${t.qtyBorder}` }}>
                 <button
                   onClick={() => setQty(q => Math.max(1, q - 1))}
-                  style={{ width: '30px', height: '30px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.10)', background: 'rgba(255,255,255,0.06)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                  style={{ width: '30px', height: '30px', borderRadius: '10px', border: `1px solid ${t.qtyBtnBorder}`, background: t.qtyBtnBg, color: t.qtyText, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
                 >
                   <Minus size={13} strokeWidth={2.5} />
                 </button>
-                <span style={{ minWidth: '28px', textAlign: 'center', fontSize: '16px', fontWeight: 800, color: '#fff' }}>{qty}</span>
+                <span style={{ minWidth: '28px', textAlign: 'center', fontSize: '16px', fontWeight: 800, color: t.qtyText }}>{qty}</span>
                 <button
                   onClick={() => setQty(q => q + 1)}
                   style={{ width: '30px', height: '30px', borderRadius: '10px', border: 'none', background: '#E8321A', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 3px 10px rgba(232,50,26,0.4)' }}
@@ -447,15 +486,15 @@ export default function FoodDetail() {
       {/* ── ADD-ONS SECTION ── */}
       <div className="fd-addon-card" style={{ margin: '12px 14px 0' }}>
         <div style={{
-          background: 'rgba(22,22,22,0.98)',
-          border: '1px solid rgba(255,255,255,0.07)',
+          background: t.addonBg,
+          border: `1px solid ${t.addonBorder}`,
           borderRadius: '22px',
           overflow: 'hidden',
-          boxShadow: '0 4px 24px rgba(0,0,0,0.4)',
+          boxShadow: t.cardShadow,
         }}>
-          <div style={{ padding: '16px 20px 12px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-            <div style={{ fontSize: '13px', fontWeight: 800, color: '#fff', letterSpacing: '0.04em' }}>Customize your dish</div>
-            <div style={{ fontSize: '11px', color: '#555', marginTop: '2px' }}>Select add-ons to enhance your meal</div>
+          <div style={{ padding: '16px 20px 12px', borderBottom: `1px solid ${t.addonDivider}` }}>
+            <div style={{ fontSize: '13px', fontWeight: 800, color: t.title, letterSpacing: '0.04em' }}>Customize your dish</div>
+            <div style={{ fontSize: '11px', color: t.subtitle, marginTop: '2px' }}>Select add-ons to enhance your meal</div>
           </div>
           {ADD_ONS.map((addon, i) => (
             <div
@@ -465,7 +504,7 @@ export default function FoodDetail() {
               style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                 padding: '14px 20px',
-                borderBottom: i < ADD_ONS.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none',
+                borderBottom: i < ADD_ONS.length - 1 ? `1px solid ${t.addonRowDiv}` : 'none',
                 cursor: 'pointer',
                 borderRadius: i === ADD_ONS.length - 1 ? '0 0 22px 22px' : 0,
               }}
@@ -473,16 +512,16 @@ export default function FoodDetail() {
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <div style={{
                   width: '22px', height: '22px', borderRadius: '7px',
-                  border: `2px solid ${selectedAddOns[addon.id] ? '#E8321A' : 'rgba(255,255,255,0.15)'}`,
+                  border: `2px solid ${selectedAddOns[addon.id] ? '#E8321A' : t.addonCheck}`,
                   background: selectedAddOns[addon.id] ? '#E8321A' : 'transparent',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   flexShrink: 0, transition: 'all 0.15s ease',
                 }}>
                   {selectedAddOns[addon.id] && <CheckCircle size={13} color="#fff" strokeWidth={2.5} />}
                 </div>
-                <span style={{ fontSize: '13px', fontWeight: 600, color: 'rgba(255,255,255,0.85)' }}>{addon.label}</span>
+                <span style={{ fontSize: '13px', fontWeight: 600, color: t.addonLabel }}>{addon.label}</span>
               </div>
-              <span style={{ fontSize: '13px', fontWeight: 700, color: selectedAddOns[addon.id] ? '#E8321A' : '#555' }}>
+              <span style={{ fontSize: '13px', fontWeight: 700, color: selectedAddOns[addon.id] ? '#E8321A' : t.addonPrice }}>
                 +₹{addon.price}
               </span>
             </div>
@@ -499,7 +538,7 @@ export default function FoodDetail() {
             padding: '12px 18px',
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           }}>
-            <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.6)', fontWeight: 600 }}>Add-ons total</span>
+            <span style={{ fontSize: '12px', color: t.addonTotal, fontWeight: 600 }}>Add-ons total</span>
             <span style={{ fontSize: '14px', fontWeight: 800, color: '#E8321A' }}>+₹{addOnTotal}</span>
           </div>
         )}
@@ -509,8 +548,8 @@ export default function FoodDetail() {
       {suggestions.length > 0 && (
         <div className="fd-suggestions" style={{ margin: '18px 0 0' }}>
           <div style={{ padding: '0 14px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ fontSize: '15px', fontWeight: 800, color: '#fff', letterSpacing: '-0.01em' }}>You may also like</div>
-            <ChevronRight size={16} color="#555" />
+            <div style={{ fontSize: '15px', fontWeight: 800, color: t.title, letterSpacing: '-0.01em' }}>You may also like</div>
+            <ChevronRight size={16} color={t.subtitle} />
           </div>
           <div style={{ display: 'flex', gap: '12px', overflowX: 'auto', padding: '0 14px 4px', scrollSnapType: 'x mandatory' }}>
             {suggestions.map((sug, i) => (
@@ -520,10 +559,10 @@ export default function FoodDetail() {
                 onClick={() => handleSuggestionClick(sug)}
                 style={{
                   flexShrink: 0, width: '140px',
-                  background: 'rgba(22,22,22,0.98)',
-                  border: '1px solid rgba(255,255,255,0.07)',
+                  background: t.sugBg,
+                  border: `1px solid ${t.sugBorder}`,
                   borderRadius: '18px', overflow: 'hidden',
-                  boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
+                  boxShadow: t.cardShadow,
                   scrollSnapAlign: 'start',
                 }}
               >
@@ -546,7 +585,7 @@ export default function FoodDetail() {
                   </div>
                 </div>
                 <div style={{ padding: '9px 10px 10px' }}>
-                  <div style={{ fontSize: '11px', fontWeight: 700, color: 'rgba(255,255,255,0.88)', lineHeight: 1.3, marginBottom: '5px', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                  <div style={{ fontSize: '11px', fontWeight: 700, color: t.sugName, lineHeight: 1.3, marginBottom: '5px', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
                     {sug.name}
                   </div>
                   <div style={{ fontSize: '13px', fontWeight: 800, color: '#E8321A' }}>
@@ -599,12 +638,12 @@ export default function FoodDetail() {
           position: 'fixed', bottom: '86px',
           left: '50%', transform: 'translateX(-50%)',
           zIndex: 200,
-          background: 'rgba(20,20,20,0.97)',
-          border: '1px solid rgba(255,255,255,0.10)',
+          background: t.toastBg,
+          border: `1px solid ${t.toastBorder}`,
           borderRadius: '16px',
           padding: '12px 20px',
           display: 'flex', alignItems: 'center', gap: '10px',
-          boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
+          boxShadow: t.toastShadow,
           animation: 'toastIn 0.35s cubic-bezier(0.22,1,0.36,1) both',
           whiteSpace: 'nowrap',
         }}>
@@ -612,8 +651,8 @@ export default function FoodDetail() {
             <CheckCircle size={15} color="#22c55e" strokeWidth={2.5} />
           </div>
           <div>
-            <div style={{ fontSize: '13px', fontWeight: 700, color: '#fff' }}>Added to cart!</div>
-            <div style={{ fontSize: '11px', color: '#666', marginTop: '1px' }}>{qty}× {item?.name?.slice(0, 22)}{(item?.name?.length || 0) > 22 ? '…' : ''}</div>
+            <div style={{ fontSize: '13px', fontWeight: 700, color: t.toastTitle }}>Added to cart!</div>
+            <div style={{ fontSize: '11px', color: t.toastSub, marginTop: '1px' }}>{qty}× {item?.name?.slice(0, 22)}{(item?.name?.length || 0) > 22 ? '…' : ''}</div>
           </div>
         </div>
       )}
