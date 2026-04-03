@@ -258,45 +258,6 @@ export default function FoodDetail() {
         <ArrowLeft size={18} strokeWidth={2.5} />
       </button>
 
-      {/* ── SHARE + FAVORITE FLOATING ── */}
-      <div style={{
-        position: 'fixed', top: '16px', right: '50%',
-        transform: 'translateX(calc(50% - 164px))',
-        zIndex: 100, display: 'flex', gap: '8px',
-      }}>
-        <button
-          onClick={handleShare}
-          style={{
-            width: '40px', height: '40px', borderRadius: '50%',
-            background: 'rgba(0,0,0,0.55)',
-            backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
-            border: '1px solid rgba(255,255,255,0.12)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            cursor: 'pointer',
-          }}
-        >
-          <Share2 size={16} color="#fff" />
-        </button>
-        <button
-          onClick={toggleLike}
-          style={{
-            width: '40px', height: '40px', borderRadius: '50%',
-            background: 'rgba(0,0,0,0.55)',
-            backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
-            border: `1px solid ${liked ? 'rgba(232,50,26,0.35)' : 'rgba(255,255,255,0.12)'}`,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            cursor: 'pointer',
-          }}
-        >
-          <Heart
-            size={16}
-            fill={liked ? '#E8321A' : 'transparent'}
-            color={liked ? '#E8321A' : '#fff'}
-            style={{ animation: heartBounce ? 'heartPop 0.4s ease' : 'none' }}
-          />
-        </button>
-      </div>
-
       {/* ── HERO IMAGE SECTION ── */}
       <div style={{ position: 'relative', width: '100%', height: '320px', overflow: 'hidden' }}>
         {/* Skeleton while loading */}
@@ -321,9 +282,44 @@ export default function FoodDetail() {
           position: 'absolute', inset: 0,
           background: 'linear-gradient(to bottom, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0) 40%, rgba(0,0,0,0.75) 100%)',
         }} />
+        {/* ── FAVOURITE BUTTON — top-right of image ── */}
+        <button
+          onClick={toggleLike}
+          style={{
+            position: 'absolute', top: '14px', right: '14px', zIndex: 10,
+            width: '40px', height: '40px', borderRadius: '50%',
+            background: 'rgba(0,0,0,0.50)',
+            backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
+            border: `1.5px solid ${liked ? 'rgba(232,50,26,0.45)' : 'rgba(255,255,255,0.15)'}`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: 'pointer', transition: 'border-color 0.2s ease',
+          }}
+        >
+          <Heart
+            size={17}
+            fill={liked ? '#E8321A' : 'transparent'}
+            color={liked ? '#E8321A' : '#fff'}
+            style={{ animation: heartBounce ? 'heartPop 0.4s ease' : 'none' }}
+          />
+        </button>
+        {/* ── SHARE BUTTON — bottom-right of image ── */}
+        <button
+          onClick={handleShare}
+          style={{
+            position: 'absolute', bottom: '18px', right: '14px', zIndex: 10,
+            width: '38px', height: '38px', borderRadius: '50%',
+            background: 'rgba(0,0,0,0.50)',
+            backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
+            border: '1.5px solid rgba(255,255,255,0.15)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: 'pointer',
+          }}
+        >
+          <Share2 size={16} color="#fff" />
+        </button>
         {/* Bottom-left overlay text */}
         {!loading && item && (
-          <div style={{ position: 'absolute', bottom: '18px', left: '18px', right: '18px' }}>
+          <div style={{ position: 'absolute', bottom: '18px', left: '18px', right: '70px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
               {/* Veg/non-veg indicator */}
               <div style={{
