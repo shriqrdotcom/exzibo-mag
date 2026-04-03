@@ -239,25 +239,6 @@ export default function FoodDetail() {
         }
       `}</style>
 
-      {/* ── BACK BUTTON FLOATING ── */}
-      <button
-        className="back-btn"
-        onClick={() => navigate(-1)}
-        style={{
-          position: 'fixed', top: '16px', left: '50%',
-          transform: 'translateX(calc(-50% - 164px))',
-          zIndex: 100,
-          width: '40px', height: '40px', borderRadius: '50%',
-          background: 'rgba(0,0,0,0.55)',
-          backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
-          border: '1px solid rgba(255,255,255,0.12)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          cursor: 'pointer', color: '#fff',
-        }}
-      >
-        <ArrowLeft size={18} strokeWidth={2.5} />
-      </button>
-
       {/* ── HERO IMAGE SECTION ── */}
       <div style={{ position: 'relative', width: '100%', height: '320px', overflow: 'hidden' }}>
         {/* Skeleton while loading */}
@@ -282,6 +263,22 @@ export default function FoodDetail() {
           position: 'absolute', inset: 0,
           background: 'linear-gradient(to bottom, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0) 40%, rgba(0,0,0,0.75) 100%)',
         }} />
+        {/* ── BACK BUTTON — top-left of image ── */}
+        <button
+          className="back-btn"
+          onClick={() => navigate(-1)}
+          style={{
+            position: 'absolute', top: '14px', left: '14px', zIndex: 10,
+            width: '40px', height: '40px', borderRadius: '50%',
+            background: 'rgba(0,0,0,0.50)',
+            backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
+            border: '1.5px solid rgba(255,255,255,0.15)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: 'pointer', color: '#fff',
+          }}
+        >
+          <ArrowLeft size={18} strokeWidth={2.5} />
+        </button>
         {/* ── FAVOURITE BUTTON — top-right of image ── */}
         <button
           onClick={toggleLike}
