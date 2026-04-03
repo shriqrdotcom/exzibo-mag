@@ -460,7 +460,7 @@ export default function RestaurantWebsite() {
             width: '44px', height: '44px', borderRadius: '13px', flexShrink: 0,
             background: 'linear-gradient(135deg, #E8321A 0%, #ff6b35 100%)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: '0 0 0 2px rgba(232,50,26,0.25), 0 0 18px 6px rgba(232,50,26,0.45), 0 4px 12px rgba(0,0,0,0.5)',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
             overflow: 'hidden',
           }}>
             {carouselImages[0] ? (
