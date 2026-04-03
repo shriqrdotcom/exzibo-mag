@@ -61,6 +61,7 @@ export default function FoodDetail() {
   const location = useLocation()
 
   const [item, setItem] = useState(location.state?.item || null)
+  const returnTab = location.state?.returnTab || 'menu'
   const [menuData, setMenuData] = useState({ starters: [], mains: [], drinks: [] })
   const [loading, setLoading] = useState(!location.state?.item)
   const [liked, setLiked] = useState(false)
@@ -157,7 +158,7 @@ export default function FoodDetail() {
 
   function handleSuggestionClick(suggested) {
     navigate(`/restaurant/${slug}/food/${encodeURIComponent(suggested.name)}`, {
-      state: { item: suggested },
+      state: { item: suggested, returnTab },
       replace: true,
     })
     setItem(suggested)
@@ -266,7 +267,7 @@ export default function FoodDetail() {
         {/* ── BACK BUTTON — top-left of image ── */}
         <button
           className="back-btn"
-          onClick={() => navigate(-1)}
+          onClick={() => navigate(`/restaurant/${slug}`, { state: { activeNav: returnTab } })}
           style={{
             position: 'absolute', top: '14px', left: '14px', zIndex: 10,
             width: '40px', height: '40px', borderRadius: '50%',

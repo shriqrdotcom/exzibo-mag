@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import {
   Star, MapPin, Bell, ShoppingCart, Home,
   UtensilsCrossed, ClipboardList, CalendarDays,
@@ -118,10 +118,11 @@ function injectOldPrice(item) {
 export default function RestaurantWebsite() {
   const { slug } = useParams()
   const navigate = useNavigate()
+  const location = useLocation()
   const [restaurant, setRestaurant] = useState(null)
   const [notFound, setNotFound] = useState(false)
   const [menuData, setMenuData] = useState({ starters: [], mains: [], drinks: [] })
-  const [activeNav, setActiveNav] = useState('home')
+  const [activeNav, setActiveNav] = useState(location.state?.activeNav || 'home')
   const [activeMenuTab, setActiveMenuTab] = useState('starters')
   const [darkMode, setDarkMode] = useState(false)
   const [carouselIdx, setCarouselIdx] = useState(0)
@@ -495,7 +496,7 @@ export default function RestaurantWebsite() {
             </div>
             <div style={{ display: 'flex', gap: '12px', overflowX: 'auto', padding: '0 18px 4px', scrollbarWidth: 'none' }}>
               {bestsellers.map((item, i) => (
-                <BestsellerCard key={i} item={item} liked={liked[i]} onLike={() => setLiked(l => ({ ...l, [i]: !l[i] }))} theme={theme} onPress={() => navigate(`/restaurant/${slug}/food/${encodeURIComponent(item.name)}`, { state: { item } })} />
+                <BestsellerCard key={i} item={item} liked={liked[i]} onLike={() => setLiked(l => ({ ...l, [i]: !l[i] }))} theme={theme} onPress={() => navigate(`/restaurant/${slug}/food/${encodeURIComponent(item.name)}`, { state: { item, returnTab: activeNav } })} />
               ))}
             </div>
           </section>
@@ -607,7 +608,7 @@ export default function RestaurantWebsite() {
                   theme={theme}
                   onAddToCart={addToCart}
                   cartQty={inCart ? inCart.qty : 0}
-                  onPress={() => navigate(`/restaurant/${slug}/food/${encodeURIComponent(item.name)}`, { state: { item } })}
+                  onPress={() => navigate(`/restaurant/${slug}/food/${encodeURIComponent(item.name)}`, { state: { item, returnTab: activeNav } })}
                 />
               )
             })}
