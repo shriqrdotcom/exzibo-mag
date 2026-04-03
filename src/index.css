@@ -159,14 +159,23 @@ img {
   -webkit-backface-visibility: hidden;
 }
 
-/* Top info row — always visible, no height/margin animation */
+/* Top info row — always visible, spacing is inside wrapper so it collapses too */
 .header-top-row {
   min-height: 44px;
-  margin-bottom: 12px;
 }
 
-/* Search bar — GPU-only animation via body scroll classes */
-/* Never uses display:none, height, or margin animation */
+/* Wrapper collapses the layout space when hidden — overflow + max-height trick */
+/* box-sizing: border-box (global) ensures max-height:0 clips padding too */
+.search-wrapper {
+  overflow: hidden;
+  max-height: 66px;
+  padding-top: 12px;
+  box-sizing: border-box;
+  will-change: max-height, opacity;
+  transition: max-height 0.3s ease, opacity 0.25s ease;
+}
+
+/* Inner row: GPU slide for the visual effect */
 .header-search-row {
   will-change: transform, opacity;
   transition: transform 0.3s ease, opacity 0.3s ease;
@@ -175,19 +184,28 @@ img {
   transform: translateZ(0);
 }
 
-/* At top of page or scrolling up → search visible */
+/* At top or scrolling up → search fully visible, space open */
+body.at-top .search-wrapper,
+body.scroll-up .search-wrapper {
+  max-height: 66px;
+  opacity: 1;
+  pointer-events: auto;
+}
 body.at-top .header-search-row,
 body.scroll-up .header-search-row {
   transform: translateY(0);
   opacity: 1;
-  pointer-events: auto;
 }
 
-/* Scrolling down → search fades and slides up (GPU transform only) */
-body.scroll-down .header-search-row {
-  transform: translateY(-110%);
+/* Scrolling down → space collapses, element slides + fades */
+body.scroll-down .search-wrapper {
+  max-height: 0;
   opacity: 0;
   pointer-events: none;
+}
+body.scroll-down .header-search-row {
+  transform: translateY(-8px);
+  opacity: 0;
 }
 
 /* Page-level scroll optimisation */
