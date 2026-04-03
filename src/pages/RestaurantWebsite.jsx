@@ -440,16 +440,6 @@ export default function RestaurantWebsite() {
         ::placeholder { color: rgba(255,255,255,0.55) !important; }
       `}</style>
 
-      {/* ── ADMIN BACK BAR ── */}
-      {slug !== 'demo' && (
-        <div style={{ background: theme.adminBg, borderBottom: `1px solid ${theme.adminBorder}`, padding: '8px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <button onClick={() => navigate('/restaurants')} style={{ background: 'none', border: 'none', color: '#E8321A', fontSize: '11px', fontWeight: 700, cursor: 'pointer', letterSpacing: '0.06em' }}>
-            ← MY RESTAURANTS
-          </button>
-          <span style={{ fontSize: '10px', color: '#aaa', letterSpacing: '0.04em' }}>ADMIN PREVIEW</span>
-        </div>
-      )}
-
       {/* ── STICKY HEADER CARD ── */}
       <header className="restaurant-header" style={{
         zIndex: 50,
