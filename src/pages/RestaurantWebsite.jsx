@@ -137,6 +137,22 @@ export default function RestaurantWebsite() {
   const [orderHistory, setOrderHistory] = useState([])
   const [viewingHistoryOrder, setViewingHistoryOrder] = useState(null)
 
+  useEffect(() => {
+    const cartKey = `exzibo_cart_${slug}`
+    const saved = localStorage.getItem(cartKey)
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved)
+        if (parsed.length > 0) setCartItems(parsed)
+      } catch (_) {}
+    }
+  }, [slug])
+
+  useEffect(() => {
+    const cartKey = `exzibo_cart_${slug}`
+    localStorage.setItem(cartKey, JSON.stringify(cartItems))
+  }, [cartItems, slug])
+
   const [bookingForm, setBookingForm] = useState({ name: '', phone: '', email: '', date: '', time: '19:00', guests: 2, occasion: 'Casual Dining', seating: 'Indoor', notes: '' })
   const [bookingSubmitted, setBookingSubmitted] = useState(false)
   const [bookingErrors, setBookingErrors] = useState({})
@@ -479,7 +495,7 @@ export default function RestaurantWebsite() {
             </div>
             <div style={{ display: 'flex', gap: '12px', overflowX: 'auto', padding: '0 18px 4px', scrollbarWidth: 'none' }}>
               {bestsellers.map((item, i) => (
-                <BestsellerCard key={i} item={item} liked={liked[i]} onLike={() => setLiked(l => ({ ...l, [i]: !l[i] }))} theme={theme} />
+                <BestsellerCard key={i} item={item} liked={liked[i]} onLike={() => setLiked(l => ({ ...l, [i]: !l[i] }))} theme={theme} onPress={() => navigate(`/restaurant/${slug}/food/${encodeURIComponent(item.name)}`, { state: { item } })} />
               ))}
             </div>
           </section>
@@ -591,6 +607,7 @@ export default function RestaurantWebsite() {
                   theme={theme}
                   onAddToCart={addToCart}
                   cartQty={inCart ? inCart.qty : 0}
+                  onPress={() => navigate(`/restaurant/${slug}/food/${encodeURIComponent(item.name)}`, { state: { item } })}
                 />
               )
             })}
@@ -1455,11 +1472,11 @@ export default function RestaurantWebsite() {
   )
 }
 
-function BestsellerCard({ item, liked, onLike, theme }) {
+function BestsellerCard({ item, liked, onLike, theme, onPress }) {
   const fallbackImg = '/menu/wagyu-ribeye.png'
   const tagColors = { Popular: '#E8321A', Seasonal: '#fbbf24', Vegetarian: '#4ade80', "Chef's Pick": '#a78bfa' }
   return (
-    <div className="food-card" style={{ flexShrink: 0, width: '155px', background: theme.bestsellerBg, border: `1px solid ${theme.bestsellerBorder}`, borderRadius: '16px', overflow: 'hidden', cursor: 'pointer', boxShadow: theme.cardShadow }}>
+    <div className="food-card" onClick={onPress} style={{ flexShrink: 0, width: '155px', background: theme.bestsellerBg, border: `1px solid ${theme.bestsellerBorder}`, borderRadius: '16px', overflow: 'hidden', cursor: 'pointer', boxShadow: theme.cardShadow }}>
       <div style={{ height: '115px', overflow: 'hidden', position: 'relative' }}>
         <img src={item.img || fallbackImg} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} onError={e => { e.target.src = fallbackImg }} />
         <button onClick={e => { e.stopPropagation(); onLike() }} style={{ position: 'absolute', top: '7px', right: '7px', width: '26px', height: '26px', borderRadius: '50%', background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -1485,13 +1502,19 @@ function BestsellerCard({ item, liked, onLike, theme }) {
   )
 }
 
-function MenuCard({ item, theme, onAddToCart, cartQty }) {
+function MenuCard({ item, theme, onAddToCart, cartQty, onPress }) {
   const fallbackImg = '/menu/wagyu-ribeye.png'
   const oldPrice = item.oldPrice || Math.round((item.price || 0) * 1.5)
   return (
     <div className="menu-card" style={{ background: theme.cardBg, border: `1px solid ${theme.cardBorder}`, borderRadius: '18px', marginBottom: '14px', boxShadow: theme.cardShadow, padding: '10px 10px 0' }}>
-      <div style={{ position: 'relative', width: '100%', height: '200px', overflow: 'hidden', borderRadius: '12px' }}>
-        <img src={item.img || fallbackImg} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} onError={e => { e.target.src = fallbackImg }} loading="lazy" />
+      <div onClick={onPress} style={{ position: 'relative', width: '100%', height: '200px', overflow: 'hidden', borderRadius: '12px', cursor: 'pointer' }}>
+        <img src={item.img || fallbackImg} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', transition: 'transform 0.35s ease' }} onError={e => { e.target.src = fallbackImg }} loading="lazy"
+          onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.04)' }}
+          onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)' }}
+        />
+        <div style={{ position: 'absolute', bottom: '10px', right: '10px', background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(6px)', borderRadius: '8px', padding: '4px 10px', fontSize: '10px', fontWeight: 700, color: '#fff', letterSpacing: '0.04em' }}>
+          View Details
+        </div>
       </div>
       <div style={{ padding: '14px 16px 16px' }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', marginBottom: '10px' }}>
