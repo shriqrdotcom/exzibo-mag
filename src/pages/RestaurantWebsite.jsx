@@ -137,6 +137,35 @@ export default function RestaurantWebsite() {
   const [showSuccessPopup, setShowSuccessPopup] = useState(false)
   const [orderNotes, setOrderNotes] = useState('')
   const [orderStatus, setOrderStatus] = useState(1)
+  const [orderHistory, setOrderHistory] = useState([
+    {
+      id: '847291038',
+      items: [
+        { id: 1, name: 'Truffle Beef Carpaccio', price: 2100, qty: 1, img: '/menu/truffle-beef-carpaccio.png' },
+        { id: 2, name: 'Atlantic Oysters', price: 2800, qty: 1, img: '/menu/atlantic-oysters.png' },
+      ],
+      subtotal: 4900, gstAmt: 245, deliveryFee: 0, discountAmt: 0, grandTotal: 5145,
+      itemCount: 2, date: '28/03/2026', couponApplied: false, status: 'DELIVERED',
+    },
+    {
+      id: '563841927',
+      items: [
+        { id: 3, name: 'A5 Wagyu Ribeye', price: 15500, qty: 1, img: '/menu/wagyu-ribeye.png' },
+      ],
+      subtotal: 15500, gstAmt: 775, deliveryFee: 0, discountAmt: 0, grandTotal: 16275,
+      itemCount: 1, date: '22/03/2026', couponApplied: false, status: 'DELIVERED',
+    },
+    {
+      id: '291047583',
+      items: [
+        { id: 5, name: 'Forest Mushroom Risotto', price: 3500, qty: 1, img: '/menu/mushroom-risotto.png' },
+        { id: 6, name: 'Noir Negroni', price: 1850, qty: 1, img: '/menu/noir-negroni.png' },
+      ],
+      subtotal: 5350, gstAmt: 268, deliveryFee: 0, discountAmt: 0, grandTotal: 5618,
+      itemCount: 2, date: '15/03/2026', couponApplied: false, status: 'DELIVERED',
+    },
+  ])
+  const [viewingHistoryOrder, setViewingHistoryOrder] = useState(null)
   const VALID_COUPON = 'SPICE10'
   const COUPON_DISCOUNT_PCT = 10
 
@@ -174,6 +203,9 @@ export default function RestaurantWebsite() {
 
   function handlePlaceOrder() {
     if (cartItems.length === 0) return
+    if (currentOrder) {
+      setOrderHistory(prev => [{ ...currentOrder, status: orderStatus >= 2 ? 'DELIVERED' : 'CONFIRMED' }, ...prev])
+    }
     const orderId = String(Math.floor(100000000 + Math.random() * 900000000))
     const now = new Date()
     const dateStr = now.toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' })
@@ -188,10 +220,12 @@ export default function RestaurantWebsite() {
       itemCount: cartItems.reduce((s, i) => s + i.qty, 0),
       date: dateStr,
       couponApplied,
+      status: 'CONFIRMED',
     }
     setCurrentOrder(order)
     setOrderStatus(1)
     setOrderNotes('')
+    setViewingHistoryOrder(null)
     setShowSuccessPopup(true)
     setCartItems([])
     setCouponApplied(false)
@@ -881,14 +915,97 @@ export default function RestaurantWebsite() {
             .copy-id-btn:hover { color: #E8321A !important; }
           `}</style>
 
+          {/* ── VIEWING HISTORY ORDER DETAIL ── */}
+          {viewingHistoryOrder && (
+            <div style={{ padding: '18px 14px 0', animation: 'fadeIn 0.3s ease' }}>
+              {/* Back + Title */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '18px' }}>
+                <button onClick={() => setViewingHistoryOrder(null)} style={{ width: '36px', height: '36px', borderRadius: '50%', background: theme.cardBg, border: `1px solid ${theme.cardBorder}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 2px 10px rgba(0,0,0,0.10)', flexShrink: 0 }}>
+                  <ArrowLeft size={16} color={theme.color} />
+                </button>
+                <div style={{ fontSize: '20px', fontWeight: 900, color: theme.color, letterSpacing: '-0.01em' }}>Order Detail</div>
+              </div>
+              {/* Order card */}
+              <div style={{ background: theme.cardBg, border: `1px solid ${theme.cardBorder}`, borderRadius: '20px', padding: '14px 16px', boxShadow: theme.cardShadow, marginBottom: '20px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
+                  <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
+                    {viewingHistoryOrder.items.slice(0, 2).map((item, i) => (
+                      <div key={i} style={{ width: '48px', height: '48px', borderRadius: '12px', overflow: 'hidden', background: darkMode ? '#2a2a2a' : '#f0ece8' }}>
+                        <img src={item.img} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.target.src = '/menu/wagyu-ribeye.png' }} />
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: '10px', color: theme.locationColor, fontWeight: 500, marginBottom: '3px' }}>ORDER ID</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ fontSize: '13px', fontWeight: 800, color: theme.color }}>#{viewingHistoryOrder.id}</span>
+                      <button className="copy-id-btn" onClick={() => navigator.clipboard?.writeText(viewingHistoryOrder.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: theme.locationColor, padding: '2px', display: 'flex', alignItems: 'center' }}>
+                        <Copy size={12} />
+                      </button>
+                    </div>
+                  </div>
+                  <div style={{ flexShrink: 0, background: '#22c55e', color: '#fff', borderRadius: '10px', padding: '8px 14px', fontSize: '11px', fontWeight: 800, letterSpacing: '0.06em' }}>
+                    DELIVERED
+                  </div>
+                </div>
+                {/* Full tracker (all done) */}
+                <div>
+                  <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                    <div style={{ position: 'absolute', top: '14px', left: '14px', right: '14px', height: '3px', background: '#E8321A', borderRadius: '2px', zIndex: 0 }} />
+                    {['PLACED', 'CONFIRM', 'DELIVERED'].map((label, i) => (
+                      <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', zIndex: 1, flex: 1 }}>
+                        <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#E8321A', border: '2px solid #E8321A', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 0 4px rgba(232,50,26,0.15)' }}>
+                          <CheckCircle size={14} color="#fff" strokeWidth={2.5} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    {['PLACED', 'CONFIRM', 'DELIVERED'].map((label, i) => (
+                      <div key={i} style={{ flex: 1, textAlign: 'center', fontSize: '9px', fontWeight: 800, color: theme.color, letterSpacing: '0.08em' }}>{label}</div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              {/* Order Details pill */}
+              <div style={{ background: 'linear-gradient(135deg, #0f0f0f 0%, #1c1c1c 50%, #0f0f0f 100%)', borderRadius: '16px', padding: '16px 24px', textAlign: 'center', marginBottom: '16px', boxShadow: '0 4px 20px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                <span style={{ fontSize: '16px', fontWeight: 900, color: '#fff', letterSpacing: '0.18em', textTransform: 'uppercase' }}>Order Details</span>
+              </div>
+              {/* Billing */}
+              <div style={{ background: theme.cardBg, border: `1px solid ${theme.cardBorder}`, borderRadius: '20px', overflow: 'hidden', boxShadow: theme.cardShadow, marginBottom: '14px' }}>
+                <div style={{ padding: '12px 16px', borderBottom: `1px solid ${theme.cardBorder}` }}>
+                  <span style={{ fontSize: '10px', fontWeight: 800, letterSpacing: '0.14em', color: theme.locationColor, textTransform: 'uppercase' }}>Billing Details</span>
+                </div>
+                {[
+                  { label: 'DATE', value: viewingHistoryOrder.date },
+                  { label: 'Total Items', value: `${viewingHistoryOrder.itemCount}  ITEMS` },
+                  { label: 'Sub total', value: `₹${viewingHistoryOrder.subtotal.toLocaleString('en-IN')}  INR` },
+                  { label: 'STATUS', value: 'DELIVERED', highlight: true },
+                ].map(({ label, value, highlight }, i, arr) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 16px', borderBottom: i < arr.length - 1 ? `1px solid ${theme.cardBorder}` : 'none' }}>
+                    <span style={{ fontSize: '13px', color: theme.locationColor, fontWeight: 500 }}>{label}</span>
+                    <span style={{ fontSize: '13px', fontWeight: 700, color: highlight ? '#22c55e' : theme.color }}>{value}</span>
+                  </div>
+                ))}
+              </div>
+              {/* Reorder */}
+              <button className="reorder-btn" onClick={() => { setCartItems(viewingHistoryOrder.items.map(i => ({ ...i }))); setViewingHistoryOrder(null); setActiveNav('cart') }} style={{ width: '100%', background: 'linear-gradient(135deg, #1c1c1c, #2a2a2a)', color: '#fff', border: '1px solid rgba(255,255,255,0.10)', borderRadius: '16px', padding: '15px', fontSize: '14px', fontWeight: 700, cursor: 'pointer', letterSpacing: '0.04em', boxShadow: '0 4px 16px rgba(0,0,0,0.25)', marginBottom: '4px' }}>
+                ↺  Reorder Same Items
+              </button>
+            </div>
+          )}
+
+          {/* ── MAIN ORDERS VIEW (no history order selected) ── */}
+          {!viewingHistoryOrder && (
+            <>
           {/* No order state */}
           {!currentOrder && (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '70px 24px', gap: '14px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '50px 24px 24px', gap: '14px' }}>
               <div style={{ width: '72px', height: '72px', borderRadius: '50%', background: darkMode ? 'rgba(255,255,255,0.05)' : '#f0ece8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <ClipboardList size={30} color={darkMode ? '#555' : '#ccc'} />
               </div>
-              <div style={{ fontSize: '16px', fontWeight: 800, color: theme.color }}>No orders yet</div>
-              <div style={{ fontSize: '13px', color: theme.locationColor, textAlign: 'center', lineHeight: 1.6, maxWidth: '220px' }}>Place an order from the cart to see it here</div>
+              <div style={{ fontSize: '16px', fontWeight: 800, color: theme.color }}>No active order</div>
+              <div style={{ fontSize: '13px', color: theme.locationColor, textAlign: 'center', lineHeight: 1.6, maxWidth: '220px' }}>Place an order from the cart to track it here</div>
               <button onClick={() => setActiveNav('menu')} style={{ marginTop: '8px', background: '#E8321A', color: '#fff', border: 'none', borderRadius: '14px', padding: '12px 28px', fontSize: '13px', fontWeight: 700, cursor: 'pointer', boxShadow: '0 6px 20px rgba(232,50,26,0.35)' }}>
                 Browse Menu
               </button>
@@ -1052,6 +1169,70 @@ export default function RestaurantWebsite() {
                 ↺  Reorder Same Items
               </button>
             </div>
+          )}
+
+          {/* ── RECENT ORDERS HISTORY ── */}
+          {orderHistory.length > 0 && (
+            <div style={{ padding: '28px 14px 8px', animation: 'fadeIn 0.4s ease' }}>
+              {/* Section header */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+                <span style={{ fontSize: '16px', fontWeight: 900, color: theme.color, letterSpacing: '-0.01em' }}>Recent Orders</span>
+                <span style={{ fontSize: '12px', color: theme.locationColor, fontWeight: 500 }}>{orderHistory.length} order{orderHistory.length !== 1 ? 's' : ''}</span>
+              </div>
+              {/* History list */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', background: theme.cardBg, border: `1px solid ${theme.cardBorder}`, borderRadius: '20px', overflow: 'hidden', boxShadow: theme.cardShadow }}>
+                {orderHistory.map((order, idx) => {
+                  const itemNames = order.items.map(i => i.name).join(', ')
+                  const truncated = itemNames.length > 38 ? itemNames.slice(0, 36) + '…' : itemNames
+                  const isLast = idx === orderHistory.length - 1
+                  return (
+                    <button
+                      key={order.id}
+                      onClick={() => setViewingHistoryOrder(order)}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: '14px',
+                        padding: '14px 16px',
+                        background: 'none', border: 'none', cursor: 'pointer',
+                        borderBottom: isLast ? 'none' : `1px solid ${theme.cardBorder}`,
+                        textAlign: 'left', width: '100%',
+                        transition: 'background 0.15s ease',
+                      }}
+                      onMouseEnter={e => e.currentTarget.style.background = darkMode ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)'}
+                      onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                    >
+                      {/* Thumbnail */}
+                      <div style={{ width: '64px', height: '64px', borderRadius: '14px', overflow: 'hidden', background: darkMode ? '#2a2a2a' : '#f0ece8', flexShrink: 0, border: `1px solid ${theme.cardBorder}` }}>
+                        <img
+                          src={order.items[0]?.img}
+                          alt={order.items[0]?.name}
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                          onError={e => { e.target.src = '/menu/wagyu-ribeye.png' }}
+                        />
+                      </div>
+                      {/* Info */}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+                          <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#22c55e', flexShrink: 0 }} />
+                          <span style={{ fontSize: '13px', fontWeight: 800, color: theme.color }}>Delivered on {order.date}</span>
+                        </div>
+                        <div style={{ fontSize: '12px', color: theme.locationColor, fontWeight: 400, lineHeight: 1.4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '180px' }}>
+                          {truncated}
+                        </div>
+                        <div style={{ marginTop: '6px', fontSize: '11px', fontWeight: 700, color: '#E8321A' }}>
+                          ₹{order.grandTotal.toLocaleString('en-IN')}
+                        </div>
+                      </div>
+                      {/* Chevron */}
+                      <ChevronRight size={18} color={theme.locationColor} style={{ flexShrink: 0 }} />
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* close !viewingHistoryOrder wrapper */}
+          </>
           )}
         </div>
       )}
