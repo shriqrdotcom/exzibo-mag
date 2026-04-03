@@ -1,0 +1,127 @@
+Got you — here’s a **clean, single copy-paste prompt** (no extra explanation) that will force Replit to fix the glitch properly 👇
+
+---
+
+## ✅ **COPY THIS PROMPT**
+
+Fix my sticky header glitch completely by rebuilding the scroll behavior to be smooth, stable, and lag-free (production-level quality like Zomato). The current issue is caused by scroll jitter, layout shifts, and inefficient updates.
+
+First, remove all existing scroll logic, event listeners, and any state-based scroll handling. Do not patch the old code — rebuild it cleanly.
+
+Create a scroll system that:
+
+* Detects scroll direction (up/down)
+* Uses a threshold of 10px to prevent micro-jitter
+* Uses `requestAnimationFrame` for smooth updates
+* Uses a passive scroll listener
+* Does NOT trigger updates on every pixel scroll
+
+Use this exact JavaScript logic:
+
+```js
+let lastScrollY = window.scrollY;
+let ticking = false;
+
+function updateScrollState() {
+  const scrollY = window.scrollY;
+
+  if (scrollY <= 10) {
+    document.body.classList.add("at-top");
+    document.body.classList.remove("scroll-down", "scroll-up");
+  } else if (scrollY > lastScrollY + 10) {
+    document.body.classList.add("scroll-down");
+    document.body.classList.remove("scroll-up", "at-top");
+  } else if (scrollY < lastScrollY - 10) {
+    document.body.classList.add("scroll-up");
+    document.body.classList.remove("scroll-down", "at-top");
+  }
+
+  lastScrollY = scrollY;
+  ticking = false;
+}
+
+window.addEventListener("scroll", () => {
+  if (!ticking) {
+    window.requestAnimationFrame(updateScrollState);
+    ticking = true;
+  }
+}, { passive: true });
+```
+
+Now fix the header layout to remove lag:
+
+* Make header fixed and stable (no resizing)
+* Do NOT change header height dynamically
+* Do NOT animate height, margin, or top
+* Only animate internal elements (like search bar)
+
+Use this CSS:
+
+```css
+.header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 80px;
+  z-index: 1000;
+  will-change: transform;
+}
+
+body {
+  padding-top: 80px;
+}
+```
+
+Now implement smooth search bar animation using GPU-based transforms only:
+
+```css
+.search-bar {
+  transition: transform 0.3s ease, opacity 0.3s ease;
+  will-change: transform, opacity;
+}
+
+.scroll-down .search-bar {
+  transform: translateY(-150%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.scroll-up .search-bar,
+.at-top .search-bar {
+  transform: translateY(0);
+  opacity: 1;
+}
+```
+
+Add performance optimizations:
+
+```css
+.header,
+.search-bar {
+  backface-visibility: hidden;
+  transform: translateZ(0);
+}
+```
+
+Strictly avoid:
+
+* display: none
+* height animations
+* frequent React state updates on scroll
+* multiple scroll listeners
+* heavy blur effects
+
+Final result must be:
+
+* zero flicker
+* zero lag
+* smooth hide/show of search bar
+* no layout shifting
+* smooth even during fast scrolling
+
+If any glitch remains, remove all unnecessary animations and ensure only transform + opacity are used.
+
+---
+
+✅ Done — just paste this and it should finally fix your issue.

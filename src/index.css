@@ -151,38 +151,42 @@ img {
 .restaurant-header {
   position: sticky;
   top: 0;
+  z-index: 1000;
   will-change: transform;
   transform: translateZ(0);
   -webkit-transform: translateZ(0);
-  -webkit-backface-visibility: hidden;
   backface-visibility: hidden;
-  transition: background 0.3s ease;
+  -webkit-backface-visibility: hidden;
 }
 
-/* Top info row — always visible, fixed height to prevent layout shift */
+/* Top info row — always visible, no height/margin animation */
 .header-top-row {
   min-height: 44px;
   margin-bottom: 12px;
-  transition: margin-bottom 0.25s ease;
-}
-.restaurant-header.header--compact .header-top-row {
-  margin-bottom: 0;
 }
 
-/* Search row — GPU-animated via transform + opacity, never display:none */
+/* Search bar — GPU-only animation via body scroll classes */
+/* Never uses display:none, height, or margin animation */
 .header-search-row {
   will-change: transform, opacity;
-  transition: transform 0.25s ease, opacity 0.25s ease, max-height 0.25s ease;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  transform: translateZ(0);
+}
+
+/* At top of page or scrolling up → search visible */
+body.at-top .header-search-row,
+body.scroll-up .header-search-row {
   transform: translateY(0);
   opacity: 1;
-  max-height: 54px;
-  overflow: hidden;
   pointer-events: auto;
 }
-.restaurant-header.header--compact .header-search-row {
-  transform: translateY(-12px);
+
+/* Scrolling down → search fades and slides up (GPU transform only) */
+body.scroll-down .header-search-row {
+  transform: translateY(-110%);
   opacity: 0;
-  max-height: 0;
   pointer-events: none;
 }
 

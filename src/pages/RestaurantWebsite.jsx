@@ -162,60 +162,42 @@ export default function RestaurantWebsite() {
 
   const [searchQuery, setSearchQuery] = useState('')
   const [activeCategory, setActiveCategory] = useState('all')
-  const headerRef = useRef(null)
-  const lastScrollYRef = useRef(0)
+  const lastScrollYRef = useRef(window.scrollY)
   const tickingRef = useRef(false)
-  const isCompactRef = useRef(false)
 
   useEffect(() => {
-    function handleScroll() {
-      const currentScrollY = window.scrollY
+    document.body.classList.add('at-top')
 
-      // 15px threshold — ignore micro-movements to prevent jitter
-      if (Math.abs(currentScrollY - lastScrollYRef.current) < 15) {
-        tickingRef.current = false
-        return
+    function updateScrollState() {
+      const scrollY = window.scrollY
+
+      if (scrollY <= 10) {
+        document.body.classList.add('at-top')
+        document.body.classList.remove('scroll-down', 'scroll-up')
+      } else if (scrollY > lastScrollYRef.current + 10) {
+        document.body.classList.add('scroll-down')
+        document.body.classList.remove('scroll-up', 'at-top')
+      } else if (scrollY < lastScrollYRef.current - 10) {
+        document.body.classList.add('scroll-up')
+        document.body.classList.remove('scroll-down', 'at-top')
       }
 
-      const header = headerRef.current
-      if (header) {
-        if (currentScrollY < 50) {
-          // Near top — always expand
-          if (isCompactRef.current) {
-            header.classList.remove('header--compact')
-            header.classList.add('header--expanded')
-            isCompactRef.current = false
-          }
-        } else if (currentScrollY > lastScrollYRef.current) {
-          // Scrolling down — go compact
-          if (!isCompactRef.current) {
-            header.classList.add('header--compact')
-            header.classList.remove('header--expanded')
-            isCompactRef.current = true
-          }
-        } else {
-          // Scrolling up — expand
-          if (isCompactRef.current) {
-            header.classList.remove('header--compact')
-            header.classList.add('header--expanded')
-            isCompactRef.current = false
-          }
-        }
-      }
-
-      lastScrollYRef.current = currentScrollY
+      lastScrollYRef.current = scrollY
       tickingRef.current = false
     }
 
     function onScroll() {
       if (!tickingRef.current) {
-        window.requestAnimationFrame(handleScroll)
+        window.requestAnimationFrame(updateScrollState)
         tickingRef.current = true
       }
     }
 
     window.addEventListener('scroll', onScroll, { passive: true })
-    return () => window.removeEventListener('scroll', onScroll)
+    return () => {
+      window.removeEventListener('scroll', onScroll)
+      document.body.classList.remove('at-top', 'scroll-down', 'scroll-up')
+    }
   }, [])
 
   const [bookingForm, setBookingForm] = useState({ name: '', phone: '', email: '', date: '', time: '19:00', guests: 2, occasion: 'Casual Dining', seating: 'Indoor', notes: '' })
@@ -469,7 +451,7 @@ export default function RestaurantWebsite() {
       )}
 
       {/* ── STICKY HEADER CARD ── */}
-      <header ref={headerRef} className="restaurant-header header--expanded" style={{
+      <header className="restaurant-header" style={{
         zIndex: 50,
         background: darkMode ? '#111' : '#1a1a1a',
         borderRadius: '0 0 22px 22px',
