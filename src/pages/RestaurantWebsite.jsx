@@ -541,7 +541,7 @@ export default function RestaurantWebsite() {
 
       {/* ── MENU VIEW ── */}
       {activeNav === 'menu' && (
-        <div style={{ animation: 'fadeIn 0.3s ease' }}>
+        <div style={{ animation: 'fadeIn 0.3s ease', paddingBottom: cartCount > 0 ? '164px' : '100px', transition: 'padding-bottom 0.3s ease' }}>
 
           {/* Category Tabs */}
           <div style={{ position: 'sticky', top: '64px', zIndex: 40, padding: '12px 14px', background: theme.pageBg, transition: 'background 0.3s ease' }}>
