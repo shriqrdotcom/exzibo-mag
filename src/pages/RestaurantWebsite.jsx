@@ -432,27 +432,21 @@ export default function RestaurantWebsite() {
       {/* ── STICKY HEADER CARD ── */}
       {(() => {
         const scrolled = scrollY > 50
+        const showSearch = !scrolled || scrollDir === 'up'
         return (
           <header style={{
             position: 'sticky', top: 0, zIndex: 50,
             background: darkMode ? '#111' : '#1a1a1a',
             borderRadius: '0 0 22px 22px',
-            padding: scrolled ? '10px 16px 14px' : '14px 16px 18px',
+            padding: '12px 16px',
             boxShadow: '0 8px 32px rgba(0,0,0,0.35)',
             transition: 'padding 0.35s ease',
           }}>
-            {/* Row 1: Logo + Name/Location + Bell */}
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: '12px',
-              overflow: 'hidden',
-              maxHeight: scrolled ? '0px' : '64px',
-              opacity: scrolled ? 0 : 1,
-              marginBottom: scrolled ? '0' : '14px',
-              transition: 'max-height 0.35s ease, opacity 0.25s ease, margin-bottom 0.35s ease',
-            }}>
+            {/* Row 1: Logo + Name/Location + Buttons — ALWAYS VISIBLE */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: showSearch ? '12px' : '0', transition: 'margin-bottom 0.35s ease' }}>
               {/* Logo avatar */}
               <div style={{
-                width: '46px', height: '46px', borderRadius: '14px', flexShrink: 0,
+                width: '44px', height: '44px', borderRadius: '13px', flexShrink: 0,
                 background: 'linear-gradient(135deg, #E8321A 0%, #ff6b35 100%)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 boxShadow: '0 4px 14px rgba(232,50,26,0.4)',
@@ -466,7 +460,7 @@ export default function RestaurantWebsite() {
               </div>
               {/* Name + Location */}
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: '17px', fontWeight: 800, color: '#fff', letterSpacing: '-0.01em', lineHeight: 1.15, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                <div style={{ fontSize: '16px', fontWeight: 800, color: '#fff', letterSpacing: '-0.01em', lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {restaurant.name}
                 </div>
                 <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '3px', marginTop: '2px' }}>
@@ -490,48 +484,39 @@ export default function RestaurantWebsite() {
               </div>
             </div>
 
-            {/* Collapsed name shown when scrolled */}
-            {scrolled && (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px', animation: 'fadeIn 0.2s ease' }}>
-                <div style={{ fontSize: '15px', fontWeight: 800, color: '#fff' }}>{restaurant.name}</div>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <button className="toggle-btn" onClick={() => setDarkMode(d => !d)} style={{ width: '30px', height: '30px', borderRadius: '9px', background: 'rgba(255,255,255,0.10)', border: '1px solid rgba(255,255,255,0.14)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                    {darkMode ? <Sun size={13} color="#FFB800" /> : <Moon size={13} color="rgba(255,255,255,0.7)" />}
-                  </button>
-                  <div style={{ width: '30px', height: '30px', borderRadius: '9px', background: 'rgba(255,255,255,0.10)', border: '1px solid rgba(255,255,255,0.14)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                    <Bell size={13} color="rgba(255,255,255,0.7)" />
-                  </div>
+            {/* Row 2: Search bar + Filter — slides up and hides on scroll down */}
+            <div style={{
+              overflow: 'hidden',
+              maxHeight: showSearch ? '54px' : '0px',
+              opacity: showSearch ? 1 : 0,
+              transition: 'max-height 0.35s ease, opacity 0.28s ease',
+            }}>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <div style={{ flex: 1, position: 'relative' }}>
+                  <input
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                    placeholder="Search dishes, drinks..."
+                    style={{
+                      width: '100%', boxSizing: 'border-box',
+                      background: 'rgba(255,255,255,0.10)',
+                      border: '1.5px solid rgba(255,255,255,0.12)',
+                      borderRadius: '14px', padding: '11px 14px 11px 40px',
+                      fontSize: '13px', color: '#fff', fontFamily: 'inherit', outline: 'none',
+                      transition: 'border-color 0.2s ease, background 0.2s ease',
+                    }}
+                    onFocus={e => { e.target.style.borderColor = '#E8321A'; e.target.style.background = 'rgba(255,255,255,0.15)' }}
+                    onBlur={e => { e.target.style.borderColor = 'rgba(255,255,255,0.12)'; e.target.style.background = 'rgba(255,255,255,0.10)' }}
+                  />
+                  <svg style={{ position: 'absolute', left: '13px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                  {searchQuery && (
+                    <button onClick={() => setSearchQuery('')} style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)', cursor: 'pointer', fontSize: '16px', lineHeight: 1, padding: '0' }}>×</button>
+                  )}
                 </div>
+                <button style={{ flexShrink: 0, width: '42px', height: '42px', borderRadius: '14px', background: '#E8321A', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 4px 14px rgba(232,50,26,0.4)' }}>
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/></svg>
+                </button>
               </div>
-            )}
-
-            {/* Row 2: Search bar + Filter button */}
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-              <div style={{ flex: 1, position: 'relative' }}>
-                <input
-                  value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
-                  placeholder="Search dishes, drinks..."
-                  style={{
-                    width: '100%', boxSizing: 'border-box',
-                    background: 'rgba(255,255,255,0.10)',
-                    border: '1.5px solid rgba(255,255,255,0.12)',
-                    borderRadius: '14px', padding: '11px 14px 11px 40px',
-                    fontSize: '13px', color: '#fff', fontFamily: 'inherit', outline: 'none',
-                    transition: 'border-color 0.2s ease, background 0.2s ease',
-                  }}
-                  onFocus={e => { e.target.style.borderColor = '#E8321A'; e.target.style.background = 'rgba(255,255,255,0.15)' }}
-                  onBlur={e => { e.target.style.borderColor = 'rgba(255,255,255,0.12)'; e.target.style.background = 'rgba(255,255,255,0.10)' }}
-                />
-                <svg style={{ position: 'absolute', left: '13px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-                {searchQuery && (
-                  <button onClick={() => setSearchQuery('')} style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)', cursor: 'pointer', fontSize: '16px', lineHeight: 1, padding: '0' }}>×</button>
-                )}
-              </div>
-              {/* Filter button */}
-              <button style={{ flexShrink: 0, width: '42px', height: '42px', borderRadius: '14px', background: '#E8321A', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 4px 14px rgba(232,50,26,0.4)' }}>
-                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/></svg>
-              </button>
             </div>
           </header>
         )
