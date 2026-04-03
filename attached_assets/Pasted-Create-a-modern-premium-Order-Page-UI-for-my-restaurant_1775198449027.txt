@@ -1,0 +1,121 @@
+Create a modern, premium "Order Page" UI for my restaurant website that matches my existing dark + glassmorphism theme (similar to Zomato/Blinkit style but without delivery tracking complexity).
+
+🔹 PAGE BEHAVIOR (VERY IMPORTANT)
+- When a user clicks "Place Order" from the Cart:
+  1. Show a full-screen success animation popup:
+     - Centered animated checkmark (Lottie or CSS animation)
+     - Text: "Order Placed Successfully 🎉"
+     - Subtext: "Preparing your delicious food..."
+     - Auto redirect after 2 seconds
+  2. Then smoothly transition (fade + slide animation) to the Order Page
+
+---
+
+🔹 ORDER PAGE UI STRUCTURE
+
+1. HEADER
+- Back button (top left, circular, soft shadow)
+- Page title: "Your Order"
+
+---
+
+2. ORDER CARD (TOP SECTION)
+- Rounded glass card (blur background, soft shadow)
+- Left: 2 food item thumbnail placeholders
+- Center:
+  - "ORD ID: 222277789"
+  - Copy icon beside it
+- Right:
+  - Gradient button "MENU" (blue → cyan)
+
+---
+
+3. ORDER STATUS TRACKER (HORIZONTAL)
+- 3 steps:
+  ✔ Placed
+  ✔ Confirm
+  ○ Delivered
+- Use a progress line with icons
+- Active steps = bold + dark
+- Pending = faded gray
+- Smooth animation when progressing
+
+---
+
+4. ORDER DETAILS TITLE
+- Big pill-shaped black gradient button style
+- Text: "ORDER DETAILS"
+- Slight glow + shadow
+
+---
+
+5. BILLING DETAILS CARD
+- Glassmorphism card
+- Sections inside:
+  - Date → 11/04/2026
+  - Total Items → 2 ITEMS
+  - Subtotal → ₹788 INR
+  - Status → CONFIRMED (fix typo, not "conform")
+
+- Proper spacing, aligned left-right layout
+- Use subtle dividers
+
+---
+
+6. ACTION SECTION
+- "Call Waiter" button
+  - Rounded pill design
+  - Left: text
+  - Right: two icons (chat + call)
+  - Hover effect: slight scale + glow
+
+---
+
+7. EMPTY SPACE / NOTES SECTION
+- Large rounded box below
+- Placeholder: "Special instructions or notes..."
+- Light glass effect
+
+---
+
+🔹 ANIMATIONS
+- Page entry: fade + slide up
+- Success popup: scale + bounce checkmark
+- Buttons: hover scale (1.05)
+- Status tracker: animated progress fill
+
+---
+
+🔹 FUNCTIONAL LOGIC
+- Store order data in state (or localStorage)
+- When order is placed:
+  - Save order details
+  - Trigger success animation
+  - Redirect to /orders page
+- Ensure it works EVERY TIME (no reload issues)
+
+---
+
+🔹 DESIGN RULES
+- Use soft shadows + blur (glassmorphism)
+- Rounded corners (20px+)
+- Consistent spacing
+- Font: modern (Poppins / Inter)
+- Colors: dark base + white + blue gradient accents
+
+---
+
+🔹 OPTIONAL IMPROVEMENTS
+- Add "Reorder" button
+- Add live status update simulation (after 5 sec → Delivered)
+- Add order time countdown
+
+---
+
+🔹 TECH STACK
+- React + Tailwind CSS (preferred)
+- Use Framer Motion for animations
+
+---
+
+Make sure everything is responsive and looks premium on mobile.

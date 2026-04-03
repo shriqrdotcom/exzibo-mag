@@ -6,7 +6,8 @@ import {
   Heart, Moon, Sun, ChevronRight, ChevronLeft,
   Phone, Flame, Award, Clock, Users, AtSign,
   Share2, MessageCircle, Globe, Leaf, ExternalLink,
-  Trash2, Minus, Plus, Tag, CheckCircle, ShoppingBag
+  Trash2, Minus, Plus, Tag, CheckCircle, ShoppingBag,
+  Copy, PhoneCall, ArrowLeft
 } from 'lucide-react'
 
 const FALLBACK_IMAGES = [
@@ -132,6 +133,10 @@ export default function RestaurantWebsite() {
   const [couponInput, setCouponInput] = useState('')
   const [couponApplied, setCouponApplied] = useState(false)
   const [couponError, setCouponError] = useState('')
+  const [currentOrder, setCurrentOrder] = useState(null)
+  const [showSuccessPopup, setShowSuccessPopup] = useState(false)
+  const [orderNotes, setOrderNotes] = useState('')
+  const [orderStatus, setOrderStatus] = useState(1)
   const VALID_COUPON = 'SPICE10'
   const COUPON_DISCOUNT_PCT = 10
 
@@ -165,6 +170,37 @@ export default function RestaurantWebsite() {
       if (existing) return prev.map(c => c.name === item.name ? { ...c, qty: c.qty + 1 } : c)
       return [...prev, { id: Date.now(), name: item.name, price: item.price, qty: 1, img: item.img || '/menu/wagyu-ribeye.png' }]
     })
+  }
+
+  function handlePlaceOrder() {
+    if (cartItems.length === 0) return
+    const orderId = String(Math.floor(100000000 + Math.random() * 900000000))
+    const now = new Date()
+    const dateStr = now.toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' })
+    const order = {
+      id: orderId,
+      items: [...cartItems],
+      subtotal,
+      gstAmt,
+      deliveryFee,
+      discountAmt,
+      grandTotal,
+      itemCount: cartItems.reduce((s, i) => s + i.qty, 0),
+      date: dateStr,
+      couponApplied,
+    }
+    setCurrentOrder(order)
+    setOrderStatus(1)
+    setOrderNotes('')
+    setShowSuccessPopup(true)
+    setCartItems([])
+    setCouponApplied(false)
+    setCouponInput('')
+    setTimeout(() => {
+      setShowSuccessPopup(false)
+      setActiveNav('orders')
+    }, 2500)
+    setTimeout(() => setOrderStatus(2), 8000)
   }
 
   const theme = buildTheme(darkMode)
@@ -262,6 +298,9 @@ export default function RestaurantWebsite() {
         @keyframes spin { to { transform: rotate(360deg) } }
         @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes successPop { 0% { transform: scale(0.6); opacity: 0; } 60% { transform: scale(1.08); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
+        @keyframes checkDraw { 0% { stroke-dashoffset: 80; opacity: 0; } 40% { opacity: 1; } 100% { stroke-dashoffset: 0; opacity: 1; } }
+        @keyframes statusBounce { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.15); } }
         .menu-card { animation: fadeUp 0.35s ease both; }
         .menu-card:nth-child(1) { animation-delay: 0ms; }
         .menu-card:nth-child(2) { animation-delay: 60ms; }
@@ -776,6 +815,7 @@ export default function RestaurantWebsite() {
                 {/* Place Order button */}
                 <button
                   className="checkout-btn"
+                  onClick={handlePlaceOrder}
                   style={{
                     width: '100%',
                     background: '#E8321A',
@@ -811,15 +851,208 @@ export default function RestaurantWebsite() {
 
       {/* ── ORDERS VIEW ── */}
       {activeNav === 'orders' && (
-        <div style={{ animation: 'fadeIn 0.3s ease', padding: '22px 18px' }}>
-          <div style={{ fontSize: '22px', fontWeight: 900, color: theme.color, marginBottom: '20px', letterSpacing: '-0.01em' }}>Your Orders</div>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 24px', gap: '12px' }}>
-            <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: darkMode ? 'rgba(255,255,255,0.05)' : '#f0ece8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <ClipboardList size={28} color={darkMode ? '#555' : '#ccc'} />
+        <div style={{ animation: 'fadeIn 0.35s ease', paddingBottom: '90px' }}>
+          <style>{`
+            @keyframes checkDraw {
+              0% { stroke-dashoffset: 80; opacity: 0; }
+              40% { opacity: 1; }
+              100% { stroke-dashoffset: 0; opacity: 1; }
+            }
+            @keyframes successPop {
+              0% { transform: scale(0.6); opacity: 0; }
+              60% { transform: scale(1.08); opacity: 1; }
+              100% { transform: scale(1); opacity: 1; }
+            }
+            @keyframes progressFill {
+              from { width: 0%; }
+              to { width: 100%; }
+            }
+            @keyframes statusBounce {
+              0%, 100% { transform: scale(1); }
+              50% { transform: scale(1.15); }
+            }
+            .waiter-btn { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+            .waiter-btn:hover { transform: scale(1.03); box-shadow: 0 8px 24px rgba(0,0,0,0.18) !important; }
+            .waiter-btn:active { transform: scale(0.97); }
+            .reorder-btn { transition: background 0.2s ease, transform 0.15s ease; }
+            .reorder-btn:hover { opacity: 0.88; transform: scale(1.02); }
+            .reorder-btn:active { transform: scale(0.97); }
+            .copy-id-btn { transition: color 0.15s ease; }
+            .copy-id-btn:hover { color: #E8321A !important; }
+          `}</style>
+
+          {/* No order state */}
+          {!currentOrder && (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '70px 24px', gap: '14px' }}>
+              <div style={{ width: '72px', height: '72px', borderRadius: '50%', background: darkMode ? 'rgba(255,255,255,0.05)' : '#f0ece8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <ClipboardList size={30} color={darkMode ? '#555' : '#ccc'} />
+              </div>
+              <div style={{ fontSize: '16px', fontWeight: 800, color: theme.color }}>No orders yet</div>
+              <div style={{ fontSize: '13px', color: theme.locationColor, textAlign: 'center', lineHeight: 1.6, maxWidth: '220px' }}>Place an order from the cart to see it here</div>
+              <button onClick={() => setActiveNav('menu')} style={{ marginTop: '8px', background: '#E8321A', color: '#fff', border: 'none', borderRadius: '14px', padding: '12px 28px', fontSize: '13px', fontWeight: 700, cursor: 'pointer', boxShadow: '0 6px 20px rgba(232,50,26,0.35)' }}>
+                Browse Menu
+              </button>
             </div>
-            <div style={{ fontSize: '15px', fontWeight: 800, color: theme.color }}>No orders yet</div>
-            <div style={{ fontSize: '13px', color: theme.locationColor, textAlign: 'center', lineHeight: 1.6 }}>Your past orders will show up here</div>
-          </div>
+          )}
+
+          {/* Order page */}
+          {currentOrder && (
+            <div style={{ padding: '18px 14px 0' }}>
+
+              {/* Back + Title */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '18px' }}>
+                <button onClick={() => setActiveNav('home')} style={{ width: '36px', height: '36px', borderRadius: '50%', background: theme.cardBg, border: `1px solid ${theme.cardBorder}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 2px 10px rgba(0,0,0,0.10)', flexShrink: 0 }}>
+                  <ArrowLeft size={16} color={theme.color} />
+                </button>
+                <div style={{ fontSize: '20px', fontWeight: 900, color: theme.color, letterSpacing: '-0.01em' }}>Your Order</div>
+              </div>
+
+              {/* ── ORDER CARD ── */}
+              <div style={{ background: theme.cardBg, border: `1px solid ${theme.cardBorder}`, borderRadius: '20px', padding: '14px 16px', boxShadow: theme.cardShadow, marginBottom: '20px' }}>
+                {/* Top row: thumbnails + ID + menu btn */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
+                  {/* Food thumbs */}
+                  <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
+                    {currentOrder.items.slice(0, 2).map((item, i) => (
+                      <div key={i} style={{ width: '48px', height: '48px', borderRadius: '12px', overflow: 'hidden', background: darkMode ? '#2a2a2a' : '#f0ece8' }}>
+                        <img src={item.img} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.target.src = '/menu/wagyu-ribeye.png' }} />
+                      </div>
+                    ))}
+                  </div>
+                  {/* Order ID */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: '10px', color: theme.locationColor, fontWeight: 500, marginBottom: '3px' }}>ORDER ID</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ fontSize: '13px', fontWeight: 800, color: theme.color, letterSpacing: '0.02em' }}>#{currentOrder.id}</span>
+                      <button
+                        className="copy-id-btn"
+                        onClick={() => navigator.clipboard?.writeText(currentOrder.id)}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: theme.locationColor, padding: '2px', display: 'flex', alignItems: 'center' }}
+                        title="Copy order ID"
+                      >
+                        <Copy size={12} />
+                      </button>
+                    </div>
+                  </div>
+                  {/* Menu button */}
+                  <button onClick={() => setActiveNav('menu')} style={{ flexShrink: 0, background: 'linear-gradient(135deg, #3b82f6, #06b6d4)', color: '#fff', border: 'none', borderRadius: '10px', padding: '8px 16px', fontSize: '12px', fontWeight: 800, cursor: 'pointer', letterSpacing: '0.06em', boxShadow: '0 4px 14px rgba(59,130,246,0.35)' }}>
+                    MENU
+                  </button>
+                </div>
+
+                {/* ── STATUS TRACKER ── */}
+                {(() => {
+                  const steps = [
+                    { label: 'PLACED', done: true },
+                    { label: 'CONFIRM', done: orderStatus >= 1 },
+                    { label: 'DELIVERED', done: orderStatus >= 2 },
+                  ]
+                  return (
+                    <div>
+                      <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                        {/* Progress track */}
+                        <div style={{ position: 'absolute', top: '14px', left: '14px', right: '14px', height: '3px', background: darkMode ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.08)', borderRadius: '2px', zIndex: 0 }}>
+                          <div style={{ height: '100%', borderRadius: '2px', background: '#E8321A', width: orderStatus === 0 ? '0%' : orderStatus === 1 ? '50%' : '100%', transition: 'width 0.8s ease' }} />
+                        </div>
+                        {steps.map((step, i) => (
+                          <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', zIndex: 1, flex: 1 }}>
+                            <div style={{
+                              width: '28px', height: '28px', borderRadius: '50%',
+                              background: step.done ? '#E8321A' : (darkMode ? 'rgba(255,255,255,0.10)' : '#e5e0db'),
+                              border: `2px solid ${step.done ? '#E8321A' : (darkMode ? 'rgba(255,255,255,0.15)' : '#ddd')}`,
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              boxShadow: step.done ? '0 0 0 4px rgba(232,50,26,0.15)' : 'none',
+                              animation: step.done ? 'statusBounce 0.5s ease' : 'none',
+                              transition: 'all 0.4s ease',
+                            }}>
+                              {step.done
+                                ? <CheckCircle size={14} color="#fff" strokeWidth={2.5} />
+                                : <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: darkMode ? 'rgba(255,255,255,0.25)' : '#ccc' }} />
+                              }
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        {steps.map((step, i) => (
+                          <div key={i} style={{ flex: 1, textAlign: 'center', fontSize: '9px', fontWeight: step.done ? 800 : 600, color: step.done ? theme.color : theme.locationColor, letterSpacing: '0.08em' }}>
+                            {step.label}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )
+                })()}
+              </div>
+
+              {/* ── ORDER DETAILS PILL ── */}
+              <div style={{ background: 'linear-gradient(135deg, #0f0f0f 0%, #1c1c1c 50%, #0f0f0f 100%)', borderRadius: '16px', padding: '16px 24px', textAlign: 'center', marginBottom: '16px', boxShadow: '0 4px 20px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                <span style={{ fontSize: '16px', fontWeight: 900, color: '#fff', letterSpacing: '0.18em', textTransform: 'uppercase', textShadow: '0 0 20px rgba(255,255,255,0.2)' }}>Order Details</span>
+              </div>
+
+              {/* ── BILLING DETAILS CARD ── */}
+              <div style={{ background: theme.cardBg, border: `1px solid ${theme.cardBorder}`, borderRadius: '20px', overflow: 'hidden', boxShadow: theme.cardShadow, marginBottom: '14px' }}>
+                <div style={{ padding: '12px 16px', borderBottom: `1px solid ${theme.cardBorder}` }}>
+                  <span style={{ fontSize: '10px', fontWeight: 800, letterSpacing: '0.14em', color: theme.locationColor, textTransform: 'uppercase' }}>Billing Details</span>
+                </div>
+                {[
+                  { label: 'DATE', value: currentOrder.date },
+                  { label: 'Total Items', value: `${currentOrder.itemCount}  ITEMS` },
+                  { label: 'Sub total', value: `₹${currentOrder.subtotal.toLocaleString('en-IN')}  INR` },
+                  { label: 'STATUS', value: orderStatus >= 2 ? 'DELIVERED' : 'CONFIRMED', highlight: true },
+                ].map(({ label, value, highlight }, i, arr) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 16px', borderBottom: i < arr.length - 1 ? `1px solid ${theme.cardBorder}` : 'none' }}>
+                    <span style={{ fontSize: '13px', color: theme.locationColor, fontWeight: 500 }}>{label}</span>
+                    <span style={{ fontSize: '13px', fontWeight: 700, color: highlight ? '#22c55e' : theme.color }}>{value}</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* ── CALL WAITER ── */}
+              <div
+                className="waiter-btn"
+                style={{ background: theme.cardBg, border: `1px solid ${theme.cardBorder}`, borderRadius: '18px', padding: '16px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', boxShadow: theme.cardShadow, cursor: 'pointer' }}
+              >
+                <span style={{ fontSize: '15px', fontWeight: 700, color: theme.color }}>Call Waiter</span>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: darkMode ? 'rgba(255,255,255,0.07)' : '#f5f1ee', border: `1px solid ${theme.cardBorder}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <MessageCircle size={16} color={theme.locationColor} />
+                  </div>
+                  <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#1a1a1a', border: '1px solid #333', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.3)' }}>
+                    <PhoneCall size={16} color="#fff" />
+                  </div>
+                </div>
+              </div>
+
+              {/* ── NOTES / REORDER ── */}
+              <textarea
+                value={orderNotes}
+                onChange={e => setOrderNotes(e.target.value)}
+                placeholder="Special instructions or notes..."
+                rows={4}
+                style={{
+                  width: '100%', background: theme.cardBg, border: `1px solid ${theme.cardBorder}`,
+                  borderRadius: '18px', padding: '16px', fontSize: '13px', color: theme.color,
+                  fontFamily: 'inherit', resize: 'none', boxShadow: theme.cardShadow, outline: 'none',
+                  marginBottom: '14px', boxSizing: 'border-box', lineHeight: 1.6,
+                }}
+              />
+
+              {/* Reorder button */}
+              <button
+                className="reorder-btn"
+                onClick={() => {
+                  if (currentOrder) {
+                    setCartItems(currentOrder.items.map(i => ({ ...i })))
+                    setActiveNav('cart')
+                  }
+                }}
+                style={{ width: '100%', background: 'linear-gradient(135deg, #1c1c1c, #2a2a2a)', color: '#fff', border: '1px solid rgba(255,255,255,0.10)', borderRadius: '16px', padding: '15px', fontSize: '14px', fontWeight: 700, cursor: 'pointer', letterSpacing: '0.04em', boxShadow: '0 4px 16px rgba(0,0,0,0.25)' }}
+              >
+                ↺  Reorder Same Items
+              </button>
+            </div>
+          )}
         </div>
       )}
 
@@ -842,6 +1075,50 @@ export default function RestaurantWebsite() {
         </div>
       )}
 
+
+      {/* ── SUCCESS POPUP OVERLAY ── */}
+      {showSuccessPopup && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 200,
+          background: 'rgba(0,0,0,0.72)',
+          backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          animation: 'fadeIn 0.2s ease',
+        }}>
+          <div style={{
+            background: 'linear-gradient(160deg, #1a1a1a 0%, #111 100%)',
+            border: '1px solid rgba(255,255,255,0.10)',
+            borderRadius: '28px',
+            padding: '40px 36px',
+            textAlign: 'center',
+            maxWidth: '300px',
+            width: '85%',
+            boxShadow: '0 24px 64px rgba(0,0,0,0.6)',
+            animation: 'successPop 0.45s cubic-bezier(0.34,1.56,0.64,1) both',
+          }}>
+            {/* Animated checkmark */}
+            <div style={{ marginBottom: '20px', display: 'flex', justifyContent: 'center' }}>
+              <svg width="72" height="72" viewBox="0 0 72 72">
+                <circle cx="36" cy="36" r="33" fill="none" stroke="rgba(34,197,94,0.18)" strokeWidth="4" />
+                <circle cx="36" cy="36" r="33" fill="none" stroke="#22c55e" strokeWidth="4"
+                  strokeDasharray="207" strokeDashoffset="207"
+                  style={{ animation: 'checkDraw 0.6s 0.15s ease forwards', strokeLinecap: 'round' }}
+                />
+                <polyline points="22,36 32,46 50,28" fill="none" stroke="#22c55e" strokeWidth="4.5" strokeLinecap="round" strokeLinejoin="round"
+                  strokeDasharray="80" strokeDashoffset="80"
+                  style={{ animation: 'checkDraw 0.5s 0.5s ease forwards' }}
+                />
+              </svg>
+            </div>
+            <div style={{ fontSize: '20px', fontWeight: 900, color: '#fff', marginBottom: '8px', letterSpacing: '-0.01em' }}>
+              Order Placed! 🎉
+            </div>
+            <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.55)', lineHeight: 1.6 }}>
+              Preparing your delicious food…
+            </div>
+          </div>
+        </div>
+      )}
 
       <nav style={{
         position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)',
