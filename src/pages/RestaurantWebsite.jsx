@@ -164,6 +164,7 @@ export default function RestaurantWebsite() {
   const [activeCategory, setActiveCategory] = useState('all')
   const prevScrollRef = useRef(0)
   const rafRef = useRef(null)
+  const isSearchHiddenRef = useRef(false)
   const searchRowRef = useRef(null)
   const topRowMarginRef = useRef(null)
 
@@ -174,13 +175,23 @@ export default function RestaurantWebsite() {
         rafRef.current = null
         const current = window.scrollY
         const prev = prevScrollRef.current
-        const goingDown = current > prev
-        const scrolled = current > 50
+        const delta = current - prev
         prevScrollRef.current = current
 
-        const hideSearch = scrolled && goingDown
-        searchRowRef.current?.classList.toggle('search-hidden', hideSearch)
-        topRowMarginRef.current?.classList.toggle('search-hidden', hideSearch)
+        if (current < 50) {
+          // Always show at the top
+          isSearchHiddenRef.current = false
+        } else if (delta > 4) {
+          // Scrolling down meaningfully — hide
+          isSearchHiddenRef.current = true
+        } else if (delta < -4) {
+          // Scrolling up meaningfully — show
+          isSearchHiddenRef.current = false
+        }
+        // Small movements / stopped: keep current state
+
+        searchRowRef.current?.classList.toggle('search-hidden', isSearchHiddenRef.current)
+        topRowMarginRef.current?.classList.toggle('search-hidden', isSearchHiddenRef.current)
       })
     }
     window.addEventListener('scroll', onScroll, { passive: true })
