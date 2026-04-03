@@ -160,6 +160,25 @@ export default function RestaurantWebsite() {
     localStorage.setItem('exzibo_darkmode', JSON.stringify(darkMode))
   }, [darkMode])
 
+  const [scrollY, setScrollY] = useState(0)
+  const [scrollDir, setScrollDir] = useState('up')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [activeCategory, setActiveCategory] = useState('all')
+  const prevScrollRef = useRef(0)
+
+  useEffect(() => {
+    function handleScroll() {
+      const current = window.scrollY
+      if (Math.abs(current - prevScrollRef.current) > 2) {
+        setScrollDir(current > prevScrollRef.current ? 'down' : 'up')
+      }
+      setScrollY(current)
+      prevScrollRef.current = current
+    }
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
+
   const [bookingForm, setBookingForm] = useState({ name: '', phone: '', email: '', date: '', time: '19:00', guests: 2, occasion: 'Casual Dining', seating: 'Indoor', notes: '' })
   const [bookingSubmitted, setBookingSubmitted] = useState(false)
   const [bookingErrors, setBookingErrors] = useState({})
@@ -299,7 +318,27 @@ export default function RestaurantWebsite() {
   const carouselImages = restaurant?.images?.length ? restaurant.images : FALLBACK_IMAGES
   const allItems = [...menuData.starters, ...menuData.mains, ...menuData.drinks]
   const tagged = allItems.filter(m => m.tags?.some(t => ['Popular', 'Seasonal', "Chef's Pick"].includes(t)))
-  const bestsellers = (tagged.length > 0 ? tagged : allItems).slice(0, 6)
+
+  const getCategoryItems = () => {
+    const q = searchQuery.trim().toLowerCase()
+    let base = []
+    switch (activeCategory) {
+      case 'starters': base = menuData.starters; break
+      case 'mains': base = menuData.mains; break
+      case 'drinks': base = menuData.drinks; break
+      case 'popular': base = allItems.filter(m => m.tags?.some(t => ['Popular', "Chef's Pick"].includes(t))); break
+      case 'veg': base = allItems.filter(m => m.veg); break
+      default: base = tagged.length > 0 ? tagged : allItems
+    }
+    if (q) base = base.filter(m => m.name.toLowerCase().includes(q) || (m.description || '').toLowerCase().includes(q))
+    return base.slice(0, 6)
+  }
+  const bestsellers = getCategoryItems()
+
+  const searchFilteredAll = searchQuery.trim()
+    ? allItems.filter(m => m.name.toLowerCase().includes(searchQuery.toLowerCase()) || (m.description || '').toLowerCase().includes(searchQuery.toLowerCase()))
+    : null
+
   const activeMenuItems = menuData[activeMenuTab] || []
 
   if (notFound) {
@@ -361,6 +400,23 @@ export default function RestaurantWebsite() {
         .toggle-btn:active { transform: scale(0.9); }
         .food-card { transition: transform 0.2s ease; }
         .food-card:active { transform: scale(0.97); }
+        .category-pill:hover { transform: translateY(-1px); }
+        .category-pill:active { transform: scale(0.95); }
+        .bestseller-card { transition: transform 0.22s ease, box-shadow 0.22s ease; }
+        .bestseller-card:hover { transform: translateY(-4px) scale(1.02); box-shadow: 0 12px 32px rgba(0,0,0,0.22) !important; }
+        .bestseller-card:active { transform: scale(0.97); }
+        .action-btn { transition: transform 0.15s ease, box-shadow 0.15s ease; }
+        .action-btn:hover { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(232,50,26,0.48) !important; }
+        .action-btn:active { transform: scale(0.97); }
+        .stat-card { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+        .stat-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.12) !important; }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
+        .reveal { animation: slideUp 0.45s ease both; }
+        .reveal-1 { animation-delay: 0ms; }
+        .reveal-2 { animation-delay: 80ms; }
+        .reveal-3 { animation-delay: 160ms; }
+        .reveal-4 { animation-delay: 240ms; }
+        ::placeholder { color: rgba(255,255,255,0.55) !important; }
       `}</style>
 
       {/* ── ADMIN BACK BAR ── */}
@@ -374,47 +430,89 @@ export default function RestaurantWebsite() {
       )}
 
       {/* ── STICKY HEADER ── */}
-      <header style={{
-        position: 'sticky', top: 0, zIndex: 50,
-        background: theme.headerBg,
-        backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
-        borderBottom: `1px solid ${theme.headerBorder}`,
-        padding: '12px 18px',
-        transition: 'background 0.3s ease, border-color 0.3s ease',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div>
-            <div style={{ fontSize: '10px', color: theme.locationColor, fontWeight: 500, letterSpacing: '0.04em', marginBottom: '2px', display: 'flex', alignItems: 'center', gap: '3px' }}>
-              <MapPin size={9} color="#E8321A" />
-              {restaurant.location || 'Fine Dining'}
-            </div>
-            <div style={{ fontSize: '18px', fontWeight: 800, color: theme.color, letterSpacing: '-0.01em', lineHeight: 1.1 }}>
-              {restaurant.name}
-            </div>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            {restaurant.rating && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: theme.ratingBg, border: `1px solid ${theme.ratingBorder}`, borderRadius: '20px', padding: '4px 10px' }}>
-                <Star size={11} fill="#FFB800" color="#FFB800" />
-                <span style={{ fontSize: '12px', fontWeight: 700, color: '#FFB800' }}>{restaurant.rating}</span>
+      {(() => {
+        const scrolled = scrollY > 60
+        const showSearch = !scrolled || scrollDir === 'up'
+        return (
+          <header style={{
+            position: 'sticky', top: 0, zIndex: 50,
+            background: scrolled ? (darkMode ? 'rgba(10,10,10,0.97)' : 'rgba(255,255,255,0.98)') : theme.headerBg,
+            backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
+            borderBottom: `1px solid ${theme.headerBorder}`,
+            padding: scrolled ? '8px 18px' : '12px 18px',
+            boxShadow: scrolled ? '0 4px 24px rgba(0,0,0,0.18)' : 'none',
+            transition: 'padding 0.35s ease, box-shadow 0.35s ease, background 0.35s ease',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div>
+                <div style={{
+                  fontSize: '10px', color: theme.locationColor, fontWeight: 500, letterSpacing: '0.04em',
+                  marginBottom: '2px', display: 'flex', alignItems: 'center', gap: '3px',
+                  opacity: scrolled ? 0 : 1, maxHeight: scrolled ? '0' : '16px',
+                  overflow: 'hidden', transition: 'opacity 0.3s ease, max-height 0.3s ease',
+                }}>
+                  <MapPin size={9} color="#E8321A" />
+                  {restaurant.location || 'Fine Dining'}
+                </div>
+                <div style={{ fontSize: scrolled ? '15px' : '18px', fontWeight: 800, color: theme.color, letterSpacing: '-0.01em', lineHeight: 1.1, transition: 'font-size 0.35s ease' }}>
+                  {restaurant.name}
+                </div>
               </div>
-            )}
-            <button className="toggle-btn" onClick={() => setDarkMode(d => !d)} title={darkMode ? 'Light mode' : 'Dark mode'} style={{ width: '34px', height: '34px', borderRadius: '10px', background: theme.toggleBg, border: `1px solid ${theme.toggleBorder}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-              {darkMode ? <Sun size={15} color="#FFB800" /> : <Moon size={15} color="#888" />}
-            </button>
-            <div style={{ width: '34px', height: '34px', borderRadius: '10px', background: theme.bellBg, border: `1px solid ${theme.bellBorder}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-              <Bell size={15} color={theme.bellColor} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                {restaurant.rating && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: theme.ratingBg, border: `1px solid ${theme.ratingBorder}`, borderRadius: '20px', padding: '4px 10px' }}>
+                    <Star size={11} fill="#FFB800" color="#FFB800" />
+                    <span style={{ fontSize: '12px', fontWeight: 700, color: '#FFB800' }}>{restaurant.rating}</span>
+                  </div>
+                )}
+                <button className="toggle-btn" onClick={() => setDarkMode(d => !d)} title={darkMode ? 'Light mode' : 'Dark mode'} style={{ width: '34px', height: '34px', borderRadius: '10px', background: theme.toggleBg, border: `1px solid ${theme.toggleBorder}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                  {darkMode ? <Sun size={15} color="#FFB800" /> : <Moon size={15} color="#888" />}
+                </button>
+                <div style={{ width: '34px', height: '34px', borderRadius: '10px', background: theme.bellBg, border: `1px solid ${theme.bellBorder}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                  <Bell size={15} color={theme.bellColor} />
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-      </header>
+            {/* Search bar — fades out on scroll down, reappears on scroll up */}
+            <div style={{
+              overflow: 'hidden',
+              maxHeight: showSearch ? '52px' : '0px',
+              opacity: showSearch ? 1 : 0,
+              marginTop: showSearch ? '10px' : '0',
+              transition: 'max-height 0.35s ease, opacity 0.3s ease, margin-top 0.35s ease',
+            }}>
+              <div style={{ position: 'relative' }}>
+                <input
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  placeholder="Search dishes, drinks..."
+                  style={{
+                    width: '100%', boxSizing: 'border-box',
+                    background: darkMode ? 'rgba(255,255,255,0.07)' : '#f5f5f5',
+                    border: `1.5px solid ${darkMode ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.08)'}`,
+                    borderRadius: '14px', padding: '10px 14px 10px 40px',
+                    fontSize: '13px', color: theme.color, fontFamily: 'inherit', outline: 'none',
+                    transition: 'border-color 0.2s ease, background 0.3s ease',
+                  }}
+                  onFocus={e => { e.target.style.borderColor = '#E8321A' }}
+                  onBlur={e => { e.target.style.borderColor = darkMode ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.08)' }}
+                />
+                <svg style={{ position: 'absolute', left: '13px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                {searchQuery && (
+                  <button onClick={() => setSearchQuery('')} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#888', cursor: 'pointer', fontSize: '16px', lineHeight: 1, padding: '0' }}>×</button>
+                )}
+              </div>
+            </div>
+          </header>
+        )
+      })()}
 
       {/* ── HOME VIEW ── */}
       {activeNav === 'home' && (
         <div style={{ animation: 'fadeIn 0.3s ease' }}>
 
           {/* Hero Carousel */}
-          <section style={{ position: 'relative', height: '240px', overflow: 'hidden', margin: '14px 14px 0' }}>
+          <section className="reveal reveal-1" style={{ position: 'relative', height: '300px', overflow: 'hidden', margin: '14px 14px 0' }}>
             <div style={{ position: 'relative', height: '100%', borderRadius: '20px', overflow: 'hidden' }}>
               {carouselImages.map((src, i) => (
                 <div key={i} style={{ position: 'absolute', inset: 0, backgroundImage: `url(${src})`, backgroundSize: 'cover', backgroundPosition: 'center', opacity: i === carouselIdx ? 1 : 0, transition: 'opacity 1s ease' }} />
@@ -428,8 +526,31 @@ export default function RestaurantWebsite() {
                 <div style={{ fontSize: '20px', fontWeight: 900, color: '#fff', lineHeight: 1.2, marginBottom: '5px', textShadow: '0 2px 12px rgba(0,0,0,0.8)' }}>
                   An Unforgettable<br />Culinary Experience
                 </div>
-                <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.7)', lineHeight: 1.4 }}>
+                <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.7)', lineHeight: 1.4, marginBottom: '14px' }}>
                   {(restaurant.description || '').slice(0, 60)}{(restaurant.description?.length || 0) > 60 ? '…' : ''}
+                </div>
+                {/* Hero Search Bar */}
+                <div style={{ position: 'relative' }}>
+                  <input
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                    placeholder="Search dishes, drinks..."
+                    style={{
+                      width: '100%', boxSizing: 'border-box',
+                      background: 'rgba(255,255,255,0.15)',
+                      backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
+                      border: '1.5px solid rgba(255,255,255,0.3)',
+                      borderRadius: '14px', padding: '11px 40px 11px 40px',
+                      fontSize: '13px', color: '#fff', fontFamily: 'inherit', outline: 'none',
+                      transition: 'border-color 0.2s ease, background 0.2s ease',
+                    }}
+                    onFocus={e => { e.target.style.borderColor = '#E8321A'; e.target.style.background = 'rgba(255,255,255,0.22)' }}
+                    onBlur={e => { e.target.style.borderColor = 'rgba(255,255,255,0.3)'; e.target.style.background = 'rgba(255,255,255,0.15)' }}
+                  />
+                  <svg style={{ position: 'absolute', left: '13px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                  {searchQuery && (
+                    <button onClick={() => setSearchQuery('')} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: '50%', width: '20px', height: '20px', color: '#fff', cursor: 'pointer', fontSize: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
+                  )}
                 </div>
               </div>
               {carouselImages.length > 1 && (
@@ -453,25 +574,64 @@ export default function RestaurantWebsite() {
           {/* Action Buttons */}
           <section style={{ padding: '14px 14px 0', display: 'flex', gap: '10px' }}>
             <button
+              className="action-btn"
               onClick={() => setActiveNav('menu')}
               style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', background: '#E8321A', border: 'none', borderRadius: '14px', padding: '14px', color: '#fff', fontSize: '13px', fontWeight: 700, cursor: 'pointer', boxShadow: '0 6px 20px rgba(232,50,26,0.4)' }}
             >
               <UtensilsCrossed size={16} /> View Menu
             </button>
             {restaurant.phone ? (
-              <a href={`tel:${restaurant.phone}`} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', background: theme.btnSecBg, border: `1px solid ${theme.btnSecBorder}`, borderRadius: '14px', padding: '14px', color: theme.btnSecColor, fontSize: '13px', fontWeight: 700, textDecoration: 'none' }}>
+              <a href={`tel:${restaurant.phone}`} className="action-btn" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', background: theme.btnSecBg, border: `1px solid ${theme.btnSecBorder}`, borderRadius: '14px', padding: '14px', color: theme.btnSecColor, fontSize: '13px', fontWeight: 700, textDecoration: 'none' }}>
                 <Phone size={16} /> Call Staff
               </a>
             ) : (
-              <button style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', background: theme.btnSecBg, border: `1px solid ${theme.btnSecBorder}`, borderRadius: '14px', padding: '14px', color: theme.btnSecColor, fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}>
+              <button className="action-btn" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', background: theme.btnSecBg, border: `1px solid ${theme.btnSecBorder}`, borderRadius: '14px', padding: '14px', color: theme.btnSecColor, fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}>
                 <Users size={16} /> About Us
               </button>
             )}
           </section>
 
+          {/* ── CATEGORY PILLS ── */}
+          <section style={{ padding: '16px 0 0' }}>
+            <div style={{ overflowX: 'auto', scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}>
+              <div style={{ display: 'flex', gap: '8px', padding: '0 14px', width: 'max-content' }}>
+                {[
+                  { id: 'all', label: '✦ All', icon: null },
+                  { id: 'starters', label: '🥗 Starters', icon: null },
+                  { id: 'mains', label: '🍽 Mains', icon: null },
+                  { id: 'drinks', label: '🍹 Drinks', icon: null },
+                  { id: 'popular', label: '🔥 Popular', icon: null },
+                  { id: 'veg', label: '🌿 Veg', icon: null },
+                ].map(cat => {
+                  const active = activeCategory === cat.id
+                  return (
+                    <button
+                      key={cat.id}
+                      onClick={() => setActiveCategory(cat.id)}
+                      className="category-pill"
+                      style={{
+                        padding: '9px 18px',
+                        borderRadius: '50px',
+                        border: `1.5px solid ${active ? '#E8321A' : (darkMode ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.10)')}`,
+                        background: active ? '#E8321A' : (darkMode ? 'rgba(255,255,255,0.05)' : '#fff'),
+                        color: active ? '#fff' : theme.color,
+                        fontSize: '12px', fontWeight: active ? 700 : 500, cursor: 'pointer',
+                        whiteSpace: 'nowrap', fontFamily: 'inherit',
+                        boxShadow: active ? '0 4px 16px rgba(232,50,26,0.35)' : (darkMode ? 'none' : '0 2px 8px rgba(0,0,0,0.06)'),
+                        transition: 'all 0.2s ease',
+                      }}
+                    >
+                      {cat.label}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          </section>
+
           {/* Quick Stats */}
-          <section style={{ padding: '14px 14px 0' }}>
-            <div style={{ display: 'flex', background: theme.statsBg, border: `1px solid ${theme.statsBorder}`, borderRadius: '16px', padding: '14px 16px', boxShadow: theme.cardShadow }}>
+          <section style={{ padding: '14px 14px 0' }} className="reveal reveal-2">
+            <div className="stat-card" style={{ display: 'flex', background: theme.statsBg, border: `1px solid ${theme.statsBorder}`, borderRadius: '16px', padding: '14px 16px', boxShadow: theme.cardShadow }}>
               {[
                 { icon: <Award size={16} color="#FFB800" />, label: restaurant.rating ? `${restaurant.rating} Rating` : 'Top Rated', sub: 'Google Reviews' },
                 { icon: <Clock size={16} color="#60a5fa" />, label: '12pm – 11pm', sub: 'Open Today' },
@@ -490,25 +650,39 @@ export default function RestaurantWebsite() {
           </section>
 
           {/* Best Sellers */}
-          <section style={{ padding: '20px 0 0' }}>
+          <section style={{ padding: '20px 0 0' }} className="reveal reveal-3">
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 18px 12px' }}>
               <div>
-                <div style={{ fontSize: '16px', fontWeight: 800, color: theme.sectionTitle, letterSpacing: '-0.01em' }}>Best Sellers</div>
-                <div style={{ fontSize: '11px', color: theme.sectionSub, marginTop: '2px' }}>Crowd favourites, every time</div>
+                <div style={{ fontSize: '16px', fontWeight: 800, color: theme.sectionTitle, letterSpacing: '-0.01em' }}>
+                  {activeCategory === 'all' ? 'Best Sellers' :
+                   activeCategory === 'starters' ? 'Starters' :
+                   activeCategory === 'mains' ? 'Main Course' :
+                   activeCategory === 'drinks' ? 'Drinks' :
+                   activeCategory === 'popular' ? '🔥 Popular Picks' : '🌿 Vegetarian'}
+                </div>
+                <div style={{ fontSize: '11px', color: theme.sectionSub, marginTop: '2px' }}>
+                  {bestsellers.length === 0 ? 'No items found' : `${bestsellers.length} items`}
+                </div>
               </div>
               <button onClick={() => setActiveNav('menu')} style={{ display: 'flex', alignItems: 'center', gap: '3px', background: 'none', border: 'none', color: '#E8321A', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}>
                 View all <ChevronRight size={13} />
               </button>
             </div>
-            <div style={{ display: 'flex', gap: '12px', overflowX: 'auto', padding: '0 18px 4px', scrollbarWidth: 'none' }}>
-              {bestsellers.map((item, i) => (
-                <BestsellerCard key={i} item={item} liked={liked[i]} onLike={() => setLiked(l => ({ ...l, [i]: !l[i] }))} theme={theme} onPress={() => navigate(`/restaurant/${slug}/food/${encodeURIComponent(item.name)}`, { state: { item, returnTab: activeNav, darkMode } })} />
-              ))}
-            </div>
+            {bestsellers.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '32px 24px', color: theme.sectionSub, fontSize: '13px' }}>
+                No items match your search
+              </div>
+            ) : (
+              <div style={{ display: 'flex', gap: '12px', overflowX: 'auto', padding: '0 18px 4px', scrollbarWidth: 'none' }}>
+                {bestsellers.map((item, i) => (
+                  <BestsellerCard key={`${activeCategory}-${i}`} item={item} liked={liked[i]} onLike={() => setLiked(l => ({ ...l, [i]: !l[i] }))} theme={theme} onPress={() => navigate(`/restaurant/${slug}/food/${encodeURIComponent(item.name)}`, { state: { item, returnTab: activeNav, darkMode } })} />
+                ))}
+              </div>
+            )}
           </section>
 
           {/* ── OUR STORY ── */}
-          <section style={{ padding: '24px 14px 0' }}>
+          <section className="reveal reveal-4" style={{ padding: '24px 14px 0' }}>
             <div style={{ marginBottom: '14px' }}>
               <div style={{ fontSize: '16px', fontWeight: 800, color: theme.sectionTitle, letterSpacing: '-0.01em' }}>Our Story</div>
               <div style={{ fontSize: '11px', color: theme.sectionSub, marginTop: '2px' }}>Where every plate tells a story</div>
@@ -1483,7 +1657,7 @@ function BestsellerCard({ item, liked, onLike, theme, onPress }) {
   const fallbackImg = '/menu/wagyu-ribeye.png'
   const tagColors = { Popular: '#E8321A', Seasonal: '#fbbf24', Vegetarian: '#4ade80', "Chef's Pick": '#a78bfa' }
   return (
-    <div className="food-card" onClick={onPress} style={{ flexShrink: 0, width: '155px', background: theme.bestsellerBg, border: `1px solid ${theme.bestsellerBorder}`, borderRadius: '16px', overflow: 'hidden', cursor: 'pointer', boxShadow: theme.cardShadow }}>
+    <div className="bestseller-card" onClick={onPress} style={{ flexShrink: 0, width: '155px', background: theme.bestsellerBg, border: `1px solid ${theme.bestsellerBorder}`, borderRadius: '16px', overflow: 'hidden', cursor: 'pointer', boxShadow: theme.cardShadow }}>
       <div style={{ height: '115px', overflow: 'hidden', position: 'relative' }}>
         <img src={item.img || fallbackImg} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} onError={e => { e.target.src = fallbackImg }} />
         <button onClick={e => { e.stopPropagation(); onLike() }} style={{ position: 'absolute', top: '7px', right: '7px', width: '26px', height: '26px', borderRadius: '50%', background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

@@ -1,0 +1,78 @@
+Create a modern, premium restaurant website homepage UI (inspired by Zomato/Blinkit-level polish but without delivery features). Upgrade the existing homepage layout using the provided workflow image.
+
+🔹 Layout & Structure
+Redesign the homepage with a clear visual hierarchy:
+Top Navigation Bar (Dynamic Sticky Header)
+Hero Section (with search + branding)
+Category / Menu Highlights
+Featured Dishes Section
+Restaurant Info / CTA Sections
+Footer
+Use a clean grid system, soft shadows, rounded corners, and consistent spacing.
+Keep the design minimal, modern, and highly professional.
+🔹 Sticky Dynamic Header Behavior (IMPORTANT)
+
+Implement a smart sticky navigation bar with scroll-based behavior:
+
+Default State (Top of Page):
+Full-size header
+Includes:
+Logo (left)
+Navigation links (center/right)
+Search bar (visible and centered or prominent)
+Height: ~80–100px
+On Scroll Down:
+Header becomes sticky and shrinks smoothly
+Reduce height to ~55–65px
+Search bar should smoothly fade out / slide up and become hidden
+Logo and nav links remain visible
+Add subtle background blur or solid color + shadow for premium feel
+On Scroll Up:
+Header expands slightly
+Search bar reappears smoothly (fade/slide animation)
+When Back to Top:
+Fully restore original header (with search bar fully visible)
+
+👉 Use smooth CSS transitions (ease-in-out, 0.3s–0.4s)
+
+🔹 Hero Section
+Large, visually appealing banner
+Include:
+Heading (e.g., “Discover the Best Food Experience”)
+Subheading
+Search bar (same as header, synced behavior)
+Optional: background gradient or food image overlay
+🔹 Menu / Category Section
+Display food categories as cards or horizontal scroll
+Hover effects:
+Scale slightly
+Add shadow or highlight border
+🔹 Featured Items Section
+Show food items in modern cards
+Each card includes:
+Image
+Name
+Price
+Short description
+Add hover animation (lift effect)
+🔹 UI/UX Enhancements
+Smooth scrolling
+Micro-interactions (hover, transitions)
+Consistent typography (modern sans-serif)
+Color palette: elegant + food-friendly (dark + warm tones or light + minimal)
+🔹 Technical Requirements
+Use React (if project is React) or clean HTML/CSS/JS
+Use Tailwind CSS (preferred) or modern CSS
+Implement scroll detection using:
+window.scrollY
+Add/remove classes dynamically
+Ensure responsive design (mobile + desktop)
+🔹 Bonus (Optional but Recommended)
+Add slight animation to sections on scroll (fade-in / slide-up)
+Add active state for nav links
+Optimize performance (no lag on scroll)
+What Changed:
+Turned your idea into a developer-ready UI system
+Clearly defined scroll behavior logic (key feature)
+Structured layout like a real production app
+Added animation, UX polish, and responsiveness
