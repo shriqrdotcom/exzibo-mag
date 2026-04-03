@@ -841,11 +841,6 @@ export default function RestaurantWebsite() {
                 >
                   Place Order <span style={{ fontSize: '16px' }}>→</span>
                 </button>
-                {deliveryFee === 0 && subtotal > 0 && (
-                  <div style={{ textAlign: 'center', fontSize: '11px', color: '#22c55e', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', paddingBottom: '4px' }}>
-                    <CheckCircle size={11} /> Free delivery applied on this order
-                  </div>
-                )}
               </div>
             </div>
             </>
