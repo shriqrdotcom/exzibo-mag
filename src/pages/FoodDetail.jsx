@@ -341,11 +341,6 @@ export default function FoodDetail() {
             <div style={{ fontSize: '26px', fontWeight: 900, color: '#fff', lineHeight: 1.2, textShadow: '0 2px 16px rgba(0,0,0,0.6)' }}>
               {item.name}
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '6px' }}>
-              <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#E8321A' }} />
-              <div style={{ width: '4px', height: '4px', borderRadius: '50%', background: 'rgba(255,255,255,0.4)' }} />
-              <div style={{ width: '4px', height: '4px', borderRadius: '50%', background: 'rgba(255,255,255,0.25)' }} />
-            </div>
           </div>
         )}
         {loading && (
