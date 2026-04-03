@@ -134,34 +134,7 @@ export default function RestaurantWebsite() {
   const [showSuccessPopup, setShowSuccessPopup] = useState(false)
   const [orderNotes, setOrderNotes] = useState('')
   const [orderStatus, setOrderStatus] = useState(1)
-  const [orderHistory, setOrderHistory] = useState([
-    {
-      id: '847291038',
-      items: [
-        { id: 1, name: 'Truffle Beef Carpaccio', price: 2100, qty: 1, img: '/menu/truffle-beef-carpaccio.png' },
-        { id: 2, name: 'Atlantic Oysters', price: 2800, qty: 1, img: '/menu/atlantic-oysters.png' },
-      ],
-      subtotal: 4900, gstAmt: 245, deliveryFee: 0, discountAmt: 0, grandTotal: 5145,
-      itemCount: 2, date: '28/03/2026', couponApplied: false, status: 'DELIVERED',
-    },
-    {
-      id: '563841927',
-      items: [
-        { id: 3, name: 'A5 Wagyu Ribeye', price: 15500, qty: 1, img: '/menu/wagyu-ribeye.png' },
-      ],
-      subtotal: 15500, gstAmt: 775, deliveryFee: 0, discountAmt: 0, grandTotal: 16275,
-      itemCount: 1, date: '22/03/2026', couponApplied: false, status: 'DELIVERED',
-    },
-    {
-      id: '291047583',
-      items: [
-        { id: 5, name: 'Forest Mushroom Risotto', price: 3500, qty: 1, img: '/menu/mushroom-risotto.png' },
-        { id: 6, name: 'Noir Negroni', price: 1850, qty: 1, img: '/menu/noir-negroni.png' },
-      ],
-      subtotal: 5350, gstAmt: 268, deliveryFee: 0, discountAmt: 0, grandTotal: 5618,
-      itemCount: 2, date: '15/03/2026', couponApplied: false, status: 'DELIVERED',
-    },
-  ])
+  const [orderHistory, setOrderHistory] = useState([])
   const [viewingHistoryOrder, setViewingHistoryOrder] = useState(null)
   const VALID_COUPON = 'SPICE10'
   const COUPON_DISCOUNT_PCT = 10
