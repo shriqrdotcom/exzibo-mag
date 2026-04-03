@@ -178,14 +178,9 @@ export default function RestaurantWebsite() {
         const scrolled = current > 50
         prevScrollRef.current = current
 
-        const showSearch = !scrolled || !goingDown
-        if (searchRowRef.current) {
-          searchRowRef.current.style.maxHeight = showSearch ? '54px' : '0px'
-          searchRowRef.current.style.opacity = showSearch ? '1' : '0'
-        }
-        if (topRowMarginRef.current) {
-          topRowMarginRef.current.style.marginBottom = showSearch ? '12px' : '0px'
-        }
+        const hideSearch = scrolled && goingDown
+        searchRowRef.current?.classList.toggle('search-hidden', hideSearch)
+        topRowMarginRef.current?.classList.toggle('search-hidden', hideSearch)
       })
     }
     window.addEventListener('scroll', onScroll, { passive: true })
@@ -454,7 +449,7 @@ export default function RestaurantWebsite() {
         boxShadow: '0 8px 32px rgba(0,0,0,0.35)',
       }}>
         {/* Row 1: Logo + Name/Location + Buttons — ALWAYS VISIBLE */}
-        <div ref={topRowMarginRef} style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px', transition: 'margin-bottom 0.32s ease' }}>
+        <div ref={topRowMarginRef} className="header-top-row" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           {/* Logo avatar with glow */}
           <div style={{
             width: '44px', height: '44px', borderRadius: '13px', flexShrink: 0,
@@ -495,13 +490,8 @@ export default function RestaurantWebsite() {
           </div>
         </div>
 
-        {/* Row 2: Search bar + Filter — collapses on scroll down via ref, no React re-render */}
-        <div ref={searchRowRef} style={{
-          overflow: 'hidden',
-          maxHeight: '54px',
-          opacity: 1,
-          transition: 'max-height 0.32s ease, opacity 0.25s ease',
-        }}>
+        {/* Row 2: Search bar + Filter — class toggled by scroll handler, never overridden by React */}
+        <div ref={searchRowRef} className="header-search-row">
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
             <div style={{ flex: 1, position: 'relative' }}>
               <input

@@ -146,3 +146,23 @@ img {
   background: #22c55e;
   box-shadow: 0 0 8px rgba(34, 197, 94, 0.5);
 }
+
+/* Header scroll animation — class-based so React re-renders can't override */
+.header-top-row {
+  margin-bottom: 12px;
+  transition: margin-bottom 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.header-top-row.search-hidden {
+  margin-bottom: 0;
+}
+.header-search-row {
+  overflow: hidden;
+  max-height: 54px;
+  opacity: 1;
+  will-change: max-height, opacity;
+  transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.22s ease;
+}
+.header-search-row.search-hidden {
+  max-height: 0;
+  opacity: 0;
+}
