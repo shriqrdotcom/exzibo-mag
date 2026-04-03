@@ -390,7 +390,7 @@ export default function RestaurantWebsite() {
   }
 
   return (
-    <div style={{
+    <div className="restaurant-page" style={{
       background: theme.pageBg,
       minHeight: '100vh',
       fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
@@ -452,12 +452,12 @@ export default function RestaurantWebsite() {
       )}
 
       {/* ── STICKY HEADER CARD ── */}
-      <header style={{
+      <header className="restaurant-header" style={{
         position: 'sticky', top: 0, zIndex: 50,
         background: darkMode ? '#111' : '#1a1a1a',
         borderRadius: '0 0 22px 22px',
         padding: '12px 16px',
-        boxShadow: '0 8px 32px rgba(0,0,0,0.35)',
+        boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
       }}>
         {/* Row 1: Logo + Name/Location + Buttons — ALWAYS VISIBLE */}
         <div ref={topRowMarginRef} className="header-top-row" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -557,10 +557,10 @@ export default function RestaurantWebsite() {
               </div>
               {carouselImages.length > 1 && (
                 <>
-                  <button onClick={() => setCarouselIdx(i => (i - 1 + carouselImages.length) % carouselImages.length)} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(6px)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '50%', width: '30px', height: '30px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', cursor: 'pointer' }}>
+                  <button onClick={() => setCarouselIdx(i => (i - 1 + carouselImages.length) % carouselImages.length)} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(0,0,0,0.6)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '50%', width: '30px', height: '30px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', cursor: 'pointer' }}>
                     <ChevronLeft size={15} />
                   </button>
-                  <button onClick={() => setCarouselIdx(i => (i + 1) % carouselImages.length)} style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(6px)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '50%', width: '30px', height: '30px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', cursor: 'pointer' }}>
+                  <button onClick={() => setCarouselIdx(i => (i + 1) % carouselImages.length)} style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(0,0,0,0.6)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '50%', width: '30px', height: '30px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', cursor: 'pointer' }}>
                     <ChevronRight size={15} />
                   </button>
                   <div style={{ position: 'absolute', bottom: '10px', right: '14px', display: 'flex', gap: '4px' }}>
@@ -618,7 +618,7 @@ export default function RestaurantWebsite() {
                     border: `2px solid ${darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)'}`,
                   }}>
                     {activeCat.img ? (
-                      <img src={activeCat.img} alt={activeCat.label} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.target.style.display = 'none' }} />
+                      <img src={activeCat.img} alt={activeCat.label} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.target.style.display = 'none' }} />
                     ) : (
                       <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <UtensilsCrossed size={22} color={darkMode ? '#444' : '#bbb'} />
@@ -1136,7 +1136,7 @@ export default function RestaurantWebsite() {
                   <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
                     {viewingHistoryOrder.items.slice(0, 2).map((item, i) => (
                       <div key={i} style={{ width: '48px', height: '48px', borderRadius: '12px', overflow: 'hidden', background: darkMode ? '#2a2a2a' : '#f0ece8' }}>
-                        <img src={item.img} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.target.src = '/menu/wagyu-ribeye.png' }} />
+                        <img src={item.img} alt={item.name} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.target.src = '/menu/wagyu-ribeye.png' }} />
                       </div>
                     ))}
                   </div>
@@ -1234,7 +1234,7 @@ export default function RestaurantWebsite() {
                   <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
                     {currentOrder.items.slice(0, 2).map((item, i) => (
                       <div key={i} style={{ width: '48px', height: '48px', borderRadius: '12px', overflow: 'hidden', background: darkMode ? '#2a2a2a' : '#f0ece8' }}>
-                        <img src={item.img} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.target.src = '/menu/wagyu-ribeye.png' }} />
+                        <img src={item.img} alt={item.name} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.target.src = '/menu/wagyu-ribeye.png' }} />
                       </div>
                     ))}
                   </div>
@@ -1703,12 +1703,12 @@ function GridFoodCard({ item, liked, onLike, theme, darkMode, onPress }) {
         />
         <button
           onClick={e => { e.stopPropagation(); onLike(e) }}
-          style={{ position: 'absolute', top: '6px', right: '6px', width: '24px', height: '24px', borderRadius: '50%', background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          style={{ position: 'absolute', top: '6px', right: '6px', width: '24px', height: '24px', borderRadius: '50%', background: 'rgba(0,0,0,0.65)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
         >
           <Heart size={10} fill={liked ? '#E8321A' : 'transparent'} color={liked ? '#E8321A' : '#aaa'} />
         </button>
         {(item.tags?.[0]) && (
-          <div style={{ position: 'absolute', bottom: '5px', left: '5px', background: `${tagColors[item.tags[0]] || '#E8321A'}dd`, backdropFilter: 'blur(4px)', borderRadius: '5px', padding: '2px 5px', fontSize: '8px', fontWeight: 800, color: '#fff', letterSpacing: '0.04em' }}>
+          <div style={{ position: 'absolute', bottom: '5px', left: '5px', background: `${tagColors[item.tags[0]] || '#E8321A'}ee`, borderRadius: '5px', padding: '2px 5px', fontSize: '8px', fontWeight: 800, color: '#fff', letterSpacing: '0.04em' }}>
             {item.tags[0]}
           </div>
         )}
@@ -1732,12 +1732,12 @@ function BestsellerCard({ item, liked, onLike, theme, onPress }) {
   return (
     <div className="bestseller-card" onClick={onPress} style={{ flexShrink: 0, width: '155px', background: theme.bestsellerBg, border: `1px solid ${theme.bestsellerBorder}`, borderRadius: '16px', overflow: 'hidden', cursor: 'pointer', boxShadow: theme.cardShadow }}>
       <div style={{ height: '115px', overflow: 'hidden', position: 'relative' }}>
-        <img src={item.img || fallbackImg} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} onError={e => { e.target.src = fallbackImg }} />
-        <button onClick={e => { e.stopPropagation(); onLike() }} style={{ position: 'absolute', top: '7px', right: '7px', width: '26px', height: '26px', borderRadius: '50%', background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <img src={item.img || fallbackImg} alt={item.name} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} onError={e => { e.target.src = fallbackImg }} />
+        <button onClick={e => { e.stopPropagation(); onLike() }} style={{ position: 'absolute', top: '7px', right: '7px', width: '26px', height: '26px', borderRadius: '50%', background: 'rgba(0,0,0,0.65)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <Heart size={12} fill={liked ? '#E8321A' : 'transparent'} color={liked ? '#E8321A' : '#aaa'} />
         </button>
         {(item.tag || item.tags?.[0]) && (
-          <div style={{ position: 'absolute', bottom: '7px', left: '7px', background: tagColors[item.tag || item.tags?.[0]] ? `${tagColors[item.tag || item.tags[0]]}dd` : 'rgba(232,50,26,0.88)', backdropFilter: 'blur(6px)', borderRadius: '6px', padding: '2px 7px', fontSize: '9px', fontWeight: 800, color: '#fff', letterSpacing: '0.05em' }}>
+          <div style={{ position: 'absolute', bottom: '7px', left: '7px', background: tagColors[item.tag || item.tags?.[0]] ? `${tagColors[item.tag || item.tags[0]]}ee` : 'rgba(232,50,26,0.92)', borderRadius: '6px', padding: '2px 7px', fontSize: '9px', fontWeight: 800, color: '#fff', letterSpacing: '0.05em' }}>
             {item.tag || item.tags[0]}
           </div>
         )}
@@ -1766,7 +1766,7 @@ function MenuCard({ item, theme, onAddToCart, cartQty, onPress }) {
           onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.04)' }}
           onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)' }}
         />
-        <div style={{ position: 'absolute', bottom: '10px', right: '10px', background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(6px)', borderRadius: '8px', padding: '4px 10px', fontSize: '10px', fontWeight: 700, color: '#fff', letterSpacing: '0.04em' }}>
+        <div style={{ position: 'absolute', bottom: '10px', right: '10px', background: 'rgba(0,0,0,0.72)', borderRadius: '8px', padding: '4px 10px', fontSize: '10px', fontWeight: 700, color: '#fff', letterSpacing: '0.04em' }}>
           View Details
         </div>
       </div>

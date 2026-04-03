@@ -148,9 +148,18 @@ img {
 }
 
 /* Header scroll animation — class-based so React re-renders can't override */
+.restaurant-header {
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  will-change: transform;
+  contain: layout style;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+}
 .header-top-row {
+  min-height: 44px;
   margin-bottom: 12px;
-  transition: margin-bottom 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: margin-bottom 0.28s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .header-top-row.search-hidden {
   margin-bottom: 0;
@@ -159,10 +168,14 @@ img {
   overflow: hidden;
   max-height: 54px;
   opacity: 1;
-  will-change: max-height, opacity;
-  transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.22s ease;
+  will-change: opacity, max-height;
+  transition: max-height 0.28s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease;
 }
 .header-search-row.search-hidden {
   max-height: 0;
   opacity: 0;
+}
+.restaurant-page {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
 }

@@ -1,0 +1,60 @@
+Fix the mobile UI header performance and scrolling lag issue in my web app.
+
+Problems:
+1. Header becomes laggy and stutters while scrolling
+2. UI feels like it's buffering on scroll
+3. Header height becomes too large and inconsistent
+4. Likely caused by heavy blur effects, large images, and inefficient rendering
+
+Tasks:
+
+1. Optimize Header Rendering:
+- Convert the header into a lightweight fixed or sticky header
+- Use "position: sticky; top: 0;" instead of heavy fixed overlays if possible
+- Avoid unnecessary re-renders during scroll
+- Ensure header does NOT resize dynamically on scroll
+
+2. Remove Performance Bottlenecks:
+- Remove or reduce backdrop-filter / blur effects (especially backdrop-blur-xl or similar)
+- Replace blur with a solid or semi-transparent background (e.g. rgba or gradient)
+- Avoid heavy box-shadows and layered effects
+
+3. Optimize Images:
+- Use compressed images (WebP preferred)
+- Add lazy loading: loading="lazy"
+- Ensure hero images are not oversized (max-width: 100%, proper height)
+- Use responsive sizes
+
+4. Improve Scroll Performance:
+- Add "will-change: transform;" only where necessary
+- Use "transform: translateZ(0);" to enable GPU acceleration
+- Avoid scroll event listeners unless throttled or debounced
+- Use passive event listeners if needed
+
+5. Fix Header Size:
+- Set a fixed height (e.g. 64px or 72px)
+- Prevent expansion using:
+  height: 64px;
+  min-height: 64px;
+  max-height: 64px;
+
+6. Reduce Layout Shift:
+- Avoid dynamic content loading inside header
+- Predefine spacing for icons and text
+- Use flexbox alignment properly
+
+7. Improve CSS Structure:
+- Use Tailwind or clean CSS classes efficiently
+- Remove redundant nested divs
+- Avoid excessive z-index stacking
+
+8. Mobile Optimization:
+- Ensure smooth 60fps scrolling
+- Test for low-end Android performance
+- Avoid unnecessary animations on scroll
+
+Expected Result:
+- Smooth scrolling with no lag
+- Stable header (no resizing or buffering)
+- Faster rendering performance
+- Clean, minimal, premium UI feel
