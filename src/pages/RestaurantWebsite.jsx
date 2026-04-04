@@ -703,7 +703,7 @@ export default function RestaurantWebsite() {
               className="action-btn"
               onClick={() => setActiveNav('booking')}
               style={{
-                width: '56px', height: '56px', flexShrink: 0,
+                width: '56px', height: '156px', flexShrink: 0,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 background: darkMode ? '#ffffff' : '#111111',
                 border: 'none', borderRadius: '20px',
@@ -728,7 +728,7 @@ export default function RestaurantWebsite() {
               className="action-btn"
               onClick={() => setActiveNav('menu')}
               style={{
-                flex: 1, height: '56px',
+                width: '805px', height: '156px',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 background: darkMode ? '#ffffff' : '#111111',
                 border: 'none', borderRadius: '20px',
