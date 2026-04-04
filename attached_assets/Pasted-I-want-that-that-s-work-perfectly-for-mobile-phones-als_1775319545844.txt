@@ -1,0 +1,99 @@
+I want that that's work' perfectly for mobile phones also 
+
+The real fix (no more fragile scroll hacks)
+
+Use IntersectionObserver instead of scroll events.
+
+Why?
+Because scroll events on mobile are unreliable. IntersectionObserver uses the browser’s rendering engine directly. No guessing, no lag, no “maybe it fired”.
+
+
+---
+
+💻 JavaScript (this is the stable solution)
+
+const header = document.querySelector(".header");
+
+// Create a sentinel element (invisible trigger)
+const sentinel = document.createElement("div");
+sentinel.style.height = "1px";
+document.body.prepend(sentinel);
+
+const observer = new IntersectionObserver(
+  ([entry]) => {
+    if (!entry.isIntersecting) {
+      // user scrolled down
+      header.classList.add("hide-extra");
+    } else {
+      // user near top / scrolling up
+      header.classList.remove("hide-extra");
+    }
+  },
+  {
+    root: null,
+    threshold: 0,
+    rootMargin: "-80px 0px 0px 0px" // adjust based on header height
+  }
+);
+
+observer.observe(sentinel);
+
+
+---
+
+🎨 CSS (don’t overcomplicate it)
+
+.header.hide-extra .search-bar,
+.header.hide-extra .red-button {
+  opacity: 0;
+  transform: translateY(-20px);
+  pointer-events: none;
+  transition: all 0.3s ease;
+}
+
+
+---
+
+Why this actually works (unlike your previous attempts)
+
+No scroll event spam
+
+No direction miscalculation
+
+No mobile momentum issues
+
+No random “I’m at bottom but still visible” nonsense
+
+Browser handles visibility detection instead of your JS guessing
+
+
+
+---
+
+If it STILL doesn’t work (then something is broken elsewhere)
+
+Check these like your life depends on it:
+
+1. Are you scrolling the window or a div?
+If you have something like:
+
+height: 100vh;
+overflow-y: scroll;
+
+then congratulations, you’ve been listening to the wrong scroll source this whole time.
+
+
+2. Duplicate headers?
+Happens more than people admit.
+
+
+3. Position issue? Your header should be:
+
+position: sticky;
+top: 0;
+
+or fixed. Not some experimental chaos.
+
+
+4. Z-index stupidity?
+If elements overlap weirdly, it looks like it’s not hiding.

@@ -172,57 +172,35 @@ export default function RestaurantWebsite() {
   const [searchQuery, setSearchQuery] = useState('')
   const [activeCategory, setActiveCategory] = useState('all')
   const [vegMode, setVegMode] = useState(false)
-  const lastScrollYRef = useRef(window.scrollY)
-  const tickingRef = useRef(false)
-  const isHiddenRef = useRef(false)
-  const THRESHOLD = 20
-  const MIN_SCROLL = 80
+  const sentinelRef = useRef(null)
 
   useEffect(() => {
-    document.body.classList.add('at-top')
+    const sentinel = sentinelRef.current
+    if (!sentinel) return
 
-    function updateScrollState() {
-      const currentScrollY = window.scrollY
-      const diff = currentScrollY - lastScrollYRef.current
-
-      // Ignore micro-jitters — very common on mobile touch scroll
-      if (Math.abs(diff) < THRESHOLD) {
-        tickingRef.current = false
-        return
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          // Sentinel visible → near top → show search bar
+          document.body.classList.remove('scroll-down')
+          document.body.classList.add('at-top')
+        } else {
+          // Sentinel out of view → scrolled down → hide search bar
+          document.body.classList.add('scroll-down')
+          document.body.classList.remove('at-top')
+        }
+      },
+      {
+        root: null,
+        threshold: 0,
+        rootMargin: '-80px 0px 0px 0px',
       }
+    )
 
-      if (currentScrollY <= 10) {
-        // Back at the very top — always show
-        document.body.classList.add('at-top')
-        document.body.classList.remove('scroll-down', 'scroll-up')
-        isHiddenRef.current = false
-      } else if (diff > 0 && currentScrollY > MIN_SCROLL && !isHiddenRef.current) {
-        // Scrolling down past safe zone → hide
-        document.body.classList.add('scroll-down')
-        document.body.classList.remove('scroll-up', 'at-top')
-        isHiddenRef.current = true
-      } else if (diff < 0 && isHiddenRef.current) {
-        // Scrolling up → show
-        document.body.classList.add('scroll-up')
-        document.body.classList.remove('scroll-down', 'at-top')
-        isHiddenRef.current = false
-      }
-
-      lastScrollYRef.current = currentScrollY
-      tickingRef.current = false
-    }
-
-    function onScroll() {
-      if (!tickingRef.current) {
-        window.requestAnimationFrame(updateScrollState)
-        tickingRef.current = true
-      }
-    }
-
-    window.addEventListener('scroll', onScroll, { passive: true })
+    observer.observe(sentinel)
     return () => {
-      window.removeEventListener('scroll', onScroll)
-      document.body.classList.remove('at-top', 'scroll-down', 'scroll-up')
+      observer.disconnect()
+      document.body.classList.remove('at-top', 'scroll-down')
     }
   }, [])
 
@@ -434,6 +412,8 @@ export default function RestaurantWebsite() {
       position: 'relative',
       transition: 'background 0.3s ease',
     }}>
+      {/* Sentinel: invisible 1px trigger watched by IntersectionObserver */}
+      <div ref={sentinelRef} style={{ position: 'absolute', top: 0, left: 0, width: '1px', height: '1px', pointerEvents: 'none' }} aria-hidden="true" />
       <style>{`
         * { box-sizing: border-box; margin: 0; padding: 0; }
         ::-webkit-scrollbar { display: none; }
