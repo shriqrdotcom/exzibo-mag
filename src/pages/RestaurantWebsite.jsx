@@ -457,6 +457,29 @@ export default function RestaurantWebsite() {
         .reveal-3 { animation-delay: 160ms; }
         .reveal-4 { animation-delay: 240ms; }
         .restaurant-header input::placeholder { color: ${darkMode ? 'rgba(0,0,0,0.35)' : 'rgba(255,255,255,0.45)'} !important; }
+
+        /* ── Scroll-hide: search bar + filter button ── */
+        .search-wrapper {
+          overflow: hidden;
+          max-height: 80px;
+          opacity: 1;
+          transform: translateY(0);
+          transition: max-height 0.3s ease, opacity 0.3s ease, transform 0.3s ease;
+          will-change: max-height, opacity, transform;
+        }
+        body.scroll-down .search-wrapper {
+          max-height: 0;
+          opacity: 0;
+          transform: translateY(-8px);
+          pointer-events: none;
+        }
+        body.scroll-up .search-wrapper,
+        body.at-top .search-wrapper {
+          max-height: 80px;
+          opacity: 1;
+          transform: translateY(0);
+          pointer-events: auto;
+        }
       `}</style>
 
       {/* ── STICKY HEADER CARD — inverted from page theme ── */}
