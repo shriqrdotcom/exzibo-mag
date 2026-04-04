@@ -219,6 +219,11 @@ body.scroll-down .header-search-row {
   overscroll-behavior-y: contain;
 }
 
+@keyframes slideUp {
+  from { transform: translateY(100%); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
 /* ── Waiter animations ── */
 @keyframes waiterFloat {
   0%, 100% { transform: translateY(0px); }

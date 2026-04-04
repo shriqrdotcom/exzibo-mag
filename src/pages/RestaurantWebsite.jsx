@@ -141,6 +141,7 @@ export default function RestaurantWebsite() {
   const [orderStatus, setOrderStatus] = useState(1)
   const [orderHistory, setOrderHistory] = useState([])
   const [viewingHistoryOrder, setViewingHistoryOrder] = useState(null)
+  const [showOrderConfirm, setShowOrderConfirm] = useState(false)
 
   useEffect(() => {
     const cartKey = `exzibo_cart_${slug}`
@@ -296,7 +297,6 @@ export default function RestaurantWebsite() {
       setShowSuccessPopup(false)
       setActiveNav('orders')
     }, 2500)
-    setTimeout(() => setOrderStatus(2), 8000)
   }
 
   const theme = buildTheme(darkMode)
@@ -1198,7 +1198,7 @@ export default function RestaurantWebsite() {
                 {/* Place Order button */}
                 <button
                   className="checkout-btn"
-                  onClick={handlePlaceOrder}
+                  onClick={() => setShowOrderConfirm(true)}
                   style={{
                     width: '100%',
                     background: '#E8321A',
@@ -1752,6 +1752,80 @@ export default function RestaurantWebsite() {
 
 
       {/* ── SUCCESS POPUP OVERLAY ── */}
+      {/* ── ORDER CONFIRMATION MODAL ── */}
+      {showOrderConfirm && (
+        <div
+          style={{
+            position: 'fixed', inset: 0, zIndex: 210,
+            background: 'rgba(0,0,0,0.65)',
+            backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)',
+            display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+            animation: 'fadeIn 0.2s ease',
+          }}
+          onClick={() => setShowOrderConfirm(false)}
+        >
+          <div
+            style={{
+              background: darkMode ? '#1a1a1a' : '#fff',
+              border: `1px solid ${darkMode ? 'rgba(255,255,255,0.09)' : 'rgba(0,0,0,0.07)'}`,
+              borderRadius: '28px 28px 0 0',
+              padding: '28px 24px 36px',
+              width: '100%',
+              maxWidth: '480px',
+              boxShadow: '0 -12px 48px rgba(0,0,0,0.3)',
+              animation: 'slideUp 0.3s cubic-bezier(0.34,1.1,0.64,1) both',
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Handle bar */}
+            <div style={{ width: '40px', height: '4px', borderRadius: '2px', background: darkMode ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.12)', margin: '0 auto 24px' }} />
+            {/* Icon */}
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
+              <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'rgba(232,50,26,0.10)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <ShoppingBag size={26} color="#E8321A" />
+              </div>
+            </div>
+            {/* Title */}
+            <div style={{ textAlign: 'center', marginBottom: '8px' }}>
+              <div style={{ fontSize: '20px', fontWeight: 900, color: theme.color, letterSpacing: '-0.01em', marginBottom: '6px' }}>Confirm your order?</div>
+              <div style={{ fontSize: '13px', color: theme.locationColor, lineHeight: 1.6 }}>
+                {cartItems.reduce((s, i) => s + i.qty, 0)} item{cartItems.reduce((s, i) => s + i.qty, 0) !== 1 ? 's' : ''} · <span style={{ fontWeight: 700, color: theme.color }}>₹{grandTotal.toLocaleString('en-IN')}</span>
+              </div>
+            </div>
+            {/* Divider */}
+            <div style={{ height: '1px', background: darkMode ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)', margin: '20px 0' }} />
+            {/* Buttons */}
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button
+                onClick={() => setShowOrderConfirm(false)}
+                style={{
+                  flex: 1, padding: '14px', borderRadius: '16px',
+                  background: darkMode ? 'rgba(255,255,255,0.07)' : '#f2f2f2',
+                  border: `1.5px solid ${darkMode ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.08)'}`,
+                  color: theme.color, fontSize: '14px', fontWeight: 700,
+                  cursor: 'pointer', fontFamily: 'inherit',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => { setShowOrderConfirm(false); handlePlaceOrder() }}
+                style={{
+                  flex: 2, padding: '14px', borderRadius: '16px',
+                  background: '#E8321A', border: 'none',
+                  color: '#fff', fontSize: '14px', fontWeight: 800,
+                  cursor: 'pointer', fontFamily: 'inherit',
+                  boxShadow: '0 6px 20px rgba(232,50,26,0.40)',
+                  letterSpacing: '0.01em',
+                }}
+              >
+                Confirm Order ✓
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showSuccessPopup && (
         <div style={{
           position: 'fixed', inset: 0, zIndex: 200,
