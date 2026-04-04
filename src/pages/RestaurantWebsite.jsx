@@ -193,7 +193,7 @@ export default function RestaurantWebsite() {
       {
         root: null,
         threshold: 0,
-        rootMargin: '-80px 0px 0px 0px',
+        rootMargin: '0px',
       }
     )
 
@@ -413,7 +413,7 @@ export default function RestaurantWebsite() {
       transition: 'background 0.3s ease',
     }}>
       {/* Sentinel: invisible 1px trigger watched by IntersectionObserver */}
-      <div ref={sentinelRef} style={{ position: 'absolute', top: 0, left: 0, width: '1px', height: '1px', pointerEvents: 'none' }} aria-hidden="true" />
+      <div ref={sentinelRef} style={{ position: 'absolute', top: '80px', left: 0, width: '1px', height: '1px', pointerEvents: 'none' }} aria-hidden="true" />
       <style>{`
         * { box-sizing: border-box; margin: 0; padding: 0; }
         ::-webkit-scrollbar { display: none; }
