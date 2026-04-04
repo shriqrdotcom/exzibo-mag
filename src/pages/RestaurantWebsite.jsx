@@ -362,9 +362,17 @@ export default function RestaurantWebsite() {
   }
   const bestsellers = getCategoryItems()
 
-  const searchFilteredAll = searchQuery.trim()
-    ? allItems.filter(m => m.name.toLowerCase().includes(searchQuery.toLowerCase()) || (m.description || '').toLowerCase().includes(searchQuery.toLowerCase()))
-    : null
+  const searchFilteredAll = searchQuery.trim() ? [
+    ...menuData.starters
+      .filter(m => m.name.toLowerCase().includes(searchQuery.toLowerCase()) || (m.description || '').toLowerCase().includes(searchQuery.toLowerCase()))
+      .map(m => ({ ...m, _cat: 'Starter' })),
+    ...menuData.mains
+      .filter(m => m.name.toLowerCase().includes(searchQuery.toLowerCase()) || (m.description || '').toLowerCase().includes(searchQuery.toLowerCase()))
+      .map(m => ({ ...m, _cat: 'Main' })),
+    ...menuData.drinks
+      .filter(m => m.name.toLowerCase().includes(searchQuery.toLowerCase()) || (m.description || '').toLowerCase().includes(searchQuery.toLowerCase()))
+      .map(m => ({ ...m, _cat: 'Drink' })),
+  ] : null
 
   const activeMenuItems = menuData[activeMenuTab] || []
 
@@ -524,6 +532,102 @@ export default function RestaurantWebsite() {
           </div>
         </div>
       </header>
+
+      {/* ── SEARCH RESULTS OVERLAY ── */}
+      {searchFilteredAll && (
+        <div style={{
+          position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+          background: theme.pageBg,
+          zIndex: 40, overflowY: 'auto', paddingBottom: '100px',
+          paddingTop: '148px',
+          animation: 'fadeIn 0.2s ease',
+        }}>
+          {/* Header */}
+          <div style={{ padding: '0 16px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div>
+              <div style={{ fontSize: '17px', fontWeight: 800, color: theme.sectionTitle, letterSpacing: '-0.02em' }}>
+                {searchFilteredAll.length > 0 ? `${searchFilteredAll.length} result${searchFilteredAll.length !== 1 ? 's' : ''}` : 'No results'}
+              </div>
+              <div style={{ fontSize: '12px', color: theme.sectionSub, marginTop: '2px' }}>
+                {searchFilteredAll.length > 0 ? `for "${searchQuery}"` : `No dishes match "${searchQuery}"`}
+              </div>
+            </div>
+          </div>
+
+          {/* Empty State */}
+          {searchFilteredAll.length === 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 24px', gap: '12px' }}>
+              <div style={{ fontSize: '48px' }}>🍽️</div>
+              <div style={{ fontSize: '16px', fontWeight: 700, color: theme.sectionTitle }}>Nothing found</div>
+              <div style={{ fontSize: '13px', color: theme.sectionSub, textAlign: 'center', lineHeight: 1.6 }}>Try a different dish name or ingredient</div>
+            </div>
+          )}
+
+          {/* Results List */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', padding: '0 14px' }}>
+            {searchFilteredAll.map((item, i) => (
+              <div key={i} style={{
+                display: 'flex', gap: '12px', alignItems: 'center',
+                background: theme.cardBg,
+                border: `1px solid ${theme.cardBorder}`,
+                borderRadius: '16px',
+                padding: '12px',
+                boxShadow: theme.cardShadow,
+                animation: 'fadeUp 0.3s ease both',
+                animationDelay: `${i * 40}ms`,
+              }}>
+                {/* Image */}
+                <div style={{ width: '72px', height: '72px', borderRadius: '12px', overflow: 'hidden', flexShrink: 0 }}>
+                  <img
+                    src={item.img || '/menu/wagyu-ribeye.png'}
+                    alt={item.name}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    onError={e => { e.target.src = '/menu/wagyu-ribeye.png' }}
+                  />
+                </div>
+                {/* Info */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '3px' }}>
+                    <span style={{ fontSize: '13px', fontWeight: 800, color: theme.itemName, lineHeight: 1.2 }}>{item.name}</span>
+                    <span style={{
+                      fontSize: '9px', fontWeight: 700, letterSpacing: '0.06em',
+                      color: item._cat === 'Drink' ? '#60a5fa' : item._cat === 'Starter' ? '#fbbf24' : '#4ade80',
+                      background: item._cat === 'Drink' ? 'rgba(96,165,250,0.12)' : item._cat === 'Starter' ? 'rgba(251,191,36,0.12)' : 'rgba(74,222,128,0.12)',
+                      borderRadius: '5px', padding: '2px 6px', textTransform: 'uppercase', flexShrink: 0,
+                    }}>{item._cat}</span>
+                  </div>
+                  {item.description && (
+                    <div style={{ fontSize: '11px', color: theme.sectionSub, lineHeight: 1.5, marginBottom: '6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {item.description}
+                    </div>
+                  )}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '5px' }}>
+                      <span style={{ fontSize: '14px', fontWeight: 800, color: theme.priceNew }}>₹{item.price.toLocaleString()}</span>
+                      {item.oldPrice && <span style={{ fontSize: '11px', color: theme.priceOld, textDecoration: 'line-through' }}>₹{item.oldPrice.toLocaleString()}</span>}
+                    </div>
+                    <button
+                      onClick={() => addToCart(item)}
+                      style={{
+                        background: '#E8321A', color: '#fff', border: 'none',
+                        borderRadius: '10px', padding: '7px 14px',
+                        fontSize: '12px', fontWeight: 700, cursor: 'pointer',
+                        boxShadow: '0 4px 12px rgba(232,50,26,0.35)',
+                        transition: 'transform 0.15s ease',
+                        fontFamily: 'inherit',
+                      }}
+                      onMouseDown={e => e.currentTarget.style.transform = 'scale(0.93)'}
+                      onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}
+                    >
+                      + Add
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* ── HOME VIEW ── */}
       {activeNav === 'home' && (
