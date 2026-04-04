@@ -1,0 +1,116 @@
+Fix that actually works on mobile
+
+Stop relying purely on scroll direction. Combine scroll position + direction + lock state.
+
+Here’s a version that doesn’t panic every time someone breathes on the screen:
+
+💻 JavaScript (mobile-safe)
+
+let lastScrollY = window.scrollY;
+let isHidden = false;
+let ticking = false;
+
+const header = document.querySelector(".header");
+const threshold = 20;
+const minScroll = 80;
+
+function updateHeader() {
+  const currentScrollY = window.scrollY;
+  const diff = currentScrollY - lastScrollY;
+
+  // Ignore tiny scroll jitters (very common on mobile)
+  if (Math.abs(diff) < threshold) {
+    ticking = false;
+    return;
+  }
+
+  // SCROLL DOWN → hide
+  if (diff > 0 && currentScrollY > minScroll && !isHidden) {
+    header.classList.add("hide-extra");
+    isHidden = true;
+  }
+
+  // SCROLL UP → show
+  if (diff < 0 && isHidden) {
+    header.classList.remove("hide-extra");
+    isHidden = false;
+  }
+
+  lastScrollY = currentScrollY;
+  ticking = false;
+}
+
+window.addEventListener("scroll", () => {
+  if (!ticking) {
+    requestAnimationFrame(updateHeader);
+    ticking = true;
+  }
+}, { passive: true });
+
+
+---
+
+🎨 CSS (don’t sabotage yourself here)
+
+.header {
+  transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.header.hide-extra .search-bar,
+.header.hide-extra .red-button {
+  opacity: 0;
+  transform: translateY(-25px);
+  pointer-events: none;
+}
+
+
+---
+
+Why this fixes your specific issue
+
+Threshold (20px) → stops micro-scroll flickering (huge on phones)
+
+minScroll (80px) → prevents hiding at top
+
+isHidden state → avoids repeated class toggling
+
+requestAnimationFrame → smooth, synced with screen
+
+passive: true → better performance on mobile
+
+
+
+---
+
+Extra fix (this is the one most people miss)
+
+If your page has this:
+
+overflow: auto;
+height: 100vh;
+
+on some container… congratulations, you broke scroll detection on mobile.
+
+Use this instead:
+
+body {
+  overflow-x: hidden;
+}
+
+And let the window scroll, not a custom container.
+
+
+---
+
+One brutal truth
+
+If after this it still glitches, then your issue is not logic anymore.
+It’s one of these:
+
+multiple scroll listeners fighting each other
+
+wrong element being selected (.header duplicated)
+
+React/Vue re-render resetting state
+
+or you accidentally built a scroll container inside a scroll container (the classic nightmare)

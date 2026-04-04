@@ -174,25 +174,41 @@ export default function RestaurantWebsite() {
   const [vegMode, setVegMode] = useState(false)
   const lastScrollYRef = useRef(window.scrollY)
   const tickingRef = useRef(false)
+  const isHiddenRef = useRef(false)
+  const THRESHOLD = 20
+  const MIN_SCROLL = 80
 
   useEffect(() => {
     document.body.classList.add('at-top')
 
     function updateScrollState() {
-      const scrollY = window.scrollY
+      const currentScrollY = window.scrollY
+      const diff = currentScrollY - lastScrollYRef.current
 
-      if (scrollY <= 10) {
-        document.body.classList.add('at-top')
-        document.body.classList.remove('scroll-down', 'scroll-up')
-      } else if (scrollY > lastScrollYRef.current + 10) {
-        document.body.classList.add('scroll-down')
-        document.body.classList.remove('scroll-up', 'at-top')
-      } else if (scrollY < lastScrollYRef.current - 10) {
-        document.body.classList.add('scroll-up')
-        document.body.classList.remove('scroll-down', 'at-top')
+      // Ignore micro-jitters — very common on mobile touch scroll
+      if (Math.abs(diff) < THRESHOLD) {
+        tickingRef.current = false
+        return
       }
 
-      lastScrollYRef.current = scrollY
+      if (currentScrollY <= 10) {
+        // Back at the very top — always show
+        document.body.classList.add('at-top')
+        document.body.classList.remove('scroll-down', 'scroll-up')
+        isHiddenRef.current = false
+      } else if (diff > 0 && currentScrollY > MIN_SCROLL && !isHiddenRef.current) {
+        // Scrolling down past safe zone → hide
+        document.body.classList.add('scroll-down')
+        document.body.classList.remove('scroll-up', 'at-top')
+        isHiddenRef.current = true
+      } else if (diff < 0 && isHiddenRef.current) {
+        // Scrolling up → show
+        document.body.classList.add('scroll-up')
+        document.body.classList.remove('scroll-down', 'at-top')
+        isHiddenRef.current = false
+      }
+
+      lastScrollYRef.current = currentScrollY
       tickingRef.current = false
     }
 
