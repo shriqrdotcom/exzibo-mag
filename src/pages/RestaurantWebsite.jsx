@@ -46,7 +46,7 @@ const MENU_TABS = [
 function buildTheme(dark) {
   return {
     pageBg: dark ? '#0f0202' : '#f2f2f2',
-    headerBg: dark ? 'rgba(15,15,15,0.95)' : 'rgba(255,255,255,0.97)',
+    headerBg: dark ? 'rgba(15,15,15,0.95)' : 'rgba(237,237,237,0.97)',
     headerBorder: dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.07)',
     color: dark ? '#fff' : '#111',
     locationColor: dark ? '#888' : '#777',
