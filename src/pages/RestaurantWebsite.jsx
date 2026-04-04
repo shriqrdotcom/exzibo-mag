@@ -886,9 +886,19 @@ export default function RestaurantWebsite() {
                 {restaurant.location && (
                   <InfoRow icon={<MapPin size={14} color="#E8321A" />} label="Location" value={restaurant.location} theme={theme} />
                 )}
-                {restaurant.tables && (
-                  <InfoRow icon={<UtensilsCrossed size={14} color="#4ade80" />} label="Capacity" value={`${restaurant.tables} Tables`} theme={theme} />
-                )}
+                {(() => {
+                  const now = new Date()
+                  const h = now.getHours()
+                  const isOpen = h >= 12 && h < 23
+                  return (
+                    <InfoRow
+                      icon={<Clock size={14} color={isOpen ? '#4ade80' : '#E8321A'} />}
+                      label="Opening Hours"
+                      value={`12:00 PM – 11:00 PM · ${isOpen ? 'Open Now' : 'Closed'}`}
+                      theme={theme}
+                    />
+                  )
+                })()}
                 {restaurant.phone && (
                   <InfoRow icon={<Phone size={14} color="#60a5fa" />} label="Reservations" value={restaurant.phone} theme={theme} />
                 )}
