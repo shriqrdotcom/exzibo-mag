@@ -175,27 +175,36 @@ export default function RestaurantWebsite() {
   const [searchHidden, setSearchHidden] = useState(false)
   const lastScrollYRef = useRef(0)
   const tickingRef = useRef(false)
+  const isHiddenRef = useRef(false)
+  const hiddenAtYRef = useRef(null)
 
   useEffect(() => {
-    const THRESHOLD = 20
-    const MIN_SCROLL = 80
+    const MIN_SCROLL = 80      // don't hide until scrolled past this point
+    const SHOW_DISTANCE = 120  // must scroll up THIS far from where bar was hidden
 
     function onScroll() {
       if (tickingRef.current) return
       tickingRef.current = true
       requestAnimationFrame(() => {
-        const currentY = window.scrollY
+        const currentY = Math.max(0, window.scrollY)
         const diff = currentY - lastScrollYRef.current
-        const maxScroll = document.documentElement.scrollHeight - window.innerHeight
-        const nearBottom = currentY >= maxScroll - 30
-        if (Math.abs(diff) >= THRESHOLD) {
-          if (diff > 0 && currentY > MIN_SCROLL) {
-            setSearchHidden(true)
-          } else if (diff < 0 && !nearBottom) {
+
+        if (diff > 0 && currentY > MIN_SCROLL && !isHiddenRef.current) {
+          // Scrolling down past safe zone → hide and record position
+          setSearchHidden(true)
+          isHiddenRef.current = true
+          hiddenAtYRef.current = currentY
+        } else if (diff < 0 && isHiddenRef.current) {
+          // Scrolling up → only reveal if scrolled SHOW_DISTANCE above hide point
+          // This prevents momentum bounce and bottom-overscroll glitches
+          if (hiddenAtYRef.current - currentY >= SHOW_DISTANCE) {
             setSearchHidden(false)
+            isHiddenRef.current = false
+            hiddenAtYRef.current = null
           }
-          lastScrollYRef.current = currentY
         }
+
+        lastScrollYRef.current = currentY
         tickingRef.current = false
       })
     }
