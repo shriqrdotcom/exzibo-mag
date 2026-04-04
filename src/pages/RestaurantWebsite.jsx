@@ -479,32 +479,17 @@ export default function RestaurantWebsite() {
               {restaurant.location || 'Fine Dining'}
             </div>
           </div>
-          {/* Bell + Dark toggle */}
-          <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
-            <button className="toggle-btn" onClick={() => setDarkMode(d => !d)} style={{
-              width: '36px', height: '36px', borderRadius: '12px',
-              background: darkMode ? '#f0f0f0' : 'rgba(255,255,255,0.10)',
-              border: darkMode ? '1px solid rgba(0,0,0,0.08)' : '1px solid rgba(255,255,255,0.14)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
-              transition: 'background 0.3s ease',
-            }}>
-              {darkMode ? <Sun size={15} color="#FFB800" /> : <Moon size={15} color="rgba(255,255,255,0.75)" />}
-            </button>
-            <div style={{
-              width: '36px', height: '36px', borderRadius: '12px',
-              background: darkMode ? '#f0f0f0' : 'rgba(255,255,255,0.10)',
-              border: darkMode ? '1px solid rgba(0,0,0,0.08)' : '1px solid rgba(255,255,255,0.14)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
-              position: 'relative', transition: 'background 0.3s ease',
-            }}>
-              <Bell size={15} color={darkMode ? '#888' : 'rgba(255,255,255,0.7)'} />
-              {restaurant.rating && (
-                <div style={{ position: 'absolute', top: '-4px', right: '-4px', background: '#E8321A', borderRadius: '50%', width: '16px', height: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Star size={8} fill="#fff" color="#fff" />
-                </div>
-              )}
-            </div>
-          </div>
+          {/* Theme toggle only */}
+          <button className="toggle-btn" onClick={() => setDarkMode(d => !d)} style={{
+            flexShrink: 0,
+            width: '38px', height: '38px', borderRadius: '12px',
+            background: darkMode ? '#f0f0f0' : 'rgba(255,255,255,0.10)',
+            border: darkMode ? '1px solid rgba(0,0,0,0.08)' : '1px solid rgba(255,255,255,0.14)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+            transition: 'background 0.3s ease',
+          }}>
+            {darkMode ? <Sun size={16} color="#FFB800" /> : <Moon size={16} color="rgba(255,255,255,0.85)" />}
+          </button>
         </div>
 
         {/* Row 2: search-wrapper collapses space; header-search-row handles visual slide */}
