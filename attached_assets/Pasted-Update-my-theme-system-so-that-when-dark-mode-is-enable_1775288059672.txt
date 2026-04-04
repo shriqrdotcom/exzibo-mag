@@ -1,0 +1,131 @@
+Update my theme system so that when dark mode is enabled, the entire website uses dark theme EXCEPT the header, which must always remain white (like a floating card UI). Ensure this works perfectly with the existing sticky scroll behavior and search bar animation.
+
+---
+
+### 🔥 Core Requirement
+
+* Dark mode applies globally
+* Header remains **white in both light and dark mode**
+* No visual glitches during scroll (hide/show search bar still smooth)
+
+---
+
+### 🧠 Theme Logic Update
+
+If using class-based dark mode (recommended):
+
+* Apply `dark` class on `<body>` or `<html>`
+* Override header styles so it **ignores dark mode**
+
+---
+
+### 🎯 Header Styling (FORCE WHITE ALWAYS)
+
+```css
+.header {
+  background: #ffffff !important;
+  color: #111 !important;
+  border-radius: 20px;
+  margin: 10px;
+  box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+}
+```
+
+---
+
+### 🌙 Dark Mode Global Styles
+
+```css
+body.dark {
+  background: #0f0f0f;
+  color: #ffffff;
+}
+```
+
+---
+
+### ⚡ Prevent Dark Mode From Affecting Header
+
+```css
+body.dark .header {
+  background: #ffffff !important;
+  color: #111 !important;
+}
+```
+
+---
+
+### 🎬 Keep Scroll Animation Working
+
+Ensure these still apply:
+
+```css
+.search-wrapper {
+  overflow: hidden;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.scroll-down .search-wrapper {
+  transform: translateY(-100%);
+  opacity: 0;
+}
+
+.scroll-up .search-wrapper,
+.at-top .search-wrapper {
+  transform: translateY(0);
+  opacity: 1;
+}
+```
+
+---
+
+### 🎨 Adjust Inner Header Elements for White UI
+
+```css
+.header .search-bar {
+  background: #f5f5f5;
+  color: #111;
+}
+
+.header .icon-button {
+  background: #f0f0f0;
+  color: #111;
+}
+```
+
+---
+
+### 🚀 Optional (Better UI Like Image)
+
+* Add subtle blur:
+
+```css
+.header {
+  backdrop-filter: blur(10px);
+}
+```
+
+* Smooth transition when toggling theme:
+
+```css
+body {
+  transition: background 0.3s ease, color 0.3s ease;
+}
+```
+
+---
+
+### 🚫 Avoid
+
+* Don’t let dark styles override header
+* Don’t remove existing scroll classes
+* Don’t change header structure (only styling)
+
+---
+
+### ✅ Final Result
+
+* Dark theme applied globally ✅
+* Header always white (premium card look) ✅
+* Search bar hide/show still smooth ✅
+* No glitches or layout issues ✅

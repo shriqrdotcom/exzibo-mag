@@ -147,16 +147,30 @@ img {
   box-shadow: 0 0 8px rgba(34, 197, 94, 0.5);
 }
 
-/* ── Restaurant header: GPU-composited sticky header ── */
+/* ── Restaurant header: GPU-composited sticky header — always white ── */
 .restaurant-header {
   position: sticky;
-  top: 0;
+  top: 10px;
   z-index: 1000;
   will-change: transform;
   transform: translateZ(0);
   -webkit-transform: translateZ(0);
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
+  background: #ffffff !important;
+  color: #111 !important;
+  border-radius: 20px !important;
+  margin: 10px !important;
+  box-shadow: 0 8px 25px rgba(0,0,0,0.15) !important;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+/* Prevent dark mode from ever affecting the header */
+body.restaurant-dark .restaurant-header,
+.restaurant-header {
+  background: #ffffff !important;
+  color: #111 !important;
 }
 
 /* Top info row — always visible, spacing is inside wrapper so it collapses too */

@@ -437,25 +437,19 @@ export default function RestaurantWebsite() {
         .reveal-2 { animation-delay: 80ms; }
         .reveal-3 { animation-delay: 160ms; }
         .reveal-4 { animation-delay: 240ms; }
-        ::placeholder { color: rgba(255,255,255,0.55) !important; }
+        .restaurant-header input::placeholder { color: rgba(0,0,0,0.35) !important; }
       `}</style>
 
-      {/* ── STICKY HEADER CARD ── */}
-      <header className="restaurant-header" style={{
-        zIndex: 50,
-        background: darkMode ? '#111' : '#1a1a1a',
-        borderRadius: '0 0 22px 22px',
-        padding: '12px 16px',
-        boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
-      }}>
+      {/* ── STICKY HEADER CARD — always white ── */}
+      <header className="restaurant-header" style={{ padding: '12px 16px' }}>
         {/* Row 1: Logo + Name/Location + Buttons — ALWAYS VISIBLE */}
         <div className="header-top-row" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          {/* Logo avatar with glow */}
+          {/* Logo avatar */}
           <div style={{
             width: '44px', height: '44px', borderRadius: '13px', flexShrink: 0,
             background: 'linear-gradient(135deg, #E8321A 0%, #ff6b35 100%)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
+            boxShadow: '0 4px 12px rgba(232,50,26,0.3)',
             overflow: 'hidden',
           }}>
             {carouselImages[0] ? (
@@ -466,21 +460,21 @@ export default function RestaurantWebsite() {
           </div>
           {/* Name + Location */}
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: '16px', fontWeight: 800, color: '#fff', letterSpacing: '-0.01em', lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <div style={{ fontSize: '16px', fontWeight: 800, color: '#111', letterSpacing: '-0.01em', lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {restaurant.name}
             </div>
-            <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '3px', marginTop: '2px' }}>
+            <div style={{ fontSize: '11px', color: '#888', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '3px', marginTop: '2px' }}>
               <MapPin size={9} color="#E8321A" />
               {restaurant.location || 'Fine Dining'}
             </div>
           </div>
           {/* Bell + Dark toggle */}
           <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
-            <button className="toggle-btn" onClick={() => setDarkMode(d => !d)} style={{ width: '36px', height: '36px', borderRadius: '12px', background: 'rgba(255,255,255,0.10)', border: '1px solid rgba(255,255,255,0.14)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-              {darkMode ? <Sun size={15} color="#FFB800" /> : <Moon size={15} color="rgba(255,255,255,0.7)" />}
+            <button className="toggle-btn" onClick={() => setDarkMode(d => !d)} style={{ width: '36px', height: '36px', borderRadius: '12px', background: '#f0f0f0', border: '1px solid rgba(0,0,0,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+              {darkMode ? <Sun size={15} color="#FFB800" /> : <Moon size={15} color="#555" />}
             </button>
-            <div style={{ width: '36px', height: '36px', borderRadius: '12px', background: 'rgba(255,255,255,0.10)', border: '1px solid rgba(255,255,255,0.14)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', position: 'relative' }}>
-              <Bell size={15} color="rgba(255,255,255,0.7)" />
+            <div style={{ width: '36px', height: '36px', borderRadius: '12px', background: '#f0f0f0', border: '1px solid rgba(0,0,0,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', position: 'relative' }}>
+              <Bell size={15} color="#888" />
               {restaurant.rating && (
                 <div style={{ position: 'absolute', top: '-4px', right: '-4px', background: '#E8321A', borderRadius: '50%', width: '16px', height: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <Star size={8} fill="#fff" color="#fff" />
@@ -501,18 +495,18 @@ export default function RestaurantWebsite() {
                   placeholder="Search dishes, drinks..."
                   style={{
                     width: '100%', boxSizing: 'border-box',
-                    background: 'rgba(255,255,255,0.10)',
-                    border: '1.5px solid rgba(255,255,255,0.12)',
+                    background: '#f5f5f5',
+                    border: '1.5px solid rgba(0,0,0,0.08)',
                     borderRadius: '14px', padding: '11px 14px 11px 40px',
-                    fontSize: '13px', color: '#fff', fontFamily: 'inherit', outline: 'none',
+                    fontSize: '13px', color: '#111', fontFamily: 'inherit', outline: 'none',
                     transition: 'border-color 0.2s ease, background 0.2s ease',
                   }}
-                  onFocus={e => { e.target.style.borderColor = '#E8321A'; e.target.style.background = 'rgba(255,255,255,0.15)' }}
-                  onBlur={e => { e.target.style.borderColor = 'rgba(255,255,255,0.12)'; e.target.style.background = 'rgba(255,255,255,0.10)' }}
+                  onFocus={e => { e.target.style.borderColor = '#E8321A'; e.target.style.background = '#f0f0f0' }}
+                  onBlur={e => { e.target.style.borderColor = 'rgba(0,0,0,0.08)'; e.target.style.background = '#f5f5f5' }}
                 />
-                <svg style={{ position: 'absolute', left: '13px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                <svg style={{ position: 'absolute', left: '13px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,0.35)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
                 {searchQuery && (
-                  <button onClick={() => setSearchQuery('')} style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)', cursor: 'pointer', fontSize: '16px', lineHeight: 1, padding: '0' }}>×</button>
+                  <button onClick={() => setSearchQuery('')} style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'rgba(0,0,0,0.4)', cursor: 'pointer', fontSize: '16px', lineHeight: 1, padding: '0' }}>×</button>
                 )}
               </div>
               <button style={{ flexShrink: 0, width: '42px', height: '42px', borderRadius: '14px', background: '#E8321A', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 4px 14px rgba(232,50,26,0.4)' }}>
