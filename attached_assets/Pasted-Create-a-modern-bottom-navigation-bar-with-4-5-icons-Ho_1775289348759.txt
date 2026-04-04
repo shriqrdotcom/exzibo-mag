@@ -1,0 +1,127 @@
+Create a modern bottom navigation bar with 4–5 icons (Home, Menu, Cart, Orders/Profile). The design should match a premium app UI (like the provided image), with a clean dark rounded container and a clear active (selected) state.
+
+---
+
+### 🔥 Layout & Structure
+
+* Create a **fixed bottom navigation bar**
+* Center it horizontally
+* Use:
+
+  * Rounded corners (pill shape)
+  * Dark background (#111 or #1a1a1a)
+  * Soft shadow for floating effect
+* Height: ~65–75px
+* Icons evenly spaced
+
+---
+
+### 🎯 Icons
+
+Use clean outline icons (Lucide / Heroicons preferred):
+
+* Home
+* Menu (IMPORTANT – default active)
+* Cart
+* Orders or Profile
+
+---
+
+### 🧠 Active (Selected) State Logic
+
+* Only ONE icon active at a time
+* Default active = **Menu**
+* When active:
+
+  * Icon color = white
+  * Background = slightly lighter/different (like a soft highlight or pill behind icon)
+* When inactive:
+
+  * Icon color = gray (#888)
+
+---
+
+### 🎨 UI Styling
+
+```css id="nav1"
+.bottom-nav {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 90%;
+  max-width: 420px;
+  height: 70px;
+  background: #111;
+  border-radius: 20px;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+  z-index: 1000;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #888;
+  transition: all 0.3s ease;
+}
+
+.nav-item.active {
+  color: #fff;
+}
+
+.nav-item.active .icon-wrapper {
+  background: #2a2a2a;
+  padding: 10px;
+  border-radius: 12px;
+}
+```
+
+---
+
+### ⚡ Interaction Logic
+
+* On click:
+
+  * Remove `active` class from all items
+  * Add `active` to clicked item
+* Smooth transition (0.3s ease)
+
+---
+
+### 🚀 Optional (Better Like Image)
+
+* Slight scale effect on active icon:
+
+```css id="nav2"
+.nav-item.active {
+  transform: scale(1.1);
+}
+```
+
+---
+
+### 📱 Responsiveness
+
+* Keep nav centered on all devices
+* Maintain spacing on mobile
+
+---
+
+### 🚫 Avoid
+
+* No text labels (icons only, like image)
+* No harsh colors
+* No sharp edges (keep rounded)
+
+---
+
+### ✅ Final Result
+
+* Clean floating bottom nav ✅
+* Menu icon selected by default ✅
+* Smooth active switching ✅
+* Premium dark UI like your image ✅

@@ -1643,42 +1643,61 @@ export default function RestaurantWebsite() {
       )}
 
       <nav style={{
-        position: 'fixed', bottom: '10px', left: '50%', transform: 'translateX(-50%)',
-        width: 'calc(100% - 20px)', maxWidth: '460px', zIndex: 100,
+        position: 'fixed', bottom: '16px', left: '50%', transform: 'translateX(-50%)',
+        width: 'calc(100% - 32px)', maxWidth: '440px', zIndex: 100,
         background: theme.navBg,
         backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
-        borderRadius: '20px',
-        boxShadow: darkMode ? '0 8px 25px rgba(0,0,0,0.15)' : '0 8px 25px rgba(0,0,0,0.5)',
-        padding: '10px 8px env(safe-area-inset-bottom, 10px)',
+        borderRadius: '22px',
+        boxShadow: darkMode ? '0 8px 28px rgba(0,0,0,0.15)' : '0 8px 28px rgba(0,0,0,0.55)',
+        height: '68px',
+        padding: '0 16px',
         display: 'flex', justifyContent: 'space-around', alignItems: 'center',
         transition: 'background 0.3s ease, box-shadow 0.3s ease',
       }}>
         {[
-          { id: 'home', icon: <Home size={22} />, label: 'Home' },
-          { id: 'menu', icon: <UtensilsCrossed size={22} />, label: 'Menu' },
+          { id: 'home', icon: <Home size={24} /> },
+          { id: 'menu', icon: <UtensilsCrossed size={24} /> },
           {
-            id: 'cart', label: 'Cart',
+            id: 'cart',
             icon: (
               <div style={{ position: 'relative', display: 'inline-flex' }}>
-                <ShoppingCart size={22} />
+                <ShoppingCart size={24} />
                 {cartCount > 0 && (
-                  <span style={{ position: 'absolute', top: '-5px', right: '-6px', width: '14px', height: '14px', borderRadius: '50%', background: '#E8321A', color: '#fff', fontSize: '8px', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{cartCount}</span>
+                  <span style={{ position: 'absolute', top: '-5px', right: '-7px', width: '15px', height: '15px', borderRadius: '50%', background: '#E8321A', color: '#fff', fontSize: '8px', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{cartCount}</span>
                 )}
               </div>
             ),
           },
-          { id: 'orders', icon: <ClipboardList size={22} />, label: 'Order' },
-          { id: 'booking', icon: <CalendarDays size={22} />, label: 'Book' },
-        ].map(({ id, icon, label }) => (
-          <button
-            key={id}
-            onClick={() => setActiveNav(id)}
-            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', border: 'none', cursor: 'pointer', color: activeNav === id ? '#E8321A' : theme.navInactive, padding: '6px 14px', borderRadius: '12px', background: activeNav === id ? 'rgba(232,50,26,0.12)' : 'none', transition: 'color 0.2s ease, background 0.2s ease' }}
-          >
-            {icon}
-            <span style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '0.03em', textTransform: 'uppercase' }}>{label}</span>
-          </button>
-        ))}
+          { id: 'orders', icon: <ClipboardList size={24} /> },
+          { id: 'booking', icon: <CalendarDays size={24} /> },
+        ].map(({ id, icon }) => {
+          const isActive = activeNav === id
+          const activeIconColor = darkMode ? '#111' : '#fff'
+          const activePillBg = darkMode ? 'rgba(0,0,0,0.10)' : 'rgba(255,255,255,0.12)'
+          return (
+            <button
+              key={id}
+              onClick={() => setActiveNav(id)}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                border: 'none', cursor: 'pointer', background: 'none',
+                padding: 0,
+                transition: 'transform 0.2s ease',
+                transform: isActive ? 'scale(1.12)' : 'scale(1)',
+              }}
+            >
+              <div style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                width: '48px', height: '44px', borderRadius: '14px',
+                background: isActive ? activePillBg : 'transparent',
+                color: isActive ? activeIconColor : theme.navInactive,
+                transition: 'background 0.25s ease, color 0.25s ease',
+              }}>
+                {icon}
+              </div>
+            </button>
+          )
+        })}
       </nav>
     </div>
   )
