@@ -9,6 +9,8 @@ import {
   Trash2, Minus, Plus, Tag, CheckCircle, ShoppingBag,
   Copy, PhoneCall, ArrowLeft
 } from 'lucide-react'
+import { FaInstagram, FaFacebook, FaWhatsapp } from 'react-icons/fa'
+import { FaXTwitter } from 'react-icons/fa6'
 
 const FALLBACK_IMAGES = [
   '/menu/wagyu-ribeye.png',
@@ -909,12 +911,13 @@ export default function RestaurantWebsite() {
                 <MapPin size={10} /> {restaurant.location}
               </div>
             )}
-            {(restaurant.socialLinks?.instagram || restaurant.socialLinks?.facebook || restaurant.socialLinks?.twitter || restaurant.socialLinks?.website) && (
+            {(restaurant.socialLinks?.instagram || restaurant.socialLinks?.facebook || restaurant.socialLinks?.twitter || restaurant.socialLinks?.whatsapp || restaurant.socialLinks?.website) && (
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', marginBottom: '18px' }}>
-                {restaurant.socialLinks?.instagram && <SocialBtn href={restaurant.socialLinks.instagram} icon={<AtSign size={17} />} theme={theme} />}
-                {restaurant.socialLinks?.facebook && <SocialBtn href={restaurant.socialLinks.facebook} icon={<Share2 size={17} />} theme={theme} />}
-                {restaurant.socialLinks?.twitter && <SocialBtn href={restaurant.socialLinks.twitter} icon={<MessageCircle size={17} />} theme={theme} />}
-                {restaurant.socialLinks?.website && <SocialBtn href={restaurant.socialLinks.website} icon={<Globe size={17} />} theme={theme} />}
+                {restaurant.socialLinks?.instagram && <SocialBtn href={restaurant.socialLinks.instagram} icon={<FaInstagram size={19} />} brandColor="#E1306C" theme={theme} />}
+                {restaurant.socialLinks?.facebook && <SocialBtn href={restaurant.socialLinks.facebook} icon={<FaFacebook size={19} />} brandColor="#1877F2" theme={theme} />}
+                {restaurant.socialLinks?.twitter && <SocialBtn href={restaurant.socialLinks.twitter} icon={<FaXTwitter size={18} />} brandColor="#000000" theme={theme} />}
+                {restaurant.socialLinks?.whatsapp && <SocialBtn href={restaurant.socialLinks.whatsapp} icon={<FaWhatsapp size={19} />} brandColor="#25D366" theme={theme} />}
+                {restaurant.socialLinks?.website && <SocialBtn href={restaurant.socialLinks.website} icon={<Globe size={18} />} brandColor="#6366f1" theme={theme} />}
               </div>
             )}
             <a
@@ -1969,15 +1972,41 @@ function InfoRow({ icon, label, value, theme }) {
   )
 }
 
-function SocialBtn({ href, icon, theme }) {
+function SocialBtn({ href, icon, brandColor, theme }) {
+  const hexToRgba = (hex, alpha) => {
+    const r = parseInt(hex.slice(1, 3), 16)
+    const g = parseInt(hex.slice(3, 5), 16)
+    const b = parseInt(hex.slice(5, 7), 16)
+    return `rgba(${r},${g},${b},${alpha})`
+  }
+  const hoverBg = brandColor ? hexToRgba(brandColor, 0.1) : 'rgba(232,50,26,0.08)'
+  const hoverBorder = brandColor ? hexToRgba(brandColor, 0.35) : 'rgba(232,50,26,0.3)'
   return (
     <a
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      style={{ width: '38px', height: '38px', borderRadius: '11px', background: theme.socialBg, border: `1px solid ${theme.socialBorder}`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: theme.socialColor, textDecoration: 'none', transition: 'all 0.2s' }}
-      onMouseEnter={e => { e.currentTarget.style.color = '#E8321A'; e.currentTarget.style.borderColor = 'rgba(232,50,26,0.3)' }}
-      onMouseLeave={e => { e.currentTarget.style.color = theme.socialColor; e.currentTarget.style.borderColor = theme.socialBorder }}
+      style={{
+        width: '42px', height: '42px', borderRadius: '13px',
+        background: theme.socialBg,
+        border: `1.5px solid ${theme.socialBorder}`,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        color: theme.socialColor, textDecoration: 'none',
+        transition: 'all 0.2s ease',
+        transform: 'scale(1)',
+      }}
+      onMouseEnter={e => {
+        e.currentTarget.style.color = brandColor || '#E8321A'
+        e.currentTarget.style.borderColor = hoverBorder
+        e.currentTarget.style.background = hoverBg
+        e.currentTarget.style.transform = 'scale(1.08)'
+      }}
+      onMouseLeave={e => {
+        e.currentTarget.style.color = theme.socialColor
+        e.currentTarget.style.borderColor = theme.socialBorder
+        e.currentTarget.style.background = theme.socialBg
+        e.currentTarget.style.transform = 'scale(1)'
+      }}
     >
       {icon}
     </a>
