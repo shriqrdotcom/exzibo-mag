@@ -533,6 +533,30 @@ export default function RestaurantWebsite() {
             </div>
           </div>
         )}
+
+        {/* Row 3: Menu category tabs — only visible when on the menu tab */}
+        {activeNav === 'menu' && (
+          <div style={{ paddingTop: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', background: darkMode ? 'rgba(0,0,0,0.07)' : 'rgba(255,255,255,0.09)', borderRadius: '16px', padding: '5px' }}>
+              {MENU_TABS.map(tab => {
+                const active = activeMenuTab === tab.id
+                return (
+                  <button key={tab.id} className="tab-pill" onClick={() => setActiveMenuTab(tab.id)} style={{
+                    flex: 1, padding: '9px 8px', borderRadius: '12px', border: 'none',
+                    background: active ? '#E8321A' : 'transparent',
+                    color: active ? '#fff' : darkMode ? '#666' : 'rgba(255,255,255,0.55)',
+                    fontSize: '11px', fontWeight: 800, cursor: 'pointer',
+                    letterSpacing: '0.05em', whiteSpace: 'nowrap', textAlign: 'center',
+                    boxShadow: active ? '0 4px 14px rgba(232,50,26,0.35)' : 'none',
+                    fontFamily: 'inherit',
+                  }}>
+                    {tab.label}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )}
       </header>
 
       {/* ── SEARCH RESULTS OVERLAY ── */}
@@ -917,20 +941,6 @@ export default function RestaurantWebsite() {
       {/* ── MENU VIEW ── */}
       {activeNav === 'menu' && (
         <div style={{ animation: 'fadeIn 0.3s ease', paddingBottom: cartCount > 0 ? '130px' : '100px', transition: 'padding-bottom 0.3s ease' }}>
-
-          {/* Category Tabs */}
-          <div style={{ position: 'sticky', top: '64px', zIndex: 40, padding: '12px 14px', background: theme.pageBg, transition: 'background 0.3s ease' }}>
-            <div style={{ display: 'flex', alignItems: 'center', background: theme.tabBarBg, borderRadius: '18px', boxShadow: theme.tabBarShadow, padding: '6px' }}>
-              {MENU_TABS.map(tab => {
-                const active = activeMenuTab === tab.id
-                return (
-                  <button key={tab.id} className="tab-pill" onClick={() => setActiveMenuTab(tab.id)} style={{ flex: 1, padding: '10px 8px', borderRadius: '14px', border: 'none', background: active ? '#E8321A' : 'transparent', color: active ? '#fff' : theme.tabInactiveColor, fontSize: '11px', fontWeight: 800, cursor: 'pointer', letterSpacing: '0.05em', whiteSpace: 'nowrap', textAlign: 'center', boxShadow: active ? '0 4px 14px rgba(232,50,26,0.35)' : 'none' }}>
-                    {tab.label}
-                  </button>
-                )
-              })}
-            </div>
-          </div>
 
           {/* Menu Cards */}
           <div style={{ padding: '4px 14px 8px' }}>
