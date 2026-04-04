@@ -500,37 +500,39 @@ export default function RestaurantWebsite() {
           </button>
         </div>
 
-        {/* Row 2: search-wrapper collapses space; header-search-row handles visual slide */}
-        <div className="search-wrapper">
-          <div className="header-search-row">
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-              <div style={{ flex: 1, position: 'relative' }}>
-                <input
-                  value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
-                  placeholder="Search dishes, drinks..."
-                  style={{
-                    width: '100%', boxSizing: 'border-box',
-                    background: darkMode ? '#f5f5f5' : 'rgba(255,255,255,0.10)',
-                    border: darkMode ? '1.5px solid rgba(0,0,0,0.08)' : '1.5px solid rgba(255,255,255,0.12)',
-                    borderRadius: '14px', padding: '11px 14px 11px 40px',
-                    fontSize: '13px', color: darkMode ? '#111' : '#fff', fontFamily: 'inherit', outline: 'none',
-                    transition: 'border-color 0.2s ease, background 0.2s ease, color 0.3s ease',
-                  }}
-                  onFocus={e => { e.target.style.borderColor = '#E8321A'; e.target.style.background = darkMode ? '#f0f0f0' : 'rgba(255,255,255,0.15)' }}
-                  onBlur={e => { e.target.style.borderColor = darkMode ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.12)'; e.target.style.background = darkMode ? '#f5f5f5' : 'rgba(255,255,255,0.10)' }}
-                />
-                <svg style={{ position: 'absolute', left: '13px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={darkMode ? 'rgba(0,0,0,0.35)' : 'rgba(255,255,255,0.5)'} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-                {searchQuery && (
-                  <button onClick={() => setSearchQuery('')} style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: darkMode ? 'rgba(0,0,0,0.4)' : 'rgba(255,255,255,0.5)', cursor: 'pointer', fontSize: '16px', lineHeight: 1, padding: '0' }}>×</button>
-                )}
+        {/* Row 2: search bar — only on home & menu pages */}
+        {(activeNav === 'home' || activeNav === 'menu') && (
+          <div className="search-wrapper">
+            <div className="header-search-row">
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <div style={{ flex: 1, position: 'relative' }}>
+                  <input
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                    placeholder="Search dishes, drinks..."
+                    style={{
+                      width: '100%', boxSizing: 'border-box',
+                      background: darkMode ? '#f5f5f5' : 'rgba(255,255,255,0.10)',
+                      border: darkMode ? '1.5px solid rgba(0,0,0,0.08)' : '1.5px solid rgba(255,255,255,0.12)',
+                      borderRadius: '14px', padding: '11px 14px 11px 40px',
+                      fontSize: '13px', color: darkMode ? '#111' : '#fff', fontFamily: 'inherit', outline: 'none',
+                      transition: 'border-color 0.2s ease, background 0.2s ease, color 0.3s ease',
+                    }}
+                    onFocus={e => { e.target.style.borderColor = '#E8321A'; e.target.style.background = darkMode ? '#f0f0f0' : 'rgba(255,255,255,0.15)' }}
+                    onBlur={e => { e.target.style.borderColor = darkMode ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.12)'; e.target.style.background = darkMode ? '#f5f5f5' : 'rgba(255,255,255,0.10)' }}
+                  />
+                  <svg style={{ position: 'absolute', left: '13px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={darkMode ? 'rgba(0,0,0,0.35)' : 'rgba(255,255,255,0.5)'} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                  {searchQuery && (
+                    <button onClick={() => setSearchQuery('')} style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: darkMode ? 'rgba(0,0,0,0.4)' : 'rgba(255,255,255,0.5)', cursor: 'pointer', fontSize: '16px', lineHeight: 1, padding: '0' }}>×</button>
+                  )}
+                </div>
+                <button style={{ flexShrink: 0, width: '42px', height: '42px', borderRadius: '14px', background: '#E8321A', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 4px 14px rgba(232,50,26,0.4)' }}>
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/></svg>
+                </button>
               </div>
-              <button style={{ flexShrink: 0, width: '42px', height: '42px', borderRadius: '14px', background: '#E8321A', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 4px 14px rgba(232,50,26,0.4)' }}>
-                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/></svg>
-              </button>
             </div>
           </div>
-        </div>
+        )}
       </header>
 
       {/* ── SEARCH RESULTS OVERLAY ── */}
