@@ -168,6 +168,7 @@ export default function RestaurantWebsite() {
 
   const [searchQuery, setSearchQuery] = useState('')
   const [activeCategory, setActiveCategory] = useState('all')
+  const [vegMode, setVegMode] = useState(false)
   const lastScrollYRef = useRef(window.scrollY)
   const tickingRef = useRef(false)
 
@@ -374,7 +375,9 @@ export default function RestaurantWebsite() {
       .map(m => ({ ...m, _cat: 'Drink' })),
   ] : null
 
-  const activeMenuItems = menuData[activeMenuTab] || []
+  const activeMenuItems = vegMode
+    ? [...(menuData[activeMenuTab] || [])].sort((a, b) => (b.veg ? 1 : 0) - (a.veg ? 1 : 0))
+    : (menuData[activeMenuTab] || [])
 
   if (notFound) {
     return (
@@ -526,8 +529,22 @@ export default function RestaurantWebsite() {
                     <button onClick={() => setSearchQuery('')} style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: darkMode ? 'rgba(0,0,0,0.4)' : 'rgba(255,255,255,0.5)', cursor: 'pointer', fontSize: '16px', lineHeight: 1, padding: '0' }}>×</button>
                   )}
                 </div>
-                <button style={{ flexShrink: 0, width: '42px', height: '42px', borderRadius: '14px', background: '#E8321A', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 4px 14px rgba(232,50,26,0.4)' }}>
-                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/></svg>
+                <button
+                  onClick={() => setVegMode(v => !v)}
+                  title={vegMode ? 'Show all items' : 'Show veg items first'}
+                  style={{
+                    flexShrink: 0, width: '42px', height: '42px', borderRadius: '14px',
+                    background: vegMode ? '#22c55e' : '#E8321A',
+                    border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    cursor: 'pointer',
+                    boxShadow: vegMode ? '0 4px 14px rgba(34,197,94,0.45)' : '0 4px 14px rgba(232,50,26,0.4)',
+                    transition: 'background 0.2s ease, box-shadow 0.2s ease',
+                  }}
+                >
+                  {vegMode
+                    ? <Leaf width="17" height="17" color="#fff" strokeWidth={2.5} />
+                    : <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/></svg>
+                  }
                 </button>
               </div>
             </div>
