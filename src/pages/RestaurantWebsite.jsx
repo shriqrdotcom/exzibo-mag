@@ -158,6 +158,12 @@ export default function RestaurantWebsite() {
 
   useEffect(() => {
     localStorage.setItem('exzibo_darkmode', JSON.stringify(darkMode))
+    document.body.style.background = darkMode ? '#0f0f0f' : '#f2f2f2'
+    document.documentElement.style.background = darkMode ? '#0f0f0f' : '#f2f2f2'
+    return () => {
+      document.body.style.background = ''
+      document.documentElement.style.background = ''
+    }
   }, [darkMode])
 
   const [searchQuery, setSearchQuery] = useState('')
