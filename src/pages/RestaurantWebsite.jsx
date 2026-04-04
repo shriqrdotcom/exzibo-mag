@@ -266,7 +266,7 @@ export default function RestaurantWebsite() {
   function handlePlaceOrder() {
     if (cartItems.length === 0) return
     if (currentOrder) {
-      setOrderHistory(prev => [{ ...currentOrder, status: orderStatus >= 2 ? 'DELIVERED' : 'CONFIRMED' }, ...prev])
+      setOrderHistory(prev => [{ ...currentOrder, status: 'CONFIRMED' }, ...prev])
     }
     const orderId = String(Math.floor(100000000 + Math.random() * 900000000))
     const now = new Date()
@@ -1400,17 +1400,17 @@ export default function RestaurantWebsite() {
 
                 {/* ── STATUS TRACKER ── */}
                 {(() => {
+                  const confirmed = orderStatus >= 1
                   const steps = [
                     { label: 'PLACED', done: true },
-                    { label: 'CONFIRM', done: orderStatus >= 1 },
-                    { label: 'DELIVERED', done: orderStatus >= 2 },
+                    { label: 'CONFIRMED', done: confirmed },
                   ]
                   return (
                     <div>
                       <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
                         {/* Progress track */}
                         <div style={{ position: 'absolute', top: '14px', left: '14px', right: '14px', height: '3px', background: darkMode ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.08)', borderRadius: '2px', zIndex: 0 }}>
-                          <div style={{ height: '100%', borderRadius: '2px', background: '#E8321A', width: orderStatus === 0 ? '0%' : orderStatus === 1 ? '50%' : '100%', transition: 'width 0.8s ease' }} />
+                          <div style={{ height: '100%', borderRadius: '2px', background: '#E8321A', width: confirmed ? '100%' : '0%', transition: 'width 0.8s ease' }} />
                         </div>
                         {steps.map((step, i) => (
                           <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', zIndex: 1, flex: 1 }}>
@@ -1438,6 +1438,28 @@ export default function RestaurantWebsite() {
                           </div>
                         ))}
                       </div>
+
+                      {/* ── THANK YOU MESSAGE (shown when confirmed) ── */}
+                      {confirmed && (
+                        <div style={{
+                          marginTop: '16px',
+                          background: darkMode ? 'rgba(34,197,94,0.08)' : 'rgba(34,197,94,0.07)',
+                          border: '1px solid rgba(34,197,94,0.25)',
+                          borderRadius: '14px',
+                          padding: '14px 16px',
+                          display: 'flex',
+                          alignItems: 'flex-start',
+                          gap: '10px',
+                        }}>
+                          <div style={{ fontSize: '22px', lineHeight: 1, flexShrink: 0 }}>🙏</div>
+                          <div>
+                            <div style={{ fontSize: '13px', fontWeight: 800, color: '#22c55e', marginBottom: '4px' }}>Thank you for your order!</div>
+                            <div style={{ fontSize: '12px', lineHeight: 1.6, color: theme.locationColor }}>
+                              Please wait a moment — your order is being prepared with care and will be with you right on time.
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )
                 })()}
@@ -1457,7 +1479,7 @@ export default function RestaurantWebsite() {
                   { label: 'DATE', value: currentOrder.date },
                   { label: 'Total Items', value: `${currentOrder.itemCount}  ITEMS` },
                   { label: 'Sub total', value: `₹${currentOrder.subtotal.toLocaleString('en-IN')}  INR` },
-                  { label: 'STATUS', value: orderStatus >= 2 ? 'DELIVERED' : 'CONFIRMED', highlight: true },
+                  { label: 'STATUS', value: orderStatus >= 1 ? 'CONFIRMED' : 'PLACED', highlight: orderStatus >= 1 },
                 ].map(({ label, value, highlight }, i, arr) => (
                   <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 16px', borderBottom: i < arr.length - 1 ? `1px solid ${theme.cardBorder}` : 'none' }}>
                     <span style={{ fontSize: '13px', color: theme.locationColor, fontWeight: 500 }}>{label}</span>
