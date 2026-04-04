@@ -358,7 +358,7 @@ export default function RestaurantWebsite() {
       default: base = tagged.length > 0 ? tagged : allItems
     }
     if (q) base = base.filter(m => m.name.toLowerCase().includes(q) || (m.description || '').toLowerCase().includes(q))
-    return base.slice(0, 6)
+    return base
   }
   const bestsellers = getCategoryItems()
 
@@ -753,16 +753,18 @@ export default function RestaurantWebsite() {
                 See all <ChevronRight size={13} />
               </button>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
-              {bestsellers.slice(0, 3).map((item, i) => (
+            <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '8px', scrollSnapType: 'x mandatory', WebkitOverflowScrolling: 'touch', msOverflowStyle: 'none', scrollbarWidth: 'none' }}>
+              {bestsellers.map((item, i) => (
                 <div
                   key={i}
                   className="menu-card"
                   style={{
                     borderRadius: '18px', overflow: 'hidden', cursor: 'pointer',
                     position: 'relative', height: '240px',
+                    minWidth: '160px', width: '160px', flexShrink: 0,
                     boxShadow: theme.cardShadow,
                     animationDelay: `${i * 60}ms`,
+                    scrollSnapAlign: 'start',
                   }}
                   onClick={() => navigate(`/restaurant/${slug}/food/${encodeURIComponent(item.name)}`, { state: { item, returnTab: 'home', darkMode } })}
                 >
