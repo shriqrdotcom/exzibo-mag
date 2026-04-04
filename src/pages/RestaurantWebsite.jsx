@@ -698,10 +698,10 @@ export default function RestaurantWebsite() {
 
           {/* ── ACTION BUTTONS: icon square + "View menu" pill ── */}
           <section className="reveal reveal-2" style={{ padding: '14px 14px 0', display: 'flex', gap: '12px', alignItems: 'stretch' }}>
-            {/* Left: menu icon square button */}
+            {/* Left: booking icon square button */}
             <button
               className="action-btn"
-              onClick={() => setActiveNav('menu')}
+              onClick={() => setActiveNav('booking')}
               style={{
                 width: '56px', height: '56px', flexShrink: 0,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
