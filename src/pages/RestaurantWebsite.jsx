@@ -760,7 +760,7 @@ export default function RestaurantWebsite() {
                   className="menu-card"
                   style={{
                     borderRadius: '18px', overflow: 'hidden', cursor: 'pointer',
-                    position: 'relative', height: '180px',
+                    position: 'relative', height: '240px',
                     boxShadow: theme.cardShadow,
                     animationDelay: `${i * 60}ms`,
                   }}
