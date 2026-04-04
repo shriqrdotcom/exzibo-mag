@@ -172,36 +172,34 @@ export default function RestaurantWebsite() {
   const [searchQuery, setSearchQuery] = useState('')
   const [activeCategory, setActiveCategory] = useState('all')
   const [vegMode, setVegMode] = useState(false)
-  const sentinelRef = useRef(null)
+  const [searchHidden, setSearchHidden] = useState(false)
+  const lastScrollYRef = useRef(0)
+  const tickingRef = useRef(false)
 
   useEffect(() => {
-    const sentinel = sentinelRef.current
-    if (!sentinel) return
+    const THRESHOLD = 20
+    const MIN_SCROLL = 80
 
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          // Sentinel visible → near top → show search bar
-          document.body.classList.remove('scroll-down')
-          document.body.classList.add('at-top')
-        } else {
-          // Sentinel out of view → scrolled down → hide search bar
-          document.body.classList.add('scroll-down')
-          document.body.classList.remove('at-top')
+    function onScroll() {
+      if (tickingRef.current) return
+      tickingRef.current = true
+      requestAnimationFrame(() => {
+        const currentY = window.scrollY
+        const diff = currentY - lastScrollYRef.current
+        if (Math.abs(diff) >= THRESHOLD) {
+          if (diff > 0 && currentY > MIN_SCROLL) {
+            setSearchHidden(true)
+          } else if (diff < 0) {
+            setSearchHidden(false)
+          }
+          lastScrollYRef.current = currentY
         }
-      },
-      {
-        root: null,
-        threshold: 0,
-        rootMargin: '0px',
-      }
-    )
-
-    observer.observe(sentinel)
-    return () => {
-      observer.disconnect()
-      document.body.classList.remove('at-top', 'scroll-down')
+        tickingRef.current = false
+      })
     }
+
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
   const [bookingForm, setBookingForm] = useState({ name: '', phone: '', email: '', date: '', time: '19:00', guests: 2, occasion: 'Casual Dining', seating: 'Indoor', notes: '' })
@@ -412,8 +410,6 @@ export default function RestaurantWebsite() {
       position: 'relative',
       transition: 'background 0.3s ease',
     }}>
-      {/* Sentinel: invisible 1px trigger watched by IntersectionObserver */}
-      <div ref={sentinelRef} style={{ position: 'absolute', top: '80px', left: 0, width: '1px', height: '1px', pointerEvents: 'none' }} aria-hidden="true" />
       <style>{`
         * { box-sizing: border-box; margin: 0; padding: 0; }
         ::-webkit-scrollbar { display: none; }
@@ -454,28 +450,6 @@ export default function RestaurantWebsite() {
         .reveal-4 { animation-delay: 240ms; }
         .restaurant-header input::placeholder { color: ${darkMode ? 'rgba(0,0,0,0.35)' : 'rgba(255,255,255,0.45)'} !important; }
 
-        /* ── Scroll-hide: search bar + filter button ── */
-        .search-wrapper {
-          overflow: hidden;
-          max-height: 80px;
-          opacity: 1;
-          transform: translateY(0);
-          transition: max-height 0.3s ease, opacity 0.3s ease, transform 0.3s ease;
-          will-change: max-height, opacity, transform;
-        }
-        body.scroll-down .search-wrapper {
-          max-height: 0;
-          opacity: 0;
-          transform: translateY(-8px);
-          pointer-events: none;
-        }
-        body.scroll-up .search-wrapper,
-        body.at-top .search-wrapper {
-          max-height: 80px;
-          opacity: 1;
-          transform: translateY(0);
-          pointer-events: auto;
-        }
       `}</style>
 
       {/* ── STICKY HEADER CARD — inverted from page theme ── */}
@@ -526,7 +500,7 @@ export default function RestaurantWebsite() {
 
         {/* Row 2: search bar — only on home & menu pages */}
         {(activeNav === 'home' || activeNav === 'menu') && (
-          <div className="search-wrapper">
+          <div className={`search-wrapper${searchHidden ? ' search-hidden' : ''}`}>
             <div className="header-search-row">
               <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                 <div style={{ flex: 1, position: 'relative' }}>

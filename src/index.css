@@ -189,26 +189,13 @@ img {
   transform: translateZ(0);
 }
 
-/* At top or scrolling up → search fully visible, space open */
-body.at-top .search-wrapper,
-body.scroll-up .search-wrapper {
-  max-height: 66px;
-  opacity: 1;
-  pointer-events: auto;
-}
-body.at-top .header-search-row,
-body.scroll-up .header-search-row {
-  transform: translateY(0);
-  opacity: 1;
-}
-
 /* Scrolling down → space collapses, element slides + fades */
-body.scroll-down .search-wrapper {
+.search-wrapper.search-hidden {
   max-height: 0;
   opacity: 0;
   pointer-events: none;
 }
-body.scroll-down .header-search-row {
+.search-wrapper.search-hidden .header-search-row {
   transform: translateY(-8px);
   opacity: 0;
 }
