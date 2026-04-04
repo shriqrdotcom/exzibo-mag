@@ -806,51 +806,6 @@ export default function RestaurantWebsite() {
             </div>
           </section>
 
-          {/* ── DESCRIPTION CARD with image ── */}
-          <section className="reveal reveal-4" style={{ padding: '14px 14px 0' }}>
-            <div style={{
-              borderRadius: '20px', overflow: 'hidden',
-              background: darkMode ? '#1a1a1a' : '#111',
-              boxShadow: '0 8px 28px rgba(0,0,0,0.35)',
-              position: 'relative',
-            }}>
-              {/* Background image with overlay */}
-              {carouselImages.length > 1 && (
-                <div style={{
-                  position: 'absolute', inset: 0,
-                  backgroundImage: `url(${carouselImages[1] || carouselImages[0]})`,
-                  backgroundSize: 'cover', backgroundPosition: 'center',
-                  opacity: 0.18,
-                }} />
-              )}
-              <div style={{ position: 'relative', padding: '20px 18px' }}>
-                <div style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '0.18em', color: '#E8321A', textTransform: 'uppercase', marginBottom: '10px' }}>
-                  The Philosophy
-                </div>
-                <p style={{ fontSize: '13px', lineHeight: 1.75, color: 'rgba(255,255,255,0.82)', margin: 0, marginBottom: '16px' }}>
-                  {(restaurant.description || 'An uncompromising culinary experience rooted in craft, quality, and atmosphere. Every dish is a conversation between heritage and innovation.').slice(0, 160)}
-                  {(restaurant.description?.length || 0) > 160 ? '…' : ''}
-                </p>
-                {/* Stats row */}
-                <div style={{ display: 'flex', gap: '0', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '14px' }}>
-                  {[
-                    { icon: <Award size={14} color="#FFB800" />, label: restaurant.rating ? `${restaurant.rating}★` : '4.9★', sub: 'Rating' },
-                    { icon: <Clock size={14} color="#60a5fa" />, label: '12–11pm', sub: 'Hours' },
-                    { icon: <UtensilsCrossed size={14} color="#4ade80" />, label: restaurant.tables ? `${restaurant.tables} Tables` : 'Fine Dining', sub: 'Capacity' },
-                  ].map((s, i) => (
-                    <React.Fragment key={i}>
-                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}>
-                        {s.icon}
-                        <div style={{ fontSize: '12px', fontWeight: 800, color: '#fff' }}>{s.label}</div>
-                        <div style={{ fontSize: '9px', color: 'rgba(255,255,255,0.4)', letterSpacing: '0.06em' }}>{s.sub}</div>
-                      </div>
-                      {i < 2 && <div style={{ width: '1px', background: 'rgba(255,255,255,0.08)' }} />}
-                    </React.Fragment>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </section>
 
           {/* ── OUR STORY ── */}
           <section className="reveal reveal-4" style={{ padding: '24px 14px 0' }}>
