@@ -758,37 +758,49 @@ export default function RestaurantWebsite() {
                 <div
                   key={i}
                   className="menu-card"
-                  onClick={() => navigate(`/restaurant/${slug}/food/${encodeURIComponent(item.name)}`, { state: { item, returnTab: 'home', darkMode } })}
                   style={{
-                    borderRadius: '16px', overflow: 'hidden', cursor: 'pointer',
-                    background: theme.cardBg,
-                    border: `1px solid ${theme.cardBorder}`,
+                    borderRadius: '18px', overflow: 'hidden', cursor: 'pointer',
+                    position: 'relative', height: '180px',
                     boxShadow: theme.cardShadow,
                     animationDelay: `${i * 60}ms`,
                   }}
+                  onClick={() => navigate(`/restaurant/${slug}/food/${encodeURIComponent(item.name)}`, { state: { item, returnTab: 'home', darkMode } })}
                 >
-                  {/* Portrait image */}
-                  <div style={{ height: '130px', overflow: 'hidden', position: 'relative' }}>
-                    <img
-                      src={item.img || '/menu/wagyu-ribeye.png'}
-                      alt={item.name}
-                      style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-                      onError={e => { e.target.src = '/menu/wagyu-ribeye.png' }}
-                    />
-                    <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.55) 0%, transparent 55%)' }} />
-                    {/* veg dot */}
-                    <div style={{ position: 'absolute', top: '6px', left: '6px', width: '10px', height: '10px', borderRadius: '50%', background: item.veg ? theme.vegDot : theme.nonVegDot, border: '1.5px solid rgba(255,255,255,0.7)' }} />
-                    {/* price tag */}
-                    <div style={{ position: 'absolute', bottom: '6px', left: '6px', background: 'rgba(0,0,0,0.75)', borderRadius: '6px', padding: '2px 6px', fontSize: '10px', fontWeight: 800, color: '#fff' }}>
-                      ₹{item.price.toLocaleString()}
-                    </div>
-                  </div>
-                  {/* Name */}
-                  <div style={{ padding: '8px 8px 9px' }}>
-                    <div style={{ fontSize: '11px', fontWeight: 700, color: theme.itemName, lineHeight: 1.3, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
-                      {item.name}
-                    </div>
-                  </div>
+                  {/* Full-bleed image */}
+                  <img
+                    src={item.img || '/menu/wagyu-ribeye.png'}
+                    alt={item.name}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                    onError={e => { e.target.src = '/menu/wagyu-ribeye.png' }}
+                  />
+                  {/* Bottom blur gradient overlay */}
+                  <div style={{
+                    position: 'absolute', bottom: 0, left: 0, right: 0, height: '60%',
+                    background: 'linear-gradient(to top, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.18) 60%, transparent 100%)',
+                    backdropFilter: 'blur(2px)',
+                    WebkitBackdropFilter: 'blur(2px)',
+                    maskImage: 'linear-gradient(to top, black 40%, transparent 100%)',
+                    WebkitMaskImage: 'linear-gradient(to top, black 40%, transparent 100%)',
+                  }} />
+                  {/* Add button — bottom right, stops propagation so it doesn't open detail */}
+                  <button
+                    onClick={e => { e.stopPropagation(); addToCart(item) }}
+                    style={{
+                      position: 'absolute', bottom: '10px', right: '10px',
+                      background: 'rgba(255,255,255,0.92)',
+                      border: 'none', borderRadius: '10px',
+                      padding: '5px 10px',
+                      fontSize: '11px', fontWeight: 800, color: '#111',
+                      cursor: 'pointer', letterSpacing: '0.02em',
+                      backdropFilter: 'blur(8px)',
+                      WebkitBackdropFilter: 'blur(8px)',
+                      display: 'flex', alignItems: 'center', gap: '3px',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.25)',
+                      fontFamily: 'inherit',
+                    }}
+                  >
+                    Add <span style={{ fontSize: '13px', lineHeight: 1 }}>+</span>
+                  </button>
                 </div>
               ))}
             </div>
