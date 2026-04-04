@@ -10,7 +10,7 @@ import {
   Copy, PhoneCall, ArrowLeft
 } from 'lucide-react'
 import { FaInstagram, FaFacebook, FaWhatsapp } from 'react-icons/fa'
-import { FaXTwitter } from 'react-icons/fa6'
+import { FaXTwitter, FaHouse, FaUtensils, FaCartShopping, FaClipboardList, FaCalendarDays } from 'react-icons/fa6'
 
 const FALLBACK_IMAGES = [
   '/menu/wagyu-ribeye.png',
@@ -1893,21 +1893,21 @@ export default function RestaurantWebsite() {
         transition: 'background 0.3s ease, box-shadow 0.3s ease',
       }}>
         {[
-          { id: 'home', icon: <Home size={24} /> },
-          { id: 'menu', icon: <UtensilsCrossed size={24} /> },
+          { id: 'home', icon: <FaHouse size={22} /> },
+          { id: 'menu', icon: <FaUtensils size={20} /> },
           {
             id: 'cart',
             icon: (
               <div style={{ position: 'relative', display: 'inline-flex' }}>
-                <ShoppingCart size={24} />
+                <FaCartShopping size={22} />
                 {cartCount > 0 && (
                   <span style={{ position: 'absolute', top: '-5px', right: '-7px', width: '15px', height: '15px', borderRadius: '50%', background: '#E8321A', color: '#fff', fontSize: '8px', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{cartCount}</span>
                 )}
               </div>
             ),
           },
-          { id: 'orders', icon: <ClipboardList size={24} /> },
-          { id: 'booking', icon: <CalendarDays size={24} /> },
+          { id: 'orders', icon: <FaClipboardList size={21} /> },
+          { id: 'booking', icon: <FaCalendarDays size={21} /> },
         ].map(({ id, icon }) => {
           const isActive = activeNav === id
           const activeIconColor = darkMode ? '#111' : '#fff'
