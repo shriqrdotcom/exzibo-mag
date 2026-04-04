@@ -712,7 +712,7 @@ export default function RestaurantWebsite() {
               }}
             >
               {/* Clipboard / menu list icon */}
-              <svg width="34" height="34" viewBox="0 0 24 24" fill="none">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
                 <rect x="5" y="3" width="14" height="18" rx="2.5" fill="white" opacity="0.15" />
                 <rect x="5" y="3" width="14" height="18" rx="2.5" stroke="white" strokeWidth="1.8" />
                 <line x1="8.5" y1="8" x2="15.5" y2="8" stroke="white" strokeWidth="1.6" strokeLinecap="round" />
