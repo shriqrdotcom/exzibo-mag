@@ -711,35 +711,11 @@ export default function RestaurantWebsite() {
                 boxShadow: '0 4px 18px rgba(0,0,0,0.35)',
               }}
             >
-              {/* Filled clipboard icon with clip tab */}
-              <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
-                {/* Clipboard body — filled white */}
-                <rect x="4" y="4" width="16" height="18" rx="3" fill="white" />
-                {/* Clip tab at top — dark cutout */}
-                <rect x="8.5" y="2.5" width="7" height="3.5" rx="1.75" fill="#111111" />
-                {/* List line row 1 */}
-                <rect x="7" y="10" width="2.5" height="1.8" rx="0.6" fill="#111111" />
-                <rect x="10.5" y="10" width="6.5" height="1.8" rx="0.6" fill="#111111" />
-                {/* List line row 2 */}
-                <rect x="7" y="14" width="2.5" height="1.8" rx="0.6" fill="#111111" />
-                <rect x="10.5" y="14" width="5" height="1.8" rx="0.6" fill="#111111" />
-              </svg>
-              {/* Badge: store/shop icon */}
-              <div style={{
-                position: 'absolute', bottom: '6px', right: '6px',
-                width: '18px', height: '18px', borderRadius: '50%',
-                background: '#111', border: '2px solid rgba(255,255,255,0.15)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}>
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none">
-                  {/* Store awning top */}
-                  <rect x="3" y="4" width="18" height="5" rx="1" fill="white" />
-                  {/* Store body */}
-                  <rect x="5" y="9" width="14" height="11" rx="1.5" fill="white" />
-                  {/* Store window cutout */}
-                  <rect x="8" y="11" width="8" height="6" rx="1" fill="#111111" />
-                </svg>
-              </div>
+              <img
+                src="/booking-icon.jpeg"
+                alt="booking"
+                style={{ width: '44px', height: '44px', objectFit: 'contain', borderRadius: '4px' }}
+              />
             </button>
 
             {/* Right: View menu pill */}
