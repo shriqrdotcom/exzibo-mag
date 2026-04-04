@@ -705,16 +705,21 @@ export default function RestaurantWebsite() {
               style={{
                 width: '56px', height: '56px', flexShrink: 0,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                background: darkMode ? '#111111' : '#111111',
+                background: darkMode ? '#ffffff' : '#111111',
                 border: 'none', borderRadius: '20px',
                 cursor: 'pointer', position: 'relative',
-                boxShadow: '0 4px 18px rgba(0,0,0,0.35)',
+                boxShadow: darkMode ? '0 4px 18px rgba(0,0,0,0.18)' : '0 4px 18px rgba(0,0,0,0.45)',
+                transition: 'background 0.3s ease, box-shadow 0.3s ease',
               }}
             >
               <img
                 src="/booking-icon.jpeg"
                 alt="booking"
-                style={{ width: '44px', height: '44px', objectFit: 'contain', borderRadius: '4px' }}
+                style={{
+                  width: '44px', height: '44px', objectFit: 'contain', borderRadius: '4px',
+                  filter: darkMode ? 'invert(1)' : 'none',
+                  transition: 'filter 0.3s ease',
+                }}
               />
             </button>
 
@@ -725,12 +730,13 @@ export default function RestaurantWebsite() {
               style={{
                 flex: 1, height: '56px',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                background: darkMode ? '#111111' : '#111111',
+                background: darkMode ? '#ffffff' : '#111111',
                 border: 'none', borderRadius: '20px',
-                color: '#ffffff',
+                color: darkMode ? '#111111' : '#ffffff',
                 fontSize: '18px', fontWeight: 800, cursor: 'pointer',
                 letterSpacing: '-0.02em', fontFamily: 'inherit',
-                boxShadow: '0 4px 18px rgba(0,0,0,0.35)',
+                boxShadow: darkMode ? '0 4px 18px rgba(0,0,0,0.18)' : '0 4px 18px rgba(0,0,0,0.45)',
+                transition: 'background 0.3s ease, color 0.3s ease, box-shadow 0.3s ease',
               }}
             >
               View menu
