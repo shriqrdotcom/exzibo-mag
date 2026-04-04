@@ -186,10 +186,12 @@ export default function RestaurantWebsite() {
       requestAnimationFrame(() => {
         const currentY = window.scrollY
         const diff = currentY - lastScrollYRef.current
+        const maxScroll = document.documentElement.scrollHeight - window.innerHeight
+        const nearBottom = currentY >= maxScroll - 30
         if (Math.abs(diff) >= THRESHOLD) {
           if (diff > 0 && currentY > MIN_SCROLL) {
             setSearchHidden(true)
-          } else if (diff < 0) {
+          } else if (diff < 0 && !nearBottom) {
             setSearchHidden(false)
           }
           lastScrollYRef.current = currentY
