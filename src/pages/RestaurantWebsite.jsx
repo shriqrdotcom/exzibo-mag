@@ -911,13 +911,12 @@ export default function RestaurantWebsite() {
                 <MapPin size={10} /> {restaurant.location}
               </div>
             )}
-            {(restaurant.socialLinks?.instagram || restaurant.socialLinks?.facebook || restaurant.socialLinks?.twitter || restaurant.socialLinks?.whatsapp || restaurant.socialLinks?.website) && (
+            {(restaurant.socialLinks?.instagram || restaurant.socialLinks?.facebook || restaurant.socialLinks?.twitter || restaurant.socialLinks?.whatsapp) && (
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', marginBottom: '18px' }}>
                 {restaurant.socialLinks?.instagram && <SocialBtn href={restaurant.socialLinks.instagram} icon={<FaInstagram size={19} />} brandColor="#E1306C" theme={theme} />}
                 {restaurant.socialLinks?.facebook && <SocialBtn href={restaurant.socialLinks.facebook} icon={<FaFacebook size={19} />} brandColor="#1877F2" theme={theme} />}
                 {restaurant.socialLinks?.twitter && <SocialBtn href={restaurant.socialLinks.twitter} icon={<FaXTwitter size={18} />} brandColor="#000000" theme={theme} />}
                 {restaurant.socialLinks?.whatsapp && <SocialBtn href={restaurant.socialLinks.whatsapp} icon={<FaWhatsapp size={19} />} brandColor="#25D366" theme={theme} />}
-                {restaurant.socialLinks?.website && <SocialBtn href={restaurant.socialLinks.website} icon={<Globe size={18} />} brandColor="#6366f1" theme={theme} />}
               </div>
             )}
             <a
