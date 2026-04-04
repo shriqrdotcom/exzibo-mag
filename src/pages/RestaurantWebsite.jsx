@@ -672,133 +672,159 @@ export default function RestaurantWebsite() {
             </div>
           </section>
 
-          {/* Action Buttons */}
-          <section style={{ padding: '14px 14px 0', display: 'flex', gap: '10px' }}>
+          {/* ── ACTION BUTTONS: small "Call Staff" + large pill "View Menu" ── */}
+          <section className="reveal reveal-2" style={{ padding: '14px 14px 0', display: 'flex', gap: '10px', alignItems: 'stretch' }}>
+            {/* Call Staff — small square */}
+            {restaurant.phone ? (
+              <a
+                href={`tel:${restaurant.phone}`}
+                className="action-btn"
+                style={{
+                  width: '64px', flexShrink: 0,
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '5px',
+                  background: darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)',
+                  border: `1.5px solid ${darkMode ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.10)'}`,
+                  borderRadius: '16px', padding: '12px 6px',
+                  color: theme.color, fontSize: '9px', fontWeight: 700, textDecoration: 'none',
+                  letterSpacing: '0.04em', textTransform: 'uppercase',
+                }}
+              >
+                <Phone size={18} color={theme.color} />
+                <span>Call Staff</span>
+              </a>
+            ) : (
+              <button
+                className="action-btn"
+                style={{
+                  width: '64px', flexShrink: 0,
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '5px',
+                  background: darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)',
+                  border: `1.5px solid ${darkMode ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.10)'}`,
+                  borderRadius: '16px', padding: '12px 6px',
+                  color: theme.color, fontSize: '9px', fontWeight: 700, cursor: 'pointer',
+                  letterSpacing: '0.04em', textTransform: 'uppercase',
+                }}
+              >
+                <Users size={18} color={theme.color} />
+                <span>About</span>
+              </button>
+            )}
+            {/* View Menu — large pill */}
             <button
               className="action-btn"
               onClick={() => setActiveNav('menu')}
-              style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', background: '#E8321A', border: 'none', borderRadius: '14px', padding: '14px', color: '#fff', fontSize: '13px', fontWeight: 700, cursor: 'pointer', boxShadow: '0 6px 20px rgba(232,50,26,0.4)' }}
+              style={{
+                flex: 1,
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
+                background: darkMode ? '#ffffff' : '#111111',
+                border: 'none', borderRadius: '50px',
+                padding: '16px 20px',
+                color: darkMode ? '#111' : '#fff',
+                fontSize: '17px', fontWeight: 800, cursor: 'pointer',
+                letterSpacing: '-0.01em',
+                boxShadow: darkMode ? '0 6px 22px rgba(0,0,0,0.18)' : '0 6px 22px rgba(0,0,0,0.45)',
+                transition: 'transform 0.15s ease, box-shadow 0.15s ease',
+              }}
             >
-              <UtensilsCrossed size={16} /> View Menu
+              <UtensilsCrossed size={20} color={darkMode ? '#111' : '#fff'} />
+              View Menu
             </button>
-            {restaurant.phone ? (
-              <a href={`tel:${restaurant.phone}`} className="action-btn" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', background: theme.btnSecBg, border: `1px solid ${theme.btnSecBorder}`, borderRadius: '14px', padding: '14px', color: theme.btnSecColor, fontSize: '13px', fontWeight: 700, textDecoration: 'none' }}>
-                <Phone size={16} /> Call Staff
-              </a>
-            ) : (
-              <button className="action-btn" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', background: theme.btnSecBg, border: `1px solid ${theme.btnSecBorder}`, borderRadius: '14px', padding: '14px', color: theme.btnSecColor, fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}>
-                <Users size={16} /> About Us
-              </button>
-            )}
           </section>
 
-          {/* ── CATEGORY ROW: Thumbnail + Pill selector (wireframe style) ── */}
-          {(() => {
-            const CATS = [
-              { id: 'all', label: 'Best Sellers', img: bestsellers[0]?.img },
-              { id: 'starters', label: 'Starters', img: menuData.starters[0]?.img },
-              { id: 'mains', label: 'Main Course', img: menuData.mains[0]?.img },
-              { id: 'drinks', label: 'Drinks', img: menuData.drinks[0]?.img },
-              { id: 'popular', label: '🔥 Popular', img: null },
-              { id: 'veg', label: '🌿 Veg', img: null },
-            ]
-            const activeCat = CATS.find(c => c.id === activeCategory) || CATS[0]
-            const nextCat = () => {
-              const idx = CATS.findIndex(c => c.id === activeCategory)
-              setActiveCategory(CATS[(idx + 1) % CATS.length].id)
-            }
-            return (
-              <section style={{ padding: '16px 14px 0' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  {/* Thumbnail */}
-                  <div style={{
-                    width: '56px', height: '56px', borderRadius: '14px', flexShrink: 0,
-                    background: darkMode ? '#2a2a2a' : '#e8e8e8', overflow: 'hidden',
-                    border: `2px solid ${darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)'}`,
-                  }}>
-                    {activeCat.img ? (
-                      <img src={activeCat.img} alt={activeCat.label} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.target.style.display = 'none' }} />
-                    ) : (
-                      <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <UtensilsCrossed size={22} color={darkMode ? '#444' : '#bbb'} />
-                      </div>
-                    )}
+          {/* ── BEST SELLING FOOD — 3-column portrait grid ── */}
+          <section className="reveal reveal-3" style={{ padding: '20px 14px 0' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+              <div style={{ fontSize: '13px', fontWeight: 900, color: theme.sectionTitle, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                Best Selling Food
+              </div>
+              <button onClick={() => setActiveNav('menu')} style={{ display: 'flex', alignItems: 'center', gap: '3px', background: 'none', border: 'none', color: '#E8321A', fontSize: '12px', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                See all <ChevronRight size={13} />
+              </button>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
+              {bestsellers.slice(0, 3).map((item, i) => (
+                <div
+                  key={i}
+                  className="menu-card"
+                  onClick={() => navigate(`/restaurant/${slug}/food/${encodeURIComponent(item.name)}`, { state: { item, returnTab: 'home', darkMode } })}
+                  style={{
+                    borderRadius: '16px', overflow: 'hidden', cursor: 'pointer',
+                    background: theme.cardBg,
+                    border: `1px solid ${theme.cardBorder}`,
+                    boxShadow: theme.cardShadow,
+                    animationDelay: `${i * 60}ms`,
+                  }}
+                >
+                  {/* Portrait image */}
+                  <div style={{ height: '130px', overflow: 'hidden', position: 'relative' }}>
+                    <img
+                      src={item.img || '/menu/wagyu-ribeye.png'}
+                      alt={item.name}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                      onError={e => { e.target.src = '/menu/wagyu-ribeye.png' }}
+                    />
+                    <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.55) 0%, transparent 55%)' }} />
+                    {/* veg dot */}
+                    <div style={{ position: 'absolute', top: '6px', left: '6px', width: '10px', height: '10px', borderRadius: '50%', background: item.veg ? theme.vegDot : theme.nonVegDot, border: '1.5px solid rgba(255,255,255,0.7)' }} />
+                    {/* price tag */}
+                    <div style={{ position: 'absolute', bottom: '6px', left: '6px', background: 'rgba(0,0,0,0.75)', borderRadius: '6px', padding: '2px 6px', fontSize: '10px', fontWeight: 800, color: '#fff' }}>
+                      ₹{item.price.toLocaleString()}
+                    </div>
                   </div>
-                  {/* Scrollable category pills */}
-                  <div style={{ flex: 1, overflowX: 'auto', scrollbarWidth: 'none' }}>
-                    <div style={{ display: 'flex', gap: '8px', width: 'max-content' }}>
-                      {CATS.map(cat => {
-                        const active = activeCategory === cat.id
-                        return (
-                          <button
-                            key={cat.id}
-                            onClick={() => setActiveCategory(cat.id)}
-                            className="category-pill"
-                            style={{
-                              padding: '10px 20px',
-                              borderRadius: '50px',
-                              border: `1.5px solid ${active ? '#E8321A' : (darkMode ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.10)')}`,
-                              background: active ? '#E8321A' : (darkMode ? 'rgba(255,255,255,0.05)' : '#fff'),
-                              color: active ? '#fff' : theme.color,
-                              fontSize: '12px', fontWeight: active ? 700 : 500, cursor: 'pointer',
-                              whiteSpace: 'nowrap', fontFamily: 'inherit',
-                              boxShadow: active ? '0 4px 16px rgba(232,50,26,0.35)' : (darkMode ? 'none' : '0 2px 8px rgba(0,0,0,0.06)'),
-                              transition: 'all 0.25s ease',
-                            }}
-                          >
-                            {cat.label}
-                          </button>
-                        )
-                      })}
+                  {/* Name */}
+                  <div style={{ padding: '8px 8px 9px' }}>
+                    <div style={{ fontSize: '11px', fontWeight: 700, color: theme.itemName, lineHeight: 1.3, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                      {item.name}
                     </div>
                   </div>
                 </div>
-              </section>
-            )
-          })()}
-
-          {/* ── 3-COLUMN FOOD GRID (wireframe) ── */}
-          <section style={{ padding: '16px 14px 0' }} className="reveal reveal-3">
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-              <div style={{ fontSize: '16px', fontWeight: 800, color: theme.sectionTitle, letterSpacing: '-0.01em' }}>
-                {activeCategory === 'all' ? 'Best Sellers' :
-                 activeCategory === 'starters' ? 'Starters' :
-                 activeCategory === 'mains' ? 'Main Course' :
-                 activeCategory === 'drinks' ? 'Drinks' :
-                 activeCategory === 'popular' ? 'Popular Picks' : 'Vegetarian'}
-              </div>
-              <button onClick={() => setActiveNav('menu')} style={{ display: 'flex', alignItems: 'center', gap: '3px', background: 'none', border: 'none', color: '#E8321A', fontSize: '12px', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
-                View all <ChevronRight size={13} />
-              </button>
+              ))}
             </div>
-            {bestsellers.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '32px 24px', color: theme.sectionSub, fontSize: '13px' }}>No items match your search</div>
-            ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
-                {bestsellers.slice(0, 6).map((item, i) => (
-                  <GridFoodCard key={`${activeCategory}-${i}`} item={item} liked={liked[i]} onLike={e => { e.stopPropagation(); setLiked(l => ({ ...l, [i]: !l[i] })) }} theme={theme} darkMode={darkMode} onPress={() => navigate(`/restaurant/${slug}/food/${encodeURIComponent(item.name)}`, { state: { item, returnTab: activeNav, darkMode } })} />
-                ))}
-              </div>
-            )}
           </section>
 
-          {/* Quick Stats (moved below grid) */}
-          <section style={{ padding: '16px 14px 0' }} className="reveal reveal-2">
-            <div className="stat-card" style={{ display: 'flex', background: theme.statsBg, border: `1px solid ${theme.statsBorder}`, borderRadius: '16px', padding: '14px 16px', boxShadow: theme.cardShadow }}>
-              {[
-                { icon: <Award size={16} color="#FFB800" />, label: restaurant.rating ? `${restaurant.rating} Rating` : 'Top Rated', sub: 'Google Reviews' },
-                { icon: <Clock size={16} color="#60a5fa" />, label: '12pm – 11pm', sub: 'Open Today' },
-                { icon: <UtensilsCrossed size={16} color="#4ade80" />, label: restaurant.tables ? `${restaurant.tables} Tables` : 'Fine Dining', sub: 'Capacity' },
-              ].map((stat, i) => (
-                <React.Fragment key={i}>
-                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-                    {stat.icon}
-                    <div style={{ fontSize: '11px', fontWeight: 700, color: theme.statsValue, textAlign: 'center', lineHeight: 1.2 }}>{stat.label}</div>
-                    <div style={{ fontSize: '9px', color: theme.statsLabel, textAlign: 'center' }}>{stat.sub}</div>
-                  </div>
-                  {i < 2 && <div style={{ width: '1px', background: theme.statsDivider }} />}
-                </React.Fragment>
-              ))}
+          {/* ── DESCRIPTION CARD with image ── */}
+          <section className="reveal reveal-4" style={{ padding: '14px 14px 0' }}>
+            <div style={{
+              borderRadius: '20px', overflow: 'hidden',
+              background: darkMode ? '#1a1a1a' : '#111',
+              boxShadow: '0 8px 28px rgba(0,0,0,0.35)',
+              position: 'relative',
+            }}>
+              {/* Background image with overlay */}
+              {carouselImages.length > 1 && (
+                <div style={{
+                  position: 'absolute', inset: 0,
+                  backgroundImage: `url(${carouselImages[1] || carouselImages[0]})`,
+                  backgroundSize: 'cover', backgroundPosition: 'center',
+                  opacity: 0.18,
+                }} />
+              )}
+              <div style={{ position: 'relative', padding: '20px 18px' }}>
+                <div style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '0.18em', color: '#E8321A', textTransform: 'uppercase', marginBottom: '10px' }}>
+                  The Philosophy
+                </div>
+                <p style={{ fontSize: '13px', lineHeight: 1.75, color: 'rgba(255,255,255,0.82)', margin: 0, marginBottom: '16px' }}>
+                  {(restaurant.description || 'An uncompromising culinary experience rooted in craft, quality, and atmosphere. Every dish is a conversation between heritage and innovation.').slice(0, 160)}
+                  {(restaurant.description?.length || 0) > 160 ? '…' : ''}
+                </p>
+                {/* Stats row */}
+                <div style={{ display: 'flex', gap: '0', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '14px' }}>
+                  {[
+                    { icon: <Award size={14} color="#FFB800" />, label: restaurant.rating ? `${restaurant.rating}★` : '4.9★', sub: 'Rating' },
+                    { icon: <Clock size={14} color="#60a5fa" />, label: '12–11pm', sub: 'Hours' },
+                    { icon: <UtensilsCrossed size={14} color="#4ade80" />, label: restaurant.tables ? `${restaurant.tables} Tables` : 'Fine Dining', sub: 'Capacity' },
+                  ].map((s, i) => (
+                    <React.Fragment key={i}>
+                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}>
+                        {s.icon}
+                        <div style={{ fontSize: '12px', fontWeight: 800, color: '#fff' }}>{s.label}</div>
+                        <div style={{ fontSize: '9px', color: 'rgba(255,255,255,0.4)', letterSpacing: '0.06em' }}>{s.sub}</div>
+                      </div>
+                      {i < 2 && <div style={{ width: '1px', background: 'rgba(255,255,255,0.08)' }} />}
+                    </React.Fragment>
+                  ))}
+                </div>
+              </div>
             </div>
           </section>
 
