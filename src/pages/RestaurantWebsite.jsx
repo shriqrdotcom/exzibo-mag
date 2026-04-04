@@ -66,9 +66,9 @@ function buildTheme(dark) {
     bannerText: dark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)',
     bannerHeart: '#e53935',
     brandText: dark ? '#333' : '#ccc',
-    navBg: dark ? 'rgba(15,15,15,0.97)' : '#fff',
-    navBorder: dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.07)',
-    navInactive: dark ? '#444' : '#bbb',
+    navBg: dark ? '#ffffff' : '#111111',
+    navBorder: dark ? 'rgba(0,0,0,0.07)' : 'rgba(255,255,255,0.08)',
+    navInactive: dark ? '#888' : 'rgba(255,255,255,0.45)',
     toggleBg: dark ? 'rgba(255,255,255,0.08)' : '#f0f0f0',
     toggleBorder: dark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.10)',
     ratingBg: 'rgba(255,184,0,0.12)',
@@ -1643,14 +1643,15 @@ export default function RestaurantWebsite() {
       )}
 
       <nav style={{
-        position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)',
-        width: '100%', maxWidth: '480px', zIndex: 100,
+        position: 'fixed', bottom: '10px', left: '50%', transform: 'translateX(-50%)',
+        width: 'calc(100% - 20px)', maxWidth: '460px', zIndex: 100,
         background: theme.navBg,
         backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
-        borderTop: `1px solid ${theme.navBorder}`,
+        borderRadius: '20px',
+        boxShadow: darkMode ? '0 8px 25px rgba(0,0,0,0.15)' : '0 8px 25px rgba(0,0,0,0.5)',
         padding: '10px 8px env(safe-area-inset-bottom, 10px)',
         display: 'flex', justifyContent: 'space-around', alignItems: 'center',
-        transition: 'background 0.3s ease, border-color 0.3s ease',
+        transition: 'background 0.3s ease, box-shadow 0.3s ease',
       }}>
         {[
           { id: 'home', icon: <Home size={22} />, label: 'Home' },
@@ -1672,7 +1673,7 @@ export default function RestaurantWebsite() {
           <button
             key={id}
             onClick={() => setActiveNav(id)}
-            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', border: 'none', cursor: 'pointer', color: activeNav === id ? '#E8321A' : theme.navInactive, padding: '6px 14px', borderRadius: '12px', background: activeNav === id ? (darkMode ? 'rgba(232,50,26,0.14)' : 'rgba(0,0,0,0.07)') : 'none', transition: 'color 0.2s ease, background 0.2s ease' }}
+            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', border: 'none', cursor: 'pointer', color: activeNav === id ? '#E8321A' : theme.navInactive, padding: '6px 14px', borderRadius: '12px', background: activeNav === id ? 'rgba(232,50,26,0.12)' : 'none', transition: 'color 0.2s ease, background 0.2s ease' }}
           >
             {icon}
             <span style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '0.03em', textTransform: 'uppercase' }}>{label}</span>
