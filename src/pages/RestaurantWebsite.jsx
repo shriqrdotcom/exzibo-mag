@@ -43,7 +43,7 @@ const MENU_TABS = [
 
 function buildTheme(dark) {
   return {
-    pageBg: dark ? '#0a0101' : '#f2f2f2',
+    pageBg: dark ? '#0f0202' : '#f2f2f2',
     headerBg: dark ? 'rgba(15,15,15,0.95)' : 'rgba(255,255,255,0.97)',
     headerBorder: dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.07)',
     color: dark ? '#fff' : '#111',
@@ -158,8 +158,8 @@ export default function RestaurantWebsite() {
 
   useEffect(() => {
     localStorage.setItem('exzibo_darkmode', JSON.stringify(darkMode))
-    document.body.style.background = darkMode ? '#0a0101' : '#f2f2f2'
-    document.documentElement.style.background = darkMode ? '#0a0101' : '#f2f2f2'
+    document.body.style.background = darkMode ? '#0f0202' : '#f2f2f2'
+    document.documentElement.style.background = darkMode ? '#0f0202' : '#f2f2f2'
     return () => {
       document.body.style.background = ''
       document.documentElement.style.background = ''
