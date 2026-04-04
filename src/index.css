@@ -218,3 +218,21 @@ body.scroll-down .header-search-row {
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-y: contain;
 }
+
+/* ── Waiter animations ── */
+@keyframes waiterFloat {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-5px); }
+}
+@keyframes waiterServe {
+  0%, 100% { transform: rotate(0deg); }
+  50%       { transform: rotate(-10deg); }
+}
+.waiter-body {
+  animation: waiterFloat 2.6s ease-in-out infinite;
+}
+.waiter-arm {
+  transform-box: fill-box;
+  transform-origin: right bottom;
+  animation: waiterServe 2s ease-in-out infinite;
+}

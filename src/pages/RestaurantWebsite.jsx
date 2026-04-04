@@ -674,41 +674,52 @@ export default function RestaurantWebsite() {
 
           {/* ── ACTION BUTTONS: small "Call Staff" + large pill "View Menu" ── */}
           <section className="reveal reveal-2" style={{ padding: '14px 14px 0', display: 'flex', gap: '10px', alignItems: 'stretch' }}>
-            {/* Call Staff — small square */}
-            {restaurant.phone ? (
-              <a
-                href={`tel:${restaurant.phone}`}
-                className="action-btn"
-                style={{
-                  width: '64px', flexShrink: 0,
-                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '5px',
-                  background: darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)',
-                  border: `1.5px solid ${darkMode ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.10)'}`,
-                  borderRadius: '16px', padding: '12px 6px',
-                  color: theme.color, fontSize: '9px', fontWeight: 700, textDecoration: 'none',
-                  letterSpacing: '0.04em', textTransform: 'uppercase',
-                }}
-              >
-                <Phone size={18} color={theme.color} />
-                <span>Call Staff</span>
-              </a>
-            ) : (
-              <button
-                className="action-btn"
-                style={{
-                  width: '64px', flexShrink: 0,
-                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '5px',
-                  background: darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)',
-                  border: `1.5px solid ${darkMode ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.10)'}`,
-                  borderRadius: '16px', padding: '12px 6px',
-                  color: theme.color, fontSize: '9px', fontWeight: 700, cursor: 'pointer',
-                  letterSpacing: '0.04em', textTransform: 'uppercase',
-                }}
-              >
-                <Users size={18} color={theme.color} />
-                <span>About</span>
-              </button>
-            )}
+            {/* Call Staff — animated waiter */}
+            {(() => {
+              const bodyColor = darkMode ? '#ffffff' : '#1a2540'
+              const accentColor = '#8B1A1A'
+              const waiterSvg = (
+                <svg viewBox="0 0 80 90" width="46" height="52" style={{ display: 'block', overflow: 'visible' }}>
+                  <g className="waiter-body">
+                    {/* Head */}
+                    <circle cx="40" cy="13" r="10" fill="none" stroke={bodyColor} strokeWidth="2.5" strokeLinecap="round" />
+                    {/* Neck */}
+                    <line x1="40" y1="23" x2="40" y2="28" stroke={bodyColor} strokeWidth="2" strokeLinecap="round" />
+                    {/* Shoulders + torso */}
+                    <path d="M22,32 Q40,26 58,32 L56,72 Q40,76 24,72 Z" fill="none" stroke={bodyColor} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                    {/* Bow tie */}
+                    <path d="M33,35 L40,40 L47,35 M33,45 L40,40 L47,45" fill="none" stroke={accentColor} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                    {/* Right arm (hanging) */}
+                    <path d="M58,36 L65,57" stroke={bodyColor} strokeWidth="2.5" strokeLinecap="round" />
+                    {/* Left arm raised + tray — animated */}
+                    <g className="waiter-arm">
+                      <path d="M22,34 L7,18" stroke={bodyColor} strokeWidth="2.5" strokeLinecap="round" />
+                      <line x1="1" y1="16" x2="15" y2="16" stroke={bodyColor} strokeWidth="2.5" strokeLinecap="round" />
+                      <path d="M1,16 Q8,7 15,16" fill="none" stroke={accentColor} strokeWidth="2.5" strokeLinecap="round" />
+                    </g>
+                  </g>
+                </svg>
+              )
+              const sharedStyle = {
+                width: '68px', flexShrink: 0,
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px',
+                background: darkMode ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)',
+                border: `1.5px solid ${darkMode ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.09)'}`,
+                borderRadius: '18px', padding: '10px 6px 9px',
+                cursor: 'pointer',
+              }
+              return restaurant.phone ? (
+                <a href={`tel:${restaurant.phone}`} className="action-btn" style={{ ...sharedStyle, textDecoration: 'none' }}>
+                  {waiterSvg}
+                  <span style={{ fontSize: '8px', fontWeight: 700, color: theme.color, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Call Staff</span>
+                </a>
+              ) : (
+                <button className="action-btn" style={sharedStyle}>
+                  {waiterSvg}
+                  <span style={{ fontSize: '8px', fontWeight: 700, color: theme.color, letterSpacing: '0.06em', textTransform: 'uppercase' }}>About</span>
+                </button>
+              )
+            })()}
             {/* View Menu — large pill */}
             <button
               className="action-btn"
