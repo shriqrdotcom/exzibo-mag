@@ -469,6 +469,13 @@ export default function RestaurantWebsite() {
         padding: '18px 20px',
         background: darkMode ? '#ffffff' : '#111111',
         boxShadow: darkMode ? '0 8px 25px rgba(0,0,0,0.15)' : '0 8px 25px rgba(0,0,0,0.5)',
+        cursor: searchHidden ? 'pointer' : 'default',
+      }} onClick={() => {
+        if (isHiddenRef.current) {
+          setSearchHidden(false)
+          isHiddenRef.current = false
+          hiddenAtYRef.current = null
+        }
       }}>
         {/* Row 1: Logo + Name/Location + Buttons — ALWAYS VISIBLE */}
         <div className="header-top-row" style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
