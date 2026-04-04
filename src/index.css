@@ -173,8 +173,8 @@ img {
 /* box-sizing: border-box (global) ensures max-height:0 clips padding too */
 .search-wrapper {
   overflow: hidden;
-  max-height: 66px;
-  padding-top: 12px;
+  max-height: 82px;
+  padding-top: 14px;
   box-sizing: border-box;
   will-change: max-height, opacity;
   transition: max-height 0.3s ease, opacity 0.25s ease;
