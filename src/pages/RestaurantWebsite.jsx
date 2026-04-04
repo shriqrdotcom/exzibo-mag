@@ -696,73 +696,60 @@ export default function RestaurantWebsite() {
             </div>
           </section>
 
-          {/* ── ACTION BUTTONS: small "Call Staff" + large pill "View Menu" ── */}
-          <section className="reveal reveal-2" style={{ padding: '14px 14px 0', display: 'flex', gap: '10px', alignItems: 'stretch' }}>
-            {/* Call Staff — animated waiter */}
-            {(() => {
-              const bodyColor = darkMode ? '#ffffff' : '#1a2540'
-              const accentColor = '#8B1A1A'
-              const waiterSvg = (
-                <svg viewBox="0 0 80 90" width="46" height="52" style={{ display: 'block', overflow: 'visible' }}>
-                  <g className="waiter-body">
-                    {/* Head */}
-                    <circle cx="40" cy="13" r="10" fill="none" stroke={bodyColor} strokeWidth="2.5" strokeLinecap="round" />
-                    {/* Neck */}
-                    <line x1="40" y1="23" x2="40" y2="28" stroke={bodyColor} strokeWidth="2" strokeLinecap="round" />
-                    {/* Shoulders + torso */}
-                    <path d="M22,32 Q40,26 58,32 L56,72 Q40,76 24,72 Z" fill="none" stroke={bodyColor} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-                    {/* Bow tie */}
-                    <path d="M33,35 L40,40 L47,35 M33,45 L40,40 L47,45" fill="none" stroke={accentColor} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-                    {/* Right arm (hanging) */}
-                    <path d="M58,36 L65,57" stroke={bodyColor} strokeWidth="2.5" strokeLinecap="round" />
-                    {/* Left arm raised + tray — animated */}
-                    <g className="waiter-arm">
-                      <path d="M22,34 L7,18" stroke={bodyColor} strokeWidth="2.5" strokeLinecap="round" />
-                      <line x1="1" y1="16" x2="15" y2="16" stroke={bodyColor} strokeWidth="2.5" strokeLinecap="round" />
-                      <path d="M1,16 Q8,7 15,16" fill="none" stroke={accentColor} strokeWidth="2.5" strokeLinecap="round" />
-                    </g>
-                  </g>
-                </svg>
-              )
-              const sharedStyle = {
-                width: '68px', flexShrink: 0,
-                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px',
-                background: darkMode ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)',
-                border: `1.5px solid ${darkMode ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.09)'}`,
-                borderRadius: '18px', padding: '10px 6px 9px',
-                cursor: 'pointer',
-              }
-              return restaurant.phone ? (
-                <a href={`tel:${restaurant.phone}`} className="action-btn" style={{ ...sharedStyle, textDecoration: 'none' }}>
-                  {waiterSvg}
-                  <span style={{ fontSize: '8px', fontWeight: 700, color: theme.color, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Call Staff</span>
-                </a>
-              ) : (
-                <button className="action-btn" style={sharedStyle}>
-                  {waiterSvg}
-                  <span style={{ fontSize: '8px', fontWeight: 700, color: theme.color, letterSpacing: '0.06em', textTransform: 'uppercase' }}>About</span>
-                </button>
-              )
-            })()}
-            {/* View Menu — large pill */}
+          {/* ── ACTION BUTTONS: icon square + "View menu" pill ── */}
+          <section className="reveal reveal-2" style={{ padding: '14px 14px 0', display: 'flex', gap: '12px', alignItems: 'stretch' }}>
+            {/* Left: menu icon square button */}
             <button
               className="action-btn"
               onClick={() => setActiveNav('menu')}
               style={{
-                flex: 1,
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
-                background: darkMode ? '#ffffff' : '#111111',
-                border: 'none', borderRadius: '50px',
-                padding: '16px 20px',
-                color: darkMode ? '#111' : '#fff',
-                fontSize: '17px', fontWeight: 800, cursor: 'pointer',
-                letterSpacing: '-0.01em',
-                boxShadow: darkMode ? '0 6px 22px rgba(0,0,0,0.18)' : '0 6px 22px rgba(0,0,0,0.45)',
-                transition: 'transform 0.15s ease, box-shadow 0.15s ease',
+                width: '72px', height: '72px', flexShrink: 0,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: darkMode ? '#111111' : '#111111',
+                border: 'none', borderRadius: '20px',
+                cursor: 'pointer', position: 'relative',
+                boxShadow: '0 4px 18px rgba(0,0,0,0.35)',
               }}
             >
-              <UtensilsCrossed size={20} color={darkMode ? '#111' : '#fff'} />
-              View Menu
+              {/* Clipboard / menu list icon */}
+              <svg width="34" height="34" viewBox="0 0 24 24" fill="none">
+                <rect x="5" y="3" width="14" height="18" rx="2.5" fill="white" opacity="0.15" />
+                <rect x="5" y="3" width="14" height="18" rx="2.5" stroke="white" strokeWidth="1.8" />
+                <line x1="8.5" y1="8" x2="15.5" y2="8" stroke="white" strokeWidth="1.6" strokeLinecap="round" />
+                <line x1="8.5" y1="11.5" x2="13.5" y2="11.5" stroke="white" strokeWidth="1.6" strokeLinecap="round" />
+                <line x1="8.5" y1="15" x2="12" y2="15" stroke="white" strokeWidth="1.6" strokeLinecap="round" />
+                <rect x="9" y="1.5" width="6" height="3" rx="1" fill="white" />
+              </svg>
+              {/* Small badge */}
+              <div style={{
+                position: 'absolute', bottom: '10px', right: '10px',
+                width: '18px', height: '18px', borderRadius: '50%',
+                background: '#111', border: '2px solid #333',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none">
+                  <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  <line x1="3" y1="6" x2="21" y2="6" stroke="white" strokeWidth="2" strokeLinecap="round" />
+                </svg>
+              </div>
+            </button>
+
+            {/* Right: View menu pill */}
+            <button
+              className="action-btn"
+              onClick={() => setActiveNav('menu')}
+              style={{
+                flex: 1, height: '72px',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: darkMode ? '#111111' : '#111111',
+                border: 'none', borderRadius: '20px',
+                color: '#ffffff',
+                fontSize: '22px', fontWeight: 800, cursor: 'pointer',
+                letterSpacing: '-0.02em', fontFamily: 'inherit',
+                boxShadow: '0 4px 18px rgba(0,0,0,0.35)',
+              }}
+            >
+              View menu
             </button>
           </section>
 
