@@ -703,7 +703,7 @@ export default function RestaurantWebsite() {
               className="action-btn"
               onClick={() => setActiveNav('menu')}
               style={{
-                width: '72px', height: '72px', flexShrink: 0,
+                width: '56px', height: '56px', flexShrink: 0,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 background: darkMode ? '#111111' : '#111111',
                 border: 'none', borderRadius: '20px',
@@ -722,7 +722,7 @@ export default function RestaurantWebsite() {
               </svg>
               {/* Small badge */}
               <div style={{
-                position: 'absolute', bottom: '10px', right: '10px',
+                position: 'absolute', bottom: '6px', right: '6px',
                 width: '18px', height: '18px', borderRadius: '50%',
                 background: '#111', border: '2px solid #333',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -739,12 +739,12 @@ export default function RestaurantWebsite() {
               className="action-btn"
               onClick={() => setActiveNav('menu')}
               style={{
-                flex: 1, height: '72px',
+                flex: 1, height: '56px',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 background: darkMode ? '#111111' : '#111111',
                 border: 'none', borderRadius: '20px',
                 color: '#ffffff',
-                fontSize: '22px', fontWeight: 800, cursor: 'pointer',
+                fontSize: '18px', fontWeight: 800, cursor: 'pointer',
                 letterSpacing: '-0.02em', fontFamily: 'inherit',
                 boxShadow: '0 4px 18px rgba(0,0,0,0.35)',
               }}
