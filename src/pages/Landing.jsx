@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowRight, Utensils, Wrench, Bell, User, Search, Palette, X, ExternalLink } from 'lucide-react'
+import { ArrowRight, Store, Wrench, Bell, User, Search, Palette, X, ExternalLink } from 'lucide-react'
 
 const THEMES = [
   {
@@ -164,7 +164,7 @@ export default function Landing() {
           <CTAButton onClick={() => navigate('/dashboard')} icon={<ArrowRight size={15} />} primary>
             OPEN DASHBOARD
           </CTAButton>
-          <CTAButton onClick={() => navigate('/restaurants')} icon={<Utensils size={15} />}>
+          <CTAButton onClick={() => navigate('/restaurants')} icon={<Store size={15} />}>
             MY RESTAURANTS
           </CTAButton>
           <CTAButton onClick={() => navigate('/create-website')} icon={<Wrench size={15} />} dashed>
