@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 import { FaInstagram, FaFacebook, FaWhatsapp } from 'react-icons/fa'
 import { FaXTwitter, FaHouse, FaUtensils, FaCartShopping, FaClipboardList, FaCalendarDays, FaStore } from 'react-icons/fa6'
+import CartToast from '../components/CartToast'
 
 const FALLBACK_IMAGES = [
   '/menu/wagyu-ribeye.png',
@@ -132,6 +133,7 @@ export default function RestaurantWebsite() {
   const [carouselIdx, setCarouselIdx] = useState(0)
   const [liked, setLiked] = useState({})
   const [cartItems, setCartItems] = useState([])
+  const [cartToasts, setCartToasts] = useState([])
   const [couponInput, setCouponInput] = useState('')
   const [couponApplied, setCouponApplied] = useState(false)
   const [couponError, setCouponError] = useState('')
@@ -265,6 +267,19 @@ export default function RestaurantWebsite() {
       if (existing) return prev.map(c => c.name === item.name ? { ...c, qty: c.qty + 1 } : c)
       return [...prev, { id: Date.now(), name: item.name, price: item.price, qty: 1, img: item.img || '/menu/wagyu-ribeye.png' }]
     })
+
+    const toastId = Date.now()
+    const toastImg = item.img || '/menu/wagyu-ribeye.png'
+    setCartToasts(prev => {
+      const filtered = prev.filter(t => t.name !== item.name).slice(-2)
+      return [...filtered, { id: toastId, name: item.name, img: toastImg, leaving: false }]
+    })
+    setTimeout(() => {
+      setCartToasts(prev => prev.map(t => t.id === toastId ? { ...t, leaving: true } : t))
+      setTimeout(() => {
+        setCartToasts(prev => prev.filter(t => t.id !== toastId))
+      }, 320)
+    }, 2600)
   }
 
   function handlePlaceOrder() {
@@ -421,6 +436,7 @@ export default function RestaurantWebsite() {
       position: 'relative',
       transition: 'background 0.3s ease',
     }}>
+      <CartToast toasts={cartToasts} onViewCart={() => setActiveNav('cart')} />
       <style>{`
         * { box-sizing: border-box; margin: 0; padding: 0; }
         ::-webkit-scrollbar { display: none; }
