@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Plus, Utensils, MapPin, Star, ExternalLink, Settings, Globe } from 'lucide-react'
+import { ArrowLeft, Plus, Utensils, Store, MapPin, Star, ExternalLink, Settings, Globe } from 'lucide-react'
 
 export default function Restaurants() {
   const navigate = useNavigate()
@@ -259,7 +259,7 @@ function EmptyState({ onAdd }) {
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         marginBottom: '28px', color: 'rgba(232,50,26,0.4)',
       }}>
-        <Utensils size={32} />
+        <Store size={32} />
       </div>
       <div style={{ fontSize: '20px', fontWeight: 800, marginBottom: '10px' }}>No Restaurants Yet</div>
       <p style={{ fontSize: '13px', color: '#555', maxWidth: '320px', lineHeight: 1.7, marginBottom: '36px' }}>
