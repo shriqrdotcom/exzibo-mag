@@ -134,6 +134,7 @@ export default function RestaurantWebsite() {
   const [liked, setLiked] = useState({})
   const [cartItems, setCartItems] = useState([])
   const [cartToasts, setCartToasts] = useState([])
+  const [cartBounce, setCartBounce] = useState(false)
   const [couponInput, setCouponInput] = useState('')
   const [couponApplied, setCouponApplied] = useState(false)
   const [couponError, setCouponError] = useState('')
@@ -179,6 +180,7 @@ export default function RestaurantWebsite() {
   const tickingRef = useRef(false)
   const isHiddenRef = useRef(false)
   const hiddenAtYRef = useRef(null)
+  const cartIconRef = useRef(null)
 
   useEffect(() => {
     const MIN_SCROLL = 80      // don't hide until scrolled past this point
@@ -261,12 +263,73 @@ export default function RestaurantWebsite() {
       setCouponError('Invalid coupon code')
     }
   }
-  function addToCart(item) {
+  function flyToCart(imgSrc, clickedEl) {
+    if (!cartIconRef.current || !clickedEl) return
+
+    let imgEl = null
+    let el = clickedEl
+    for (let i = 0; i < 8 && el; i++) {
+      const found = el.querySelector('img')
+      if (found) { imgEl = found; break }
+      el = el.parentElement
+    }
+
+    const startRect = imgEl ? imgEl.getBoundingClientRect() : clickedEl.getBoundingClientRect()
+    const endRect = cartIconRef.current.getBoundingClientRect()
+
+    const size = Math.min(Math.min(startRect.width, startRect.height), 72)
+    const clone = document.createElement('img')
+    clone.src = imgSrc || '/menu/wagyu-ribeye.png'
+    Object.assign(clone.style, {
+      position: 'fixed',
+      left: `${startRect.left + startRect.width / 2 - size / 2}px`,
+      top: `${startRect.top + startRect.height / 2 - size / 2}px`,
+      width: `${size}px`,
+      height: `${size}px`,
+      borderRadius: '12px',
+      objectFit: 'cover',
+      zIndex: '10000',
+      pointerEvents: 'none',
+      boxShadow: '0 8px 28px rgba(0,0,0,0.6)',
+      transformOrigin: 'center center',
+    })
+    document.body.appendChild(clone)
+
+    const startCX = startRect.left + startRect.width / 2
+    const startCY = startRect.top + startRect.height / 2
+    const endCX = endRect.left + endRect.width / 2
+    const endCY = endRect.top + endRect.height / 2
+    const dx = endCX - startCX
+    const dy = endCY - startCY
+    const cpDx = dx * 0.15
+    const cpDy = dy - Math.abs(dx) * 0.55 - 60
+
+    const STEPS = 40
+    const keyframes = Array.from({ length: STEPS + 1 }, (_, i) => {
+      const t = i / STEPS
+      const bx = 2 * (1 - t) * t * cpDx + t * t * dx
+      const by = 2 * (1 - t) * t * cpDy + t * t * dy
+      const scale = 1 - t * 0.72
+      const opacity = t > 0.72 ? 1 - (t - 0.72) / 0.28 : 1
+      return { transform: `translate(${bx}px, ${by}px) scale(${scale})`, opacity }
+    })
+
+    const anim = clone.animate(keyframes, { duration: 720, easing: 'ease-in', fill: 'forwards' })
+    anim.onfinish = () => {
+      clone.remove()
+      setCartBounce(true)
+      setTimeout(() => setCartBounce(false), 450)
+    }
+  }
+
+  function addToCart(item, e) {
     setCartItems(prev => {
       const existing = prev.find(c => c.name === item.name)
       if (existing) return prev.map(c => c.name === item.name ? { ...c, qty: c.qty + 1 } : c)
       return [...prev, { id: Date.now(), name: item.name, price: item.price, qty: 1, img: item.img || '/menu/wagyu-ribeye.png' }]
     })
+
+    if (e) flyToCart(item.img || '/menu/wagyu-ribeye.png', e.currentTarget)
 
     const toastId = Date.now()
     const toastImg = item.img || '/menu/wagyu-ribeye.png'
@@ -470,6 +533,7 @@ export default function RestaurantWebsite() {
         .stat-card { transition: transform 0.2s ease, box-shadow 0.2s ease; }
         .stat-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.12) !important; }
         @keyframes slideUp { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes cartIconBounce { 0% { transform: scale(1); } 30% { transform: scale(1.38); } 60% { transform: scale(0.92); } 80% { transform: scale(1.12); } 100% { transform: scale(1); } }
         .reveal { animation: slideUp 0.45s ease both; }
         .reveal-1 { animation-delay: 0ms; }
         .reveal-2 { animation-delay: 80ms; }
@@ -679,7 +743,7 @@ export default function RestaurantWebsite() {
                       {item.oldPrice && <span style={{ fontSize: '11px', color: theme.priceOld, textDecoration: 'line-through' }}>₹{item.oldPrice.toLocaleString()}</span>}
                     </div>
                     <button
-                      onClick={() => addToCart(item)}
+                      onClick={(e) => addToCart(item, e)}
                       style={{
                         background: '#E8321A', color: '#fff', border: 'none',
                         borderRadius: '10px', padding: '7px 14px',
@@ -832,7 +896,7 @@ export default function RestaurantWebsite() {
                   }} />
                   {/* Add button — bottom right, stops propagation so it doesn't open detail */}
                   <button
-                    onClick={e => { e.stopPropagation(); addToCart(item) }}
+                    onClick={e => { e.stopPropagation(); addToCart(item, e) }}
                     style={{
                       position: 'absolute', bottom: '10px', right: '10px',
                       background: 'rgba(255,255,255,0.92)',
@@ -1940,13 +2004,17 @@ export default function RestaurantWebsite() {
                 transform: isActive ? 'scale(1.12)' : 'scale(1)',
               }}
             >
-              <div style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                width: '48px', height: '44px', borderRadius: '14px',
-                background: isActive ? activePillBg : 'transparent',
-                color: isActive ? activeIconColor : theme.navInactive,
-                transition: 'background 0.25s ease, color 0.25s ease',
-              }}>
+              <div
+                ref={id === 'cart' ? cartIconRef : undefined}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  width: '48px', height: '44px', borderRadius: '14px',
+                  background: isActive ? activePillBg : 'transparent',
+                  color: isActive ? activeIconColor : theme.navInactive,
+                  transition: 'background 0.25s ease, color 0.25s ease',
+                  animation: id === 'cart' && cartBounce ? 'cartIconBounce 0.45s cubic-bezier(0.34,1.56,0.64,1) forwards' : 'none',
+                }}
+              >
                 {icon}
               </div>
             </button>
@@ -2069,7 +2137,7 @@ function MenuCard({ item, theme, onAddToCart, cartQty, onPress }) {
           </div>
           <button
             className="view-cart-btn"
-            onClick={() => onAddToCart && onAddToCart(item)}
+            onClick={(e) => onAddToCart && onAddToCart(item, e)}
             style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '9px 16px', borderRadius: '10px', background: cartQty > 0 ? 'rgba(232,50,26,0.10)' : 'transparent', border: `1.5px solid #E8321A`, color: '#E8321A', fontSize: '12px', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
           >
             {cartQty > 0 ? `In cart (${cartQty})` : <><Plus size={12} strokeWidth={3} /> Add</>}
