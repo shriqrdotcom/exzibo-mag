@@ -10,7 +10,7 @@ import {
   Copy, PhoneCall, ArrowLeft
 } from 'lucide-react'
 import { FaInstagram, FaFacebook, FaWhatsapp } from 'react-icons/fa'
-import { FaXTwitter, FaHouse, FaUtensils, FaCartShopping, FaClipboardList, FaCalendarDays } from 'react-icons/fa6'
+import { FaXTwitter, FaHouse, FaUtensils, FaCartShopping, FaClipboardList, FaCalendarDays, FaStore } from 'react-icons/fa6'
 
 const FALLBACK_IMAGES = [
   '/menu/wagyu-ribeye.png',
@@ -1907,7 +1907,7 @@ export default function RestaurantWebsite() {
             ),
           },
           { id: 'orders', icon: <FaClipboardList size={21} /> },
-          { id: 'booking', icon: <FaCalendarDays size={21} /> },
+          { id: 'booking', icon: <FaStore size={21} /> },
         ].map(({ id, icon }) => {
           const isActive = activeNav === id
           const activeIconColor = darkMode ? '#111' : '#fff'
