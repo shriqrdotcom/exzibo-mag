@@ -9,6 +9,7 @@ import Restaurants from './pages/Restaurants'
 import RestaurantDetail from './pages/RestaurantDetail'
 import RestaurantWebsite from './pages/RestaurantWebsite'
 import FoodDetail from './pages/FoodDetail'
+import AdminDashboard from './pages/AdminDashboard'
 
 export default function App() {
   return (
@@ -16,6 +17,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/admin" element={<AdminDashboard />} />
         <Route path="/menu-editor" element={<MenuEditor />} />
         <Route path="/menu-editor/:uid" element={<MenuEditor />} />
         <Route path="/settings" element={<Settings />} />

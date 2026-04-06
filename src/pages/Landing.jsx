@@ -271,7 +271,7 @@ export default function Landing() {
                       navigate(theme.link)
                     }
                   }}
-                  onOpenAdmin={() => {}}
+                  onOpenAdmin={() => { setShowThemes(false); setSelectedTheme(null); navigate('/admin'); }}
                 />
               ))}
 

@@ -1,0 +1,147 @@
+Create a modern, premium SaaS-style Restaurant Admin Dashboard Home page.
+
+⚡ Design Style:
+- Clean, soft neumorphism + glassmorphism hybrid UI
+- Light grey gradient cards with smooth shadows
+- Rounded corners (16px–24px)
+- Subtle blur + elevation layers
+- Professional typography (Inter / Poppins)
+- Minimal but data-rich (like Zomato admin / POS system)
+
+----------------------------------
+
+🧩 PAGE STRUCTURE:
+
+1. 🔝 HEADER SECTION
+- Left: Restaurant/Admin Name (e.g., "Exzibo Admin")
+- Subtext: Role ("ADMIN")
+- Icon: small food/restaurant icon
+- Right side:
+  - Notification Bell icon (with badge)
+  - Optional profile avatar
+
+----------------------------------
+
+2. 📊 PAGE TITLE BAR
+- Title: "Orders"
+- Right side:
+  - Active Orders badge (e.g., "12 ACTIVE")
+  - Styled as pill (soft gradient / blue highlight)
+
+----------------------------------
+
+3. 📦 ORDERS LIST (MAIN COMPONENT)
+
+Create dynamic order cards (repeatable component)
+
+Each Order Card must include:
+
+🪪 ORDER INFO
+- Table Number (e.g., "Orders from Table No - 08")
+- Order ID (e.g., #EX8821)
+
+💰 ORDER SUMMARY
+- Subtotal (bold, right aligned)
+- Currency: INR
+- Status:
+  - Preparing → green
+  - Pending → yellow
+  - Completed → grey
+
+📋 ITEM LIST
+- Numbered list
+- Item Name + quantity
+- Price aligned right
+Example:
+1. Paneer Tikka Platter — 450
+2. Dal Makhani Special — 600
+
+🎯 ACTION BUTTONS
+- Confirm (Primary button)
+  - Green tone
+  - Icon: check
+- Cancel (Secondary button)
+  - Red tone
+  - Icon: cross
+
+Buttons should be:
+- Rounded pill shape
+- Soft shadow
+- Slight hover + press animation
+
+----------------------------------
+
+4. 📱 BOTTOM NAVIGATION BAR (Floating)
+
+- Fixed bottom floating container
+- Rounded capsule design
+- Icons only:
+  - Orders (active)
+  - Menu
+  - Customers
+  - Edit / Settings
+
+Active tab should:
+- Have highlight background
+- Slight glow
+
+----------------------------------
+
+⚙️ FUNCTIONAL PRD (IMPORTANT)
+
+- Orders should be dynamically rendered from mock JSON
+- Each order must support:
+  - status update (Confirm → Preparing → Completed)
+  - cancel action (removes or marks canceled)
+- Clicking Confirm:
+  → Change status to "Preparing"
+- Clicking Cancel:
+  → Remove or mark as "Cancelled"
+
+- Active Orders count should auto-update
+
+----------------------------------
+
+🎬 MICRO INTERACTIONS
+
+- Card hover → slight lift
+- Button click → ripple or scale animation
+- Status change → smooth color transition
+- New order → fade + slide-in animation
+
+----------------------------------
+
+📱 RESPONSIVENESS
+
+- Mobile-first layout
+- Cards stacked vertically
+- Touch-friendly buttons
+- Bottom nav always visible
+
+----------------------------------
+
+🎨 COLOR SYSTEM
+
+- Background: #f4f6f9 or soft gradient
+- Card: #ffffff with shadow
+- Primary: Blue / Indigo
+- Success: Green
+- Danger: Red
+- Warning: Orange/Yellow
+
+----------------------------------
+
+🧠 BONUS (OPTIONAL)
+
+- Add search or filter for orders
+- Add “New Order” highlight animation
+- Add sound or visual feedback on confirm
+
+----------------------------------
+
+🚀 OUTPUT REQUIREMENTS
+
+- Clean component-based structure
+- Reusable OrderCard component
+- Maintain scalable SaaS architecture
+- No unnecessary clutter
