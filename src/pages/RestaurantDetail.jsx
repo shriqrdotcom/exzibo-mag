@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, Utensils, LayoutGrid, Settings, Users, Edit3, ExternalLink } from 'lucide-react'
+import { ArrowLeft, Utensils, LayoutGrid, Settings, Users, Edit3, ExternalLink, LayoutDashboard } from 'lucide-react'
 
 export default function RestaurantDetail() {
   const { id } = useParams()
@@ -101,6 +101,7 @@ export default function RestaurantDetail() {
           marginBottom: '48px',
         }}>
           {[
+            { icon: <LayoutDashboard size={22} />, label: 'Admin Dashboard', desc: 'Manage orders & operations', action: () => navigate(`/admin/${id}`) },
             { icon: <Utensils size={22} />, label: 'Menu Editor', desc: 'Add, edit & manage menu items', action: () => navigate('/menu-editor') },
             { icon: <Users size={22} />, label: 'Staff', desc: 'Manage your team & roles', action: null },
             { icon: <Settings size={22} />, label: 'Settings', desc: 'Configure this restaurant', action: () => navigate('/settings') },

@@ -17,7 +17,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/admin" element={<AdminDashboard />} />
+        <Route path="/admin/:id" element={<AdminDashboard />} />
         <Route path="/menu-editor" element={<MenuEditor />} />
         <Route path="/menu-editor/:uid" element={<MenuEditor />} />
         <Route path="/settings" element={<Settings />} />

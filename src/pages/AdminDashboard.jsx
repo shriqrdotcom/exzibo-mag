@@ -1,57 +1,15 @@
-import React, { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import React, { useState, useEffect } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
 import {
   Bell, CheckCircle, XCircle, UtensilsCrossed,
   ClipboardList, BookOpen, Users, Settings, ArrowLeft,
 } from 'lucide-react'
 
-const INITIAL_ORDERS = [
-  {
-    id: 'EX8821',
-    table: '08',
-    status: 'preparing',
-    items: [
-      { name: 'Paneer Tikka Platter', qty: 1, price: 450 },
-      { name: 'Dal Makhani Special', qty: 1, price: 600 },
-      { name: 'Butter Garlic Naan', qty: 4, price: 400 },
-    ],
-  },
-  {
-    id: 'EX8824',
-    table: '14',
-    status: 'pending',
-    items: [
-      { name: 'Chicken Biryani Bowl', qty: 1, price: 420 },
-      { name: 'Mint Lime Soda', qty: 2, price: 240 },
-      { name: 'Gulab Jamun', qty: 1, price: 160 },
-    ],
-  },
-  {
-    id: 'EX8819',
-    table: '03',
-    status: 'completed',
-    items: [
-      { name: 'Masala Dosa', qty: 2, price: 340 },
-      { name: 'Filter Coffee', qty: 2, price: 180 },
-    ],
-  },
-  {
-    id: 'EX8830',
-    table: '11',
-    status: 'pending',
-    items: [
-      { name: 'Veg Manchurian', qty: 1, price: 280 },
-      { name: 'Fried Rice', qty: 2, price: 420 },
-      { name: 'Mango Lassi', qty: 2, price: 260 },
-    ],
-  },
-]
-
 const STATUS_CONFIG = {
-  pending:    { label: 'Pending',    color: '#F59E0B', bg: '#FFFBEB', border: '#FDE68A' },
-  preparing:  { label: 'Preparing', color: '#10B981', bg: '#ECFDF5', border: '#A7F3D0' },
-  completed:  { label: 'Completed', color: '#94A3B8', bg: '#F8FAFC', border: '#E2E8F0' },
-  cancelled:  { label: 'Cancelled', color: '#EF4444', bg: '#FEF2F2', border: '#FECACA' },
+  pending:   { label: 'Pending',   color: '#F59E0B', bg: '#FFFBEB', border: '#FDE68A' },
+  preparing: { label: 'Preparing', color: '#10B981', bg: '#ECFDF5', border: '#A7F3D0' },
+  completed: { label: 'Completed', color: '#94A3B8', bg: '#F8FAFC', border: '#E2E8F0' },
+  cancelled: { label: 'Cancelled', color: '#EF4444', bg: '#FEF2F2', border: '#FECACA' },
 }
 
 const NAV_ITEMS = [
@@ -61,32 +19,95 @@ const NAV_ITEMS = [
   { id: 'settings',  icon: Settings,      label: 'Settings' },
 ]
 
+function makeOrders(restaurantName) {
+  const tag = restaurantName ? restaurantName.slice(0, 2).toUpperCase() : 'EX'
+  return [
+    {
+      id: `${tag}8821`,
+      table: '08',
+      status: 'preparing',
+      items: [
+        { name: 'Paneer Tikka Platter', qty: 1, price: 450 },
+        { name: 'Dal Makhani Special',  qty: 1, price: 600 },
+        { name: 'Butter Garlic Naan',   qty: 4, price: 400 },
+      ],
+    },
+    {
+      id: `${tag}8824`,
+      table: '14',
+      status: 'pending',
+      items: [
+        { name: 'Chicken Biryani Bowl', qty: 1, price: 420 },
+        { name: 'Mint Lime Soda',       qty: 2, price: 240 },
+        { name: 'Gulab Jamun',          qty: 1, price: 160 },
+      ],
+    },
+    {
+      id: `${tag}8819`,
+      table: '03',
+      status: 'completed',
+      items: [
+        { name: 'Masala Dosa',   qty: 2, price: 340 },
+        { name: 'Filter Coffee', qty: 2, price: 180 },
+      ],
+    },
+    {
+      id: `${tag}8830`,
+      table: '11',
+      status: 'pending',
+      items: [
+        { name: 'Veg Manchurian', qty: 1, price: 280 },
+        { name: 'Fried Rice',     qty: 2, price: 420 },
+        { name: 'Mango Lassi',    qty: 2, price: 260 },
+      ],
+    },
+  ]
+}
+
 export default function AdminDashboard() {
+  const { id } = useParams()
   const navigate = useNavigate()
-  const [orders, setOrders] = useState(INITIAL_ORDERS)
+  const [restaurant, setRestaurant] = useState(null)
+  const [orders, setOrders] = useState([])
   const [activeNav, setActiveNav] = useState('orders')
   const [notification, setNotification] = useState(null)
 
+  useEffect(() => {
+    const saved = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
+    const found = saved.find(r => r.id === id)
+    if (!found) {
+      navigate('/restaurants')
+      return
+    }
+    setRestaurant(found)
+    setOrders(makeOrders(found.name))
+  }, [id])
+
   const activeCount = orders.filter(o => o.status === 'pending' || o.status === 'preparing').length
 
-  function confirmOrder(id) {
+  function confirmOrder(orderId) {
     setOrders(prev => prev.map(o => {
-      if (o.id !== id) return o
+      if (o.id !== orderId) return o
       const next = o.status === 'pending' ? 'preparing' : o.status === 'preparing' ? 'completed' : o.status
-      showNotification(next === 'preparing' ? '🍳 Order is now Preparing!' : '✅ Order Completed!')
+      showToast(next === 'preparing' ? '🍳 Order is now Preparing!' : '✅ Order Completed!')
       return { ...o, status: next }
     }))
   }
 
-  function cancelOrder(id) {
-    setOrders(prev => prev.map(o => o.id === id ? { ...o, status: 'cancelled' } : o))
-    showNotification('❌ Order Cancelled')
+  function cancelOrder(orderId) {
+    setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: 'cancelled' } : o))
+    showToast('❌ Order Cancelled')
   }
 
-  function showNotification(msg) {
+  function showToast(msg) {
     setNotification(msg)
     setTimeout(() => setNotification(null), 2500)
   }
+
+  if (!restaurant) return null
+
+  const initials = restaurant.name
+    .split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase()
 
   return (
     <div style={{
@@ -100,48 +121,37 @@ export default function AdminDashboard() {
       position: 'relative',
     }}>
       <style>{`
-        @keyframes slideIn {
-          from { opacity: 0; transform: translateY(-12px); }
-          to   { opacity: 1; transform: translateY(0); }
+        @keyframes slideInToast {
+          from { opacity: 0; transform: translateX(-50%) translateY(-12px); }
+          to   { opacity: 1; transform: translateX(-50%) translateY(0); }
         }
         @keyframes fadeSlideUp {
           from { opacity: 0; transform: translateY(18px); }
           to   { opacity: 1; transform: translateY(0); }
         }
-        .order-card {
-          animation: fadeSlideUp 0.35s ease both;
-        }
-        .action-btn {
-          transition: transform 0.15s ease, box-shadow 0.15s ease;
-        }
-        .action-btn:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 8px 20px rgba(0,0,0,0.12) !important;
-        }
-        .action-btn:active {
-          transform: scale(0.96);
-        }
-        .nav-tab {
-          transition: background 0.2s ease, transform 0.15s ease;
-        }
+        .order-card { animation: fadeSlideUp 0.35s ease both; }
+        .action-btn { transition: transform 0.15s ease, box-shadow 0.15s ease; }
+        .action-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.12) !important; }
+        .action-btn:active { transform: scale(0.96); }
+        .nav-tab { transition: background 0.2s ease, transform 0.15s ease; }
         .nav-tab:hover { transform: scale(1.08); }
       `}</style>
 
-      {/* Toast Notification */}
+      {/* Toast */}
       {notification && (
         <div style={{
-          position: 'fixed', top: '20px', left: '50%', transform: 'translateX(-50%)',
+          position: 'fixed', top: '20px', left: '50%',
+          transform: 'translateX(-50%)',
           background: '#1e293b', color: '#fff', padding: '12px 24px',
           borderRadius: '50px', fontSize: '13px', fontWeight: 600,
           zIndex: 999, boxShadow: '0 8px 30px rgba(0,0,0,0.25)',
-          animation: 'slideIn 0.3s ease',
+          animation: 'slideInToast 0.3s ease',
           whiteSpace: 'nowrap',
         }}>
           {notification}
         </div>
       )}
 
-      {/* Max-width wrapper */}
       <div style={{ width: '100%', maxWidth: '480px', padding: '0 16px', boxSizing: 'border-box' }}>
 
         {/* ── HEADER ── */}
@@ -158,7 +168,7 @@ export default function AdminDashboard() {
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <button
-              onClick={() => navigate('/')}
+              onClick={() => navigate(`/manage/${id}`)}
               style={{
                 width: '38px', height: '38px', borderRadius: '12px',
                 background: 'rgba(99,102,241,0.1)',
@@ -171,15 +181,16 @@ export default function AdminDashboard() {
             </button>
             <div style={{
               width: '44px', height: '44px', borderRadius: '14px',
-              background: 'linear-gradient(135deg, #6366F1, #8B5CF6)',
+              background: 'linear-gradient(135deg, #E8321A, #c42210)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: '0 4px 12px rgba(99,102,241,0.35)',
+              boxShadow: '0 4px 12px rgba(232,50,26,0.35)',
+              fontSize: '16px', fontWeight: 900, color: '#fff',
             }}>
-              <UtensilsCrossed size={20} color="#fff" />
+              {initials}
             </div>
             <div>
               <div style={{ fontSize: '17px', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.01em' }}>
-                Exzibo Admin
+                {restaurant.name}
               </div>
               <div style={{ fontSize: '11px', fontWeight: 700, color: '#6366F1', letterSpacing: '0.1em' }}>
                 ADMIN
@@ -211,7 +222,7 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* ── PAGE TITLE BAR ── */}
+        {/* ── TITLE BAR ── */}
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           padding: '24px 4px 16px',
@@ -269,9 +280,7 @@ export default function AdminDashboard() {
               title={item.label}
               style={{
                 width: '48px', height: '48px', borderRadius: '18px',
-                background: active
-                  ? 'linear-gradient(135deg, #6366F1, #8B5CF6)'
-                  : 'transparent',
+                background: active ? 'linear-gradient(135deg, #6366F1, #8B5CF6)' : 'transparent',
                 border: 'none',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 cursor: 'pointer',
@@ -319,7 +328,7 @@ function OrderCard({ order, index, onConfirm, onCancel }) {
         e.currentTarget.style.transform = 'translateY(0)'
       }}
     >
-      {/* Order header */}
+      {/* Header row */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
         <div>
           <div style={{ fontSize: '13px', fontWeight: 800, color: '#6366F1', letterSpacing: '0.02em', lineHeight: 1.3 }}>
@@ -334,19 +343,15 @@ function OrderCard({ order, index, onConfirm, onCancel }) {
           <div style={{ fontSize: '22px', fontWeight: 900, color: '#0f172a', letterSpacing: '-0.02em', lineHeight: 1.1 }}>
             {subtotal.toLocaleString('en-IN')} <span style={{ fontSize: '13px', fontWeight: 700 }}>INR</span>
           </div>
-          <div style={{
-            fontSize: '10px', fontWeight: 800, letterSpacing: '0.1em',
-            color: cfg.color, marginTop: '4px',
-          }}>
+          <div style={{ fontSize: '10px', fontWeight: 800, letterSpacing: '0.1em', color: cfg.color, marginTop: '4px' }}>
             {cfg.label.toUpperCase()}
           </div>
         </div>
       </div>
 
-      {/* Divider */}
       <div style={{ height: '1px', background: 'linear-gradient(90deg, rgba(99,102,241,0.12), transparent)', marginBottom: '14px' }} />
 
-      {/* Item list */}
+      {/* Items */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '18px' }}>
         {order.items.map((item, idx) => (
           <div key={idx} style={{
@@ -367,14 +372,12 @@ function OrderCard({ order, index, onConfirm, onCancel }) {
             <div style={{ flex: 1, fontSize: '13px', color: '#334155', fontWeight: 500 }}>
               {item.name}{item.qty > 1 ? ` (x${item.qty})` : ''}
             </div>
-            <div style={{ fontSize: '13px', fontWeight: 700, color: '#0f172a' }}>
-              {item.price}
-            </div>
+            <div style={{ fontSize: '13px', fontWeight: 700, color: '#0f172a' }}>{item.price}</div>
           </div>
         ))}
       </div>
 
-      {/* Action buttons */}
+      {/* Actions */}
       {!isDone ? (
         <div style={{ display: 'flex', gap: '10px' }}>
           <button

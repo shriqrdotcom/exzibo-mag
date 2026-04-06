@@ -90,7 +90,7 @@ export default function Restaurants() {
                 key={r.id}
                 restaurant={r}
                 onCustomer={() => navigate(`/restaurant/${r.slug || r.id}`)}
-                onAdmin={() => navigate(`/manage/${r.id}`)}
+                onAdmin={() => navigate(`/admin/${r.id}`)}
               />
             ))}
           </div>
