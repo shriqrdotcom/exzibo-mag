@@ -271,7 +271,7 @@ export default function Landing() {
                       navigate(theme.link)
                     }
                   }}
-                  onOpenAdmin={() => { setShowThemes(false); setSelectedTheme(null); navigate('/restaurants'); }}
+                  onOpenAdmin={() => { setShowThemes(false); setSelectedTheme(null); navigate('/admin/default'); }}
                 />
               ))}
 

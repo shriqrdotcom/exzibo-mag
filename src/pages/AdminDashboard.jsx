@@ -1,9 +1,29 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
-  Bell, CheckCircle, XCircle, UtensilsCrossed,
+  Bell, CheckCircle, XCircle,
   ClipboardList, BookOpen, Users, Settings, ArrowLeft,
+  Palette, DollarSign, Type, Save, Check,
 } from 'lucide-react'
+
+const GLOBAL_CONFIG_KEY = 'exzibo_admin_global_config'
+
+const DEFAULT_GLOBAL_CONFIG = {
+  accentColor: '#6366F1',
+  accentColorEnd: '#8B5CF6',
+  currency: 'INR',
+  adminTitle: 'Exzibo Admin',
+}
+
+const ACCENT_OPTIONS = [
+  { label: 'Indigo',  start: '#6366F1', end: '#8B5CF6' },
+  { label: 'Crimson', start: '#E8321A', end: '#c42210' },
+  { label: 'Ocean',   start: '#2563EB', end: '#1d4ed8' },
+  { label: 'Emerald', start: '#10B981', end: '#059669' },
+  { label: 'Amber',   start: '#D97706', end: '#b45309' },
+]
+
+const CURRENCY_OPTIONS = ['INR', 'USD', 'EUR', 'GBP', 'AED']
 
 const STATUS_CONFIG = {
   pending:   { label: 'Pending',   color: '#F59E0B', bg: '#FFFBEB', border: '#FDE68A' },
@@ -19,71 +39,87 @@ const NAV_ITEMS = [
   { id: 'settings',  icon: Settings,      label: 'Settings' },
 ]
 
-function makeOrders(restaurantName) {
+const DEMO_ORDERS = [
+  {
+    id: 'EX8821', table: '08', status: 'preparing',
+    items: [
+      { name: 'Paneer Tikka Platter', qty: 1, price: 450 },
+      { name: 'Dal Makhani Special',  qty: 1, price: 600 },
+      { name: 'Butter Garlic Naan',   qty: 4, price: 400 },
+    ],
+  },
+  {
+    id: 'EX8824', table: '14', status: 'pending',
+    items: [
+      { name: 'Chicken Biryani Bowl', qty: 1, price: 420 },
+      { name: 'Mint Lime Soda',       qty: 2, price: 240 },
+      { name: 'Gulab Jamun',          qty: 1, price: 160 },
+    ],
+  },
+  {
+    id: 'EX8819', table: '03', status: 'completed',
+    items: [
+      { name: 'Masala Dosa',   qty: 2, price: 340 },
+      { name: 'Filter Coffee', qty: 2, price: 180 },
+    ],
+  },
+]
+
+function makeRestaurantOrders(restaurantName) {
   const tag = restaurantName ? restaurantName.slice(0, 2).toUpperCase() : 'EX'
-  return [
-    {
-      id: `${tag}8821`,
-      table: '08',
-      status: 'preparing',
-      items: [
-        { name: 'Paneer Tikka Platter', qty: 1, price: 450 },
-        { name: 'Dal Makhani Special',  qty: 1, price: 600 },
-        { name: 'Butter Garlic Naan',   qty: 4, price: 400 },
-      ],
-    },
-    {
-      id: `${tag}8824`,
-      table: '14',
-      status: 'pending',
-      items: [
-        { name: 'Chicken Biryani Bowl', qty: 1, price: 420 },
-        { name: 'Mint Lime Soda',       qty: 2, price: 240 },
-        { name: 'Gulab Jamun',          qty: 1, price: 160 },
-      ],
-    },
-    {
-      id: `${tag}8819`,
-      table: '03',
-      status: 'completed',
-      items: [
-        { name: 'Masala Dosa',   qty: 2, price: 340 },
-        { name: 'Filter Coffee', qty: 2, price: 180 },
-      ],
-    },
-    {
-      id: `${tag}8830`,
-      table: '11',
-      status: 'pending',
-      items: [
-        { name: 'Veg Manchurian', qty: 1, price: 280 },
-        { name: 'Fried Rice',     qty: 2, price: 420 },
-        { name: 'Mango Lassi',    qty: 2, price: 260 },
-      ],
-    },
-  ]
+  return DEMO_ORDERS.map(o => ({ ...o, id: tag + o.id.slice(2) }))
+}
+
+function loadGlobalConfig() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(GLOBAL_CONFIG_KEY))
+    return saved ? { ...DEFAULT_GLOBAL_CONFIG, ...saved } : { ...DEFAULT_GLOBAL_CONFIG }
+  } catch { return { ...DEFAULT_GLOBAL_CONFIG } }
 }
 
 export default function AdminDashboard() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const isDefault = !id || id === 'default'
+
   const [restaurant, setRestaurant] = useState(null)
   const [orders, setOrders] = useState([])
   const [activeNav, setActiveNav] = useState('orders')
   const [notification, setNotification] = useState(null)
+  const [globalConfig, setGlobalConfig] = useState(loadGlobalConfig)
+
+  // Draft state for the settings panel
+  const [draft, setDraft] = useState(null)
+  const [saved, setSaved] = useState(false)
 
   useEffect(() => {
-    const saved = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
-    const found = saved.find(r => r.id === id)
-    if (!found) {
-      navigate('/restaurants')
+    if (isDefault) {
+      setOrders(DEMO_ORDERS)
       return
     }
+    const all = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
+    const found = all.find(r => r.id === id)
+    if (!found) { navigate('/restaurants'); return }
     setRestaurant(found)
-    setOrders(makeOrders(found.name))
+    setOrders(makeRestaurantOrders(found.name))
   }, [id])
 
+  // Sync global config whenever localStorage changes (other tabs, etc.)
+  useEffect(() => {
+    const cfg = loadGlobalConfig()
+    setGlobalConfig(cfg)
+    setDraft(cfg)
+  }, [])
+
+  useEffect(() => {
+    if (activeNav === 'settings' && draft === null) {
+      setDraft({ ...globalConfig })
+    }
+  }, [activeNav])
+
   const activeCount = orders.filter(o => o.status === 'pending' || o.status === 'preparing').length
+  const accentStart = globalConfig.accentColor
+  const accentEnd   = globalConfig.accentColorEnd
 
   function confirmOrder(orderId) {
     setOrders(prev => prev.map(o => {
@@ -104,9 +140,19 @@ export default function AdminDashboard() {
     setTimeout(() => setNotification(null), 2500)
   }
 
-  if (!restaurant) return null
+  function saveSettings() {
+    localStorage.setItem(GLOBAL_CONFIG_KEY, JSON.stringify(draft))
+    setGlobalConfig({ ...draft })
+    setSaved(true)
+    setTimeout(() => setSaved(false), 2000)
+    showToast('✅ Settings saved — applies to all restaurants!')
+  }
 
-  const initials = restaurant.name
+  const displayName = isDefault
+    ? globalConfig.adminTitle
+    : (restaurant?.name || 'Admin')
+
+  const initials = displayName
     .split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase()
 
   return (
@@ -116,7 +162,7 @@ export default function AdminDashboard() {
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
-      paddingBottom: '100px',
+      paddingBottom: '110px',
       fontFamily: "'Inter', 'Poppins', system-ui, sans-serif",
       position: 'relative',
     }}>
@@ -127,6 +173,10 @@ export default function AdminDashboard() {
         }
         @keyframes fadeSlideUp {
           from { opacity: 0; transform: translateY(18px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes settingsPanelIn {
+          from { opacity: 0; transform: translateY(24px); }
           to   { opacity: 1; transform: translateY(0); }
         }
         .order-card { animation: fadeSlideUp 0.35s ease both; }
@@ -168,31 +218,41 @@ export default function AdminDashboard() {
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <button
-              onClick={() => navigate(`/manage/${id}`)}
+              onClick={() => isDefault ? navigate('/') : navigate(`/manage/${id}`)}
               style={{
                 width: '38px', height: '38px', borderRadius: '12px',
-                background: 'rgba(99,102,241,0.1)',
-                border: '1px solid rgba(99,102,241,0.2)',
+                background: `${accentStart}18`,
+                border: `1px solid ${accentStart}30`,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                cursor: 'pointer', color: '#6366F1',
+                cursor: 'pointer', color: accentStart,
               }}
             >
               <ArrowLeft size={16} />
             </button>
             <div style={{
               width: '44px', height: '44px', borderRadius: '14px',
-              background: 'linear-gradient(135deg, #E8321A, #c42210)',
+              background: `linear-gradient(135deg, ${accentStart}, ${accentEnd})`,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: '0 4px 12px rgba(232,50,26,0.35)',
+              boxShadow: `0 4px 12px ${accentStart}50`,
               fontSize: '16px', fontWeight: 900, color: '#fff',
             }}>
               {initials}
             </div>
             <div>
               <div style={{ fontSize: '17px', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.01em' }}>
-                {restaurant.name}
+                {displayName}
+                {isDefault && (
+                  <span style={{
+                    marginLeft: '8px', fontSize: '9px', fontWeight: 700,
+                    letterSpacing: '0.1em', color: accentStart,
+                    background: `${accentStart}15`, borderRadius: '6px',
+                    padding: '2px 7px', verticalAlign: 'middle',
+                  }}>
+                    TEMPLATE
+                  </span>
+                )}
               </div>
-              <div style={{ fontSize: '11px', fontWeight: 700, color: '#6366F1', letterSpacing: '0.1em' }}>
+              <div style={{ fontSize: '11px', fontWeight: 700, color: accentStart, letterSpacing: '0.1em' }}>
                 ADMIN
               </div>
             </div>
@@ -222,38 +282,68 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* ── TITLE BAR ── */}
-        <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '24px 4px 16px',
-        }}>
-          <h1 style={{ fontSize: '28px', fontWeight: 900, color: '#0f172a', margin: 0, letterSpacing: '-0.02em' }}>
-            Orders
-          </h1>
-          <div style={{
-            padding: '6px 16px',
-            background: 'linear-gradient(135deg, #6366F1, #8B5CF6)',
-            borderRadius: '50px',
-            color: '#fff',
-            fontSize: '11px', fontWeight: 800, letterSpacing: '0.1em',
-            boxShadow: '0 4px 14px rgba(99,102,241,0.4)',
-          }}>
-            {activeCount} ACTIVE
-          </div>
-        </div>
+        {/* ── CONTENT ── */}
+        {activeNav === 'settings' ? (
+          <SettingsPanel
+            draft={draft}
+            setDraft={setDraft}
+            accentStart={accentStart}
+            accentEnd={accentEnd}
+            onSave={saveSettings}
+            saved={saved}
+            isDefault={isDefault}
+          />
+        ) : (
+          <>
+            {/* Title bar */}
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: '24px 4px 16px',
+            }}>
+              <h1 style={{ fontSize: '28px', fontWeight: 900, color: '#0f172a', margin: 0, letterSpacing: '-0.02em' }}>
+                Orders
+              </h1>
+              <div style={{
+                padding: '6px 16px',
+                background: `linear-gradient(135deg, ${accentStart}, ${accentEnd})`,
+                borderRadius: '50px', color: '#fff',
+                fontSize: '11px', fontWeight: 800, letterSpacing: '0.1em',
+                boxShadow: `0 4px 14px ${accentStart}60`,
+              }}>
+                {activeCount} ACTIVE
+              </div>
+            </div>
 
-        {/* ── ORDER CARDS ── */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {orders.map((order, i) => (
-            <OrderCard
-              key={order.id}
-              order={order}
-              index={i}
-              onConfirm={() => confirmOrder(order.id)}
-              onCancel={() => cancelOrder(order.id)}
-            />
-          ))}
-        </div>
+            {/* Default mode banner */}
+            {isDefault && (
+              <div style={{
+                margin: '0 0 16px',
+                padding: '12px 16px',
+                background: `${accentStart}12`,
+                border: `1px solid ${accentStart}25`,
+                borderRadius: '14px',
+                fontSize: '12px', color: accentStart, fontWeight: 600, lineHeight: 1.5,
+              }}>
+                📋 This is the <strong>default template</strong> for all restaurants. Changes made in Settings will apply to every restaurant's admin dashboard.
+              </div>
+            )}
+
+            {/* Order cards */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {orders.map((order, i) => (
+                <OrderCard
+                  key={order.id}
+                  order={order}
+                  index={i}
+                  accentStart={accentStart}
+                  currency={globalConfig.currency}
+                  onConfirm={() => confirmOrder(order.id)}
+                  onCancel={() => cancelOrder(order.id)}
+                />
+              ))}
+            </div>
+          </>
+        )}
       </div>
 
       {/* ── BOTTOM NAV ── */}
@@ -280,12 +370,12 @@ export default function AdminDashboard() {
               title={item.label}
               style={{
                 width: '48px', height: '48px', borderRadius: '18px',
-                background: active ? 'linear-gradient(135deg, #6366F1, #8B5CF6)' : 'transparent',
+                background: active ? `linear-gradient(135deg, ${accentStart}, ${accentEnd})` : 'transparent',
                 border: 'none',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 cursor: 'pointer',
                 color: active ? '#fff' : '#94A3B8',
-                boxShadow: active ? '0 4px 14px rgba(99,102,241,0.45)' : 'none',
+                boxShadow: active ? `0 4px 14px ${accentStart}60` : 'none',
               }}
             >
               <item.icon size={20} />
@@ -297,7 +387,175 @@ export default function AdminDashboard() {
   )
 }
 
-function OrderCard({ order, index, onConfirm, onCancel }) {
+/* ─── Settings Panel ─── */
+function SettingsPanel({ draft, setDraft, accentStart, accentEnd, onSave, saved, isDefault }) {
+  if (!draft) return null
+
+  return (
+    <div style={{ animation: 'settingsPanelIn 0.3s ease', paddingTop: '24px' }}>
+      {/* Header */}
+      <div style={{ padding: '0 4px 20px' }}>
+        <h1 style={{ fontSize: '28px', fontWeight: 900, color: '#0f172a', margin: '0 0 4px', letterSpacing: '-0.02em' }}>
+          Settings
+        </h1>
+        <p style={{ fontSize: '13px', color: '#64748b', margin: 0 }}>
+          {isDefault
+            ? 'Configure the global admin template — changes apply to all restaurants.'
+            : 'Global admin settings — changes apply to all restaurant dashboards.'}
+        </p>
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+
+        {/* Admin Title */}
+        <SettingCard
+          icon={<Type size={18} />}
+          accentStart={accentStart}
+          title="Admin Title"
+          desc="The name shown in the admin header across all dashboards"
+        >
+          <input
+            value={draft.adminTitle}
+            onChange={e => setDraft(d => ({ ...d, adminTitle: e.target.value }))}
+            placeholder="Exzibo Admin"
+            style={{
+              width: '100%', boxSizing: 'border-box',
+              padding: '10px 14px',
+              background: 'rgba(248,250,252,0.9)',
+              border: '1.5px solid #e2e8f0',
+              borderRadius: '12px',
+              fontSize: '14px', fontWeight: 600, color: '#0f172a',
+              outline: 'none', fontFamily: 'inherit',
+            }}
+            onFocus={e => e.target.style.borderColor = accentStart}
+            onBlur={e => e.target.style.borderColor = '#e2e8f0'}
+          />
+        </SettingCard>
+
+        {/* Accent Color */}
+        <SettingCard
+          icon={<Palette size={18} />}
+          accentStart={accentStart}
+          title="Accent Color"
+          desc="Theme color used across all admin dashboards"
+        >
+          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+            {ACCENT_OPTIONS.map(opt => {
+              const active = draft.accentColor === opt.start
+              return (
+                <button
+                  key={opt.label}
+                  onClick={() => setDraft(d => ({ ...d, accentColor: opt.start, accentColorEnd: opt.end }))}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '7px',
+                    padding: '8px 14px',
+                    background: active ? `${opt.start}18` : 'rgba(248,250,252,0.9)',
+                    border: `1.5px solid ${active ? opt.start : '#e2e8f0'}`,
+                    borderRadius: '50px', cursor: 'pointer',
+                    fontSize: '12px', fontWeight: 700, color: active ? opt.start : '#64748b',
+                    transition: 'all 0.2s',
+                  }}
+                >
+                  <span style={{
+                    width: '12px', height: '12px', borderRadius: '50%',
+                    background: `linear-gradient(135deg, ${opt.start}, ${opt.end})`,
+                    flexShrink: 0,
+                  }} />
+                  {opt.label}
+                </button>
+              )
+            })}
+          </div>
+        </SettingCard>
+
+        {/* Currency */}
+        <SettingCard
+          icon={<DollarSign size={18} />}
+          accentStart={accentStart}
+          title="Currency"
+          desc="Currency displayed in all order subtotals"
+        >
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            {CURRENCY_OPTIONS.map(c => {
+              const active = draft.currency === c
+              return (
+                <button
+                  key={c}
+                  onClick={() => setDraft(d => ({ ...d, currency: c }))}
+                  style={{
+                    padding: '8px 18px',
+                    background: active ? `${accentStart}18` : 'rgba(248,250,252,0.9)',
+                    border: `1.5px solid ${active ? accentStart : '#e2e8f0'}`,
+                    borderRadius: '50px', cursor: 'pointer',
+                    fontSize: '13px', fontWeight: 700,
+                    color: active ? accentStart : '#64748b',
+                    transition: 'all 0.2s',
+                  }}
+                >
+                  {c}
+                </button>
+              )
+            })}
+          </div>
+        </SettingCard>
+
+        {/* Save Button */}
+        <button
+          onClick={onSave}
+          style={{
+            width: '100%', padding: '15px',
+            background: saved
+              ? 'linear-gradient(135deg, #10B981, #059669)'
+              : `linear-gradient(135deg, ${accentStart}, ${accentEnd})`,
+            border: 'none', borderRadius: '50px',
+            color: '#fff', fontSize: '14px', fontWeight: 800,
+            letterSpacing: '0.06em', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+            boxShadow: `0 6px 20px ${accentStart}50`,
+            transition: 'background 0.3s ease, box-shadow 0.3s ease',
+          }}
+        >
+          {saved ? <Check size={16} /> : <Save size={16} />}
+          {saved ? 'SAVED!' : 'SAVE & APPLY TO ALL RESTAURANTS'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function SettingCard({ icon, accentStart, title, desc, children }) {
+  return (
+    <div style={{
+      background: 'rgba(255,255,255,0.75)',
+      backdropFilter: 'blur(12px)',
+      WebkitBackdropFilter: 'blur(12px)',
+      borderRadius: '20px',
+      padding: '18px 20px',
+      border: '1px solid rgba(255,255,255,0.7)',
+      boxShadow: '0 4px 24px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.8)',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
+        <div style={{
+          width: '34px', height: '34px', borderRadius: '10px',
+          background: `${accentStart}15`,
+          border: `1px solid ${accentStart}25`,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          color: accentStart, flexShrink: 0,
+        }}>
+          {icon}
+        </div>
+        <div>
+          <div style={{ fontSize: '14px', fontWeight: 700, color: '#0f172a' }}>{title}</div>
+          <div style={{ fontSize: '11px', color: '#94A3B8', marginTop: '1px' }}>{desc}</div>
+        </div>
+      </div>
+      {children}
+    </div>
+  )
+}
+
+/* ─── Order Card ─── */
+function OrderCard({ order, index, accentStart, currency, onConfirm, onCancel }) {
   const subtotal = order.items.reduce((s, it) => s + it.price, 0)
   const cfg = STATUS_CONFIG[order.status] || STATUS_CONFIG.pending
   const isDone = order.status === 'completed' || order.status === 'cancelled'
@@ -310,8 +568,7 @@ function OrderCard({ order, index, onConfirm, onCancel }) {
         background: 'rgba(255,255,255,0.75)',
         backdropFilter: 'blur(12px)',
         WebkitBackdropFilter: 'blur(12px)',
-        borderRadius: '20px',
-        padding: '20px',
+        borderRadius: '20px', padding: '20px',
         border: '1px solid rgba(255,255,255,0.7)',
         boxShadow: '0 4px 24px rgba(0,0,0,0.07), inset 0 1px 0 rgba(255,255,255,0.8)',
         transition: 'box-shadow 0.25s ease, transform 0.25s ease',
@@ -328,10 +585,9 @@ function OrderCard({ order, index, onConfirm, onCancel }) {
         e.currentTarget.style.transform = 'translateY(0)'
       }}
     >
-      {/* Header row */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
         <div>
-          <div style={{ fontSize: '13px', fontWeight: 800, color: '#6366F1', letterSpacing: '0.02em', lineHeight: 1.3 }}>
+          <div style={{ fontSize: '13px', fontWeight: 800, color: accentStart, letterSpacing: '0.02em', lineHeight: 1.3 }}>
             ORDERS FROM TABLE NO — {order.table}
           </div>
           <div style={{ fontSize: '12px', color: '#94A3B8', marginTop: '3px', fontWeight: 500 }}>
@@ -341,7 +597,7 @@ function OrderCard({ order, index, onConfirm, onCancel }) {
         <div style={{ textAlign: 'right' }}>
           <div style={{ fontSize: '11px', fontWeight: 700, color: '#94A3B8', letterSpacing: '0.06em' }}>SUBTOTAL</div>
           <div style={{ fontSize: '22px', fontWeight: 900, color: '#0f172a', letterSpacing: '-0.02em', lineHeight: 1.1 }}>
-            {subtotal.toLocaleString('en-IN')} <span style={{ fontSize: '13px', fontWeight: 700 }}>INR</span>
+            {subtotal.toLocaleString()} <span style={{ fontSize: '13px', fontWeight: 700 }}>{currency}</span>
           </div>
           <div style={{ fontSize: '10px', fontWeight: 800, letterSpacing: '0.1em', color: cfg.color, marginTop: '4px' }}>
             {cfg.label.toUpperCase()}
@@ -349,9 +605,8 @@ function OrderCard({ order, index, onConfirm, onCancel }) {
         </div>
       </div>
 
-      <div style={{ height: '1px', background: 'linear-gradient(90deg, rgba(99,102,241,0.12), transparent)', marginBottom: '14px' }} />
+      <div style={{ height: '1px', background: `linear-gradient(90deg, ${accentStart}20, transparent)`, marginBottom: '14px' }} />
 
-      {/* Items */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '18px' }}>
         {order.items.map((item, idx) => (
           <div key={idx} style={{
@@ -363,9 +618,9 @@ function OrderCard({ order, index, onConfirm, onCancel }) {
           }}>
             <div style={{
               width: '22px', height: '22px', borderRadius: '8px',
-              background: 'linear-gradient(135deg, #e0e7ff, #c7d2fe)',
+              background: `linear-gradient(135deg, ${accentStart}25, ${accentStart}15)`,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '11px', fontWeight: 800, color: '#6366F1', flexShrink: 0,
+              fontSize: '11px', fontWeight: 800, color: accentStart, flexShrink: 0,
             }}>
               {idx + 1}
             </div>
@@ -377,7 +632,6 @@ function OrderCard({ order, index, onConfirm, onCancel }) {
         ))}
       </div>
 
-      {/* Actions */}
       {!isDone ? (
         <div style={{ display: 'flex', gap: '10px' }}>
           <button
