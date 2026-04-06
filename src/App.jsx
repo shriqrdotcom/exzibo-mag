@@ -6,7 +6,6 @@ import MenuEditor from './pages/MenuEditor'
 import Settings from './pages/Settings'
 import CreateWebsite from './pages/CreateWebsite'
 import Restaurants from './pages/Restaurants'
-import RestaurantDetail from './pages/RestaurantDetail'
 import RestaurantWebsite from './pages/RestaurantWebsite'
 import FoodDetail from './pages/FoodDetail'
 import AdminDashboard from './pages/AdminDashboard'
@@ -23,7 +22,6 @@ export default function App() {
         <Route path="/settings" element={<Settings />} />
         <Route path="/create-website" element={<CreateWebsite />} />
         <Route path="/restaurants" element={<Restaurants />} />
-        <Route path="/manage/:id" element={<RestaurantDetail />} />
         <Route path="/restaurant/:slug" element={<RestaurantWebsite />} />
         <Route path="/restaurant/:slug/food/:itemName" element={<FoodDetail />} />
         <Route path="/r/:slug" element={<RestaurantWebsite />} />

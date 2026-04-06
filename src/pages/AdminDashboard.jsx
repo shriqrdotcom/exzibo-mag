@@ -218,7 +218,7 @@ export default function AdminDashboard() {
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <button
-              onClick={() => isDefault ? navigate('/') : navigate(`/manage/${id}`)}
+              onClick={() => isDefault ? navigate('/') : navigate('/restaurants')}
               style={{
                 width: '38px', height: '38px', borderRadius: '12px',
                 background: `${accentStart}18`,
