@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowRight, Store, Wrench, Bell, User, Search, Palette, X, ExternalLink } from 'lucide-react'
+import { ArrowRight, Store, Wrench, Bell, User, Search, Palette, X, ExternalLink, LayoutDashboard } from 'lucide-react'
 
 const THEMES = [
   {
@@ -69,6 +69,7 @@ export default function Landing() {
   const navigate = useNavigate()
   const [loaded, setLoaded] = useState(false)
   const [showThemes, setShowThemes] = useState(false)
+  const [selectedTheme, setSelectedTheme] = useState(null)
 
   useEffect(() => {
     setTimeout(() => setLoaded(true), 100)
@@ -179,7 +180,7 @@ export default function Landing() {
       {/* ── THEMES MODAL ── */}
       {showThemes && (
         <div
-          onClick={() => setShowThemes(false)}
+          onClick={() => { setShowThemes(false); setSelectedTheme(null); }}
           style={{
             position: 'fixed', inset: 0, zIndex: 300,
             background: 'rgba(0,0,0,0.82)',
@@ -231,7 +232,7 @@ export default function Landing() {
                 </div>
               </div>
               <button
-                onClick={() => setShowThemes(false)}
+                onClick={() => { setShowThemes(false); setSelectedTheme(null); }}
                 style={{
                   width: '34px', height: '34px', borderRadius: '10px',
                   background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)',
@@ -257,12 +258,20 @@ export default function Landing() {
                 <ThemeCard
                   key={theme.id}
                   theme={theme}
+                  selected={selectedTheme === theme.id}
                   onClick={() => {
-                    if (theme.available && theme.link) {
+                    if (theme.available) {
+                      setSelectedTheme(prev => prev === theme.id ? null : theme.id)
+                    }
+                  }}
+                  onOpenTheme={() => {
+                    if (theme.link) {
                       setShowThemes(false)
+                      setSelectedTheme(null)
                       navigate(theme.link)
                     }
                   }}
+                  onOpenAdmin={() => {}}
                 />
               ))}
 
@@ -294,7 +303,7 @@ export default function Landing() {
                 {THEMES.filter(t => t.available).length} of {THEMES.length + 1} themes available
               </span>
               <button
-                onClick={() => setShowThemes(false)}
+                onClick={() => { setShowThemes(false); setSelectedTheme(null); }}
                 style={{
                   padding: '10px 28px', background: '#E8321A', border: 'none',
                   borderRadius: '50px', color: '#fff', fontSize: '12px',
@@ -314,7 +323,7 @@ export default function Landing() {
   )
 }
 
-function ThemeCard({ theme, onClick }) {
+function ThemeCard({ theme, onClick, selected, onOpenTheme, onOpenAdmin }) {
   const [hovered, setHovered] = useState(false)
 
   return (
@@ -325,12 +334,12 @@ function ThemeCard({ theme, onClick }) {
       onMouseLeave={() => setHovered(false)}
       style={{
         borderRadius: '16px',
-        border: `1px solid ${hovered && theme.available ? theme.accent + '55' : 'rgba(255,255,255,0.07)'}`,
+        border: `1px solid ${(hovered || selected) && theme.available ? theme.accent + '55' : 'rgba(255,255,255,0.07)'}`,
         background: '#111',
         overflow: 'hidden',
         cursor: theme.available ? 'pointer' : 'default',
         transition: 'all 0.25s ease',
-        boxShadow: hovered && theme.available ? `0 8px 28px ${theme.accent}25` : 'none',
+        boxShadow: (hovered || selected) && theme.available ? `0 8px 28px ${theme.accent}25` : 'none',
         opacity: theme.available ? 1 : 0.45,
         position: 'relative',
       }}
@@ -349,29 +358,70 @@ function ThemeCard({ theme, onClick }) {
                 width: '100%', height: '100%', objectFit: 'cover',
                 objectPosition: 'top',
                 transition: 'transform 0.4s ease',
-                transform: hovered ? 'scale(1.04)' : 'scale(1)',
+                transform: hovered || selected ? 'scale(1.04)' : 'scale(1)',
                 display: 'block',
               }}
             />
-            {/* Hover overlay with "Preview" CTA */}
+            {/* Click overlay with two action buttons */}
             <div className="theme-card-overlay" style={{
               position: 'absolute', inset: 0,
-              background: 'rgba(0,0,0,0.55)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              opacity: hovered ? 1 : 0,
+              background: 'rgba(0,0,0,0.65)',
+              display: 'flex', flexDirection: 'column',
+              alignItems: 'center', justifyContent: 'center', gap: '10px',
+              opacity: selected ? 1 : hovered ? 0.55 : 0,
               transition: 'opacity 0.25s ease',
             }}>
-              <div style={{
-                display: 'flex', alignItems: 'center', gap: '7px',
-                background: theme.accent, borderRadius: '50px',
-                padding: '9px 20px',
-                fontSize: '12px', fontWeight: 800, color: '#fff',
-                letterSpacing: '0.06em',
-                boxShadow: `0 4px 18px ${theme.accent}60`,
-              }}>
-                <ExternalLink size={13} />
-                OPEN THEME
-              </div>
+              {selected ? (
+                <>
+                  <button
+                    onClick={e => { e.stopPropagation(); onOpenTheme(); }}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: '7px',
+                      background: theme.accent, border: 'none', borderRadius: '50px',
+                      padding: '9px 20px', fontSize: '12px', fontWeight: 800,
+                      color: '#fff', letterSpacing: '0.06em', cursor: 'pointer',
+                      boxShadow: `0 4px 18px ${theme.accent}60`,
+                      width: '150px', justifyContent: 'center',
+                      transition: 'transform 0.15s ease',
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.04)'}
+                    onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+                  >
+                    <ExternalLink size={13} />
+                    OPEN THEME
+                  </button>
+                  <button
+                    onClick={e => { e.stopPropagation(); onOpenAdmin(); }}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: '7px',
+                      background: 'rgba(255,255,255,0.1)',
+                      border: '1px solid rgba(255,255,255,0.2)',
+                      borderRadius: '50px',
+                      padding: '9px 20px', fontSize: '12px', fontWeight: 800,
+                      color: '#fff', letterSpacing: '0.06em', cursor: 'pointer',
+                      width: '150px', justifyContent: 'center',
+                      transition: 'transform 0.15s ease, background 0.2s ease',
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.04)'; e.currentTarget.style.background = 'rgba(255,255,255,0.18)' }}
+                    onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.background = 'rgba(255,255,255,0.1)' }}
+                  >
+                    <LayoutDashboard size={13} />
+                    OPEN ADMIN
+                  </button>
+                </>
+              ) : (
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: '7px',
+                  background: theme.accent, borderRadius: '50px',
+                  padding: '9px 20px',
+                  fontSize: '12px', fontWeight: 800, color: '#fff',
+                  letterSpacing: '0.06em',
+                  boxShadow: `0 4px 18px ${theme.accent}60`,
+                }}>
+                  <ExternalLink size={13} />
+                  OPEN THEME
+                </div>
+              )}
             </div>
           </>
         ) : (
@@ -403,7 +453,7 @@ function ThemeCard({ theme, onClick }) {
       {/* Info bar */}
       <div style={{
         padding: '12px 14px',
-        background: hovered && theme.available ? `${theme.accent}0e` : 'transparent',
+        background: (hovered || selected) && theme.available ? `${theme.accent}0e` : 'transparent',
         transition: 'background 0.25s',
         borderTop: '1px solid rgba(255,255,255,0.05)',
       }}>
