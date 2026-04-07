@@ -1144,26 +1144,31 @@ export default function RestaurantWebsite() {
         </div>
       )}
 
-      {/* ── FLOATING VIEW CART (menu view) ── */}
+      {/* ── FLOATING CART BUTTON (right side) ── */}
       {activeNav === 'menu' && cartCount > 0 && (
-        <div style={{
-          position: 'fixed', bottom: '78px', left: '50%', transform: 'translateX(-50%)',
-          zIndex: 80, pointerEvents: 'none', width: '100%', maxWidth: '480px', padding: '0 14px',
-        }}>
-          <button
-            onClick={() => setActiveNav('cart')}
-            style={{
-              pointerEvents: 'all', width: '100%', background: '#111', color: '#fff', border: 'none',
-              borderRadius: '16px', padding: '14px 20px', fontSize: '14px', fontWeight: 700,
-              cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              boxShadow: '0 8px 28px rgba(0,0,0,0.35)',
-            }}
-          >
-            <span style={{ background: '#E8321A', borderRadius: '7px', padding: '3px 9px', fontSize: '12px', fontWeight: 800 }}>{cartCount}</span>
-            <span>View Cart</span>
-            <span style={{ color: '#E8321A', fontWeight: 800 }}>₹{subtotal.toLocaleString('en-IN')}</span>
-          </button>
-        </div>
+        <button
+          onClick={() => setActiveNav('cart')}
+          style={{
+            position: 'fixed', right: '16px', bottom: '90px', zIndex: 80,
+            background: '#111', border: 'none', borderRadius: '20px',
+            width: '72px', height: '56px',
+            display: 'flex', alignItems: 'center', justifyContent: 'flex-end',
+            paddingRight: '16px',
+            cursor: 'pointer',
+            boxShadow: '0 8px 28px rgba(0,0,0,0.5)',
+          }}
+        >
+          {cartCount > 0 && (
+            <span style={{
+              position: 'absolute', top: '-7px', right: '-7px',
+              background: '#E8321A', color: '#fff',
+              fontSize: '10px', fontWeight: 800,
+              borderRadius: '7px', padding: '2px 7px',
+              minWidth: '18px', textAlign: 'center',
+            }}>{cartCount}</span>
+          )}
+          <ShoppingCart size={22} color="#fff" strokeWidth={2.2} />
+        </button>
       )}
 
       {/* ── CART VIEW ── */}
