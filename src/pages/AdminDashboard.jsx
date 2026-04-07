@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import {
   Bell, CheckCircle, XCircle,
   ClipboardList, BookOpen, Users, Settings, ArrowLeft,
-  Palette, DollarSign, Type, Save, Check,
+  Palette, DollarSign, Type, Save, Check, CalendarDays, UtensilsCrossed,
 } from 'lucide-react'
 
 const GLOBAL_CONFIG_KEY = 'exzibo_admin_global_config'
@@ -65,6 +65,31 @@ const DEMO_ORDERS = [
   },
 ]
 
+const DEMO_BOOKINGS = [
+  {
+    id: 'BK1041', name: 'Arjun Mehta', guests: 4, date: 'Today', time: '7:30 PM',
+    table: '05', note: 'Window seat preferred', status: 'confirmed',
+  },
+  {
+    id: 'BK1042', name: 'Priya Sharma', guests: 2, date: 'Today', time: '8:00 PM',
+    table: '11', note: 'Anniversary dinner', status: 'pending',
+  },
+  {
+    id: 'BK1043', name: 'Rohan Das', guests: 6, date: 'Tomorrow', time: '1:00 PM',
+    table: '02', note: 'Birthday party — cake allowed', status: 'confirmed',
+  },
+  {
+    id: 'BK1044', name: 'Sneha Kapoor', guests: 3, date: 'Tomorrow', time: '7:00 PM',
+    table: '09', note: '', status: 'cancelled',
+  },
+]
+
+const BOOKING_STATUS_CONFIG = {
+  pending:   { label: 'Pending',   color: '#F59E0B', bg: '#FFFBEB', border: '#FDE68A' },
+  confirmed: { label: 'Confirmed', color: '#10B981', bg: '#ECFDF5', border: '#A7F3D0' },
+  cancelled: { label: 'Cancelled', color: '#EF4444', bg: '#FEF2F2', border: '#FECACA' },
+}
+
 function makeRestaurantOrders(restaurantName) {
   const tag = restaurantName ? restaurantName.slice(0, 2).toUpperCase() : 'EX'
   return DEMO_ORDERS.map(o => ({ ...o, id: tag + o.id.slice(2) }))
@@ -85,6 +110,7 @@ export default function AdminDashboard() {
   const [restaurant, setRestaurant] = useState(null)
   const [orders, setOrders] = useState([])
   const [activeNav, setActiveNav] = useState('orders')
+  const [orderView, setOrderView] = useState('orders')
   const [notification, setNotification] = useState(null)
   const [globalConfig, setGlobalConfig] = useState(loadGlobalConfig)
 
@@ -301,7 +327,7 @@ export default function AdminDashboard() {
               padding: '24px 4px 16px',
             }}>
               <h1 style={{ fontSize: '28px', fontWeight: 900, color: '#0f172a', margin: 0, letterSpacing: '-0.02em' }}>
-                Orders
+                {orderView === 'orders' ? 'Orders' : 'Bookings'}
               </h1>
               <div style={{
                 padding: '6px 16px',
@@ -310,8 +336,55 @@ export default function AdminDashboard() {
                 fontSize: '11px', fontWeight: 800, letterSpacing: '0.1em',
                 boxShadow: `0 4px 14px ${accentStart}60`,
               }}>
-                {activeCount} ACTIVE
+                {orderView === 'orders'
+                  ? `${activeCount} ACTIVE`
+                  : `${DEMO_BOOKINGS.filter(b => b.status !== 'cancelled').length} UPCOMING`}
               </div>
+            </div>
+
+            {/* Orders / Bookings Toggle */}
+            <div style={{
+              display: 'flex',
+              background: 'rgba(255,255,255,0.65)',
+              backdropFilter: 'blur(12px)',
+              WebkitBackdropFilter: 'blur(12px)',
+              borderRadius: '16px',
+              padding: '5px',
+              marginBottom: '20px',
+              border: '1px solid rgba(255,255,255,0.7)',
+              boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
+              gap: '4px',
+            }}>
+              {[
+                { id: 'orders',   icon: UtensilsCrossed, label: 'Orders' },
+                { id: 'bookings', icon: CalendarDays,    label: 'Bookings' },
+              ].map(tab => {
+                const active = orderView === tab.id
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setOrderView(tab.id)}
+                    style={{
+                      flex: 1,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '7px',
+                      padding: '10px 14px',
+                      border: 'none',
+                      borderRadius: '12px',
+                      cursor: 'pointer',
+                      fontSize: '13px', fontWeight: 700,
+                      background: active
+                        ? `linear-gradient(135deg, ${accentStart}, ${accentEnd})`
+                        : 'transparent',
+                      color: active ? '#fff' : '#94A3B8',
+                      boxShadow: active ? `0 4px 14px ${accentStart}50` : 'none',
+                      transition: 'all 0.2s ease',
+                    }}
+                  >
+                    <tab.icon size={15} />
+                    {tab.label}
+                  </button>
+                )
+              })}
             </div>
 
             {/* Default mode banner */}
@@ -328,19 +401,30 @@ export default function AdminDashboard() {
               </div>
             )}
 
-            {/* Order cards */}
+            {/* Order / Booking cards */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              {orders.map((order, i) => (
-                <OrderCard
-                  key={order.id}
-                  order={order}
-                  index={i}
-                  accentStart={accentStart}
-                  currency={globalConfig.currency}
-                  onConfirm={() => confirmOrder(order.id)}
-                  onCancel={() => cancelOrder(order.id)}
-                />
-              ))}
+              {orderView === 'orders'
+                ? orders.map((order, i) => (
+                    <OrderCard
+                      key={order.id}
+                      order={order}
+                      index={i}
+                      accentStart={accentStart}
+                      currency={globalConfig.currency}
+                      onConfirm={() => confirmOrder(order.id)}
+                      onCancel={() => cancelOrder(order.id)}
+                    />
+                  ))
+                : DEMO_BOOKINGS.map((booking, i) => (
+                    <BookingCard
+                      key={booking.id}
+                      booking={booking}
+                      index={i}
+                      accentStart={accentStart}
+                      accentEnd={accentEnd}
+                    />
+                  ))
+              }
             </div>
           </>
         )}
@@ -550,6 +634,86 @@ function SettingCard({ icon, accentStart, title, desc, children }) {
         </div>
       </div>
       {children}
+    </div>
+  )
+}
+
+/* ─── Booking Card ─── */
+function BookingCard({ booking, index, accentStart, accentEnd }) {
+  const cfg = BOOKING_STATUS_CONFIG[booking.status] || BOOKING_STATUS_CONFIG.pending
+
+  return (
+    <div
+      className="order-card"
+      style={{
+        animationDelay: `${index * 0.07}s`,
+        background: 'rgba(255,255,255,0.75)',
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)',
+        borderRadius: '20px', padding: '20px',
+        border: '1px solid rgba(255,255,255,0.7)',
+        boxShadow: '0 4px 24px rgba(0,0,0,0.07), inset 0 1px 0 rgba(255,255,255,0.8)',
+        opacity: booking.status === 'cancelled' ? 0.65 : 1,
+      }}
+    >
+      {/* Top row */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '14px' }}>
+        <div>
+          <div style={{ fontSize: '16px', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.01em' }}>
+            {booking.name}
+          </div>
+          <div style={{ fontSize: '11px', color: '#94A3B8', marginTop: '2px', fontWeight: 600, letterSpacing: '0.04em' }}>
+            BOOKING #{booking.id}
+          </div>
+        </div>
+        <div style={{
+          padding: '5px 12px',
+          background: cfg.bg,
+          border: `1px solid ${cfg.border}`,
+          borderRadius: '50px',
+          fontSize: '10px', fontWeight: 800, color: cfg.color, letterSpacing: '0.1em',
+        }}>
+          {cfg.label.toUpperCase()}
+        </div>
+      </div>
+
+      <div style={{ height: '1px', background: `linear-gradient(90deg, ${accentStart}20, transparent)`, marginBottom: '14px' }} />
+
+      {/* Detail pills */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: booking.note ? '14px' : '0' }}>
+        {[
+          { icon: '📅', label: `${booking.date} · ${booking.time}` },
+          { icon: '🪑', label: `Table ${booking.table}` },
+          { icon: '👥', label: `${booking.guests} Guest${booking.guests > 1 ? 's' : ''}` },
+        ].map((pill, i) => (
+          <div key={i} style={{
+            display: 'flex', alignItems: 'center', gap: '6px',
+            padding: '7px 12px',
+            background: `${accentStart}0D`,
+            border: `1px solid ${accentStart}20`,
+            borderRadius: '50px',
+            fontSize: '12px', fontWeight: 600, color: '#334155',
+          }}>
+            <span style={{ fontSize: '13px' }}>{pill.icon}</span>
+            {pill.label}
+          </div>
+        ))}
+      </div>
+
+      {/* Note */}
+      {booking.note ? (
+        <div style={{
+          marginTop: '12px',
+          padding: '10px 14px',
+          background: 'rgba(248,250,252,0.9)',
+          border: '1px solid rgba(226,232,240,0.6)',
+          borderRadius: '12px',
+          fontSize: '12px', color: '#64748b', fontWeight: 500,
+          fontStyle: 'italic',
+        }}>
+          💬 {booking.note}
+        </div>
+      ) : null}
     </div>
   )
 }
