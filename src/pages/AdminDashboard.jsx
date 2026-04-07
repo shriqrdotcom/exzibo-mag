@@ -4,6 +4,7 @@ import {
   Bell, CheckCircle, XCircle,
   ClipboardList, BookOpen, Users, Settings, ArrowLeft,
   Palette, DollarSign, Type, Save, Check, CalendarDays, UtensilsCrossed,
+  SlidersHorizontal,
 } from 'lucide-react'
 
 const GLOBAL_CONFIG_KEY = 'exzibo_admin_global_config'
@@ -42,6 +43,7 @@ const NAV_ITEMS = [
 const DEMO_ORDERS = [
   {
     id: 'EX8821', table: '08', status: 'preparing',
+    customerName: 'Rahul Sharma', phone: '+91 98765 43210', location: '12-A, Connaught Place, New Delhi',
     items: [
       { name: 'Paneer Tikka Platter', qty: 1, price: 450 },
       { name: 'Dal Makhani Special',  qty: 1, price: 600 },
@@ -50,6 +52,7 @@ const DEMO_ORDERS = [
   },
   {
     id: 'EX8824', table: '14', status: 'pending',
+    customerName: 'Meera Joshi', phone: '+91 91234 56789', location: '5, MG Road, Bengaluru',
     items: [
       { name: 'Chicken Biryani Bowl', qty: 1, price: 420 },
       { name: 'Mint Lime Soda',       qty: 2, price: 240 },
@@ -58,6 +61,7 @@ const DEMO_ORDERS = [
   },
   {
     id: 'EX8819', table: '03', status: 'completed',
+    customerName: 'Aryan Verma', phone: '+91 87654 32109', location: '88, Bandra West, Mumbai',
     items: [
       { name: 'Masala Dosa',   qty: 2, price: 340 },
       { name: 'Filter Coffee', qty: 2, price: 180 },
@@ -116,6 +120,8 @@ export default function AdminDashboard() {
   const [bookings, setBookings] = useState([])
   const [activeNav, setActiveNav] = useState('orders')
   const [orderView, setOrderView] = useState('orders')
+  const [showOrderSettings, setShowOrderSettings] = useState(false)
+  const [orderSettings, setOrderSettings] = useState({ showName: false, showPhone: false, showLocation: false })
   const [notification, setNotification] = useState(null)
   const [globalConfig, setGlobalConfig] = useState(loadGlobalConfig)
 
@@ -342,18 +348,91 @@ export default function AdminDashboard() {
               <h1 style={{ fontSize: '28px', fontWeight: 900, color: '#0f172a', margin: 0, letterSpacing: '-0.02em' }}>
                 {orderView === 'orders' ? 'Orders' : 'Bookings'}
               </h1>
-              <div style={{
-                padding: '6px 16px',
-                background: `linear-gradient(135deg, ${accentStart}, ${accentEnd})`,
-                borderRadius: '50px', color: '#fff',
-                fontSize: '11px', fontWeight: 800, letterSpacing: '0.1em',
-                boxShadow: `0 4px 14px ${accentStart}60`,
-              }}>
-                {orderView === 'orders'
-                  ? `${activeCount} ACTIVE`
-                  : `${bookings.filter(b => b.status !== 'cancelled').length} UPCOMING`}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                {orderView === 'orders' && (
+                  <button
+                    onClick={() => setShowOrderSettings(p => !p)}
+                    style={{
+                      width: '36px', height: '36px', borderRadius: '11px',
+                      background: showOrderSettings ? `${accentStart}18` : 'rgba(255,255,255,0.8)',
+                      border: `1.5px solid ${showOrderSettings ? accentStart : 'rgba(226,232,240,0.8)'}`,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      cursor: 'pointer', color: showOrderSettings ? accentStart : '#64748b',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+                      transition: 'all 0.2s ease',
+                    }}
+                  >
+                    <SlidersHorizontal size={15} />
+                  </button>
+                )}
+                <div style={{
+                  padding: '6px 16px',
+                  background: `linear-gradient(135deg, ${accentStart}, ${accentEnd})`,
+                  borderRadius: '50px', color: '#fff',
+                  fontSize: '11px', fontWeight: 800, letterSpacing: '0.1em',
+                  boxShadow: `0 4px 14px ${accentStart}60`,
+                }}>
+                  {orderView === 'orders'
+                    ? `${activeCount} ACTIVE`
+                    : `${bookings.filter(b => b.status !== 'cancelled').length} UPCOMING`}
+                </div>
               </div>
             </div>
+
+            {/* Order Settings Panel */}
+            {orderView === 'orders' && showOrderSettings && (
+              <div style={{
+                marginBottom: '16px',
+                background: 'rgba(255,255,255,0.8)',
+                backdropFilter: 'blur(12px)',
+                WebkitBackdropFilter: 'blur(12px)',
+                borderRadius: '18px',
+                padding: '16px 18px',
+                border: '1px solid rgba(255,255,255,0.7)',
+                boxShadow: '0 4px 20px rgba(0,0,0,0.07)',
+                animation: 'fadeSlideUp 0.2s ease',
+              }}>
+                <div style={{ fontSize: '11px', fontWeight: 800, color: '#94A3B8', letterSpacing: '0.1em', marginBottom: '12px' }}>
+                  SHOW ON ORDERS
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {[
+                    { key: 'showName',     label: 'Name',       icon: '👤' },
+                    { key: 'showPhone',    label: 'Phone No.',  icon: '📞' },
+                    { key: 'showLocation', label: 'Location',   icon: '📍' },
+                  ].map(({ key, label, icon }) => {
+                    const on = orderSettings[key]
+                    return (
+                      <div key={key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: 600, color: '#334155' }}>
+                          <span>{icon}</span> {label}
+                        </div>
+                        <button
+                          onClick={() => setOrderSettings(prev => ({ ...prev, [key]: !prev[key] }))}
+                          style={{
+                            width: '44px', height: '24px', borderRadius: '50px',
+                            background: on ? `linear-gradient(135deg, ${accentStart}, ${accentEnd})` : '#e2e8f0',
+                            border: 'none', cursor: 'pointer', position: 'relative',
+                            transition: 'background 0.25s ease',
+                            flexShrink: 0,
+                          }}
+                        >
+                          <span style={{
+                            position: 'absolute', top: '3px',
+                            left: on ? '23px' : '3px',
+                            width: '18px', height: '18px', borderRadius: '50%',
+                            background: '#fff',
+                            boxShadow: '0 1px 4px rgba(0,0,0,0.2)',
+                            transition: 'left 0.25s ease',
+                            display: 'block',
+                          }} />
+                        </button>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* Orders / Bookings Toggle */}
             <div style={{
@@ -413,6 +492,7 @@ export default function AdminDashboard() {
                       currency={globalConfig.currency}
                       onConfirm={() => confirmOrder(order.id)}
                       onCancel={() => cancelOrder(order.id)}
+                      orderSettings={orderSettings}
                     />
                   ))
                 : bookings.map((booking, i) => (
@@ -754,10 +834,11 @@ function BookingCard({ booking, index, accentStart, accentEnd }) {
 }
 
 /* ─── Order Card ─── */
-function OrderCard({ order, index, accentStart, currency, onConfirm, onCancel }) {
+function OrderCard({ order, index, accentStart, currency, onConfirm, onCancel, orderSettings = {} }) {
   const subtotal = order.items.reduce((s, it) => s + it.price, 0)
   const cfg = STATUS_CONFIG[order.status] || STATUS_CONFIG.pending
   const isDone = order.status === 'completed' || order.status === 'cancelled'
+  const showCustomerDetails = orderSettings.showName || orderSettings.showPhone || orderSettings.showLocation
 
   return (
     <div
@@ -803,6 +884,34 @@ function OrderCard({ order, index, accentStart, currency, onConfirm, onCancel })
           </div>
         </div>
       </div>
+
+      {/* Customer details (shown when toggles are on) */}
+      {showCustomerDetails && (
+        <div style={{
+          display: 'flex', flexDirection: 'column', gap: '5px',
+          marginBottom: '14px',
+          padding: '10px 12px',
+          background: `${accentStart}08`,
+          border: `1px solid ${accentStart}18`,
+          borderRadius: '12px',
+        }}>
+          {orderSettings.showName && order.customerName && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '7px', fontSize: '12px', color: '#334155', fontWeight: 600 }}>
+              <span>👤</span> {order.customerName}
+            </div>
+          )}
+          {orderSettings.showPhone && order.phone && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '7px', fontSize: '12px', color: '#334155', fontWeight: 500 }}>
+              <span>📞</span> {order.phone}
+            </div>
+          )}
+          {orderSettings.showLocation && order.location && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '7px', fontSize: '12px', color: '#334155', fontWeight: 500 }}>
+              <span>📍</span> {order.location}
+            </div>
+          )}
+        </div>
+      )}
 
       <div style={{ height: '1px', background: `linear-gradient(90deg, ${accentStart}20, transparent)`, marginBottom: '14px' }} />
 
