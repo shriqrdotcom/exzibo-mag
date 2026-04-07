@@ -400,19 +400,6 @@ export default function AdminDashboard() {
               })}
             </div>
 
-            {/* Default mode banner */}
-            {isDefault && (
-              <div style={{
-                margin: '0 0 16px',
-                padding: '12px 16px',
-                background: `${accentStart}12`,
-                border: `1px solid ${accentStart}25`,
-                borderRadius: '14px',
-                fontSize: '12px', color: accentStart, fontWeight: 600, lineHeight: 1.5,
-              }}>
-                📋 This is the <strong>default template</strong> for all restaurants. Changes made in Settings will apply to every restaurant's admin dashboard.
-              </div>
-            )}
 
             {/* Order / Booking cards */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
