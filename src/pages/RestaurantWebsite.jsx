@@ -1184,36 +1184,65 @@ export default function RestaurantWebsite() {
       )}
 
       {/* ── FLOATING CART BUTTON (draggable, right side) ── */}
-      {(activeNav === 'home' || activeNav === 'menu' || activeNav === 'orders') && cartCount > 0 && (
-        <button
-          onMouseDown={onCartBtnPointerDown}
-          onTouchStart={onCartBtnPointerDown}
-          onClick={onCartBtnClick}
-          style={{
-            position: 'fixed',
-            ...(cartBtnXY
-              ? { left: cartBtnXY.left, top: cartBtnXY.top }
-              : { right: '16px', bottom: '90px' }),
-            zIndex: 80,
-            background: '#111', border: 'none', borderRadius: '20px',
-            width: '72px', height: '56px',
-            display: 'flex', alignItems: 'center', justifyContent: 'flex-end',
-            paddingRight: '16px',
-            cursor: 'grab',
-            boxShadow: '0 8px 28px rgba(0,0,0,0.5)',
-            userSelect: 'none', touchAction: 'none',
-          }}
-        >
-          <span style={{
-            position: 'absolute', top: '-7px', right: '-7px',
-            background: '#E8321A', color: '#fff',
-            fontSize: '10px', fontWeight: 800,
-            borderRadius: '7px', padding: '2px 7px',
-            minWidth: '18px', textAlign: 'center',
-          }}>{cartCount}</span>
-          <ShoppingCart size={22} color="#fff" strokeWidth={2.2} />
-        </button>
-      )}
+      {(activeNav === 'home' || activeNav === 'menu' || activeNav === 'orders') && cartCount > 0 && (() => {
+        const previewImgs = cartItems.slice(0, 2).map(i => i.img)
+        const imgSize = 32
+        const overlap = 10
+        const stackWidth = previewImgs.length === 1 ? imgSize : imgSize + (imgSize - overlap)
+        return (
+          <button
+            onMouseDown={onCartBtnPointerDown}
+            onTouchStart={onCartBtnPointerDown}
+            onClick={onCartBtnClick}
+            style={{
+              position: 'fixed',
+              ...(cartBtnXY
+                ? { left: cartBtnXY.left, top: cartBtnXY.top }
+                : { right: '16px', bottom: '90px' }),
+              zIndex: 80,
+              background: '#111', border: 'none', borderRadius: '20px',
+              height: '56px',
+              display: 'flex', alignItems: 'center', gap: '10px',
+              padding: '0 16px 0 12px',
+              cursor: 'grab',
+              boxShadow: '0 8px 28px rgba(0,0,0,0.5)',
+              userSelect: 'none', touchAction: 'none',
+            }}
+          >
+            {/* Overlapping item images */}
+            <div style={{ position: 'relative', width: `${stackWidth}px`, height: `${imgSize}px`, flexShrink: 0 }}>
+              {previewImgs.map((src, idx) => (
+                <img
+                  key={idx}
+                  src={src}
+                  alt=""
+                  style={{
+                    position: 'absolute',
+                    left: `${idx * (imgSize - overlap)}px`,
+                    top: 0,
+                    width: `${imgSize}px`,
+                    height: `${imgSize}px`,
+                    borderRadius: '50%',
+                    objectFit: 'cover',
+                    border: '2px solid #111',
+                    zIndex: previewImgs.length - idx,
+                  }}
+                />
+              ))}
+            </div>
+            {/* Count + cart icon */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1px' }}>
+              <ShoppingCart size={18} color="#fff" strokeWidth={2.2} />
+              <span style={{
+                background: '#1DB954', color: '#fff',
+                fontSize: '9px', fontWeight: 800,
+                borderRadius: '6px', padding: '1px 5px',
+                minWidth: '16px', textAlign: 'center', lineHeight: '14px',
+              }}>{cartCount}</span>
+            </div>
+          </button>
+        )
+      })()}
 
       {/* ── CART VIEW ── */}
       {activeNav === 'cart' && (
