@@ -231,6 +231,25 @@ export default function RestaurantWebsite() {
     if (!bookingForm.email.trim()) errs.email = 'Required'
     if (!bookingForm.date) errs.date = 'Required'
     if (Object.keys(errs).length) { setBookingErrors(errs); return }
+
+    const restaurantId = restaurant?.id || slug || 'demo'
+    const storageKey = `exzibo_bookings_${restaurantId}`
+    const existing = JSON.parse(localStorage.getItem(storageKey) || '[]')
+    const newBooking = {
+      id: 'BK' + Date.now().toString().slice(-6),
+      name: bookingForm.name.trim(),
+      phone: bookingForm.phone.trim(),
+      email: bookingForm.email.trim(),
+      date: bookingForm.date,
+      time: bookingForm.time,
+      guests: bookingForm.guests,
+      occasion: bookingForm.occasion,
+      seating: bookingForm.seating,
+      notes: bookingForm.notes.trim(),
+      status: 'pending',
+      submittedAt: new Date().toISOString(),
+    }
+    localStorage.setItem(storageKey, JSON.stringify([newBooking, ...existing]))
     setBookingSubmitted(true)
   }
 

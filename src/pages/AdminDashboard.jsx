@@ -67,20 +67,24 @@ const DEMO_ORDERS = [
 
 const DEMO_BOOKINGS = [
   {
-    id: 'BK1041', name: 'Arjun Mehta', guests: 4, date: 'Today', time: '7:30 PM',
-    table: '05', note: 'Window seat preferred', status: 'confirmed',
+    id: 'BK1041', name: 'Arjun Mehta', phone: '+91 98765 43210', email: 'arjun@example.com',
+    guests: 4, date: 'Today', time: '19:30', occasion: 'Casual Dining', seating: 'Indoor',
+    notes: 'Window seat preferred', status: 'confirmed',
   },
   {
-    id: 'BK1042', name: 'Priya Sharma', guests: 2, date: 'Today', time: '8:00 PM',
-    table: '11', note: 'Anniversary dinner', status: 'pending',
+    id: 'BK1042', name: 'Priya Sharma', phone: '+91 91234 56789', email: 'priya@example.com',
+    guests: 2, date: 'Today', time: '20:00', occasion: 'Anniversary', seating: 'Private',
+    notes: 'Anniversary dinner', status: 'pending',
   },
   {
-    id: 'BK1043', name: 'Rohan Das', guests: 6, date: 'Tomorrow', time: '1:00 PM',
-    table: '02', note: 'Birthday party — cake allowed', status: 'confirmed',
+    id: 'BK1043', name: 'Rohan Das', phone: '+91 87654 32109', email: 'rohan@example.com',
+    guests: 6, date: 'Tomorrow', time: '13:00', occasion: 'Birthday', seating: 'Outdoor',
+    notes: 'Birthday party — cake allowed', status: 'confirmed',
   },
   {
-    id: 'BK1044', name: 'Sneha Kapoor', guests: 3, date: 'Tomorrow', time: '7:00 PM',
-    table: '09', note: '', status: 'cancelled',
+    id: 'BK1044', name: 'Sneha Kapoor', phone: '+91 77654 98765', email: 'sneha@example.com',
+    guests: 3, date: 'Tomorrow', time: '19:00', occasion: 'Casual Dining', seating: 'Indoor',
+    notes: '', status: 'cancelled',
   },
 ]
 
@@ -109,6 +113,7 @@ export default function AdminDashboard() {
 
   const [restaurant, setRestaurant] = useState(null)
   const [orders, setOrders] = useState([])
+  const [bookings, setBookings] = useState([])
   const [activeNav, setActiveNav] = useState('orders')
   const [orderView, setOrderView] = useState('orders')
   const [notification, setNotification] = useState(null)
@@ -118,9 +123,16 @@ export default function AdminDashboard() {
   const [draft, setDraft] = useState(null)
   const [saved, setSaved] = useState(false)
 
+  function loadBookings(restaurantId) {
+    const key = `exzibo_bookings_${restaurantId}`
+    const saved = JSON.parse(localStorage.getItem(key) || '[]')
+    return saved.length > 0 ? saved : DEMO_BOOKINGS
+  }
+
   useEffect(() => {
     if (isDefault) {
       setOrders(DEMO_ORDERS)
+      setBookings(loadBookings('demo'))
       return
     }
     const all = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
@@ -128,6 +140,7 @@ export default function AdminDashboard() {
     if (!found) { navigate('/restaurants'); return }
     setRestaurant(found)
     setOrders(makeRestaurantOrders(found.name))
+    setBookings(loadBookings(found.id))
   }, [id])
 
   // Sync global config whenever localStorage changes (other tabs, etc.)
@@ -338,7 +351,7 @@ export default function AdminDashboard() {
               }}>
                 {orderView === 'orders'
                   ? `${activeCount} ACTIVE`
-                  : `${DEMO_BOOKINGS.filter(b => b.status !== 'cancelled').length} UPCOMING`}
+                  : `${bookings.filter(b => b.status !== 'cancelled').length} UPCOMING`}
               </div>
             </div>
 
@@ -415,7 +428,7 @@ export default function AdminDashboard() {
                       onCancel={() => cancelOrder(order.id)}
                     />
                   ))
-                : DEMO_BOOKINGS.map((booking, i) => (
+                : bookings.map((booking, i) => (
                     <BookingCard
                       key={booking.id}
                       booking={booking}
@@ -642,6 +655,25 @@ function SettingCard({ icon, accentStart, title, desc, children }) {
 function BookingCard({ booking, index, accentStart, accentEnd }) {
   const cfg = BOOKING_STATUS_CONFIG[booking.status] || BOOKING_STATUS_CONFIG.pending
 
+  function formatTime(t) {
+    if (!t) return ''
+    const [h, m] = t.split(':')
+    const hour = parseInt(h, 10)
+    const ampm = hour >= 12 ? 'PM' : 'AM'
+    const h12 = hour % 12 || 12
+    return `${h12}:${m} ${ampm}`
+  }
+
+  function formatDate(d) {
+    if (!d) return ''
+    if (d === 'Today' || d === 'Tomorrow') return d
+    try {
+      return new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+    } catch { return d }
+  }
+
+  const seatingIcon = { Indoor: '🏠', Outdoor: '🌿', Private: '🔒' }
+
   return (
     <div
       className="order-card"
@@ -656,7 +688,7 @@ function BookingCard({ booking, index, accentStart, accentEnd }) {
         opacity: booking.status === 'cancelled' ? 0.65 : 1,
       }}
     >
-      {/* Top row */}
+      {/* Top row — name + status */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '14px' }}>
         <div>
           <div style={{ fontSize: '16px', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.01em' }}>
@@ -672,6 +704,7 @@ function BookingCard({ booking, index, accentStart, accentEnd }) {
           border: `1px solid ${cfg.border}`,
           borderRadius: '50px',
           fontSize: '10px', fontWeight: 800, color: cfg.color, letterSpacing: '0.1em',
+          flexShrink: 0,
         }}>
           {cfg.label.toUpperCase()}
         </div>
@@ -679,13 +712,28 @@ function BookingCard({ booking, index, accentStart, accentEnd }) {
 
       <div style={{ height: '1px', background: `linear-gradient(90deg, ${accentStart}20, transparent)`, marginBottom: '14px' }} />
 
+      {/* Contact row */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '14px' }}>
+        {booking.phone && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: '#475569', fontWeight: 500 }}>
+            <span style={{ fontSize: '13px' }}>📞</span> {booking.phone}
+          </div>
+        )}
+        {booking.email && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: '#475569', fontWeight: 500 }}>
+            <span style={{ fontSize: '13px' }}>✉️</span> {booking.email}
+          </div>
+        )}
+      </div>
+
       {/* Detail pills */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: booking.note ? '14px' : '0' }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
         {[
-          { icon: '📅', label: `${booking.date} · ${booking.time}` },
-          { icon: '🪑', label: `Table ${booking.table}` },
+          { icon: '📅', label: `${formatDate(booking.date)}  ${formatTime(booking.time)}` },
           { icon: '👥', label: `${booking.guests} Guest${booking.guests > 1 ? 's' : ''}` },
-        ].map((pill, i) => (
+          { icon: seatingIcon[booking.seating] || '🪑', label: booking.seating || '' },
+          booking.occasion ? { icon: '🎉', label: booking.occasion } : null,
+        ].filter(Boolean).map((pill, i) => (
           <div key={i} style={{
             display: 'flex', alignItems: 'center', gap: '6px',
             padding: '7px 12px',
@@ -700,8 +748,8 @@ function BookingCard({ booking, index, accentStart, accentEnd }) {
         ))}
       </div>
 
-      {/* Note */}
-      {booking.note ? (
+      {/* Special requests / notes */}
+      {booking.notes ? (
         <div style={{
           marginTop: '12px',
           padding: '10px 14px',
@@ -711,7 +759,7 @@ function BookingCard({ booking, index, accentStart, accentEnd }) {
           fontSize: '12px', color: '#64748b', fontWeight: 500,
           fontStyle: 'italic',
         }}>
-          💬 {booking.note}
+          💬 {booking.notes}
         </div>
       ) : null}
     </div>
