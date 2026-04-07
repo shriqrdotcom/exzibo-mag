@@ -603,7 +603,7 @@ export default function RestaurantWebsite() {
         {(activeNav === 'home' || activeNav === 'menu') && (
           <div className={`search-wrapper${searchHidden ? ' search-hidden' : ''}`}>
             <div className="header-search-row">
-              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center', width: '100%' }}>
                 <div style={{ flex: 1, position: 'relative' }}>
                   <input
                     value={searchQuery}
