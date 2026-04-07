@@ -201,6 +201,15 @@ img {
   opacity: 0;
 }
 
+/* Category filter horizontal scroll — no scrollbar */
+.category-scroll-row {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.category-scroll-row::-webkit-scrollbar {
+  display: none;
+}
+
 /* Page-level scroll optimisation */
 .restaurant-page {
   -webkit-overflow-scrolling: touch;

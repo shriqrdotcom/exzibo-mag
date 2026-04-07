@@ -43,6 +43,17 @@ const MENU_TABS = [
   { id: 'drinks', label: 'DRINKS' },
 ]
 
+const CATEGORIES = [
+  { id: 'all',     label: 'All',     emoji: '🍽️', img: '/menu/wagyu-ribeye.png' },
+  { id: 'organic', label: 'Organic', emoji: '🥗', img: '/menu/heirloom-burrata.png' },
+  { id: 'health',  label: 'Health',  emoji: '🥦', img: '/menu/mushroom-risotto.png' },
+  { id: 'deals',   label: 'Deals',   emoji: '🏷️', img: '/menu/atlantic-oysters.png' },
+  { id: 'burger',  label: 'Burger',  emoji: '🍔', img: null },
+  { id: 'pizza',   label: 'Pizza',   emoji: '🍕', img: null },
+  { id: 'biryani', label: 'Biryani', emoji: '🍛', img: null },
+  { id: 'chicken', label: 'Chicken', emoji: '🍗', img: null },
+]
+
 function buildTheme(dark) {
   return {
     pageBg: dark ? '#0a0a0a' : '#f2f2f2',
@@ -462,9 +473,24 @@ export default function RestaurantWebsite() {
       .map(m => ({ ...m, _cat: 'Drink' })),
   ] : null
 
+  const rawMenuItems = menuData[activeMenuTab] || []
+  const categoryFiltered = activeCategory === 'all' ? rawMenuItems : rawMenuItems.filter(item => {
+    const name = (item.name || '').toLowerCase()
+    const tags = item.tags || []
+    switch (activeCategory) {
+      case 'organic': return item.veg === true || tags.includes('Vegetarian') || tags.includes('Vegan')
+      case 'health':  return tags.some(t => ['Gluten Free', 'Vegan', 'Vegetarian'].includes(t))
+      case 'deals':   return item.oldPrice && item.oldPrice > item.price
+      case 'burger':  return name.includes('burger') || name.includes('beef') || name.includes('patty')
+      case 'pizza':   return name.includes('pizza')
+      case 'biryani': return name.includes('biryani') || name.includes('rice') || name.includes('risotto')
+      case 'chicken': return name.includes('chicken') || name.includes('poultry')
+      default:        return true
+    }
+  })
   const activeMenuItems = vegMode
-    ? [...(menuData[activeMenuTab] || [])].sort((a, b) => (b.veg ? 1 : 0) - (a.veg ? 1 : 0))
-    : (menuData[activeMenuTab] || [])
+    ? [...categoryFiltered].sort((a, b) => (b.veg ? 1 : 0) - (a.veg ? 1 : 0))
+    : categoryFiltered
 
   if (notFound) {
     return (
@@ -643,6 +669,61 @@ export default function RestaurantWebsite() {
                   }
                 </button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Row 2b: Category filter — only on menu page */}
+        {activeNav === 'menu' && (
+          <div style={{ marginTop: '14px' }}>
+            <div className="category-scroll-row" style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '2px' }}>
+              {CATEGORIES.map(cat => {
+                const isActive = activeCategory === cat.id
+                return (
+                  <button
+                    key={cat.id}
+                    onClick={() => setActiveCategory(cat.id)}
+                    style={{
+                      flexShrink: 0,
+                      display: 'flex', flexDirection: 'column', alignItems: 'center',
+                      gap: '6px',
+                      background: isActive
+                        ? '#fff'
+                        : (darkMode ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)'),
+                      border: 'none',
+                      borderRadius: '16px',
+                      padding: '10px 10px 8px',
+                      cursor: 'pointer',
+                      minWidth: '62px',
+                      boxShadow: isActive ? '0 4px 14px rgba(0,0,0,0.2)' : 'none',
+                      transition: 'all 0.2s ease',
+                      fontFamily: 'inherit',
+                    }}
+                  >
+                    <div style={{
+                      width: '44px', height: '44px', borderRadius: '12px',
+                      overflow: 'hidden',
+                      background: isActive ? 'rgba(232,50,26,0.08)' : (darkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'),
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}>
+                      {cat.img ? (
+                        <img src={cat.img} alt={cat.label} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      ) : (
+                        <span style={{ fontSize: '24px', lineHeight: 1 }}>{cat.emoji}</span>
+                      )}
+                    </div>
+                    <span style={{
+                      fontSize: '10px',
+                      fontWeight: isActive ? 800 : 500,
+                      color: isActive ? '#111' : (darkMode ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.5)'),
+                      letterSpacing: '0.01em',
+                      whiteSpace: 'nowrap',
+                    }}>
+                      {cat.label}
+                    </span>
+                  </button>
+                )
+              })}
             </div>
           </div>
         )}
