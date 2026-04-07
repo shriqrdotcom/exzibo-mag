@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
   Bell, CheckCircle, XCircle,
@@ -125,6 +125,11 @@ export default function AdminDashboard() {
   const [showBookingSettings, setShowBookingSettings] = useState(false)
   const [bookingSettings, setBookingSettings] = useState({ showSeating: false })
   const [notification, setNotification] = useState(null)
+
+  const orderSettingsBtnRef = useRef(null)
+  const orderSettingsPanelRef = useRef(null)
+  const bookingSettingsBtnRef = useRef(null)
+  const bookingSettingsPanelRef = useRef(null)
   const [globalConfig, setGlobalConfig] = useState(loadGlobalConfig)
 
   // Draft state for the settings panel
@@ -163,6 +168,23 @@ export default function AdminDashboard() {
       setDraft({ ...globalConfig })
     }
   }, [activeNav])
+
+  useEffect(() => {
+    function handleClickOutside(e) {
+      const inOrderBtn   = orderSettingsBtnRef.current?.contains(e.target)
+      const inOrderPanel = orderSettingsPanelRef.current?.contains(e.target)
+      if (showOrderSettings && !inOrderBtn && !inOrderPanel) {
+        setShowOrderSettings(false)
+      }
+      const inBookingBtn   = bookingSettingsBtnRef.current?.contains(e.target)
+      const inBookingPanel = bookingSettingsPanelRef.current?.contains(e.target)
+      if (showBookingSettings && !inBookingBtn && !inBookingPanel) {
+        setShowBookingSettings(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [showOrderSettings, showBookingSettings])
 
   const activeCount = orders.filter(o => o.status === 'pending' || o.status === 'preparing').length
   const accentStart = globalConfig.accentColor
@@ -353,6 +375,7 @@ export default function AdminDashboard() {
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 {orderView === 'orders' && (
                   <button
+                    ref={orderSettingsBtnRef}
                     onClick={() => setShowOrderSettings(p => !p)}
                     style={{
                       width: '36px', height: '36px', borderRadius: '11px',
@@ -369,6 +392,7 @@ export default function AdminDashboard() {
                 )}
                 {orderView === 'bookings' && (
                   <button
+                    ref={bookingSettingsBtnRef}
                     onClick={() => setShowBookingSettings(p => !p)}
                     style={{
                       width: '36px', height: '36px', borderRadius: '11px',
@@ -399,7 +423,7 @@ export default function AdminDashboard() {
 
             {/* Order Settings Panel */}
             {orderView === 'orders' && showOrderSettings && (
-              <div style={{
+              <div ref={orderSettingsPanelRef} style={{
                 marginBottom: '16px',
                 background: 'rgba(255,255,255,0.8)',
                 backdropFilter: 'blur(12px)',
@@ -454,7 +478,7 @@ export default function AdminDashboard() {
 
             {/* Booking Settings Panel */}
             {orderView === 'bookings' && showBookingSettings && (
-              <div style={{
+              <div ref={bookingSettingsPanelRef} style={{
                 marginBottom: '16px',
                 background: 'rgba(255,255,255,0.8)',
                 backdropFilter: 'blur(12px)',
