@@ -154,9 +154,7 @@ export default function FoodDetail() {
     localStorage.setItem(cartKey, JSON.stringify(updated))
     setAddBtnScale(true)
     setTimeout(() => setAddBtnScale(false), 200)
-    setToast(true)
-    clearTimeout(toastTimer.current)
-    toastTimer.current = setTimeout(() => setToast(false), 2500)
+    navigate(`/restaurant/${slug}`, { state: { activeNav: 'cart' } })
   }
 
   function handleSuggestionClick(suggested) {
