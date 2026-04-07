@@ -577,11 +577,10 @@ export default function FoodDetail() {
       <div style={{
         position: 'fixed', bottom: '24px',
         left: '50%', transform: 'translateX(-50%)',
-        width: '100%', maxWidth: '480px',
-        padding: '0 14px', zIndex: 90,
+        zIndex: 90,
       }}>
         <div style={{
-          display: 'flex', alignItems: 'center', gap: '8px',
+          display: 'inline-flex', alignItems: 'center', gap: '8px',
           background: darkMode ? 'rgba(28,28,28,0.92)' : 'rgba(240,240,240,0.95)',
           backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
           borderRadius: '50px',
@@ -622,7 +621,6 @@ export default function FoodDetail() {
             onClick={handleAddToCart}
             disabled={loading || !item}
             style={{
-              flex: 1,
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
               background: 'linear-gradient(135deg, #E8321A 0%, #ff6b35 100%)',
               color: '#fff', border: 'none',
