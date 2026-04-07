@@ -595,13 +595,13 @@ export default function FoodDetail() {
             style={{
               flexShrink: 0,
               width: '38px', height: '38px', borderRadius: '50%',
-              background: '#E8321A',
+              background: '#fff',
               border: 'none',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               cursor: 'pointer',
-              boxShadow: '0 3px 12px rgba(232,50,26,0.45)',
+              boxShadow: '0 3px 12px rgba(0,0,0,0.18)',
               transition: 'transform 0.15s ease',
-              color: '#fff',
+              color: '#111',
             }}
             onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.08)'}
             onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
