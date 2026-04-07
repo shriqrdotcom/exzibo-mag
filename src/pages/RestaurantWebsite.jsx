@@ -1198,7 +1198,7 @@ export default function RestaurantWebsite() {
               position: 'fixed',
               ...(cartBtnXY
                 ? { left: cartBtnXY.left, top: cartBtnXY.top }
-                : { right: '16px', bottom: '90px' }),
+                : { right: '16px', bottom: '100px' }),
               zIndex: 80,
               background: '#111', border: 'none', borderRadius: '20px',
               height: '56px',
