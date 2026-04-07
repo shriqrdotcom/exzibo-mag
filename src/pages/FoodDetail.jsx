@@ -575,41 +575,40 @@ export default function FoodDetail() {
 
       {/* ── STICKY ADD TO ORDER BUTTON ── */}
       <div style={{
-        position: 'fixed', bottom: '24px',
-        left: '50%', transform: 'translateX(-50%)',
+        position: 'fixed', bottom: '24px', right: '14px',
         zIndex: 90,
       }}>
         <div style={{
-          display: 'inline-flex', alignItems: 'center', gap: '8px',
-          background: darkMode ? 'rgba(28,28,28,0.92)' : 'rgba(240,240,240,0.95)',
+          display: 'inline-flex', alignItems: 'center', gap: '6px',
+          background: darkMode ? 'rgba(22,22,22,0.95)' : 'rgba(235,235,235,0.97)',
           backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
           borderRadius: '50px',
-          padding: '6px',
+          padding: '5px',
           boxShadow: darkMode
-            ? '0 8px 32px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.06)'
-            : '0 8px 32px rgba(0,0,0,0.14), inset 0 1px 0 rgba(255,255,255,0.9)',
-          border: darkMode ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.06)',
+            ? '0 6px 24px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.05)'
+            : '0 6px 24px rgba(0,0,0,0.13), inset 0 1px 0 rgba(255,255,255,0.9)',
+          border: darkMode ? '1px solid rgba(255,255,255,0.07)' : '1px solid rgba(0,0,0,0.06)',
         }}>
           {/* Up arrow — scrolls to hero image */}
           <button
             onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
             style={{
               flexShrink: 0,
-              width: '48px', height: '48px', borderRadius: '50%',
-              background: darkMode ? 'rgba(255,255,255,0.10)' : '#fff',
-              border: darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(0,0,0,0.08)',
+              width: '38px', height: '38px', borderRadius: '50%',
+              background: '#E8321A',
+              border: 'none',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               cursor: 'pointer',
-              boxShadow: darkMode ? 'none' : '0 2px 10px rgba(0,0,0,0.10)',
-              transition: 'transform 0.15s ease, background 0.15s ease',
-              color: darkMode ? '#fff' : '#111',
+              boxShadow: '0 3px 12px rgba(232,50,26,0.45)',
+              transition: 'transform 0.15s ease',
+              color: '#fff',
             }}
             onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.08)'}
             onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
             onMouseDown={e => e.currentTarget.style.transform = 'scale(0.93)'}
             onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}
           >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round">
               <line x1="12" y1="19" x2="12" y2="5" />
               <polyline points="5 12 12 5 19 12" />
             </svg>
@@ -621,14 +620,14 @@ export default function FoodDetail() {
             onClick={handleAddToCart}
             disabled={loading || !item}
             style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-              background: 'linear-gradient(135deg, #E8321A 0%, #ff6b35 100%)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '7px',
+              background: '#E8321A',
               color: '#fff', border: 'none',
               borderRadius: '40px',
-              padding: '14px 20px',
-              fontSize: '14px', fontWeight: 800,
+              padding: '11px 16px',
+              fontSize: '13px', fontWeight: 800,
               cursor: loading || !item ? 'not-allowed' : 'pointer',
-              boxShadow: '0 6px 20px rgba(232,50,26,0.45)',
+              boxShadow: '0 4px 16px rgba(232,50,26,0.45)',
               opacity: loading || !item ? 0.6 : 1,
               transform: addBtnScale ? 'scale(0.97)' : 'scale(1)',
               transition: 'transform 0.15s ease',
@@ -636,7 +635,7 @@ export default function FoodDetail() {
               whiteSpace: 'nowrap',
             }}
           >
-            <ShoppingBag size={16} strokeWidth={2.5} />
+            <ShoppingBag size={14} strokeWidth={2.5} />
             Add to Order · ₹{total.toLocaleString('en-IN')}
           </button>
         </div>
