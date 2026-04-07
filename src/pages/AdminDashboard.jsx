@@ -124,6 +124,7 @@ export default function AdminDashboard() {
   const [orderSettings, setOrderSettings] = useState({ showName: false, showPhone: false, showLocation: false })
   const [showBookingSettings, setShowBookingSettings] = useState(false)
   const [bookingSettings, setBookingSettings] = useState({ showSeating: false })
+  const [bookingFilter, setBookingFilter] = useState('today')
   const [notification, setNotification] = useState(null)
 
   const orderSettingsBtnRef = useRef(null)
@@ -187,6 +188,13 @@ export default function AdminDashboard() {
   }, [showOrderSettings, showBookingSettings])
 
   const activeCount = orders.filter(o => o.status === 'pending' || o.status === 'preparing').length
+
+  const todayStr = new Date().toISOString().slice(0, 10)
+  const filteredBookings = bookings.filter(b => {
+    if (bookingFilter === 'today')    return b.date === todayStr
+    if (bookingFilter === 'upcoming') return b.date > todayStr && b.status !== 'cancelled'
+    return true
+  })
   const accentStart = globalConfig.accentColor
   const accentEnd   = globalConfig.accentColorEnd
 
@@ -575,6 +583,50 @@ export default function AdminDashboard() {
             </div>
 
 
+            {/* Booking Date Filter */}
+            {orderView === 'bookings' && (
+              <div style={{
+                display: 'flex',
+                background: 'rgba(255,255,255,0.65)',
+                backdropFilter: 'blur(12px)',
+                WebkitBackdropFilter: 'blur(12px)',
+                borderRadius: '50px',
+                padding: '4px',
+                marginBottom: '16px',
+                border: '1px solid rgba(255,255,255,0.7)',
+                boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
+                gap: '2px',
+              }}>
+                {[
+                  { id: 'today',    label: 'Today' },
+                  { id: 'upcoming', label: 'Upcoming' },
+                  { id: 'all',      label: 'All' },
+                ].map(f => {
+                  const active = bookingFilter === f.id
+                  return (
+                    <button
+                      key={f.id}
+                      onClick={() => setBookingFilter(f.id)}
+                      style={{
+                        flex: 1,
+                        padding: '8px 12px',
+                        border: 'none',
+                        borderRadius: '50px',
+                        cursor: 'pointer',
+                        fontSize: '12px', fontWeight: 800, letterSpacing: '0.06em',
+                        background: active ? '#fff' : 'transparent',
+                        color: active ? accentStart : '#94A3B8',
+                        boxShadow: active ? '0 2px 8px rgba(0,0,0,0.10)' : 'none',
+                        transition: 'all 0.2s ease',
+                      }}
+                    >
+                      {f.label.toUpperCase()}
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+
             {/* Order / Booking cards */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               {orderView === 'orders'
@@ -590,7 +642,16 @@ export default function AdminDashboard() {
                       orderSettings={orderSettings}
                     />
                   ))
-                : bookings.map((booking, i) => (
+                : filteredBookings.length === 0
+                  ? (
+                    <div style={{
+                      textAlign: 'center', padding: '48px 24px',
+                      color: '#94A3B8', fontSize: '14px', fontWeight: 600,
+                    }}>
+                      No {bookingFilter === 'today' ? "today's" : bookingFilter} bookings found.
+                    </div>
+                  )
+                  : filteredBookings.map((booking, i) => (
                     <BookingCard
                       key={booking.id}
                       booking={booking}
