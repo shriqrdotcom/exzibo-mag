@@ -122,6 +122,8 @@ export default function AdminDashboard() {
   const [orderView, setOrderView] = useState('orders')
   const [showOrderSettings, setShowOrderSettings] = useState(false)
   const [orderSettings, setOrderSettings] = useState({ showName: false, showPhone: false, showLocation: false })
+  const [showBookingSettings, setShowBookingSettings] = useState(false)
+  const [bookingSettings, setBookingSettings] = useState({ showSeating: false })
   const [notification, setNotification] = useState(null)
   const [globalConfig, setGlobalConfig] = useState(loadGlobalConfig)
 
@@ -365,6 +367,22 @@ export default function AdminDashboard() {
                     <SlidersHorizontal size={15} />
                   </button>
                 )}
+                {orderView === 'bookings' && (
+                  <button
+                    onClick={() => setShowBookingSettings(p => !p)}
+                    style={{
+                      width: '36px', height: '36px', borderRadius: '11px',
+                      background: showBookingSettings ? `${accentStart}18` : 'rgba(255,255,255,0.8)',
+                      border: `1.5px solid ${showBookingSettings ? accentStart : 'rgba(226,232,240,0.8)'}`,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      cursor: 'pointer', color: showBookingSettings ? accentStart : '#64748b',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+                      transition: 'all 0.2s ease',
+                    }}
+                  >
+                    <SlidersHorizontal size={15} />
+                  </button>
+                )}
                 <div style={{
                   padding: '6px 16px',
                   background: `linear-gradient(135deg, ${accentStart}, ${accentEnd})`,
@@ -409,6 +427,59 @@ export default function AdminDashboard() {
                         </div>
                         <button
                           onClick={() => setOrderSettings(prev => ({ ...prev, [key]: !prev[key] }))}
+                          style={{
+                            width: '44px', height: '24px', borderRadius: '50px',
+                            background: on ? `linear-gradient(135deg, ${accentStart}, ${accentEnd})` : '#e2e8f0',
+                            border: 'none', cursor: 'pointer', position: 'relative',
+                            transition: 'background 0.25s ease',
+                            flexShrink: 0,
+                          }}
+                        >
+                          <span style={{
+                            position: 'absolute', top: '3px',
+                            left: on ? '23px' : '3px',
+                            width: '18px', height: '18px', borderRadius: '50%',
+                            background: '#fff',
+                            boxShadow: '0 1px 4px rgba(0,0,0,0.2)',
+                            transition: 'left 0.25s ease',
+                            display: 'block',
+                          }} />
+                        </button>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Booking Settings Panel */}
+            {orderView === 'bookings' && showBookingSettings && (
+              <div style={{
+                marginBottom: '16px',
+                background: 'rgba(255,255,255,0.8)',
+                backdropFilter: 'blur(12px)',
+                WebkitBackdropFilter: 'blur(12px)',
+                borderRadius: '18px',
+                padding: '16px 18px',
+                border: '1px solid rgba(255,255,255,0.7)',
+                boxShadow: '0 4px 20px rgba(0,0,0,0.07)',
+                animation: 'fadeSlideUp 0.2s ease',
+              }}>
+                <div style={{ fontSize: '11px', fontWeight: 800, color: '#94A3B8', letterSpacing: '0.1em', marginBottom: '12px' }}>
+                  SHOW ON BOOKINGS
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {[
+                    { key: 'showSeating', label: 'Seating Preference', icon: '🪑' },
+                  ].map(({ key, label, icon }) => {
+                    const on = bookingSettings[key]
+                    return (
+                      <div key={key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: 600, color: '#334155' }}>
+                          <span>{icon}</span> {label}
+                        </div>
+                        <button
+                          onClick={() => setBookingSettings(prev => ({ ...prev, [key]: !prev[key] }))}
                           style={{
                             width: '44px', height: '24px', borderRadius: '50px',
                             background: on ? `linear-gradient(135deg, ${accentStart}, ${accentEnd})` : '#e2e8f0',
@@ -502,6 +573,7 @@ export default function AdminDashboard() {
                       index={i}
                       accentStart={accentStart}
                       accentEnd={accentEnd}
+                      bookingSettings={bookingSettings}
                     />
                   ))
               }
@@ -719,7 +791,7 @@ function SettingCard({ icon, accentStart, title, desc, children }) {
 }
 
 /* ─── Booking Card ─── */
-function BookingCard({ booking, index, accentStart, accentEnd }) {
+function BookingCard({ booking, index, accentStart, accentEnd, bookingSettings = {} }) {
   const cfg = BOOKING_STATUS_CONFIG[booking.status] || BOOKING_STATUS_CONFIG.pending
 
   function formatTime(t) {
@@ -798,7 +870,7 @@ function BookingCard({ booking, index, accentStart, accentEnd }) {
         {[
           { icon: '📅', label: `${formatDate(booking.date)}  ${formatTime(booking.time)}` },
           { icon: '👥', label: `${booking.guests} Guest${booking.guests > 1 ? 's' : ''}` },
-          { icon: seatingIcon[booking.seating] || '🪑', label: booking.seating || '' },
+          bookingSettings.showSeating && booking.seating ? { icon: seatingIcon[booking.seating] || '🪑', label: booking.seating } : null,
           booking.occasion ? { icon: '🎉', label: booking.occasion } : null,
         ].filter(Boolean).map((pill, i) => (
           <div key={i} style={{
