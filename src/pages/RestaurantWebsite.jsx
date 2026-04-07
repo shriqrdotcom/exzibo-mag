@@ -144,6 +144,8 @@ export default function RestaurantWebsite() {
   const [liked, setLiked] = useState({})
   const [cartItems, setCartItems] = useState([])
   const [cartBounce, setCartBounce] = useState(false)
+  const [cartBtnXY, setCartBtnXY] = useState(null)
+  const cartDragRef = useRef({ isDragging: false, startX: 0, startY: 0, startLeft: 0, startTop: 0, moved: false })
   const [couponInput, setCouponInput] = useState('')
   const [couponApplied, setCouponApplied] = useState(false)
   const [couponError, setCouponError] = useState('')
@@ -491,6 +493,43 @@ export default function RestaurantWebsite() {
   const activeMenuItems = vegMode
     ? [...categoryFiltered].sort((a, b) => (b.veg ? 1 : 0) - (a.veg ? 1 : 0))
     : categoryFiltered
+
+  function onCartBtnPointerDown(e) {
+    const btn = e.currentTarget
+    const rect = btn.getBoundingClientRect()
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY
+    cartDragRef.current = { isDragging: true, startX: clientX, startY: clientY, startLeft: rect.left, startTop: rect.top, moved: false }
+
+    const onMove = (me) => {
+      if (!cartDragRef.current.isDragging) return
+      me.preventDefault && me.preventDefault()
+      const cx = me.touches ? me.touches[0].clientX : me.clientX
+      const cy = me.touches ? me.touches[0].clientY : me.clientY
+      const dx = cx - cartDragRef.current.startX
+      const dy = cy - cartDragRef.current.startY
+      if (Math.abs(dx) > 4 || Math.abs(dy) > 4) cartDragRef.current.moved = true
+      const newLeft = Math.max(0, Math.min(window.innerWidth - 72, cartDragRef.current.startLeft + dx))
+      const newTop = Math.max(0, Math.min(window.innerHeight - 56, cartDragRef.current.startTop + dy))
+      setCartBtnXY({ left: newLeft, top: newTop })
+    }
+    const onUp = () => {
+      cartDragRef.current.isDragging = false
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', onUp)
+      window.removeEventListener('touchmove', onMove)
+      window.removeEventListener('touchend', onUp)
+    }
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+    window.addEventListener('touchmove', onMove, { passive: false })
+    window.addEventListener('touchend', onUp)
+  }
+
+  function onCartBtnClick(e) {
+    if (cartDragRef.current.moved) { cartDragRef.current.moved = false; return }
+    setActiveNav('cart')
+  }
 
   if (notFound) {
     return (
@@ -1144,29 +1183,34 @@ export default function RestaurantWebsite() {
         </div>
       )}
 
-      {/* ── FLOATING CART BUTTON (right side) ── */}
-      {activeNav === 'menu' && cartCount > 0 && (
+      {/* ── FLOATING CART BUTTON (draggable, right side) ── */}
+      {(activeNav === 'home' || activeNav === 'menu' || activeNav === 'orders') && cartCount > 0 && (
         <button
-          onClick={() => setActiveNav('cart')}
+          onMouseDown={onCartBtnPointerDown}
+          onTouchStart={onCartBtnPointerDown}
+          onClick={onCartBtnClick}
           style={{
-            position: 'fixed', right: '16px', bottom: '90px', zIndex: 80,
+            position: 'fixed',
+            ...(cartBtnXY
+              ? { left: cartBtnXY.left, top: cartBtnXY.top }
+              : { right: '16px', bottom: '90px' }),
+            zIndex: 80,
             background: '#111', border: 'none', borderRadius: '20px',
             width: '72px', height: '56px',
             display: 'flex', alignItems: 'center', justifyContent: 'flex-end',
             paddingRight: '16px',
-            cursor: 'pointer',
+            cursor: 'grab',
             boxShadow: '0 8px 28px rgba(0,0,0,0.5)',
+            userSelect: 'none', touchAction: 'none',
           }}
         >
-          {cartCount > 0 && (
-            <span style={{
-              position: 'absolute', top: '-7px', right: '-7px',
-              background: '#E8321A', color: '#fff',
-              fontSize: '10px', fontWeight: 800,
-              borderRadius: '7px', padding: '2px 7px',
-              minWidth: '18px', textAlign: 'center',
-            }}>{cartCount}</span>
-          )}
+          <span style={{
+            position: 'absolute', top: '-7px', right: '-7px',
+            background: '#E8321A', color: '#fff',
+            fontSize: '10px', fontWeight: 800,
+            borderRadius: '7px', padding: '2px 7px',
+            minWidth: '18px', textAlign: 'center',
+          }}>{cartCount}</span>
           <ShoppingCart size={22} color="#fff" strokeWidth={2.2} />
         </button>
       )}
