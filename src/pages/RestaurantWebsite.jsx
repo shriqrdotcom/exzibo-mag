@@ -697,61 +697,62 @@ export default function RestaurantWebsite() {
           </div>
         )}
 
-        {/* Row 2b: Category filter — only on menu page */}
-        {activeNav === 'menu' && (
-          <div style={{ marginTop: '14px' }}>
-            <div className="category-scroll-row" style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '2px' }}>
-              {CATEGORIES.map(cat => {
-                const isActive = activeCategory === cat.id
-                return (
-                  <button
-                    key={cat.id}
-                    onClick={() => setActiveCategory(cat.id)}
-                    style={{
-                      flexShrink: 0,
-                      display: 'flex', flexDirection: 'column', alignItems: 'center',
-                      gap: '6px',
-                      background: isActive
-                        ? '#fff'
-                        : (darkMode ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)'),
-                      border: 'none',
-                      borderRadius: '16px',
-                      padding: '10px 10px 8px',
-                      cursor: 'pointer',
-                      minWidth: '62px',
-                      boxShadow: isActive ? '0 4px 14px rgba(0,0,0,0.2)' : 'none',
-                      transition: 'all 0.2s ease',
-                      fontFamily: 'inherit',
-                    }}
-                  >
-                    <div style={{
-                      width: '44px', height: '44px', borderRadius: '12px',
-                      overflow: 'hidden',
-                      background: isActive ? 'rgba(232,50,26,0.08)' : (darkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'),
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    }}>
-                      {cat.img ? (
-                        <img src={cat.img} alt={cat.label} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      ) : (
-                        <span style={{ fontSize: '24px', lineHeight: 1 }}>{cat.emoji}</span>
-                      )}
-                    </div>
-                    <span style={{
-                      fontSize: '10px',
-                      fontWeight: isActive ? 800 : 500,
-                      color: isActive ? '#111' : (darkMode ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.5)'),
-                      letterSpacing: '0.01em',
-                      whiteSpace: 'nowrap',
-                    }}>
-                      {cat.label}
-                    </span>
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-        )}
       </header>
+
+      {/* ── CATEGORY FILTER STRIP — standalone, outside header ── */}
+      {activeNav === 'menu' && (
+        <div style={{ padding: '14px 16px 0' }}>
+          <div className="category-scroll-row" style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '2px' }}>
+            {CATEGORIES.map(cat => {
+              const isActive = activeCategory === cat.id
+              return (
+                <button
+                  key={cat.id}
+                  onClick={() => setActiveCategory(cat.id)}
+                  style={{
+                    flexShrink: 0,
+                    display: 'flex', flexDirection: 'column', alignItems: 'center',
+                    gap: '6px',
+                    background: isActive
+                      ? '#fff'
+                      : (darkMode ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)'),
+                    border: 'none',
+                    borderRadius: '16px',
+                    padding: '10px 10px 8px',
+                    cursor: 'pointer',
+                    minWidth: '62px',
+                    boxShadow: isActive ? '0 4px 14px rgba(0,0,0,0.2)' : 'none',
+                    transition: 'all 0.2s ease',
+                    fontFamily: 'inherit',
+                  }}
+                >
+                  <div style={{
+                    width: '44px', height: '44px', borderRadius: '12px',
+                    overflow: 'hidden',
+                    background: isActive ? 'rgba(232,50,26,0.08)' : (darkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'),
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    {cat.img ? (
+                      <img src={cat.img} alt={cat.label} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ) : (
+                      <span style={{ fontSize: '24px', lineHeight: 1 }}>{cat.emoji}</span>
+                    )}
+                  </div>
+                  <span style={{
+                    fontSize: '10px',
+                    fontWeight: isActive ? 800 : 500,
+                    color: isActive ? '#111' : (darkMode ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.5)'),
+                    letterSpacing: '0.01em',
+                    whiteSpace: 'nowrap',
+                  }}>
+                    {cat.label}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       {/* ── SEARCH RESULTS OVERLAY ── */}
       {searchFilteredAll && (
