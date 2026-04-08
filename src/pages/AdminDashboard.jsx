@@ -4,7 +4,7 @@ import {
   Bell, CheckCircle, XCircle,
   ClipboardList, BookOpen, Users, Settings, ArrowLeft,
   Palette, DollarSign, Type, Save, Check, CalendarDays, UtensilsCrossed,
-  SlidersHorizontal, Plus, Pencil, Trash2, X,
+  SlidersHorizontal, Plus, Pencil, Trash2, X, Search,
 } from 'lucide-react'
 
 const GLOBAL_CONFIG_KEY = 'exzibo_admin_global_config'
@@ -1201,10 +1201,13 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast }
   const [showSectionDropdown, setShowSectionDropdown] = useState(false)
   const [showNewSectionModal, setShowNewSectionModal] = useState(false)
   const [newSectionDraft, setNewSectionDraft] = useState({ label: '', emoji: '🍽️' })
+  const [menuSearch, setMenuSearch] = useState('')
+  const [showMenuSearch, setShowMenuSearch] = useState(false)
   const saveAllTimer = useRef(null)
   const longPressTimer = useRef(null)
   const catImageInputRef = useRef(null)
   const sectionDropdownRef = useRef(null)
+  const menuSearchRef = useRef(null)
 
   function saveMenu(updated) {
     localStorage.setItem(storageKey, JSON.stringify(updated))
@@ -1390,6 +1393,17 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast }
 
   const items = menu[activeCategory] || []
 
+  const searchResults = menuSearch.trim()
+    ? categoryTabs.flatMap(tab =>
+        (menu[tab.key] || [])
+          .filter(item =>
+            item.name.toLowerCase().includes(menuSearch.toLowerCase()) ||
+            (item.desc || '').toLowerCase().includes(menuSearch.toLowerCase())
+          )
+          .map(item => ({ ...item, _sectionKey: tab.key, _sectionLabel: tab.label, _sectionEmoji: tab.emoji }))
+      )
+    : []
+
   const inputSt = {
     width: '100%', boxSizing: 'border-box',
     padding: '10px 13px',
@@ -1414,6 +1428,26 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast }
           </p>
         </div>
         <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          <button
+            onClick={() => {
+              setShowMenuSearch(v => !v)
+              if (showMenuSearch) setMenuSearch('')
+              else setTimeout(() => menuSearchRef.current?.focus(), 50)
+            }}
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              width: '40px', height: '40px',
+              background: showMenuSearch ? `${accentStart}15` : 'rgba(15,23,42,0.07)',
+              border: showMenuSearch ? `1.5px solid ${accentStart}50` : '1.5px solid rgba(15,23,42,0.12)',
+              borderRadius: '50%',
+              color: showMenuSearch ? accentStart : '#475569',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+            }}
+            title="Search items"
+          >
+            <Search size={16} />
+          </button>
           <button
             onClick={handleSaveAll}
             style={{
@@ -1537,6 +1571,107 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast }
               <button onClick={addSection} style={{ flex: 2, padding: '11px', background: `linear-gradient(135deg, ${accentStart}, ${accentEnd})`, border: 'none', borderRadius: '50px', color: '#fff', fontSize: '12px', fontWeight: 800, letterSpacing: '0.05em', cursor: 'pointer', boxShadow: `0 4px 14px ${accentStart}40` }}>CREATE SECTION</button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Search bar */}
+      {showMenuSearch && (
+        <div style={{ marginBottom: '16px' }}>
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: '10px',
+            background: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(12px)',
+            borderRadius: '16px', padding: '10px 16px',
+            border: `1.5px solid ${accentStart}30`,
+            boxShadow: `0 4px 20px ${accentStart}10`,
+          }}>
+            <Search size={16} color={accentStart} style={{ flexShrink: 0 }} />
+            <input
+              ref={menuSearchRef}
+              value={menuSearch}
+              onChange={e => setMenuSearch(e.target.value)}
+              placeholder="Search items by name or description…"
+              style={{
+                flex: 1, border: 'none', background: 'transparent',
+                fontSize: '14px', fontWeight: 500, color: '#0f172a',
+                outline: 'none', fontFamily: 'inherit',
+              }}
+            />
+            {menuSearch && (
+              <button onClick={() => setMenuSearch('')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center', color: '#94A3B8' }}>
+                <X size={14} />
+              </button>
+            )}
+          </div>
+
+          {menuSearch.trim() && (
+            <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {searchResults.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '28px 0', color: '#94A3B8', fontSize: '13px', fontWeight: 600 }}>
+                  No items match "{menuSearch}"
+                </div>
+              ) : (
+                searchResults.map(item => (
+                  <div key={`${item._sectionKey}-${item.id}`} style={{
+                    display: 'flex', alignItems: 'center', gap: '12px',
+                    background: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(12px)',
+                    borderRadius: '14px', padding: '12px 14px',
+                    border: '1px solid rgba(255,255,255,0.7)',
+                    boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
+                  }}>
+                    {item.img && (
+                      <img src={item.img} alt={item.name} style={{ width: '44px', height: '44px', borderRadius: '10px', objectFit: 'cover', flexShrink: 0 }} />
+                    )}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
+                        <span style={{ fontSize: '13px', fontWeight: 700, color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.name}</span>
+                        <span style={{ fontSize: '10px', color: '#94A3B8', background: 'rgba(0,0,0,0.04)', borderRadius: '50px', padding: '2px 7px', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                          {item._sectionEmoji} {item._sectionLabel}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 500 }}>
+                        {currency}{item.price}
+                        {item.available === false && <span style={{ marginLeft: '6px', color: '#EF4444', fontWeight: 700 }}>• Unavailable</span>}
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
+                      <button
+                        onClick={() => {
+                          setActiveCategory(item._sectionKey)
+                          setShowMenuSearch(false)
+                          setMenuSearch('')
+                          setTimeout(() => {
+                            setShowAdd(false)
+                            startEdit(item)
+                          }, 50)
+                        }}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: '4px',
+                          padding: '6px 12px', borderRadius: '50px', border: 'none',
+                          background: `linear-gradient(135deg, ${accentStart}, ${accentEnd})`,
+                          color: '#fff', fontSize: '11px', fontWeight: 700, cursor: 'pointer',
+                        }}
+                      >
+                        <Pencil size={11} /> Edit
+                      </button>
+                      <button
+                        onClick={() => {
+                          const updated = { ...menu, [item._sectionKey]: menu[item._sectionKey].filter(i => i.id !== item.id) }
+                          saveMenu(updated)
+                        }}
+                        style={{
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          width: '30px', height: '30px', borderRadius: '50%', border: 'none',
+                          background: '#FEF2F2', color: '#EF4444', cursor: 'pointer',
+                        }}
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
         </div>
       )}
 
