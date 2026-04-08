@@ -486,16 +486,23 @@ export default function RestaurantWebsite() {
   }, [restaurant])
 
   const carouselImages = restaurant?.images?.length ? restaurant.images : FALLBACK_IMAGES
-  const allItems = [...menuData.starters, ...menuData.mains, ...menuData.drinks]
+
+  const visibleMenuData = {
+    starters: (menuData.starters || []).filter(m => m.available !== false),
+    mains:    (menuData.mains    || []).filter(m => m.available !== false),
+    drinks:   (menuData.drinks   || []).filter(m => m.available !== false),
+  }
+
+  const allItems = [...visibleMenuData.starters, ...visibleMenuData.mains, ...visibleMenuData.drinks]
   const tagged = allItems.filter(m => m.tags?.some(t => ['Popular', 'Seasonal', "Chef's Pick"].includes(t)))
 
   const getCategoryItems = () => {
     const q = searchQuery.trim().toLowerCase()
     let base = []
     switch (activeCategory) {
-      case 'starters': base = menuData.starters; break
-      case 'mains': base = menuData.mains; break
-      case 'drinks': base = menuData.drinks; break
+      case 'starters': base = visibleMenuData.starters; break
+      case 'mains': base = visibleMenuData.mains; break
+      case 'drinks': base = visibleMenuData.drinks; break
       case 'popular': base = allItems.filter(m => m.tags?.some(t => ['Popular', "Chef's Pick"].includes(t))); break
       case 'veg': base = allItems.filter(m => m.veg); break
       default: base = tagged.length > 0 ? tagged : allItems
@@ -506,18 +513,18 @@ export default function RestaurantWebsite() {
   const bestsellers = getCategoryItems()
 
   const searchFilteredAll = searchQuery.trim() ? [
-    ...menuData.starters
+    ...visibleMenuData.starters
       .filter(m => m.name.toLowerCase().includes(searchQuery.toLowerCase()) || (m.description || '').toLowerCase().includes(searchQuery.toLowerCase()))
       .map(m => ({ ...m, _cat: 'Starter' })),
-    ...menuData.mains
+    ...visibleMenuData.mains
       .filter(m => m.name.toLowerCase().includes(searchQuery.toLowerCase()) || (m.description || '').toLowerCase().includes(searchQuery.toLowerCase()))
       .map(m => ({ ...m, _cat: 'Main' })),
-    ...menuData.drinks
+    ...visibleMenuData.drinks
       .filter(m => m.name.toLowerCase().includes(searchQuery.toLowerCase()) || (m.description || '').toLowerCase().includes(searchQuery.toLowerCase()))
       .map(m => ({ ...m, _cat: 'Drink' })),
   ] : null
 
-  const rawMenuItems = menuData[activeMenuTab] || []
+  const rawMenuItems = visibleMenuData[activeMenuTab] || []
   const tabCategories = dynamicCategories[activeMenuTab] || DEFAULT_CATEGORY_FILTERS[activeMenuTab] || []
   const categoryFiltered = activeCategory === 'all' ? rawMenuItems : rawMenuItems.filter(item => {
     const cat = tabCategories.find(c => c.id === activeCategory)
