@@ -41,6 +41,7 @@ export default function MenuEditor() {
   const [resolvedName, setResolvedName] = useState(null)
   const [notFound, setNotFound] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [activeView, setActiveView] = useState('menu-edit')
   const saveTimer = useRef(null)
 
   useEffect(() => {
@@ -115,6 +116,37 @@ export default function MenuEditor() {
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <AdminHeader subtitle={resolvedName ? `Menu · ${resolvedName}` : uid ? `Menu · UID ${uid}` : 'Menu Configuration'} />
         <main style={{ flex: 1, overflowY: 'auto', padding: '32px' }}>
+
+          {/* View Toggle Buttons */}
+          <div style={{ display: 'flex', gap: '6px', marginBottom: '28px' }}>
+            {[
+              { key: 'menu-edit', label: 'MENU EDIT' },
+              { key: 'food-card', label: 'FOOD CARD' },
+              { key: 'food-window', label: 'FOOD WINDOW' },
+            ].map(({ key, label }) => (
+              <button
+                key={key}
+                onClick={() => setActiveView(key)}
+                style={{
+                  padding: '10px 24px',
+                  borderRadius: '10px',
+                  background: activeView === key ? '#E8321A' : 'rgba(255,255,255,0.04)',
+                  border: activeView === key ? 'none' : '1px solid rgba(255,255,255,0.08)',
+                  color: activeView === key ? '#fff' : '#666',
+                  fontSize: '12px',
+                  fontWeight: 700,
+                  letterSpacing: '0.08em',
+                  cursor: 'pointer',
+                  boxShadow: activeView === key ? '0 0 18px rgba(232,50,26,0.35)' : 'none',
+                  transition: 'all 0.2s',
+                }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {activeView === 'menu-edit' && <>
           {notFound && (
             <div style={{
               background: 'rgba(232,50,26,0.06)',
@@ -350,6 +382,58 @@ export default function MenuEditor() {
               </div>
             </div>
           </div>
+          </>}
+
+          {activeView === 'food-card' && (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', gap: '16px' }}>
+              <div style={{
+                width: '64px', height: '64px', borderRadius: '18px',
+                background: 'rgba(232,50,26,0.1)',
+                border: '1px solid rgba(232,50,26,0.2)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '28px',
+              }}>🃏</div>
+              <div style={{ textAlign: 'center' }}>
+                <h2 style={{ fontSize: '22px', fontWeight: 800, marginBottom: '8px', color: '#fff' }}>Food Card</h2>
+                <p style={{ fontSize: '13px', color: '#555', maxWidth: '320px', lineHeight: 1.7 }}>
+                  This section is coming soon. Food card layouts and customization will be available here.
+                </p>
+              </div>
+              <div style={{
+                padding: '8px 20px',
+                borderRadius: '50px',
+                background: 'rgba(232,50,26,0.08)',
+                border: '1px solid rgba(232,50,26,0.18)',
+                fontSize: '11px', fontWeight: 700, letterSpacing: '0.1em', color: '#E8321A',
+              }}>COMING SOON</div>
+            </div>
+          )}
+
+          {activeView === 'food-window' && (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', gap: '16px' }}>
+              <div style={{
+                width: '64px', height: '64px', borderRadius: '18px',
+                background: 'rgba(232,50,26,0.1)',
+                border: '1px solid rgba(232,50,26,0.2)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '28px',
+              }}>🪟</div>
+              <div style={{ textAlign: 'center' }}>
+                <h2 style={{ fontSize: '22px', fontWeight: 800, marginBottom: '8px', color: '#fff' }}>Food Window</h2>
+                <p style={{ fontSize: '13px', color: '#555', maxWidth: '320px', lineHeight: 1.7 }}>
+                  This section is coming soon. The food window display and configuration will be available here.
+                </p>
+              </div>
+              <div style={{
+                padding: '8px 20px',
+                borderRadius: '50px',
+                background: 'rgba(232,50,26,0.08)',
+                border: '1px solid rgba(232,50,26,0.18)',
+                fontSize: '11px', fontWeight: 700, letterSpacing: '0.1em', color: '#E8321A',
+              }}>COMING SOON</div>
+            </div>
+          )}
+
         </main>
       </div>
 
