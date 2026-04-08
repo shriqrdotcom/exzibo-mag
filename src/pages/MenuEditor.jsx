@@ -63,6 +63,8 @@ export default function MenuEditor() {
       setNotFound(false)
       const savedMenu = localStorage.getItem(`exzibo_menu_${uid}`)
       if (savedMenu) setMenuItems(JSON.parse(savedMenu))
+      const savedFilters = localStorage.getItem(`exzibo_menu_filters_${uid}`)
+      if (savedFilters) setCategoryFilters(JSON.parse(savedFilters))
     } else {
       setNotFound(true)
     }
@@ -71,6 +73,7 @@ export default function MenuEditor() {
   const saveChanges = () => {
     if (uid) {
       localStorage.setItem(`exzibo_menu_${uid}`, JSON.stringify(menuItems))
+      localStorage.setItem(`exzibo_menu_filters_${uid}`, JSON.stringify(categoryFilters))
       const all = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
       const updated = all.map(r => r.id === uid
         ? { ...r, status: isActive ? 'active' : 'paused', name: restInfo.name, tables: restInfo.tables,
@@ -80,6 +83,7 @@ export default function MenuEditor() {
       localStorage.setItem('exzibo_restaurants', JSON.stringify(updated))
     } else {
       localStorage.setItem('exzibo_menu_default', JSON.stringify(menuItems))
+      localStorage.setItem('exzibo_menu_filters_default', JSON.stringify(categoryFilters))
     }
     setSaved(true)
     clearTimeout(saveTimer.current)

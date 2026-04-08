@@ -43,16 +43,19 @@ const MENU_TABS = [
   { id: 'drinks', label: 'DRINKS' },
 ]
 
-const CATEGORIES = [
-  { id: 'all',     label: 'All',     emoji: '🍽️', img: '/menu/wagyu-ribeye.png' },
-  { id: 'organic', label: 'Organic', emoji: '🥗', img: '/menu/heirloom-burrata.png' },
-  { id: 'health',  label: 'Health',  emoji: '🥦', img: '/menu/mushroom-risotto.png' },
-  { id: 'deals',   label: 'Deals',   emoji: '🏷️', img: '/menu/atlantic-oysters.png' },
-  { id: 'burger',  label: 'Burger',  emoji: '🍔', img: null },
-  { id: 'pizza',   label: 'Pizza',   emoji: '🍕', img: null },
-  { id: 'biryani', label: 'Biryani', emoji: '🍛', img: null },
-  { id: 'chicken', label: 'Chicken', emoji: '🍗', img: null },
-]
+const DEFAULT_CATEGORY_FILTERS = {
+  starters: [{ id: 'all', emoji: '🍽️', label: 'All', image: null, assignedItems: [] }],
+  mains:    [{ id: 'all', emoji: '🍽️', label: 'All', image: null, assignedItems: [] }],
+  drinks:   [{ id: 'all', emoji: '🥤', label: 'All', image: null, assignedItems: [] }],
+}
+
+function loadFiltersFromStorage(id) {
+  try {
+    const saved = localStorage.getItem(`exzibo_menu_filters_${id}`)
+    if (saved) return JSON.parse(saved)
+  } catch (_) {}
+  return DEFAULT_CATEGORY_FILTERS
+}
 
 function buildTheme(dark) {
   return {
@@ -206,6 +209,7 @@ export default function RestaurantWebsite() {
     }
   }, [darkMode])
 
+  const [dynamicCategories, setDynamicCategories] = useState(DEFAULT_CATEGORY_FILTERS)
   const [searchQuery, setSearchQuery] = useState('')
   const [activeCategory, setActiveCategory] = useState('all')
   const [vegMode, setVegMode] = useState(false)
@@ -437,6 +441,7 @@ export default function RestaurantWebsite() {
         socialLinks: { instagram: '#', facebook: '#', twitter: '#', website: '#' },
       })
       setMenuData(loadMenuFromStorage('demo') || MENU_FALLBACK)
+      setDynamicCategories(loadFiltersFromStorage('demo'))
       return
     }
     const restaurants = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
@@ -444,6 +449,7 @@ export default function RestaurantWebsite() {
     if (found) {
       setRestaurant(found)
       setMenuData(loadMenuFromStorage(found.id) || MENU_FALLBACK)
+      setDynamicCategories(loadFiltersFromStorage(found.id))
     } else {
       setNotFound(true)
     }
@@ -456,12 +462,21 @@ export default function RestaurantWebsite() {
       const found = restaurants.find(r => r.slug === slug || r.id === slug)
       const id = found?.id || (slug === 'demo' ? 'demo' : null)
       if (!id) return
-      if (e.key !== `exzibo_menu_${id}`) return
-      setMenuData(loadMenuFromStorage(id) || MENU_FALLBACK)
+      if (e.key === `exzibo_menu_${id}`) {
+        setMenuData(loadMenuFromStorage(id) || MENU_FALLBACK)
+      }
+      if (e.key === `exzibo_menu_filters_${id}`) {
+        setDynamicCategories(loadFiltersFromStorage(id))
+        setActiveCategory('all')
+      }
     }
     window.addEventListener('storage', onStorageChange)
     return () => window.removeEventListener('storage', onStorageChange)
   }, [slug])
+
+  useEffect(() => {
+    setActiveCategory('all')
+  }, [activeMenuTab])
 
   useEffect(() => {
     const images = restaurant?.images?.length ? restaurant.images : FALLBACK_IMAGES
@@ -503,19 +518,12 @@ export default function RestaurantWebsite() {
   ] : null
 
   const rawMenuItems = menuData[activeMenuTab] || []
+  const tabCategories = dynamicCategories[activeMenuTab] || DEFAULT_CATEGORY_FILTERS[activeMenuTab] || []
   const categoryFiltered = activeCategory === 'all' ? rawMenuItems : rawMenuItems.filter(item => {
-    const name = (item.name || '').toLowerCase()
-    const tags = item.tags || []
-    switch (activeCategory) {
-      case 'organic': return item.veg === true || tags.includes('Vegetarian') || tags.includes('Vegan')
-      case 'health':  return tags.some(t => ['Gluten Free', 'Vegan', 'Vegetarian'].includes(t))
-      case 'deals':   return item.oldPrice && item.oldPrice > item.price
-      case 'burger':  return name.includes('burger') || name.includes('beef') || name.includes('patty')
-      case 'pizza':   return name.includes('pizza')
-      case 'biryani': return name.includes('biryani') || name.includes('rice') || name.includes('risotto')
-      case 'chicken': return name.includes('chicken') || name.includes('poultry')
-      default:        return true
-    }
+    const cat = tabCategories.find(c => c.id === activeCategory)
+    if (!cat) return true
+    const assigned = cat.assignedItems || []
+    return assigned.length === 0 || assigned.includes(item.id)
   })
   const activeMenuItems = vegMode
     ? [...categoryFiltered].sort((a, b) => (b.veg ? 1 : 0) - (a.veg ? 1 : 0))
@@ -769,7 +777,7 @@ export default function RestaurantWebsite() {
       {activeNav === 'menu' && (
         <div style={{ padding: '14px 16px 0' }}>
           <div className="category-scroll-row" style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '2px' }}>
-            {CATEGORIES.map(cat => {
+            {tabCategories.map(cat => {
               const isActive = activeCategory === cat.id
               return (
                 <button
@@ -798,8 +806,8 @@ export default function RestaurantWebsite() {
                     background: isActive ? 'rgba(232,50,26,0.08)' : (darkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'),
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                   }}>
-                    {cat.img ? (
-                      <img src={cat.img} alt={cat.label} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    {cat.image ? (
+                      <img src={cat.image} alt={cat.label} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     ) : (
                       <span style={{ fontSize: '24px', lineHeight: 1 }}>{cat.emoji}</span>
                     )}
