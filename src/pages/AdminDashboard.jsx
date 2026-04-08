@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
-  Bell, CheckCircle, XCircle,
+  CheckCircle, XCircle,
   ClipboardList, BookOpen, Users, Settings, ArrowLeft,
   Palette, DollarSign, Type, Save, Check, CalendarDays, UtensilsCrossed,
   SlidersHorizontal, Plus, Pencil, Trash2, X, Search,
@@ -136,6 +136,9 @@ export default function AdminDashboard() {
   // Draft state for the settings panel
   const [draft, setDraft] = useState(null)
   const [saved, setSaved] = useState(false)
+  const [showMenuSearch, setShowMenuSearch] = useState(false)
+  const [menuSearch, setMenuSearch] = useState('')
+  const menuSearchRef = useRef(null)
 
   function loadBookings(restaurantId) {
     const key = `exzibo_bookings_${restaurantId}`
@@ -334,29 +337,31 @@ export default function AdminDashboard() {
               </div>
             </div>
           </div>
-          <div style={{ position: 'relative' }}>
-            <div style={{
-              width: '42px', height: '42px', borderRadius: '13px',
-              background: 'rgba(255,255,255,0.8)',
-              boxShadow: '4px 4px 10px rgba(0,0,0,0.08), -2px -2px 8px rgba(255,255,255,0.9)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              cursor: 'pointer', border: '1px solid rgba(255,255,255,0.6)',
-            }}>
-              <Bell size={18} color="#64748b" />
-            </div>
-            {activeCount > 0 && (
-              <div style={{
-                position: 'absolute', top: '-4px', right: '-4px',
-                width: '18px', height: '18px', borderRadius: '50%',
-                background: '#EF4444', color: '#fff',
-                fontSize: '10px', fontWeight: 800,
+          {activeNav === 'menu' && (
+            <div
+              onClick={() => {
+                setShowMenuSearch(v => !v)
+                if (!showMenuSearch) {
+                  setMenuSearch('')
+                  setTimeout(() => menuSearchRef.current?.focus(), 50)
+                } else {
+                  setMenuSearch('')
+                }
+              }}
+              style={{
+                width: '42px', height: '42px', borderRadius: '13px',
+                background: showMenuSearch ? `${accentStart}15` : 'rgba(255,255,255,0.8)',
+                boxShadow: showMenuSearch
+                  ? `0 0 0 1.5px ${accentStart}50, 4px 4px 10px rgba(0,0,0,0.08)`
+                  : '4px 4px 10px rgba(0,0,0,0.08), -2px -2px 8px rgba(255,255,255,0.9)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                border: '2px solid #eef0f5',
-              }}>
-                {activeCount}
-              </div>
-            )}
-          </div>
+                cursor: 'pointer', border: `1px solid ${showMenuSearch ? accentStart + '40' : 'rgba(255,255,255,0.6)'}`,
+                transition: 'all 0.2s',
+              }}
+            >
+              <Search size={18} color={showMenuSearch ? accentStart : '#64748b'} />
+            </div>
+          )}
         </div>
 
         {/* ── CONTENT ── */}
@@ -377,6 +382,11 @@ export default function AdminDashboard() {
             accentEnd={accentEnd}
             currency={globalConfig.currency}
             showToast={showToast}
+            showMenuSearch={showMenuSearch}
+            menuSearch={menuSearch}
+            setMenuSearch={setMenuSearch}
+            menuSearchRef={menuSearchRef}
+            onCloseSearch={() => { setShowMenuSearch(false); setMenuSearch('') }}
           />
         ) : (
           <>
@@ -1154,7 +1164,7 @@ function ImageUploadField({ value, onChange, accentStart }) {
   )
 }
 
-function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast }) {
+function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, showMenuSearch, menuSearch, setMenuSearch, menuSearchRef, onCloseSearch }) {
   const storageKey = `exzibo_menu_${restaurantId}`
   const filtersKey = `exzibo_menu_filters_${restaurantId}`
   const tabsKey   = `exzibo_tabs_${restaurantId}`
@@ -1201,13 +1211,10 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast }
   const [showSectionDropdown, setShowSectionDropdown] = useState(false)
   const [showNewSectionModal, setShowNewSectionModal] = useState(false)
   const [newSectionDraft, setNewSectionDraft] = useState({ label: '', emoji: '🍽️' })
-  const [menuSearch, setMenuSearch] = useState('')
-  const [showMenuSearch, setShowMenuSearch] = useState(false)
   const saveAllTimer = useRef(null)
   const longPressTimer = useRef(null)
   const catImageInputRef = useRef(null)
   const sectionDropdownRef = useRef(null)
-  const menuSearchRef = useRef(null)
 
   function saveMenu(updated) {
     localStorage.setItem(storageKey, JSON.stringify(updated))
@@ -1428,26 +1435,6 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast }
           </p>
         </div>
         <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-          <button
-            onClick={() => {
-              setShowMenuSearch(v => !v)
-              if (showMenuSearch) setMenuSearch('')
-              else setTimeout(() => menuSearchRef.current?.focus(), 50)
-            }}
-            style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              width: '40px', height: '40px',
-              background: showMenuSearch ? `${accentStart}15` : 'rgba(15,23,42,0.07)',
-              border: showMenuSearch ? `1.5px solid ${accentStart}50` : '1.5px solid rgba(15,23,42,0.12)',
-              borderRadius: '50%',
-              color: showMenuSearch ? accentStart : '#475569',
-              cursor: 'pointer',
-              transition: 'all 0.2s',
-            }}
-            title="Search items"
-          >
-            <Search size={16} />
-          </button>
           <button
             onClick={handleSaveAll}
             style={{
