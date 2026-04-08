@@ -467,10 +467,11 @@ export default function MenuEditor() {
 
               {/* Food Category Filter Strip */}
               <div style={{
-                padding: '14px 20px 10px',
+                paddingTop: '14px',
+                paddingBottom: '10px',
                 borderBottom: '1px solid rgba(255,255,255,0.05)',
               }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', padding: '0 20px' }}>
                   <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', color: '#555', textTransform: 'uppercase' }}>
                     Category Filters · {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
                   </span>
