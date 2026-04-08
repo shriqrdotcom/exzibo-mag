@@ -1463,7 +1463,10 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast }
         <div style={{
           display: 'flex', gap: '10px',
           overflowX: 'auto',
+          overflowY: 'visible',
           paddingBottom: '4px',
+          paddingTop: '10px',
+          paddingRight: '10px',
           scrollbarWidth: 'none',
         }}>
           {(catFilters[activeCategory] || []).map(cat => {
@@ -1529,21 +1532,24 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast }
                     {assignedCount}
                   </div>
                 )}
-                {cat.id !== 'all' && isHov && (
+                {cat.id !== 'all' && (
                   <button
                     onClick={e => { e.stopPropagation(); removeCatFilter(cat.id) }}
+                    onTouchEnd={e => { e.stopPropagation(); e.preventDefault(); removeCatFilter(cat.id) }}
                     style={{
-                      position: 'absolute', top: '-5px', right: '-5px',
-                      width: '18px', height: '18px',
-                      background: '#EF4444', border: 'none',
+                      position: 'absolute', top: '-8px', right: '-8px',
+                      width: '24px', height: '24px',
+                      background: '#EF4444', border: '2px solid #fff',
                       borderRadius: '50%',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       cursor: 'pointer',
-                      boxShadow: '0 2px 8px rgba(239,68,68,0.4)',
+                      boxShadow: '0 2px 8px rgba(239,68,68,0.5)',
+                      zIndex: 10,
+                      touchAction: 'none',
                     }}
                     title="Remove filter"
                   >
-                    <X size={9} color="#fff" />
+                    <X size={11} color="#fff" />
                   </button>
                 )}
               </div>
