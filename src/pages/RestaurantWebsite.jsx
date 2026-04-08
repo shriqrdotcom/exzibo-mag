@@ -43,6 +43,14 @@ const MENU_TABS = [
   { id: 'drinks', label: 'DRINKS' },
 ]
 
+function loadMenuTabs(id) {
+  try {
+    const saved = JSON.parse(localStorage.getItem(`exzibo_tabs_${id}`))
+    if (saved?.length) return saved.map(t => ({ id: t.key, label: t.label.toUpperCase() }))
+  } catch {}
+  return MENU_TABS
+}
+
 const DEFAULT_CATEGORY_FILTERS = {
   starters: [{ id: 'all', emoji: '🍽️', label: 'All', image: null, assignedItems: [] }],
   mains:    [{ id: 'all', emoji: '🍽️', label: 'All', image: null, assignedItems: [] }],
@@ -143,15 +151,18 @@ function injectOldPrice(item) {
   return { ...item, oldPrice: item.oldPrice || Math.round(item.price * 1.5) }
 }
 
-function loadMenuFromStorage(id) {
+function loadMenuFromStorage(id, tabs) {
   const saved = localStorage.getItem(`exzibo_menu_${id}`)
   if (!saved) return null
-  const parsed = JSON.parse(saved)
-  return {
-    starters: parsed.starters?.length ? parsed.starters.map(normalizeItem) : MENU_FALLBACK.starters,
-    mains:    parsed.mains?.length    ? parsed.mains.map(normalizeItem)    : MENU_FALLBACK.mains,
-    drinks:   parsed.drinks?.length   ? parsed.drinks.map(normalizeItem)   : MENU_FALLBACK.drinks,
-  }
+  try {
+    const parsed = JSON.parse(saved)
+    const activeTabs = tabs || MENU_TABS
+    const result = {}
+    activeTabs.forEach(tab => {
+      result[tab.id] = parsed[tab.id]?.length ? parsed[tab.id].map(normalizeItem) : (MENU_FALLBACK[tab.id] || [])
+    })
+    return result
+  } catch { return null }
 }
 
 export default function RestaurantWebsite() {
@@ -160,7 +171,8 @@ export default function RestaurantWebsite() {
   const location = useLocation()
   const [restaurant, setRestaurant] = useState(null)
   const [notFound, setNotFound] = useState(false)
-  const [menuData, setMenuData] = useState({ starters: [], mains: [], drinks: [] })
+  const [menuTabs, setMenuTabs] = useState(MENU_TABS)
+  const [menuData, setMenuData] = useState(() => Object.fromEntries(MENU_TABS.map(t => [t.id, []])))
   const [activeNav, setActiveNav] = useState(location.state?.activeNav || 'home')
   const [activeMenuTab, setActiveMenuTab] = useState('starters')
   const [darkMode, setDarkMode] = useState(() => {
@@ -440,16 +452,22 @@ export default function RestaurantWebsite() {
         images: FALLBACK_IMAGES,
         socialLinks: { instagram: '#', facebook: '#', twitter: '#', website: '#' },
       })
-      setMenuData(loadMenuFromStorage('demo') || MENU_FALLBACK)
+      const demoTabs = loadMenuTabs('demo')
+      setMenuTabs(demoTabs)
+      setMenuData(loadMenuFromStorage('demo', demoTabs) || MENU_FALLBACK)
       setDynamicCategories(loadFiltersFromStorage('demo'))
+      setActiveMenuTab(demoTabs[0]?.id || 'starters')
       return
     }
     const restaurants = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
     const found = restaurants.find(r => r.slug === slug || r.id === slug)
     if (found) {
+      const tabs = loadMenuTabs(found.id)
+      setMenuTabs(tabs)
       setRestaurant(found)
-      setMenuData(loadMenuFromStorage(found.id) || MENU_FALLBACK)
+      setMenuData(loadMenuFromStorage(found.id, tabs) || Object.fromEntries(tabs.map(t => [t.id, []])))
       setDynamicCategories(loadFiltersFromStorage(found.id))
+      setActiveMenuTab(tabs[0]?.id || 'starters')
     } else {
       setNotFound(true)
     }
@@ -457,13 +475,29 @@ export default function RestaurantWebsite() {
 
   useEffect(() => {
     function onStorageChange(e) {
-      if (!e.key?.startsWith('exzibo_menu_')) return
+      if (!e.key?.startsWith('exzibo_menu_') && !e.key?.startsWith('exzibo_tabs_')) return
       const restaurants = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
       const found = restaurants.find(r => r.slug === slug || r.id === slug)
       const id = found?.id || (slug === 'demo' ? 'demo' : null)
       if (!id) return
+      if (e.key === `exzibo_tabs_${id}`) {
+        try {
+          const saved = JSON.parse(e.newValue)
+          if (saved?.length) {
+            const newTabs = saved.map(t => ({ id: t.key, label: t.label.toUpperCase() }))
+            setMenuTabs(newTabs)
+            const newMenu = loadMenuFromStorage(id, newTabs)
+            if (newMenu) setMenuData(newMenu)
+            setActiveMenuTab(prev => newTabs.find(t => t.id === prev) ? prev : newTabs[0]?.id || 'starters')
+          }
+        } catch {}
+        return
+      }
       if (e.key === `exzibo_menu_${id}`) {
-        setMenuData(loadMenuFromStorage(id) || MENU_FALLBACK)
+        setMenuData(prev => {
+          const tabs = Object.keys(prev).map(id => ({ id }))
+          return loadMenuFromStorage(id, tabs.length ? tabs : undefined) || MENU_FALLBACK
+        })
       }
       if (e.key === `exzibo_menu_filters_${id}`) {
         setDynamicCategories(loadFiltersFromStorage(id))
@@ -487,13 +521,11 @@ export default function RestaurantWebsite() {
 
   const carouselImages = restaurant?.images?.length ? restaurant.images : FALLBACK_IMAGES
 
-  const visibleMenuData = {
-    starters: (menuData.starters || []).filter(m => m.available !== false),
-    mains:    (menuData.mains    || []).filter(m => m.available !== false),
-    drinks:   (menuData.drinks   || []).filter(m => m.available !== false),
-  }
+  const visibleMenuData = Object.fromEntries(
+    menuTabs.map(tab => [tab.id, (menuData[tab.id] || []).filter(m => m.available !== false)])
+  )
 
-  const allItems = [...visibleMenuData.starters, ...visibleMenuData.mains, ...visibleMenuData.drinks]
+  const allItems = menuTabs.flatMap(tab => visibleMenuData[tab.id] || [])
   const tagged = allItems.filter(m => m.tags?.some(t => ['Popular', 'Seasonal', "Chef's Pick"].includes(t)))
 
   const getCategoryItems = () => {
@@ -512,17 +544,11 @@ export default function RestaurantWebsite() {
   }
   const bestsellers = getCategoryItems()
 
-  const searchFilteredAll = searchQuery.trim() ? [
-    ...visibleMenuData.starters
+  const searchFilteredAll = searchQuery.trim() ? menuTabs.flatMap(tab =>
+    (visibleMenuData[tab.id] || [])
       .filter(m => m.name.toLowerCase().includes(searchQuery.toLowerCase()) || (m.description || '').toLowerCase().includes(searchQuery.toLowerCase()))
-      .map(m => ({ ...m, _cat: 'Starter' })),
-    ...visibleMenuData.mains
-      .filter(m => m.name.toLowerCase().includes(searchQuery.toLowerCase()) || (m.description || '').toLowerCase().includes(searchQuery.toLowerCase()))
-      .map(m => ({ ...m, _cat: 'Main' })),
-    ...visibleMenuData.drinks
-      .filter(m => m.name.toLowerCase().includes(searchQuery.toLowerCase()) || (m.description || '').toLowerCase().includes(searchQuery.toLowerCase()))
-      .map(m => ({ ...m, _cat: 'Drink' })),
-  ] : null
+      .map(m => ({ ...m, _cat: tab.label }))
+  ) : null
 
   const rawMenuItems = visibleMenuData[activeMenuTab] || []
   const tabCategories = dynamicCategories[activeMenuTab] || DEFAULT_CATEGORY_FILTERS[activeMenuTab] || []
@@ -758,7 +784,7 @@ export default function RestaurantWebsite() {
         {activeNav === 'menu' && (
           <div style={{ paddingTop: '12px' }}>
             <div style={{ display: 'flex', alignItems: 'center', background: darkMode ? 'rgba(0,0,0,0.07)' : 'rgba(255,255,255,0.09)', borderRadius: '16px', padding: '5px' }}>
-              {MENU_TABS.map(tab => {
+              {menuTabs.map(tab => {
                 const active = activeMenuTab === tab.id
                 return (
                   <button key={tab.id} className="tab-pill" onClick={() => setActiveMenuTab(tab.id)} style={{

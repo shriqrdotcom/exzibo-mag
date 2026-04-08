@@ -1157,6 +1157,14 @@ function ImageUploadField({ value, onChange, accentStart }) {
 function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast }) {
   const storageKey = `exzibo_menu_${restaurantId}`
   const filtersKey = `exzibo_menu_filters_${restaurantId}`
+  const tabsKey   = `exzibo_tabs_${restaurantId}`
+
+  function loadTabs() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(tabsKey))
+      return saved?.length ? saved : CATEGORY_TABS
+    } catch { return CATEGORY_TABS }
+  }
 
   function loadMenu() {
     try {
@@ -1172,8 +1180,9 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast }
     } catch { return DEFAULT_CAT_FILTERS }
   }
 
+  const [categoryTabs, setCategoryTabs] = useState(loadTabs)
   const [menu, setMenu] = useState(loadMenu)
-  const [activeCategory, setActiveCategory] = useState('starters')
+  const [activeCategory, setActiveCategory] = useState(() => loadTabs()[0]?.key || 'starters')
   const [editingId, setEditingId] = useState(null)
   const [editDraft, setEditDraft] = useState(null)
   const [showAdd, setShowAdd] = useState(false)
@@ -1181,15 +1190,21 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast }
   const [editFoodCard, setEditFoodCard] = useState(false)
   const [newAddon, setNewAddon] = useState({ label: '', price: '' })
   const [catFilters, setCatFilters] = useState(loadCatFilters)
-  const [activeCatFilter, setActiveCatFilter] = useState({ starters: 'all', mains: 'all', drinks: 'all' })
+  const [activeCatFilter, setActiveCatFilter] = useState(() =>
+    Object.fromEntries(loadTabs().map(t => [t.key, 'all']))
+  )
   const [hoveredCatId, setHoveredCatId] = useState(null)
   const [showAddCatModal, setShowAddCatModal] = useState(false)
   const [newCat, setNewCat] = useState({ emoji: '', label: '', image: null })
   const [assignModalCat, setAssignModalCat] = useState(null)
   const [savedAll, setSavedAll] = useState(false)
+  const [showSectionDropdown, setShowSectionDropdown] = useState(false)
+  const [showNewSectionModal, setShowNewSectionModal] = useState(false)
+  const [newSectionDraft, setNewSectionDraft] = useState({ label: '', emoji: '🍽️' })
   const saveAllTimer = useRef(null)
   const longPressTimer = useRef(null)
   const catImageInputRef = useRef(null)
+  const sectionDropdownRef = useRef(null)
 
   function saveMenu(updated) {
     localStorage.setItem(storageKey, JSON.stringify(updated))
@@ -1204,15 +1219,57 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast }
     window.dispatchEvent(new StorageEvent('storage', { key: filtersKey, newValue: JSON.stringify(updated) }))
   }
 
+  function saveTabs(updated) {
+    localStorage.setItem(tabsKey, JSON.stringify(updated))
+    setCategoryTabs(updated)
+    window.dispatchEvent(new StorageEvent('storage', { key: tabsKey, newValue: JSON.stringify(updated) }))
+  }
+
   function handleSaveAll() {
     localStorage.setItem(storageKey, JSON.stringify(menu))
     window.dispatchEvent(new StorageEvent('storage', { key: storageKey, newValue: JSON.stringify(menu) }))
     localStorage.setItem(filtersKey, JSON.stringify(catFilters))
     window.dispatchEvent(new StorageEvent('storage', { key: filtersKey, newValue: JSON.stringify(catFilters) }))
+    localStorage.setItem(tabsKey, JSON.stringify(categoryTabs))
+    window.dispatchEvent(new StorageEvent('storage', { key: tabsKey, newValue: JSON.stringify(categoryTabs) }))
     showToast('✅ Changes saved!')
     setSavedAll(true)
     clearTimeout(saveAllTimer.current)
     saveAllTimer.current = setTimeout(() => setSavedAll(false), 2500)
+  }
+
+  function addSection() {
+    if (!newSectionDraft.label.trim()) return
+    const key = newSectionDraft.label.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_') + '_' + Date.now()
+    const newTab = { key, label: newSectionDraft.label.trim(), emoji: newSectionDraft.emoji || '🍽️' }
+    const updatedTabs = [...categoryTabs, newTab]
+    const updatedMenu = { ...menu, [key]: [] }
+    const updatedFilters = { ...catFilters, [key]: [{ id: 'all', emoji: '🍽️', label: 'All', image: null, assignedItems: [] }] }
+    saveTabs(updatedTabs)
+    localStorage.setItem(storageKey, JSON.stringify(updatedMenu)); setMenu(updatedMenu)
+    window.dispatchEvent(new StorageEvent('storage', { key: storageKey, newValue: JSON.stringify(updatedMenu) }))
+    localStorage.setItem(filtersKey, JSON.stringify(updatedFilters)); setCatFilters(updatedFilters)
+    window.dispatchEvent(new StorageEvent('storage', { key: filtersKey, newValue: JSON.stringify(updatedFilters) }))
+    setActiveCatFilter(prev => ({ ...prev, [key]: 'all' }))
+    setActiveCategory(key)
+    setNewSectionDraft({ label: '', emoji: '🍽️' })
+    setShowNewSectionModal(false)
+    showToast('✅ Section created!')
+  }
+
+  function deleteSection(key) {
+    if (categoryTabs.length <= 1) { showToast('⚠️ Cannot delete the only section!'); return }
+    const updatedTabs = categoryTabs.filter(t => t.key !== key)
+    const { [key]: _m, ...updatedMenu } = menu
+    const { [key]: _f, ...updatedFilters } = catFilters
+    saveTabs(updatedTabs)
+    localStorage.setItem(storageKey, JSON.stringify(updatedMenu)); setMenu(updatedMenu)
+    window.dispatchEvent(new StorageEvent('storage', { key: storageKey, newValue: JSON.stringify(updatedMenu) }))
+    localStorage.setItem(filtersKey, JSON.stringify(updatedFilters)); setCatFilters(updatedFilters)
+    window.dispatchEvent(new StorageEvent('storage', { key: filtersKey, newValue: JSON.stringify(updatedFilters) }))
+    setActiveCategory(updatedTabs[0].key)
+    setShowSectionDropdown(false)
+    showToast('🗑️ Section deleted!')
   }
 
   function deleteItem(id) {
@@ -1353,7 +1410,7 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast }
             Menu
           </h1>
           <p style={{ fontSize: '12px', color: '#94A3B8', margin: 0, fontWeight: 600 }}>
-            {items.length} item{items.length !== 1 ? 's' : ''} in {CATEGORY_TABS.find(c => c.key === activeCategory)?.label}
+            {items.length} item{items.length !== 1 ? 's' : ''} in {categoryTabs.find(c => c.key === activeCategory)?.label}
           </p>
         </div>
         <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
@@ -1373,22 +1430,115 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast }
           >
             {savedAll ? <><Check size={14} /> SAVED!</> : <><Save size={14} /> SAVE CHANGES</>}
           </button>
-          <button
-            onClick={() => { setShowAdd(true); setEditingId(null); setAddDraft(BLANK_ITEM) }}
-            style={{
-              display: 'flex', alignItems: 'center', gap: '6px',
-              padding: '10px 18px',
-              background: `linear-gradient(135deg, ${accentStart}, ${accentEnd})`,
-              border: 'none', borderRadius: '50px',
-              color: '#fff', fontSize: '12px', fontWeight: 800, letterSpacing: '0.06em',
-              cursor: 'pointer',
-              boxShadow: `0 4px 14px ${accentStart}50`,
-            }}
-          >
-            <Plus size={14} /> ADD ITEM
-          </button>
+          <div style={{ position: 'relative' }} ref={sectionDropdownRef}>
+            <div style={{ display: 'flex', borderRadius: '50px', overflow: 'hidden', boxShadow: `0 4px 14px ${accentStart}50` }}>
+              <button
+                onClick={() => { setShowAdd(true); setEditingId(null); setAddDraft(BLANK_ITEM) }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '6px',
+                  padding: '10px 16px',
+                  background: `linear-gradient(135deg, ${accentStart}, ${accentEnd})`,
+                  border: 'none',
+                  color: '#fff', fontSize: '12px', fontWeight: 800, letterSpacing: '0.06em',
+                  cursor: 'pointer',
+                }}
+              >
+                <Plus size={14} /> ADD ITEM
+              </button>
+              <div style={{ width: '1px', background: 'rgba(255,255,255,0.25)', flexShrink: 0 }} />
+              <button
+                onClick={() => setShowSectionDropdown(v => !v)}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  padding: '10px 12px',
+                  background: `linear-gradient(135deg, ${accentStart}, ${accentEnd})`,
+                  border: 'none',
+                  color: '#fff', fontSize: '12px',
+                  cursor: 'pointer',
+                }}
+                title="Section options"
+              >
+                ▾
+              </button>
+            </div>
+            {showSectionDropdown && (
+              <div style={{
+                position: 'absolute', top: 'calc(100% + 8px)', right: 0,
+                background: '#fff', borderRadius: '14px',
+                boxShadow: '0 8px 32px rgba(0,0,0,0.14)',
+                border: '1px solid #e2e8f0',
+                minWidth: '190px', zIndex: 100,
+                overflow: 'hidden',
+              }}>
+                <button
+                  onClick={() => { setShowNewSectionModal(true); setShowSectionDropdown(false) }}
+                  style={{
+                    width: '100%', padding: '12px 16px', border: 'none', background: 'transparent',
+                    display: 'flex', alignItems: 'center', gap: '10px',
+                    fontSize: '12px', fontWeight: 700, color: '#0f172a',
+                    cursor: 'pointer', textAlign: 'left',
+                  }}
+                >
+                  <Plus size={14} color={accentStart} /> New Section
+                </button>
+                <div style={{ height: '1px', background: '#f1f5f9' }} />
+                <button
+                  onClick={() => deleteSection(activeCategory)}
+                  style={{
+                    width: '100%', padding: '12px 16px', border: 'none', background: 'transparent',
+                    display: 'flex', alignItems: 'center', gap: '10px',
+                    fontSize: '12px', fontWeight: 700, color: '#EF4444',
+                    cursor: 'pointer', textAlign: 'left',
+                  }}
+                >
+                  <Trash2 size={14} color="#EF4444" /> Delete "{categoryTabs.find(t => t.key === activeCategory)?.label}"
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
+      {showSectionDropdown && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 99 }} onClick={() => setShowSectionDropdown(false)} />
+      )}
+
+      {/* New Section Modal */}
+      {showNewSectionModal && (
+        <div style={{
+          position: 'fixed', inset: 0,
+          background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(6px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 300,
+        }} onClick={() => setShowNewSectionModal(false)}>
+          <div style={{
+            background: '#fff', borderRadius: '24px', padding: '28px',
+            width: '90%', maxWidth: '360px',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.2)',
+          }} onClick={e => e.stopPropagation()}>
+            <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#0f172a', marginBottom: '4px' }}>New Section</h3>
+            <p style={{ fontSize: '12px', color: '#94A3B8', marginBottom: '20px', fontWeight: 500 }}>Add a new menu section (e.g. Desserts, Specials)</p>
+            <div style={{ display: 'flex', gap: '10px', marginBottom: '14px' }}>
+              <input
+                value={newSectionDraft.emoji}
+                onChange={e => setNewSectionDraft(d => ({ ...d, emoji: e.target.value }))}
+                placeholder="🍽️"
+                style={{ width: '56px', padding: '10px', borderRadius: '12px', border: '1.5px solid #e2e8f0', fontSize: '20px', textAlign: 'center', outline: 'none', fontFamily: 'inherit', flexShrink: 0 }}
+              />
+              <input
+                value={newSectionDraft.label}
+                onChange={e => setNewSectionDraft(d => ({ ...d, label: e.target.value }))}
+                placeholder="Section name *"
+                onKeyDown={e => e.key === 'Enter' && addSection()}
+                style={{ flex: 1, padding: '10px 14px', borderRadius: '12px', border: '1.5px solid #e2e8f0', fontSize: '13px', fontWeight: 500, color: '#0f172a', outline: 'none', fontFamily: 'inherit' }}
+              />
+            </div>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button onClick={() => setShowNewSectionModal(false)} style={{ flex: 1, padding: '11px', background: 'rgba(248,250,252,0.9)', border: '1.5px solid #e2e8f0', borderRadius: '50px', color: '#94A3B8', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}>Cancel</button>
+              <button onClick={addSection} style={{ flex: 2, padding: '11px', background: `linear-gradient(135deg, ${accentStart}, ${accentEnd})`, border: 'none', borderRadius: '50px', color: '#fff', fontSize: '12px', fontWeight: 800, letterSpacing: '0.05em', cursor: 'pointer', boxShadow: `0 4px 14px ${accentStart}40` }}>CREATE SECTION</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Category tabs */}
       <div style={{
@@ -1403,7 +1553,7 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast }
         boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
         gap: '4px',
       }}>
-        {CATEGORY_TABS.map(tab => {
+        {categoryTabs.map(tab => {
           const active = activeCategory === tab.key
           return (
             <button
@@ -1440,7 +1590,7 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast }
       }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
           <span style={{ fontSize: '10px', fontWeight: 800, letterSpacing: '0.12em', color: '#94A3B8', textTransform: 'uppercase' }}>
-            Category Filters · {CATEGORY_TABS.find(c => c.key === activeCategory)?.label}
+            Category Filters · {categoryTabs.find(c => c.key === activeCategory)?.label}
           </span>
           <button
             onClick={() => setShowAddCatModal(true)}
@@ -1580,7 +1730,7 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast }
           }} onClick={e => e.stopPropagation()}>
             <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#0f172a', marginBottom: '4px' }}>Add Category Filter</h3>
             <p style={{ fontSize: '12px', color: '#94A3B8', marginBottom: '20px', fontWeight: 500 }}>
-              Adding to <span style={{ color: accentStart, fontWeight: 700 }}>{CATEGORY_TABS.find(c => c.key === activeCategory)?.label}</span> section
+              Adding to <span style={{ color: accentStart, fontWeight: 700 }}>{categoryTabs.find(c => c.key === activeCategory)?.label}</span> section
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
 
@@ -1670,7 +1820,7 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast }
                 <div>
                   <div style={{ fontSize: '16px', fontWeight: 800, color: '#0f172a' }}>Assign Items to "{cat.label}"</div>
                   <div style={{ fontSize: '11px', color: '#94A3B8', fontWeight: 500, marginTop: '2px' }}>
-                    {assigned.length} of {sectionItems.length} items assigned · {CATEGORY_TABS.find(c => c.key === activeCategory)?.label}
+                    {assigned.length} of {sectionItems.length} items assigned · {categoryTabs.find(c => c.key === activeCategory)?.label}
                   </div>
                 </div>
                 <button onClick={() => setAssignModalCat(null)} style={{ marginLeft: 'auto', background: 'rgba(0,0,0,0.05)', border: 'none', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -1721,7 +1871,7 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast }
           boxShadow: `0 4px 24px ${accentStart}15`,
         }}>
           <div style={{ fontSize: '11px', fontWeight: 800, color: accentStart, letterSpacing: '0.1em', marginBottom: '14px' }}>
-            NEW ITEM — {CATEGORY_TABS.find(c => c.key === activeCategory)?.label.toUpperCase()}
+            NEW ITEM — {categoryTabs.find(c => c.key === activeCategory)?.label.toUpperCase()}
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             <ImageUploadField
