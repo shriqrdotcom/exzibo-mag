@@ -510,12 +510,13 @@ export default function MenuEditor() {
                     </button>
                   </div>
                 </div>
+                <div style={{ width: '100%', overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: '6px' }}>
                 <div style={{
                   display: 'flex', gap: '10px',
                   justifyContent: 'center',
-                  overflowX: 'auto',
-                  paddingBottom: '6px',
-                  scrollbarWidth: 'none',
+                  flexWrap: 'wrap',
+                  minWidth: 'max-content',
+                  margin: '0 auto',
                 }}>
                   {(categoryFilters[activeTab] || []).map(cat => {
                     const isActive = activeCategoryFilter[activeTab] === cat.id
@@ -601,6 +602,7 @@ export default function MenuEditor() {
                       </div>
                     )
                   })}
+                </div>
                 </div>
               </div>
 
