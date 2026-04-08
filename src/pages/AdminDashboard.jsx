@@ -2145,31 +2145,30 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
                       )
                     })}
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setEditDraft(d => ({ ...d, veg: !d.veg }))}
-                    style={{
-                      display: 'flex', alignItems: 'center', gap: '8px',
-                      padding: '8px 14px', borderRadius: '50px', cursor: 'pointer',
-                      background: editDraft.veg ? '#f0fdf4' : '#fff5f5',
-                      border: `1.5px solid ${editDraft.veg ? '#22c55e' : '#ef4444'}`,
-                      color: editDraft.veg ? '#16a34a' : '#dc2626',
-                      fontSize: '11px', fontWeight: 800, letterSpacing: '0.06em',
-                      transition: 'all 0.2s', alignSelf: 'flex-start',
-                    }}
-                  >
-                    <span style={{
-                      width: '14px', height: '14px', borderRadius: '3px', flexShrink: 0,
-                      border: `2px solid ${editDraft.veg ? '#22c55e' : '#ef4444'}`,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    }}>
-                      <span style={{
-                        width: '6px', height: '6px', borderRadius: '50%',
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <span style={{ fontSize: '11px', fontWeight: 700, color: '#ef4444', letterSpacing: '0.06em' }}>NON-VEG</span>
+                    <div
+                      onClick={() => setEditDraft(d => ({ ...d, veg: !d.veg }))}
+                      style={{
+                        width: '44px', height: '24px', borderRadius: '12px',
                         background: editDraft.veg ? '#22c55e' : '#ef4444',
+                        position: 'relative', cursor: 'pointer',
+                        transition: 'background 0.25s ease',
+                        boxShadow: editDraft.veg ? '0 0 10px rgba(34,197,94,0.4)' : '0 0 10px rgba(239,68,68,0.4)',
+                        flexShrink: 0,
+                      }}
+                    >
+                      <div style={{
+                        position: 'absolute', top: '4px',
+                        left: editDraft.veg ? '22px' : '4px',
+                        width: '16px', height: '16px',
+                        borderRadius: '50%', background: '#fff',
+                        transition: 'left 0.25s ease',
+                        boxShadow: '0 1px 4px rgba(0,0,0,0.2)',
                       }} />
-                    </span>
-                    {editDraft.veg ? 'VEG' : 'NON-VEG'}
-                  </button>
+                    </div>
+                    <span style={{ fontSize: '11px', fontWeight: 700, color: '#22c55e', letterSpacing: '0.06em' }}>VEG</span>
+                  </div>
                 </div>
                 {/* ── Food Card: Add-on Editor ── */}
                 <div style={{ marginTop: '10px' }}>
