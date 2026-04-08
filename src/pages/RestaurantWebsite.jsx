@@ -124,8 +124,31 @@ function buildTheme(dark) {
   }
 }
 
+function normalizeItem(item) {
+  return {
+    ...item,
+    description: item.description || item.desc || '',
+    img: item.img || null,
+    veg: item.veg !== undefined
+      ? item.veg
+      : (item.tags || []).some(t => ['Vegetarian', 'Vegan'].includes(t)),
+    oldPrice: item.oldPrice || Math.round(item.price * 1.5),
+  }
+}
+
 function injectOldPrice(item) {
   return { ...item, oldPrice: item.oldPrice || Math.round(item.price * 1.5) }
+}
+
+function loadMenuFromStorage(id) {
+  const saved = localStorage.getItem(`exzibo_menu_${id}`)
+  if (!saved) return null
+  const parsed = JSON.parse(saved)
+  return {
+    starters: parsed.starters?.length ? parsed.starters.map(normalizeItem) : MENU_FALLBACK.starters,
+    mains:    parsed.mains?.length    ? parsed.mains.map(normalizeItem)    : MENU_FALLBACK.mains,
+    drinks:   parsed.drinks?.length   ? parsed.drinks.map(normalizeItem)   : MENU_FALLBACK.drinks,
+  }
 }
 
 export default function RestaurantWebsite() {
@@ -413,27 +436,31 @@ export default function RestaurantWebsite() {
         images: FALLBACK_IMAGES,
         socialLinks: { instagram: '#', facebook: '#', twitter: '#', website: '#' },
       })
-      setMenuData(MENU_FALLBACK)
+      setMenuData(loadMenuFromStorage('demo') || MENU_FALLBACK)
       return
     }
     const restaurants = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
     const found = restaurants.find(r => r.slug === slug || r.id === slug)
     if (found) {
       setRestaurant(found)
-      const saved = localStorage.getItem(`exzibo_menu_${found.id}`)
-      if (saved) {
-        const parsed = JSON.parse(saved)
-        setMenuData({
-          starters: parsed.starters?.length ? parsed.starters.map(injectOldPrice) : MENU_FALLBACK.starters,
-          mains: parsed.mains?.length ? parsed.mains.map(injectOldPrice) : MENU_FALLBACK.mains,
-          drinks: parsed.drinks?.length ? parsed.drinks.map(injectOldPrice) : MENU_FALLBACK.drinks,
-        })
-      } else {
-        setMenuData(MENU_FALLBACK)
-      }
+      setMenuData(loadMenuFromStorage(found.id) || MENU_FALLBACK)
     } else {
       setNotFound(true)
     }
+  }, [slug])
+
+  useEffect(() => {
+    function onStorageChange(e) {
+      if (!e.key?.startsWith('exzibo_menu_')) return
+      const restaurants = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
+      const found = restaurants.find(r => r.slug === slug || r.id === slug)
+      const id = found?.id || (slug === 'demo' ? 'demo' : null)
+      if (!id) return
+      if (e.key !== `exzibo_menu_${id}`) return
+      setMenuData(loadMenuFromStorage(id) || MENU_FALLBACK)
+    }
+    window.addEventListener('storage', onStorageChange)
+    return () => window.removeEventListener('storage', onStorageChange)
   }, [slug])
 
   useEffect(() => {

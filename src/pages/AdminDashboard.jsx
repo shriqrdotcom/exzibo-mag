@@ -1052,6 +1052,7 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast }
   function saveMenu(updated) {
     localStorage.setItem(storageKey, JSON.stringify(updated))
     setMenu(updated)
+    window.dispatchEvent(new StorageEvent('storage', { key: storageKey, newValue: JSON.stringify(updated) }))
     showToast('✅ Menu saved!')
   }
 
