@@ -511,6 +511,7 @@ export default function MenuEditor() {
                 </div>
                 <div style={{
                   display: 'flex', gap: '10px',
+                  justifyContent: 'center',
                   overflowX: 'auto',
                   paddingBottom: '6px',
                   scrollbarWidth: 'none',
