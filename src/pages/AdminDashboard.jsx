@@ -1030,7 +1030,105 @@ const CATEGORY_TABS = [
   { key: 'drinks',   label: 'Drinks',   emoji: '🍹' },
 ]
 
-const BLANK_ITEM = { name: '', desc: '', price: '', tags: [] }
+const BLANK_ITEM = { name: '', desc: '', price: '', tags: [], img: null }
+
+function ImageUploadField({ value, onChange, accentStart }) {
+  const inputRef = React.useRef(null)
+
+  function handleFile(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = (ev) => onChange(ev.target.result)
+    reader.readAsDataURL(file)
+    e.target.value = ''
+  }
+
+  return (
+    <div>
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        style={{ display: 'none' }}
+        onChange={handleFile}
+      />
+      {value ? (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <img
+            src={value}
+            alt="Food"
+            style={{
+              width: '72px', height: '72px', borderRadius: '14px',
+              objectFit: 'cover',
+              border: '2px solid rgba(255,255,255,0.7)',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.12)',
+              flexShrink: 0,
+            }}
+          />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1 }}>
+            <button
+              type="button"
+              onClick={() => inputRef.current?.click()}
+              style={{
+                padding: '8px 14px',
+                background: `${accentStart}12`,
+                border: `1.5px solid ${accentStart}30`,
+                borderRadius: '50px', cursor: 'pointer',
+                fontSize: '11px', fontWeight: 800, color: accentStart,
+                letterSpacing: '0.06em',
+              }}
+            >
+              CHANGE PHOTO
+            </button>
+            <button
+              type="button"
+              onClick={() => onChange(null)}
+              style={{
+                padding: '6px 14px',
+                background: 'transparent',
+                border: '1.5px solid #FECACA',
+                borderRadius: '50px', cursor: 'pointer',
+                fontSize: '11px', fontWeight: 700, color: '#EF4444',
+              }}
+            >
+              REMOVE
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => inputRef.current?.click()}
+          style={{
+            width: '100%', padding: '18px',
+            background: 'rgba(248,250,252,0.9)',
+            border: '1.5px dashed #CBD5E1',
+            borderRadius: '14px', cursor: 'pointer',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px',
+            transition: 'border-color 0.2s, background 0.2s',
+          }}
+          onMouseEnter={e => {
+            e.currentTarget.style.borderColor = accentStart
+            e.currentTarget.style.background = `${accentStart}08`
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.borderColor = '#CBD5E1'
+            e.currentTarget.style.background = 'rgba(248,250,252,0.9)'
+          }}
+        >
+          <span style={{ fontSize: '24px' }}>📷</span>
+          <span style={{ fontSize: '12px', fontWeight: 700, color: '#64748B', letterSpacing: '0.04em' }}>
+            TAP TO UPLOAD PHOTO
+          </span>
+          <span style={{ fontSize: '10px', color: '#94A3B8', fontWeight: 500 }}>
+            JPG, PNG, WEBP supported
+          </span>
+        </button>
+      )}
+    </div>
+  )
+}
 
 function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast }) {
   const storageKey = `exzibo_menu_${restaurantId}`
@@ -1184,6 +1282,11 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast }
             NEW ITEM — {CATEGORY_TABS.find(c => c.key === activeCategory)?.label.toUpperCase()}
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <ImageUploadField
+              value={addDraft.img}
+              onChange={v => setAddDraft(d => ({ ...d, img: v }))}
+              accentStart={accentStart}
+            />
             <input
               value={addDraft.name} onChange={e => setAddDraft(d => ({ ...d, name: e.target.value }))}
               placeholder="Item name *" style={inputSt}
@@ -1265,6 +1368,11 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast }
                   EDITING ITEM
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <ImageUploadField
+                    value={editDraft.img}
+                    onChange={v => setEditDraft(d => ({ ...d, img: v }))}
+                    accentStart={accentStart}
+                  />
                   <input
                     value={editDraft.name} onChange={e => setEditDraft(d => ({ ...d, name: e.target.value }))}
                     style={inputSt}
@@ -1318,7 +1426,19 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast }
             ) : (
               /* ── View Mode ── */
               <>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px', gap: '12px' }}>
+                  {item.img && (
+                    <img
+                      src={item.img}
+                      alt={item.name}
+                      style={{
+                        width: '56px', height: '56px', borderRadius: '12px',
+                        objectFit: 'cover', flexShrink: 0,
+                        border: '1px solid rgba(0,0,0,0.06)',
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.10)',
+                      }}
+                    />
+                  )}
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: '15px', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.01em' }}>
                       {item.name}
@@ -1329,7 +1449,7 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast }
                       </div>
                     )}
                   </div>
-                  <div style={{ textAlign: 'right', marginLeft: '12px', flexShrink: 0 }}>
+                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
                     <div style={{ fontSize: '17px', fontWeight: 900, color: '#0f172a', letterSpacing: '-0.01em' }}>
                       {item.price.toLocaleString()}
                     </div>
