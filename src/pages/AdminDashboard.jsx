@@ -4,7 +4,7 @@ import {
   Bell, CheckCircle, XCircle,
   ClipboardList, BookOpen, Users, Settings, ArrowLeft,
   Palette, DollarSign, Type, Save, Check, CalendarDays, UtensilsCrossed,
-  SlidersHorizontal,
+  SlidersHorizontal, Plus, Pencil, Trash2,
 } from 'lucide-react'
 
 const GLOBAL_CONFIG_KEY = 'exzibo_admin_global_config'
@@ -369,6 +369,14 @@ export default function AdminDashboard() {
             onSave={saveSettings}
             saved={saved}
             isDefault={isDefault}
+          />
+        ) : activeNav === 'menu' ? (
+          <MenuPanel
+            restaurantId={isDefault ? 'demo' : id}
+            accentStart={accentStart}
+            accentEnd={accentEnd}
+            currency={globalConfig.currency}
+            showToast={showToast}
           />
         ) : (
           <>
@@ -986,6 +994,396 @@ function BookingCard({ booking, index, accentStart, accentEnd, bookingSettings =
           💬 {booking.notes}
         </div>
       ) : null}
+    </div>
+  )
+}
+
+/* ─── Menu Panel ─── */
+const INITIAL_MENU = {
+  starters: [
+    { id: 1, name: 'Truffle Beef Carpaccio', desc: 'Thinly sliced wagyu, truffle oil, parmesan shavings, wild arugula.', price: 2100, tags: ['Popular', 'Gluten Free'] },
+    { id: 2, name: 'Atlantic Oysters', desc: 'Half dozen fresh oysters, mignonette sauce, lemon wedges.', price: 2850, tags: ['Seasonal'] },
+    { id: 3, name: 'Heirloom Burrata', desc: 'Creamy burrata, heirloom tomatoes, basil pesto, pine nuts.', price: 1650, tags: ['Vegetarian'] },
+  ],
+  mains: [
+    { id: 4, name: 'A5 Wagyu Ribeye', desc: 'Japanese A5 wagyu, roasted bone marrow, truffle jus, seasonal vegetables.', price: 15500, tags: ['Popular'] },
+    { id: 5, name: 'Lobster Thermidor', desc: 'Atlantic lobster, cognac cream, gruyère gratin, chive oil.', price: 7950, tags: ['Seasonal'] },
+    { id: 6, name: 'Forest Mushroom Risotto', desc: 'Arborio rice, porcini, chanterelle, truffle oil, aged parmesan.', price: 3500, tags: ['Vegetarian', 'Gluten Free'] },
+  ],
+  drinks: [
+    { id: 7, name: 'Noir Negroni', desc: 'Aged gin, Campari, premium vermouth, black walnut bitters.', price: 1850, tags: ['Popular'] },
+    { id: 8, name: 'Champagne Selection', desc: 'Curated vintage champagnes by the glass or bottle.', price: 3750, tags: ['Seasonal'] },
+    { id: 9, name: 'Pressed Botanicals', desc: 'House-pressed botanical blend, elderflower, cucumber, tonic.', price: 1350, tags: ['Vegetarian'] },
+  ],
+}
+
+const TAG_COLORS = {
+  Popular:     { bg: '#FEF9C3', color: '#CA8A04', border: '#FDE68A' },
+  'Gluten Free': { bg: '#EFF6FF', color: '#2563EB', border: '#BFDBFE' },
+  Vegetarian:  { bg: '#F0FDF4', color: '#16A34A', border: '#BBF7D0' },
+  Seasonal:    { bg: '#FFF7ED', color: '#EA580C', border: '#FED7AA' },
+}
+
+const CATEGORY_TABS = [
+  { key: 'starters', label: 'Starters', emoji: '🥗' },
+  { key: 'mains',    label: 'Mains',    emoji: '🍖' },
+  { key: 'drinks',   label: 'Drinks',   emoji: '🍹' },
+]
+
+const BLANK_ITEM = { name: '', desc: '', price: '', tags: [] }
+
+function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast }) {
+  const storageKey = `exzibo_menu_${restaurantId}`
+
+  function loadMenu() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(storageKey))
+      return saved || INITIAL_MENU
+    } catch { return INITIAL_MENU }
+  }
+
+  const [menu, setMenu] = useState(loadMenu)
+  const [activeCategory, setActiveCategory] = useState('starters')
+  const [editingId, setEditingId] = useState(null)
+  const [editDraft, setEditDraft] = useState(null)
+  const [showAdd, setShowAdd] = useState(false)
+  const [addDraft, setAddDraft] = useState(BLANK_ITEM)
+
+  function saveMenu(updated) {
+    localStorage.setItem(storageKey, JSON.stringify(updated))
+    setMenu(updated)
+    showToast('✅ Menu saved!')
+  }
+
+  function deleteItem(id) {
+    const updated = { ...menu, [activeCategory]: menu[activeCategory].filter(i => i.id !== id) }
+    saveMenu(updated)
+  }
+
+  function startEdit(item) {
+    setEditingId(item.id)
+    setEditDraft({ ...item, price: String(item.price) })
+    setShowAdd(false)
+  }
+
+  function saveEdit() {
+    const updated = {
+      ...menu,
+      [activeCategory]: menu[activeCategory].map(i =>
+        i.id === editingId ? { ...editDraft, price: parseFloat(editDraft.price) || 0 } : i
+      ),
+    }
+    saveMenu(updated)
+    setEditingId(null)
+    setEditDraft(null)
+  }
+
+  function addItem() {
+    if (!addDraft.name.trim()) return
+    const item = { id: Date.now(), name: addDraft.name.trim(), desc: addDraft.desc.trim(), price: parseFloat(addDraft.price) || 0, tags: addDraft.tags }
+    const updated = { ...menu, [activeCategory]: [...menu[activeCategory], item] }
+    saveMenu(updated)
+    setAddDraft(BLANK_ITEM)
+    setShowAdd(false)
+  }
+
+  function toggleTag(draft, setDraft, tag) {
+    const has = draft.tags.includes(tag)
+    setDraft(d => ({ ...d, tags: has ? d.tags.filter(t => t !== tag) : [...d.tags, tag] }))
+  }
+
+  const items = menu[activeCategory] || []
+
+  const inputSt = {
+    width: '100%', boxSizing: 'border-box',
+    padding: '10px 13px',
+    background: 'rgba(248,250,252,0.9)',
+    border: '1.5px solid #e2e8f0',
+    borderRadius: '12px',
+    fontSize: '13px', fontWeight: 500, color: '#0f172a',
+    outline: 'none', fontFamily: 'inherit',
+  }
+
+  return (
+    <div style={{ animation: 'fadeSlideUp 0.3s ease', paddingTop: '24px' }}>
+
+      {/* Header row */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 4px 20px' }}>
+        <div>
+          <h1 style={{ fontSize: '28px', fontWeight: 900, color: '#0f172a', margin: '0 0 2px', letterSpacing: '-0.02em' }}>
+            Menu
+          </h1>
+          <p style={{ fontSize: '12px', color: '#94A3B8', margin: 0, fontWeight: 600 }}>
+            {items.length} item{items.length !== 1 ? 's' : ''} in {CATEGORY_TABS.find(c => c.key === activeCategory)?.label}
+          </p>
+        </div>
+        <button
+          onClick={() => { setShowAdd(true); setEditingId(null); setAddDraft(BLANK_ITEM) }}
+          style={{
+            display: 'flex', alignItems: 'center', gap: '6px',
+            padding: '10px 18px',
+            background: `linear-gradient(135deg, ${accentStart}, ${accentEnd})`,
+            border: 'none', borderRadius: '50px',
+            color: '#fff', fontSize: '12px', fontWeight: 800, letterSpacing: '0.06em',
+            cursor: 'pointer',
+            boxShadow: `0 4px 14px ${accentStart}50`,
+          }}
+        >
+          <Plus size={14} /> ADD ITEM
+        </button>
+      </div>
+
+      {/* Category tabs */}
+      <div style={{
+        display: 'flex',
+        background: 'rgba(255,255,255,0.65)',
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)',
+        borderRadius: '16px',
+        padding: '5px',
+        marginBottom: '16px',
+        border: '1px solid rgba(255,255,255,0.7)',
+        boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
+        gap: '4px',
+      }}>
+        {CATEGORY_TABS.map(tab => {
+          const active = activeCategory === tab.key
+          return (
+            <button
+              key={tab.key}
+              onClick={() => { setActiveCategory(tab.key); setEditingId(null); setShowAdd(false) }}
+              style={{
+                flex: 1,
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                padding: '10px 10px',
+                border: 'none', borderRadius: '12px', cursor: 'pointer',
+                fontSize: '12px', fontWeight: 700,
+                background: active ? `linear-gradient(135deg, ${accentStart}, ${accentEnd})` : 'transparent',
+                color: active ? '#fff' : '#94A3B8',
+                boxShadow: active ? `0 4px 14px ${accentStart}50` : 'none',
+                transition: 'all 0.2s ease',
+              }}
+            >
+              <span>{tab.emoji}</span> {tab.label}
+            </button>
+          )
+        })}
+      </div>
+
+      {/* Add Item Form */}
+      {showAdd && (
+        <div className="order-card" style={{
+          background: 'rgba(255,255,255,0.85)',
+          backdropFilter: 'blur(12px)',
+          borderRadius: '20px', padding: '20px', marginBottom: '14px',
+          border: `1.5px solid ${accentStart}30`,
+          boxShadow: `0 4px 24px ${accentStart}15`,
+        }}>
+          <div style={{ fontSize: '11px', fontWeight: 800, color: accentStart, letterSpacing: '0.1em', marginBottom: '14px' }}>
+            NEW ITEM — {CATEGORY_TABS.find(c => c.key === activeCategory)?.label.toUpperCase()}
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <input
+              value={addDraft.name} onChange={e => setAddDraft(d => ({ ...d, name: e.target.value }))}
+              placeholder="Item name *" style={inputSt}
+              onFocus={e => e.target.style.borderColor = accentStart}
+              onBlur={e => e.target.style.borderColor = '#e2e8f0'}
+            />
+            <textarea
+              value={addDraft.desc} onChange={e => setAddDraft(d => ({ ...d, desc: e.target.value }))}
+              placeholder="Description" rows={2}
+              style={{ ...inputSt, resize: 'vertical' }}
+              onFocus={e => e.target.style.borderColor = accentStart}
+              onBlur={e => e.target.style.borderColor = '#e2e8f0'}
+            />
+            <input
+              type="number" value={addDraft.price} onChange={e => setAddDraft(d => ({ ...d, price: e.target.value }))}
+              placeholder={`Price (${currency})`} style={inputSt}
+              onFocus={e => e.target.style.borderColor = accentStart}
+              onBlur={e => e.target.style.borderColor = '#e2e8f0'}
+            />
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+              {Object.keys(TAG_COLORS).map(tag => {
+                const active = addDraft.tags.includes(tag)
+                const tc = TAG_COLORS[tag]
+                return (
+                  <button key={tag} onClick={() => toggleTag(addDraft, setAddDraft, tag)} style={{
+                    padding: '5px 12px', borderRadius: '50px', cursor: 'pointer',
+                    background: active ? tc.bg : 'transparent',
+                    border: `1.5px solid ${active ? tc.border : '#e2e8f0'}`,
+                    color: active ? tc.color : '#94A3B8',
+                    fontSize: '11px', fontWeight: 700, transition: 'all 0.15s',
+                  }}>{tag}</button>
+                )
+              })}
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: '8px', marginTop: '14px' }}>
+            <button onClick={() => setShowAdd(false)} style={{
+              flex: 1, padding: '11px',
+              background: 'rgba(248,250,252,0.9)', border: '1.5px solid #e2e8f0',
+              borderRadius: '50px', color: '#94A3B8',
+              fontSize: '12px', fontWeight: 700, cursor: 'pointer',
+            }}>Cancel</button>
+            <button onClick={addItem} style={{
+              flex: 2, padding: '11px',
+              background: `linear-gradient(135deg, ${accentStart}, ${accentEnd})`,
+              border: 'none', borderRadius: '50px', color: '#fff',
+              fontSize: '12px', fontWeight: 800, letterSpacing: '0.05em', cursor: 'pointer',
+              boxShadow: `0 4px 14px ${accentStart}40`,
+            }}>ADD TO MENU</button>
+          </div>
+        </div>
+      )}
+
+      {/* Item cards */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        {items.length === 0 && (
+          <div style={{
+            textAlign: 'center', padding: '48px 24px',
+            color: '#94A3B8', fontSize: '13px', fontWeight: 600,
+          }}>
+            <div style={{ fontSize: '32px', marginBottom: '10px' }}>🍽️</div>
+            No items yet. Tap ADD ITEM to get started.
+          </div>
+        )}
+        {items.map((item, i) => (
+          <div key={item.id} className="order-card" style={{
+            animationDelay: `${i * 0.06}s`,
+            background: 'rgba(255,255,255,0.75)',
+            backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)',
+            borderRadius: '20px', padding: '18px 20px',
+            border: editingId === item.id ? `1.5px solid ${accentStart}40` : '1px solid rgba(255,255,255,0.7)',
+            boxShadow: '0 4px 24px rgba(0,0,0,0.07), inset 0 1px 0 rgba(255,255,255,0.8)',
+          }}>
+            {editingId === item.id && editDraft ? (
+              /* ── Edit Mode ── */
+              <div>
+                <div style={{ fontSize: '11px', fontWeight: 800, color: accentStart, letterSpacing: '0.1em', marginBottom: '12px' }}>
+                  EDITING ITEM
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <input
+                    value={editDraft.name} onChange={e => setEditDraft(d => ({ ...d, name: e.target.value }))}
+                    style={inputSt}
+                    onFocus={e => e.target.style.borderColor = accentStart}
+                    onBlur={e => e.target.style.borderColor = '#e2e8f0'}
+                  />
+                  <textarea
+                    value={editDraft.desc} onChange={e => setEditDraft(d => ({ ...d, desc: e.target.value }))}
+                    rows={2} style={{ ...inputSt, resize: 'vertical' }}
+                    onFocus={e => e.target.style.borderColor = accentStart}
+                    onBlur={e => e.target.style.borderColor = '#e2e8f0'}
+                  />
+                  <input
+                    type="number" value={editDraft.price} onChange={e => setEditDraft(d => ({ ...d, price: e.target.value }))}
+                    style={inputSt}
+                    onFocus={e => e.target.style.borderColor = accentStart}
+                    onBlur={e => e.target.style.borderColor = '#e2e8f0'}
+                  />
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                    {Object.keys(TAG_COLORS).map(tag => {
+                      const active = editDraft.tags.includes(tag)
+                      const tc = TAG_COLORS[tag]
+                      return (
+                        <button key={tag} onClick={() => toggleTag(editDraft, setEditDraft, tag)} style={{
+                          padding: '5px 12px', borderRadius: '50px', cursor: 'pointer',
+                          background: active ? tc.bg : 'transparent',
+                          border: `1.5px solid ${active ? tc.border : '#e2e8f0'}`,
+                          color: active ? tc.color : '#94A3B8',
+                          fontSize: '11px', fontWeight: 700, transition: 'all 0.15s',
+                        }}>{tag}</button>
+                      )
+                    })}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: '8px', marginTop: '14px' }}>
+                  <button onClick={() => setEditingId(null)} style={{
+                    flex: 1, padding: '11px',
+                    background: 'rgba(248,250,252,0.9)', border: '1.5px solid #e2e8f0',
+                    borderRadius: '50px', color: '#94A3B8',
+                    fontSize: '12px', fontWeight: 700, cursor: 'pointer',
+                  }}>Cancel</button>
+                  <button onClick={saveEdit} style={{
+                    flex: 2, padding: '11px',
+                    background: `linear-gradient(135deg, ${accentStart}, ${accentEnd})`,
+                    border: 'none', borderRadius: '50px', color: '#fff',
+                    fontSize: '12px', fontWeight: 800, letterSpacing: '0.05em', cursor: 'pointer',
+                    boxShadow: `0 4px 14px ${accentStart}40`,
+                  }}>SAVE CHANGES</button>
+                </div>
+              </div>
+            ) : (
+              /* ── View Mode ── */
+              <>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: '15px', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.01em' }}>
+                      {item.name}
+                    </div>
+                    {item.desc && (
+                      <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px', lineHeight: 1.5, fontWeight: 500 }}>
+                        {item.desc}
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ textAlign: 'right', marginLeft: '12px', flexShrink: 0 }}>
+                    <div style={{ fontSize: '17px', fontWeight: 900, color: '#0f172a', letterSpacing: '-0.01em' }}>
+                      {item.price.toLocaleString()}
+                    </div>
+                    <div style={{ fontSize: '10px', fontWeight: 700, color: '#94A3B8', letterSpacing: '0.06em' }}>
+                      {currency}
+                    </div>
+                  </div>
+                </div>
+
+                {item.tags?.length > 0 && (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px', marginBottom: '12px' }}>
+                    {item.tags.map(tag => {
+                      const tc = TAG_COLORS[tag] || { bg: '#f1f5f9', color: '#64748b', border: '#e2e8f0' }
+                      return (
+                        <span key={tag} style={{
+                          padding: '3px 10px', borderRadius: '50px',
+                          background: tc.bg, border: `1px solid ${tc.border}`,
+                          color: tc.color, fontSize: '10px', fontWeight: 700, letterSpacing: '0.05em',
+                        }}>{tag}</span>
+                      )
+                    })}
+                  </div>
+                )}
+
+                <div style={{ height: '1px', background: `linear-gradient(90deg, ${accentStart}18, transparent)`, marginBottom: '12px' }} />
+
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button onClick={() => startEdit(item)} className="action-btn" style={{
+                    flex: 1, padding: '10px',
+                    background: `${accentStart}10`,
+                    border: `1.5px solid ${accentStart}25`,
+                    borderRadius: '50px', color: accentStart,
+                    fontSize: '12px', fontWeight: 800, letterSpacing: '0.06em',
+                    cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                  }}>
+                    <Pencil size={13} /> EDIT
+                  </button>
+                  <button onClick={() => deleteItem(item.id)} className="action-btn" style={{
+                    flex: 1, padding: '10px',
+                    background: 'rgba(254,242,242,0.9)',
+                    border: '1.5px solid #FECACA',
+                    borderRadius: '50px', color: '#EF4444',
+                    fontSize: '12px', fontWeight: 800, letterSpacing: '0.06em',
+                    cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                  }}>
+                    <Trash2 size={13} /> DELETE
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
