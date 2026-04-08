@@ -1030,7 +1030,7 @@ const CATEGORY_TABS = [
   { key: 'drinks',   label: 'Drinks',   emoji: '🍹' },
 ]
 
-const BLANK_ITEM = { name: '', desc: '', price: '', tags: [], img: null }
+const BLANK_ITEM = { name: '', desc: '', price: '', tags: [], img: null, veg: false }
 
 const DEFAULT_CAT_FILTERS = {
   starters: [
@@ -1263,7 +1263,7 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast }
 
   function addItem() {
     if (!addDraft.name.trim()) return
-    const item = { id: Date.now(), name: addDraft.name.trim(), desc: addDraft.desc.trim(), price: parseFloat(addDraft.price) || 0, tags: addDraft.tags }
+    const item = { id: Date.now(), name: addDraft.name.trim(), desc: addDraft.desc.trim(), price: parseFloat(addDraft.price) || 0, tags: addDraft.tags, veg: addDraft.veg || false }
     const updated = { ...menu, [activeCategory]: [...menu[activeCategory], item] }
     saveMenu(updated)
     setAddDraft(BLANK_ITEM)
@@ -1757,6 +1757,31 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast }
                 )
               })}
             </div>
+            <button
+              type="button"
+              onClick={() => setAddDraft(d => ({ ...d, veg: !d.veg }))}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '8px',
+                padding: '8px 14px', borderRadius: '50px', cursor: 'pointer',
+                background: addDraft.veg ? '#f0fdf4' : '#fff5f5',
+                border: `1.5px solid ${addDraft.veg ? '#22c55e' : '#ef4444'}`,
+                color: addDraft.veg ? '#16a34a' : '#dc2626',
+                fontSize: '11px', fontWeight: 800, letterSpacing: '0.06em',
+                transition: 'all 0.2s', alignSelf: 'flex-start',
+              }}
+            >
+              <span style={{
+                width: '14px', height: '14px', borderRadius: '3px', flexShrink: 0,
+                border: `2px solid ${addDraft.veg ? '#22c55e' : '#ef4444'}`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <span style={{
+                  width: '6px', height: '6px', borderRadius: '50%',
+                  background: addDraft.veg ? '#22c55e' : '#ef4444',
+                }} />
+              </span>
+              {addDraft.veg ? 'VEG' : 'NON-VEG'}
+            </button>
           </div>
           <div style={{ display: 'flex', gap: '8px', marginTop: '14px' }}>
             <button onClick={() => setShowAdd(false)} style={{
@@ -1842,6 +1867,31 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast }
                       )
                     })}
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => setEditDraft(d => ({ ...d, veg: !d.veg }))}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: '8px',
+                      padding: '8px 14px', borderRadius: '50px', cursor: 'pointer',
+                      background: editDraft.veg ? '#f0fdf4' : '#fff5f5',
+                      border: `1.5px solid ${editDraft.veg ? '#22c55e' : '#ef4444'}`,
+                      color: editDraft.veg ? '#16a34a' : '#dc2626',
+                      fontSize: '11px', fontWeight: 800, letterSpacing: '0.06em',
+                      transition: 'all 0.2s', alignSelf: 'flex-start',
+                    }}
+                  >
+                    <span style={{
+                      width: '14px', height: '14px', borderRadius: '3px', flexShrink: 0,
+                      border: `2px solid ${editDraft.veg ? '#22c55e' : '#ef4444'}`,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}>
+                      <span style={{
+                        width: '6px', height: '6px', borderRadius: '50%',
+                        background: editDraft.veg ? '#22c55e' : '#ef4444',
+                      }} />
+                    </span>
+                    {editDraft.veg ? 'VEG' : 'NON-VEG'}
+                  </button>
                 </div>
                 {/* ── Food Card: Add-on Editor ── */}
                 <div style={{ marginTop: '10px' }}>
