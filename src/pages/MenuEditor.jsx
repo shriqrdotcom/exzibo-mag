@@ -95,33 +95,36 @@ export default function MenuEditor() {
 
   const defaultCategoryFilters = {
     starters: [
-      { id: 'all', emoji: '🍽️', label: 'All' },
-      { id: 'veg', emoji: '🥗', label: 'Veg' },
-      { id: 'nonveg', emoji: '🥩', label: 'Non-Veg' },
-      { id: 'popular', emoji: '⭐', label: 'Popular' },
-      { id: 'seasonal', emoji: '🌿', label: 'Seasonal' },
+      { id: 'all', emoji: '🍽️', label: 'All', image: null, assignedItems: [] },
+      { id: 'veg', emoji: '🥗', label: 'Veg', image: null, assignedItems: [] },
+      { id: 'nonveg', emoji: '🥩', label: 'Non-Veg', image: null, assignedItems: [] },
+      { id: 'popular', emoji: '⭐', label: 'Popular', image: null, assignedItems: [] },
+      { id: 'seasonal', emoji: '🌿', label: 'Seasonal', image: null, assignedItems: [] },
     ],
     mains: [
-      { id: 'all', emoji: '🍽️', label: 'All' },
-      { id: 'grill', emoji: '🔥', label: 'Grill' },
-      { id: 'seafood', emoji: '🦞', label: 'Seafood' },
-      { id: 'vegetarian', emoji: '🥦', label: 'Vegetarian' },
-      { id: 'pasta', emoji: '🍝', label: 'Pasta' },
+      { id: 'all', emoji: '🍽️', label: 'All', image: null, assignedItems: [] },
+      { id: 'grill', emoji: '🔥', label: 'Grill', image: null, assignedItems: [] },
+      { id: 'seafood', emoji: '🦞', label: 'Seafood', image: null, assignedItems: [] },
+      { id: 'vegetarian', emoji: '🥦', label: 'Vegetarian', image: null, assignedItems: [] },
+      { id: 'pasta', emoji: '🍝', label: 'Pasta', image: null, assignedItems: [] },
     ],
     drinks: [
-      { id: 'all', emoji: '🥤', label: 'All' },
-      { id: 'cocktails', emoji: '🍹', label: 'Cocktails' },
-      { id: 'wine', emoji: '🍷', label: 'Wine' },
-      { id: 'beer', emoji: '🍺', label: 'Beer' },
-      { id: 'soft', emoji: '🧃', label: 'Soft' },
+      { id: 'all', emoji: '🥤', label: 'All', image: null, assignedItems: [] },
+      { id: 'cocktails', emoji: '🍹', label: 'Cocktails', image: null, assignedItems: [] },
+      { id: 'wine', emoji: '🍷', label: 'Wine', image: null, assignedItems: [] },
+      { id: 'beer', emoji: '🍺', label: 'Beer', image: null, assignedItems: [] },
+      { id: 'soft', emoji: '🧃', label: 'Soft', image: null, assignedItems: [] },
     ],
   }
 
   const [categoryFilters, setCategoryFilters] = useState(defaultCategoryFilters)
   const [activeCategoryFilter, setActiveCategoryFilter] = useState({ starters: 'all', mains: 'all', drinks: 'all' })
   const [showAddCategoryModal, setShowAddCategoryModal] = useState(false)
-  const [newCategory, setNewCategory] = useState({ emoji: '', label: '' })
+  const [newCategory, setNewCategory] = useState({ emoji: '', label: '', image: null })
   const [hoveredCatId, setHoveredCatId] = useState(null)
+  const [assignModalCat, setAssignModalCat] = useState(null)
+  const longPressTimer = useRef(null)
+  const catImageInputRef = useRef(null)
 
   const addCategoryFilter = () => {
     if (!newCategory.label.trim()) return
@@ -129,9 +132,11 @@ export default function MenuEditor() {
       id: Date.now().toString(),
       emoji: newCategory.emoji || '🏷️',
       label: newCategory.label.trim(),
+      image: newCategory.image || null,
+      assignedItems: [],
     }
     setCategoryFilters(prev => ({ ...prev, [activeTab]: [...prev[activeTab], cat] }))
-    setNewCategory({ emoji: '', label: '' })
+    setNewCategory({ emoji: '', label: '', image: null })
     setShowAddCategoryModal(false)
   }
 
@@ -141,6 +146,33 @@ export default function MenuEditor() {
     if (activeCategoryFilter[activeTab] === catId) {
       setActiveCategoryFilter(prev => ({ ...prev, [activeTab]: 'all' }))
     }
+  }
+
+  const handleCatImageUpload = (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = ev => setNewCategory(p => ({ ...p, image: ev.target.result }))
+    reader.readAsDataURL(file)
+    e.target.value = ''
+  }
+
+  const handleLongPressStart = (catId) => {
+    longPressTimer.current = setTimeout(() => setAssignModalCat(catId), 600)
+  }
+
+  const handleLongPressEnd = () => clearTimeout(longPressTimer.current)
+
+  const toggleAssignItem = (catId, itemId) => {
+    setCategoryFilters(prev => ({
+      ...prev,
+      [activeTab]: prev[activeTab].map(c => {
+        if (c.id !== catId) return c
+        const assigned = c.assignedItems || []
+        const has = assigned.includes(itemId)
+        return { ...c, assignedItems: has ? assigned.filter(i => i !== itemId) : [...assigned, itemId] }
+      }),
+    }))
   }
 
   const deleteItem = (id) => {
@@ -455,15 +487,21 @@ export default function MenuEditor() {
                   {(categoryFilters[activeTab] || []).map(cat => {
                     const isActive = activeCategoryFilter[activeTab] === cat.id
                     const isHovered = hoveredCatId === cat.id
+                    const assignedCount = (cat.assignedItems || []).length
                     return (
                       <div
                         key={cat.id}
                         style={{ position: 'relative', flexShrink: 0 }}
                         onMouseEnter={() => setHoveredCatId(cat.id)}
-                        onMouseLeave={() => setHoveredCatId(null)}
+                        onMouseLeave={() => { setHoveredCatId(null); handleLongPressEnd() }}
+                        onMouseDown={() => handleLongPressStart(cat.id)}
+                        onMouseUp={handleLongPressEnd}
+                        onTouchStart={() => handleLongPressStart(cat.id)}
+                        onTouchEnd={handleLongPressEnd}
                       >
                         <button
                           onClick={() => setActiveCategoryFilter(prev => ({ ...prev, [activeTab]: cat.id }))}
+                          title="Long press to assign items"
                           style={{
                             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px',
                             padding: '10px 8px 8px',
@@ -474,15 +512,18 @@ export default function MenuEditor() {
                             cursor: 'pointer',
                             transition: 'all 0.2s',
                             boxShadow: isActive ? '0 4px 16px rgba(0,0,0,0.35)' : 'none',
+                            userSelect: 'none',
                           }}
                         >
                           <div style={{
                             width: '44px', height: '44px', borderRadius: '12px',
                             background: isActive ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.06)',
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            fontSize: '24px',
+                            fontSize: '24px', overflow: 'hidden',
                           }}>
-                            {cat.emoji}
+                            {cat.image
+                              ? <img src={cat.image} alt={cat.label} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '12px' }} />
+                              : cat.emoji}
                           </div>
                           <span style={{
                             fontSize: '11px',
@@ -494,9 +535,22 @@ export default function MenuEditor() {
                             {cat.label}
                           </span>
                         </button>
+                        {assignedCount > 0 && (
+                          <div style={{
+                            position: 'absolute', bottom: '28px', right: '-4px',
+                            background: '#E8321A', color: '#fff',
+                            fontSize: '9px', fontWeight: 800,
+                            width: '16px', height: '16px', borderRadius: '50%',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            border: '2px solid #111',
+                            pointerEvents: 'none',
+                          }}>
+                            {assignedCount}
+                          </div>
+                        )}
                         {cat.id !== 'all' && isHovered && (
                           <button
-                            onClick={() => removeCategoryFilter(cat.id)}
+                            onClick={e => { e.stopPropagation(); removeCategoryFilter(cat.id) }}
                             style={{
                               position: 'absolute', top: '-5px', right: '-5px',
                               width: '18px', height: '18px',
@@ -599,6 +653,9 @@ export default function MenuEditor() {
         <Plus size={22} />
       </button>
 
+      {/* Hidden image input for category filter */}
+      <input ref={catImageInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleCatImageUpload} />
+
       {showAddCategoryModal && (
         <div style={{
           position: 'fixed', inset: 0,
@@ -606,13 +663,13 @@ export default function MenuEditor() {
           backdropFilter: 'blur(8px)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           zIndex: 110,
-        }} onClick={() => setShowAddCategoryModal(false)}>
+        }} onClick={() => { setShowAddCategoryModal(false); setNewCategory({ emoji: '', label: '', image: null }) }}>
           <div style={{
             background: '#161616',
             border: '1px solid rgba(255,255,255,0.1)',
             borderRadius: '20px',
             padding: '32px',
-            width: '360px',
+            width: '380px',
             maxWidth: '90vw',
           }} onClick={e => e.stopPropagation()}>
             <h3 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '6px' }}>Add Category Filter</h3>
@@ -620,7 +677,29 @@ export default function MenuEditor() {
               Adding to <span style={{ color: '#E8321A', fontWeight: 700 }}>{activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}</span> section
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <FormField label="EMOJI ICON">
+
+              {/* Image Upload */}
+              <FormField label="FILTER IMAGE (OPTIONAL)">
+                {newCategory.image ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <img src={newCategory.image} alt="preview" style={{ width: '56px', height: '56px', borderRadius: '12px', objectFit: 'cover', border: '1px solid rgba(255,255,255,0.1)', flexShrink: 0 }} />
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1 }}>
+                      <button type="button" onClick={() => catImageInputRef.current?.click()} style={{ padding: '7px 12px', background: 'rgba(232,50,26,0.12)', border: '1px solid rgba(232,50,26,0.25)', borderRadius: '50px', cursor: 'pointer', fontSize: '11px', fontWeight: 700, color: '#E8321A' }}>CHANGE</button>
+                      <button type="button" onClick={() => setNewCategory(p => ({ ...p, image: null }))} style={{ padding: '6px 12px', background: 'transparent', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '50px', cursor: 'pointer', fontSize: '11px', fontWeight: 700, color: '#EF4444' }}>REMOVE</button>
+                    </div>
+                  </div>
+                ) : (
+                  <button type="button" onClick={() => catImageInputRef.current?.click()} style={{ width: '100%', padding: '14px', background: 'rgba(255,255,255,0.03)', border: '1px dashed rgba(255,255,255,0.15)', borderRadius: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'all 0.2s' }}
+                    onMouseEnter={e => { e.currentTarget.style.borderColor = '#E8321A'; e.currentTarget.style.background = 'rgba(232,50,26,0.06)' }}
+                    onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)'; e.currentTarget.style.background = 'rgba(255,255,255,0.03)' }}
+                  >
+                    <span style={{ fontSize: '20px' }}>📷</span>
+                    <span style={{ fontSize: '12px', fontWeight: 600, color: '#666' }}>Upload Filter Image</span>
+                  </button>
+                )}
+              </FormField>
+
+              <FormField label={`EMOJI ICON${newCategory.image ? ' (shown if no image)' : ''}`}>
                 <input
                   value={newCategory.emoji}
                   onChange={e => setNewCategory(p => ({ ...p, emoji: e.target.value }))}
@@ -639,52 +718,82 @@ export default function MenuEditor() {
                 />
               </FormField>
               {newCategory.label && (
-                <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0' }}>
-                  <div style={{
-                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px',
-                    padding: '10px 8px 8px',
-                    width: '74px',
-                    background: 'rgba(255,255,255,0.04)',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    borderRadius: '14px',
-                  }}>
-                    <div style={{
-                      width: '44px', height: '44px', borderRadius: '12px',
-                      background: 'rgba(255,255,255,0.06)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: '24px',
-                    }}>
-                      {newCategory.emoji || '🏷️'}
+                <div style={{ display: 'flex', justifyContent: 'center', padding: '8px 0' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', padding: '10px 8px 8px', width: '74px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '14px' }}>
+                    <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: 'rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', overflow: 'hidden' }}>
+                      {newCategory.image
+                        ? <img src={newCategory.image} alt="preview" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '12px' }} />
+                        : (newCategory.emoji || '🏷️')}
                     </div>
-                    <span style={{ fontSize: '11px', fontWeight: 500, color: '#888', whiteSpace: 'nowrap' }}>
-                      {newCategory.label || 'Label'}
-                    </span>
+                    <span style={{ fontSize: '11px', fontWeight: 500, color: '#888', whiteSpace: 'nowrap' }}>{newCategory.label}</span>
                   </div>
                 </div>
               )}
             </div>
             <div style={{ display: 'flex', gap: '10px', marginTop: '24px' }}>
-              <button onClick={() => { setShowAddCategoryModal(false); setNewCategory({ emoji: '', label: '' }) }} style={{
-                flex: 1, padding: '12px',
-                background: 'rgba(255,255,255,0.04)',
-                border: '1px solid rgba(255,255,255,0.08)',
-                borderRadius: '10px',
-                color: '#888', fontSize: '13px', fontWeight: 600,
-                cursor: 'pointer',
-              }}>Cancel</button>
-              <button onClick={addCategoryFilter} style={{
-                flex: 2, padding: '12px',
-                background: '#E8321A', border: 'none',
-                borderRadius: '10px',
-                color: '#fff', fontSize: '13px', fontWeight: 700,
-                cursor: 'pointer',
-                boxShadow: '0 0 20px rgba(232,50,26,0.4)',
-                opacity: newCategory.label.trim() ? 1 : 0.4,
-              }}>Add Filter</button>
+              <button onClick={() => { setShowAddCategoryModal(false); setNewCategory({ emoji: '', label: '', image: null }) }} style={{ flex: 1, padding: '12px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', color: '#888', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
+              <button onClick={addCategoryFilter} style={{ flex: 2, padding: '12px', background: '#E8321A', border: 'none', borderRadius: '10px', color: '#fff', fontSize: '13px', fontWeight: 700, cursor: 'pointer', boxShadow: '0 0 20px rgba(232,50,26,0.4)', opacity: newCategory.label.trim() ? 1 : 0.4 }}>Add Filter</button>
             </div>
           </div>
         </div>
       )}
+
+      {/* Assign Items Modal (long press) */}
+      {assignModalCat && (() => {
+        const cat = (categoryFilters[activeTab] || []).find(c => c.id === assignModalCat)
+        if (!cat) return null
+        const sectionItems = currentItems
+        const assigned = cat.assignedItems || []
+        return (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 130 }}
+            onClick={() => setAssignModalCat(null)}>
+            <div style={{ background: '#161616', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '24px 24px 0 0', padding: '24px', width: '100%', maxWidth: '600px', maxHeight: '70vh', display: 'flex', flexDirection: 'column', boxShadow: '0 -8px 40px rgba(0,0,0,0.5)' }}
+              onClick={e => e.stopPropagation()}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
+                <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: 'rgba(232,50,26,0.1)', border: '1px solid rgba(232,50,26,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', overflow: 'hidden', flexShrink: 0 }}>
+                  {cat.image ? <img src={cat.image} alt={cat.label} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '12px' }} /> : cat.emoji}
+                </div>
+                <div>
+                  <div style={{ fontSize: '16px', fontWeight: 700, color: '#fff' }}>Assign Items to "{cat.label}"</div>
+                  <div style={{ fontSize: '11px', color: '#666', marginTop: '2px' }}>{assigned.length} of {sectionItems.length} items assigned · {activeTab}</div>
+                </div>
+                <button onClick={() => setAssignModalCat(null)} style={{ marginLeft: 'auto', background: 'rgba(255,255,255,0.06)', border: 'none', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <X size={16} color="#888" />
+                </button>
+              </div>
+              {sectionItems.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '32px', color: '#555', fontSize: '13px' }}>No items in this section yet.</div>
+              ) : (
+                <div style={{ overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
+                  {sectionItems.map(item => {
+                    const isAssigned = assigned.includes(item.id)
+                    return (
+                      <button key={item.id} onClick={() => toggleAssignItem(cat.id, item.id)}
+                        style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 14px', background: isAssigned ? 'rgba(232,50,26,0.08)' : 'rgba(255,255,255,0.03)', border: `1px solid ${isAssigned ? 'rgba(232,50,26,0.25)' : 'rgba(255,255,255,0.06)'}`, borderRadius: '14px', cursor: 'pointer', textAlign: 'left', transition: 'all 0.15s' }}>
+                        <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', overflow: 'hidden', flexShrink: 0 }}>
+                          {item.img && typeof item.img === 'string' && (item.img.startsWith('/') || item.img.startsWith('data:'))
+                            ? <img src={item.img} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '10px' }} />
+                            : (item.img || '🍽️')}
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: '13px', fontWeight: 700, color: '#fff' }}>{item.name}</div>
+                          <div style={{ fontSize: '11px', color: '#666' }}>₹{item.price?.toLocaleString('en-IN') || 0}</div>
+                        </div>
+                        <div style={{ width: '22px', height: '22px', borderRadius: '6px', border: `2px solid ${isAssigned ? '#E8321A' : 'rgba(255,255,255,0.15)'}`, background: isAssigned ? '#E8321A' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'all 0.15s' }}>
+                          {isAssigned && <Check size={12} color="#fff" strokeWidth={3} />}
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+              <button onClick={() => setAssignModalCat(null)} style={{ marginTop: '16px', padding: '14px', background: '#E8321A', border: 'none', borderRadius: '12px', color: '#fff', fontSize: '14px', fontWeight: 700, cursor: 'pointer', boxShadow: '0 0 20px rgba(232,50,26,0.4)' }}>
+                Done — {assigned.length} item{assigned.length !== 1 ? 's' : ''} assigned
+              </button>
+            </div>
+          </div>
+        )
+      })()}
 
       {showAddModal && (
         <div style={{

@@ -1034,25 +1034,25 @@ const BLANK_ITEM = { name: '', desc: '', price: '', tags: [], img: null }
 
 const DEFAULT_CAT_FILTERS = {
   starters: [
-    { id: 'all', emoji: '🍽️', label: 'All' },
-    { id: 'veg', emoji: '🥗', label: 'Veg' },
-    { id: 'nonveg', emoji: '🥩', label: 'Non-Veg' },
-    { id: 'popular', emoji: '⭐', label: 'Popular' },
-    { id: 'seasonal', emoji: '🌿', label: 'Seasonal' },
+    { id: 'all', emoji: '🍽️', label: 'All', image: null, assignedItems: [] },
+    { id: 'veg', emoji: '🥗', label: 'Veg', image: null, assignedItems: [] },
+    { id: 'nonveg', emoji: '🥩', label: 'Non-Veg', image: null, assignedItems: [] },
+    { id: 'popular', emoji: '⭐', label: 'Popular', image: null, assignedItems: [] },
+    { id: 'seasonal', emoji: '🌿', label: 'Seasonal', image: null, assignedItems: [] },
   ],
   mains: [
-    { id: 'all', emoji: '🍽️', label: 'All' },
-    { id: 'grill', emoji: '🔥', label: 'Grill' },
-    { id: 'seafood', emoji: '🦞', label: 'Seafood' },
-    { id: 'vegetarian', emoji: '🥦', label: 'Vegetarian' },
-    { id: 'pasta', emoji: '🍝', label: 'Pasta' },
+    { id: 'all', emoji: '🍽️', label: 'All', image: null, assignedItems: [] },
+    { id: 'grill', emoji: '🔥', label: 'Grill', image: null, assignedItems: [] },
+    { id: 'seafood', emoji: '🦞', label: 'Seafood', image: null, assignedItems: [] },
+    { id: 'vegetarian', emoji: '🥦', label: 'Vegetarian', image: null, assignedItems: [] },
+    { id: 'pasta', emoji: '🍝', label: 'Pasta', image: null, assignedItems: [] },
   ],
   drinks: [
-    { id: 'all', emoji: '🥤', label: 'All' },
-    { id: 'cocktails', emoji: '🍹', label: 'Cocktails' },
-    { id: 'wine', emoji: '🍷', label: 'Wine' },
-    { id: 'beer', emoji: '🍺', label: 'Beer' },
-    { id: 'soft', emoji: '🧃', label: 'Soft' },
+    { id: 'all', emoji: '🥤', label: 'All', image: null, assignedItems: [] },
+    { id: 'cocktails', emoji: '🍹', label: 'Cocktails', image: null, assignedItems: [] },
+    { id: 'wine', emoji: '🍷', label: 'Wine', image: null, assignedItems: [] },
+    { id: 'beer', emoji: '🍺', label: 'Beer', image: null, assignedItems: [] },
+    { id: 'soft', emoji: '🧃', label: 'Soft', image: null, assignedItems: [] },
   ],
 }
 
@@ -1176,7 +1176,10 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast }
   const [activeCatFilter, setActiveCatFilter] = useState({ starters: 'all', mains: 'all', drinks: 'all' })
   const [hoveredCatId, setHoveredCatId] = useState(null)
   const [showAddCatModal, setShowAddCatModal] = useState(false)
-  const [newCat, setNewCat] = useState({ emoji: '', label: '' })
+  const [newCat, setNewCat] = useState({ emoji: '', label: '', image: null })
+  const [assignModalCat, setAssignModalCat] = useState(null)
+  const longPressTimer = useRef(null)
+  const catImageInputRef = useRef(null)
 
   function saveMenu(updated) {
     localStorage.setItem(storageKey, JSON.stringify(updated))
@@ -1237,9 +1240,15 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast }
 
   function addCatFilter() {
     if (!newCat.label.trim()) return
-    const cat = { id: Date.now().toString(), emoji: newCat.emoji || '🏷️', label: newCat.label.trim() }
+    const cat = {
+      id: Date.now().toString(),
+      emoji: newCat.emoji || '🏷️',
+      label: newCat.label.trim(),
+      image: newCat.image || null,
+      assignedItems: [],
+    }
     setCatFilters(prev => ({ ...prev, [activeCategory]: [...prev[activeCategory], cat] }))
-    setNewCat({ emoji: '', label: '' })
+    setNewCat({ emoji: '', label: '', image: null })
     setShowAddCatModal(false)
   }
 
@@ -1249,6 +1258,37 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast }
     if (activeCatFilter[activeCategory] === catId) {
       setActiveCatFilter(prev => ({ ...prev, [activeCategory]: 'all' }))
     }
+  }
+
+  function handleCatImageUpload(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = ev => setNewCat(p => ({ ...p, image: ev.target.result }))
+    reader.readAsDataURL(file)
+    e.target.value = ''
+  }
+
+  function handleLongPressStart(catId) {
+    longPressTimer.current = setTimeout(() => {
+      setAssignModalCat(catId)
+    }, 600)
+  }
+
+  function handleLongPressEnd() {
+    clearTimeout(longPressTimer.current)
+  }
+
+  function toggleAssignItem(catId, itemId) {
+    setCatFilters(prev => ({
+      ...prev,
+      [activeCategory]: prev[activeCategory].map(c => {
+        if (c.id !== catId) return c
+        const assigned = c.assignedItems || []
+        const has = assigned.includes(itemId)
+        return { ...c, assignedItems: has ? assigned.filter(i => i !== itemId) : [...assigned, itemId] }
+      }),
+    }))
   }
 
   const items = menu[activeCategory] || []
@@ -1371,15 +1411,21 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast }
           {(catFilters[activeCategory] || []).map(cat => {
             const isActive = activeCatFilter[activeCategory] === cat.id
             const isHov = hoveredCatId === cat.id
+            const assignedCount = (cat.assignedItems || []).length
             return (
               <div
                 key={cat.id}
                 style={{ position: 'relative', flexShrink: 0 }}
                 onMouseEnter={() => setHoveredCatId(cat.id)}
-                onMouseLeave={() => setHoveredCatId(null)}
+                onMouseLeave={() => { setHoveredCatId(null); handleLongPressEnd() }}
+                onMouseDown={() => handleLongPressStart(cat.id)}
+                onMouseUp={handleLongPressEnd}
+                onTouchStart={() => handleLongPressStart(cat.id)}
+                onTouchEnd={handleLongPressEnd}
               >
                 <button
                   onClick={() => setActiveCatFilter(prev => ({ ...prev, [activeCategory]: cat.id }))}
+                  title="Long press to assign items"
                   style={{
                     display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px',
                     padding: '10px 8px 8px',
@@ -1390,15 +1436,18 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast }
                     cursor: 'pointer',
                     transition: 'all 0.2s',
                     boxShadow: isActive ? `0 4px 16px ${accentStart}25` : 'none',
+                    userSelect: 'none',
                   }}
                 >
                   <div style={{
                     width: '42px', height: '42px', borderRadius: '12px',
                     background: isActive ? `${accentStart}12` : 'rgba(0,0,0,0.05)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: '22px',
+                    fontSize: '22px', overflow: 'hidden',
                   }}>
-                    {cat.emoji}
+                    {cat.image
+                      ? <img src={cat.image} alt={cat.label} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '12px' }} />
+                      : cat.emoji}
                   </div>
                   <span style={{
                     fontSize: '11px',
@@ -1409,9 +1458,22 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast }
                     {cat.label}
                   </span>
                 </button>
+                {assignedCount > 0 && (
+                  <div style={{
+                    position: 'absolute', bottom: '28px', right: '-4px',
+                    background: accentStart, color: '#fff',
+                    fontSize: '9px', fontWeight: 800,
+                    width: '16px', height: '16px', borderRadius: '50%',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    border: '2px solid #fff',
+                    pointerEvents: 'none',
+                  }}>
+                    {assignedCount}
+                  </div>
+                )}
                 {cat.id !== 'all' && isHov && (
                   <button
-                    onClick={() => removeCatFilter(cat.id)}
+                    onClick={e => { e.stopPropagation(); removeCatFilter(cat.id) }}
                     style={{
                       position: 'absolute', top: '-5px', right: '-5px',
                       width: '18px', height: '18px',
@@ -1432,6 +1494,9 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast }
         </div>
       </div>
 
+      {/* Hidden image input for category filter */}
+      <input ref={catImageInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleCatImageUpload} />
+
       {/* Add Category Filter Modal */}
       {showAddCatModal && (
         <div style={{
@@ -1440,12 +1505,12 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast }
           backdropFilter: 'blur(6px)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           zIndex: 200,
-        }} onClick={() => setShowAddCatModal(false)}>
+        }} onClick={() => { setShowAddCatModal(false); setNewCat({ emoji: '', label: '', image: null }) }}>
           <div style={{
             background: '#fff',
             borderRadius: '24px',
             padding: '28px',
-            width: '340px',
+            width: '360px',
             maxWidth: '90vw',
             boxShadow: '0 20px 60px rgba(0,0,0,0.2)',
           }} onClick={e => e.stopPropagation()}>
@@ -1454,21 +1519,42 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast }
               Adding to <span style={{ color: accentStart, fontWeight: 700 }}>{CATEGORY_TABS.find(c => c.key === activeCategory)?.label}</span> section
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+
+              {/* Image Upload */}
               <div>
-                <label style={{ fontSize: '10px', fontWeight: 800, letterSpacing: '0.1em', color: '#64748B', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>Emoji Icon</label>
+                <label style={{ fontSize: '10px', fontWeight: 800, letterSpacing: '0.1em', color: '#64748B', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>Filter Image (optional)</label>
+                {newCat.image ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <img src={newCat.image} alt="preview" style={{ width: '56px', height: '56px', borderRadius: '14px', objectFit: 'cover', border: '2px solid #e2e8f0', flexShrink: 0 }} />
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1 }}>
+                      <button type="button" onClick={() => catImageInputRef.current?.click()} style={{ padding: '7px 12px', background: `${accentStart}12`, border: `1.5px solid ${accentStart}30`, borderRadius: '50px', cursor: 'pointer', fontSize: '11px', fontWeight: 800, color: accentStart, letterSpacing: '0.06em' }}>CHANGE</button>
+                      <button type="button" onClick={() => setNewCat(p => ({ ...p, image: null }))} style={{ padding: '6px 12px', background: 'transparent', border: '1.5px solid #FECACA', borderRadius: '50px', cursor: 'pointer', fontSize: '11px', fontWeight: 700, color: '#EF4444' }}>REMOVE</button>
+                    </div>
+                  </div>
+                ) : (
+                  <button type="button" onClick={() => catImageInputRef.current?.click()} style={{ width: '100%', padding: '14px', background: 'rgba(248,250,252,0.9)', border: '1.5px dashed #CBD5E1', borderRadius: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'all 0.2s' }}
+                    onMouseEnter={e => { e.currentTarget.style.borderColor = accentStart; e.currentTarget.style.background = `${accentStart}08` }}
+                    onMouseLeave={e => { e.currentTarget.style.borderColor = '#CBD5E1'; e.currentTarget.style.background = 'rgba(248,250,252,0.9)' }}
+                  >
+                    <span style={{ fontSize: '20px' }}>📷</span>
+                    <span style={{ fontSize: '12px', fontWeight: 700, color: '#64748B' }}>Upload Filter Image</span>
+                  </button>
+                )}
+              </div>
+
+              {/* Emoji Icon */}
+              <div>
+                <label style={{ fontSize: '10px', fontWeight: 800, letterSpacing: '0.1em', color: '#64748B', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>Emoji Icon {newCat.image ? '(shown if no image)' : ''}</label>
                 <input
                   value={newCat.emoji}
                   onChange={e => setNewCat(p => ({ ...p, emoji: e.target.value }))}
                   placeholder="e.g. 🥗"
                   maxLength={4}
-                  style={{
-                    width: '100%', boxSizing: 'border-box', padding: '10px 13px',
-                    background: 'rgba(248,250,252,0.9)', border: '1.5px solid #e2e8f0',
-                    borderRadius: '12px', fontSize: '22px', textAlign: 'center',
-                    outline: 'none', fontFamily: 'inherit',
-                  }}
+                  style={{ width: '100%', boxSizing: 'border-box', padding: '10px 13px', background: 'rgba(248,250,252,0.9)', border: '1.5px solid #e2e8f0', borderRadius: '12px', fontSize: '22px', textAlign: 'center', outline: 'none', fontFamily: 'inherit' }}
                 />
               </div>
+
+              {/* Category Name */}
               <div>
                 <label style={{ fontSize: '10px', fontWeight: 800, letterSpacing: '0.1em', color: '#64748B', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>Category Name</label>
                 <input
@@ -1476,60 +1562,90 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast }
                   onChange={e => setNewCat(p => ({ ...p, label: e.target.value }))}
                   placeholder="e.g. Organic, Vegan, Spicy..."
                   onKeyDown={e => e.key === 'Enter' && addCatFilter()}
-                  style={{
-                    width: '100%', boxSizing: 'border-box', padding: '10px 13px',
-                    background: 'rgba(248,250,252,0.9)', border: '1.5px solid #e2e8f0',
-                    borderRadius: '12px', fontSize: '13px', fontWeight: 500, color: '#0f172a',
-                    outline: 'none', fontFamily: 'inherit',
-                  }}
+                  style={{ width: '100%', boxSizing: 'border-box', padding: '10px 13px', background: 'rgba(248,250,252,0.9)', border: '1.5px solid #e2e8f0', borderRadius: '12px', fontSize: '13px', fontWeight: 500, color: '#0f172a', outline: 'none', fontFamily: 'inherit' }}
                 />
               </div>
+
+              {/* Preview */}
               {newCat.label.trim() && (
                 <div style={{ display: 'flex', justifyContent: 'center', padding: '8px 0' }}>
-                  <div style={{
-                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px',
-                    padding: '10px 8px 8px', width: '72px',
-                    background: 'rgba(0,0,0,0.03)', border: '1.5px solid rgba(0,0,0,0.06)',
-                    borderRadius: '14px',
-                  }}>
-                    <div style={{
-                      width: '42px', height: '42px', borderRadius: '12px',
-                      background: 'rgba(0,0,0,0.05)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px',
-                    }}>
-                      {newCat.emoji || '🏷️'}
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', padding: '10px 8px 8px', width: '72px', background: 'rgba(0,0,0,0.03)', border: '1.5px solid rgba(0,0,0,0.06)', borderRadius: '14px' }}>
+                    <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: 'rgba(0,0,0,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', overflow: 'hidden' }}>
+                      {newCat.image
+                        ? <img src={newCat.image} alt="preview" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '12px' }} />
+                        : (newCat.emoji || '🏷️')}
                     </div>
-                    <span style={{ fontSize: '11px', fontWeight: 500, color: '#94A3B8', whiteSpace: 'nowrap' }}>
-                      {newCat.label}
-                    </span>
+                    <span style={{ fontSize: '11px', fontWeight: 500, color: '#94A3B8', whiteSpace: 'nowrap' }}>{newCat.label}</span>
                   </div>
                 </div>
               )}
             </div>
             <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
-              <button
-                onClick={() => { setShowAddCatModal(false); setNewCat({ emoji: '', label: '' }) }}
-                style={{
-                  flex: 1, padding: '12px',
-                  background: '#F8FAFC', border: '1.5px solid #E2E8F0',
-                  borderRadius: '12px', color: '#64748B', fontSize: '13px', fontWeight: 700, cursor: 'pointer',
-                }}
-              >Cancel</button>
-              <button
-                onClick={addCatFilter}
-                style={{
-                  flex: 2, padding: '12px',
-                  background: `linear-gradient(135deg, ${accentStart}, ${accentEnd})`,
-                  border: 'none', borderRadius: '12px',
-                  color: '#fff', fontSize: '13px', fontWeight: 800, cursor: 'pointer',
-                  boxShadow: `0 4px 14px ${accentStart}40`,
-                  opacity: newCat.label.trim() ? 1 : 0.45,
-                }}
-              >Add Filter</button>
+              <button onClick={() => { setShowAddCatModal(false); setNewCat({ emoji: '', label: '', image: null }) }} style={{ flex: 1, padding: '12px', background: '#F8FAFC', border: '1.5px solid #E2E8F0', borderRadius: '12px', color: '#64748B', fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}>Cancel</button>
+              <button onClick={addCatFilter} style={{ flex: 2, padding: '12px', background: `linear-gradient(135deg, ${accentStart}, ${accentEnd})`, border: 'none', borderRadius: '12px', color: '#fff', fontSize: '13px', fontWeight: 800, cursor: 'pointer', boxShadow: `0 4px 14px ${accentStart}40`, opacity: newCat.label.trim() ? 1 : 0.45 }}>Add Filter</button>
             </div>
           </div>
         </div>
       )}
+
+      {/* Assign Items Modal (long press) */}
+      {assignModalCat && (() => {
+        const cat = (catFilters[activeCategory] || []).find(c => c.id === assignModalCat)
+        if (!cat) return null
+        const sectionItems = menu[activeCategory] || []
+        const assigned = cat.assignedItems || []
+        return (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 200 }}
+            onClick={() => setAssignModalCat(null)}>
+            <div style={{ background: '#fff', borderRadius: '24px 24px 0 0', padding: '24px', width: '100%', maxWidth: '480px', maxHeight: '70vh', display: 'flex', flexDirection: 'column', boxShadow: '0 -8px 40px rgba(0,0,0,0.15)' }}
+              onClick={e => e.stopPropagation()}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
+                <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: `${accentStart}12`, border: `1.5px solid ${accentStart}25`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', overflow: 'hidden', flexShrink: 0 }}>
+                  {cat.image ? <img src={cat.image} alt={cat.label} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '12px' }} /> : cat.emoji}
+                </div>
+                <div>
+                  <div style={{ fontSize: '16px', fontWeight: 800, color: '#0f172a' }}>Assign Items to "{cat.label}"</div>
+                  <div style={{ fontSize: '11px', color: '#94A3B8', fontWeight: 500, marginTop: '2px' }}>
+                    {assigned.length} of {sectionItems.length} items assigned · {CATEGORY_TABS.find(c => c.key === activeCategory)?.label}
+                  </div>
+                </div>
+                <button onClick={() => setAssignModalCat(null)} style={{ marginLeft: 'auto', background: 'rgba(0,0,0,0.05)', border: 'none', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <X size={16} color="#64748B" />
+                </button>
+              </div>
+              {sectionItems.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '32px', color: '#94A3B8', fontSize: '13px' }}>No items in this section yet.</div>
+              ) : (
+                <div style={{ overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
+                  {sectionItems.map(item => {
+                    const isAssigned = assigned.includes(item.id)
+                    return (
+                      <button key={item.id} onClick={() => toggleAssignItem(cat.id, item.id)}
+                        style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 14px', background: isAssigned ? `${accentStart}08` : 'rgba(248,250,252,0.9)', border: `1.5px solid ${isAssigned ? accentStart + '30' : '#e2e8f0'}`, borderRadius: '14px', cursor: 'pointer', textAlign: 'left', transition: 'all 0.15s' }}>
+                        <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', overflow: 'hidden', flexShrink: 0 }}>
+                          {item.img && typeof item.img === 'string' && (item.img.startsWith('/') || item.img.startsWith('data:'))
+                            ? <img src={item.img} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '10px' }} />
+                            : (item.img || '🍽️')}
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: '13px', fontWeight: 700, color: '#0f172a' }}>{item.name}</div>
+                          <div style={{ fontSize: '11px', color: '#94A3B8', fontWeight: 500 }}>₹{item.price?.toLocaleString('en-IN') || 0}</div>
+                        </div>
+                        <div style={{ width: '22px', height: '22px', borderRadius: '6px', border: `2px solid ${isAssigned ? accentStart : '#CBD5E1'}`, background: isAssigned ? accentStart : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'all 0.15s' }}>
+                          {isAssigned && <Check size={12} color="#fff" strokeWidth={3} />}
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+              <button onClick={() => setAssignModalCat(null)} style={{ marginTop: '16px', padding: '14px', background: `linear-gradient(135deg, ${accentStart}, ${accentEnd})`, border: 'none', borderRadius: '14px', color: '#fff', fontSize: '14px', fontWeight: 800, cursor: 'pointer', boxShadow: `0 4px 14px ${accentStart}40` }}>
+                Done — {assigned.length} item{assigned.length !== 1 ? 's' : ''} assigned
+              </button>
+            </div>
+          </div>
+        )
+      })()}
 
       {/* Add Item Form */}
       {showAdd && (
