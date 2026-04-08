@@ -1186,6 +1186,8 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast }
   const [showAddCatModal, setShowAddCatModal] = useState(false)
   const [newCat, setNewCat] = useState({ emoji: '', label: '', image: null })
   const [assignModalCat, setAssignModalCat] = useState(null)
+  const [savedAll, setSavedAll] = useState(false)
+  const saveAllTimer = useRef(null)
   const longPressTimer = useRef(null)
   const catImageInputRef = useRef(null)
 
@@ -1200,6 +1202,17 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast }
     localStorage.setItem(filtersKey, JSON.stringify(updated))
     setCatFilters(updated)
     window.dispatchEvent(new StorageEvent('storage', { key: filtersKey, newValue: JSON.stringify(updated) }))
+  }
+
+  function handleSaveAll() {
+    localStorage.setItem(storageKey, JSON.stringify(menu))
+    window.dispatchEvent(new StorageEvent('storage', { key: storageKey, newValue: JSON.stringify(menu) }))
+    localStorage.setItem(filtersKey, JSON.stringify(catFilters))
+    window.dispatchEvent(new StorageEvent('storage', { key: filtersKey, newValue: JSON.stringify(catFilters) }))
+    showToast('✅ Changes saved!')
+    setSavedAll(true)
+    clearTimeout(saveAllTimer.current)
+    saveAllTimer.current = setTimeout(() => setSavedAll(false), 2500)
   }
 
   function deleteItem(id) {
@@ -1333,20 +1346,38 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast }
             {items.length} item{items.length !== 1 ? 's' : ''} in {CATEGORY_TABS.find(c => c.key === activeCategory)?.label}
           </p>
         </div>
-        <button
-          onClick={() => { setShowAdd(true); setEditingId(null); setAddDraft(BLANK_ITEM) }}
-          style={{
-            display: 'flex', alignItems: 'center', gap: '6px',
-            padding: '10px 18px',
-            background: `linear-gradient(135deg, ${accentStart}, ${accentEnd})`,
-            border: 'none', borderRadius: '50px',
-            color: '#fff', fontSize: '12px', fontWeight: 800, letterSpacing: '0.06em',
-            cursor: 'pointer',
-            boxShadow: `0 4px 14px ${accentStart}50`,
-          }}
-        >
-          <Plus size={14} /> ADD ITEM
-        </button>
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          <button
+            onClick={handleSaveAll}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '6px',
+              padding: '10px 18px',
+              background: savedAll ? 'rgba(34,197,94,0.12)' : 'rgba(15,23,42,0.07)',
+              border: savedAll ? '1.5px solid rgba(34,197,94,0.4)' : '1.5px solid rgba(15,23,42,0.12)',
+              borderRadius: '50px',
+              color: savedAll ? '#16a34a' : '#475569',
+              fontSize: '12px', fontWeight: 800, letterSpacing: '0.06em',
+              cursor: 'pointer',
+              transition: 'all 0.25s ease',
+            }}
+          >
+            {savedAll ? <><Check size={14} /> SAVED!</> : <><Save size={14} /> SAVE CHANGES</>}
+          </button>
+          <button
+            onClick={() => { setShowAdd(true); setEditingId(null); setAddDraft(BLANK_ITEM) }}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '6px',
+              padding: '10px 18px',
+              background: `linear-gradient(135deg, ${accentStart}, ${accentEnd})`,
+              border: 'none', borderRadius: '50px',
+              color: '#fff', fontSize: '12px', fontWeight: 800, letterSpacing: '0.06em',
+              cursor: 'pointer',
+              boxShadow: `0 4px 14px ${accentStart}50`,
+            }}
+          >
+            <Plus size={14} /> ADD ITEM
+          </button>
+        </div>
       </div>
 
       {/* Category tabs */}
