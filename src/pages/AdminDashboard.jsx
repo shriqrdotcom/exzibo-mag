@@ -4,7 +4,7 @@ import {
   Bell, CheckCircle, XCircle,
   ClipboardList, BookOpen, Users, Settings, ArrowLeft,
   Palette, DollarSign, Type, Save, Check, CalendarDays, UtensilsCrossed,
-  SlidersHorizontal, Plus, Pencil, Trash2,
+  SlidersHorizontal, Plus, Pencil, Trash2, X,
 } from 'lucide-react'
 
 const GLOBAL_CONFIG_KEY = 'exzibo_admin_global_config'
@@ -1032,6 +1032,30 @@ const CATEGORY_TABS = [
 
 const BLANK_ITEM = { name: '', desc: '', price: '', tags: [], img: null }
 
+const DEFAULT_CAT_FILTERS = {
+  starters: [
+    { id: 'all', emoji: '🍽️', label: 'All' },
+    { id: 'veg', emoji: '🥗', label: 'Veg' },
+    { id: 'nonveg', emoji: '🥩', label: 'Non-Veg' },
+    { id: 'popular', emoji: '⭐', label: 'Popular' },
+    { id: 'seasonal', emoji: '🌿', label: 'Seasonal' },
+  ],
+  mains: [
+    { id: 'all', emoji: '🍽️', label: 'All' },
+    { id: 'grill', emoji: '🔥', label: 'Grill' },
+    { id: 'seafood', emoji: '🦞', label: 'Seafood' },
+    { id: 'vegetarian', emoji: '🥦', label: 'Vegetarian' },
+    { id: 'pasta', emoji: '🍝', label: 'Pasta' },
+  ],
+  drinks: [
+    { id: 'all', emoji: '🥤', label: 'All' },
+    { id: 'cocktails', emoji: '🍹', label: 'Cocktails' },
+    { id: 'wine', emoji: '🍷', label: 'Wine' },
+    { id: 'beer', emoji: '🍺', label: 'Beer' },
+    { id: 'soft', emoji: '🧃', label: 'Soft' },
+  ],
+}
+
 function ImageUploadField({ value, onChange, accentStart }) {
   const inputRef = React.useRef(null)
 
@@ -1148,6 +1172,11 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast }
   const [addDraft, setAddDraft] = useState(BLANK_ITEM)
   const [editFoodCard, setEditFoodCard] = useState(false)
   const [newAddon, setNewAddon] = useState({ label: '', price: '' })
+  const [catFilters, setCatFilters] = useState(DEFAULT_CAT_FILTERS)
+  const [activeCatFilter, setActiveCatFilter] = useState({ starters: 'all', mains: 'all', drinks: 'all' })
+  const [hoveredCatId, setHoveredCatId] = useState(null)
+  const [showAddCatModal, setShowAddCatModal] = useState(false)
+  const [newCat, setNewCat] = useState({ emoji: '', label: '' })
 
   function saveMenu(updated) {
     localStorage.setItem(storageKey, JSON.stringify(updated))
@@ -1204,6 +1233,22 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast }
   function toggleTag(draft, setDraft, tag) {
     const has = draft.tags.includes(tag)
     setDraft(d => ({ ...d, tags: has ? d.tags.filter(t => t !== tag) : [...d.tags, tag] }))
+  }
+
+  function addCatFilter() {
+    if (!newCat.label.trim()) return
+    const cat = { id: Date.now().toString(), emoji: newCat.emoji || '🏷️', label: newCat.label.trim() }
+    setCatFilters(prev => ({ ...prev, [activeCategory]: [...prev[activeCategory], cat] }))
+    setNewCat({ emoji: '', label: '' })
+    setShowAddCatModal(false)
+  }
+
+  function removeCatFilter(catId) {
+    if (catId === 'all') return
+    setCatFilters(prev => ({ ...prev, [activeCategory]: prev[activeCategory].filter(c => c.id !== catId) }))
+    if (activeCatFilter[activeCategory] === catId) {
+      setActiveCatFilter(prev => ({ ...prev, [activeCategory]: 'all' }))
+    }
   }
 
   const items = menu[activeCategory] || []
@@ -1283,6 +1328,208 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast }
           )
         })}
       </div>
+
+      {/* Food Category Filter Strip */}
+      <div style={{
+        background: 'rgba(255,255,255,0.65)',
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)',
+        borderRadius: '16px',
+        padding: '14px 16px 12px',
+        marginBottom: '16px',
+        border: '1px solid rgba(255,255,255,0.7)',
+        boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+          <span style={{ fontSize: '10px', fontWeight: 800, letterSpacing: '0.12em', color: '#94A3B8', textTransform: 'uppercase' }}>
+            Category Filters · {CATEGORY_TABS.find(c => c.key === activeCategory)?.label}
+          </span>
+          <button
+            onClick={() => setShowAddCatModal(true)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '4px',
+              padding: '4px 10px',
+              background: `${accentStart}15`,
+              border: `1px solid ${accentStart}35`,
+              borderRadius: '6px',
+              color: accentStart, fontSize: '10px', fontWeight: 800, letterSpacing: '0.06em',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = accentStart; e.currentTarget.style.color = '#fff' }}
+            onMouseLeave={e => { e.currentTarget.style.background = `${accentStart}15`; e.currentTarget.style.color = accentStart }}
+          >
+            <Plus size={10} /> ADD FILTER
+          </button>
+        </div>
+        <div style={{
+          display: 'flex', gap: '10px',
+          overflowX: 'auto',
+          paddingBottom: '4px',
+          scrollbarWidth: 'none',
+        }}>
+          {(catFilters[activeCategory] || []).map(cat => {
+            const isActive = activeCatFilter[activeCategory] === cat.id
+            const isHov = hoveredCatId === cat.id
+            return (
+              <div
+                key={cat.id}
+                style={{ position: 'relative', flexShrink: 0 }}
+                onMouseEnter={() => setHoveredCatId(cat.id)}
+                onMouseLeave={() => setHoveredCatId(null)}
+              >
+                <button
+                  onClick={() => setActiveCatFilter(prev => ({ ...prev, [activeCategory]: cat.id }))}
+                  style={{
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px',
+                    padding: '10px 8px 8px',
+                    width: '72px',
+                    background: isActive ? '#fff' : isHov ? 'rgba(0,0,0,0.05)' : 'rgba(0,0,0,0.03)',
+                    border: isActive ? `1.5px solid ${accentStart}40` : '1.5px solid rgba(0,0,0,0.06)',
+                    borderRadius: '14px',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    boxShadow: isActive ? `0 4px 16px ${accentStart}25` : 'none',
+                  }}
+                >
+                  <div style={{
+                    width: '42px', height: '42px', borderRadius: '12px',
+                    background: isActive ? `${accentStart}12` : 'rgba(0,0,0,0.05)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: '22px',
+                  }}>
+                    {cat.emoji}
+                  </div>
+                  <span style={{
+                    fontSize: '11px',
+                    fontWeight: isActive ? 800 : 500,
+                    color: isActive ? accentStart : '#94A3B8',
+                    whiteSpace: 'nowrap',
+                  }}>
+                    {cat.label}
+                  </span>
+                </button>
+                {cat.id !== 'all' && isHov && (
+                  <button
+                    onClick={() => removeCatFilter(cat.id)}
+                    style={{
+                      position: 'absolute', top: '-5px', right: '-5px',
+                      width: '18px', height: '18px',
+                      background: '#EF4444', border: 'none',
+                      borderRadius: '50%',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      cursor: 'pointer',
+                      boxShadow: '0 2px 8px rgba(239,68,68,0.4)',
+                    }}
+                    title="Remove filter"
+                  >
+                    <X size={9} color="#fff" />
+                  </button>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Add Category Filter Modal */}
+      {showAddCatModal && (
+        <div style={{
+          position: 'fixed', inset: 0,
+          background: 'rgba(0,0,0,0.5)',
+          backdropFilter: 'blur(6px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 200,
+        }} onClick={() => setShowAddCatModal(false)}>
+          <div style={{
+            background: '#fff',
+            borderRadius: '24px',
+            padding: '28px',
+            width: '340px',
+            maxWidth: '90vw',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.2)',
+          }} onClick={e => e.stopPropagation()}>
+            <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#0f172a', marginBottom: '4px' }}>Add Category Filter</h3>
+            <p style={{ fontSize: '12px', color: '#94A3B8', marginBottom: '20px', fontWeight: 500 }}>
+              Adding to <span style={{ color: accentStart, fontWeight: 700 }}>{CATEGORY_TABS.find(c => c.key === activeCategory)?.label}</span> section
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div>
+                <label style={{ fontSize: '10px', fontWeight: 800, letterSpacing: '0.1em', color: '#64748B', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>Emoji Icon</label>
+                <input
+                  value={newCat.emoji}
+                  onChange={e => setNewCat(p => ({ ...p, emoji: e.target.value }))}
+                  placeholder="e.g. 🥗"
+                  maxLength={4}
+                  style={{
+                    width: '100%', boxSizing: 'border-box', padding: '10px 13px',
+                    background: 'rgba(248,250,252,0.9)', border: '1.5px solid #e2e8f0',
+                    borderRadius: '12px', fontSize: '22px', textAlign: 'center',
+                    outline: 'none', fontFamily: 'inherit',
+                  }}
+                />
+              </div>
+              <div>
+                <label style={{ fontSize: '10px', fontWeight: 800, letterSpacing: '0.1em', color: '#64748B', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>Category Name</label>
+                <input
+                  value={newCat.label}
+                  onChange={e => setNewCat(p => ({ ...p, label: e.target.value }))}
+                  placeholder="e.g. Organic, Vegan, Spicy..."
+                  onKeyDown={e => e.key === 'Enter' && addCatFilter()}
+                  style={{
+                    width: '100%', boxSizing: 'border-box', padding: '10px 13px',
+                    background: 'rgba(248,250,252,0.9)', border: '1.5px solid #e2e8f0',
+                    borderRadius: '12px', fontSize: '13px', fontWeight: 500, color: '#0f172a',
+                    outline: 'none', fontFamily: 'inherit',
+                  }}
+                />
+              </div>
+              {newCat.label.trim() && (
+                <div style={{ display: 'flex', justifyContent: 'center', padding: '8px 0' }}>
+                  <div style={{
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px',
+                    padding: '10px 8px 8px', width: '72px',
+                    background: 'rgba(0,0,0,0.03)', border: '1.5px solid rgba(0,0,0,0.06)',
+                    borderRadius: '14px',
+                  }}>
+                    <div style={{
+                      width: '42px', height: '42px', borderRadius: '12px',
+                      background: 'rgba(0,0,0,0.05)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px',
+                    }}>
+                      {newCat.emoji || '🏷️'}
+                    </div>
+                    <span style={{ fontSize: '11px', fontWeight: 500, color: '#94A3B8', whiteSpace: 'nowrap' }}>
+                      {newCat.label}
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+            <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+              <button
+                onClick={() => { setShowAddCatModal(false); setNewCat({ emoji: '', label: '' }) }}
+                style={{
+                  flex: 1, padding: '12px',
+                  background: '#F8FAFC', border: '1.5px solid #E2E8F0',
+                  borderRadius: '12px', color: '#64748B', fontSize: '13px', fontWeight: 700, cursor: 'pointer',
+                }}
+              >Cancel</button>
+              <button
+                onClick={addCatFilter}
+                style={{
+                  flex: 2, padding: '12px',
+                  background: `linear-gradient(135deg, ${accentStart}, ${accentEnd})`,
+                  border: 'none', borderRadius: '12px',
+                  color: '#fff', fontSize: '13px', fontWeight: 800, cursor: 'pointer',
+                  boxShadow: `0 4px 14px ${accentStart}40`,
+                  opacity: newCat.label.trim() ? 1 : 0.45,
+                }}
+              >Add Filter</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Add Item Form */}
       {showAdd && (
