@@ -1146,6 +1146,8 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast }
   const [editDraft, setEditDraft] = useState(null)
   const [showAdd, setShowAdd] = useState(false)
   const [addDraft, setAddDraft] = useState(BLANK_ITEM)
+  const [editFoodCard, setEditFoodCard] = useState(false)
+  const [newAddon, setNewAddon] = useState({ label: '', price: '' })
 
   function saveMenu(updated) {
     localStorage.setItem(storageKey, JSON.stringify(updated))
@@ -1161,8 +1163,21 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast }
 
   function startEdit(item) {
     setEditingId(item.id)
-    setEditDraft({ ...item, price: String(item.price) })
+    setEditDraft({ ...item, price: String(item.price), addOns: item.addOns || [] })
     setShowAdd(false)
+    setEditFoodCard(false)
+    setNewAddon({ label: '', price: '' })
+  }
+
+  function addNewAddon() {
+    if (!newAddon.label.trim()) return
+    const addon = { id: 'addon_' + Date.now(), label: newAddon.label.trim(), price: parseFloat(newAddon.price) || 0 }
+    setEditDraft(d => ({ ...d, addOns: [...(d.addOns || []), addon] }))
+    setNewAddon({ label: '', price: '' })
+  }
+
+  function removeAddon(idx) {
+    setEditDraft(d => ({ ...d, addOns: (d.addOns || []).filter((_, i) => i !== idx) }))
   }
 
   function saveEdit() {
@@ -1407,6 +1422,116 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast }
                     })}
                   </div>
                 </div>
+                {/* ── Food Card: Add-on Editor ── */}
+                <div style={{ marginTop: '10px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setEditFoodCard(v => !v)}
+                    style={{
+                      width: '100%', padding: '10px 14px',
+                      background: editFoodCard ? `linear-gradient(135deg, ${accentStart}18, ${accentEnd}10)` : 'rgba(248,250,252,0.9)',
+                      border: `1.5px solid ${editFoodCard ? accentStart + '60' : '#e2e8f0'}`,
+                      borderRadius: '12px', cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      color: editFoodCard ? accentStart : '#64748b',
+                      fontSize: '11px', fontWeight: 800, letterSpacing: '0.08em',
+                      transition: 'all 0.2s',
+                    }}
+                  >
+                    <span>🃏 FOOD CARD — CUSTOMIZE ADD-ONS</span>
+                    <span style={{ fontSize: '10px' }}>{editFoodCard ? '▲' : '▼'}</span>
+                  </button>
+
+                  {editFoodCard && (
+                    <div style={{
+                      marginTop: '8px', padding: '14px',
+                      background: 'rgba(248,250,252,0.95)',
+                      border: '1px solid #e2e8f0', borderRadius: '14px',
+                    }}>
+                      <div style={{ fontSize: '10px', fontWeight: 800, color: '#94A3B8', letterSpacing: '0.1em', marginBottom: '10px' }}>
+                        CUSTOMIZE YOUR DISH OPTIONS
+                      </div>
+
+                      {/* Existing add-ons */}
+                      {(editDraft.addOns || []).length === 0 && (
+                        <div style={{ fontSize: '12px', color: '#cbd5e1', textAlign: 'center', padding: '10px 0', fontWeight: 600 }}>
+                          No add-ons yet. Add one below.
+                        </div>
+                      )}
+                      {(editDraft.addOns || []).map((addon, idx) => (
+                        <div key={addon.id || idx} style={{
+                          display: 'flex', alignItems: 'center', gap: '8px',
+                          padding: '8px 10px', marginBottom: '6px',
+                          background: '#fff', borderRadius: '10px',
+                          border: '1px solid #f1f5f9',
+                          boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
+                        }}>
+                          <span style={{ flex: 1, fontSize: '13px', fontWeight: 700, color: '#0f172a' }}>
+                            {addon.label}
+                          </span>
+                          <span style={{ fontSize: '12px', fontWeight: 700, color: '#64748b' }}>
+                            +{currency}{addon.price}
+                          </span>
+                          <button
+                            onClick={() => removeAddon(idx)}
+                            style={{
+                              width: '22px', height: '22px', borderRadius: '50%', flexShrink: 0,
+                              background: '#fee2e2', border: 'none', cursor: 'pointer',
+                              color: '#ef4444', fontSize: '13px', fontWeight: 900,
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              lineHeight: 1,
+                            }}
+                          >×</button>
+                        </div>
+                      ))}
+
+                      {/* Add new add-on row */}
+                      <div style={{ display: 'flex', gap: '6px', marginTop: '10px' }}>
+                        <input
+                          placeholder="Option name"
+                          value={newAddon.label}
+                          onChange={e => setNewAddon(n => ({ ...n, label: e.target.value }))}
+                          onKeyDown={e => e.key === 'Enter' && addNewAddon()}
+                          style={{
+                            flex: 1, padding: '8px 10px',
+                            border: '1.5px solid #e2e8f0', borderRadius: '8px',
+                            fontSize: '12px', fontWeight: 600, color: '#0f172a',
+                            background: '#fff', outline: 'none',
+                          }}
+                          onFocus={e => e.target.style.borderColor = accentStart}
+                          onBlur={e => e.target.style.borderColor = '#e2e8f0'}
+                        />
+                        <input
+                          type="number"
+                          placeholder="Price"
+                          value={newAddon.price}
+                          onChange={e => setNewAddon(n => ({ ...n, price: e.target.value }))}
+                          onKeyDown={e => e.key === 'Enter' && addNewAddon()}
+                          style={{
+                            width: '72px', padding: '8px 10px',
+                            border: '1.5px solid #e2e8f0', borderRadius: '8px',
+                            fontSize: '12px', fontWeight: 600, color: '#0f172a',
+                            background: '#fff', outline: 'none',
+                          }}
+                          onFocus={e => e.target.style.borderColor = accentStart}
+                          onBlur={e => e.target.style.borderColor = '#e2e8f0'}
+                        />
+                        <button
+                          onClick={addNewAddon}
+                          style={{
+                            width: '34px', height: '34px', borderRadius: '8px', flexShrink: 0,
+                            background: `linear-gradient(135deg, ${accentStart}, ${accentEnd})`,
+                            border: 'none', cursor: 'pointer',
+                            color: '#fff', fontSize: '18px', fontWeight: 900,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            boxShadow: `0 2px 8px ${accentStart}40`,
+                          }}
+                        >+</button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 <div style={{ display: 'flex', gap: '8px', marginTop: '14px' }}>
                   <button onClick={() => setEditingId(null)} style={{
                     flex: 1, padding: '11px',

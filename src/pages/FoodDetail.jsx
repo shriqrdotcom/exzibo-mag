@@ -117,7 +117,8 @@ export default function FoodDetail() {
   const allMenuItems = getAllItems(menuData)
   const suggestions = allMenuItems.filter(i => i.name !== item?.name).slice(0, 6)
 
-  const addOnTotal = ADD_ONS.filter(a => selectedAddOns[a.id]).reduce((s, a) => s + a.price, 0)
+  const activeAddOns = (item?.addOns && item.addOns.length > 0) ? item.addOns : ADD_ONS
+  const addOnTotal = activeAddOns.filter(a => selectedAddOns[a.id]).reduce((s, a) => s + a.price, 0)
   const unitPrice = (item?.price || 0) + addOnTotal
   const total = unitPrice * qty
 
@@ -138,7 +139,7 @@ export default function FoodDetail() {
     const cartItem = {
       id: Date.now(),
       name: item.name + (Object.keys(selectedAddOns).filter(k => selectedAddOns[k]).length > 0
-        ? ' (+' + ADD_ONS.filter(a => selectedAddOns[a.id]).map(a => a.label).join(', ') + ')'
+        ? ' (+' + activeAddOns.filter(a => selectedAddOns[a.id]).map(a => a.label).join(', ') + ')'
         : ''),
       price: unitPrice,
       qty,
@@ -469,7 +470,7 @@ export default function FoodDetail() {
             <div style={{ fontSize: '13px', fontWeight: 800, color: t.title, letterSpacing: '0.04em' }}>Customize your dish</div>
             <div style={{ fontSize: '11px', color: t.subtitle, marginTop: '2px' }}>Select add-ons to enhance your meal</div>
           </div>
-          {ADD_ONS.map((addon, i) => (
+          {activeAddOns.map((addon, i) => (
             <div
               key={addon.id}
               className="addon-row"
@@ -477,9 +478,9 @@ export default function FoodDetail() {
               style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                 padding: '14px 20px',
-                borderBottom: i < ADD_ONS.length - 1 ? `1px solid ${t.addonRowDiv}` : 'none',
+                borderBottom: i < activeAddOns.length - 1 ? `1px solid ${t.addonRowDiv}` : 'none',
                 cursor: 'pointer',
-                borderRadius: i === ADD_ONS.length - 1 ? '0 0 22px 22px' : 0,
+                borderRadius: i === activeAddOns.length - 1 ? '0 0 22px 22px' : 0,
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
