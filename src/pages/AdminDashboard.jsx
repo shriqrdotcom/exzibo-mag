@@ -1156,12 +1156,20 @@ function ImageUploadField({ value, onChange, accentStart }) {
 
 function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast }) {
   const storageKey = `exzibo_menu_${restaurantId}`
+  const filtersKey = `exzibo_menu_filters_${restaurantId}`
 
   function loadMenu() {
     try {
       const saved = JSON.parse(localStorage.getItem(storageKey))
       return saved || INITIAL_MENU
     } catch { return INITIAL_MENU }
+  }
+
+  function loadCatFilters() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(filtersKey))
+      return saved || DEFAULT_CAT_FILTERS
+    } catch { return DEFAULT_CAT_FILTERS }
   }
 
   const [menu, setMenu] = useState(loadMenu)
@@ -1172,7 +1180,7 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast }
   const [addDraft, setAddDraft] = useState(BLANK_ITEM)
   const [editFoodCard, setEditFoodCard] = useState(false)
   const [newAddon, setNewAddon] = useState({ label: '', price: '' })
-  const [catFilters, setCatFilters] = useState(DEFAULT_CAT_FILTERS)
+  const [catFilters, setCatFilters] = useState(loadCatFilters)
   const [activeCatFilter, setActiveCatFilter] = useState({ starters: 'all', mains: 'all', drinks: 'all' })
   const [hoveredCatId, setHoveredCatId] = useState(null)
   const [showAddCatModal, setShowAddCatModal] = useState(false)
@@ -1186,6 +1194,12 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast }
     setMenu(updated)
     window.dispatchEvent(new StorageEvent('storage', { key: storageKey, newValue: JSON.stringify(updated) }))
     showToast('✅ Menu saved!')
+  }
+
+  function saveCatFilters(updated) {
+    localStorage.setItem(filtersKey, JSON.stringify(updated))
+    setCatFilters(updated)
+    window.dispatchEvent(new StorageEvent('storage', { key: filtersKey, newValue: JSON.stringify(updated) }))
   }
 
   function deleteItem(id) {
@@ -1247,14 +1261,16 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast }
       image: newCat.image || null,
       assignedItems: [],
     }
-    setCatFilters(prev => ({ ...prev, [activeCategory]: [...prev[activeCategory], cat] }))
+    const updated = { ...catFilters, [activeCategory]: [...catFilters[activeCategory], cat] }
+    saveCatFilters(updated)
     setNewCat({ emoji: '', label: '', image: null })
     setShowAddCatModal(false)
   }
 
   function removeCatFilter(catId) {
     if (catId === 'all') return
-    setCatFilters(prev => ({ ...prev, [activeCategory]: prev[activeCategory].filter(c => c.id !== catId) }))
+    const updated = { ...catFilters, [activeCategory]: catFilters[activeCategory].filter(c => c.id !== catId) }
+    saveCatFilters(updated)
     if (activeCatFilter[activeCategory] === catId) {
       setActiveCatFilter(prev => ({ ...prev, [activeCategory]: 'all' }))
     }
@@ -1280,15 +1296,16 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast }
   }
 
   function toggleAssignItem(catId, itemId) {
-    setCatFilters(prev => ({
-      ...prev,
-      [activeCategory]: prev[activeCategory].map(c => {
+    const updated = {
+      ...catFilters,
+      [activeCategory]: catFilters[activeCategory].map(c => {
         if (c.id !== catId) return c
         const assigned = c.assignedItems || []
         const has = assigned.includes(itemId)
         return { ...c, assignedItems: has ? assigned.filter(i => i !== itemId) : [...assigned, itemId] }
       }),
-    }))
+    }
+    saveCatFilters(updated)
   }
 
   const items = menu[activeCategory] || []
