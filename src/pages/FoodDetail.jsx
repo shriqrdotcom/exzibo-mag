@@ -117,7 +117,7 @@ export default function FoodDetail() {
   const allMenuItems = getAllItems(menuData)
   const suggestions = allMenuItems.filter(i => i.name !== item?.name).slice(0, 6)
 
-  const activeAddOns = (item?.addOns && item.addOns.length > 0) ? item.addOns : ADD_ONS
+  const activeAddOns = (item?.addOns && item.addOns.length > 0) ? item.addOns : []
   const addOnTotal = activeAddOns.filter(a => selectedAddOns[a.id]).reduce((s, a) => s + a.price, 0)
   const unitPrice = (item?.price || 0) + addOnTotal
   const total = unitPrice * qty
@@ -458,6 +458,7 @@ export default function FoodDetail() {
       </div>
 
       {/* ── ADD-ONS SECTION ── */}
+      {activeAddOns.length > 0 && (
       <div className="fd-addon-card" style={{ margin: '12px 14px 0' }}>
         <div style={{
           background: t.addonBg,
@@ -517,6 +518,7 @@ export default function FoodDetail() {
           </div>
         )}
       </div>
+      )}
 
       {/* ── YOU MAY ALSO LIKE ── */}
       {suggestions.length > 0 && (
