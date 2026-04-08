@@ -1220,6 +1220,16 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast }
     saveMenu(updated)
   }
 
+  function toggleAvailability(id) {
+    const updated = {
+      ...menu,
+      [activeCategory]: menu[activeCategory].map(i =>
+        i.id === id ? { ...i, available: i.available === false ? true : false } : i
+      ),
+    }
+    saveMenu(updated)
+  }
+
   function startEdit(item) {
     setEditingId(item.id)
     setEditDraft({ ...item, price: String(item.price), addOns: item.addOns || [] })
@@ -1962,7 +1972,36 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast }
             ) : (
               /* ── View Mode ── */
               <>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px', gap: '12px' }}>
+                {/* Availability toggle row */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', marginBottom: '10px', gap: '8px' }}>
+                  <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.06em', color: item.available === false ? '#EF4444' : '#22c55e', textTransform: 'uppercase' }}>
+                    {item.available === false ? 'Unavailable' : 'Available'}
+                  </span>
+                  <div
+                    onClick={() => toggleAvailability(item.id)}
+                    title={item.available === false ? 'Mark as available' : 'Mark as unavailable'}
+                    style={{
+                      width: '40px', height: '22px', borderRadius: '11px',
+                      background: item.available === false ? '#e2e8f0' : `linear-gradient(135deg, ${accentStart}, ${accentEnd})`,
+                      position: 'relative', cursor: 'pointer',
+                      transition: 'background 0.25s ease',
+                      flexShrink: 0,
+                      boxShadow: item.available === false ? 'none' : `0 2px 8px ${accentStart}50`,
+                    }}
+                  >
+                    <div style={{
+                      position: 'absolute',
+                      top: '3px',
+                      left: item.available === false ? '3px' : '19px',
+                      width: '16px', height: '16px',
+                      borderRadius: '50%', background: '#fff',
+                      transition: 'left 0.25s ease',
+                      boxShadow: '0 1px 4px rgba(0,0,0,0.2)',
+                    }} />
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px', gap: '12px', opacity: item.available === false ? 0.5 : 1, transition: 'opacity 0.2s' }}>
                   {item.img && (
                     <img
                       src={item.img}

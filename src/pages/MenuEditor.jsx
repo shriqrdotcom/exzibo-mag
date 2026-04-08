@@ -186,6 +186,15 @@ export default function MenuEditor() {
     }))
   }
 
+  const toggleItemAvailability = (id) => {
+    setMenuItems(prev => ({
+      ...prev,
+      [activeTab]: prev[activeTab].map(item =>
+        item.id === id ? { ...item, available: item.available === false ? true : false } : item
+      )
+    }))
+  }
+
   const addItem = () => {
     if (!newItem.name) return
     const item = { id: Date.now(), name: newItem.name, desc: newItem.desc, price: parseFloat(newItem.price) || 0, tags: newItem.tags, img: '🍽️' }
@@ -577,7 +586,7 @@ export default function MenuEditor() {
 
               <div style={{ flex: 1, overflowY: 'auto', padding: '16px' }}>
                 {currentItems.map(item => (
-                  <MenuItem key={item.id} item={item} onDelete={() => deleteItem(item.id)} />
+                  <MenuItem key={item.id} item={item} onDelete={() => deleteItem(item.id)} onToggle={() => toggleItemAvailability(item.id)} />
                 ))}
                 {currentItems.length === 0 && (
                   <div style={{ textAlign: 'center', padding: '60px', color: '#555' }}>
@@ -870,8 +879,9 @@ export default function MenuEditor() {
   )
 }
 
-function MenuItem({ item, onDelete }) {
+function MenuItem({ item, onDelete, onToggle }) {
   const [hov, setHov] = useState(false)
+  const isAvailable = item.available !== false
   return (
     <div onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
       style={{
@@ -882,6 +892,7 @@ function MenuItem({ item, onDelete }) {
         marginBottom: '4px',
         transition: 'background 0.2s',
         cursor: 'default',
+        opacity: isAvailable ? 1 : 0.5,
       }}>
       <div style={{
         width: '62px', height: '62px', borderRadius: '12px', minWidth: '62px',
@@ -898,12 +909,34 @@ function MenuItem({ item, onDelete }) {
       <div style={{ flex: 1 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
           <span style={{ fontSize: '15px', fontWeight: 700 }}>{item.name}</span>
-          <span style={{ color: '#E8321A', fontWeight: 800, fontSize: '16px' }}>₹{item.price.toLocaleString('en-IN')}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div
+              onClick={onToggle}
+              title={isAvailable ? 'Mark as unavailable' : 'Mark as available'}
+              style={{
+                width: '36px', height: '20px', borderRadius: '10px',
+                background: isAvailable ? '#E8321A' : 'rgba(255,255,255,0.15)',
+                position: 'relative', cursor: 'pointer',
+                transition: 'background 0.25s ease', flexShrink: 0,
+                boxShadow: isAvailable ? '0 0 10px rgba(232,50,26,0.4)' : 'none',
+              }}
+            >
+              <div style={{
+                position: 'absolute', top: '3px',
+                left: isAvailable ? '17px' : '3px',
+                width: '14px', height: '14px',
+                borderRadius: '50%', background: '#fff',
+                transition: 'left 0.25s ease',
+                boxShadow: '0 1px 4px rgba(0,0,0,0.3)',
+              }} />
+            </div>
+            <span style={{ color: '#E8321A', fontWeight: 800, fontSize: '16px' }}>₹{item.price.toLocaleString('en-IN')}</span>
+          </div>
         </div>
         <p style={{ color: '#666', fontSize: '12px', lineHeight: 1.6, marginBottom: '8px' }}>{item.desc}</p>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-            {item.tags.map(tag => {
+            {(item.tags || []).map(tag => {
               const style = tagColors[tag] || { bg: 'rgba(255,255,255,0.05)', color: '#888', border: 'rgba(255,255,255,0.1)' }
               return (
                 <span key={tag} style={{
@@ -917,6 +950,11 @@ function MenuItem({ item, onDelete }) {
                 }}>{tag}</span>
               )
             })}
+            {!isAvailable && (
+              <span style={{ padding: '3px 9px', borderRadius: '50px', background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.25)', color: '#EF4444', fontSize: '10px', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                Unavailable
+              </span>
+            )}
           </div>
           {hov && (
             <div style={{ display: 'flex', gap: '6px' }}>
