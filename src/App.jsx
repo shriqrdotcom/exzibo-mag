@@ -9,6 +9,7 @@ import Restaurants from './pages/Restaurants'
 import RestaurantWebsite from './pages/RestaurantWebsite'
 import FoodDetail from './pages/FoodDetail'
 import AdminDashboard from './pages/AdminDashboard'
+import MenuPage from './pages/MenuPage'
 
 export default function App() {
   return (
@@ -21,6 +22,7 @@ export default function App() {
         <Route path="/menu-editor/:uid" element={<MenuEditor />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/create-website" element={<CreateWebsite />} />
+        <Route path="/menu" element={<MenuPage />} />
         <Route path="/restaurants" element={<Restaurants />} />
         <Route path="/restaurant/:slug" element={<RestaurantWebsite />} />
         <Route path="/restaurant/:slug/food/:itemName" element={<FoodDetail />} />
