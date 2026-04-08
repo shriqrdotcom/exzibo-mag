@@ -127,6 +127,7 @@ export default function MenuEditor() {
   const [newCategory, setNewCategory] = useState({ emoji: '', label: '', image: null })
   const [hoveredCatId, setHoveredCatId] = useState(null)
   const [assignModalCat, setAssignModalCat] = useState(null)
+  const [catEditMode, setCatEditMode] = useState(false)
   const longPressTimer = useRef(null)
   const catImageInputRef = useRef(null)
 
@@ -473,23 +474,40 @@ export default function MenuEditor() {
                   <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', color: '#555', textTransform: 'uppercase' }}>
                     Category Filters · {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
                   </span>
-                  <button
-                    onClick={() => setShowAddCategoryModal(true)}
-                    style={{
-                      display: 'flex', alignItems: 'center', gap: '4px',
-                      padding: '4px 10px',
-                      background: 'rgba(232,50,26,0.1)',
-                      border: '1px solid rgba(232,50,26,0.2)',
-                      borderRadius: '6px',
-                      color: '#E8321A', fontSize: '10px', fontWeight: 700, letterSpacing: '0.06em',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s',
-                    }}
-                    onMouseEnter={e => { e.currentTarget.style.background = '#E8321A'; e.currentTarget.style.color = '#fff' }}
-                    onMouseLeave={e => { e.currentTarget.style.background = 'rgba(232,50,26,0.1)'; e.currentTarget.style.color = '#E8321A' }}
-                  >
-                    <Plus size={10} /> ADD FILTER
-                  </button>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <button
+                      onClick={() => setCatEditMode(v => !v)}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: '4px',
+                        padding: '4px 10px',
+                        background: catEditMode ? 'rgba(255,255,255,0.08)' : 'transparent',
+                        border: `1px solid ${catEditMode ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.1)'}`,
+                        borderRadius: '6px',
+                        color: catEditMode ? '#fff' : '#555', fontSize: '10px', fontWeight: 700, letterSpacing: '0.06em',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                      }}
+                    >
+                      {catEditMode ? 'DONE' : 'EDIT'}
+                    </button>
+                    <button
+                      onClick={() => setShowAddCategoryModal(true)}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: '4px',
+                        padding: '4px 10px',
+                        background: 'rgba(232,50,26,0.1)',
+                        border: '1px solid rgba(232,50,26,0.2)',
+                        borderRadius: '6px',
+                        color: '#E8321A', fontSize: '10px', fontWeight: 700, letterSpacing: '0.06em',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                      }}
+                      onMouseEnter={e => { e.currentTarget.style.background = '#E8321A'; e.currentTarget.style.color = '#fff' }}
+                      onMouseLeave={e => { e.currentTarget.style.background = 'rgba(232,50,26,0.1)'; e.currentTarget.style.color = '#E8321A' }}
+                    >
+                      <Plus size={10} /> ADD FILTER
+                    </button>
+                  </div>
                 </div>
                 <div style={{
                   display: 'flex', gap: '10px',
@@ -561,7 +579,7 @@ export default function MenuEditor() {
                             {assignedCount}
                           </div>
                         )}
-                        {cat.id !== 'all' && isHovered && (
+                        {cat.id !== 'all' && (catEditMode || isHovered) && (
                           <button
                             onClick={e => { e.stopPropagation(); removeCategoryFilter(cat.id) }}
                             style={{
