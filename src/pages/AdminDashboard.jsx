@@ -2150,12 +2150,39 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
                     onFocus={e => e.target.style.borderColor = accentStart}
                     onBlur={e => e.target.style.borderColor = '#e2e8f0'}
                   />
-                  <input
-                    type="number" value={editDraft.price} onChange={e => setEditDraft(d => ({ ...d, price: e.target.value }))}
-                    style={inputSt}
-                    onFocus={e => e.target.style.borderColor = accentStart}
-                    onBlur={e => e.target.style.borderColor = '#e2e8f0'}
-                  />
+                  {/* Price + Veg/Non-Veg row */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <input
+                      type="number" value={editDraft.price} onChange={e => setEditDraft(d => ({ ...d, price: e.target.value }))}
+                      style={{ ...inputSt, flex: 1 }}
+                      onFocus={e => e.target.style.borderColor = accentStart}
+                      onBlur={e => e.target.style.borderColor = '#e2e8f0'}
+                    />
+                    <div
+                      onClick={() => setEditDraft(d => ({ ...d, veg: !d.veg }))}
+                      style={{
+                        display: 'flex', alignItems: 'center',
+                        borderRadius: '999px', overflow: 'hidden', cursor: 'pointer', flexShrink: 0,
+                        border: '1.5px solid #e2e8f0',
+                        background: '#f8fafc',
+                      }}
+                    >
+                      <span style={{
+                        padding: '7px 14px',
+                        background: !editDraft.veg ? '#ef4444' : 'transparent',
+                        color: !editDraft.veg ? '#fff' : '#94A3B8',
+                        fontSize: '11px', fontWeight: 800, letterSpacing: '0.04em',
+                        transition: 'all 0.2s',
+                      }}>NON-VEG</span>
+                      <span style={{
+                        padding: '7px 14px',
+                        background: editDraft.veg ? '#22c55e' : 'transparent',
+                        color: editDraft.veg ? '#fff' : '#94A3B8',
+                        fontSize: '11px', fontWeight: 800, letterSpacing: '0.04em',
+                        transition: 'all 0.2s',
+                      }}>VEG</span>
+                    </div>
+                  </div>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                     {Object.keys(TAG_COLORS).map(tag => {
                       const active = editDraft.tags.includes(tag)
@@ -2171,31 +2198,6 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
                         }}>{tag}</button>
                       )
                     })}
-                  </div>
-                  {/* Veg / Non-Veg toggle */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <span style={{ fontSize: '11px', fontWeight: 700, color: '#ef4444', letterSpacing: '0.06em' }}>NON-VEG</span>
-                    <div
-                      onClick={() => setEditDraft(d => ({ ...d, veg: !d.veg }))}
-                      style={{
-                        width: '44px', height: '24px', borderRadius: '12px',
-                        background: editDraft.veg ? '#22c55e' : '#ef4444',
-                        position: 'relative', cursor: 'pointer',
-                        transition: 'background 0.25s ease',
-                        boxShadow: editDraft.veg ? '0 0 10px rgba(34,197,94,0.4)' : '0 0 10px rgba(239,68,68,0.4)',
-                        flexShrink: 0,
-                      }}
-                    >
-                      <div style={{
-                        position: 'absolute', top: '4px',
-                        left: editDraft.veg ? '22px' : '4px',
-                        width: '16px', height: '16px',
-                        borderRadius: '50%', background: '#fff',
-                        transition: 'left 0.25s ease',
-                        boxShadow: '0 1px 4px rgba(0,0,0,0.2)',
-                      }} />
-                    </div>
-                    <span style={{ fontSize: '11px', fontWeight: 700, color: '#22c55e', letterSpacing: '0.06em' }}>VEG</span>
                   </div>
                 </div>
                 {/* ── Food Card: Add-on Editor ── */}
