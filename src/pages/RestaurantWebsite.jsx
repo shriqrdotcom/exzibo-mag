@@ -222,6 +222,7 @@ export default function RestaurantWebsite() {
   }, [darkMode])
 
   const [dynamicCategories, setDynamicCategories] = useState(DEFAULT_CATEGORY_FILTERS)
+  const [filtersEnabled, setFiltersEnabled] = useState({ starters: true, mains: true, drinks: true })
   const [searchQuery, setSearchQuery] = useState('')
   const [activeCategory, setActiveCategory] = useState('all')
   const [vegMode, setVegMode] = useState(false)
@@ -456,6 +457,7 @@ export default function RestaurantWebsite() {
       setMenuTabs(demoTabs)
       setMenuData(loadMenuFromStorage('demo', demoTabs) || MENU_FALLBACK)
       setDynamicCategories(loadFiltersFromStorage('demo'))
+      try { const fe = localStorage.getItem('exzibo_filters_enabled_demo'); if (fe) setFiltersEnabled(JSON.parse(fe)) } catch {}
       setActiveMenuTab(demoTabs[0]?.id || 'starters')
       return
     }
@@ -467,6 +469,7 @@ export default function RestaurantWebsite() {
       setRestaurant(found)
       setMenuData(loadMenuFromStorage(found.id, tabs) || Object.fromEntries(tabs.map(t => [t.id, []])))
       setDynamicCategories(loadFiltersFromStorage(found.id))
+      try { const fe = localStorage.getItem(`exzibo_filters_enabled_${found.id}`); if (fe) setFiltersEnabled(JSON.parse(fe)) } catch {}
       setActiveMenuTab(tabs[0]?.id || 'starters')
     } else {
       setNotFound(true)
@@ -503,6 +506,9 @@ export default function RestaurantWebsite() {
         setDynamicCategories(loadFiltersFromStorage(id))
         setActiveCategory('all')
       }
+      if (e.key === `exzibo_filters_enabled_${id}`) {
+        try { if (e.newValue) setFiltersEnabled(JSON.parse(e.newValue)) } catch {}
+      }
     }
     window.addEventListener('storage', onStorageChange)
     return () => window.removeEventListener('storage', onStorageChange)
@@ -511,6 +517,12 @@ export default function RestaurantWebsite() {
   useEffect(() => {
     setActiveCategory('all')
   }, [activeMenuTab])
+
+  useEffect(() => {
+    if (filtersEnabled[activeMenuTab] === false) {
+      setActiveCategory('all')
+    }
+  }, [filtersEnabled, activeMenuTab])
 
   useEffect(() => {
     const images = restaurant?.images?.length ? restaurant.images : FALLBACK_IMAGES
@@ -807,7 +819,7 @@ export default function RestaurantWebsite() {
       </header>
 
       {/* ── CATEGORY FILTER STRIP — standalone, outside header ── */}
-      {activeNav === 'menu' && (
+      {activeNav === 'menu' && filtersEnabled[activeMenuTab] !== false && (
         <div style={{ padding: '14px 16px 0' }}>
           <div className="category-scroll-row" style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '2px' }}>
             {tabCategories.map(cat => {

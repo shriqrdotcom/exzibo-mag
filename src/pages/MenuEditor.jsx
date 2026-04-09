@@ -65,6 +65,8 @@ export default function MenuEditor() {
       if (savedMenu) setMenuItems(JSON.parse(savedMenu))
       const savedFilters = localStorage.getItem(`exzibo_menu_filters_${uid}`)
       if (savedFilters) setCategoryFilters(JSON.parse(savedFilters))
+      const savedFiltersEnabled = localStorage.getItem(`exzibo_filters_enabled_${uid}`)
+      if (savedFiltersEnabled) setFiltersEnabled(JSON.parse(savedFiltersEnabled))
     } else {
       setNotFound(true)
     }
@@ -74,6 +76,7 @@ export default function MenuEditor() {
     if (uid) {
       localStorage.setItem(`exzibo_menu_${uid}`, JSON.stringify(menuItems))
       localStorage.setItem(`exzibo_menu_filters_${uid}`, JSON.stringify(categoryFilters))
+      localStorage.setItem(`exzibo_filters_enabled_${uid}`, JSON.stringify(filtersEnabled))
       const all = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
       const updated = all.map(r => r.id === uid
         ? { ...r, status: isActive ? 'active' : 'paused', name: restInfo.name, tables: restInfo.tables,
@@ -84,6 +87,7 @@ export default function MenuEditor() {
     } else {
       localStorage.setItem('exzibo_menu_default', JSON.stringify(menuItems))
       localStorage.setItem('exzibo_menu_filters_default', JSON.stringify(categoryFilters))
+      localStorage.setItem('exzibo_filters_enabled_default', JSON.stringify(filtersEnabled))
     }
     setSaved(true)
     clearTimeout(saveTimer.current)
@@ -122,6 +126,7 @@ export default function MenuEditor() {
   }
 
   const [categoryFilters, setCategoryFilters] = useState(defaultCategoryFilters)
+  const [filtersEnabled, setFiltersEnabled] = useState({ starters: true, mains: true, drinks: true })
   const [activeCategoryFilter, setActiveCategoryFilter] = useState({ starters: 'all', mains: 'all', drinks: 'all' })
   const [showAddCategoryModal, setShowAddCategoryModal] = useState(false)
   const [newCategory, setNewCategory] = useState({ emoji: '', label: '', image: null })
@@ -491,6 +496,48 @@ export default function MenuEditor() {
                     >
                       {catEditMode ? 'DONE' : 'EDIT'}
                     </button>
+                    {/* Toggle switch for enabling/disabling category filters */}
+                    <div
+                      onClick={() => setFiltersEnabled(prev => ({ ...prev, [activeTab]: !(prev[activeTab] !== false) }))}
+                      title={filtersEnabled[activeTab] !== false ? 'Disable category filters for this section' : 'Enable category filters for this section'}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: '6px',
+                        padding: '4px 10px',
+                        background: filtersEnabled[activeTab] !== false ? 'rgba(34,197,94,0.1)' : 'rgba(255,255,255,0.04)',
+                        border: `1px solid ${filtersEnabled[activeTab] !== false ? 'rgba(34,197,94,0.25)' : 'rgba(255,255,255,0.1)'}`,
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                        userSelect: 'none',
+                      }}
+                    >
+                      <div style={{
+                        width: '28px', height: '16px',
+                        borderRadius: '8px',
+                        background: filtersEnabled[activeTab] !== false ? '#22c55e' : 'rgba(255,255,255,0.15)',
+                        position: 'relative',
+                        transition: 'background 0.2s',
+                        flexShrink: 0,
+                      }}>
+                        <div style={{
+                          position: 'absolute',
+                          top: '2px',
+                          left: filtersEnabled[activeTab] !== false ? '14px' : '2px',
+                          width: '12px', height: '12px',
+                          borderRadius: '6px',
+                          background: '#fff',
+                          transition: 'left 0.2s',
+                          boxShadow: '0 1px 4px rgba(0,0,0,0.3)',
+                        }} />
+                      </div>
+                      <span style={{
+                        fontSize: '10px', fontWeight: 700, letterSpacing: '0.06em',
+                        color: filtersEnabled[activeTab] !== false ? '#4ade80' : '#555',
+                        transition: 'color 0.2s',
+                      }}>
+                        {filtersEnabled[activeTab] !== false ? 'ON' : 'OFF'}
+                      </span>
+                    </div>
                     <button
                       onClick={() => setShowAddCategoryModal(true)}
                       style={{
