@@ -1028,10 +1028,10 @@ const INITIAL_MENU = {
 }
 
 const TAG_COLORS = {
-  Popular:     { bg: '#FEF9C3', color: '#CA8A04', border: '#FDE68A' },
-  'Gluten Free': { bg: '#EFF6FF', color: '#2563EB', border: '#BFDBFE' },
-  Vegetarian:  { bg: '#F0FDF4', color: '#16A34A', border: '#BBF7D0' },
-  Seasonal:    { bg: '#FFF7ED', color: '#EA580C', border: '#FED7AA' },
+  Popular:       { bg: '#FEF9C3', color: '#B45309', border: '#FDE68A' },
+  'Gluten Free': { bg: '#DBEAFE', color: '#1D4ED8', border: '#BFDBFE' },
+  Vegetarian:    { bg: '#F1F5F9', color: '#64748B', border: '#CBD5E1' },
+  Seasonal:      { bg: '#F1F5F9', color: '#64748B', border: '#CBD5E1' },
 }
 
 const CATEGORY_TABS = [
@@ -2103,8 +2103,34 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
             {editingId === item.id && editDraft ? (
               /* ── Edit Mode ── */
               <div>
-                <div style={{ fontSize: '11px', fontWeight: 800, color: accentStart, letterSpacing: '0.1em', marginBottom: '12px' }}>
-                  EDITING ITEM
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                  <span style={{ fontSize: '11px', fontWeight: 800, color: accentStart, letterSpacing: '0.1em' }}>
+                    EDITING ITEM
+                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '10px', fontWeight: 700, color: '#94A3B8', letterSpacing: '0.06em' }}>UNAVAILABLE</span>
+                    <div
+                      onClick={() => setEditDraft(d => ({ ...d, available: d.available === false ? true : false }))}
+                      style={{
+                        width: '40px', height: '22px', borderRadius: '11px',
+                        background: editDraft.available !== false ? accentStart : '#cbd5e1',
+                        position: 'relative', cursor: 'pointer',
+                        transition: 'background 0.25s ease',
+                        boxShadow: editDraft.available !== false ? `0 0 8px ${accentStart}50` : 'none',
+                        flexShrink: 0,
+                      }}
+                    >
+                      <div style={{
+                        position: 'absolute', top: '3px',
+                        left: editDraft.available !== false ? '20px' : '3px',
+                        width: '16px', height: '16px',
+                        borderRadius: '50%', background: '#fff',
+                        transition: 'left 0.25s ease',
+                        boxShadow: '0 1px 4px rgba(0,0,0,0.2)',
+                      }} />
+                    </div>
+                    <span style={{ fontSize: '10px', fontWeight: 700, color: accentStart, letterSpacing: '0.06em' }}>AVAILABLE</span>
+                  </div>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   <ImageUploadField
@@ -2134,10 +2160,11 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
                     {Object.keys(TAG_COLORS).map(tag => {
                       const active = editDraft.tags.includes(tag)
                       const tc = TAG_COLORS[tag]
+                      const isOutlineOnly = tag === 'Vegetarian' || tag === 'Seasonal'
                       return (
                         <button key={tag} onClick={() => toggleTag(editDraft, setEditDraft, tag)} style={{
-                          padding: '5px 12px', borderRadius: '50px', cursor: 'pointer',
-                          background: active ? tc.bg : 'transparent',
+                          padding: '5px 14px', borderRadius: '999px', cursor: 'pointer',
+                          background: active && !isOutlineOnly ? tc.bg : active && isOutlineOnly ? 'rgba(100,116,139,0.08)' : 'transparent',
                           border: `1.5px solid ${active ? tc.border : '#e2e8f0'}`,
                           color: active ? tc.color : '#94A3B8',
                           fontSize: '11px', fontWeight: 700, transition: 'all 0.15s',
@@ -2145,57 +2172,30 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
                       )
                     })}
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    {/* Veg / Non-Veg toggle */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <span style={{ minWidth: '80px', textAlign: 'right', fontSize: '11px', fontWeight: 700, color: '#ef4444', letterSpacing: '0.06em' }}>NON-VEG</span>
-                      <div
-                        onClick={() => setEditDraft(d => ({ ...d, veg: !d.veg }))}
-                        style={{
-                          width: '44px', height: '24px', borderRadius: '12px',
-                          background: editDraft.veg ? '#22c55e' : '#ef4444',
-                          position: 'relative', cursor: 'pointer',
-                          transition: 'background 0.25s ease',
-                          boxShadow: editDraft.veg ? '0 0 10px rgba(34,197,94,0.4)' : '0 0 10px rgba(239,68,68,0.4)',
-                          flexShrink: 0,
-                        }}
-                      >
-                        <div style={{
-                          position: 'absolute', top: '4px',
-                          left: editDraft.veg ? '22px' : '4px',
-                          width: '16px', height: '16px',
-                          borderRadius: '50%', background: '#fff',
-                          transition: 'left 0.25s ease',
-                          boxShadow: '0 1px 4px rgba(0,0,0,0.2)',
-                        }} />
-                      </div>
-                      <span style={{ fontSize: '11px', fontWeight: 700, color: '#22c55e', letterSpacing: '0.06em' }}>VEG</span>
+                  {/* Veg / Non-Veg toggle */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <span style={{ fontSize: '11px', fontWeight: 700, color: '#ef4444', letterSpacing: '0.06em' }}>NON-VEG</span>
+                    <div
+                      onClick={() => setEditDraft(d => ({ ...d, veg: !d.veg }))}
+                      style={{
+                        width: '44px', height: '24px', borderRadius: '12px',
+                        background: editDraft.veg ? '#22c55e' : '#ef4444',
+                        position: 'relative', cursor: 'pointer',
+                        transition: 'background 0.25s ease',
+                        boxShadow: editDraft.veg ? '0 0 10px rgba(34,197,94,0.4)' : '0 0 10px rgba(239,68,68,0.4)',
+                        flexShrink: 0,
+                      }}
+                    >
+                      <div style={{
+                        position: 'absolute', top: '4px',
+                        left: editDraft.veg ? '22px' : '4px',
+                        width: '16px', height: '16px',
+                        borderRadius: '50%', background: '#fff',
+                        transition: 'left 0.25s ease',
+                        boxShadow: '0 1px 4px rgba(0,0,0,0.2)',
+                      }} />
                     </div>
-                    {/* Available / Unavailable toggle */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <span style={{ minWidth: '80px', textAlign: 'right', fontSize: '11px', fontWeight: 700, color: '#94A3B8', letterSpacing: '0.06em' }}>UNAVAILABLE</span>
-                      <div
-                        onClick={() => setEditDraft(d => ({ ...d, available: d.available === false ? true : false }))}
-                        style={{
-                          width: '44px', height: '24px', borderRadius: '12px',
-                          background: editDraft.available !== false ? accentStart : '#cbd5e1',
-                          position: 'relative', cursor: 'pointer',
-                          transition: 'background 0.25s ease',
-                          boxShadow: editDraft.available !== false ? `0 0 10px ${accentStart}60` : 'none',
-                          flexShrink: 0,
-                        }}
-                      >
-                        <div style={{
-                          position: 'absolute', top: '4px',
-                          left: editDraft.available !== false ? '22px' : '4px',
-                          width: '16px', height: '16px',
-                          borderRadius: '50%', background: '#fff',
-                          transition: 'left 0.25s ease',
-                          boxShadow: '0 1px 4px rgba(0,0,0,0.2)',
-                        }} />
-                      </div>
-                      <span style={{ fontSize: '11px', fontWeight: 700, color: accentStart, letterSpacing: '0.06em' }}>AVAILABLE</span>
-                    </div>
+                    <span style={{ fontSize: '11px', fontWeight: 700, color: '#22c55e', letterSpacing: '0.06em' }}>VEG</span>
                   </div>
                 </div>
                 {/* ── Food Card: Add-on Editor ── */}
