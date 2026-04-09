@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
   CheckCircle, XCircle,
-  ClipboardList, BookOpen, Users, Settings, ArrowLeft,
+  ClipboardList, BookOpen, Users, Settings, ArrowLeft, BarChart2,
   Palette, DollarSign, Type, Save, Check, CalendarDays, UtensilsCrossed,
   SlidersHorizontal, Plus, Pencil, Trash2, X, Search,
 } from 'lucide-react'
@@ -37,7 +37,7 @@ const NAV_ITEMS = [
   { id: 'orders',    icon: ClipboardList, label: 'Orders' },
   { id: 'bookings',  icon: CalendarDays,  label: 'Bookings' },
   { id: 'menu',      icon: BookOpen,      label: 'Menu' },
-  { id: 'customers', icon: Users,         label: 'Customers' },
+  { id: 'customers', icon: BarChart2,      label: 'Analytics' },
   { id: 'settings',  icon: Settings,      label: 'Settings' },
 ]
 
