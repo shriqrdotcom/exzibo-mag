@@ -1191,6 +1191,8 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
   const [showAddCatModal, setShowAddCatModal] = useState(false)
   const [newCat, setNewCat] = useState({ emoji: '', label: '', image: null })
   const [assignModalCat, setAssignModalCat] = useState(null)
+  const [assignSearch, setAssignSearch] = useState('')
+  const [assignSearchOpen, setAssignSearchOpen] = useState(false)
   const [editIconCat, setEditIconCat] = useState(null)
   const [editIconDraft, setEditIconDraft] = useState({ emoji: '', image: null })
   const [savedAll, setSavedAll] = useState(false)
@@ -2130,30 +2132,65 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
         if (!cat) return null
         const sectionItems = menu[activeCategory] || []
         const assigned = cat.assignedItems || []
+        const filteredItems = assignSearch.trim()
+          ? sectionItems.filter(i => i.name.toLowerCase().includes(assignSearch.toLowerCase()))
+          : sectionItems
+        const sectionLabel = categoryTabs.find(c => c.key === activeCategory)?.label || activeCategory
         return (
           <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 200 }}
-            onClick={() => setAssignModalCat(null)}>
+            onClick={() => { setAssignModalCat(null); setAssignSearch(''); setAssignSearchOpen(false) }}>
             <div style={{ background: '#fff', borderRadius: '24px 24px 0 0', padding: '24px', width: '100%', maxWidth: '480px', maxHeight: '70vh', display: 'flex', flexDirection: 'column', boxShadow: '0 -8px 40px rgba(0,0,0,0.15)' }}
               onClick={e => e.stopPropagation()}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: assignSearchOpen ? '12px' : '20px' }}>
                 <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: `${accentStart}12`, border: `1.5px solid ${accentStart}25`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', overflow: 'hidden', flexShrink: 0 }}>
                   {cat.image ? <img src={cat.image} alt={cat.label} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '12px' }} /> : cat.emoji}
                 </div>
                 <div>
                   <div style={{ fontSize: '16px', fontWeight: 800, color: '#0f172a' }}>Assign Items to "{cat.label}"</div>
                   <div style={{ fontSize: '11px', color: '#94A3B8', fontWeight: 500, marginTop: '2px' }}>
-                    {assigned.length} of {sectionItems.length} items assigned · {categoryTabs.find(c => c.key === activeCategory)?.label}
+                    {assigned.length} of {sectionItems.length} items assigned · {sectionLabel}
                   </div>
                 </div>
-                <button onClick={() => setAssignModalCat(null)} style={{ marginLeft: 'auto', background: 'rgba(0,0,0,0.05)', border: 'none', borderRadius: '16px', width: '32px', height: '32px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <button onClick={() => { setAssignSearchOpen(o => !o); setAssignSearch('') }} style={{ marginLeft: 'auto', background: assignSearchOpen ? `${accentStart}15` : 'rgba(0,0,0,0.05)', border: 'none', borderRadius: '16px', width: '32px', height: '32px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <Search size={15} color={assignSearchOpen ? accentStart : '#64748B'} />
+                </button>
+                <button onClick={() => { setAssignModalCat(null); setAssignSearch(''); setAssignSearchOpen(false) }} style={{ background: 'rgba(0,0,0,0.05)', border: 'none', borderRadius: '16px', width: '32px', height: '32px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   <X size={16} color="#64748B" />
                 </button>
               </div>
+              {assignSearchOpen && (
+                <div style={{ position: 'relative', marginBottom: '16px' }}>
+                  <Search size={14} color="#94A3B8" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
+                  <input
+                    autoFocus
+                    value={assignSearch}
+                    onChange={e => setAssignSearch(e.target.value)}
+                    placeholder={`Search in ${sectionLabel}…`}
+                    style={{
+                      width: '100%', boxSizing: 'border-box',
+                      padding: '10px 12px 10px 34px',
+                      background: 'rgba(248,250,252,0.9)',
+                      border: '1.5px solid #e2e8f0',
+                      borderRadius: '12px', color: '#0f172a', fontSize: '13px',
+                      outline: 'none',
+                    }}
+                    onFocus={e => e.target.style.borderColor = accentStart}
+                    onBlur={e => e.target.style.borderColor = '#e2e8f0'}
+                  />
+                  {assignSearch && (
+                    <button onClick={() => setAssignSearch('')} style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+                      <X size={13} color="#94A3B8" />
+                    </button>
+                  )}
+                </div>
+              )}
               {sectionItems.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '32px', color: '#94A3B8', fontSize: '13px' }}>No items in this section yet.</div>
+              ) : filteredItems.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '32px', color: '#94A3B8', fontSize: '13px' }}>No items match "{assignSearch}"</div>
               ) : (
                 <div style={{ overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
-                  {sectionItems.map(item => {
+                  {filteredItems.map(item => {
                     const isAssigned = assigned.includes(item.id)
                     return (
                       <button key={item.id} onClick={() => toggleAssignItem(cat.id, item.id)}
