@@ -656,7 +656,7 @@ export default function AdminDashboard() {
             </div>
           </>
         ) : activeNav === 'customers' ? (
-          <AnalyticsPanel accentStart={accentStart} accentEnd={accentEnd} />
+          <AnalyticsPanel accentStart={accentStart} accentEnd={accentEnd} restaurantId={isDefault ? 'demo' : id} />
         ) : null}
       </div>
 
@@ -2649,15 +2649,52 @@ function AnalyticsDonutChart({ accentStart }) {
   )
 }
 
-const CATEGORY_ITEMS = [
-  { emoji: '🍽️', label: 'Starts',        pct: '39%', pctColor: '#0f172a', value: '-1,804.90', barColor: '#1e293b', barW: '39%', iconBg: '#e8eaf5' },
-  { emoji: '🗓️', label: 'Main Course',   pct: '15%', pctColor: '#0eb5a0', value: '-694.20',   barColor: '#0eb5a0', barW: '15%', iconBg: '#dff6f3' },
-  { emoji: '🏠', label: "Drink's section", pct: '12%', pctColor: '#64748b', value: '-555.40',  barColor: '#6C63FF', barW: '12%', iconBg: '#ede9fe' },
-  { emoji: '🧮', label: 'TOTAL',         pct: '10%', pctColor: '#ef4444', value: '-462.80',   barColor: '#ef4444', barW: '10%', iconBg: '#fef2f0' },
+const ANALYTICS_PALETTE = [
+  { barColor: '#1e293b', iconBg: '#e8eaf5', pctColor: '#0f172a' },
+  { barColor: '#0eb5a0', iconBg: '#dff6f3', pctColor: '#0eb5a0' },
+  { barColor: '#6C63FF', iconBg: '#ede9fe', pctColor: '#64748b' },
+  { barColor: '#f59e0b', iconBg: '#fffbeb', pctColor: '#d97706' },
+  { barColor: '#ec4899', iconBg: '#fdf2f8', pctColor: '#db2777' },
+  { barColor: '#10b981', iconBg: '#ecfdf5', pctColor: '#059669' },
+  { barColor: '#3b82f6', iconBg: '#eff6ff', pctColor: '#2563eb' },
 ]
 
-function AnalyticsPanel({ accentStart, accentEnd }) {
+function buildCategoryItems(restaurantId) {
+  try {
+    const tabs = JSON.parse(localStorage.getItem(`exzibo_tabs_${restaurantId}`)) || CATEGORY_TABS
+    const menu = JSON.parse(localStorage.getItem(`exzibo_menu_${restaurantId}`)) || {}
+    const totalItems = tabs.reduce((sum, t) => sum + (menu[t.key]?.length || 0), 0) || 1
+    return tabs.map((tab, i) => {
+      const count = menu[tab.key]?.length || 0
+      const pct = Math.round((count / totalItems) * 100)
+      const value = -(count * 184.9 + i * 111.3).toFixed(2)
+      const palette = ANALYTICS_PALETTE[i % ANALYTICS_PALETTE.length]
+      return {
+        emoji: tab.emoji || '🍽️',
+        label: tab.label,
+        pct: `${pct}%`,
+        pctColor: palette.pctColor,
+        value: value.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+        barColor: palette.barColor,
+        barW: `${Math.max(pct, 4)}%`,
+        iconBg: palette.iconBg,
+      }
+    })
+  } catch {
+    return []
+  }
+}
+
+function AnalyticsPanel({ accentStart, accentEnd, restaurantId }) {
   const [showSheet, setShowSheet] = React.useState(false)
+  const [categoryItems, setCategoryItems] = React.useState(() => buildCategoryItems(restaurantId))
+
+  React.useEffect(() => {
+    const refresh = () => setCategoryItems(buildCategoryItems(restaurantId))
+    window.addEventListener('storage', refresh)
+    return () => window.removeEventListener('storage', refresh)
+  }, [restaurantId])
+
   const accent = accentStart || '#6C63FF'
   const accentE = accentEnd || accent
   const card = {
@@ -2789,8 +2826,8 @@ function AnalyticsPanel({ accentStart, accentEnd }) {
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0px' }}>
-              {CATEGORY_ITEMS.map((item, i) => (
-                <div key={i} style={{ paddingBottom: '18px', borderBottom: i < CATEGORY_ITEMS.length - 1 ? '1px solid #f1f5f9' : 'none', marginBottom: i < CATEGORY_ITEMS.length - 1 ? '18px' : '0' }}>
+              {categoryItems.map((item, i) => (
+                <div key={i} style={{ paddingBottom: '18px', borderBottom: i < categoryItems.length - 1 ? '1px solid #f1f5f9' : 'none', marginBottom: i < categoryItems.length - 1 ? '18px' : '0' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
                     <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: item.iconBg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', flexShrink: 0 }}>
                       {item.emoji}
