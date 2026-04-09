@@ -655,6 +655,8 @@ export default function AdminDashboard() {
               }
             </div>
           </>
+        ) : activeNav === 'customers' ? (
+          <AnalyticsPanel accentStart={accentStart} accentEnd={accentEnd} />
         ) : null}
       </div>
 
@@ -2583,5 +2585,182 @@ function OrderCard({ order, index, accentStart, currency, onConfirm, onCancel, o
         </div>
       )}
     </div>
+  )
+}
+
+/* ─── Analytics Panel (Customers Tab) ─── */
+const WEALTH_DATA = [38, 62, 58, 44, 42, 60, 64, 58, 62, 55, 48, 42]
+const CHART_W = 320
+const CHART_H = 110
+const MIN_V = 35
+const MAX_V = 75
+
+function AnalyticsLineChart() {
+  const pts = WEALTH_DATA.map((v, i) => [
+    (i / (WEALTH_DATA.length - 1)) * CHART_W,
+    CHART_H - ((v - MIN_V) / (MAX_V - MIN_V)) * CHART_H,
+  ])
+  const polyline = pts.map(([x, y]) => `${x},${y}`).join(' ')
+  const area = `M ${pts[0][0]},${CHART_H} ` + pts.map(([x, y]) => `L ${x},${y}`).join(' ') + ` L ${pts[pts.length - 1][0]},${CHART_H} Z`
+  return (
+    <svg viewBox={`0 0 ${CHART_W} ${CHART_H + 6}`} style={{ width: '100%', height: '120px' }} preserveAspectRatio="none">
+      <defs>
+        <linearGradient id="ag" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#E8321A" stopOpacity="0.15" />
+          <stop offset="100%" stopColor="#E8321A" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      {[35, 55, 75].map((v, i) => {
+        const y = CHART_H - ((v - MIN_V) / (MAX_V - MIN_V)) * CHART_H
+        return <line key={i} x1={0} y1={y} x2={CHART_W} y2={y} stroke="#e2e8f0" strokeWidth="1" strokeDasharray="4 3" />
+      })}
+      <path d={area} fill="url(#ag)" />
+      <polyline points={polyline} fill="none" stroke="#E8321A" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
+      {pts.map(([x, y], i) => <circle key={i} cx={x} cy={y} r="3.5" fill="#fff" stroke="#E8321A" strokeWidth="2" />)}
+    </svg>
+  )
+}
+
+function AnalyticsDonutChart({ accentStart }) {
+  const accent = accentStart || '#6C63FF'
+  const segments = [
+    { value: 55, color: accent },
+    { value: 25, color: '#3d3799' },
+    { value: 20, color: '#a5d8f0' },
+  ]
+  const total = segments.reduce((s, d) => s + d.value, 0)
+  const r = 40, cx = 55, cy = 55, sw = 16, circ = 2 * Math.PI * r
+  let cum = 0
+  return (
+    <div style={{ position: 'relative', width: 110, height: 110 }}>
+      <svg viewBox="0 0 110 110" width={110} height={110} style={{ transform: 'rotate(-90deg)' }}>
+        {segments.map((seg, i) => {
+          const dash = (seg.value / total) * circ
+          const offset = (cum / total) * circ
+          cum += seg.value
+          return <circle key={i} cx={cx} cy={cy} r={r} fill="none" stroke={seg.color} strokeWidth={sw} strokeDasharray={`${dash} ${circ - dash}`} strokeDashoffset={-offset} />
+        })}
+      </svg>
+      <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+        <span style={{ fontSize: 20 }}>🏠</span>
+        <span style={{ fontSize: 10, color: '#64748b', fontWeight: 700, marginTop: 2 }}>rent</span>
+      </div>
+    </div>
+  )
+}
+
+function AnalyticsPanel({ accentStart, accentEnd }) {
+  const accent = accentStart || '#6C63FF'
+  const accentE = accentEnd || accent
+  const card = {
+    background: 'rgba(255,255,255,0.85)',
+    backdropFilter: 'blur(12px)',
+    WebkitBackdropFilter: 'blur(12px)',
+    borderRadius: '20px',
+    padding: '18px',
+    boxShadow: '0 4px 20px rgba(0,0,0,0.07), inset 0 1px 0 rgba(255,255,255,0.9)',
+    border: '1px solid rgba(255,255,255,0.7)',
+  }
+  return (
+    <div style={{ paddingTop: '8px', display: 'flex', flexDirection: 'column', gap: '14px', animation: 'fadeSlideUp 0.3s ease' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 4px 8px' }}>
+        <h1 style={{ fontSize: '24px', fontWeight: 900, color: '#0f172a', margin: 0, letterSpacing: '-0.02em' }}>
+          Analytics Page
+        </h1>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          {[ABarChart2, ACalendar].map((Icon, i) => (
+            <div key={i} style={{ width: '36px', height: '36px', borderRadius: '12px', background: 'rgba(255,255,255,0.8)', border: '1px solid rgba(226,232,240,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
+              <Icon size={16} color="#64748b" />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div style={card}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+          <span style={{ fontSize: '14px', fontWeight: 700, color: '#334155' }}>Overview</span>
+          <ABarChart2 size={16} color="#94a3b8" />
+        </div>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginBottom: '10px' }}>
+          <span style={{ fontSize: '24px', fontWeight: 900, color: '#0f172a' }}>$34,628</span>
+          <span style={{ fontSize: '12px', color: '#94a3b8', fontWeight: 500 }}>Total wealth</span>
+        </div>
+        <div style={{ fontSize: '10px', color: '#94a3b8', marginBottom: '2px' }}>75k</div>
+        <AnalyticsLineChart />
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: '#94a3b8', marginTop: '2px' }}>
+          <span>35k</span><span>55k</span><span>75k</span>
+        </div>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+        <div style={{ background: `linear-gradient(135deg, ${accent}, ${accentE})`, borderRadius: '20px', padding: '18px', boxShadow: `0 4px 20px ${accent}40` }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '14px' }}>
+            <span style={{ fontSize: '11px', fontWeight: 800, color: 'rgba(255,255,255,0.85)', textTransform: 'uppercase', letterSpacing: '0.06em', lineHeight: 1.4 }}>Todays<br />Collection</span>
+            <AGrid size={15} color="rgba(255,255,255,0.65)" />
+          </div>
+          <div style={{ fontSize: '20px', fontWeight: 900, color: '#fff', marginBottom: '6px' }}>-₹2,273.59</div>
+          <div style={{ fontSize: '10px', fontWeight: 700, color: 'rgba(255,255,255,0.65)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Total in INR.</div>
+        </div>
+
+        <div style={card}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '14px' }}>
+            <span style={{ fontSize: '13px', fontWeight: 700, color: '#334155', lineHeight: 1.4 }}>Total<br />customer</span>
+            <AUsers size={16} color="#94a3b8" />
+          </div>
+          <div style={{ fontSize: '28px', fontWeight: 900, color: '#0f172a', marginBottom: '4px' }}>1,482</div>
+          <div style={{ fontSize: '11px', color: accent, fontWeight: 700 }}>+12% this month</div>
+        </div>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', paddingBottom: '8px' }}>
+        <div style={{ ...card, display: 'flex', flexDirection: 'column' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+            <span style={{ fontSize: '13px', fontWeight: 700, color: '#334155' }}>Category</span>
+            <ACalendar size={15} color="#94a3b8" />
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'center' }}>
+            <AnalyticsDonutChart accentStart={accentStart} />
+          </div>
+        </div>
+
+        <div style={card}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '14px' }}>
+            <span style={{ fontSize: '11px', fontWeight: 800, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.06em', lineHeight: 1.4 }}>Total<br />Booking</span>
+            <ACalendar size={15} color="#94a3b8" />
+          </div>
+          <div style={{ fontSize: '40px', fontWeight: 900, color: '#0f172a', lineHeight: 1, marginBottom: '10px' }}>256</div>
+          <div style={{ fontSize: '12px', color: '#64748b' }}>Bookings this month</div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function ABarChart2({ size, color }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="18" y1="20" x2="18" y2="10" /><line x1="12" y1="20" x2="12" y2="4" /><line x1="6" y1="20" x2="6" y2="14" /><line x1="2" y1="20" x2="22" y2="20" />
+    </svg>
+  )
+}
+function ACalendar({ size, color }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" />
+    </svg>
+  )
+}
+function AGrid({ size, color }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="14" y="14" width="7" height="7" /><rect x="3" y="14" width="7" height="7" />
+    </svg>
+  )
+}
+function AUsers({ size, color }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" />
+    </svg>
   )
 }
