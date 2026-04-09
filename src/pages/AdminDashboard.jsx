@@ -1267,7 +1267,8 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
         i.id === id ? { ...i, available: i.available === false ? true : false } : i
       ),
     }
-    saveMenu(updated)
+    setMenu(updated)
+    setSavedAll(false)
   }
 
   function startEdit(item) {
@@ -1296,7 +1297,8 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
         i.id === editingId ? { ...editDraft, price: parseFloat(editDraft.price) || 0 } : i
       ),
     }
-    saveMenu(updated)
+    setMenu(updated)
+    setSavedAll(false)
     setEditingId(null)
     setEditDraft(null)
   }
@@ -2284,7 +2286,7 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
                 </div>
 
                 <div style={{ display: 'flex', gap: '8px', marginTop: '14px' }}>
-                  <button onClick={() => setEditingId(null)} style={{
+                  <button onClick={() => { setEditingId(null); setEditDraft(null) }} style={{
                     flex: 1, padding: '11px',
                     background: 'rgba(248,250,252,0.9)', border: '1.5px solid #e2e8f0',
                     borderRadius: '50px', color: '#94A3B8',
