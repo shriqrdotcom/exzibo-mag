@@ -2649,7 +2649,15 @@ function AnalyticsDonutChart({ accentStart }) {
   )
 }
 
+const CATEGORY_ITEMS = [
+  { emoji: '🍽️', label: 'Starts',        pct: '39%', pctColor: '#0f172a', value: '-1,804.90', barColor: '#1e293b', barW: '39%', iconBg: '#e8eaf5' },
+  { emoji: '🗓️', label: 'Main Course',   pct: '15%', pctColor: '#0eb5a0', value: '-694.20',   barColor: '#0eb5a0', barW: '15%', iconBg: '#dff6f3' },
+  { emoji: '🏠', label: 'Drunks Section',pct: '12%', pctColor: '#64748b', value: '-555.40',   barColor: '#6C63FF', barW: '12%', iconBg: '#ede9fe' },
+  { emoji: '🧮', label: 'TOTAL',         pct: '10%', pctColor: '#ef4444', value: '-462.80',   barColor: '#ef4444', barW: '10%', iconBg: '#fef2f0' },
+]
+
 function AnalyticsPanel({ accentStart, accentEnd }) {
+  const [showSheet, setShowSheet] = React.useState(false)
   const accent = accentStart || '#6C63FF'
   const accentE = accentEnd || accent
   const card = {
@@ -2662,77 +2670,152 @@ function AnalyticsPanel({ accentStart, accentEnd }) {
     border: '1px solid rgba(255,255,255,0.7)',
   }
   return (
-    <div style={{ paddingTop: '8px', display: 'flex', flexDirection: 'column', gap: '14px', animation: 'fadeSlideUp 0.3s ease' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 4px 8px' }}>
-        <h1 style={{ fontSize: '24px', fontWeight: 900, color: '#0f172a', margin: 0, letterSpacing: '-0.02em' }}>
-          Analytics Page
-        </h1>
-        <div style={{ display: 'flex', gap: '8px' }}>
-          {[ABarChart2, ACalendar].map((Icon, i) => (
-            <div key={i} style={{ width: '36px', height: '36px', borderRadius: '12px', background: 'rgba(255,255,255,0.8)', border: '1px solid rgba(226,232,240,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
-              <Icon size={16} color="#64748b" />
+    <>
+      <style>{`
+        @keyframes sheetSlideUp {
+          from { transform: translateY(100%); opacity: 0; }
+          to   { transform: translateY(0);    opacity: 1; }
+        }
+        @keyframes sheetSlideDown {
+          from { transform: translateY(0);    opacity: 1; }
+          to   { transform: translateY(100%); opacity: 0; }
+        }
+        @keyframes overlayIn  { from { opacity: 0; } to { opacity: 1; } }
+      `}</style>
+
+      <div style={{ paddingTop: '8px', display: 'flex', flexDirection: 'column', gap: '14px', animation: 'fadeSlideUp 0.3s ease' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 4px 8px' }}>
+          <h1 style={{ fontSize: '24px', fontWeight: 900, color: '#0f172a', margin: 0, letterSpacing: '-0.02em' }}>
+            Analytics Page
+          </h1>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            {[ABarChart2, ACalendar].map((Icon, i) => (
+              <div key={i} style={{ width: '36px', height: '36px', borderRadius: '12px', background: 'rgba(255,255,255,0.8)', border: '1px solid rgba(226,232,240,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
+                <Icon size={16} color="#64748b" />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div style={card}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+            <span style={{ fontSize: '14px', fontWeight: 700, color: '#334155' }}>Overview</span>
+            <ABarChart2 size={16} color="#94a3b8" />
+          </div>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginBottom: '10px' }}>
+            <span style={{ fontSize: '24px', fontWeight: 900, color: '#0f172a' }}>$34,628</span>
+            <span style={{ fontSize: '12px', color: '#94a3b8', fontWeight: 500 }}>Total wealth</span>
+          </div>
+          <div style={{ fontSize: '10px', color: '#94a3b8', marginBottom: '2px' }}>75k</div>
+          <AnalyticsLineChart />
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: '#94a3b8', marginTop: '2px' }}>
+            <span>35k</span><span>55k</span><span>75k</span>
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+          <div style={{ background: `linear-gradient(135deg, ${accent}, ${accentE})`, borderRadius: '20px', padding: '18px', boxShadow: `0 4px 20px ${accent}40` }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '14px' }}>
+              <span style={{ fontSize: '11px', fontWeight: 800, color: 'rgba(255,255,255,0.85)', textTransform: 'uppercase', letterSpacing: '0.06em', lineHeight: 1.4 }}>Todays<br />Collection</span>
+              <AGrid size={15} color="rgba(255,255,255,0.65)" />
             </div>
-          ))}
+            <div style={{ fontSize: '20px', fontWeight: 900, color: '#fff', marginBottom: '6px' }}>-₹2,273.59</div>
+            <div style={{ fontSize: '10px', fontWeight: 700, color: 'rgba(255,255,255,0.65)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Total in INR.</div>
+          </div>
+
+          <div style={card}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '14px' }}>
+              <span style={{ fontSize: '13px', fontWeight: 700, color: '#334155', lineHeight: 1.4 }}>Total<br />customer</span>
+              <AUsers size={16} color="#94a3b8" />
+            </div>
+            <div style={{ fontSize: '28px', fontWeight: 900, color: '#0f172a', marginBottom: '4px' }}>1,482</div>
+            <div style={{ fontSize: '11px', color: accent, fontWeight: 700 }}>+12% this month</div>
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', paddingBottom: '8px' }}>
+          <div
+            onClick={() => setShowSheet(true)}
+            style={{ ...card, display: 'flex', flexDirection: 'column', cursor: 'pointer', transition: 'transform 0.15s ease, box-shadow 0.15s ease' }}
+            onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.02)'; e.currentTarget.style.boxShadow = '0 8px 28px rgba(0,0,0,0.12)' }}
+            onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,0,0,0.07), inset 0 1px 0 rgba(255,255,255,0.9)' }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+              <span style={{ fontSize: '13px', fontWeight: 700, color: '#334155' }}>Category</span>
+              <ACalendar size={15} color="#94a3b8" />
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'center' }}>
+              <AnalyticsDonutChart accentStart={accentStart} />
+            </div>
+          </div>
+
+          <div style={card}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '14px' }}>
+              <span style={{ fontSize: '11px', fontWeight: 800, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.06em', lineHeight: 1.4 }}>Total<br />Booking</span>
+              <ACalendar size={15} color="#94a3b8" />
+            </div>
+            <div style={{ fontSize: '40px', fontWeight: 900, color: '#0f172a', lineHeight: 1, marginBottom: '10px' }}>256</div>
+            <div style={{ fontSize: '12px', color: '#64748b' }}>Bookings this month</div>
+          </div>
         </div>
       </div>
 
-      <div style={card}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
-          <span style={{ fontSize: '14px', fontWeight: 700, color: '#334155' }}>Overview</span>
-          <ABarChart2 size={16} color="#94a3b8" />
-        </div>
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginBottom: '10px' }}>
-          <span style={{ fontSize: '24px', fontWeight: 900, color: '#0f172a' }}>$34,628</span>
-          <span style={{ fontSize: '12px', color: '#94a3b8', fontWeight: 500 }}>Total wealth</span>
-        </div>
-        <div style={{ fontSize: '10px', color: '#94a3b8', marginBottom: '2px' }}>75k</div>
-        <AnalyticsLineChart />
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: '#94a3b8', marginTop: '2px' }}>
-          <span>35k</span><span>55k</span><span>75k</span>
-        </div>
-      </div>
+      {/* ── Category Bottom Sheet ── */}
+      {showSheet && (
+        <div
+          onClick={() => setShowSheet(false)}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 999,
+            background: 'rgba(15,23,42,0.45)',
+            backdropFilter: 'blur(4px)',
+            WebkitBackdropFilter: 'blur(4px)',
+            animation: 'overlayIn 0.2s ease',
+            display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              width: '100%', maxWidth: '480px',
+              background: '#fff',
+              borderRadius: '24px 24px 0 0',
+              padding: '12px 24px 40px',
+              animation: 'sheetSlideUp 0.32s cubic-bezier(0.32,0.72,0,1)',
+              boxShadow: '0 -8px 40px rgba(0,0,0,0.18)',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '20px', paddingTop: '4px' }}>
+              <div style={{ width: '40px', height: '4px', borderRadius: '2px', background: '#e2e8f0' }} />
+            </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
-        <div style={{ background: `linear-gradient(135deg, ${accent}, ${accentE})`, borderRadius: '20px', padding: '18px', boxShadow: `0 4px 20px ${accent}40` }}>
-          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '14px' }}>
-            <span style={{ fontSize: '11px', fontWeight: 800, color: 'rgba(255,255,255,0.85)', textTransform: 'uppercase', letterSpacing: '0.06em', lineHeight: 1.4 }}>Todays<br />Collection</span>
-            <AGrid size={15} color="rgba(255,255,255,0.65)" />
-          </div>
-          <div style={{ fontSize: '20px', fontWeight: 900, color: '#fff', marginBottom: '6px' }}>-₹2,273.59</div>
-          <div style={{ fontSize: '10px', fontWeight: 700, color: 'rgba(255,255,255,0.65)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Total in INR.</div>
-        </div>
-
-        <div style={card}>
-          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '14px' }}>
-            <span style={{ fontSize: '13px', fontWeight: 700, color: '#334155', lineHeight: 1.4 }}>Total<br />customer</span>
-            <AUsers size={16} color="#94a3b8" />
-          </div>
-          <div style={{ fontSize: '28px', fontWeight: 900, color: '#0f172a', marginBottom: '4px' }}>1,482</div>
-          <div style={{ fontSize: '11px', color: accent, fontWeight: 700 }}>+12% this month</div>
-        </div>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', paddingBottom: '8px' }}>
-        <div style={{ ...card, display: 'flex', flexDirection: 'column' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-            <span style={{ fontSize: '13px', fontWeight: 700, color: '#334155' }}>Category</span>
-            <ACalendar size={15} color="#94a3b8" />
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'center' }}>
-            <AnalyticsDonutChart accentStart={accentStart} />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0px' }}>
+              {CATEGORY_ITEMS.map((item, i) => (
+                <div key={i} style={{ paddingBottom: '18px', borderBottom: i < CATEGORY_ITEMS.length - 1 ? '1px solid #f1f5f9' : 'none', marginBottom: i < CATEGORY_ITEMS.length - 1 ? '18px' : '0' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                    <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: item.iconBg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', flexShrink: 0 }}>
+                      {item.emoji}
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                        <span style={{ fontSize: '15px', fontWeight: 700, color: '#0f172a' }}>{item.label}</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ fontSize: '14px', fontWeight: 700, color: item.pctColor }}>{item.pct}</span>
+                          <span style={{ color: '#cbd5e1', fontSize: '12px' }}>•</span>
+                          <span style={{ fontSize: '13px', fontWeight: 600, color: item.barColor }}>{item.value}</span>
+                        </div>
+                      </div>
+                      <div style={{ height: '5px', borderRadius: '3px', background: '#f1f5f9', overflow: 'hidden' }}>
+                        <div style={{ height: '100%', width: item.barW, borderRadius: '3px', background: item.barColor, transition: 'width 0.6s ease' }} />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
-
-        <div style={card}>
-          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '14px' }}>
-            <span style={{ fontSize: '11px', fontWeight: 800, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.06em', lineHeight: 1.4 }}>Total<br />Booking</span>
-            <ACalendar size={15} color="#94a3b8" />
-          </div>
-          <div style={{ fontSize: '40px', fontWeight: 900, color: '#0f172a', lineHeight: 1, marginBottom: '10px' }}>256</div>
-          <div style={{ fontSize: '12px', color: '#64748b' }}>Bookings this month</div>
-        </div>
-      </div>
-    </div>
+      )}
+    </>
   )
 }
 
