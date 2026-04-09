@@ -2642,8 +2642,7 @@ function AnalyticsDonutChart({ accentStart }) {
         })}
       </svg>
       <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-        <span style={{ fontSize: 20 }}>🏠</span>
-        <span style={{ fontSize: 10, color: '#64748b', fontWeight: 700, marginTop: 2 }}>rent</span>
+        <span style={{ fontSize: 10, color: '#64748b', fontWeight: 700 }}>rent</span>
       </div>
     </div>
   )
