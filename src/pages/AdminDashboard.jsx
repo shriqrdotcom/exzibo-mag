@@ -1191,6 +1191,8 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
   const [showAddCatModal, setShowAddCatModal] = useState(false)
   const [newCat, setNewCat] = useState({ emoji: '', label: '', image: null })
   const [assignModalCat, setAssignModalCat] = useState(null)
+  const [editIconCat, setEditIconCat] = useState(null)
+  const [editIconDraft, setEditIconDraft] = useState({ emoji: '', image: null })
   const [savedAll, setSavedAll] = useState(false)
   const [hasDraftChanges, setHasDraftChanges] = useState(false)
   const [showSectionDropdown, setShowSectionDropdown] = useState(false)
@@ -1199,6 +1201,7 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
   const saveAllTimer = useRef(null)
   const longPressTimer = useRef(null)
   const catImageInputRef = useRef(null)
+  const editIconImageRef = useRef(null)
   const sectionDropdownRef = useRef(null)
 
   function saveMenu(updated) {
@@ -1366,14 +1369,41 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
     e.target.value = ''
   }
 
+  function openEditIcon(catId) {
+    const cat = (catFilters[activeCategory] || []).find(c => c.id === catId)
+    if (!cat) return
+    setEditIconDraft({ emoji: cat.emoji || '', image: cat.image || null })
+    setEditIconCat(catId)
+  }
+
   function handleLongPressStart(catId) {
-    longPressTimer.current = setTimeout(() => {
-      setAssignModalCat(catId)
-    }, 600)
+    longPressTimer.current = setTimeout(() => openEditIcon(catId), 600)
   }
 
   function handleLongPressEnd() {
     clearTimeout(longPressTimer.current)
+  }
+
+  function handleEditIconImageUpload(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = ev => setEditIconDraft(p => ({ ...p, image: ev.target.result }))
+    reader.readAsDataURL(file)
+    e.target.value = ''
+  }
+
+  function saveEditIcon() {
+    const updated = {
+      ...catFilters,
+      [activeCategory]: catFilters[activeCategory].map(c =>
+        c.id === editIconCat
+          ? { ...c, emoji: editIconDraft.emoji || c.emoji, image: editIconDraft.image }
+          : c
+      ),
+    }
+    saveCatFilters(updated)
+    setEditIconCat(null)
   }
 
   function toggleAssignItem(catId, itemId) {
@@ -1811,7 +1841,7 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
               >
                 <button
                   onClick={() => setActiveCatFilter(prev => ({ ...prev, [activeCategory]: cat.id }))}
-                  title="Long press to assign items"
+                  title="Long press to edit icon"
                   style={{
                     display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px',
                     padding: '10px 8px 8px',
@@ -1830,10 +1860,21 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
                     background: isActive ? `${accentStart}12` : 'rgba(0,0,0,0.05)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     fontSize: '22px', overflow: 'hidden',
+                    position: 'relative',
                   }}>
                     {cat.image
                       ? <img src={cat.image} alt={cat.label} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '12px' }} />
                       : cat.emoji}
+                    {isHov && (
+                      <div style={{
+                        position: 'absolute', inset: 0,
+                        background: 'rgba(0,0,0,0.35)',
+                        borderRadius: '12px',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: '13px',
+                        pointerEvents: 'none',
+                      }}>✏️</div>
+                    )}
                   </div>
                   <span style={{
                     fontSize: '11px',
@@ -1885,6 +1926,112 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
 
       {/* Hidden image input for category filter */}
       <input ref={catImageInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleCatImageUpload} />
+      {/* Hidden image input for edit icon */}
+      <input ref={editIconImageRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleEditIconImageUpload} />
+
+      {/* Edit Icon Modal */}
+      {editIconCat !== null && (() => {
+        const cat = (catFilters[activeCategory] || []).find(c => c.id === editIconCat)
+        if (!cat) return null
+        const previewImage = editIconDraft.image
+        const previewEmoji = editIconDraft.emoji || cat.emoji
+        return (
+          <div style={{
+            position: 'fixed', inset: 0,
+            background: 'rgba(15,23,42,0.6)',
+            backdropFilter: 'blur(8px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            zIndex: 220,
+          }} onClick={() => setEditIconCat(null)}>
+            <div style={{
+              background: '#fff',
+              border: '1.5px solid rgba(0,0,0,0.08)',
+              borderRadius: '24px',
+              padding: '28px',
+              width: '340px',
+              maxWidth: '92vw',
+              boxShadow: '0 20px 60px rgba(0,0,0,0.15)',
+            }} onClick={e => e.stopPropagation()}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
+                <div style={{
+                  width: '48px', height: '48px', borderRadius: '14px',
+                  background: `${accentStart}10`, border: `1.5px solid ${accentStart}25`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: '26px', overflow: 'hidden', flexShrink: 0,
+                }}>
+                  {previewImage
+                    ? <img src={previewImage} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '14px' }} />
+                    : previewEmoji}
+                </div>
+                <div>
+                  <div style={{ fontSize: '16px', fontWeight: 800, color: '#0f172a' }}>Edit Icon</div>
+                  <div style={{ fontSize: '11px', color: '#94A3B8', fontWeight: 500, marginTop: '2px' }}>"{cat.label}" filter</div>
+                </div>
+                <button onClick={() => setEditIconCat(null)} style={{ marginLeft: 'auto', background: 'rgba(0,0,0,0.05)', border: 'none', borderRadius: '12px', width: '30px', height: '30px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <X size={14} color="#64748B" />
+                </button>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div>
+                  <div style={{ fontSize: '10px', fontWeight: 800, letterSpacing: '0.1em', color: '#94A3B8', marginBottom: '8px' }}>CUSTOM IMAGE</div>
+                  {previewImage ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <img src={previewImage} alt="" style={{ width: '52px', height: '52px', borderRadius: '12px', objectFit: 'cover', border: '1.5px solid #e2e8f0', flexShrink: 0 }} />
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1 }}>
+                        <button type="button" onClick={() => editIconImageRef.current?.click()} style={{ padding: '7px 12px', background: `${accentStart}12`, border: `1.5px solid ${accentStart}30`, borderRadius: '50px', cursor: 'pointer', fontSize: '11px', fontWeight: 800, color: accentStart }}>CHANGE IMAGE</button>
+                        <button type="button" onClick={() => setEditIconDraft(p => ({ ...p, image: null }))} style={{ padding: '6px 12px', background: 'transparent', border: '1.5px solid rgba(239,68,68,0.3)', borderRadius: '50px', cursor: 'pointer', fontSize: '11px', fontWeight: 800, color: '#EF4444' }}>REMOVE IMAGE</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button type="button" onClick={() => editIconImageRef.current?.click()}
+                      style={{ width: '100%', padding: '14px', background: 'rgba(248,250,252,0.9)', border: '1.5px dashed #CBD5E1', borderRadius: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'all 0.2s' }}
+                      onMouseEnter={e => { e.currentTarget.style.borderColor = accentStart; e.currentTarget.style.background = `${accentStart}08` }}
+                      onMouseLeave={e => { e.currentTarget.style.borderColor = '#CBD5E1'; e.currentTarget.style.background = 'rgba(248,250,252,0.9)' }}
+                    >
+                      <span style={{ fontSize: '18px' }}>📷</span>
+                      <span style={{ fontSize: '12px', fontWeight: 700, color: '#64748B' }}>Upload Image</span>
+                    </button>
+                  )}
+                </div>
+
+                <div>
+                  <div style={{ fontSize: '10px', fontWeight: 800, letterSpacing: '0.1em', color: '#94A3B8', marginBottom: '8px' }}>EMOJI (used if no image)</div>
+                  <input
+                    value={editIconDraft.emoji}
+                    onChange={e => setEditIconDraft(p => ({ ...p, emoji: e.target.value }))}
+                    placeholder={cat.emoji || '🍽️'}
+                    maxLength={4}
+                    style={{
+                      width: '100%', padding: '10px 12px', boxSizing: 'border-box',
+                      background: 'rgba(248,250,252,0.9)', border: '1.5px solid #e2e8f0',
+                      borderRadius: '10px', color: '#0f172a', fontSize: '22px', textAlign: 'center',
+                    }}
+                  />
+                </div>
+
+                {cat.id !== 'all' && (
+                  <button
+                    onClick={() => { setEditIconCat(null); setAssignModalCat(cat.id) }}
+                    style={{
+                      padding: '10px', background: 'rgba(248,250,252,0.9)', border: '1.5px solid #e2e8f0',
+                      borderRadius: '10px', color: '#64748B', fontSize: '12px', fontWeight: 700, cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                    }}
+                  >
+                    📋 Assign Menu Items ({(cat.assignedItems || []).length} assigned)
+                  </button>
+                )}
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+                <button onClick={() => setEditIconCat(null)} style={{ flex: 1, padding: '11px', background: 'rgba(248,250,252,0.9)', border: '1.5px solid #e2e8f0', borderRadius: '12px', color: '#64748B', fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}>Cancel</button>
+                <button onClick={saveEditIcon} style={{ flex: 2, padding: '11px', background: `linear-gradient(135deg, ${accentStart}, ${accentEnd})`, border: 'none', borderRadius: '12px', color: '#fff', fontSize: '13px', fontWeight: 800, cursor: 'pointer', boxShadow: `0 4px 14px ${accentStart}40` }}>Save Icon</button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
 
       {/* Add Category Filter Modal */}
       {showAddCatModal && (
