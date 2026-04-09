@@ -1840,8 +1840,8 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
                 onTouchEnd={handleLongPressEnd}
               >
                 <button
-                  onClick={() => setActiveCatFilter(prev => ({ ...prev, [activeCategory]: cat.id }))}
-                  title="Long press to edit icon"
+                  onClick={() => cat.id !== 'all' ? setAssignModalCat(cat.id) : setActiveCatFilter(prev => ({ ...prev, [activeCategory]: cat.id }))}
+                  title={cat.id !== 'all' ? 'Click to assign items • Long press to edit icon' : 'Show all items'}
                   style={{
                     display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px',
                     padding: '10px 8px 8px',
@@ -1865,7 +1865,7 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
                     {cat.image
                       ? <img src={cat.image} alt={cat.label} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '12px' }} />
                       : cat.emoji}
-                    {isHov && (
+                    {isHov && cat.id !== 'all' && (
                       <div style={{
                         position: 'absolute', inset: 0,
                         background: 'rgba(0,0,0,0.35)',
@@ -1873,7 +1873,7 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         fontSize: '13px',
                         pointerEvents: 'none',
-                      }}>✏️</div>
+                      }}>📋</div>
                     )}
                   </div>
                   <span style={{
@@ -2175,7 +2175,11 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
                   })}
                 </div>
               )}
-              <button onClick={() => setAssignModalCat(null)} style={{ marginTop: '16px', padding: '14px', background: `linear-gradient(135deg, ${accentStart}, ${accentEnd})`, border: 'none', borderRadius: '14px', color: '#fff', fontSize: '14px', fontWeight: 800, cursor: 'pointer', boxShadow: `0 4px 14px ${accentStart}40` }}>
+              <button onClick={() => {
+                setAssignModalCat(null)
+                localStorage.setItem(filtersKey, JSON.stringify(catFilters))
+                window.dispatchEvent(new StorageEvent('storage', { key: filtersKey, newValue: JSON.stringify(catFilters) }))
+              }} style={{ marginTop: '16px', padding: '14px', background: `linear-gradient(135deg, ${accentStart}, ${accentEnd})`, border: 'none', borderRadius: '14px', color: '#fff', fontSize: '14px', fontWeight: 800, cursor: 'pointer', boxShadow: `0 4px 14px ${accentStart}40` }}>
                 Done — {assigned.length} item{assigned.length !== 1 ? 's' : ''} assigned
               </button>
             </div>

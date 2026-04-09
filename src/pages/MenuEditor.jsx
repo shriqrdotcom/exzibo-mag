@@ -612,8 +612,8 @@ export default function MenuEditor() {
                         onTouchEnd={handleLongPressEnd}
                       >
                         <button
-                          onClick={() => setActiveCategoryFilter(prev => ({ ...prev, [activeTab]: cat.id }))}
-                          title="Long press to edit icon"
+                          onClick={() => cat.id !== 'all' ? setAssignModalCat(cat.id) : setActiveCategoryFilter(prev => ({ ...prev, [activeTab]: cat.id }))}
+                          title={cat.id !== 'all' ? 'Click to assign items • Long press to edit icon' : 'Show all items'}
                           style={{
                             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px',
                             padding: '10px 8px 8px',
@@ -638,7 +638,7 @@ export default function MenuEditor() {
                             {cat.image
                               ? <img src={cat.image} alt={cat.label} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '12px' }} />
                               : cat.emoji}
-                            {isHovered && (
+                            {isHovered && cat.id !== 'all' && (
                               <div style={{
                                 position: 'absolute', inset: 0,
                                 background: 'rgba(0,0,0,0.45)',
@@ -646,7 +646,7 @@ export default function MenuEditor() {
                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                                 fontSize: '14px',
                                 pointerEvents: 'none',
-                              }}>✏️</div>
+                              }}>📋</div>
                             )}
                           </div>
                           <span style={{
@@ -1020,7 +1020,12 @@ export default function MenuEditor() {
                   })}
                 </div>
               )}
-              <button onClick={() => setAssignModalCat(null)} style={{ marginTop: '16px', padding: '14px', background: '#E8321A', border: 'none', borderRadius: '12px', color: '#fff', fontSize: '14px', fontWeight: 700, cursor: 'pointer', boxShadow: '0 0 20px rgba(232,50,26,0.4)' }}>
+              <button onClick={() => {
+                setAssignModalCat(null)
+                const fKey = uid ? `exzibo_menu_filters_${uid}` : 'exzibo_menu_filters_default'
+                localStorage.setItem(fKey, JSON.stringify(categoryFilters))
+                window.dispatchEvent(new StorageEvent('storage', { key: fKey, newValue: JSON.stringify(categoryFilters) }))
+              }} style={{ marginTop: '16px', padding: '14px', background: '#E8321A', border: 'none', borderRadius: '12px', color: '#fff', fontSize: '14px', fontWeight: 700, cursor: 'pointer', boxShadow: '0 0 20px rgba(232,50,26,0.4)' }}>
                 Done — {assigned.length} item{assigned.length !== 1 ? 's' : ''} assigned
               </button>
             </div>
