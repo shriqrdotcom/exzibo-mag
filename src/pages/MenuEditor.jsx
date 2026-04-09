@@ -332,7 +332,7 @@ export default function MenuEditor() {
                   </FormField>
                   <FormField label="STATUS">
                     <div style={{ display: 'flex', alignItems: 'center', gap: '7px', padding: '10px', background: 'rgba(255,255,255,0.04)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.06)' }}>
-                      <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#22c55e', boxShadow: '0 0 8px rgba(34,197,94,0.6)', display: 'inline-block' }} />
+                      <span style={{ width: '7px', height: '7px', borderRadius: '4px', background: '#22c55e', boxShadow: '0 0 8px rgba(34,197,94,0.6)', display: 'inline-block' }} />
                       <span style={{ fontSize: '12px', fontWeight: 700, color: '#22c55e' }}>ONLINE</span>
                     </div>
                   </FormField>
@@ -574,7 +574,7 @@ export default function MenuEditor() {
                             position: 'absolute', bottom: '28px', right: '-4px',
                             background: '#E8321A', color: '#fff',
                             fontSize: '9px', fontWeight: 800,
-                            width: '16px', height: '16px', borderRadius: '50%',
+                            width: '16px', height: '16px', borderRadius: '8px',
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                             border: '2px solid #111',
                             pointerEvents: 'none',
@@ -589,7 +589,7 @@ export default function MenuEditor() {
                               position: 'absolute', top: '-5px', right: '-5px',
                               width: '18px', height: '18px',
                               background: '#E8321A', border: 'none',
-                              borderRadius: '50%',
+                              borderRadius: '9px',
                               display: 'flex', alignItems: 'center', justifyContent: 'center',
                               cursor: 'pointer',
                               boxShadow: '0 2px 8px rgba(232,50,26,0.5)',
@@ -676,7 +676,7 @@ export default function MenuEditor() {
 
       <button onClick={() => setShowAddModal(true)} style={{
         position: 'fixed', bottom: '28px', right: '28px',
-        width: '52px', height: '52px', borderRadius: '50%',
+        width: '52px', height: '52px', borderRadius: '26px',
         background: '#E8321A', border: 'none', color: '#fff',
         cursor: 'pointer', boxShadow: '0 0 30px rgba(232,50,26,0.5)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -792,7 +792,7 @@ export default function MenuEditor() {
                   <div style={{ fontSize: '16px', fontWeight: 700, color: '#fff' }}>Assign Items to "{cat.label}"</div>
                   <div style={{ fontSize: '11px', color: '#666', marginTop: '2px' }}>{assigned.length} of {sectionItems.length} items assigned · {activeTab}</div>
                 </div>
-                <button onClick={() => setAssignModalCat(null)} style={{ marginLeft: 'auto', background: 'rgba(255,255,255,0.06)', border: 'none', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <button onClick={() => setAssignModalCat(null)} style={{ marginLeft: 'auto', background: 'rgba(255,255,255,0.06)', border: 'none', borderRadius: '16px', width: '32px', height: '32px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   <X size={16} color="#888" />
                 </button>
               </div>
@@ -947,7 +947,7 @@ function MenuItem({ item, onDelete, onToggle }) {
                 position: 'absolute', top: '3px',
                 left: isAvailable ? '17px' : '3px',
                 width: '14px', height: '14px',
-                borderRadius: '50%', background: '#fff',
+                borderRadius: '7px', background: '#fff',
                 transition: 'left 0.25s ease',
                 boxShadow: '0 1px 4px rgba(0,0,0,0.3)',
               }} />

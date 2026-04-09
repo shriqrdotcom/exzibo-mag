@@ -468,7 +468,7 @@ export default function AdminDashboard() {
                           <span style={{
                             position: 'absolute', top: '3px',
                             left: on ? '23px' : '3px',
-                            width: '18px', height: '18px', borderRadius: '50%',
+                            width: '18px', height: '18px', borderRadius: '9px',
                             background: '#fff',
                             boxShadow: '0 1px 4px rgba(0,0,0,0.2)',
                             transition: 'left 0.25s ease',
@@ -575,7 +575,7 @@ export default function AdminDashboard() {
                           <span style={{
                             position: 'absolute', top: '3px',
                             left: on ? '23px' : '3px',
-                            width: '18px', height: '18px', borderRadius: '50%',
+                            width: '18px', height: '18px', borderRadius: '9px',
                             background: '#fff',
                             boxShadow: '0 1px 4px rgba(0,0,0,0.2)',
                             transition: 'left 0.25s ease',
@@ -769,7 +769,7 @@ function SettingsPanel({ draft, setDraft, accentStart, accentEnd, onSave, saved,
                   }}
                 >
                   <span style={{
-                    width: '12px', height: '12px', borderRadius: '50%',
+                    width: '12px', height: '12px', borderRadius: '6px',
                     background: `linear-gradient(135deg, ${opt.start}, ${opt.end})`,
                     flexShrink: 0,
                   }} />
@@ -1622,7 +1622,7 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
                         }}
                         style={{
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          width: '30px', height: '30px', borderRadius: '50%', border: 'none',
+                          width: '30px', height: '30px', borderRadius: '15px', border: 'none',
                           background: '#FEF2F2', color: '#EF4444', cursor: 'pointer',
                         }}
                       >
@@ -1771,7 +1771,7 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
                     position: 'absolute', bottom: '28px', right: '-4px',
                     background: accentStart, color: '#fff',
                     fontSize: '9px', fontWeight: 800,
-                    width: '16px', height: '16px', borderRadius: '50%',
+                    width: '16px', height: '16px', borderRadius: '8px',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     border: '2px solid #fff',
                     pointerEvents: 'none',
@@ -1787,7 +1787,7 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
                       position: 'absolute', top: '-8px', right: '-8px',
                       width: '24px', height: '24px',
                       background: '#EF4444', border: '2px solid #fff',
-                      borderRadius: '50%',
+                      borderRadius: '12px',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       cursor: 'pointer',
                       boxShadow: '0 2px 8px rgba(239,68,68,0.5)',
@@ -1920,7 +1920,7 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
                     {assigned.length} of {sectionItems.length} items assigned · {categoryTabs.find(c => c.key === activeCategory)?.label}
                   </div>
                 </div>
-                <button onClick={() => setAssignModalCat(null)} style={{ marginLeft: 'auto', background: 'rgba(0,0,0,0.05)', border: 'none', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <button onClick={() => setAssignModalCat(null)} style={{ marginLeft: 'auto', background: 'rgba(0,0,0,0.05)', border: 'none', borderRadius: '16px', width: '32px', height: '32px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   <X size={16} color="#64748B" />
                 </button>
               </div>
@@ -2029,7 +2029,7 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}>
                 <span style={{
-                  width: '6px', height: '6px', borderRadius: '50%',
+                  width: '6px', height: '6px', borderRadius: '3px',
                   background: addDraft.veg ? '#22c55e' : '#ef4444',
                 }} />
               </span>
@@ -2099,7 +2099,7 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
                         position: 'absolute', top: '3px',
                         left: editDraft.available !== false ? '20px' : '3px',
                         width: '16px', height: '16px',
-                        borderRadius: '50%', background: '#fff',
+                        borderRadius: '8px', background: '#fff',
                         transition: 'left 0.25s ease',
                         boxShadow: '0 1px 4px rgba(0,0,0,0.2)',
                       }} />
@@ -2228,7 +2228,7 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
                           <button
                             onClick={() => removeAddon(idx)}
                             style={{
-                              width: '22px', height: '22px', borderRadius: '50%', flexShrink: 0,
+                              width: '22px', height: '22px', borderRadius: '11px', flexShrink: 0,
                               background: '#fee2e2', border: 'none', cursor: 'pointer',
                               color: '#ef4444', fontSize: '13px', fontWeight: 900,
                               display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -2326,7 +2326,7 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
                       top: '3px',
                       left: item.available === false ? '3px' : '19px',
                       width: '16px', height: '16px',
-                      borderRadius: '50%', background: '#fff',
+                      borderRadius: '8px', background: '#fff',
                       transition: 'left 0.25s ease',
                       boxShadow: '0 1px 4px rgba(0,0,0,0.2)',
                     }} />

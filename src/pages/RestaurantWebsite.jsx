@@ -617,7 +617,7 @@ export default function RestaurantWebsite() {
     return (
       <div style={{ minHeight: '100vh', background: '#f2f2f2', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Inter', sans-serif" }}>
         <div style={{ textAlign: 'center' }}>
-          <div style={{ width: '40px', height: '40px', border: '3px solid rgba(232,50,26,0.2)', borderTopColor: '#E8321A', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto 14px' }} />
+          <div style={{ width: '40px', height: '40px', border: '3px solid rgba(232,50,26,0.2)', borderTopColor: '#E8321A', borderRadius: '20px', animation: 'spin 0.8s linear infinite', margin: '0 auto 14px' }} />
           <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
           <div style={{ color: '#aaa', fontSize: '13px' }}>Loading…</div>
         </div>
@@ -982,10 +982,10 @@ export default function RestaurantWebsite() {
               </div>
               {carouselImages.length > 1 && (
                 <>
-                  <button onClick={() => setCarouselIdx(i => (i - 1 + carouselImages.length) % carouselImages.length)} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(0,0,0,0.6)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '50%', width: '30px', height: '30px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', cursor: 'pointer' }}>
+                  <button onClick={() => setCarouselIdx(i => (i - 1 + carouselImages.length) % carouselImages.length)} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(0,0,0,0.6)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '15px', width: '30px', height: '30px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', cursor: 'pointer' }}>
                     <ChevronLeft size={15} />
                   </button>
-                  <button onClick={() => setCarouselIdx(i => (i + 1) % carouselImages.length)} style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(0,0,0,0.6)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '50%', width: '30px', height: '30px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', cursor: 'pointer' }}>
+                  <button onClick={() => setCarouselIdx(i => (i + 1) % carouselImages.length)} style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(0,0,0,0.6)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '15px', width: '30px', height: '30px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', cursor: 'pointer' }}>
                     <ChevronRight size={15} />
                   </button>
                   <div style={{ position: 'absolute', bottom: '10px', right: '14px', display: 'flex', gap: '4px' }}>
@@ -1290,7 +1290,7 @@ export default function RestaurantWebsite() {
                     top: 0,
                     width: `${imgSize}px`,
                     height: `${imgSize}px`,
-                    borderRadius: '50%',
+                    borderRadius: '999px',
                     objectFit: 'cover',
                     border: '2px solid #111',
                     zIndex: previewImgs.length - idx,
@@ -1337,7 +1337,7 @@ export default function RestaurantWebsite() {
           {/* Empty state */}
           {cartItems.length === 0 && (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 24px', gap: '14px', animation: 'fadeIn 0.4s ease' }}>
-              <div style={{ width: '72px', height: '72px', borderRadius: '50%', background: darkMode ? 'rgba(255,255,255,0.05)' : '#f0ece8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div style={{ width: '72px', height: '72px', borderRadius: '36px', background: darkMode ? 'rgba(255,255,255,0.05)' : '#f0ece8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <ShoppingBag size={32} color={darkMode ? '#555' : '#ccc'} />
               </div>
               <div style={{ fontSize: '16px', fontWeight: 800, color: theme.color }}>Your cart is empty</div>
@@ -1586,7 +1586,7 @@ export default function RestaurantWebsite() {
             <div style={{ padding: '18px 14px 0', animation: 'fadeIn 0.3s ease' }}>
               {/* Back + Title */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '18px' }}>
-                <button onClick={() => setViewingHistoryOrder(null)} style={{ width: '36px', height: '36px', borderRadius: '50%', background: theme.cardBg, border: `1px solid ${theme.cardBorder}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 2px 10px rgba(0,0,0,0.10)', flexShrink: 0 }}>
+                <button onClick={() => setViewingHistoryOrder(null)} style={{ width: '36px', height: '36px', borderRadius: '18px', background: theme.cardBg, border: `1px solid ${theme.cardBorder}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 2px 10px rgba(0,0,0,0.10)', flexShrink: 0 }}>
                   <ArrowLeft size={16} color={theme.color} />
                 </button>
                 <div style={{ fontSize: '20px', fontWeight: 900, color: theme.color, letterSpacing: '-0.01em' }}>Order Detail</div>
@@ -1617,7 +1617,7 @@ export default function RestaurantWebsite() {
                     <div style={{ position: 'absolute', top: '14px', left: '14px', right: '14px', height: '3px', background: '#E8321A', borderRadius: '2px', zIndex: 0 }} />
                     {['PLACED', 'CONFIRM', 'DELIVERED'].map((label, i) => (
                       <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', zIndex: 1, flex: 1 }}>
-                        <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#E8321A', border: '2px solid #E8321A', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 0 4px rgba(232,50,26,0.15)' }}>
+                        <div style={{ width: '28px', height: '28px', borderRadius: '14px', background: '#E8321A', border: '2px solid #E8321A', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 0 4px rgba(232,50,26,0.15)' }}>
                           <CheckCircle size={14} color="#fff" strokeWidth={2.5} />
                         </div>
                       </div>
@@ -1664,7 +1664,7 @@ export default function RestaurantWebsite() {
           {/* No order state */}
           {!currentOrder && (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '50px 24px 24px', gap: '14px' }}>
-              <div style={{ width: '72px', height: '72px', borderRadius: '50%', background: darkMode ? 'rgba(255,255,255,0.05)' : '#f0ece8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div style={{ width: '72px', height: '72px', borderRadius: '36px', background: darkMode ? 'rgba(255,255,255,0.05)' : '#f0ece8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <ClipboardList size={30} color={darkMode ? '#555' : '#ccc'} />
               </div>
               <div style={{ fontSize: '16px', fontWeight: 800, color: theme.color }}>No active order</div>
@@ -1681,7 +1681,7 @@ export default function RestaurantWebsite() {
 
               {/* Back + Title */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '18px' }}>
-                <button onClick={() => setActiveNav('home')} style={{ width: '36px', height: '36px', borderRadius: '50%', background: theme.cardBg, border: `1px solid ${theme.cardBorder}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 2px 10px rgba(0,0,0,0.10)', flexShrink: 0 }}>
+                <button onClick={() => setActiveNav('home')} style={{ width: '36px', height: '36px', borderRadius: '18px', background: theme.cardBg, border: `1px solid ${theme.cardBorder}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 2px 10px rgba(0,0,0,0.10)', flexShrink: 0 }}>
                   <ArrowLeft size={16} color={theme.color} />
                 </button>
                 <div style={{ fontSize: '20px', fontWeight: 900, color: theme.color, letterSpacing: '-0.01em' }}>Your Order</div>
@@ -1737,7 +1737,7 @@ export default function RestaurantWebsite() {
                         {steps.map((step, i) => (
                           <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', zIndex: 1, flex: 1 }}>
                             <div style={{
-                              width: '28px', height: '28px', borderRadius: '50%',
+                              width: '28px', height: '28px', borderRadius: '14px',
                               background: step.done ? '#E8321A' : (darkMode ? 'rgba(255,255,255,0.10)' : '#e5e0db'),
                               border: `2px solid ${step.done ? '#E8321A' : (darkMode ? 'rgba(255,255,255,0.15)' : '#ddd')}`,
                               display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -1747,7 +1747,7 @@ export default function RestaurantWebsite() {
                             }}>
                               {step.done
                                 ? <CheckCircle size={14} color="#fff" strokeWidth={2.5} />
-                                : <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: darkMode ? 'rgba(255,255,255,0.25)' : '#ccc' }} />
+                                : <div style={{ width: '8px', height: '8px', borderRadius: '4px', background: darkMode ? 'rgba(255,255,255,0.25)' : '#ccc' }} />
                               }
                             </div>
                           </div>
@@ -1817,10 +1817,10 @@ export default function RestaurantWebsite() {
               >
                 <span style={{ fontSize: '15px', fontWeight: 700, color: theme.color }}>Call Waiter</span>
                 <div style={{ display: 'flex', gap: '8px' }}>
-                  <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: darkMode ? 'rgba(255,255,255,0.07)' : '#f5f1ee', border: `1px solid ${theme.cardBorder}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <div style={{ width: '36px', height: '36px', borderRadius: '18px', background: darkMode ? 'rgba(255,255,255,0.07)' : '#f5f1ee', border: `1px solid ${theme.cardBorder}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <MessageCircle size={16} color={theme.locationColor} />
                   </div>
-                  <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#1a1a1a', border: '1px solid #333', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.3)' }}>
+                  <div style={{ width: '36px', height: '36px', borderRadius: '18px', background: '#1a1a1a', border: '1px solid #333', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.3)' }}>
                     <PhoneCall size={16} color="#fff" />
                   </div>
                 </div>
@@ -1897,7 +1897,7 @@ export default function RestaurantWebsite() {
                       {/* Info */}
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
-                          <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#22c55e', flexShrink: 0 }} />
+                          <div style={{ width: '7px', height: '7px', borderRadius: '4px', background: '#22c55e', flexShrink: 0 }} />
                           <span style={{ fontSize: '13px', fontWeight: 800, color: theme.color }}>Delivered on {order.date}</span>
                         </div>
                         <div style={{ fontSize: '12px', color: theme.locationColor, fontWeight: 400, lineHeight: 1.4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '180px' }}>
@@ -1940,7 +1940,7 @@ export default function RestaurantWebsite() {
           {bookingSubmitted ? (
             /* ── SUCCESS STATE ── */
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 24px', gap: '18px', textAlign: 'center', animation: 'fadeIn 0.4s ease' }}>
-              <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: 'rgba(232,50,26,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div style={{ width: '80px', height: '80px', borderRadius: '40px', background: 'rgba(232,50,26,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <CalendarDays size={36} color="#E8321A" />
               </div>
               <div style={{ fontSize: '22px', fontWeight: 900, color: theme.color, letterSpacing: '-0.01em' }}>Table Reserved!</div>
@@ -2103,7 +2103,7 @@ export default function RestaurantWebsite() {
             <div style={{ width: '40px', height: '4px', borderRadius: '2px', background: darkMode ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.12)', margin: '0 auto 24px' }} />
             {/* Icon */}
             <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
-              <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'rgba(232,50,26,0.10)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div style={{ width: '56px', height: '56px', borderRadius: '28px', background: 'rgba(232,50,26,0.10)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <ShoppingBag size={26} color="#E8321A" />
               </div>
             </div>
@@ -2212,7 +2212,7 @@ export default function RestaurantWebsite() {
               <div style={{ position: 'relative', display: 'inline-flex' }}>
                 <FaCartShopping size={22} />
                 {cartCount > 0 && (
-                  <span style={{ position: 'absolute', top: '-5px', right: '-7px', width: '15px', height: '15px', borderRadius: '50%', background: '#E8321A', color: '#fff', fontSize: '8px', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{cartCount}</span>
+                  <span style={{ position: 'absolute', top: '-5px', right: '-7px', width: '15px', height: '15px', borderRadius: '8px', background: '#E8321A', color: '#fff', fontSize: '8px', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{cartCount}</span>
                 )}
               </div>
             ),
@@ -2284,7 +2284,7 @@ function GridFoodCard({ item, liked, onLike, theme, darkMode, onPress }) {
         />
         <button
           onClick={e => { e.stopPropagation(); onLike(e) }}
-          style={{ position: 'absolute', top: '6px', right: '6px', width: '24px', height: '24px', borderRadius: '50%', background: 'rgba(0,0,0,0.65)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          style={{ position: 'absolute', top: '6px', right: '6px', width: '24px', height: '24px', borderRadius: '12px', background: 'rgba(0,0,0,0.65)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
         >
           <Heart size={10} fill={liked ? '#E8321A' : 'transparent'} color={liked ? '#E8321A' : '#aaa'} />
         </button>
@@ -2314,7 +2314,7 @@ function BestsellerCard({ item, liked, onLike, theme, onPress }) {
     <div className="bestseller-card" onClick={onPress} style={{ flexShrink: 0, width: '155px', background: theme.bestsellerBg, border: `1px solid ${theme.bestsellerBorder}`, borderRadius: '16px', overflow: 'hidden', cursor: 'pointer', boxShadow: theme.cardShadow }}>
       <div style={{ height: '115px', overflow: 'hidden', position: 'relative' }}>
         <img src={item.img || fallbackImg} alt={item.name} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} onError={e => { e.target.src = fallbackImg }} />
-        <button onClick={e => { e.stopPropagation(); onLike() }} style={{ position: 'absolute', top: '7px', right: '7px', width: '26px', height: '26px', borderRadius: '50%', background: 'rgba(0,0,0,0.65)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <button onClick={e => { e.stopPropagation(); onLike() }} style={{ position: 'absolute', top: '7px', right: '7px', width: '26px', height: '26px', borderRadius: '13px', background: 'rgba(0,0,0,0.65)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <Heart size={12} fill={liked ? '#E8321A' : 'transparent'} color={liked ? '#E8321A' : '#aaa'} />
         </button>
         {(item.tag || item.tags?.[0]) && (
@@ -2354,7 +2354,7 @@ function MenuCard({ item, theme, onAddToCart, cartQty, onPress }) {
       <div style={{ padding: '14px 16px 16px' }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', marginBottom: '10px' }}>
           <div style={{ flexShrink: 0, marginTop: '3px', width: '14px', height: '14px', borderRadius: '3px', border: `1.5px solid ${item.veg !== false ? theme.vegDot : theme.nonVegDot}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: item.veg !== false ? theme.vegDot : theme.nonVegDot }} />
+            <div style={{ width: '7px', height: '7px', borderRadius: '4px', background: item.veg !== false ? theme.vegDot : theme.nonVegDot }} />
           </div>
           <div style={{ fontSize: '14px', fontWeight: 700, color: theme.itemName, lineHeight: 1.35 }}>{item.name}</div>
         </div>
