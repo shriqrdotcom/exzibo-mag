@@ -1140,9 +1140,10 @@ function ImageUploadField({ value, onChange, accentStart }) {
 }
 
 function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, showMenuSearch, menuSearch, setMenuSearch, menuSearchRef, onCloseSearch }) {
-  const storageKey = `exzibo_menu_${restaurantId}`
-  const filtersKey = `exzibo_menu_filters_${restaurantId}`
-  const tabsKey   = `exzibo_tabs_${restaurantId}`
+  const storageKey  = `exzibo_menu_${restaurantId}`
+  const filtersKey  = `exzibo_menu_filters_${restaurantId}`
+  const tabsKey     = `exzibo_tabs_${restaurantId}`
+  const enabledKey  = `exzibo_filters_enabled_${restaurantId}`
 
   function loadTabs() {
     try {
@@ -1165,6 +1166,13 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
     } catch { return DEFAULT_CAT_FILTERS }
   }
 
+  function loadFiltersEnabled() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(enabledKey))
+      return saved || {}
+    } catch { return {} }
+  }
+
   const [categoryTabs, setCategoryTabs] = useState(loadTabs)
   const [menu, setMenu] = useState(loadMenu)
   const [activeCategory, setActiveCategory] = useState(() => loadTabs()[0]?.key || 'starters')
@@ -1175,6 +1183,7 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
   const [editFoodCard, setEditFoodCard] = useState(false)
   const [newAddon, setNewAddon] = useState({ label: '', price: '' })
   const [catFilters, setCatFilters] = useState(loadCatFilters)
+  const [filtersEnabled, setFiltersEnabled] = useState(loadFiltersEnabled)
   const [activeCatFilter, setActiveCatFilter] = useState(() =>
     Object.fromEntries(loadTabs().map(t => [t.key, 'all']))
   )
@@ -1215,6 +1224,8 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
     window.dispatchEvent(new StorageEvent('storage', { key: storageKey, newValue: JSON.stringify(menu) }))
     localStorage.setItem(filtersKey, JSON.stringify(catFilters))
     window.dispatchEvent(new StorageEvent('storage', { key: filtersKey, newValue: JSON.stringify(catFilters) }))
+    localStorage.setItem(enabledKey, JSON.stringify(filtersEnabled))
+    window.dispatchEvent(new StorageEvent('storage', { key: enabledKey, newValue: JSON.stringify(filtersEnabled) }))
     localStorage.setItem(tabsKey, JSON.stringify(categoryTabs))
     window.dispatchEvent(new StorageEvent('storage', { key: tabsKey, newValue: JSON.stringify(categoryTabs) }))
     showToast('✅ Menu published to website!')
@@ -1231,9 +1242,11 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
     const updatedTabs = [...categoryTabs, newTab]
     const updatedMenu = { ...menu, [key]: [] }
     const updatedFilters = { ...catFilters, [key]: [{ id: 'all', emoji: '🍽️', label: 'All', image: null, assignedItems: [] }] }
+    const updatedEnabled = { ...filtersEnabled, [key]: true }
     saveTabs(updatedTabs)
     setMenu(updatedMenu)
     setCatFilters(updatedFilters)
+    setFiltersEnabled(updatedEnabled)
     setActiveCatFilter(prev => ({ ...prev, [key]: 'all' }))
     setActiveCategory(key)
     setNewSectionDraft({ label: '', emoji: '🍽️' })
@@ -1246,9 +1259,11 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
     const updatedTabs = categoryTabs.filter(t => t.key !== key)
     const { [key]: _m, ...updatedMenu } = menu
     const { [key]: _f, ...updatedFilters } = catFilters
+    const { [key]: _e, ...updatedEnabled } = filtersEnabled
     saveTabs(updatedTabs)
     setMenu(updatedMenu)
     setCatFilters(updatedFilters)
+    setFiltersEnabled(updatedEnabled)
     setActiveCategory(updatedTabs[0].key)
     setShowSectionDropdown(false)
     showToast('🗑️ Section deleted! Save changes to publish.')
@@ -1703,23 +1718,72 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
           <span style={{ fontSize: '10px', fontWeight: 800, letterSpacing: '0.12em', color: '#94A3B8', textTransform: 'uppercase' }}>
             Category Filters · {categoryTabs.find(c => c.key === activeCategory)?.label}
           </span>
-          <button
-            onClick={() => setShowAddCatModal(true)}
-            style={{
-              display: 'flex', alignItems: 'center', gap: '4px',
-              padding: '4px 10px',
-              background: `${accentStart}15`,
-              border: `1px solid ${accentStart}35`,
-              borderRadius: '6px',
-              color: accentStart, fontSize: '10px', fontWeight: 800, letterSpacing: '0.06em',
-              cursor: 'pointer',
-              transition: 'all 0.2s',
-            }}
-            onMouseEnter={e => { e.currentTarget.style.background = accentStart; e.currentTarget.style.color = '#fff' }}
-            onMouseLeave={e => { e.currentTarget.style.background = `${accentStart}15`; e.currentTarget.style.color = accentStart }}
-          >
-            <Plus size={10} /> ADD FILTER
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            {/* Toggle for enabling/disabling filters per section */}
+            <div
+              onClick={() => {
+                const current = filtersEnabled[activeCategory] !== false
+                setFiltersEnabled(prev => ({ ...prev, [activeCategory]: !current }))
+                setSavedAll(false)
+                setHasDraftChanges(true)
+              }}
+              title={filtersEnabled[activeCategory] !== false ? 'Disable filters for this section' : 'Enable filters for this section'}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '6px',
+                padding: '4px 10px',
+                background: filtersEnabled[activeCategory] !== false ? 'rgba(34,197,94,0.10)' : 'rgba(0,0,0,0.05)',
+                border: `1px solid ${filtersEnabled[activeCategory] !== false ? 'rgba(34,197,94,0.3)' : 'rgba(0,0,0,0.12)'}`,
+                borderRadius: '6px',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                userSelect: 'none',
+              }}
+            >
+              <div style={{
+                width: '28px', height: '16px',
+                borderRadius: '8px',
+                background: filtersEnabled[activeCategory] !== false ? '#22c55e' : '#CBD5E1',
+                position: 'relative',
+                transition: 'background 0.2s',
+                flexShrink: 0,
+              }}>
+                <div style={{
+                  position: 'absolute',
+                  top: '2px',
+                  left: filtersEnabled[activeCategory] !== false ? '14px' : '2px',
+                  width: '12px', height: '12px',
+                  borderRadius: '6px',
+                  background: '#fff',
+                  transition: 'left 0.2s',
+                  boxShadow: '0 1px 4px rgba(0,0,0,0.2)',
+                }} />
+              </div>
+              <span style={{
+                fontSize: '10px', fontWeight: 800, letterSpacing: '0.06em',
+                color: filtersEnabled[activeCategory] !== false ? '#16a34a' : '#94A3B8',
+                transition: 'color 0.2s',
+              }}>
+                {filtersEnabled[activeCategory] !== false ? 'ON' : 'OFF'}
+              </span>
+            </div>
+            <button
+              onClick={() => setShowAddCatModal(true)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '4px',
+                padding: '4px 10px',
+                background: `${accentStart}15`,
+                border: `1px solid ${accentStart}35`,
+                borderRadius: '6px',
+                color: accentStart, fontSize: '10px', fontWeight: 800, letterSpacing: '0.06em',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.background = accentStart; e.currentTarget.style.color = '#fff' }}
+              onMouseLeave={e => { e.currentTarget.style.background = `${accentStart}15`; e.currentTarget.style.color = accentStart }}
+            >
+              <Plus size={10} /> ADD FILTER
+            </button>
+          </div>
         </div>
         <div style={{
           display: 'flex', gap: '10px',
