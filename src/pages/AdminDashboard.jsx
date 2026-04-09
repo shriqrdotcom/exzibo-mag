@@ -35,6 +35,7 @@ const STATUS_CONFIG = {
 
 const NAV_ITEMS = [
   { id: 'orders',    icon: ClipboardList, label: 'Orders' },
+  { id: 'bookings',  icon: CalendarDays,  label: 'Bookings' },
   { id: 'menu',      icon: BookOpen,      label: 'Menu' },
   { id: 'customers', icon: Users,         label: 'Customers' },
   { id: 'settings',  icon: Settings,      label: 'Settings' },
@@ -388,51 +389,32 @@ export default function AdminDashboard() {
             menuSearchRef={menuSearchRef}
             onCloseSearch={() => { setShowMenuSearch(false); setMenuSearch('') }}
           />
-        ) : (
+        ) : activeNav === 'orders' ? (
           <>
-            {/* Title bar */}
+            {/* Title bar - Orders */}
             <div style={{
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
               padding: '24px 4px 16px',
             }}>
               <h1 style={{ fontSize: '28px', fontWeight: 900, color: '#0f172a', margin: 0, letterSpacing: '-0.02em' }}>
-                {orderView === 'orders' ? 'Orders' : 'Bookings'}
+                Orders
               </h1>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                {orderView === 'orders' && (
-                  <button
-                    ref={orderSettingsBtnRef}
-                    onClick={() => setShowOrderSettings(p => !p)}
-                    style={{
-                      width: '36px', height: '36px', borderRadius: '11px',
-                      background: showOrderSettings ? `${accentStart}18` : 'rgba(255,255,255,0.8)',
-                      border: `1.5px solid ${showOrderSettings ? accentStart : 'rgba(226,232,240,0.8)'}`,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      cursor: 'pointer', color: showOrderSettings ? accentStart : '#64748b',
-                      boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
-                      transition: 'all 0.2s ease',
-                    }}
-                  >
-                    <SlidersHorizontal size={15} />
-                  </button>
-                )}
-                {orderView === 'bookings' && (
-                  <button
-                    ref={bookingSettingsBtnRef}
-                    onClick={() => setShowBookingSettings(p => !p)}
-                    style={{
-                      width: '36px', height: '36px', borderRadius: '11px',
-                      background: showBookingSettings ? `${accentStart}18` : 'rgba(255,255,255,0.8)',
-                      border: `1.5px solid ${showBookingSettings ? accentStart : 'rgba(226,232,240,0.8)'}`,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      cursor: 'pointer', color: showBookingSettings ? accentStart : '#64748b',
-                      boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
-                      transition: 'all 0.2s ease',
-                    }}
-                  >
-                    <SlidersHorizontal size={15} />
-                  </button>
-                )}
+                <button
+                  ref={orderSettingsBtnRef}
+                  onClick={() => setShowOrderSettings(p => !p)}
+                  style={{
+                    width: '36px', height: '36px', borderRadius: '11px',
+                    background: showOrderSettings ? `${accentStart}18` : 'rgba(255,255,255,0.8)',
+                    border: `1.5px solid ${showOrderSettings ? accentStart : 'rgba(226,232,240,0.8)'}`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    cursor: 'pointer', color: showOrderSettings ? accentStart : '#64748b',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+                    transition: 'all 0.2s ease',
+                  }}
+                >
+                  <SlidersHorizontal size={15} />
+                </button>
                 <div style={{
                   padding: '6px 16px',
                   background: `linear-gradient(135deg, ${accentStart}, ${accentEnd})`,
@@ -440,15 +422,13 @@ export default function AdminDashboard() {
                   fontSize: '11px', fontWeight: 800, letterSpacing: '0.1em',
                   boxShadow: `0 4px 14px ${accentStart}60`,
                 }}>
-                  {orderView === 'orders'
-                    ? `${activeCount} ACTIVE`
-                    : `${bookings.filter(b => b.status !== 'cancelled').length} UPCOMING`}
+                  {`${activeCount} ACTIVE`}
                 </div>
               </div>
             </div>
 
             {/* Order Settings Panel */}
-            {orderView === 'orders' && showOrderSettings && (
+            {showOrderSettings && (
               <div ref={orderSettingsPanelRef} style={{
                 marginBottom: '16px',
                 background: 'rgba(255,255,255,0.8)',
@@ -502,8 +482,62 @@ export default function AdminDashboard() {
               </div>
             )}
 
+            {/* Order cards */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {orders.map((order, i) => (
+                <OrderCard
+                  key={order.id}
+                  order={order}
+                  index={i}
+                  accentStart={accentStart}
+                  currency={globalConfig.currency}
+                  onConfirm={() => confirmOrder(order.id)}
+                  onCancel={() => cancelOrder(order.id)}
+                  orderSettings={orderSettings}
+                />
+              ))}
+            </div>
+          </>
+        ) : activeNav === 'bookings' ? (
+          <>
+            {/* Title bar - Bookings */}
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: '24px 4px 16px',
+            }}>
+              <h1 style={{ fontSize: '28px', fontWeight: 900, color: '#0f172a', margin: 0, letterSpacing: '-0.02em' }}>
+                Bookings
+              </h1>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <button
+                  ref={bookingSettingsBtnRef}
+                  onClick={() => setShowBookingSettings(p => !p)}
+                  style={{
+                    width: '36px', height: '36px', borderRadius: '11px',
+                    background: showBookingSettings ? `${accentStart}18` : 'rgba(255,255,255,0.8)',
+                    border: `1.5px solid ${showBookingSettings ? accentStart : 'rgba(226,232,240,0.8)'}`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    cursor: 'pointer', color: showBookingSettings ? accentStart : '#64748b',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+                    transition: 'all 0.2s ease',
+                  }}
+                >
+                  <SlidersHorizontal size={15} />
+                </button>
+                <div style={{
+                  padding: '6px 16px',
+                  background: `linear-gradient(135deg, ${accentStart}, ${accentEnd})`,
+                  borderRadius: '50px', color: '#fff',
+                  fontSize: '11px', fontWeight: 800, letterSpacing: '0.1em',
+                  boxShadow: `0 4px 14px ${accentStart}60`,
+                }}>
+                  {`${bookings.filter(b => b.status !== 'cancelled').length} UPCOMING`}
+                </div>
+              </div>
+            </div>
+
             {/* Booking Settings Panel */}
-            {orderView === 'bookings' && showBookingSettings && (
+            {showBookingSettings && (
               <div ref={bookingSettingsPanelRef} style={{
                 marginBottom: '16px',
                 background: 'rgba(255,255,255,0.8)',
@@ -555,134 +589,73 @@ export default function AdminDashboard() {
               </div>
             )}
 
-            {/* Orders / Bookings Toggle */}
+            {/* Booking Date Filter */}
             <div style={{
               display: 'flex',
               background: 'rgba(255,255,255,0.65)',
               backdropFilter: 'blur(12px)',
               WebkitBackdropFilter: 'blur(12px)',
-              borderRadius: '16px',
-              padding: '5px',
-              marginBottom: '20px',
+              borderRadius: '50px',
+              padding: '4px',
+              marginBottom: '16px',
               border: '1px solid rgba(255,255,255,0.7)',
               boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
-              gap: '4px',
+              gap: '2px',
             }}>
               {[
-                { id: 'orders',   icon: UtensilsCrossed, label: 'Orders' },
-                { id: 'bookings', icon: CalendarDays,    label: 'Bookings' },
-              ].map(tab => {
-                const active = orderView === tab.id
+                { id: 'today',    label: 'Today' },
+                { id: 'upcoming', label: 'Upcoming' },
+                { id: 'all',      label: 'All' },
+              ].map(f => {
+                const active = bookingFilter === f.id
                 return (
                   <button
-                    key={tab.id}
-                    onClick={() => setOrderView(tab.id)}
+                    key={f.id}
+                    onClick={() => setBookingFilter(f.id)}
                     style={{
                       flex: 1,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '7px',
-                      padding: '10px 14px',
+                      padding: '8px 12px',
                       border: 'none',
-                      borderRadius: '12px',
+                      borderRadius: '50px',
                       cursor: 'pointer',
-                      fontSize: '13px', fontWeight: 700,
-                      background: active
-                        ? `linear-gradient(135deg, ${accentStart}, ${accentEnd})`
-                        : 'transparent',
-                      color: active ? '#fff' : '#94A3B8',
-                      boxShadow: active ? `0 4px 14px ${accentStart}50` : 'none',
+                      fontSize: '12px', fontWeight: 800, letterSpacing: '0.06em',
+                      background: active ? '#fff' : 'transparent',
+                      color: active ? accentStart : '#94A3B8',
+                      boxShadow: active ? '0 2px 8px rgba(0,0,0,0.10)' : 'none',
                       transition: 'all 0.2s ease',
                     }}
                   >
-                    <tab.icon size={15} />
-                    {tab.label}
+                    {f.label.toUpperCase()}
                   </button>
                 )
               })}
             </div>
 
-
-            {/* Booking Date Filter */}
-            {orderView === 'bookings' && (
-              <div style={{
-                display: 'flex',
-                background: 'rgba(255,255,255,0.65)',
-                backdropFilter: 'blur(12px)',
-                WebkitBackdropFilter: 'blur(12px)',
-                borderRadius: '50px',
-                padding: '4px',
-                marginBottom: '16px',
-                border: '1px solid rgba(255,255,255,0.7)',
-                boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
-                gap: '2px',
-              }}>
-                {[
-                  { id: 'today',    label: 'Today' },
-                  { id: 'upcoming', label: 'Upcoming' },
-                  { id: 'all',      label: 'All' },
-                ].map(f => {
-                  const active = bookingFilter === f.id
-                  return (
-                    <button
-                      key={f.id}
-                      onClick={() => setBookingFilter(f.id)}
-                      style={{
-                        flex: 1,
-                        padding: '8px 12px',
-                        border: 'none',
-                        borderRadius: '50px',
-                        cursor: 'pointer',
-                        fontSize: '12px', fontWeight: 800, letterSpacing: '0.06em',
-                        background: active ? '#fff' : 'transparent',
-                        color: active ? accentStart : '#94A3B8',
-                        boxShadow: active ? '0 2px 8px rgba(0,0,0,0.10)' : 'none',
-                        transition: 'all 0.2s ease',
-                      }}
-                    >
-                      {f.label.toUpperCase()}
-                    </button>
-                  )
-                })}
-              </div>
-            )}
-
-            {/* Order / Booking cards */}
+            {/* Booking cards */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              {orderView === 'orders'
-                ? orders.map((order, i) => (
-                    <OrderCard
-                      key={order.id}
-                      order={order}
-                      index={i}
-                      accentStart={accentStart}
-                      currency={globalConfig.currency}
-                      onConfirm={() => confirmOrder(order.id)}
-                      onCancel={() => cancelOrder(order.id)}
-                      orderSettings={orderSettings}
-                    />
-                  ))
-                : filteredBookings.length === 0
-                  ? (
-                    <div style={{
-                      textAlign: 'center', padding: '48px 24px',
-                      color: '#94A3B8', fontSize: '14px', fontWeight: 600,
-                    }}>
-                      No {bookingFilter === 'today' ? "today's" : bookingFilter} bookings found.
-                    </div>
-                  )
-                  : filteredBookings.map((booking, i) => (
-                    <BookingCard
-                      key={booking.id}
-                      booking={booking}
-                      index={i}
-                      accentStart={accentStart}
-                      accentEnd={accentEnd}
-                      bookingSettings={bookingSettings}
-                    />
-                  ))
+              {filteredBookings.length === 0
+                ? (
+                  <div style={{
+                    textAlign: 'center', padding: '48px 24px',
+                    color: '#94A3B8', fontSize: '14px', fontWeight: 600,
+                  }}>
+                    No {bookingFilter === 'today' ? "today's" : bookingFilter} bookings found.
+                  </div>
+                )
+                : filteredBookings.map((booking, i) => (
+                  <BookingCard
+                    key={booking.id}
+                    booking={booking}
+                    index={i}
+                    accentStart={accentStart}
+                    accentEnd={accentEnd}
+                    bookingSettings={bookingSettings}
+                  />
+                ))
               }
             </div>
           </>
-        )}
+        ) : null}
       </div>
 
       {/* ── BOTTOM NAV ── */}
