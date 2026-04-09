@@ -1326,7 +1326,7 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
 
   function addItem() {
     if (!addDraft.name.trim()) return
-    const item = { id: Date.now(), name: addDraft.name.trim(), desc: addDraft.desc.trim(), price: parseFloat(addDraft.price) || 0, tags: addDraft.tags, veg: addDraft.veg || false }
+    const item = { id: Date.now(), img: addDraft.img || null, name: addDraft.name.trim(), desc: addDraft.desc.trim(), price: parseFloat(addDraft.price) || 0, tags: addDraft.tags, veg: addDraft.veg || false }
     const updated = { ...menu, [activeCategory]: [...menu[activeCategory], item] }
     saveMenu(updated)
     setAddDraft(BLANK_ITEM)
