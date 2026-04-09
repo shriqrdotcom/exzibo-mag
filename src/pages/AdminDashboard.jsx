@@ -2652,7 +2652,7 @@ function AnalyticsDonutChart({ accentStart }) {
 const CATEGORY_ITEMS = [
   { emoji: '🍽️', label: 'Starts',        pct: '39%', pctColor: '#0f172a', value: '-1,804.90', barColor: '#1e293b', barW: '39%', iconBg: '#e8eaf5' },
   { emoji: '🗓️', label: 'Main Course',   pct: '15%', pctColor: '#0eb5a0', value: '-694.20',   barColor: '#0eb5a0', barW: '15%', iconBg: '#dff6f3' },
-  { emoji: '🏠', label: 'Drunks Section',pct: '12%', pctColor: '#64748b', value: '-555.40',   barColor: '#6C63FF', barW: '12%', iconBg: '#ede9fe' },
+  { emoji: '🏠', label: "Drink's section", pct: '12%', pctColor: '#64748b', value: '-555.40',  barColor: '#6C63FF', barW: '12%', iconBg: '#ede9fe' },
   { emoji: '🧮', label: 'TOTAL',         pct: '10%', pctColor: '#ef4444', value: '-462.80',   barColor: '#ef4444', barW: '10%', iconBg: '#fef2f0' },
 ]
 
