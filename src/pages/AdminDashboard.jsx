@@ -1181,6 +1181,7 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
   const [newCat, setNewCat] = useState({ emoji: '', label: '', image: null })
   const [assignModalCat, setAssignModalCat] = useState(null)
   const [savedAll, setSavedAll] = useState(false)
+  const [hasDraftChanges, setHasDraftChanges] = useState(false)
   const [showSectionDropdown, setShowSectionDropdown] = useState(false)
   const [showNewSectionModal, setShowNewSectionModal] = useState(false)
   const [newSectionDraft, setNewSectionDraft] = useState({ label: '', emoji: '🍽️' })
@@ -1190,22 +1191,21 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
   const sectionDropdownRef = useRef(null)
 
   function saveMenu(updated) {
-    localStorage.setItem(storageKey, JSON.stringify(updated))
     setMenu(updated)
-    window.dispatchEvent(new StorageEvent('storage', { key: storageKey, newValue: JSON.stringify(updated) }))
-    showToast('✅ Menu saved!')
+    setSavedAll(false)
+    setHasDraftChanges(true)
   }
 
   function saveCatFilters(updated) {
-    localStorage.setItem(filtersKey, JSON.stringify(updated))
     setCatFilters(updated)
-    window.dispatchEvent(new StorageEvent('storage', { key: filtersKey, newValue: JSON.stringify(updated) }))
+    setSavedAll(false)
+    setHasDraftChanges(true)
   }
 
   function saveTabs(updated) {
-    localStorage.setItem(tabsKey, JSON.stringify(updated))
     setCategoryTabs(updated)
-    window.dispatchEvent(new StorageEvent('storage', { key: tabsKey, newValue: JSON.stringify(updated) }))
+    setSavedAll(false)
+    setHasDraftChanges(true)
   }
 
   function handleSaveAll() {
@@ -1215,8 +1215,9 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
     window.dispatchEvent(new StorageEvent('storage', { key: filtersKey, newValue: JSON.stringify(catFilters) }))
     localStorage.setItem(tabsKey, JSON.stringify(categoryTabs))
     window.dispatchEvent(new StorageEvent('storage', { key: tabsKey, newValue: JSON.stringify(categoryTabs) }))
-    showToast('✅ Changes saved!')
+    showToast('✅ Menu published to website!')
     setSavedAll(true)
+    setHasDraftChanges(false)
     clearTimeout(saveAllTimer.current)
     saveAllTimer.current = setTimeout(() => setSavedAll(false), 2500)
   }
@@ -1229,15 +1230,13 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
     const updatedMenu = { ...menu, [key]: [] }
     const updatedFilters = { ...catFilters, [key]: [{ id: 'all', emoji: '🍽️', label: 'All', image: null, assignedItems: [] }] }
     saveTabs(updatedTabs)
-    localStorage.setItem(storageKey, JSON.stringify(updatedMenu)); setMenu(updatedMenu)
-    window.dispatchEvent(new StorageEvent('storage', { key: storageKey, newValue: JSON.stringify(updatedMenu) }))
-    localStorage.setItem(filtersKey, JSON.stringify(updatedFilters)); setCatFilters(updatedFilters)
-    window.dispatchEvent(new StorageEvent('storage', { key: filtersKey, newValue: JSON.stringify(updatedFilters) }))
+    setMenu(updatedMenu)
+    setCatFilters(updatedFilters)
     setActiveCatFilter(prev => ({ ...prev, [key]: 'all' }))
     setActiveCategory(key)
     setNewSectionDraft({ label: '', emoji: '🍽️' })
     setShowNewSectionModal(false)
-    showToast('✅ Section created!')
+    showToast('✅ Section created! Save changes to publish.')
   }
 
   function deleteSection(key) {
@@ -1246,13 +1245,11 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
     const { [key]: _m, ...updatedMenu } = menu
     const { [key]: _f, ...updatedFilters } = catFilters
     saveTabs(updatedTabs)
-    localStorage.setItem(storageKey, JSON.stringify(updatedMenu)); setMenu(updatedMenu)
-    window.dispatchEvent(new StorageEvent('storage', { key: storageKey, newValue: JSON.stringify(updatedMenu) }))
-    localStorage.setItem(filtersKey, JSON.stringify(updatedFilters)); setCatFilters(updatedFilters)
-    window.dispatchEvent(new StorageEvent('storage', { key: filtersKey, newValue: JSON.stringify(updatedFilters) }))
+    setMenu(updatedMenu)
+    setCatFilters(updatedFilters)
     setActiveCategory(updatedTabs[0].key)
     setShowSectionDropdown(false)
-    showToast('🗑️ Section deleted!')
+    showToast('🗑️ Section deleted! Save changes to publish.')
   }
 
   function deleteItem(id) {
@@ -1269,6 +1266,7 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
     }
     setMenu(updated)
     setSavedAll(false)
+    setHasDraftChanges(true)
   }
 
   function startEdit(item) {
@@ -1299,6 +1297,7 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
     }
     setMenu(updated)
     setSavedAll(false)
+    setHasDraftChanges(true)
     setEditingId(null)
     setEditDraft(null)
   }
@@ -1415,16 +1414,29 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
             style={{
               display: 'flex', alignItems: 'center', gap: '6px',
               padding: '10px 18px',
-              background: savedAll ? 'rgba(34,197,94,0.12)' : 'rgba(15,23,42,0.07)',
-              border: savedAll ? '1.5px solid rgba(34,197,94,0.4)' : '1.5px solid rgba(15,23,42,0.12)',
+              background: savedAll
+                ? 'rgba(34,197,94,0.12)'
+                : hasDraftChanges
+                  ? 'rgba(232,50,26,0.08)'
+                  : 'rgba(15,23,42,0.07)',
+              border: savedAll
+                ? '1.5px solid rgba(34,197,94,0.4)'
+                : hasDraftChanges
+                  ? '1.5px solid rgba(232,50,26,0.45)'
+                  : '1.5px solid rgba(15,23,42,0.12)',
               borderRadius: '50px',
-              color: savedAll ? '#16a34a' : '#475569',
+              color: savedAll ? '#16a34a' : hasDraftChanges ? '#E8321A' : '#475569',
               fontSize: '12px', fontWeight: 800, letterSpacing: '0.06em',
               cursor: 'pointer',
               transition: 'all 0.25s ease',
             }}
           >
-            {savedAll ? <><Check size={14} /> SAVED!</> : <><Save size={14} /> SAVE CHANGES</>}
+            {savedAll
+              ? <><Check size={14} /> SAVED!</>
+              : hasDraftChanges
+                ? <><span style={{ width: '6px', height: '6px', borderRadius: '3px', background: '#E8321A', display: 'inline-block', flexShrink: 0 }} /><Save size={14} /> SAVE CHANGES</>
+                : <><Save size={14} /> SAVE CHANGES</>
+            }
           </button>
           <div style={{ position: 'relative' }} ref={sectionDropdownRef}>
             <div style={{ display: 'flex', borderRadius: '50px', overflow: 'hidden', boxShadow: `0 4px 14px ${accentStart}50` }}>
