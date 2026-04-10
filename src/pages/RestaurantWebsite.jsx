@@ -216,6 +216,7 @@ export default function RestaurantWebsite() {
   const [couponInput, setCouponInput] = useState('')
   const [couponApplied, setCouponApplied] = useState(false)
   const [couponError, setCouponError] = useState('')
+  const [appliedCouponData, setAppliedCouponData] = useState(null)
   const [customerOrders, setCustomerOrders] = useState([])
   const currentOrder = customerOrders[0] ?? null
   const orderHistory = customerOrders.slice(1)
@@ -337,14 +338,17 @@ export default function RestaurantWebsite() {
     setBookingSubmitted(true)
   }
 
-  const VALID_COUPON = 'SPICE10'
-  const COUPON_DISCOUNT_PCT = 10
-
   const cartCount = cartItems.reduce((s, i) => s + i.qty, 0)
   const subtotal = cartItems.reduce((s, i) => s + i.price * i.qty, 0)
   const deliveryFee = subtotal > 500 ? 0 : 40
   const gstAmt = +(subtotal * 0.05).toFixed(2)
-  const discountAmt = couponApplied ? +(subtotal * COUPON_DISCOUNT_PCT / 100).toFixed(2) : 0
+  const discountAmt = (() => {
+    if (!couponApplied || !appliedCouponData) return 0
+    if (appliedCouponData.discountType === 'Fixed Amount') {
+      return Math.min(+appliedCouponData.discountPct, subtotal)
+    }
+    return +(subtotal * +appliedCouponData.discountPct / 100).toFixed(2)
+  })()
   const grandTotal = +(subtotal + gstAmt + deliveryFee - discountAmt).toFixed(2)
 
   function updateQty(id, delta) {
@@ -357,12 +361,24 @@ export default function RestaurantWebsite() {
   }
   function handleApplyCoupon() {
     if (couponApplied) return
-    if (couponInput.trim().toUpperCase() === VALID_COUPON) {
-      setCouponApplied(true)
-      setCouponError('')
-    } else {
-      setCouponError('Invalid coupon code')
+    const restaurantId = restaurant?.id || slug || 'demo'
+    const stored = localStorage.getItem(`exzibo_admin_coupon_${restaurantId}`)
+    if (!stored) { setCouponError('Invalid coupon code'); return }
+    const saved = JSON.parse(stored)
+    if (!saved.code || couponInput.trim().toUpperCase() !== saved.code.toUpperCase()) {
+      setCouponError('Invalid coupon code'); return
     }
+    if (!saved.active) {
+      setCouponError('This coupon is currently inactive'); return
+    }
+    if (saved.expireDate) {
+      const expiry = new Date(saved.expireDate)
+      expiry.setHours(23, 59, 59, 999)
+      if (new Date() > expiry) { setCouponError('This coupon has expired'); return }
+    }
+    setAppliedCouponData(saved)
+    setCouponApplied(true)
+    setCouponError('')
   }
   function flyToCart(imgSrc, clickedEl) {
     if (!cartIconRef.current || !clickedEl) return

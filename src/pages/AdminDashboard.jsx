@@ -525,6 +525,7 @@ export default function AdminDashboard() {
             onSave={saveSettings}
             saved={saved}
             isDefault={isDefault}
+            restaurantId={isDefault ? 'demo' : id}
           />
         ) : activeNav === 'menu' ? (
           <MenuPanel
@@ -859,7 +860,7 @@ export default function AdminDashboard() {
 }
 
 /* ─── Settings Panel ─── */
-function SettingsPanel({ draft, setDraft, accentStart, accentEnd, onSave, saved, isDefault }) {
+function SettingsPanel({ draft, setDraft, accentStart, accentEnd, onSave, saved, isDefault, restaurantId }) {
   const [activeTab, setActiveTab] = useState('settings')
   if (!draft) return null
 
@@ -1027,7 +1028,7 @@ function SettingsPanel({ draft, setDraft, accentStart, accentEnd, onSave, saved,
             </button>
           </>
         ) : (
-          <AdminCouponManagement accentStart={accentStart} />
+          <AdminCouponManagement accentStart={accentStart} restaurantId={restaurantId} />
         )}
       </div>
     </div>
@@ -1073,32 +1074,32 @@ function generateCouponCode() {
   return code
 }
 
-const ADMIN_COUPON_HISTORY = [
-  { code: 'SAVE20', type: 'Percentage', discount: '20%', used: 142, status: 'Expired', date: '01-01-2025' },
-  { code: 'FLAT50', type: 'Fixed Amount', discount: '₹50', used: 88, status: 'Expired', date: '15-03-2025' },
-  { code: 'AB20', type: 'Percentage', discount: '10%', used: 34, status: 'Active', date: '09-11-2025' },
-]
+function AdminCouponManagement({ accentStart, restaurantId }) {
+  const couponKey = `exzibo_admin_coupon_${restaurantId}`
+  const historyKey = `exzibo_coupon_history_${restaurantId}`
 
-function AdminCouponManagement({ accentStart }) {
   const [coupon, setCoupon] = useState({
-    code: 'AB20',
+    code: '',
     discountType: 'Percentage',
     discountPct: '10.00',
     minDiscount: '400.00',
     maxDiscount: '100.00',
     active: true,
-    validUntil: '2025-11-09',
-    expireDate: '2025-10-10',
+    validUntil: '',
+    expireDate: '',
   })
+  const [history, setHistory] = useState([])
   const [showDropdown, setShowDropdown] = useState(false)
   const [showHistory, setShowHistory] = useState(false)
   const [updated, setUpdated] = useState(false)
   const dropdownRef = useRef(null)
 
   useEffect(() => {
-    const stored = localStorage.getItem('exzibo_admin_coupon')
+    const stored = localStorage.getItem(couponKey)
     if (stored) setCoupon(JSON.parse(stored))
-  }, [])
+    const hist = localStorage.getItem(historyKey)
+    if (hist) setHistory(JSON.parse(hist))
+  }, [couponKey, historyKey])
 
   useEffect(() => {
     function handler(e) {
@@ -1109,18 +1110,35 @@ function AdminCouponManagement({ accentStart }) {
   }, [])
 
   const handleUpdate = () => {
-    localStorage.setItem('exzibo_admin_coupon', JSON.stringify(coupon))
+    localStorage.setItem(couponKey, JSON.stringify(coupon))
+    const discountLabel = coupon.discountType === 'Fixed Amount'
+      ? `₹${coupon.discountPct}`
+      : `${coupon.discountPct}%`
+    const newEntry = {
+      code: coupon.code,
+      type: coupon.discountType,
+      discount: discountLabel,
+      status: coupon.active ? 'Active' : 'Inactive',
+      date: coupon.expireDate
+        ? new Date(coupon.expireDate).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' })
+        : '—',
+      savedAt: new Date().toISOString(),
+    }
+    const prev = JSON.parse(localStorage.getItem(historyKey) || '[]')
+    const next = [newEntry, ...prev.filter(h => h.code !== coupon.code)].slice(0, 20)
+    localStorage.setItem(historyKey, JSON.stringify(next))
+    setHistory(next)
     setUpdated(true)
     setTimeout(() => setUpdated(false), 2000)
   }
 
   const handleCancel = () => {
-    const stored = localStorage.getItem('exzibo_admin_coupon')
+    const stored = localStorage.getItem(couponKey)
     if (stored) setCoupon(JSON.parse(stored))
     else setCoupon({
-      code: 'AB20', discountType: 'Percentage', discountPct: '10.00',
+      code: '', discountType: 'Percentage', discountPct: '10.00',
       minDiscount: '400.00', maxDiscount: '100.00', active: true,
-      validUntil: '2025-11-09', expireDate: '2025-10-10',
+      validUntil: '', expireDate: '',
     })
   }
 
@@ -1400,30 +1418,36 @@ function AdminCouponManagement({ accentStart }) {
           {showHistory && (
             <div>
               <div style={{ fontSize: '11px', fontWeight: 700, color: '#94a3b8', marginBottom: '10px', letterSpacing: '0.06em' }}>COUPON HISTORY</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {ADMIN_COUPON_HISTORY.map(h => (
-                  <div key={h.code} style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    padding: '11px 14px',
-                    background: '#fff',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '12px',
-                    boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
-                  }}>
-                    <div>
-                      <div style={{ fontSize: '13px', fontWeight: 700, color: '#0f172a', fontFamily: 'monospace', letterSpacing: '0.05em' }}>{h.code}</div>
-                      <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '2px' }}>{h.type} • {h.discount} • Used {h.used}x • Until {h.date}</div>
+              {history.length === 0 ? (
+                <div style={{ fontSize: '13px', color: '#94a3b8', textAlign: 'center', padding: '16px 0' }}>
+                  No coupon history yet. Save a coupon to see it here.
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {history.map((h, idx) => (
+                    <div key={h.code + idx} style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      padding: '11px 14px',
+                      background: '#fff',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '12px',
+                      boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
+                    }}>
+                      <div>
+                        <div style={{ fontSize: '13px', fontWeight: 700, color: '#0f172a', fontFamily: 'monospace', letterSpacing: '0.05em' }}>{h.code}</div>
+                        <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '2px' }}>{h.type} • {h.discount} • Until {h.date}</div>
+                      </div>
+                      <span style={{
+                        padding: '4px 10px', borderRadius: '20px',
+                        background: h.status === 'Active' ? 'rgba(37,99,235,0.1)' : 'rgba(100,116,139,0.1)',
+                        border: `1px solid ${h.status === 'Active' ? 'rgba(37,99,235,0.25)' : 'rgba(100,116,139,0.2)'}`,
+                        color: h.status === 'Active' ? '#2563EB' : '#64748b',
+                        fontSize: '11px', fontWeight: 600,
+                      }}>{h.status}</span>
                     </div>
-                    <span style={{
-                      padding: '4px 10px', borderRadius: '20px',
-                      background: h.status === 'Active' ? 'rgba(37,99,235,0.1)' : 'rgba(100,116,139,0.1)',
-                      border: `1px solid ${h.status === 'Active' ? 'rgba(37,99,235,0.25)' : 'rgba(100,116,139,0.2)'}`,
-                      color: h.status === 'Active' ? '#2563EB' : '#64748b',
-                      fontSize: '11px', fontWeight: 600,
-                    }}>{h.status}</span>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>
