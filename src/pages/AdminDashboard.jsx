@@ -1266,29 +1266,31 @@ function AdminCouponManagement({ accentStart }) {
             </div>
           </div>
 
-          <div>
-            <label style={labelStyle}>Maximum Discount Amount (₹)</label>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-              <input
-                type="number" step="0.01"
-                value={coupon.minDiscount}
-                onChange={e => setCoupon(p => ({ ...p, minDiscount: e.target.value }))}
-                style={inputStyle}
-                placeholder="Minimum"
-                onFocus={e => e.target.style.borderColor = '#2563EB'}
-                onBlur={e => e.target.style.borderColor = '#e2e8f0'}
-              />
-              <input
-                type="number" step="0.01"
-                value={coupon.maxDiscount}
-                onChange={e => setCoupon(p => ({ ...p, maxDiscount: e.target.value }))}
-                style={inputStyle}
-                placeholder="Maximum"
-                onFocus={e => e.target.style.borderColor = '#2563EB'}
-                onBlur={e => e.target.style.borderColor = '#e2e8f0'}
-              />
+          {coupon.active && (
+            <div>
+              <label style={labelStyle}>Maximum Discount Amount (₹)</label>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <input
+                  type="number" step="0.01"
+                  value={coupon.minDiscount}
+                  onChange={e => setCoupon(p => ({ ...p, minDiscount: e.target.value }))}
+                  style={inputStyle}
+                  placeholder="Minimum"
+                  onFocus={e => e.target.style.borderColor = '#2563EB'}
+                  onBlur={e => e.target.style.borderColor = '#e2e8f0'}
+                />
+                <input
+                  type="number" step="0.01"
+                  value={coupon.maxDiscount}
+                  onChange={e => setCoupon(p => ({ ...p, maxDiscount: e.target.value }))}
+                  style={inputStyle}
+                  placeholder="Maximum"
+                  onFocus={e => e.target.style.borderColor = '#2563EB'}
+                  onBlur={e => e.target.style.borderColor = '#e2e8f0'}
+                />
+              </div>
             </div>
-          </div>
+          )}
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <button
