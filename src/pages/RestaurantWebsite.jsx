@@ -475,6 +475,7 @@ export default function RestaurantWebsite() {
       phone: '',
       location: '',
       submittedAt: new Date().toISOString(),
+      createdAt: new Date().toISOString(),
       grandTotal,
       items: cartItems.map(i => ({ name: i.name, qty: i.qty, price: i.price })),
     }

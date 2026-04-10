@@ -154,9 +154,32 @@ export default function AdminDashboard() {
     try { return JSON.parse(localStorage.getItem(key) || '[]') } catch { return [] }
   }
 
+  const STALE_ORDER_EXPIRY_MS = 12 * 60 * 60 * 1000 // 12 hours
+
+  function filterStaleOrders(orderList) {
+    const now = Date.now()
+    return orderList.filter(o => {
+      if (o.status !== 'confirmed' && o.status !== 'cancelled') return true
+      const ts = o.createdAt || o.submittedAt
+      if (!ts) return true // no timestamp → keep
+      return (now - new Date(ts).getTime()) < STALE_ORDER_EXPIRY_MS
+    })
+  }
+
+  function cleanAndPersistOrders(restaurantId) {
+    const raw = loadOrders(restaurantId)
+    const cleaned = filterStaleOrders(raw)
+    if (cleaned.length !== raw.length) {
+      const key = `exzibo_orders_${restaurantId}`
+      localStorage.setItem(key, JSON.stringify(cleaned))
+      notifyAnalyticsUpdate()
+    }
+    return cleaned
+  }
+
   useEffect(() => {
     if (isDefault) {
-      setOrders(loadOrders('demo'))
+      setOrders(cleanAndPersistOrders('demo'))
       setBookings(loadBookings('demo'))
       return
     }
@@ -164,14 +187,14 @@ export default function AdminDashboard() {
     const found = all.find(r => r.id === id)
     if (!found) { navigate('/restaurants'); return }
     setRestaurant(found)
-    setOrders(loadOrders(found.id))
+    setOrders(cleanAndPersistOrders(found.id))
     setBookings(loadBookings(found.id))
   }, [id])
 
   useEffect(() => {
     function refreshData() {
       const restaurantId = isDefault ? 'demo' : id
-      setOrders(loadOrders(restaurantId))
+      setOrders(cleanAndPersistOrders(restaurantId))
       setBookings(loadBookings(restaurantId))
     }
     window.addEventListener('storage', refreshData)
@@ -180,6 +203,15 @@ export default function AdminDashboard() {
       window.removeEventListener('storage', refreshData)
       window.removeEventListener('exzibo-data-changed', refreshData)
     }
+  }, [id, isDefault])
+
+  // Hourly background cleanup of stale confirmed/cancelled orders
+  useEffect(() => {
+    const restaurantId = isDefault ? 'demo' : id
+    const intervalId = setInterval(() => {
+      setOrders(cleanAndPersistOrders(restaurantId))
+    }, 60 * 60 * 1000)
+    return () => clearInterval(intervalId)
   }, [id, isDefault])
 
   // Sync global config whenever localStorage changes (other tabs, etc.)
