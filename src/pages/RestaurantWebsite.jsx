@@ -152,6 +152,34 @@ function injectOldPrice(item) {
   return { ...item, oldPrice: item.oldPrice || Math.round(item.price * 1.5) }
 }
 
+const CUSTOMER_ORDERS_EXPIRY_MS = 12 * 60 * 60 * 1000
+
+function getCustomerOrdersKey(restaurantId) {
+  return `exzibo_customer_orders_${restaurantId}`
+}
+
+function loadAndFilterCustomerOrders(restaurantId) {
+  try {
+    const raw = localStorage.getItem(getCustomerOrdersKey(restaurantId))
+    if (!raw) return []
+    const all = JSON.parse(raw)
+    const now = Date.now()
+    const valid = all.filter(o => {
+      if (o.status === 'cancelled') return false
+      if (o.placedAt) return (now - new Date(o.placedAt).getTime()) < CUSTOMER_ORDERS_EXPIRY_MS
+      return true
+    })
+    localStorage.setItem(getCustomerOrdersKey(restaurantId), JSON.stringify(valid))
+    return valid
+  } catch { return [] }
+}
+
+function persistCustomerOrders(restaurantId, orders) {
+  try {
+    localStorage.setItem(getCustomerOrdersKey(restaurantId), JSON.stringify(orders))
+  } catch {}
+}
+
 function loadMenuFromStorage(id, tabs) {
   const saved = localStorage.getItem(`exzibo_menu_${id}`)
   if (!saved) return null
@@ -188,11 +216,12 @@ export default function RestaurantWebsite() {
   const [couponInput, setCouponInput] = useState('')
   const [couponApplied, setCouponApplied] = useState(false)
   const [couponError, setCouponError] = useState('')
-  const [currentOrder, setCurrentOrder] = useState(null)
+  const [customerOrders, setCustomerOrders] = useState([])
+  const currentOrder = customerOrders[0] ?? null
+  const orderHistory = customerOrders.slice(1)
   const [showSuccessPopup, setShowSuccessPopup] = useState(false)
   const [orderNotes, setOrderNotes] = useState('')
   const [orderStatus, setOrderStatus] = useState(1)
-  const [orderHistory, setOrderHistory] = useState([])
   const [viewingHistoryOrder, setViewingHistoryOrder] = useState(null)
   const [showOrderConfirm, setShowOrderConfirm] = useState(false)
 
@@ -406,12 +435,10 @@ export default function RestaurantWebsite() {
 
   function handlePlaceOrder() {
     if (cartItems.length === 0) return
-    if (currentOrder) {
-      setOrderHistory(prev => [{ ...currentOrder, status: 'CONFIRMED' }, ...prev])
-    }
     const orderId = String(Math.floor(100000000 + Math.random() * 900000000))
     const now = new Date()
     const dateStr = now.toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' })
+    const restaurantId = restaurant?.id || slug || 'demo'
     const order = {
       id: orderId,
       items: [...cartItems],
@@ -423,10 +450,15 @@ export default function RestaurantWebsite() {
       itemCount: cartItems.reduce((s, i) => s + i.qty, 0),
       date: dateStr,
       couponApplied,
-      status: 'PLACED',
+      status: 'pending',
+      placedAt: new Date().toISOString(),
+      _restaurantId: restaurantId,
     }
-    const restaurantId = restaurant?.id || slug || 'demo'
-    setCurrentOrder({ ...order, _restaurantId: restaurantId })
+    setCustomerOrders(prev => {
+      const next = [order, ...prev]
+      persistCustomerOrders(restaurantId, next)
+      return next
+    })
     setOrderStatus(0)
     setOrderNotes('')
     setViewingHistoryOrder(null)
@@ -457,6 +489,23 @@ export default function RestaurantWebsite() {
     }, 2500)
   }
 
+  function handleCancelOrder(orderId) {
+    const restaurantId = restaurant?.id || slug || 'demo'
+    setCustomerOrders(prev => {
+      const next = prev.filter(o => o.id !== orderId)
+      persistCustomerOrders(restaurantId, next)
+      return next
+    })
+    if (viewingHistoryOrder?.id === orderId) setViewingHistoryOrder(null)
+    const adminOrdersKey = `exzibo_orders_${restaurantId}`
+    try {
+      const adminOrders = JSON.parse(localStorage.getItem(adminOrdersKey) || '[]')
+      const updated = adminOrders.map(o => o.id === orderId ? { ...o, status: 'cancelled' } : o)
+      localStorage.setItem(adminOrdersKey, JSON.stringify(updated))
+      notifyAnalyticsUpdate()
+    } catch {}
+  }
+
   const theme = buildTheme(darkMode)
 
   useEffect(() => {
@@ -479,6 +528,8 @@ export default function RestaurantWebsite() {
       setDynamicCategories(loadFiltersFromStorage('demo'))
       try { const fe = localStorage.getItem('exzibo_filters_enabled_demo'); if (fe) setFiltersEnabled(JSON.parse(fe)) } catch {}
       setActiveMenuTab(demoTabs[0]?.id || 'starters')
+      const demoOrders = loadAndFilterCustomerOrders('demo')
+      setCustomerOrders(demoOrders)
       return
     }
     const restaurants = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
@@ -491,6 +542,8 @@ export default function RestaurantWebsite() {
       setDynamicCategories(loadFiltersFromStorage(found.id))
       try { const fe = localStorage.getItem(`exzibo_filters_enabled_${found.id}`); if (fe) setFiltersEnabled(JSON.parse(fe)) } catch {}
       setActiveMenuTab(tabs[0]?.id || 'starters')
+      const foundOrders = loadAndFilterCustomerOrders(found.id)
+      setCustomerOrders(foundOrders)
     } else {
       setNotFound(true)
     }
@@ -503,13 +556,29 @@ export default function RestaurantWebsite() {
 
     function syncOrderStatus() {
       try {
-        const orders = JSON.parse(localStorage.getItem(ordersKey) || '[]')
-        const adminOrder = orders.find(o => o.id === currentOrder.id)
-        if (!adminOrder) return
-        if (adminOrder.status === 'preparing') setOrderStatus(1)
-        else if (adminOrder.status === 'completed') setOrderStatus(1)
-        else if (adminOrder.status === 'cancelled') setOrderStatus(0)
-        else setOrderStatus(0)
+        const adminOrders = JSON.parse(localStorage.getItem(ordersKey) || '[]')
+        setCustomerOrders(prev => {
+          if (prev.length === 0) return prev
+          let changed = false
+          const updated = prev.filter(co => {
+            const admin = adminOrders.find(o => o.id === co.id)
+            if (admin && admin.status === 'cancelled') { changed = true; return false }
+            return true
+          }).map(co => {
+            const admin = adminOrders.find(o => o.id === co.id)
+            if (!admin) return co
+            const newStatus = admin.status
+            if (newStatus !== co.status) { changed = true; return { ...co, status: newStatus } }
+            return co
+          })
+          if (changed) persistCustomerOrders(restaurantId, updated)
+          const firstAdmin = adminOrders.find(o => o.id === (updated[0]?.id))
+          if (firstAdmin) {
+            if (firstAdmin.status === 'preparing' || firstAdmin.status === 'completed' || firstAdmin.status === 'confirmed') setOrderStatus(1)
+            else setOrderStatus(0)
+          }
+          return changed ? updated : prev
+        })
       } catch {}
     }
 
@@ -1710,8 +1779,17 @@ export default function RestaurantWebsite() {
                 ))}
               </div>
               {/* Reorder */}
-              <button className="reorder-btn" onClick={() => { setCartItems(viewingHistoryOrder.items.map(i => ({ ...i }))); setViewingHistoryOrder(null); setActiveNav('cart') }} style={{ width: '100%', background: 'linear-gradient(135deg, #1c1c1c, #2a2a2a)', color: '#fff', border: '1px solid rgba(255,255,255,0.10)', borderRadius: '16px', padding: '15px', fontSize: '14px', fontWeight: 700, cursor: 'pointer', letterSpacing: '0.04em', boxShadow: '0 4px 16px rgba(0,0,0,0.25)', marginBottom: '4px' }}>
+              <button className="reorder-btn" onClick={() => { setCartItems(viewingHistoryOrder.items.map(i => ({ ...i }))); setViewingHistoryOrder(null); setActiveNav('cart') }} style={{ width: '100%', background: 'linear-gradient(135deg, #1c1c1c, #2a2a2a)', color: '#fff', border: '1px solid rgba(255,255,255,0.10)', borderRadius: '16px', padding: '15px', fontSize: '14px', fontWeight: 700, cursor: 'pointer', letterSpacing: '0.04em', boxShadow: '0 4px 16px rgba(0,0,0,0.25)', marginBottom: '10px' }}>
                 ↺  Reorder Same Items
+              </button>
+              {/* Cancel this order */}
+              <button
+                onClick={() => handleCancelOrder(viewingHistoryOrder.id)}
+                style={{ width: '100%', background: 'none', color: '#E8321A', border: '1.5px solid rgba(232,50,26,0.35)', borderRadius: '16px', padding: '13px', fontSize: '13px', fontWeight: 700, cursor: 'pointer', letterSpacing: '0.04em', transition: 'background 0.2s ease' }}
+                onMouseEnter={e => e.currentTarget.style.background = 'rgba(232,50,26,0.07)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'none'}
+              >
+                Cancel Order
               </button>
             </div>
           )}
@@ -1720,12 +1798,12 @@ export default function RestaurantWebsite() {
           {!viewingHistoryOrder && (
             <>
           {/* No order state */}
-          {!currentOrder && (
+          {customerOrders.length === 0 && (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '50px 24px 24px', gap: '14px' }}>
               <div style={{ width: '72px', height: '72px', borderRadius: '36px', background: darkMode ? 'rgba(255,255,255,0.05)' : '#f0ece8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <ClipboardList size={30} color={darkMode ? '#555' : '#ccc'} />
               </div>
-              <div style={{ fontSize: '16px', fontWeight: 800, color: theme.color }}>No active order</div>
+              <div style={{ fontSize: '16px', fontWeight: 800, color: theme.color }}>No active orders.</div>
               <div style={{ fontSize: '13px', color: theme.locationColor, textAlign: 'center', lineHeight: 1.6, maxWidth: '220px' }}>Place an order from the cart to track it here</div>
               <button onClick={() => setActiveNav('menu')} style={{ marginTop: '8px', background: '#E8321A', color: '#fff', border: 'none', borderRadius: '14px', padding: '12px 28px', fontSize: '13px', fontWeight: 700, cursor: 'pointer', boxShadow: '0 6px 20px rgba(232,50,26,0.35)' }}>
                 Browse Menu
@@ -1907,9 +1985,18 @@ export default function RestaurantWebsite() {
                     setActiveNav('cart')
                   }
                 }}
-                style={{ width: '100%', background: 'linear-gradient(135deg, #1c1c1c, #2a2a2a)', color: '#fff', border: '1px solid rgba(255,255,255,0.10)', borderRadius: '16px', padding: '15px', fontSize: '14px', fontWeight: 700, cursor: 'pointer', letterSpacing: '0.04em', boxShadow: '0 4px 16px rgba(0,0,0,0.25)' }}
+                style={{ width: '100%', background: 'linear-gradient(135deg, #1c1c1c, #2a2a2a)', color: '#fff', border: '1px solid rgba(255,255,255,0.10)', borderRadius: '16px', padding: '15px', fontSize: '14px', fontWeight: 700, cursor: 'pointer', letterSpacing: '0.04em', boxShadow: '0 4px 16px rgba(0,0,0,0.25)', marginBottom: '10px' }}
               >
                 ↺  Reorder Same Items
+              </button>
+              {/* Cancel Order button */}
+              <button
+                onClick={() => currentOrder && handleCancelOrder(currentOrder.id)}
+                style={{ width: '100%', background: 'none', color: '#E8321A', border: '1.5px solid rgba(232,50,26,0.35)', borderRadius: '16px', padding: '13px', fontSize: '13px', fontWeight: 700, cursor: 'pointer', letterSpacing: '0.04em', transition: 'background 0.2s ease' }}
+                onMouseEnter={e => e.currentTarget.style.background = 'rgba(232,50,26,0.07)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'none'}
+              >
+                Cancel Order
               </button>
             </div>
           )}
@@ -1929,45 +2016,59 @@ export default function RestaurantWebsite() {
                   const truncated = itemNames.length > 38 ? itemNames.slice(0, 36) + '…' : itemNames
                   const isLast = idx === orderHistory.length - 1
                   return (
-                    <button
+                    <div
                       key={order.id}
-                      onClick={() => setViewingHistoryOrder(order)}
                       style={{
                         display: 'flex', alignItems: 'center', gap: '14px',
                         padding: '14px 16px',
-                        background: 'none', border: 'none', cursor: 'pointer',
                         borderBottom: isLast ? 'none' : `1px solid ${theme.cardBorder}`,
-                        textAlign: 'left', width: '100%',
-                        transition: 'background 0.15s ease',
                       }}
-                      onMouseEnter={e => e.currentTarget.style.background = darkMode ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)'}
-                      onMouseLeave={e => e.currentTarget.style.background = 'none'}
                     >
-                      {/* Thumbnail */}
-                      <div style={{ width: '64px', height: '64px', borderRadius: '14px', overflow: 'hidden', background: darkMode ? '#2a2a2a' : '#f0ece8', flexShrink: 0, border: `1px solid ${theme.cardBorder}` }}>
-                        <img
-                          src={order.items[0]?.img}
-                          alt={order.items[0]?.name}
-                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                          onError={e => { e.target.src = '/menu/wagyu-ribeye.png' }}
-                        />
-                      </div>
-                      {/* Info */}
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
-                          <div style={{ width: '7px', height: '7px', borderRadius: '4px', background: '#22c55e', flexShrink: 0 }} />
-                          <span style={{ fontSize: '13px', fontWeight: 800, color: theme.color }}>Delivered on {order.date}</span>
+                      {/* Clickable row */}
+                      <button
+                        onClick={() => setViewingHistoryOrder(order)}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: '14px',
+                          flex: 1, minWidth: 0,
+                          background: 'none', border: 'none', cursor: 'pointer',
+                          textAlign: 'left', padding: 0,
+                        }}
+                      >
+                        {/* Thumbnail */}
+                        <div style={{ width: '64px', height: '64px', borderRadius: '14px', overflow: 'hidden', background: darkMode ? '#2a2a2a' : '#f0ece8', flexShrink: 0, border: `1px solid ${theme.cardBorder}` }}>
+                          <img
+                            src={order.items[0]?.img}
+                            alt={order.items[0]?.name}
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                            onError={e => { e.target.src = '/menu/wagyu-ribeye.png' }}
+                          />
                         </div>
-                        <div style={{ fontSize: '12px', color: theme.locationColor, fontWeight: 400, lineHeight: 1.4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '180px' }}>
-                          {truncated}
+                        {/* Info */}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+                            <div style={{ width: '7px', height: '7px', borderRadius: '4px', background: '#22c55e', flexShrink: 0 }} />
+                            <span style={{ fontSize: '13px', fontWeight: 800, color: theme.color }}>Placed on {order.date}</span>
+                          </div>
+                          <div style={{ fontSize: '12px', color: theme.locationColor, fontWeight: 400, lineHeight: 1.4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '160px' }}>
+                            {truncated}
+                          </div>
+                          <div style={{ marginTop: '6px', fontSize: '11px', fontWeight: 700, color: '#E8321A' }}>
+                            ₹{order.grandTotal.toLocaleString('en-IN')}
+                          </div>
                         </div>
-                        <div style={{ marginTop: '6px', fontSize: '11px', fontWeight: 700, color: '#E8321A' }}>
-                          ₹{order.grandTotal.toLocaleString('en-IN')}
-                        </div>
-                      </div>
-                      {/* Chevron */}
-                      <ChevronRight size={18} color={theme.locationColor} style={{ flexShrink: 0 }} />
-                    </button>
+                        <ChevronRight size={18} color={theme.locationColor} style={{ flexShrink: 0 }} />
+                      </button>
+                      {/* Cancel button */}
+                      <button
+                        onClick={() => handleCancelOrder(order.id)}
+                        title="Cancel this order"
+                        style={{ flexShrink: 0, background: 'none', border: '1.5px solid rgba(232,50,26,0.30)', borderRadius: '10px', padding: '6px 10px', fontSize: '11px', fontWeight: 700, color: '#E8321A', cursor: 'pointer', transition: 'background 0.15s ease' }}
+                        onMouseEnter={e => e.currentTarget.style.background = 'rgba(232,50,26,0.08)'}
+                        onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                      >
+                        Cancel
+                      </button>
+                    </div>
                   )
                 })}
               </div>
