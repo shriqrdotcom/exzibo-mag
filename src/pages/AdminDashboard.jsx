@@ -129,6 +129,7 @@ export default function AdminDashboard() {
   const [bookingSettings, setBookingSettings] = useState({ showSeating: false })
   const [bookingFilter, setBookingFilter] = useState('today')
   const [notification, setNotification] = useState(null)
+  const [cancelTarget, setCancelTarget] = useState(null)
 
   const orderSettingsBtnRef = useRef(null)
   const orderSettingsPanelRef = useRef(null)
@@ -295,6 +296,10 @@ export default function AdminDashboard() {
           from { opacity: 0; transform: translateY(24px); }
           to   { opacity: 1; transform: translateY(0); }
         }
+        @keyframes slideUpModal {
+          from { transform: translateY(100%); opacity: 0; }
+          to   { transform: translateY(0);    opacity: 1; }
+        }
         .order-card { animation: fadeSlideUp 0.35s ease both; }
         .action-btn { transition: transform 0.15s ease, box-shadow 0.15s ease; }
         .action-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.12) !important; }
@@ -317,6 +322,84 @@ export default function AdminDashboard() {
           {notification}
         </div>
       )}
+
+      {/* Cancel Confirmation Modal */}
+      {cancelTarget && (() => {
+        const targetOrder = orders.find(o => o.id === cancelTarget)
+        const itemCount = targetOrder?.items?.reduce((s, i) => s + (i.qty || 1), 0) ?? 0
+        const total = targetOrder?.grandTotal ?? targetOrder?.items?.reduce((s, i) => s + (i.price * (i.qty || 1)), 0) ?? 0
+        return (
+          <div
+            onClick={() => setCancelTarget(null)}
+            style={{
+              position: 'fixed', inset: 0, zIndex: 1000,
+              display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', alignItems: 'center',
+              background: 'rgba(0,0,0,0.48)',
+              backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)',
+            }}
+          >
+            <div
+              onClick={e => e.stopPropagation()}
+              style={{
+                background: '#fff', borderRadius: '24px 24px 0 0',
+                padding: '12px 24px 40px',
+                width: '100%', maxWidth: '480px',
+                animation: 'slideUpModal 0.28s cubic-bezier(0.34,1.1,0.64,1)',
+                boxShadow: '0 -8px 40px rgba(0,0,0,0.18)',
+              }}
+            >
+              {/* Drag handle */}
+              <div style={{ width: '40px', height: '4px', background: '#e2e8f0', borderRadius: '2px', margin: '0 auto 24px' }} />
+
+              {/* Icon */}
+              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
+                <div style={{ width: '60px', height: '60px', borderRadius: '30px', background: '#FEF2F2', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <XCircle size={30} color="#EF4444" />
+                </div>
+              </div>
+
+              {/* Heading */}
+              <div style={{ textAlign: 'center', fontWeight: 900, fontSize: '20px', color: '#0f172a', marginBottom: '8px' }}>
+                Cancel this order?
+              </div>
+              <div style={{ textAlign: 'center', fontSize: '14px', color: '#64748B', marginBottom: '24px', fontWeight: 500 }}>
+                {itemCount} item{itemCount !== 1 ? 's' : ''} · ₹{total.toLocaleString('en-IN')}
+              </div>
+
+              {/* Divider */}
+              <div style={{ height: '1px', background: '#f1f5f9', marginBottom: '20px' }} />
+
+              {/* Buttons */}
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <button
+                  onClick={() => setCancelTarget(null)}
+                  style={{
+                    flex: 1, padding: '14px', borderRadius: '16px',
+                    background: '#f1f5f9', border: 'none',
+                    color: '#374151', fontSize: '14px', fontWeight: 700,
+                    cursor: 'pointer', fontFamily: 'inherit',
+                  }}
+                >
+                  No, Keep it
+                </button>
+                <button
+                  onClick={() => { cancelOrder(cancelTarget); setCancelTarget(null) }}
+                  style={{
+                    flex: 2, padding: '14px', borderRadius: '16px',
+                    background: '#EF4444', border: 'none',
+                    color: '#fff', fontSize: '14px', fontWeight: 800,
+                    cursor: 'pointer', fontFamily: 'inherit',
+                    boxShadow: '0 6px 20px rgba(239,68,68,0.35)',
+                    letterSpacing: '0.01em',
+                  }}
+                >
+                  Yes, Cancel Order ✕
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
 
       <div style={{ width: '100%', maxWidth: '480px', padding: '0 16px', boxSizing: 'border-box' }}>
 
@@ -534,7 +617,7 @@ export default function AdminDashboard() {
                   accentStart={accentStart}
                   currency={globalConfig.currency}
                   onConfirm={() => confirmOrder(order.id)}
-                  onCancel={() => cancelOrder(order.id)}
+                  onCancel={() => setCancelTarget(order.id)}
                   orderSettings={orderSettings}
                 />
               ))}
