@@ -5,7 +5,7 @@ import {
   CheckCircle, XCircle,
   ClipboardList, BookOpen, Users, Settings, ArrowLeft, BarChart2,
   Palette, DollarSign, Type, Save, Check, CalendarDays, UtensilsCrossed,
-  SlidersHorizontal, Plus, Pencil, Trash2, X, Search,
+  SlidersHorizontal, Plus, Pencil, Trash2, X, Search, ChevronDown,
 } from 'lucide-react'
 
 const GLOBAL_CONFIG_KEY = 'exzibo_admin_global_config'
@@ -970,6 +970,9 @@ function SettingsPanel({ draft, setDraft, accentStart, accentEnd, onSave, saved,
           </div>
         </SettingCard>
 
+        {/* Coupon Management */}
+        <AdminCouponManagement accentStart={accentStart} />
+
         {/* Save Button */}
         <button
           onClick={onSave}
@@ -1021,6 +1024,357 @@ function SettingCard({ icon, accentStart, title, desc, children }) {
         </div>
       </div>
       {children}
+    </div>
+  )
+}
+
+/* ─── Admin Coupon Management ─── */
+function generateCouponCode() {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+  let code = ''
+  for (let i = 0; i < 8; i++) code += chars[Math.floor(Math.random() * chars.length)]
+  return code
+}
+
+const ADMIN_COUPON_HISTORY = [
+  { code: 'SAVE20', type: 'Percentage', discount: '20%', used: 142, status: 'Expired', date: '01-01-2025' },
+  { code: 'FLAT50', type: 'Fixed Amount', discount: '₹50', used: 88, status: 'Expired', date: '15-03-2025' },
+  { code: 'AB20', type: 'Percentage', discount: '10%', used: 34, status: 'Active', date: '09-11-2025' },
+]
+
+function AdminCouponManagement({ accentStart }) {
+  const [coupon, setCoupon] = useState({
+    code: 'AB20',
+    discountType: 'Percentage',
+    discountPct: '10.00',
+    minDiscount: '400.00',
+    maxDiscount: '100.00',
+    active: true,
+    validUntil: '2025-11-09',
+    expireDate: '2025-10-10',
+  })
+  const [showDropdown, setShowDropdown] = useState(false)
+  const [showHistory, setShowHistory] = useState(false)
+  const [updated, setUpdated] = useState(false)
+  const dropdownRef = useRef(null)
+
+  useEffect(() => {
+    const stored = localStorage.getItem('exzibo_admin_coupon')
+    if (stored) setCoupon(JSON.parse(stored))
+  }, [])
+
+  useEffect(() => {
+    function handler(e) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) setShowDropdown(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  const handleUpdate = () => {
+    localStorage.setItem('exzibo_admin_coupon', JSON.stringify(coupon))
+    setUpdated(true)
+    setTimeout(() => setUpdated(false), 2000)
+  }
+
+  const handleCancel = () => {
+    const stored = localStorage.getItem('exzibo_admin_coupon')
+    if (stored) setCoupon(JSON.parse(stored))
+    else setCoupon({
+      code: 'AB20', discountType: 'Percentage', discountPct: '10.00',
+      minDiscount: '400.00', maxDiscount: '100.00', active: true,
+      validUntil: '2025-11-09', expireDate: '2025-10-10',
+    })
+  }
+
+  const inputStyle = {
+    width: '100%', boxSizing: 'border-box',
+    padding: '10px 14px',
+    background: 'rgba(248,250,252,0.9)',
+    border: '1.5px solid #e2e8f0',
+    borderRadius: '12px',
+    fontSize: '14px', fontWeight: 500, color: '#0f172a',
+    outline: 'none', fontFamily: 'inherit',
+  }
+
+  const labelStyle = {
+    display: 'block',
+    fontSize: '11px', fontWeight: 600,
+    color: '#64748b',
+    marginBottom: '6px',
+    letterSpacing: '0.03em',
+  }
+
+  return (
+    <div style={{
+      background: 'rgba(255,255,255,0.75)',
+      backdropFilter: 'blur(12px)',
+      WebkitBackdropFilter: 'blur(12px)',
+      borderRadius: '20px',
+      padding: '20px',
+      border: '1px solid rgba(255,255,255,0.7)',
+      boxShadow: '0 4px 24px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.8)',
+    }}>
+      <div style={{ marginBottom: '18px' }}>
+        <div style={{ fontSize: '15px', fontWeight: 800, color: '#2563EB', marginBottom: '2px' }}>Coupon Management</div>
+        <div style={{ fontSize: '12px', color: '#64748b' }}>Create and manage discount coupons for your restaurants.</div>
+      </div>
+
+      <div style={{
+        background: 'rgba(248,250,252,0.6)',
+        borderRadius: '14px',
+        padding: '16px',
+        border: '1px solid rgba(226,232,240,0.8)',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '18px' }}>
+          <div style={{
+            width: '32px', height: '32px', borderRadius: '50%',
+            background: 'rgba(37,99,235,0.12)',
+            border: '1px solid rgba(37,99,235,0.25)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: '#2563EB', cursor: 'pointer', flexShrink: 0,
+          }}>
+            <ArrowLeft size={15} />
+          </div>
+          <span style={{ fontSize: '15px', fontWeight: 700, color: '#0f172a' }}>Edit Coupon</span>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <div>
+            <label style={labelStyle}>Coupon Code <span style={{ color: '#ef4444' }}>*</span></label>
+            <div style={{ position: 'relative' }}>
+              <input
+                value={coupon.code}
+                onChange={e => setCoupon(p => ({ ...p, code: e.target.value }))}
+                style={{ ...inputStyle, paddingRight: '110px' }}
+                placeholder="e.g. SAVE20"
+                onFocus={e => e.target.style.borderColor = '#2563EB'}
+                onBlur={e => e.target.style.borderColor = '#e2e8f0'}
+              />
+              <button
+                onClick={() => setCoupon(p => ({ ...p, code: generateCouponCode() }))}
+                style={{
+                  position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)',
+                  background: 'none', border: 'none',
+                  color: '#2563EB', fontSize: '12px', fontWeight: 700,
+                  cursor: 'pointer', letterSpacing: '0.05em', padding: '4px 8px',
+                }}
+              >GENERATE</button>
+            </div>
+            <p style={{ fontSize: '11px', color: '#94a3b8', marginTop: '5px' }}>Enter a unique coupon code</p>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+            <div>
+              <label style={labelStyle}>Discount Type <span style={{ color: '#ef4444' }}>*</span></label>
+              <div ref={dropdownRef} style={{ position: 'relative' }}>
+                <button
+                  onClick={() => setShowDropdown(v => !v)}
+                  style={{
+                    width: '100%', boxSizing: 'border-box',
+                    padding: '10px 14px',
+                    background: 'rgba(248,250,252,0.9)',
+                    border: `1.5px solid ${showDropdown ? '#2563EB' : '#e2e8f0'}`,
+                    borderRadius: '12px',
+                    fontSize: '14px', fontWeight: 500, color: '#0f172a',
+                    cursor: 'pointer', fontFamily: 'inherit',
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    transition: 'border-color 0.2s',
+                  }}
+                >
+                  <span>{coupon.discountType}</span>
+                  <ChevronDown size={15} style={{ color: '#94a3b8', transform: showDropdown ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+                </button>
+                {showDropdown && (
+                  <div style={{
+                    position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, zIndex: 100,
+                    background: '#fff',
+                    border: '1.5px solid rgba(37,99,235,0.3)',
+                    borderRadius: '12px',
+                    overflow: 'hidden',
+                    boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+                  }}>
+                    {['Percentage', 'Fixed Amount'].map(opt => (
+                      <button
+                        key={opt}
+                        onClick={() => { setCoupon(p => ({ ...p, discountType: opt })); setShowDropdown(false) }}
+                        style={{
+                          width: '100%', padding: '11px 14px',
+                          background: coupon.discountType === opt ? 'rgba(37,99,235,0.08)' : 'transparent',
+                          border: 'none',
+                          color: coupon.discountType === opt ? '#2563EB' : '#0f172a',
+                          fontSize: '14px', fontWeight: coupon.discountType === opt ? 700 : 400,
+                          cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit',
+                          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        }}
+                      >
+                        {opt}
+                        {coupon.discountType === opt && <Check size={14} style={{ color: '#2563EB' }} />}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+            <div>
+              <label style={labelStyle}>Discount % <span style={{ color: '#ef4444' }}>*</span></label>
+              <input
+                type="number" min="0" step="0.01"
+                value={coupon.discountPct}
+                onChange={e => setCoupon(p => ({ ...p, discountPct: e.target.value }))}
+                style={inputStyle}
+                onFocus={e => e.target.style.borderColor = '#2563EB'}
+                onBlur={e => e.target.style.borderColor = '#e2e8f0'}
+              />
+            </div>
+          </div>
+
+          <div>
+            <label style={labelStyle}>Maximum Discount Amount (₹)</label>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <input
+                type="number" step="0.01"
+                value={coupon.minDiscount}
+                onChange={e => setCoupon(p => ({ ...p, minDiscount: e.target.value }))}
+                style={inputStyle}
+                placeholder="Minimum"
+                onFocus={e => e.target.style.borderColor = '#2563EB'}
+                onBlur={e => e.target.style.borderColor = '#e2e8f0'}
+              />
+              <input
+                type="number" step="0.01"
+                value={coupon.maxDiscount}
+                onChange={e => setCoupon(p => ({ ...p, maxDiscount: e.target.value }))}
+                style={inputStyle}
+                placeholder="Maximum"
+                onFocus={e => e.target.style.borderColor = '#2563EB'}
+                onBlur={e => e.target.style.borderColor = '#e2e8f0'}
+              />
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <button
+              onClick={() => setCoupon(p => ({ ...p, active: !p.active }))}
+              style={{
+                width: '50px', height: '27px', borderRadius: '14px',
+                background: coupon.active ? '#2563EB' : '#cbd5e1',
+                border: 'none', cursor: 'pointer',
+                position: 'relative', transition: 'background 0.25s', flexShrink: 0,
+              }}
+            >
+              <span style={{
+                position: 'absolute', top: '3.5px',
+                left: coupon.active ? '27px' : '3.5px',
+                width: '20px', height: '20px', borderRadius: '50%',
+                background: '#fff', transition: 'left 0.25s',
+                boxShadow: '0 1px 4px rgba(0,0,0,0.2)',
+              }} />
+            </button>
+            <span style={{ fontSize: '14px', fontWeight: 600, color: '#0f172a' }}>Active</span>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+            <div>
+              <label style={labelStyle}>Valid Until</label>
+              <input
+                type="date"
+                value={coupon.validUntil}
+                onChange={e => setCoupon(p => ({ ...p, validUntil: e.target.value }))}
+                style={{ ...inputStyle, colorScheme: 'light' }}
+                onFocus={e => e.target.style.borderColor = '#2563EB'}
+                onBlur={e => e.target.style.borderColor = '#e2e8f0'}
+              />
+            </div>
+            <div>
+              <label style={{ ...labelStyle, fontWeight: 800, color: '#0f172a', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>EXPIRE DATE</label>
+              <input
+                type="date"
+                value={coupon.expireDate}
+                onChange={e => setCoupon(p => ({ ...p, expireDate: e.target.value }))}
+                style={{ ...inputStyle, colorScheme: 'light' }}
+                onFocus={e => e.target.style.borderColor = '#2563EB'}
+                onBlur={e => e.target.style.borderColor = '#e2e8f0'}
+              />
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <button
+              onClick={handleCancel}
+              style={{
+                flex: 1, padding: '12px',
+                background: 'transparent',
+                border: '1.5px solid #cbd5e1',
+                borderRadius: '12px',
+                color: '#64748b', fontSize: '13px', fontWeight: 700,
+                cursor: 'pointer', letterSpacing: '0.06em',
+                transition: 'all 0.2s', fontFamily: 'inherit',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = '#94a3b8'; e.currentTarget.style.color = '#475569' }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.color = '#64748b' }}
+            >CANCEL</button>
+            <button
+              onClick={handleUpdate}
+              style={{
+                flex: 1, padding: '12px',
+                background: updated ? 'linear-gradient(135deg,#10B981,#059669)' : '#2563EB',
+                border: 'none',
+                borderRadius: '12px',
+                color: '#fff', fontSize: '13px', fontWeight: 700,
+                cursor: 'pointer', letterSpacing: '0.06em',
+                transition: 'all 0.25s', fontFamily: 'inherit',
+                boxShadow: updated ? '0 4px 16px rgba(16,185,129,0.35)' : '0 4px 16px rgba(37,99,235,0.35)',
+              }}
+            >{updated ? '✓ UPDATED!' : 'UPDATE'}</button>
+          </div>
+
+          <button
+            onClick={() => setShowHistory(v => !v)}
+            style={{
+              width: '100%', padding: '13px',
+              background: '#2563EB',
+              border: 'none', borderRadius: '12px',
+              color: '#fff', fontSize: '13px', fontWeight: 800,
+              cursor: 'pointer', letterSpacing: '0.08em', fontFamily: 'inherit',
+              boxShadow: '0 4px 16px rgba(37,99,235,0.35)',
+              transition: 'background 0.2s',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = '#1d4ed8' }}
+            onMouseLeave={e => { e.currentTarget.style.background = '#2563EB' }}
+          >HISTORY</button>
+
+          {showHistory && (
+            <div>
+              <div style={{ fontSize: '11px', fontWeight: 700, color: '#94a3b8', marginBottom: '10px', letterSpacing: '0.06em' }}>COUPON HISTORY</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {ADMIN_COUPON_HISTORY.map(h => (
+                  <div key={h.code} style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: '11px 14px',
+                    background: '#fff',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '12px',
+                    boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
+                  }}>
+                    <div>
+                      <div style={{ fontSize: '13px', fontWeight: 700, color: '#0f172a', fontFamily: 'monospace', letterSpacing: '0.05em' }}>{h.code}</div>
+                      <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '2px' }}>{h.type} • {h.discount} • Used {h.used}x • Until {h.date}</div>
+                    </div>
+                    <span style={{
+                      padding: '4px 10px', borderRadius: '20px',
+                      background: h.status === 'Active' ? 'rgba(37,99,235,0.1)' : 'rgba(100,116,139,0.1)',
+                      border: `1px solid ${h.status === 'Active' ? 'rgba(37,99,235,0.25)' : 'rgba(100,116,139,0.2)'}`,
+                      color: h.status === 'Active' ? '#2563EB' : '#64748b',
+                      fontSize: '11px', fontWeight: 600,
+                    }}>{h.status}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   )
 }
