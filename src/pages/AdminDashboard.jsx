@@ -29,6 +29,7 @@ const CURRENCY_OPTIONS = ['INR', 'USD', 'EUR', 'GBP', 'AED']
 
 const STATUS_CONFIG = {
   pending:   { label: 'Pending',   color: '#F59E0B', bg: '#FFFBEB', border: '#FDE68A' },
+  confirmed: { label: 'Confirmed', color: '#10B981', bg: '#ECFDF5', border: '#A7F3D0' },
   preparing: { label: 'Preparing', color: '#10B981', bg: '#ECFDF5', border: '#A7F3D0' },
   completed: { label: 'Completed', color: '#94A3B8', bg: '#F8FAFC', border: '#E2E8F0' },
   cancelled: { label: 'Cancelled', color: '#EF4444', bg: '#FEF2F2', border: '#FECACA' },
@@ -232,8 +233,8 @@ export default function AdminDashboard() {
     setOrders(prev => {
       const updated = prev.map(o => {
         if (o.id !== orderId) return o
-        const next = o.status === 'pending' ? 'preparing' : o.status === 'preparing' ? 'completed' : o.status
-        showToast(next === 'preparing' ? '🍳 Order is now Preparing!' : '✅ Order Completed!')
+        const next = o.status === 'pending' ? 'confirmed' : o.status === 'preparing' ? 'confirmed' : o.status
+        showToast('✅ Order Confirmed!')
         return { ...o, status: next }
       })
       persistOrders(updated)
@@ -2729,7 +2730,7 @@ function OrderCard({ order, index, accentStart, currency, onConfirm, onCancel, o
     ? order.grandTotal
     : order.items.reduce((s, it) => s + (it.price * (it.qty || 1)), 0)
   const cfg = STATUS_CONFIG[order.status] || STATUS_CONFIG.pending
-  const isDone = order.status === 'completed' || order.status === 'cancelled'
+  const isDone = order.status === 'confirmed' || order.status === 'completed' || order.status === 'cancelled'
   const showCustomerDetails = orderSettings.showName || orderSettings.showPhone || orderSettings.showLocation
 
   return (
