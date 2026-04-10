@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
+import { notifyAnalyticsUpdate } from '../context/AnalyticsContext'
 import {
   Star, MapPin, Bell, ShoppingCart, Home,
   UtensilsCrossed, ClipboardList, CalendarDays,
@@ -303,6 +304,7 @@ export default function RestaurantWebsite() {
       submittedAt: new Date().toISOString(),
     }
     localStorage.setItem(storageKey, JSON.stringify([newBooking, ...existing]))
+    notifyAnalyticsUpdate()
     setBookingSubmitted(true)
   }
 

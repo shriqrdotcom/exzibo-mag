@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { useAnalytics } from '../context/AnalyticsContext'
 import {
   CheckCircle, XCircle,
   ClipboardList, BookOpen, Users, Settings, ArrowLeft, BarChart2,
@@ -2873,13 +2874,15 @@ function AnalyticsLineChart() {
   )
 }
 
-function AnalyticsDonutChart({ accentStart }) {
+function AnalyticsDonutChart({ accentStart, segments: propSegments }) {
   const accent = accentStart || '#6C63FF'
-  const segments = [
-    { value: 55, color: accent },
-    { value: 25, color: '#3d3799' },
-    { value: 20, color: '#a5d8f0' },
-  ]
+  const segments = propSegments && propSegments.length >= 2
+    ? propSegments.map((s, i) => ({ ...s, color: i === 0 ? accent : s.color }))
+    : [
+        { value: 55, color: accent },
+        { value: 25, color: '#3d3799' },
+        { value: 20, color: '#a5d8f0' },
+      ]
   const total = segments.reduce((s, d) => s + d.value, 0)
   const r = 40, cx = 55, cy = 55, sw = 16, circ = 2 * Math.PI * r
   let cum = 0
@@ -2940,10 +2943,20 @@ function AnalyticsPanel({ accentStart, accentEnd, restaurantId }) {
   const [showSheet, setShowSheet] = React.useState(false)
   const [categoryItems, setCategoryItems] = React.useState(() => buildCategoryItems(restaurantId))
 
+  const { totalWealth, todaysCollection, totalCustomers, totalBookings, categoryData, setRestaurantId } = useAnalytics()
+
+  React.useEffect(() => {
+    setRestaurantId(restaurantId)
+  }, [restaurantId, setRestaurantId])
+
   React.useEffect(() => {
     const refresh = () => setCategoryItems(buildCategoryItems(restaurantId))
     window.addEventListener('storage', refresh)
-    return () => window.removeEventListener('storage', refresh)
+    window.addEventListener('exzibo-data-changed', refresh)
+    return () => {
+      window.removeEventListener('storage', refresh)
+      window.removeEventListener('exzibo-data-changed', refresh)
+    }
   }, [restaurantId])
 
   const accent = accentStart || '#6C63FF'
@@ -2991,7 +3004,7 @@ function AnalyticsPanel({ accentStart, accentEnd, restaurantId }) {
             <ABarChart2 size={16} color="#94a3b8" />
           </div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginBottom: '10px' }}>
-            <span style={{ fontSize: '24px', fontWeight: 900, color: '#0f172a' }}>$34,628</span>
+            <span style={{ fontSize: '24px', fontWeight: 900, color: '#0f172a' }}>{totalWealth}</span>
             <span style={{ fontSize: '12px', color: '#94a3b8', fontWeight: 500 }}>Total wealth</span>
           </div>
           <div style={{ fontSize: '10px', color: '#94a3b8', marginBottom: '2px' }}>75k</div>
@@ -3007,7 +3020,7 @@ function AnalyticsPanel({ accentStart, accentEnd, restaurantId }) {
               <span style={{ fontSize: '11px', fontWeight: 800, color: 'rgba(255,255,255,0.85)', textTransform: 'uppercase', letterSpacing: '0.06em', lineHeight: 1.4 }}>Todays<br />Collection</span>
               <AGrid size={15} color="rgba(255,255,255,0.65)" />
             </div>
-            <div style={{ fontSize: '20px', fontWeight: 900, color: '#fff', marginBottom: '6px' }}>-₹2,273.59</div>
+            <div style={{ fontSize: '20px', fontWeight: 900, color: '#fff', marginBottom: '6px' }}>{todaysCollection}</div>
             <div style={{ fontSize: '10px', fontWeight: 700, color: 'rgba(255,255,255,0.65)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Total in INR.</div>
           </div>
 
@@ -3016,7 +3029,7 @@ function AnalyticsPanel({ accentStart, accentEnd, restaurantId }) {
               <span style={{ fontSize: '13px', fontWeight: 700, color: '#334155', lineHeight: 1.4 }}>Total<br />customer</span>
               <AUsers size={16} color="#94a3b8" />
             </div>
-            <div style={{ fontSize: '28px', fontWeight: 900, color: '#0f172a', marginBottom: '4px' }}>1,482</div>
+            <div style={{ fontSize: '28px', fontWeight: 900, color: '#0f172a', marginBottom: '4px' }}>{totalCustomers.toLocaleString()}</div>
             <div style={{ fontSize: '11px', color: accent, fontWeight: 700 }}>+12% this month</div>
           </div>
         </div>
@@ -3033,7 +3046,7 @@ function AnalyticsPanel({ accentStart, accentEnd, restaurantId }) {
               <ACalendar size={15} color="#94a3b8" />
             </div>
             <div style={{ display: 'flex', justifyContent: 'center' }}>
-              <AnalyticsDonutChart accentStart={accentStart} />
+              <AnalyticsDonutChart accentStart={accentStart} segments={categoryData} />
             </div>
           </div>
 
@@ -3042,7 +3055,7 @@ function AnalyticsPanel({ accentStart, accentEnd, restaurantId }) {
               <span style={{ fontSize: '11px', fontWeight: 800, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.06em', lineHeight: 1.4 }}>Total<br />Booking</span>
               <ACalendar size={15} color="#94a3b8" />
             </div>
-            <div style={{ fontSize: '40px', fontWeight: 900, color: '#0f172a', lineHeight: 1, marginBottom: '10px' }}>256</div>
+            <div style={{ fontSize: '40px', fontWeight: 900, color: '#0f172a', lineHeight: 1, marginBottom: '10px' }}>{totalBookings.toLocaleString()}</div>
             <div style={{ fontSize: '12px', color: '#64748b' }}>Bookings this month</div>
           </div>
         </div>

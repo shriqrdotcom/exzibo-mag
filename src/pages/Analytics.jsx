@@ -2,6 +2,7 @@ import React from 'react'
 import Sidebar from '../components/Sidebar'
 import AdminHeader from '../components/AdminHeader'
 import { BarChart2, CalendarDays, LayoutGrid, CalendarCheck, Users } from 'lucide-react'
+import { useAnalytics } from '../context/AnalyticsContext'
 
 const wealthData = [38, 62, 58, 44, 42, 60, 64, 58, 62, 55, 48, 42]
 const chartW = 340
@@ -64,12 +65,7 @@ function LineChart() {
   )
 }
 
-function DonutChart() {
-  const segments = [
-    { value: 55, color: '#6C63FF' },
-    { value: 25, color: '#3d3799' },
-    { value: 20, color: '#a5d8f0' },
-  ]
+function DonutChart({ segments }) {
   const total = segments.reduce((s, d) => s + d.value, 0)
   const cx = 60, cy = 60, r = 44, strokeW = 18
   const circ = 2 * Math.PI * r
@@ -117,6 +113,8 @@ const card = {
 }
 
 export default function Analytics() {
+  const { totalWealth, todaysCollection, totalCustomers, totalBookings, categoryData } = useAnalytics()
+
   return (
     <div style={{ display: 'flex', height: '100vh', background: '#0A0A0A', overflow: 'hidden' }}>
       <Sidebar />
@@ -145,7 +143,7 @@ export default function Analytics() {
                 <BarChart2 size={18} color="#aaa" />
               </div>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 8 }}>
-                <span style={{ fontSize: 26, fontWeight: 900, color: '#111' }}>$34,628</span>
+                <span style={{ fontSize: 26, fontWeight: 900, color: '#111' }}>{totalWealth}</span>
                 <span style={{ fontSize: 13, color: '#888' }}>Total wealth</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#aaa', marginBottom: 4 }}>
@@ -168,7 +166,7 @@ export default function Analytics() {
                   <LayoutGrid size={16} color="rgba(255,255,255,0.7)" />
                 </div>
                 <div style={{ fontSize: 22, fontWeight: 900, color: '#fff', marginBottom: 6 }}>
-                  -₹2,273.59
+                  {todaysCollection}
                 </div>
                 <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.65)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                   Total in INR.
@@ -183,7 +181,7 @@ export default function Analytics() {
                   <Users size={18} color="#aaa" />
                 </div>
                 <div style={{ fontSize: 30, fontWeight: 900, color: '#111', marginBottom: 4 }}>
-                  1,482
+                  {totalCustomers.toLocaleString()}
                 </div>
                 <div style={{ fontSize: 12, color: '#6C63FF', fontWeight: 600 }}>
                   +12% this month
@@ -198,7 +196,7 @@ export default function Analytics() {
                   <CalendarCheck size={16} color="#aaa" />
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
-                  <DonutChart />
+                  <DonutChart segments={categoryData} />
                 </div>
               </div>
 
@@ -210,7 +208,7 @@ export default function Analytics() {
                   <CalendarCheck size={16} color="#aaa" />
                 </div>
                 <div style={{ fontSize: 44, fontWeight: 900, color: '#111', marginBottom: 4, lineHeight: 1 }}>
-                  256
+                  {totalBookings.toLocaleString()}
                 </div>
                 <div style={{ fontSize: 13, color: '#888', marginTop: 8 }}>
                   Bookings this month

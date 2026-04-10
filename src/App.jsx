@@ -9,24 +9,27 @@ import Restaurants from './pages/Restaurants'
 import RestaurantWebsite from './pages/RestaurantWebsite'
 import FoodDetail from './pages/FoodDetail'
 import AdminDashboard from './pages/AdminDashboard'
+import { AnalyticsProvider } from './context/AnalyticsContext'
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Landing />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/admin/:id" element={<AdminDashboard />} />
-        <Route path="/menu-editor" element={<MenuEditor />} />
-        <Route path="/menu-editor/:uid" element={<MenuEditor />} />
-        <Route path="/settings" element={<Settings />} />
-        <Route path="/create-website" element={<CreateWebsite />} />
-        <Route path="/restaurants" element={<Restaurants />} />
-        <Route path="/restaurant/:slug" element={<RestaurantWebsite />} />
-        <Route path="/restaurant/:slug/food/:itemName" element={<FoodDetail />} />
-        <Route path="/r/:slug" element={<RestaurantWebsite />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </BrowserRouter>
+    <AnalyticsProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<Landing />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/admin/:id" element={<AdminDashboard />} />
+          <Route path="/menu-editor" element={<MenuEditor />} />
+          <Route path="/menu-editor/:uid" element={<MenuEditor />} />
+          <Route path="/settings" element={<Settings />} />
+          <Route path="/create-website" element={<CreateWebsite />} />
+          <Route path="/restaurants" element={<Restaurants />} />
+          <Route path="/restaurant/:slug" element={<RestaurantWebsite />} />
+          <Route path="/restaurant/:slug/food/:itemName" element={<FoodDetail />} />
+          <Route path="/r/:slug" element={<RestaurantWebsite />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </BrowserRouter>
+    </AnalyticsProvider>
   )
 }
