@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { useAnalytics } from '../context/AnalyticsContext'
+import { useAnalytics, notifyAnalyticsUpdate } from '../context/AnalyticsContext'
 import {
   CheckCircle, XCircle,
   ClipboardList, BookOpen, Users, Settings, ArrowLeft, BarChart2,
@@ -148,9 +148,15 @@ export default function AdminDashboard() {
     return saved.length > 0 ? saved : DEMO_BOOKINGS
   }
 
+  function loadOrders(restaurantId) {
+    const key = `exzibo_orders_${restaurantId}`
+    const saved = JSON.parse(localStorage.getItem(key) || '[]')
+    return saved.length > 0 ? saved : (restaurantId === 'demo' ? DEMO_ORDERS : DEMO_ORDERS)
+  }
+
   useEffect(() => {
     if (isDefault) {
-      setOrders(DEMO_ORDERS)
+      setOrders(loadOrders('demo'))
       setBookings(loadBookings('demo'))
       return
     }
@@ -158,9 +164,23 @@ export default function AdminDashboard() {
     const found = all.find(r => r.id === id)
     if (!found) { navigate('/restaurants'); return }
     setRestaurant(found)
-    setOrders(makeRestaurantOrders(found.name))
+    setOrders(loadOrders(found.id))
     setBookings(loadBookings(found.id))
   }, [id])
+
+  useEffect(() => {
+    function refreshData() {
+      const restaurantId = isDefault ? 'demo' : id
+      setOrders(loadOrders(restaurantId))
+      setBookings(loadBookings(restaurantId))
+    }
+    window.addEventListener('storage', refreshData)
+    window.addEventListener('exzibo-data-changed', refreshData)
+    return () => {
+      window.removeEventListener('storage', refreshData)
+      window.removeEventListener('exzibo-data-changed', refreshData)
+    }
+  }, [id, isDefault])
 
   // Sync global config whenever localStorage changes (other tabs, etc.)
   useEffect(() => {
@@ -203,17 +223,32 @@ export default function AdminDashboard() {
   const accentStart = globalConfig.accentColor
   const accentEnd   = globalConfig.accentColorEnd
 
+  function persistOrders(updatedOrders) {
+    const restaurantId = isDefault ? 'demo' : id
+    const key = `exzibo_orders_${restaurantId}`
+    localStorage.setItem(key, JSON.stringify(updatedOrders))
+    notifyAnalyticsUpdate()
+  }
+
   function confirmOrder(orderId) {
-    setOrders(prev => prev.map(o => {
-      if (o.id !== orderId) return o
-      const next = o.status === 'pending' ? 'preparing' : o.status === 'preparing' ? 'completed' : o.status
-      showToast(next === 'preparing' ? '🍳 Order is now Preparing!' : '✅ Order Completed!')
-      return { ...o, status: next }
-    }))
+    setOrders(prev => {
+      const updated = prev.map(o => {
+        if (o.id !== orderId) return o
+        const next = o.status === 'pending' ? 'preparing' : o.status === 'preparing' ? 'completed' : o.status
+        showToast(next === 'preparing' ? '🍳 Order is now Preparing!' : '✅ Order Completed!')
+        return { ...o, status: next }
+      })
+      persistOrders(updated)
+      return updated
+    })
   }
 
   function cancelOrder(orderId) {
-    setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: 'cancelled' } : o))
+    setOrders(prev => {
+      const updated = prev.map(o => o.id === orderId ? { ...o, status: 'cancelled' } : o)
+      persistOrders(updated)
+      return updated
+    })
     showToast('❌ Order Cancelled')
   }
 

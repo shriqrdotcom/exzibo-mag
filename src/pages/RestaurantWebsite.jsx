@@ -433,6 +433,24 @@ export default function RestaurantWebsite() {
     setCartItems([])
     setCouponApplied(false)
     setCouponInput('')
+
+    const restaurantId = restaurant?.id || slug || 'demo'
+    const adminOrder = {
+      id: orderId,
+      table: String(Math.floor(Math.random() * 20) + 1).padStart(2, '0'),
+      status: 'pending',
+      customerName: '',
+      phone: '',
+      location: '',
+      submittedAt: new Date().toISOString(),
+      grandTotal,
+      items: cartItems.map(i => ({ name: i.name, qty: i.qty, price: i.price })),
+    }
+    const ordersKey = `exzibo_orders_${restaurantId}`
+    const existing = JSON.parse(localStorage.getItem(ordersKey) || '[]')
+    localStorage.setItem(ordersKey, JSON.stringify([adminOrder, ...existing]))
+    notifyAnalyticsUpdate()
+
     setTimeout(() => {
       setShowSuccessPopup(false)
       setActiveNav('orders')
