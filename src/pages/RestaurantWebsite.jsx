@@ -1769,7 +1769,7 @@ export default function RestaurantWebsite() {
                 {[
                   { label: 'DATE', value: viewingHistoryOrder.date },
                   { label: 'Total Items', value: `${viewingHistoryOrder.itemCount}  ITEMS` },
-                  { label: 'Sub total', value: `₹${viewingHistoryOrder.subtotal.toLocaleString('en-IN')}  INR` },
+                  { label: 'Grand Total', value: `₹${viewingHistoryOrder.grandTotal.toLocaleString('en-IN')}  INR` },
                   { label: 'STATUS', value: 'DELIVERED', highlight: true },
                 ].map(({ label, value, highlight }, i, arr) => (
                   <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 16px', borderBottom: i < arr.length - 1 ? `1px solid ${theme.cardBorder}` : 'none' }}>
@@ -1936,7 +1936,7 @@ export default function RestaurantWebsite() {
                 {[
                   { label: 'DATE', value: currentOrder.date },
                   { label: 'Total Items', value: `${currentOrder.itemCount}  ITEMS` },
-                  { label: 'Sub total', value: `₹${currentOrder.subtotal.toLocaleString('en-IN')}  INR` },
+                  { label: 'Grand Total', value: `₹${currentOrder.grandTotal.toLocaleString('en-IN')}  INR` },
                   { label: 'STATUS', value: orderStatus >= 1 ? 'CONFIRMED' : 'PLACED', highlight: orderStatus >= 1 },
                 ].map(({ label, value, highlight }, i, arr) => (
                   <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 16px', borderBottom: i < arr.length - 1 ? `1px solid ${theme.cardBorder}` : 'none' }}>

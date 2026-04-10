@@ -2725,7 +2725,9 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
 
 /* ─── Order Card ─── */
 function OrderCard({ order, index, accentStart, currency, onConfirm, onCancel, orderSettings = {} }) {
-  const subtotal = order.items.reduce((s, it) => s + it.price, 0)
+  const subtotal = order.grandTotal != null
+    ? order.grandTotal
+    : order.items.reduce((s, it) => s + (it.price * (it.qty || 1)), 0)
   const cfg = STATUS_CONFIG[order.status] || STATUS_CONFIG.pending
   const isDone = order.status === 'completed' || order.status === 'cancelled'
   const showCustomerDetails = orderSettings.showName || orderSettings.showPhone || orderSettings.showLocation
@@ -2765,7 +2767,7 @@ function OrderCard({ order, index, accentStart, currency, onConfirm, onCancel, o
           </div>
         </div>
         <div style={{ textAlign: 'right' }}>
-          <div style={{ fontSize: '11px', fontWeight: 700, color: '#94A3B8', letterSpacing: '0.06em' }}>SUBTOTAL</div>
+          <div style={{ fontSize: '11px', fontWeight: 700, color: '#94A3B8', letterSpacing: '0.06em' }}>GRAND TOTAL</div>
           <div style={{ fontSize: '22px', fontWeight: 900, color: '#0f172a', letterSpacing: '-0.02em', lineHeight: 1.1 }}>
             {subtotal.toLocaleString()} <span style={{ fontSize: '13px', fontWeight: 700 }}>{currency}</span>
           </div>
