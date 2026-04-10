@@ -1582,9 +1582,13 @@ export default function RestaurantWebsite() {
                   {couponApplied ? (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(34,197,94,0.08)', border: '1.5px solid rgba(34,197,94,0.25)', borderRadius: '12px', padding: '11px 14px' }}>
                       <CheckCircle size={16} color="#22c55e" />
-                      <span style={{ fontSize: '13px', fontWeight: 700, color: '#22c55e', flex: 1 }}>SPICE10 applied — 10% off!</span>
+                      <span style={{ fontSize: '13px', fontWeight: 700, color: '#22c55e', flex: 1 }}>
+                        {appliedCouponData
+                          ? `${appliedCouponData.code} applied — ${appliedCouponData.discountType === 'Fixed Amount' ? `₹${appliedCouponData.discountPct} off!` : `${appliedCouponData.discountPct}% off!`}`
+                          : 'Coupon applied!'}
+                      </span>
                       <button
-                        onClick={() => { setCouponApplied(false); setCouponInput('') }}
+                        onClick={() => { setCouponApplied(false); setCouponInput(''); setAppliedCouponData(null) }}
                         style={{ background: 'none', border: 'none', color: '#aaa', fontSize: '11px', fontWeight: 600, cursor: 'pointer', padding: '0' }}
                       >Remove</button>
                     </div>
@@ -1595,7 +1599,7 @@ export default function RestaurantWebsite() {
                           value={couponInput}
                           onChange={e => { setCouponInput(e.target.value); setCouponError('') }}
                           onKeyDown={e => e.key === 'Enter' && handleApplyCoupon()}
-                          placeholder="Enter code (SPICE10)"
+                          placeholder="Enter coupon code"
                           style={{
                             flex: 1, background: darkMode ? 'rgba(255,255,255,0.05)' : '#f7f3f0',
                             border: `1.5px solid ${couponError ? 'rgba(232,50,26,0.4)' : (darkMode ? 'rgba(255,255,255,0.09)' : 'rgba(0,0,0,0.09)')}`,
@@ -1650,7 +1654,7 @@ export default function RestaurantWebsite() {
                 {/* Discount row */}
                 {couponApplied && (
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                    <span style={{ fontSize: '13px', color: '#22c55e', fontWeight: 600 }}>Discount (SPICE10)</span>
+                    <span style={{ fontSize: '13px', color: '#22c55e', fontWeight: 600 }}>Discount {appliedCouponData?.code ? `(${appliedCouponData.code})` : ''}</span>
                     <span style={{ fontSize: '13px', fontWeight: 700, color: '#22c55e' }}>−₹{discountAmt.toLocaleString('en-IN')}</span>
                   </div>
                 )}

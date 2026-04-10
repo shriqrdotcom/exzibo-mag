@@ -1142,6 +1142,16 @@ function AdminCouponManagement({ accentStart, restaurantId }) {
     })
   }
 
+  const handleDelete = () => {
+    localStorage.removeItem(couponKey)
+    setCoupon({
+      code: '', discountType: 'Percentage', discountPct: '',
+      minDiscount: '', maxDiscount: '', active: false,
+      validUntil: '', expireDate: '',
+    })
+    setShowHistory(false)
+  }
+
   const inputStyle = {
     width: '100%', boxSizing: 'border-box',
     padding: '10px 14px',
@@ -1400,20 +1410,37 @@ function AdminCouponManagement({ accentStart, restaurantId }) {
             >{updated ? '✓ UPDATED!' : 'UPDATE'}</button>
           </div>
 
-          <button
-            onClick={() => setShowHistory(v => !v)}
-            style={{
-              width: '100%', padding: '13px',
-              background: '#2563EB',
-              border: 'none', borderRadius: '12px',
-              color: '#fff', fontSize: '13px', fontWeight: 800,
-              cursor: 'pointer', letterSpacing: '0.08em', fontFamily: 'inherit',
-              boxShadow: '0 4px 16px rgba(37,99,235,0.35)',
-              transition: 'background 0.2s',
-            }}
-            onMouseEnter={e => { e.currentTarget.style.background = '#1d4ed8' }}
-            onMouseLeave={e => { e.currentTarget.style.background = '#2563EB' }}
-          >HISTORY</button>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <button
+              onClick={() => setShowHistory(v => !v)}
+              style={{
+                flex: 1, padding: '13px',
+                background: '#2563EB',
+                border: 'none', borderRadius: '12px',
+                color: '#fff', fontSize: '13px', fontWeight: 800,
+                cursor: 'pointer', letterSpacing: '0.08em', fontFamily: 'inherit',
+                boxShadow: '0 4px 16px rgba(37,99,235,0.35)',
+                transition: 'background 0.2s',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.background = '#1d4ed8' }}
+              onMouseLeave={e => { e.currentTarget.style.background = '#2563EB' }}
+            >HISTORY</button>
+            <button
+              onClick={handleDelete}
+              style={{
+                padding: '13px 18px',
+                background: 'transparent',
+                border: '1.5px solid rgba(239,68,68,0.4)',
+                borderRadius: '12px',
+                color: '#ef4444', fontSize: '13px', fontWeight: 700,
+                cursor: 'pointer', letterSpacing: '0.06em', fontFamily: 'inherit',
+                transition: 'all 0.2s',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.08)'; e.currentTarget.style.borderColor = '#ef4444' }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'rgba(239,68,68,0.4)' }}
+              title="Delete coupon — removes it from the restaurant website"
+            >DELETE</button>
+          </div>
 
           {showHistory && (
             <div>
