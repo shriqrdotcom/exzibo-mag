@@ -1254,15 +1254,29 @@ function AdminCouponManagement({ accentStart }) {
               </div>
             </div>
             <div>
-              <label style={labelStyle}>Discount % <span style={{ color: '#ef4444' }}>*</span></label>
-              <input
-                type="number" min="0" step="0.01"
-                value={coupon.discountPct}
-                onChange={e => setCoupon(p => ({ ...p, discountPct: e.target.value }))}
-                style={inputStyle}
-                onFocus={e => e.target.style.borderColor = '#2563EB'}
-                onBlur={e => e.target.style.borderColor = '#e2e8f0'}
-              />
+              <label style={labelStyle}>
+                {coupon.discountType === 'Fixed Amount' ? 'Discount Amount' : 'Discount %'}{' '}
+                <span style={{ color: '#ef4444' }}>*</span>
+              </label>
+              <div style={{ position: 'relative' }}>
+                <input
+                  type="number" min="0" step="0.01"
+                  value={coupon.discountPct}
+                  onChange={e => setCoupon(p => ({ ...p, discountPct: e.target.value }))}
+                  style={{ ...inputStyle, paddingRight: '36px' }}
+                  onFocus={e => e.target.style.borderColor = '#2563EB'}
+                  onBlur={e => e.target.style.borderColor = '#e2e8f0'}
+                />
+                <span style={{
+                  position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)',
+                  fontSize: '14px', fontWeight: 700,
+                  color: '#64748b',
+                  pointerEvents: 'none',
+                  userSelect: 'none',
+                }}>
+                  {coupon.discountType === 'Fixed Amount' ? '₹' : '%'}
+                </span>
+              </div>
             </div>
           </div>
 
