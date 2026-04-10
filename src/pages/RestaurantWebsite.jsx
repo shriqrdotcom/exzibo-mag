@@ -1897,6 +1897,28 @@ export default function RestaurantWebsite() {
                         ))}
                       </div>
 
+                      {/* ── WAITING MESSAGE (shown when placed, not yet confirmed) ── */}
+                      {!confirmed && (
+                        <div style={{
+                          marginTop: '16px',
+                          background: darkMode ? 'rgba(255,160,0,0.10)' : '#FFF8E1',
+                          border: '1px solid rgba(255,160,0,0.35)',
+                          borderRadius: '14px',
+                          padding: '14px 16px',
+                          display: 'flex',
+                          alignItems: 'flex-start',
+                          gap: '10px',
+                        }}>
+                          <div style={{ fontSize: '22px', lineHeight: 1, flexShrink: 0 }}>⏳</div>
+                          <div>
+                            <div style={{ fontSize: '13px', fontWeight: 800, color: '#FFA000', marginBottom: '4px' }}>Order Received!</div>
+                            <div style={{ fontSize: '12px', lineHeight: 1.6, color: theme.locationColor }}>
+                              Thanks for ordering! We've received your request and are waiting for the restaurant to confirm. This usually only takes a moment.
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
                       {/* ── THANK YOU MESSAGE (shown when confirmed) ── */}
                       {confirmed && (
                         <div style={{
