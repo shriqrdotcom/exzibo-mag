@@ -423,10 +423,11 @@ export default function RestaurantWebsite() {
       itemCount: cartItems.reduce((s, i) => s + i.qty, 0),
       date: dateStr,
       couponApplied,
-      status: 'CONFIRMED',
+      status: 'PLACED',
     }
-    setCurrentOrder(order)
-    setOrderStatus(1)
+    const restaurantId = restaurant?.id || slug || 'demo'
+    setCurrentOrder({ ...order, _restaurantId: restaurantId })
+    setOrderStatus(0)
     setOrderNotes('')
     setViewingHistoryOrder(null)
     setShowSuccessPopup(true)
@@ -434,7 +435,6 @@ export default function RestaurantWebsite() {
     setCouponApplied(false)
     setCouponInput('')
 
-    const restaurantId = restaurant?.id || slug || 'demo'
     const adminOrder = {
       id: orderId,
       table: String(Math.floor(Math.random() * 20) + 1).padStart(2, '0'),
@@ -495,6 +495,32 @@ export default function RestaurantWebsite() {
       setNotFound(true)
     }
   }, [slug])
+
+  useEffect(() => {
+    if (!currentOrder) return
+    const restaurantId = currentOrder._restaurantId || restaurant?.id || slug || 'demo'
+    const ordersKey = `exzibo_orders_${restaurantId}`
+
+    function syncOrderStatus() {
+      try {
+        const orders = JSON.parse(localStorage.getItem(ordersKey) || '[]')
+        const adminOrder = orders.find(o => o.id === currentOrder.id)
+        if (!adminOrder) return
+        if (adminOrder.status === 'preparing') setOrderStatus(1)
+        else if (adminOrder.status === 'completed') setOrderStatus(1)
+        else if (adminOrder.status === 'cancelled') setOrderStatus(0)
+        else setOrderStatus(0)
+      } catch {}
+    }
+
+    syncOrderStatus()
+    window.addEventListener('storage', syncOrderStatus)
+    window.addEventListener('exzibo-data-changed', syncOrderStatus)
+    return () => {
+      window.removeEventListener('storage', syncOrderStatus)
+      window.removeEventListener('exzibo-data-changed', syncOrderStatus)
+    }
+  }, [currentOrder, restaurant, slug])
 
   useEffect(() => {
     function onStorageChange(e) {
