@@ -860,12 +860,13 @@ export default function AdminDashboard() {
 
 /* ─── Settings Panel ─── */
 function SettingsPanel({ draft, setDraft, accentStart, accentEnd, onSave, saved, isDefault }) {
+  const [activeTab, setActiveTab] = useState('settings')
   if (!draft) return null
 
   return (
     <div style={{ animation: 'settingsPanelIn 0.3s ease', paddingTop: '24px' }}>
       {/* Header */}
-      <div style={{ padding: '0 4px 20px' }}>
+      <div style={{ padding: '0 4px 16px' }}>
         <h1 style={{ fontSize: '28px', fontWeight: 900, color: '#0f172a', margin: '0 0 4px', letterSpacing: '-0.02em' }}>
           Settings
         </h1>
@@ -876,122 +877,158 @@ function SettingsPanel({ draft, setDraft, accentStart, accentEnd, onSave, saved,
         </p>
       </div>
 
+      {/* Tab Toggle */}
+      <div style={{
+        display: 'flex',
+        background: 'rgba(241,245,249,0.9)',
+        borderRadius: '14px',
+        padding: '4px',
+        marginBottom: '18px',
+        border: '1px solid rgba(226,232,240,0.8)',
+      }}>
+        {['settings', 'coupon'].map(tab => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            style={{
+              flex: 1,
+              padding: '10px',
+              background: activeTab === tab ? '#fff' : 'transparent',
+              border: 'none',
+              borderRadius: '10px',
+              fontSize: '13px', fontWeight: 700,
+              color: activeTab === tab ? '#0f172a' : '#94a3b8',
+              cursor: 'pointer',
+              textTransform: 'capitalize',
+              boxShadow: activeTab === tab ? '0 2px 8px rgba(0,0,0,0.08)' : 'none',
+              transition: 'all 0.2s',
+              letterSpacing: '0.02em',
+            }}
+          >
+            {tab.charAt(0).toUpperCase() + tab.slice(1)}
+          </button>
+        ))}
+      </div>
+
       <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
 
-        {/* Admin Title */}
-        <SettingCard
-          icon={<Type size={18} />}
-          accentStart={accentStart}
-          title="Admin Title"
-          desc="The name shown in the admin header across all dashboards"
-        >
-          <input
-            value={draft.adminTitle}
-            onChange={e => setDraft(d => ({ ...d, adminTitle: e.target.value }))}
-            placeholder="Exzibo Admin"
-            style={{
-              width: '100%', boxSizing: 'border-box',
-              padding: '10px 14px',
-              background: 'rgba(248,250,252,0.9)',
-              border: '1.5px solid #e2e8f0',
-              borderRadius: '12px',
-              fontSize: '14px', fontWeight: 600, color: '#0f172a',
-              outline: 'none', fontFamily: 'inherit',
-            }}
-            onFocus={e => e.target.style.borderColor = accentStart}
-            onBlur={e => e.target.style.borderColor = '#e2e8f0'}
-          />
-        </SettingCard>
+        {activeTab === 'settings' ? (
+          <>
+            {/* Admin Title */}
+            <SettingCard
+              icon={<Type size={18} />}
+              accentStart={accentStart}
+              title="Admin Title"
+              desc="The name shown in the admin header across all dashboards"
+            >
+              <input
+                value={draft.adminTitle}
+                onChange={e => setDraft(d => ({ ...d, adminTitle: e.target.value }))}
+                placeholder="Exzibo Admin"
+                style={{
+                  width: '100%', boxSizing: 'border-box',
+                  padding: '10px 14px',
+                  background: 'rgba(248,250,252,0.9)',
+                  border: '1.5px solid #e2e8f0',
+                  borderRadius: '12px',
+                  fontSize: '14px', fontWeight: 600, color: '#0f172a',
+                  outline: 'none', fontFamily: 'inherit',
+                }}
+                onFocus={e => e.target.style.borderColor = accentStart}
+                onBlur={e => e.target.style.borderColor = '#e2e8f0'}
+              />
+            </SettingCard>
 
-        {/* Accent Color */}
-        <SettingCard
-          icon={<Palette size={18} />}
-          accentStart={accentStart}
-          title="Accent Color"
-          desc="Theme color used across all admin dashboards"
-        >
-          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-            {ACCENT_OPTIONS.map(opt => {
-              const active = draft.accentColor === opt.start
-              return (
-                <button
-                  key={opt.label}
-                  onClick={() => setDraft(d => ({ ...d, accentColor: opt.start, accentColorEnd: opt.end }))}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: '7px',
-                    padding: '8px 14px',
-                    background: active ? `${opt.start}18` : 'rgba(248,250,252,0.9)',
-                    border: `1.5px solid ${active ? opt.start : '#e2e8f0'}`,
-                    borderRadius: '50px', cursor: 'pointer',
-                    fontSize: '12px', fontWeight: 700, color: active ? opt.start : '#64748b',
-                    transition: 'all 0.2s',
-                  }}
-                >
-                  <span style={{
-                    width: '12px', height: '12px', borderRadius: '6px',
-                    background: `linear-gradient(135deg, ${opt.start}, ${opt.end})`,
-                    flexShrink: 0,
-                  }} />
-                  {opt.label}
-                </button>
-              )
-            })}
-          </div>
-        </SettingCard>
+            {/* Accent Color */}
+            <SettingCard
+              icon={<Palette size={18} />}
+              accentStart={accentStart}
+              title="Accent Color"
+              desc="Theme color used across all admin dashboards"
+            >
+              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                {ACCENT_OPTIONS.map(opt => {
+                  const active = draft.accentColor === opt.start
+                  return (
+                    <button
+                      key={opt.label}
+                      onClick={() => setDraft(d => ({ ...d, accentColor: opt.start, accentColorEnd: opt.end }))}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: '7px',
+                        padding: '8px 14px',
+                        background: active ? `${opt.start}18` : 'rgba(248,250,252,0.9)',
+                        border: `1.5px solid ${active ? opt.start : '#e2e8f0'}`,
+                        borderRadius: '50px', cursor: 'pointer',
+                        fontSize: '12px', fontWeight: 700, color: active ? opt.start : '#64748b',
+                        transition: 'all 0.2s',
+                      }}
+                    >
+                      <span style={{
+                        width: '12px', height: '12px', borderRadius: '6px',
+                        background: `linear-gradient(135deg, ${opt.start}, ${opt.end})`,
+                        flexShrink: 0,
+                      }} />
+                      {opt.label}
+                    </button>
+                  )
+                })}
+              </div>
+            </SettingCard>
 
-        {/* Currency */}
-        <SettingCard
-          icon={<DollarSign size={18} />}
-          accentStart={accentStart}
-          title="Currency"
-          desc="Currency displayed in all order subtotals"
-        >
-          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-            {CURRENCY_OPTIONS.map(c => {
-              const active = draft.currency === c
-              return (
-                <button
-                  key={c}
-                  onClick={() => setDraft(d => ({ ...d, currency: c }))}
-                  style={{
-                    padding: '8px 18px',
-                    background: active ? `${accentStart}18` : 'rgba(248,250,252,0.9)',
-                    border: `1.5px solid ${active ? accentStart : '#e2e8f0'}`,
-                    borderRadius: '50px', cursor: 'pointer',
-                    fontSize: '13px', fontWeight: 700,
-                    color: active ? accentStart : '#64748b',
-                    transition: 'all 0.2s',
-                  }}
-                >
-                  {c}
-                </button>
-              )
-            })}
-          </div>
-        </SettingCard>
+            {/* Currency */}
+            <SettingCard
+              icon={<DollarSign size={18} />}
+              accentStart={accentStart}
+              title="Currency"
+              desc="Currency displayed in all order subtotals"
+            >
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                {CURRENCY_OPTIONS.map(c => {
+                  const active = draft.currency === c
+                  return (
+                    <button
+                      key={c}
+                      onClick={() => setDraft(d => ({ ...d, currency: c }))}
+                      style={{
+                        padding: '8px 18px',
+                        background: active ? `${accentStart}18` : 'rgba(248,250,252,0.9)',
+                        border: `1.5px solid ${active ? accentStart : '#e2e8f0'}`,
+                        borderRadius: '50px', cursor: 'pointer',
+                        fontSize: '13px', fontWeight: 700,
+                        color: active ? accentStart : '#64748b',
+                        transition: 'all 0.2s',
+                      }}
+                    >
+                      {c}
+                    </button>
+                  )
+                })}
+              </div>
+            </SettingCard>
 
-        {/* Coupon Management */}
-        <AdminCouponManagement accentStart={accentStart} />
-
-        {/* Save Button */}
-        <button
-          onClick={onSave}
-          style={{
-            width: '100%', padding: '15px',
-            background: saved
-              ? 'linear-gradient(135deg, #10B981, #059669)'
-              : `linear-gradient(135deg, ${accentStart}, ${accentEnd})`,
-            border: 'none', borderRadius: '50px',
-            color: '#fff', fontSize: '14px', fontWeight: 800,
-            letterSpacing: '0.06em', cursor: 'pointer',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-            boxShadow: `0 6px 20px ${accentStart}50`,
-            transition: 'background 0.3s ease, box-shadow 0.3s ease',
-          }}
-        >
-          {saved ? <Check size={16} /> : <Save size={16} />}
-          {saved ? 'SAVED!' : 'SAVE & APPLY TO ALL RESTAURANTS'}
-        </button>
+            {/* Save Button */}
+            <button
+              onClick={onSave}
+              style={{
+                width: '100%', padding: '15px',
+                background: saved
+                  ? 'linear-gradient(135deg, #10B981, #059669)'
+                  : `linear-gradient(135deg, ${accentStart}, ${accentEnd})`,
+                border: 'none', borderRadius: '50px',
+                color: '#fff', fontSize: '14px', fontWeight: 800,
+                letterSpacing: '0.06em', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                boxShadow: `0 6px 20px ${accentStart}50`,
+                transition: 'background 0.3s ease, box-shadow 0.3s ease',
+              }}
+            >
+              {saved ? <Check size={16} /> : <Save size={16} />}
+              {saved ? 'SAVED!' : 'SAVE & APPLY TO ALL RESTAURANTS'}
+            </button>
+          </>
+        ) : (
+          <AdminCouponManagement accentStart={accentStart} />
+        )}
       </div>
     </div>
   )
