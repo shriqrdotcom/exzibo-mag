@@ -144,14 +144,12 @@ export default function AdminDashboard() {
 
   function loadBookings(restaurantId) {
     const key = `exzibo_bookings_${restaurantId}`
-    const saved = JSON.parse(localStorage.getItem(key) || '[]')
-    return saved.length > 0 ? saved : DEMO_BOOKINGS
+    try { return JSON.parse(localStorage.getItem(key) || '[]') } catch { return [] }
   }
 
   function loadOrders(restaurantId) {
     const key = `exzibo_orders_${restaurantId}`
-    const saved = JSON.parse(localStorage.getItem(key) || '[]')
-    return saved.length > 0 ? saved : (restaurantId === 'demo' ? DEMO_ORDERS : DEMO_ORDERS)
+    try { return JSON.parse(localStorage.getItem(key) || '[]') } catch { return [] }
   }
 
   useEffect(() => {
@@ -520,7 +518,14 @@ export default function AdminDashboard() {
 
             {/* Order cards */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              {orders.map((order, i) => (
+              {orders.length === 0 ? (
+                <div style={{
+                  textAlign: 'center', padding: '48px 24px',
+                  color: '#94A3B8', fontSize: '14px', fontWeight: 600,
+                }}>
+                  No orders yet. Orders placed from your restaurant page will appear here.
+                </div>
+              ) : orders.map((order, i) => (
                 <OrderCard
                   key={order.id}
                   order={order}
