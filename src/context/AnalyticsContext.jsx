@@ -3,7 +3,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 const AnalyticsContext = createContext(null)
 
 const DEMO_VALUES = {
-  totalWealth: '$34,628',
+  totalWealth: '₹34,628',
   todaysCollection: '-₹2,273.59',
   totalCustomers: 1482,
   totalBookings: 256,
