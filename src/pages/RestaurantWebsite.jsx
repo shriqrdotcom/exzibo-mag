@@ -683,11 +683,23 @@ export default function RestaurantWebsite() {
         return prev
       })
     }
+    function onContactChanged(e) {
+      const { restaurantId: changedId, phone, email } = e.detail || {}
+      setRestaurant(prev => {
+        if (!prev) return prev
+        const isDemoMatch = (changedId === 'default' && (prev.id === 'demo' || prev.slug === 'demo'))
+        const isDirectMatch = changedId === prev.id || changedId === prev.slug
+        if (isDemoMatch || isDirectMatch) return { ...prev, phone: phone ?? prev.phone, email: email ?? prev.email }
+        return prev
+      })
+    }
     window.addEventListener('exzibo-logo-changed', onLogoChanged)
     window.addEventListener('exzibo-name-changed', onNameChanged)
+    window.addEventListener('exzibo-contact-changed', onContactChanged)
     return () => {
       window.removeEventListener('exzibo-logo-changed', onLogoChanged)
       window.removeEventListener('exzibo-name-changed', onNameChanged)
+      window.removeEventListener('exzibo-contact-changed', onContactChanged)
     }
   }, [])
 

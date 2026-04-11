@@ -225,15 +225,24 @@ export default function AdminDashboard() {
         if (!isDefault) setRestaurant(prev => prev ? { ...prev, name: name || '' } : prev)
       }
     }
+    function handleContactChanged(e) {
+      const { restaurantId: changedId, phone, email } = e.detail || {}
+      const myId = isDefault ? 'default' : id
+      if (changedId === myId) {
+        setRestaurant(prev => prev ? { ...prev, phone: phone ?? prev.phone, email: email ?? prev.email } : prev)
+      }
+    }
     window.addEventListener('storage', refreshData)
     window.addEventListener('exzibo-data-changed', refreshData)
     window.addEventListener('exzibo-logo-changed', handleLogoChanged)
     window.addEventListener('exzibo-name-changed', handleNameChanged)
+    window.addEventListener('exzibo-contact-changed', handleContactChanged)
     return () => {
       window.removeEventListener('storage', refreshData)
       window.removeEventListener('exzibo-data-changed', refreshData)
       window.removeEventListener('exzibo-logo-changed', handleLogoChanged)
       window.removeEventListener('exzibo-name-changed', handleNameChanged)
+      window.removeEventListener('exzibo-contact-changed', handleContactChanged)
     }
   }, [id, isDefault])
 

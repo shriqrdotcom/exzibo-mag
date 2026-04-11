@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import {
   X, Share2, Power, MapPin, Phone, Store, Users, Image,
-  Loader2, AlertCircle, CheckCircle2, Check, XCircle
+  Loader2, AlertCircle, CheckCircle2, Check, XCircle, Mail
 } from 'lucide-react'
 import { PiPencilCircle } from 'react-icons/pi'
 
@@ -16,6 +16,16 @@ function fileToBase64(file) {
   })
 }
 
+function loadContact(restaurantId) {
+  if (!restaurantId || restaurantId === 'default') {
+    const config = JSON.parse(localStorage.getItem('exzibo_admin_global_config') || '{}')
+    return { phone: config.phone || '', email: config.email || '' }
+  }
+  const all = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
+  const r = all.find(r => r.id === restaurantId)
+  return { phone: r?.phone || '', email: r?.email || '' }
+}
+
 export default function ProfileSlide({
   open, onClose,
   restaurantId, logoUrl, onLogoUpdate,
@@ -23,6 +33,7 @@ export default function ProfileSlide({
 }) {
   const fileInputRef = useRef(null)
   const nameInputRef = useRef(null)
+  const phoneInputRef = useRef(null)
 
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState('')
@@ -35,8 +46,22 @@ export default function ProfileSlide({
   const [nameSaving, setNameSaving] = useState(false)
   const [nameSuccess, setNameSuccess] = useState(false)
 
+  const [editingContact, setEditingContact] = useState(false)
+  const [contactPhone, setContactPhone] = useState('')
+  const [contactEmail, setContactEmail] = useState('')
+  const [contactPhoneError, setContactPhoneError] = useState('')
+  const [contactEmailError, setContactEmailError] = useState('')
+  const [contactSaving, setContactSaving] = useState(false)
+  const [contactSuccess, setContactSuccess] = useState(false)
+
   useEffect(() => { setPreviewUrl(logoUrl || '') }, [logoUrl])
   useEffect(() => { setNameInput(restaurantName || '') }, [restaurantName])
+
+  useEffect(() => {
+    const { phone, email } = loadContact(restaurantId)
+    setContactPhone(phone)
+    setContactEmail(email)
+  }, [restaurantId])
 
   useEffect(() => {
     if (open) {
@@ -48,6 +73,10 @@ export default function ProfileSlide({
       setEditingName(false)
       setNameError('')
       setNameSuccess(false)
+      setEditingContact(false)
+      setContactPhoneError('')
+      setContactEmailError('')
+      setContactSuccess(false)
     }
     return () => { document.body.style.overflow = '' }
   }, [open])
@@ -57,6 +86,12 @@ export default function ProfileSlide({
       setTimeout(() => nameInputRef.current?.focus(), 60)
     }
   }, [editingName])
+
+  useEffect(() => {
+    if (editingContact) {
+      setTimeout(() => phoneInputRef.current?.focus(), 60)
+    }
+  }, [editingContact])
 
   async function handleLogoUpload(file) {
     if (!file) return
@@ -124,6 +159,71 @@ export default function ProfileSlide({
     } finally {
       setNameSaving(false)
     }
+  }
+
+  function validateContact() {
+    let valid = true
+    const phoneDigits = contactPhone.replace(/\D/g, '')
+    if (!contactPhone.trim()) {
+      setContactPhoneError('Contact number is required.')
+      valid = false
+    } else if (!/^\d+$/.test(contactPhone.trim())) {
+      setContactPhoneError('Only numbers are allowed.')
+      valid = false
+    } else if (phoneDigits.length !== 10) {
+      setContactPhoneError('Must be exactly 10 digits.')
+      valid = false
+    } else {
+      setContactPhoneError('')
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!contactEmail.trim()) {
+      setContactEmailError('Email address is required.')
+      valid = false
+    } else if (!emailRegex.test(contactEmail.trim())) {
+      setContactEmailError('Enter a valid email address.')
+      valid = false
+    } else {
+      setContactEmailError('')
+    }
+
+    return valid
+  }
+
+  async function handleSaveContact() {
+    if (!validateContact()) return
+    setContactSaving(true)
+    setContactSuccess(false)
+    try {
+      await new Promise(r => setTimeout(r, 400))
+      const phone = contactPhone.trim()
+      const email = contactEmail.trim()
+      if (!restaurantId || restaurantId === 'default') {
+        const config = JSON.parse(localStorage.getItem('exzibo_admin_global_config') || '{}')
+        config.phone = phone
+        config.email = email
+        localStorage.setItem('exzibo_admin_global_config', JSON.stringify(config))
+      } else {
+        const all = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
+        const updated = all.map(r => r.id === restaurantId ? { ...r, phone, email } : r)
+        localStorage.setItem('exzibo_restaurants', JSON.stringify(updated))
+      }
+      window.dispatchEvent(new CustomEvent('exzibo-contact-changed', { detail: { restaurantId, phone, email } }))
+      setContactSuccess(true)
+      setEditingContact(false)
+      setTimeout(() => setContactSuccess(false), 2500)
+    } catch {
+      setContactPhoneError('Failed to save. Please try again.')
+    } finally {
+      setContactSaving(false)
+    }
+  }
+
+  function handlePhoneInput(val) {
+    const digits = val.replace(/\D/g, '').slice(0, 10)
+    setContactPhone(digits)
+    setContactPhoneError('')
   }
 
   return (
@@ -219,7 +319,7 @@ export default function ProfileSlide({
             </button>
           </div>
 
-          {/* Logo status messages */}
+          {/* Status messages */}
           {uploadError && (
             <div style={{
               display: 'flex', alignItems: 'center', gap: '8px',
@@ -248,6 +348,16 @@ export default function ProfileSlide({
               color: '#10B981', fontSize: '12px', fontWeight: 600,
             }}>
               <CheckCircle2 size={14} /> Restaurant name updated!
+            </div>
+          )}
+          {contactSuccess && (
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: '8px',
+              background: '#F0FDF4', border: '1px solid #A7F3D0',
+              borderRadius: '12px', padding: '10px 14px', marginBottom: '10px',
+              color: '#10B981', fontSize: '12px', fontWeight: 600,
+            }}>
+              <CheckCircle2 size={14} /> Contact info updated successfully!
             </div>
           )}
 
@@ -295,7 +405,7 @@ export default function ProfileSlide({
                 {nameSuccess && !editingName && <CheckCircle2 size={16} color="#10B981" />}
               </div>
 
-              {/* Inline editor */}
+              {/* Name inline editor */}
               {editingName && (
                 <div style={{
                   background: '#fff', borderRadius: '0 0 14px 14px',
@@ -362,18 +472,160 @@ export default function ProfileSlide({
               )}
             </div>
 
-            {/* CONTACT INFO */}
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: '14px',
-              padding: '13px 10px', borderRadius: '12px',
-              marginBottom: '2px', cursor: 'default',
-            }}>
-              <span style={{ color: '#333', display: 'flex', alignItems: 'center' }}>
-                <Phone size={22} strokeWidth={1.4} />
-              </span>
-              <span style={{ fontWeight: 700, fontSize: '13px', letterSpacing: '0.08em', textTransform: 'uppercase', color: '#222' }}>
-                CONTACT INFO
-              </span>
+            {/* CONTACT INFO — editable */}
+            <div style={{ marginBottom: '2px' }}>
+              <div
+                onClick={() => {
+                  setEditingContact(v => !v)
+                  setContactPhoneError('')
+                  setContactEmailError('')
+                  if (!editingContact) {
+                    const { phone, email } = loadContact(restaurantId)
+                    setContactPhone(phone)
+                    setContactEmail(email)
+                  }
+                }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '14px',
+                  padding: '13px 10px',
+                  borderRadius: editingContact ? '12px 12px 0 0' : '12px',
+                  background: editingContact ? 'rgba(168,230,61,0.15)' : 'transparent',
+                  cursor: 'pointer', transition: 'background 0.15s',
+                }}
+              >
+                <span style={{ color: '#333', display: 'flex', alignItems: 'center' }}>
+                  <Phone size={22} strokeWidth={1.4} />
+                </span>
+                <span style={{ fontWeight: 700, fontSize: '13px', letterSpacing: '0.08em', textTransform: 'uppercase', color: '#222', flex: 1 }}>
+                  CONTACT INFO
+                </span>
+                {contactSuccess && !editingContact && <CheckCircle2 size={16} color="#10B981" />}
+              </div>
+
+              {/* Contact inline editor */}
+              {editingContact && (
+                <div style={{
+                  background: '#fff', borderRadius: '0 0 14px 14px',
+                  padding: '12px 12px 14px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+                }}>
+                  {/* Phone field */}
+                  <div style={{ marginBottom: contactPhoneError ? '6px' : '10px' }}>
+                    <label style={{
+                      display: 'flex', alignItems: 'center', gap: '6px',
+                      fontSize: '11px', fontWeight: 700, color: '#888',
+                      letterSpacing: '0.07em', textTransform: 'uppercase',
+                      marginBottom: '6px',
+                    }}>
+                      <Phone size={11} /> Contact Number
+                    </label>
+                    <input
+                      ref={phoneInputRef}
+                      type="tel"
+                      inputMode="numeric"
+                      value={contactPhone}
+                      onChange={e => handlePhoneInput(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Escape') setEditingContact(false) }}
+                      placeholder="10-digit number"
+                      maxLength={10}
+                      style={{
+                        width: '100%', boxSizing: 'border-box',
+                        padding: '10px 12px', borderRadius: '10px',
+                        border: `1.5px solid ${contactPhoneError ? '#FECACA' : '#E0E0E8'}`,
+                        fontSize: '14px', fontWeight: 600, color: '#111',
+                        outline: 'none', background: '#F7F7FA',
+                        transition: 'border-color 0.15s',
+                      }}
+                      onFocus={e => e.target.style.borderColor = contactPhoneError ? '#FECACA' : LIME}
+                      onBlur={e => e.target.style.borderColor = contactPhoneError ? '#FECACA' : '#E0E0E8'}
+                    />
+                  </div>
+                  {contactPhoneError && (
+                    <div style={{
+                      display: 'flex', alignItems: 'center', gap: '6px',
+                      color: '#EF4444', fontSize: '11px', fontWeight: 600,
+                      marginBottom: '8px',
+                    }}>
+                      <AlertCircle size={12} /> {contactPhoneError}
+                    </div>
+                  )}
+
+                  {/* Email field */}
+                  <div style={{ marginBottom: contactEmailError ? '6px' : '10px' }}>
+                    <label style={{
+                      display: 'flex', alignItems: 'center', gap: '6px',
+                      fontSize: '11px', fontWeight: 700, color: '#888',
+                      letterSpacing: '0.07em', textTransform: 'uppercase',
+                      marginBottom: '6px',
+                    }}>
+                      <Mail size={11} /> Email Address
+                    </label>
+                    <input
+                      type="email"
+                      value={contactEmail}
+                      onChange={e => { setContactEmail(e.target.value); setContactEmailError('') }}
+                      onKeyDown={e => { if (e.key === 'Escape') setEditingContact(false) }}
+                      placeholder="example@gmail.com"
+                      style={{
+                        width: '100%', boxSizing: 'border-box',
+                        padding: '10px 12px', borderRadius: '10px',
+                        border: `1.5px solid ${contactEmailError ? '#FECACA' : '#E0E0E8'}`,
+                        fontSize: '14px', fontWeight: 600, color: '#111',
+                        outline: 'none', background: '#F7F7FA',
+                        transition: 'border-color 0.15s',
+                      }}
+                      onFocus={e => e.target.style.borderColor = contactEmailError ? '#FECACA' : LIME}
+                      onBlur={e => e.target.style.borderColor = contactEmailError ? '#FECACA' : '#E0E0E8'}
+                    />
+                  </div>
+                  {contactEmailError && (
+                    <div style={{
+                      display: 'flex', alignItems: 'center', gap: '6px',
+                      color: '#EF4444', fontSize: '11px', fontWeight: 600,
+                      marginBottom: '8px',
+                    }}>
+                      <AlertCircle size={12} /> {contactEmailError}
+                    </div>
+                  )}
+
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button
+                      onClick={handleSaveContact}
+                      disabled={contactSaving}
+                      style={{
+                        flex: 1, padding: '9px 0', borderRadius: '10px',
+                        background: LIME, border: 'none',
+                        fontWeight: 700, fontSize: '12px', letterSpacing: '0.06em',
+                        color: '#1a1a1a', cursor: contactSaving ? 'not-allowed' : 'pointer',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                        opacity: contactSaving ? 0.7 : 1, transition: 'opacity 0.15s',
+                      }}
+                    >
+                      {contactSaving
+                        ? <><Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> SAVING…</>
+                        : <><Check size={13} /> SAVE</>}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setEditingContact(false)
+                        setContactPhoneError('')
+                        setContactEmailError('')
+                        const { phone, email } = loadContact(restaurantId)
+                        setContactPhone(phone)
+                        setContactEmail(email)
+                      }}
+                      style={{
+                        padding: '9px 14px', borderRadius: '10px',
+                        background: '#EBEBF0', border: 'none',
+                        fontWeight: 700, fontSize: '12px', letterSpacing: '0.06em',
+                        color: '#555', cursor: 'pointer',
+                        display: 'flex', alignItems: 'center', gap: '5px',
+                      }}
+                    >
+                      <XCircle size={13} /> CANCEL
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* LOCATION — active */}
