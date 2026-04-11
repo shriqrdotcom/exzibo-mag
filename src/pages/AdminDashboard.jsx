@@ -6,7 +6,10 @@ import {
   ClipboardList, BookOpen, Users, Settings, ArrowLeft, BarChart2,
   Palette, DollarSign, Type, Save, Check, CalendarDays, UtensilsCrossed,
   SlidersHorizontal, Plus, Pencil, Trash2, X, Search, ChevronDown,
+  Tag, Info, Share2, Globe,
 } from 'lucide-react'
+import { FaFacebook, FaInstagram, FaLinkedinIn, FaYoutube } from 'react-icons/fa'
+import { FaXTwitter } from 'react-icons/fa6'
 
 const GLOBAL_CONFIG_KEY = 'exzibo_admin_global_config'
 
@@ -861,170 +864,179 @@ export default function AdminDashboard() {
 
 /* ─── Settings Panel ─── */
 function SettingsPanel({ draft, setDraft, accentStart, accentEnd, onSave, saved, isDefault, restaurantId }) {
-  const [activeTab, setActiveTab] = useState('settings')
+  const [aboutText, setAboutText] = useState('')
+  const [socialLinks, setSocialLinks] = useState({
+    facebook: '', instagram: '', twitter: '', website: '', linkedin: '', youtube: '',
+  })
   if (!draft) return null
+
+  const cardStyle = {
+    background: '#fff',
+    borderRadius: '16px',
+    padding: '18px 20px',
+    border: '1px solid #f1f5f9',
+    boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
+  }
+
+  const cardHeaderStyle = {
+    display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '14px',
+  }
+
+  const iconBoxStyle = (bg, color) => ({
+    width: '38px', height: '38px', borderRadius: '10px',
+    background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center',
+    color, flexShrink: 0,
+  })
+
+  const inputStyle = {
+    width: '100%', boxSizing: 'border-box',
+    padding: '11px 14px',
+    background: '#f8fafc',
+    border: '1.5px solid #e2e8f0',
+    borderRadius: '10px',
+    fontSize: '13px', color: '#0f172a',
+    outline: 'none', fontFamily: 'inherit',
+  }
+
+  const socialPlatforms = [
+    { key: 'facebook',  label: 'Facebook',  placeholder: 'https://facebook.com/exzibo',  icon: <FaFacebook size={18} />,    bg: '#1877F2', color: '#fff' },
+    { key: 'instagram', label: 'Instagram', placeholder: 'https://instagram.com/exzibo', icon: <FaInstagram size={18} />,   bg: 'radial-gradient(circle at 30% 110%, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)', color: '#fff' },
+    { key: 'twitter',   label: 'X',         placeholder: 'https://twitter.com/exzibo',   icon: <FaXTwitter size={18} />,    bg: '#000', color: '#fff' },
+    { key: 'website',   label: 'Website',   placeholder: 'https://twitter.com/exzibo',   icon: <Globe size={16} />,         bg: '#0EA5E9', color: '#fff' },
+    { key: 'linkedin',  label: 'LinkedIn',  placeholder: 'https://linkedin.com/exzibo',  icon: <FaLinkedinIn size={18} />,  bg: '#0A66C2', color: '#fff' },
+    { key: 'youtube',   label: 'YouTube',   placeholder: 'https://youtube.com/exzibo',   icon: <FaYoutube size={18} />,     bg: '#FF0000', color: '#fff' },
+  ]
 
   return (
     <div style={{ animation: 'settingsPanelIn 0.3s ease', paddingTop: '24px' }}>
-      {/* Header */}
-      <div style={{ padding: '0 4px 16px' }}>
-        <h1 style={{ fontSize: '28px', fontWeight: 900, color: '#0f172a', margin: '0 0 4px', letterSpacing: '-0.02em' }}>
-          Settings
-        </h1>
-      </div>
 
-      {/* Tab Toggle */}
-      <div style={{
-        display: 'flex',
-        background: 'rgba(241,245,249,0.9)',
-        borderRadius: '14px',
-        padding: '4px',
-        marginBottom: '18px',
-        border: '1px solid rgba(226,232,240,0.8)',
-      }}>
-        {['settings', 'coupon'].map(tab => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            style={{
-              flex: 1,
-              padding: '10px',
-              background: activeTab === tab ? '#fff' : 'transparent',
-              border: 'none',
-              borderRadius: '10px',
-              fontSize: '13px', fontWeight: 700,
-              color: activeTab === tab ? '#0f172a' : '#94a3b8',
-              cursor: 'pointer',
-              textTransform: 'capitalize',
-              boxShadow: activeTab === tab ? '0 2px 8px rgba(0,0,0,0.08)' : 'none',
-              transition: 'all 0.2s',
-              letterSpacing: '0.02em',
-            }}
-          >
-            {tab.charAt(0).toUpperCase() + tab.slice(1)}
-          </button>
-        ))}
+      {/* Settings heading chip */}
+      <div style={{ marginBottom: '16px' }}>
+        <div style={{
+          display: 'inline-block',
+          background: '#fff',
+          border: '1px solid #e2e8f0',
+          borderRadius: '50px',
+          padding: '8px 24px',
+          fontSize: '14px', fontWeight: 700, color: '#0f172a',
+          boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+        }}>
+          Settings
+        </div>
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
 
-        {activeTab === 'settings' ? (
-          <>
-            {/* Admin Title */}
-            <SettingCard
-              icon={<Type size={18} />}
-              accentStart={accentStart}
-              title="Admin Title"
-              desc="The name shown in the admin header across all dashboards"
-            >
-              <input
-                value={draft.adminTitle}
-                onChange={e => setDraft(d => ({ ...d, adminTitle: e.target.value }))}
-                placeholder="Exzibo Admin"
-                style={{
-                  width: '100%', boxSizing: 'border-box',
-                  padding: '10px 14px',
-                  background: 'rgba(248,250,252,0.9)',
-                  border: '1.5px solid #e2e8f0',
-                  borderRadius: '12px',
-                  fontSize: '14px', fontWeight: 600, color: '#0f172a',
-                  outline: 'none', fontFamily: 'inherit',
-                }}
-                onFocus={e => e.target.style.borderColor = accentStart}
-                onBlur={e => e.target.style.borderColor = '#e2e8f0'}
-              />
-            </SettingCard>
+        {/* 1. Add Coupon Code */}
+        <div style={cardStyle}>
+          <div style={cardHeaderStyle}>
+            <div style={iconBoxStyle('#EFF6FF', '#3B82F6')}>
+              <Tag size={18} />
+            </div>
+            <div style={{ fontSize: '15px', fontWeight: 700, color: '#0f172a' }}>Add Coupon Code</div>
+          </div>
+        </div>
 
-            {/* Accent Color */}
-            <SettingCard
-              icon={<Palette size={18} />}
-              accentStart={accentStart}
-              title="Accent Color"
-              desc="Theme color used across all admin dashboards"
-            >
-              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                {ACCENT_OPTIONS.map(opt => {
-                  const active = draft.accentColor === opt.start
-                  return (
-                    <button
-                      key={opt.label}
-                      onClick={() => setDraft(d => ({ ...d, accentColor: opt.start, accentColorEnd: opt.end }))}
-                      style={{
-                        display: 'flex', alignItems: 'center', gap: '7px',
-                        padding: '8px 14px',
-                        background: active ? `${opt.start}18` : 'rgba(248,250,252,0.9)',
-                        border: `1.5px solid ${active ? opt.start : '#e2e8f0'}`,
-                        borderRadius: '50px', cursor: 'pointer',
-                        fontSize: '12px', fontWeight: 700, color: active ? opt.start : '#64748b',
-                        transition: 'all 0.2s',
-                      }}
-                    >
-                      <span style={{
-                        width: '12px', height: '12px', borderRadius: '6px',
-                        background: `linear-gradient(135deg, ${opt.start}, ${opt.end})`,
-                        flexShrink: 0,
-                      }} />
-                      {opt.label}
-                    </button>
-                  )
-                })}
-              </div>
-            </SettingCard>
-
-            {/* Currency */}
-            <SettingCard
-              icon={<DollarSign size={18} />}
-              accentStart={accentStart}
-              title="Currency"
-              desc="Currency displayed in all order subtotals"
-            >
-              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                {CURRENCY_OPTIONS.map(c => {
-                  const active = draft.currency === c
-                  return (
-                    <button
-                      key={c}
-                      onClick={() => setDraft(d => ({ ...d, currency: c }))}
-                      style={{
-                        padding: '8px 18px',
-                        background: active ? `${accentStart}18` : 'rgba(248,250,252,0.9)',
-                        border: `1.5px solid ${active ? accentStart : '#e2e8f0'}`,
-                        borderRadius: '50px', cursor: 'pointer',
-                        fontSize: '13px', fontWeight: 700,
-                        color: active ? accentStart : '#64748b',
-                        transition: 'all 0.2s',
-                      }}
-                    >
-                      {c}
-                    </button>
-                  )
-                })}
-              </div>
-            </SettingCard>
-
-            {/* Save Button */}
-            <button
-              onClick={onSave}
-              style={{
-                width: '100%', padding: '15px',
-                background: saved
-                  ? 'linear-gradient(135deg, #10B981, #059669)'
-                  : `linear-gradient(135deg, ${accentStart}, ${accentEnd})`,
-                border: 'none', borderRadius: '50px',
-                color: '#fff', fontSize: '14px', fontWeight: 800,
-                letterSpacing: '0.06em', cursor: 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                boxShadow: `0 6px 20px ${accentStart}50`,
-                transition: 'background 0.3s ease, box-shadow 0.3s ease',
-              }}
-            >
-              {saved ? <Check size={16} /> : <Save size={16} />}
-              {saved ? 'SAVED!' : 'SAVE & APPLY TO ALL RESTAURANTS'}
+        {/* 2. About Section */}
+        <div style={cardStyle}>
+          <div style={cardHeaderStyle}>
+            <div style={iconBoxStyle('#EFF6FF', '#3B82F6')}>
+              <Info size={18} />
+            </div>
+            <div>
+              <div style={{ fontSize: '15px', fontWeight: 700, color: '#0f172a' }}>About Section</div>
+              <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '2px' }}>Short description or about text for the admin template</div>
+            </div>
+          </div>
+          <input
+            value={aboutText}
+            onChange={e => setAboutText(e.target.value)}
+            placeholder="Write a short description about the admin template..."
+            style={{ ...inputStyle, marginBottom: '12px' }}
+          />
+          <div style={{
+            border: '1.5px dashed #cbd5e1',
+            borderRadius: '10px',
+            minHeight: '110px',
+            background: '#f8fafc',
+            position: 'relative',
+          }}>
+            <button style={{
+              position: 'absolute', bottom: '10px', right: '10px',
+              width: '28px', height: '28px',
+              background: '#fff',
+              border: '1.5px solid #e2e8f0',
+              borderRadius: '8px',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer', fontSize: '18px', color: '#64748b',
+              boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
+            }}>
+              +
             </button>
-          </>
-        ) : (
-          <AdminCouponManagement accentStart={accentStart} restaurantId={restaurantId} />
-        )}
+          </div>
+        </div>
+
+        {/* 3. Add Social Media Links */}
+        <div style={cardStyle}>
+          <div style={cardHeaderStyle}>
+            <div style={iconBoxStyle('#EFF6FF', '#3B82F6')}>
+              <Share2 size={18} />
+            </div>
+            <div>
+              <div style={{ fontSize: '15px', fontWeight: 700, color: '#0f172a' }}>Add Social Media Links</div>
+              <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '2px' }}>Enter social media profile URLs</div>
+            </div>
+          </div>
+          <div style={{
+            display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px',
+          }}>
+            {socialPlatforms.map(p => (
+              <div key={p.key} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{
+                  width: '34px', height: '34px', borderRadius: '9px',
+                  background: p.bg,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  color: p.color, flexShrink: 0,
+                }}>
+                  {p.icon}
+                </div>
+                <input
+                  value={socialLinks[p.key]}
+                  onChange={e => setSocialLinks(s => ({ ...s, [p.key]: e.target.value }))}
+                  placeholder={p.placeholder}
+                  style={{
+                    flex: 1, minWidth: 0,
+                    padding: '8px 10px',
+                    background: '#f8fafc',
+                    border: '1.5px solid #e2e8f0',
+                    borderRadius: '8px',
+                    fontSize: '11px', color: '#0f172a',
+                    outline: 'none', fontFamily: 'inherit',
+                  }}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Save Button */}
+        <button
+          onClick={onSave}
+          style={{
+            width: '100%', padding: '16px',
+            background: saved ? 'linear-gradient(135deg, #10B981, #059669)' : 'linear-gradient(135deg, #2563EB, #1D4ED8)',
+            border: 'none', borderRadius: '50px',
+            color: '#fff', fontSize: '14px', fontWeight: 800,
+            letterSpacing: '0.06em', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+            boxShadow: saved ? '0 6px 20px rgba(16,185,129,0.4)' : '0 6px 20px rgba(37,99,235,0.4)',
+            transition: 'all 0.3s ease',
+          }}
+        >
+          {saved ? <Check size={16} /> : <Save size={16} />}
+          {saved ? 'SAVED!' : 'SAVE & APPLY TO ALL RESTAURANTS'}
+        </button>
+
       </div>
     </div>
   )
