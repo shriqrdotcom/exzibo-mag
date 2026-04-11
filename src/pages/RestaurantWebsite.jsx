@@ -571,7 +571,7 @@ export default function RestaurantWebsite() {
         phone: '+91 98765 43210',
         tables: '24',
         images: FALLBACK_IMAGES,
-        socialLinks: { instagram: '#', facebook: '#', twitter: '#', website: '#' },
+        socialLinks: { instagram: '', facebook: '', twitter: '', website: '', linkedin: '', youtube: '' },
       })
       const demoTabs = loadMenuTabs('demo')
       setMenuTabs(demoTabs)
@@ -1372,17 +1372,23 @@ export default function RestaurantWebsite() {
                 <MapPin size={10} /> {restaurant.location}
               </div>
             )}
-            {(restaurant.socialLinks?.instagram || restaurant.socialLinks?.facebook || restaurant.socialLinks?.twitter || restaurant.socialLinks?.whatsapp || restaurant.socialLinks?.linkedin || restaurant.socialLinks?.youtube || restaurant.socialLinks?.website) && (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: '10px', marginBottom: '18px' }}>
-                {restaurant.socialLinks?.facebook && <SocialBtn href={restaurant.socialLinks.facebook} icon={<FaFacebook size={19} />} brandColor="#1877F2" theme={theme} />}
-                {restaurant.socialLinks?.instagram && <SocialBtn href={restaurant.socialLinks.instagram} icon={<FaInstagram size={19} />} brandColor="#E1306C" theme={theme} />}
-                {restaurant.socialLinks?.twitter && <SocialBtn href={restaurant.socialLinks.twitter} icon={<FaXTwitter size={18} />} brandColor="#000000" theme={theme} />}
-                {restaurant.socialLinks?.linkedin && <SocialBtn href={restaurant.socialLinks.linkedin} icon={<FaLinkedinIn size={18} />} brandColor="#0A66C2" theme={theme} />}
-                {restaurant.socialLinks?.youtube && <SocialBtn href={restaurant.socialLinks.youtube} icon={<FaYoutube size={19} />} brandColor="#FF0000" theme={theme} />}
-                {restaurant.socialLinks?.website && <SocialBtn href={restaurant.socialLinks.website} icon={<Globe size={18} />} brandColor="#0EA5E9" theme={theme} />}
-                {restaurant.socialLinks?.whatsapp && <SocialBtn href={restaurant.socialLinks.whatsapp} icon={<FaWhatsapp size={19} />} brandColor="#25D366" theme={theme} />}
-              </div>
-            )}
+            {(() => {
+              const sl = restaurant.socialLinks || {}
+              const has = key => sl[key] && sl[key].trim() && sl[key].trim() !== '#'
+              const anyLink = ['facebook','instagram','twitter','linkedin','youtube','website','whatsapp'].some(has)
+              if (!anyLink) return null
+              return (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: '10px', marginBottom: '18px' }}>
+                  {has('facebook')  && <SocialBtn href={sl.facebook}  icon={<FaFacebook  size={19} />} brandColor="#1877F2" theme={theme} />}
+                  {has('instagram') && <SocialBtn href={sl.instagram} icon={<FaInstagram size={19} />} brandColor="#E1306C" theme={theme} />}
+                  {has('twitter')   && <SocialBtn href={sl.twitter}   icon={<FaXTwitter  size={18} />} brandColor="#000000" theme={theme} />}
+                  {has('linkedin')  && <SocialBtn href={sl.linkedin}  icon={<FaLinkedinIn size={18} />} brandColor="#0A66C2" theme={theme} />}
+                  {has('youtube')   && <SocialBtn href={sl.youtube}   icon={<FaYoutube   size={19} />} brandColor="#FF0000" theme={theme} />}
+                  {has('website')   && <SocialBtn href={sl.website}   icon={<Globe       size={18} />} brandColor="#0EA5E9" theme={theme} />}
+                  {has('whatsapp')  && <SocialBtn href={sl.whatsapp}  icon={<FaWhatsapp  size={19} />} brandColor="#25D366" theme={theme} />}
+                </div>
+              )
+            })()}
             <a
               href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(restaurant.name + ' ' + (restaurant.location || ''))}`}
               target="_blank" rel="noopener noreferrer"
