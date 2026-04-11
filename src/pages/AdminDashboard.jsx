@@ -2719,21 +2719,21 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
     <div style={{ animation: 'fadeSlideUp 0.3s ease', paddingTop: '24px' }}>
 
       {/* Header row */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 4px 20px' }}>
-        <div>
-          <h1 style={{ fontSize: '28px', fontWeight: 900, color: '#0f172a', margin: '0 0 2px', letterSpacing: '-0.02em' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'nowrap', gap: '8px', padding: '0 4px 20px' }}>
+        <div style={{ minWidth: 0, overflow: 'hidden' }}>
+          <h1 style={{ fontSize: 'clamp(18px, 5vw, 28px)', fontWeight: 900, color: '#0f172a', margin: '0 0 2px', letterSpacing: '-0.02em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             Menu
           </h1>
-          <p style={{ fontSize: '12px', color: '#94A3B8', margin: 0, fontWeight: 600 }}>
+          <p style={{ fontSize: 'clamp(10px, 2.5vw, 12px)', color: '#94A3B8', margin: 0, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {items.length} item{items.length !== 1 ? 's' : ''} in {categoryTabs.find(c => c.key === activeCategory)?.label}
           </p>
         </div>
-        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexShrink: 0, flexWrap: 'nowrap' }}>
           <button
             onClick={handleSaveAll}
             style={{
-              display: 'flex', alignItems: 'center', gap: '6px',
-              padding: '10px 18px',
+              display: 'flex', alignItems: 'center', gap: '4px',
+              padding: 'clamp(7px, 1.8vw, 10px) clamp(10px, 2.5vw, 18px)',
               background: savedAll
                 ? 'rgba(34,197,94,0.12)'
                 : hasDraftChanges
@@ -2746,8 +2746,8 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
                   : '1.5px solid rgba(15,23,42,0.12)',
               borderRadius: '50px',
               color: savedAll ? '#16a34a' : hasDraftChanges ? '#E8321A' : '#475569',
-              fontSize: '12px', fontWeight: 800, letterSpacing: '0.06em',
-              cursor: 'pointer',
+              fontSize: 'clamp(9px, 2vw, 12px)', fontWeight: 800, letterSpacing: '0.06em',
+              cursor: 'pointer', whiteSpace: 'nowrap',
               transition: 'all 0.25s ease',
             }}
           >
@@ -2763,12 +2763,12 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
               <button
                 onClick={() => { setShowAdd(true); setEditingId(null); setAddDraft(BLANK_ITEM) }}
                 style={{
-                  display: 'flex', alignItems: 'center', gap: '6px',
-                  padding: '10px 16px',
+                  display: 'flex', alignItems: 'center', gap: '4px',
+                  padding: 'clamp(7px, 1.8vw, 10px) clamp(8px, 2vw, 16px)',
                   background: `linear-gradient(135deg, ${accentStart}, ${accentEnd})`,
                   border: 'none',
-                  color: '#fff', fontSize: '12px', fontWeight: 800, letterSpacing: '0.06em',
-                  cursor: 'pointer',
+                  color: '#fff', fontSize: 'clamp(9px, 2vw, 12px)', fontWeight: 800, letterSpacing: '0.06em',
+                  cursor: 'pointer', whiteSpace: 'nowrap',
                 }}
               >
                 <Plus size={14} /> ADD ITEM
@@ -2778,10 +2778,10 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
                 onClick={() => setShowSectionDropdown(v => !v)}
                 style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  padding: '10px 12px',
+                  padding: 'clamp(7px, 1.8vw, 10px) clamp(8px, 1.8vw, 12px)',
                   background: `linear-gradient(135deg, ${accentStart}, ${accentEnd})`,
                   border: 'none',
-                  color: '#fff', fontSize: '12px',
+                  color: '#fff', fontSize: 'clamp(9px, 2vw, 12px)',
                   cursor: 'pointer',
                 }}
                 title="Section options"
