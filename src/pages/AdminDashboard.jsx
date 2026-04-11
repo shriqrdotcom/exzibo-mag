@@ -871,11 +871,6 @@ function SettingsPanel({ draft, setDraft, accentStart, accentEnd, onSave, saved,
         <h1 style={{ fontSize: '28px', fontWeight: 900, color: '#0f172a', margin: '0 0 4px', letterSpacing: '-0.02em' }}>
           Settings
         </h1>
-        <p style={{ fontSize: '13px', color: '#64748b', margin: 0 }}>
-          {isDefault
-            ? 'Configure the global admin template — changes apply to all restaurants.'
-            : 'Global admin settings — changes apply to all restaurant dashboards.'}
-        </p>
       </div>
 
       {/* Tab Toggle */}
