@@ -862,9 +862,261 @@ export default function AdminDashboard() {
   )
 }
 
+/* ─── Create Coupon Modal ─── */
+function CreateCouponModal({ onClose }) {
+  const today = new Date()
+  const nextYear = new Date(today)
+  nextYear.setFullYear(today.getFullYear() + 1)
+  const fmt = d => `${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}/${d.getFullYear()}`
+
+  const [couponCode, setCouponCode] = useState('')
+  const [discountType, setDiscountType] = useState('Fixed Amount')
+  const [discountAmount, setDiscountAmount] = useState('10.00')
+  const [maxMin, setMaxMin] = useState('20')
+  const [maxMax, setMaxMax] = useState('22')
+  const [active, setActive] = useState(true)
+  const [validFrom, setValidFrom] = useState(fmt(today))
+  const [expireDate, setExpireDate] = useState(fmt(nextYear))
+
+  const generateCode = () => {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+    let code = ''
+    for (let i = 0; i < 8; i++) code += chars[Math.floor(Math.random() * chars.length)]
+    setCouponCode(code)
+  }
+
+  const fieldLabel = (text, required) => (
+    <div style={{ fontSize: '12px', fontWeight: 600, color: '#64748b', marginBottom: '6px', letterSpacing: '0.01em' }}>
+      {text}{required && <span style={{ color: '#EF4444', marginLeft: '3px' }}>*</span>}
+    </div>
+  )
+
+  const baseInput = {
+    width: '100%', boxSizing: 'border-box',
+    padding: '12px 14px',
+    background: '#fff',
+    border: '1.5px solid #e2e8f0',
+    borderRadius: '12px',
+    fontSize: '14px', color: '#0f172a',
+    outline: 'none', fontFamily: 'inherit',
+  }
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 9999,
+      background: 'rgba(238,241,248,0.7)',
+      backdropFilter: 'blur(4px)',
+      WebkitBackdropFilter: 'blur(4px)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      padding: '20px',
+    }}>
+      <div style={{
+        background: '#fff',
+        borderRadius: '24px',
+        width: '100%', maxWidth: '420px',
+        padding: '24px',
+        boxShadow: '0 20px 60px rgba(0,0,0,0.15)',
+        maxHeight: '90vh', overflowY: 'auto',
+      }}>
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '22px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <button
+              onClick={onClose}
+              style={{
+                width: '34px', height: '34px', borderRadius: '50%',
+                background: '#EFF6FF', border: 'none',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer', color: '#2E5BFF',
+              }}
+            >
+              <ArrowLeft size={16} />
+            </button>
+            <span style={{ fontSize: '17px', fontWeight: 800, color: '#0f172a' }}>Create New Coupon</span>
+          </div>
+          <button style={{
+            background: '#2E5BFF', border: 'none', borderRadius: '10px',
+            padding: '9px 18px',
+            color: '#fff', fontSize: '13px', fontWeight: 800,
+            letterSpacing: '0.06em', cursor: 'pointer',
+          }}>
+            HISTORY
+          </button>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+
+          {/* Coupon Code */}
+          <div>
+            {fieldLabel('Coupon Code', true)}
+            <div style={{ position: 'relative' }}>
+              <input
+                value={couponCode}
+                onChange={e => setCouponCode(e.target.value.toUpperCase())}
+                placeholder="e.g. SAVE20"
+                style={{ ...baseInput, paddingRight: '100px' }}
+              />
+              <button
+                onClick={generateCode}
+                style={{
+                  position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)',
+                  background: 'none', border: 'none',
+                  color: '#2E5BFF', fontSize: '13px', fontWeight: 700,
+                  cursor: 'pointer', letterSpacing: '0.04em',
+                }}
+              >
+                GENERATE
+              </button>
+            </div>
+            <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '5px' }}>Enter a unique coupon code</div>
+          </div>
+
+          {/* Discount Type + Amount */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+            <div>
+              {fieldLabel('Discount Type', true)}
+              <div style={{ position: 'relative' }}>
+                <select
+                  value={discountType}
+                  onChange={e => setDiscountType(e.target.value)}
+                  style={{
+                    ...baseInput,
+                    appearance: 'none', WebkitAppearance: 'none',
+                    paddingRight: '32px', cursor: 'pointer',
+                  }}
+                >
+                  <option>Fixed Amount</option>
+                  <option>Percentage</option>
+                </select>
+                <ChevronDown size={14} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', pointerEvents: 'none' }} />
+              </div>
+            </div>
+            <div>
+              {fieldLabel('Discount Amount', true)}
+              <div style={{ position: 'relative' }}>
+                <input
+                  type="number"
+                  value={discountAmount}
+                  onChange={e => setDiscountAmount(e.target.value)}
+                  style={{ ...baseInput, paddingRight: '36px' }}
+                />
+                <span style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontSize: '15px' }}>₹</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Maximum Discount Amount */}
+          <div>
+            {fieldLabel('Maximum Discount Amount (₹)')}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <input
+                type="number"
+                value={maxMin}
+                onChange={e => setMaxMin(e.target.value)}
+                style={baseInput}
+              />
+              <input
+                type="number"
+                value={maxMax}
+                onChange={e => setMaxMax(e.target.value)}
+                style={baseInput}
+              />
+            </div>
+          </div>
+
+          {/* Active Toggle */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+            <div
+              onClick={() => setActive(a => !a)}
+              style={{
+                width: '52px', height: '28px', borderRadius: '14px',
+                background: active ? '#2E5BFF' : '#cbd5e1',
+                position: 'relative', cursor: 'pointer',
+                transition: 'background 0.2s',
+                flexShrink: 0,
+              }}
+            >
+              <div style={{
+                position: 'absolute',
+                top: '3px',
+                left: active ? '27px' : '3px',
+                width: '22px', height: '22px',
+                borderRadius: '50%', background: '#fff',
+                boxShadow: '0 1px 4px rgba(0,0,0,0.2)',
+                transition: 'left 0.2s',
+              }} />
+            </div>
+            <span style={{ fontSize: '15px', fontWeight: 600, color: '#0f172a' }}>Active</span>
+          </div>
+
+          {/* Date Pickers */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+            <div>
+              <div style={{ fontSize: '12px', fontWeight: 600, color: '#64748b', marginBottom: '6px' }}>Valid From</div>
+              <div style={{ position: 'relative' }}>
+                <input
+                  value={validFrom}
+                  onChange={e => setValidFrom(e.target.value)}
+                  style={{ ...baseInput, paddingRight: '32px' }}
+                />
+                <ChevronDown size={14} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', pointerEvents: 'none' }} />
+              </div>
+            </div>
+            <div>
+              <div style={{ fontSize: '12px', fontWeight: 700, color: '#0f172a', marginBottom: '6px', letterSpacing: '0.02em', textTransform: 'uppercase' }}>Expire Date</div>
+              <div style={{ position: 'relative' }}>
+                <input
+                  value={expireDate}
+                  onChange={e => setExpireDate(e.target.value)}
+                  style={{ ...baseInput, paddingRight: '32px' }}
+                />
+                <ChevronDown size={14} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', pointerEvents: 'none' }} />
+              </div>
+            </div>
+          </div>
+
+          {/* Buttons */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '4px' }}>
+            <button
+              onClick={onClose}
+              style={{
+                padding: '14px',
+                background: '#fff',
+                border: '1.5px solid #e2e8f0',
+                borderRadius: '50px',
+                fontSize: '13px', fontWeight: 800,
+                color: '#0f172a', cursor: 'pointer',
+                letterSpacing: '0.06em',
+              }}
+            >
+              CANCEL
+            </button>
+            <button
+              style={{
+                padding: '14px',
+                background: '#2E5BFF',
+                border: 'none',
+                borderRadius: '50px',
+                fontSize: '13px', fontWeight: 800,
+                color: '#fff', cursor: 'pointer',
+                letterSpacing: '0.06em',
+                boxShadow: '0 4px 16px rgba(46,91,255,0.4)',
+              }}
+            >
+              CREATE COUPON
+            </button>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  )
+}
+
 /* ─── Settings Panel ─── */
 function SettingsPanel({ draft, setDraft, accentStart, accentEnd, onSave, saved, isDefault, restaurantId }) {
   const [aboutText, setAboutText] = useState('')
+  const [showCouponModal, setShowCouponModal] = useState(false)
   const [socialLinks, setSocialLinks] = useState({
     facebook: '', instagram: '', twitter: '', website: '', linkedin: '', youtube: '',
   })
@@ -910,6 +1162,9 @@ function SettingsPanel({ draft, setDraft, accentStart, accentEnd, onSave, saved,
   return (
     <div style={{ animation: 'settingsPanelIn 0.3s ease', paddingTop: '24px' }}>
 
+      {/* Coupon Modal */}
+      {showCouponModal && <CreateCouponModal onClose={() => setShowCouponModal(false)} />}
+
       {/* Settings heading chip */}
       <div style={{ marginBottom: '16px' }}>
         <div style={{
@@ -928,7 +1183,10 @@ function SettingsPanel({ draft, setDraft, accentStart, accentEnd, onSave, saved,
       <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
 
         {/* 1. Add Coupon Code */}
-        <div style={cardStyle}>
+        <div
+          style={{ ...cardStyle, cursor: 'pointer' }}
+          onClick={() => setShowCouponModal(true)}
+        >
           <div style={cardHeaderStyle}>
             <div style={iconBoxStyle('#EFF6FF', '#3B82F6')}>
               <Tag size={18} />
