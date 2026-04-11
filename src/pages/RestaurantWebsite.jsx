@@ -362,23 +362,57 @@ export default function RestaurantWebsite() {
   function handleApplyCoupon() {
     if (couponApplied) return
     const restaurantId = restaurant?.id || slug || 'demo'
-    const stored = localStorage.getItem(`exzibo_admin_coupon_${restaurantId}`)
-    if (!stored) { setCouponError('Invalid coupon code'); return }
-    const saved = JSON.parse(stored)
-    if (!saved.code || couponInput.trim().toUpperCase() !== saved.code.toUpperCase()) {
-      setCouponError('Invalid coupon code'); return
+    const inputCode = couponInput.trim().toUpperCase()
+
+    // Helper: validate and apply a normalised coupon object
+    const tryCoupon = (couponObj) => {
+      if (!couponObj || !couponObj.code) return false
+      if (couponObj.code.toUpperCase() !== inputCode) return false
+      // active flag (old format has it; new format treats all as active unless expired)
+      if (couponObj.active === false) {
+        setCouponError('This coupon is currently inactive')
+        return true // code matched, error set
+      }
+      if (couponObj.expireDate) {
+        const expiry = new Date(couponObj.expireDate)
+        expiry.setHours(23, 59, 59, 999)
+        if (new Date() > expiry) {
+          setCouponError('This coupon has expired')
+          return true
+        }
+      }
+      setAppliedCouponData(couponObj)
+      setCouponApplied(true)
+      setCouponError('')
+      return true
     }
-    if (!saved.active) {
-      setCouponError('This coupon is currently inactive'); return
+
+    // 1. Check old single-coupon format (AdminCouponManagement)
+    const oldStored = localStorage.getItem(`exzibo_admin_coupon_${restaurantId}`)
+    if (oldStored) {
+      const saved = JSON.parse(oldStored)
+      if (tryCoupon(saved)) return
     }
-    if (saved.expireDate) {
-      const expiry = new Date(saved.expireDate)
-      expiry.setHours(23, 59, 59, 999)
-      if (new Date() > expiry) { setCouponError('This coupon has expired'); return }
+
+    // 2. Check new coupon list format — restaurant-specific key
+    const tryListKey = (key) => {
+      try {
+        const list = JSON.parse(localStorage.getItem(key) || '[]')
+        if (!Array.isArray(list)) return false
+        for (const c of list) {
+          // Normalise: new format uses discountAmount, old validator expects discountPct
+          const normalised = { ...c, discountPct: c.discountPct ?? c.discountAmount, active: true }
+          if (tryCoupon(normalised)) return true
+        }
+      } catch { /* ignore */ }
+      return false
     }
-    setAppliedCouponData(saved)
-    setCouponApplied(true)
-    setCouponError('')
+
+    if (tryListKey(`exzibo_coupons_${restaurantId}`)) return
+    // 3. Also check global admin template coupons (key 'default')
+    if (tryListKey('exzibo_coupons_default')) return
+
+    setCouponError('Invalid coupon code')
   }
   function flyToCart(imgSrc, clickedEl) {
     if (!cartIconRef.current || !clickedEl) return
