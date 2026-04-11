@@ -1464,6 +1464,66 @@ function SettingsPanel({ draft, setDraft, accentStart, accentEnd, onSave, saved,
         </div>
 
         {/* 3. Add Social Media Links */}
+        <style>{`
+          .social-links-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+          }
+          .social-link-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            min-width: 0;
+          }
+          .social-link-input-wrap {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            align-items: center;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 8px;
+            overflow: hidden;
+            background: #f8fafc;
+          }
+          .social-link-input-wrap input {
+            flex: 1;
+            min-width: 0;
+            padding: 8px 8px;
+            background: transparent;
+            border: none;
+            font-size: 11px;
+            color: #0f172a;
+            outline: none;
+            font-family: inherit;
+          }
+          .social-paste-btn {
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            gap: 3px;
+            padding: 0 9px;
+            height: 34px;
+            background: #1e40af;
+            border: none;
+            border-left: 1.5px solid #e2e8f0;
+            color: #fff;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: background 0.2s;
+          }
+          .social-paste-btn:hover {
+            background: #1d4ed8;
+          }
+          @media (max-width: 500px) {
+            .social-links-grid {
+              grid-template-columns: 1fr;
+            }
+          }
+        `}</style>
         <div style={cardStyle}>
           <div style={cardHeaderStyle}>
             <div style={iconBoxStyle('#EFF6FF', '#3B82F6')}>
@@ -1474,11 +1534,9 @@ function SettingsPanel({ draft, setDraft, accentStart, accentEnd, onSave, saved,
               <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '2px' }}>Enter social media profile URLs</div>
             </div>
           </div>
-          <div style={{
-            display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px',
-          }}>
+          <div className="social-links-grid">
             {socialPlatforms.map(p => (
-              <div key={p.key} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div key={p.key} className="social-link-item">
                 <div style={{
                   width: '34px', height: '34px', borderRadius: '9px',
                   background: p.bg,
@@ -1487,20 +1545,26 @@ function SettingsPanel({ draft, setDraft, accentStart, accentEnd, onSave, saved,
                 }}>
                   {p.icon}
                 </div>
-                <input
-                  value={socialLinks[p.key]}
-                  onChange={e => setSocialLinks(s => ({ ...s, [p.key]: e.target.value }))}
-                  placeholder={p.placeholder}
-                  style={{
-                    flex: 1, minWidth: 0,
-                    padding: '8px 10px',
-                    background: '#f8fafc',
-                    border: '1.5px solid #e2e8f0',
-                    borderRadius: '8px',
-                    fontSize: '11px', color: '#0f172a',
-                    outline: 'none', fontFamily: 'inherit',
-                  }}
-                />
+                <div className="social-link-input-wrap">
+                  <input
+                    type="url"
+                    value={socialLinks[p.key]}
+                    onChange={e => setSocialLinks(s => ({ ...s, [p.key]: e.target.value }))}
+                    placeholder={p.placeholder}
+                  />
+                  <button
+                    className="social-paste-btn"
+                    title={`Paste ${p.label} URL`}
+                    onClick={async () => {
+                      try {
+                        const text = await navigator.clipboard.readText()
+                        setSocialLinks(s => ({ ...s, [p.key]: text }))
+                      } catch {}
+                    }}
+                  >
+                    PASTE
+                  </button>
+                </div>
               </div>
             ))}
           </div>
