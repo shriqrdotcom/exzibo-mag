@@ -1278,6 +1278,8 @@ function CreateCouponModal({ onClose, coupons = [], onCreateCoupon, onDeleteCoup
 /* ─── Settings Panel ─── */
 function SettingsPanel({ draft, setDraft, accentStart, accentEnd, onSave, saved, isDefault, restaurantId }) {
   const [aboutText, setAboutText] = useState('')
+  const [aboutImage, setAboutImage] = useState('')
+  const fileInputRef = useRef(null)
   const [showCouponModal, setShowCouponModal] = useState(false)
   const [couponEnabled, setCouponEnabled] = useState(true)
   const [socialLinks, setSocialLinks] = useState({
@@ -1285,15 +1287,32 @@ function SettingsPanel({ draft, setDraft, accentStart, accentEnd, onSave, saved,
   })
   const [pastedKey, setPastedKey] = useState(null)
   const couponStorageKey = `exzibo_coupons_${restaurantId || 'default'}`
+  const aboutKey = `exzibo_about_${restaurantId || 'demo'}`
 
   useEffect(() => {
-    if (!restaurantId || restaurantId === 'demo') return
+    if (!restaurantId) return
     try {
-      const all = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
-      const found = all.find(r => r.id === restaurantId)
-      if (found?.socialLinks) setSocialLinks(prev => ({ ...prev, ...found.socialLinks }))
+      // Load about text + image
+      const stored = JSON.parse(localStorage.getItem(aboutKey) || '{}')
+      if (stored.description) setAboutText(stored.description)
+      if (stored.image) setAboutImage(stored.image)
+    } catch {}
+    try {
+      // Load social links (non-demo only)
+      if (restaurantId !== 'demo') {
+        const all = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
+        const found = all.find(r => r.id === restaurantId)
+        if (found?.socialLinks) setSocialLinks(prev => ({ ...prev, ...found.socialLinks }))
+      }
     } catch {}
   }, [restaurantId])
+
+  const handleImageFile = (file) => {
+    if (!file || !file.type.startsWith('image/')) return
+    const reader = new FileReader()
+    reader.onload = (e) => setAboutImage(e.target.result)
+    reader.readAsDataURL(file)
+  }
   const [coupons, setCoupons] = useState(() => {
     try { return JSON.parse(localStorage.getItem(couponStorageKey) || '[]') } catch { return [] }
   })
@@ -1451,25 +1470,77 @@ function SettingsPanel({ draft, setDraft, accentStart, accentEnd, onSave, saved,
             placeholder="Write a short description about the admin template..."
             style={{ ...inputStyle, marginBottom: '12px' }}
           />
-          <div style={{
-            border: '1.5px dashed #cbd5e1',
-            borderRadius: '10px',
-            minHeight: '110px',
-            background: '#f8fafc',
-            position: 'relative',
-          }}>
-            <button style={{
-              position: 'absolute', bottom: '10px', right: '10px',
-              width: '28px', height: '28px',
-              background: '#fff',
-              border: '1.5px solid #e2e8f0',
-              borderRadius: '8px',
+          {/* Hidden file input */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            style={{ display: 'none' }}
+            onChange={e => handleImageFile(e.target.files[0])}
+          />
+          {/* Image upload / preview area */}
+          <div
+            onClick={() => !aboutImage && fileInputRef.current?.click()}
+            style={{
+              border: '1.5px dashed #cbd5e1',
+              borderRadius: '10px',
+              minHeight: '120px',
+              background: aboutImage ? 'transparent' : '#f8fafc',
+              position: 'relative',
+              overflow: 'hidden',
+              cursor: aboutImage ? 'default' : 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              cursor: 'pointer', fontSize: '18px', color: '#64748b',
-              boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
-            }}>
-              +
-            </button>
+            }}
+          >
+            {aboutImage ? (
+              <>
+                <img
+                  src={aboutImage}
+                  alt="About preview"
+                  style={{ width: '100%', height: '150px', objectFit: 'cover', borderRadius: '9px', display: 'block' }}
+                />
+                {/* Replace / clear buttons */}
+                <div style={{ position: 'absolute', top: '8px', right: '8px', display: 'flex', gap: '6px' }}>
+                  <button
+                    onClick={e => { e.stopPropagation(); fileInputRef.current?.click() }}
+                    style={{
+                      padding: '4px 10px', fontSize: '11px', fontWeight: 700,
+                      background: '#fff', border: '1px solid #e2e8f0', borderRadius: '6px',
+                      color: '#0f172a', cursor: 'pointer', boxShadow: '0 1px 4px rgba(0,0,0,0.1)',
+                    }}
+                  >Change</button>
+                  <button
+                    onClick={e => { e.stopPropagation(); setAboutImage('') }}
+                    style={{
+                      padding: '4px 10px', fontSize: '11px', fontWeight: 700,
+                      background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: '6px',
+                      color: '#dc2626', cursor: 'pointer',
+                    }}
+                  >Remove</button>
+                </div>
+              </>
+            ) : (
+              <div style={{ textAlign: 'center', color: '#94a3b8', pointerEvents: 'none' }}>
+                <div style={{ fontSize: '28px', lineHeight: 1 }}>🖼</div>
+                <div style={{ fontSize: '11px', marginTop: '6px' }}>Click to upload image</div>
+              </div>
+            )}
+            {/* + button always visible */}
+            {!aboutImage && (
+              <button
+                onClick={e => { e.stopPropagation(); fileInputRef.current?.click() }}
+                style={{
+                  position: 'absolute', bottom: '10px', right: '10px',
+                  width: '28px', height: '28px',
+                  background: '#fff',
+                  border: '1.5px solid #e2e8f0',
+                  borderRadius: '8px',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  cursor: 'pointer', fontSize: '18px', color: '#64748b',
+                  boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
+                }}
+              >+</button>
+            )}
           </div>
         </div>
 
@@ -1584,14 +1655,20 @@ function SettingsPanel({ draft, setDraft, accentStart, accentEnd, onSave, saved,
         {/* Save Button */}
         <button
           onClick={() => {
+            // Save about text + image
+            try {
+              localStorage.setItem(aboutKey, JSON.stringify({ description: aboutText, image: aboutImage }))
+            } catch {}
+            // Save social links to restaurant record
             if (restaurantId && restaurantId !== 'demo') {
               try {
                 const all = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
                 const updated = all.map(r => r.id === restaurantId ? { ...r, socialLinks } : r)
                 localStorage.setItem('exzibo_restaurants', JSON.stringify(updated))
-                window.dispatchEvent(new Event('storage'))
               } catch {}
             }
+            // Notify all listeners
+            window.dispatchEvent(new Event('storage'))
             onSave()
           }}
           style={{

@@ -199,6 +199,7 @@ export default function RestaurantWebsite() {
   const navigate = useNavigate()
   const location = useLocation()
   const [restaurant, setRestaurant] = useState(null)
+  const [aboutData, setAboutData] = useState({ description: '', image: '' })
   const [notFound, setNotFound] = useState(false)
   const [menuTabs, setMenuTabs] = useState(MENU_TABS)
   const [menuData, setMenuData] = useState(() => Object.fromEntries(MENU_TABS.map(t => [t.id, []])))
@@ -599,6 +600,22 @@ export default function RestaurantWebsite() {
       setNotFound(true)
     }
   }, [slug])
+
+  // Load & live-sync about data (description + image) from admin panel
+  useEffect(() => {
+    const id = restaurant?.id || (slug === 'demo' ? 'demo' : null)
+    if (!id) return
+    const key = `exzibo_about_${id}`
+    const load = () => {
+      try {
+        const stored = JSON.parse(localStorage.getItem(key) || '{}')
+        setAboutData({ description: stored.description || '', image: stored.image || '' })
+      } catch {}
+    }
+    load()
+    window.addEventListener('storage', load)
+    return () => window.removeEventListener('storage', load)
+  }, [restaurant?.id, slug])
 
   useEffect(() => {
     if (!currentOrder) return
@@ -1296,9 +1313,14 @@ export default function RestaurantWebsite() {
               <div style={{ fontSize: '11px', color: theme.sectionSub, marginTop: '2px' }}>Where every plate tells a story</div>
             </div>
 
-            {/* About hero image */}
-            {carouselImages.length > 1 && (
-              <div style={{ height: '155px', borderRadius: '16px', overflow: 'hidden', marginBottom: '12px', backgroundImage: `url(${carouselImages[1] || carouselImages[0]})`, backgroundSize: 'cover', backgroundPosition: 'center', position: 'relative' }}>
+            {/* About hero image — admin-uploaded takes priority, then carousel fallback */}
+            {(aboutData.image || carouselImages.length > 1) && (
+              <div style={{ height: '155px', borderRadius: '16px', overflow: 'hidden', marginBottom: '12px', position: 'relative' }}>
+                {aboutData.image ? (
+                  <img src={aboutData.image} alt="About" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                ) : (
+                  <div style={{ height: '100%', backgroundImage: `url(${carouselImages[1] || carouselImages[0]})`, backgroundSize: 'cover', backgroundPosition: 'center' }} />
+                )}
                 <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.6), transparent)' }} />
               </div>
             )}
@@ -1324,7 +1346,7 @@ export default function RestaurantWebsite() {
                 {/* Opening quote mark */}
                 <div style={{ fontSize: '42px', lineHeight: 0.6, color: '#E8321A', opacity: 0.25, fontFamily: 'Georgia, serif', marginBottom: '8px', userSelect: 'none' }}>"</div>
                 <p style={{ fontSize: '14px', lineHeight: 1.8, color: theme.aboutText, margin: 0, fontStyle: 'italic' }}>
-                  {restaurant.description || 'An uncompromising culinary experience rooted in craft, quality, and atmosphere. Every dish is a conversation between heritage and innovation.'}
+                  {aboutData.description || restaurant.description || 'An uncompromising culinary experience rooted in craft, quality, and atmosphere. Every dish is a conversation between heritage and innovation.'}
                 </p>
                 {restaurant.additionalInfo && (
                   <p style={{ fontSize: '12px', lineHeight: 1.7, color: theme.aboutSub, marginTop: '12px', paddingTop: '12px', borderTop: `1px solid ${theme.aboutSubBorder}`, margin: '12px 0 0', fontStyle: 'normal' }}>
