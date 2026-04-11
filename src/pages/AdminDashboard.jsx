@@ -863,7 +863,7 @@ export default function AdminDashboard() {
 }
 
 /* ─── Create Coupon Modal ─── */
-function CreateCouponModal({ onClose, coupons = [], onCreateCoupon }) {
+function CreateCouponModal({ onClose, coupons = [], onCreateCoupon, onDeleteCoupon }) {
   const todayISO = new Date().toISOString().split('T')[0]
   const nextYearISO = (() => {
     const d = new Date(); d.setFullYear(d.getFullYear() + 1)
@@ -878,6 +878,8 @@ function CreateCouponModal({ onClose, coupons = [], onCreateCoupon }) {
   const [maxMax, setMaxMax] = useState('22')
   const [validFrom, setValidFrom] = useState(todayISO)
   const [expireDate, setExpireDate] = useState(nextYearISO)
+  const [pendingDeleteId, setPendingDeleteId] = useState(null)
+  const [deleteToast, setDeleteToast] = useState(false)
 
   const PREFIXES = ['SAVE', 'OFF', 'DEAL', 'GET', 'WIN', 'USE', 'BIG', 'FUN']
   const generateCode = () => {
@@ -908,6 +910,14 @@ function CreateCouponModal({ onClose, coupons = [], onCreateCoupon }) {
     }
     onCreateCoupon(newCoupon)
     onClose()
+  }
+
+  const handleConfirmDelete = () => {
+    if (pendingDeleteId == null) return
+    onDeleteCoupon(pendingDeleteId)
+    setPendingDeleteId(null)
+    setDeleteToast(true)
+    setTimeout(() => setDeleteToast(false), 2500)
   }
 
   const baseInput = {
@@ -949,6 +959,7 @@ function CreateCouponModal({ onClose, coupons = [], onCreateCoupon }) {
         padding: '24px',
         boxShadow: '0 20px 60px rgba(0,0,0,0.2)',
         maxHeight: '90vh', overflowY: 'auto',
+        position: 'relative',
       }}>
 
         {/* ── HEADER ── */}
@@ -997,18 +1008,32 @@ function CreateCouponModal({ onClose, coupons = [], onCreateCoupon }) {
                 borderRadius: '12px',
                 padding: '14px 16px',
                 background: '#fafafa',
+                position: 'relative',
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
                   <span style={{ fontSize: '16px', fontWeight: 800, color: '#0f172a', letterSpacing: '0.04em' }}>{c.code}</span>
-                  <span style={{
-                    fontSize: '11px', fontWeight: 700,
-                    padding: '3px 10px', borderRadius: '20px',
-                    background: isActive(c.expireDate) ? '#D1FAE5' : '#FEE2E2',
-                    color: isActive(c.expireDate) ? '#059669' : '#DC2626',
-                    letterSpacing: '0.06em',
-                  }}>
-                    {isActive(c.expireDate) ? 'ACTIVE' : 'INACTIVE'}
-                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{
+                      fontSize: '11px', fontWeight: 700,
+                      padding: '3px 10px', borderRadius: '20px',
+                      background: isActive(c.expireDate) ? '#D1FAE5' : '#FEE2E2',
+                      color: isActive(c.expireDate) ? '#059669' : '#DC2626',
+                      letterSpacing: '0.06em',
+                    }}>
+                      {isActive(c.expireDate) ? 'ACTIVE' : 'INACTIVE'}
+                    </span>
+                    <button
+                      onClick={() => setPendingDeleteId(c.id)}
+                      style={{
+                        background: '#FEF2F2', border: '1px solid #FECACA',
+                        borderRadius: '8px', width: '28px', height: '28px',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        cursor: 'pointer', color: '#EF4444', flexShrink: 0,
+                      }}
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
                 </div>
                 <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '4px' }}>
                   {c.discountType === 'Percentage' ? `${c.discountAmount}% off` : `₹${c.discountAmount} off`}
@@ -1139,7 +1164,84 @@ function CreateCouponModal({ onClose, coupons = [], onCreateCoupon }) {
 
         </div>
         )}
+
+        {/* ── DELETE CONFIRMATION DIALOG ── */}
+        {pendingDeleteId != null && (
+          <div style={{
+            position: 'absolute', inset: 0, zIndex: 10,
+            background: 'rgba(0,0,0,0.35)',
+            backdropFilter: 'blur(3px)',
+            borderRadius: '16px',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: '24px',
+          }}>
+            <div style={{
+              background: '#fff', borderRadius: '16px',
+              padding: '24px', width: '100%', maxWidth: '320px',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
+              textAlign: 'center',
+            }}>
+              <div style={{
+                width: '48px', height: '48px', borderRadius: '50%',
+                background: '#FEF2F2', margin: '0 auto 14px',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: '#EF4444',
+              }}>
+                <Trash2 size={22} />
+              </div>
+              <div style={{ fontSize: '16px', fontWeight: 800, color: '#0f172a', marginBottom: '8px' }}>
+                Delete Coupon?
+              </div>
+              <div style={{ fontSize: '13px', color: '#64748b', marginBottom: '22px', lineHeight: 1.5 }}>
+                Are you sure you want to delete this coupon code? This action cannot be undone.
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <button
+                  onClick={() => setPendingDeleteId(null)}
+                  style={{
+                    padding: '12px', background: '#fff',
+                    border: '1.5px solid #e2e8f0', borderRadius: '50px',
+                    fontSize: '13px', fontWeight: 700, color: '#0f172a',
+                    cursor: 'pointer', letterSpacing: '0.04em',
+                  }}
+                >
+                  CANCEL
+                </button>
+                <button
+                  onClick={handleConfirmDelete}
+                  style={{
+                    padding: '12px', background: '#EF4444',
+                    border: 'none', borderRadius: '50px',
+                    fontSize: '13px', fontWeight: 700, color: '#fff',
+                    cursor: 'pointer', letterSpacing: '0.04em',
+                    boxShadow: '0 4px 12px rgba(239,68,68,0.35)',
+                  }}
+                >
+                  DELETE
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
       </div>
+
+      {/* ── DELETE TOAST ── */}
+      {deleteToast && (
+        <div style={{
+          position: 'fixed', bottom: '32px', left: '50%', transform: 'translateX(-50%)',
+          zIndex: 10001,
+          background: '#1e293b', color: '#fff',
+          padding: '12px 22px', borderRadius: '50px',
+          fontSize: '13px', fontWeight: 600,
+          display: 'flex', alignItems: 'center', gap: '8px',
+          boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
+          animation: 'toastIn 0.3s ease',
+        }}>
+          <Check size={15} style={{ color: '#4ade80' }} />
+          Coupon deleted successfully.
+        </div>
+      )}
     </div>
   )
 }
@@ -1148,6 +1250,7 @@ function CreateCouponModal({ onClose, coupons = [], onCreateCoupon }) {
 function SettingsPanel({ draft, setDraft, accentStart, accentEnd, onSave, saved, isDefault, restaurantId }) {
   const [aboutText, setAboutText] = useState('')
   const [showCouponModal, setShowCouponModal] = useState(false)
+  const [couponEnabled, setCouponEnabled] = useState(true)
   const [socialLinks, setSocialLinks] = useState({
     facebook: '', instagram: '', twitter: '', website: '', linkedin: '', youtube: '',
   })
@@ -1158,6 +1261,12 @@ function SettingsPanel({ draft, setDraft, accentStart, accentEnd, onSave, saved,
 
   const handleCreateCoupon = coupon => {
     const updated = [...coupons, coupon]
+    setCoupons(updated)
+    localStorage.setItem(couponStorageKey, JSON.stringify(updated))
+  }
+
+  const handleDeleteCoupon = id => {
+    const updated = coupons.filter(c => c.id !== id)
     setCoupons(updated)
     localStorage.setItem(couponStorageKey, JSON.stringify(updated))
   }
@@ -1210,6 +1319,7 @@ function SettingsPanel({ draft, setDraft, accentStart, accentEnd, onSave, saved,
           onClose={() => setShowCouponModal(false)}
           coupons={coupons}
           onCreateCoupon={handleCreateCoupon}
+          onDeleteCoupon={handleDeleteCoupon}
         />
       )}
 
@@ -1231,16 +1341,60 @@ function SettingsPanel({ draft, setDraft, accentStart, accentEnd, onSave, saved,
       <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
 
         {/* 1. Add Coupon Code */}
-        <div
-          style={{ ...cardStyle, cursor: 'pointer' }}
-          onClick={() => setShowCouponModal(true)}
-        >
-          <div style={cardHeaderStyle}>
-            <div style={iconBoxStyle('#EFF6FF', '#3B82F6')}>
-              <Tag size={18} />
+        <div style={cardStyle}>
+          {/* Card header row with toggle */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: couponEnabled ? '14px' : '0' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={iconBoxStyle(couponEnabled ? '#EFF6FF' : '#f1f5f9', couponEnabled ? '#3B82F6' : '#94a3b8')}>
+                <Tag size={18} />
+              </div>
+              <div>
+                <div style={{ fontSize: '15px', fontWeight: 700, color: couponEnabled ? '#0f172a' : '#94a3b8' }}>Add Coupon Code</div>
+                <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '2px' }}>
+                  {couponEnabled ? 'Coupon codes are enabled' : 'Coupon codes are disabled'}
+                </div>
+              </div>
             </div>
-            <div style={{ fontSize: '15px', fontWeight: 700, color: '#0f172a' }}>Add Coupon Code</div>
+            {/* Toggle switch */}
+            <div
+              onClick={() => setCouponEnabled(e => !e)}
+              style={{
+                width: '44px', height: '24px', borderRadius: '12px',
+                background: couponEnabled ? '#2E5BFF' : '#cbd5e1',
+                position: 'relative', cursor: 'pointer',
+                transition: 'background 0.2s',
+                flexShrink: 0,
+              }}
+            >
+              <div style={{
+                position: 'absolute',
+                top: '3px',
+                left: couponEnabled ? '23px' : '3px',
+                width: '18px', height: '18px',
+                borderRadius: '50%', background: '#fff',
+                boxShadow: '0 1px 4px rgba(0,0,0,0.2)',
+                transition: 'left 0.2s',
+              }} />
+            </div>
           </div>
+          {/* Clickable area shown only when enabled */}
+          {couponEnabled && (
+            <div
+              onClick={() => setShowCouponModal(true)}
+              style={{
+                padding: '10px 14px',
+                background: '#EFF6FF',
+                borderRadius: '10px',
+                border: '1.5px dashed #93C5FD',
+                cursor: 'pointer',
+                fontSize: '13px', fontWeight: 600, color: '#2E5BFF',
+                textAlign: 'center',
+                transition: 'background 0.15s',
+              }}
+            >
+              + Create / Manage Coupons
+            </div>
+          )}
         </div>
 
         {/* 2. About Section */}
