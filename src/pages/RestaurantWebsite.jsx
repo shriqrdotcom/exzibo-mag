@@ -568,7 +568,7 @@ export default function RestaurantWebsite() {
       setRestaurant({
         id: 'demo', slug: 'demo',
         name: savedDemoName,
-        location: 'Cyber City, Gurugram',
+        location: demoConfig.location || 'Cyber City, Gurugram',
         description: 'An uncompromising culinary experience rooted in craft, quality, and atmosphere. Every dish is a conversation between heritage and innovation.',
         chefInfo: 'Chef Marcus Aurélius, trained in Paris and Tokyo, brings 20 years of Michelin-star experience to every plate.',
         rating: '4.9',
@@ -695,13 +695,30 @@ export default function RestaurantWebsite() {
         return prev
       })
     }
+    function onLocationChanged(e) {
+      const { restaurantId: changedId, location, locationLat, locationLng } = e.detail || {}
+      setRestaurant(prev => {
+        if (!prev) return prev
+        const isDemoMatch = (changedId === 'default' && (prev.id === 'demo' || prev.slug === 'demo'))
+        const isDirectMatch = changedId === prev.id || changedId === prev.slug
+        if (isDemoMatch || isDirectMatch) return {
+          ...prev,
+          location: location ?? prev.location,
+          locationLat: locationLat ?? prev.locationLat,
+          locationLng: locationLng ?? prev.locationLng,
+        }
+        return prev
+      })
+    }
     window.addEventListener('exzibo-logo-changed', onLogoChanged)
     window.addEventListener('exzibo-name-changed', onNameChanged)
     window.addEventListener('exzibo-contact-changed', onContactChanged)
+    window.addEventListener('exzibo-location-changed', onLocationChanged)
     return () => {
       window.removeEventListener('exzibo-logo-changed', onLogoChanged)
       window.removeEventListener('exzibo-name-changed', onNameChanged)
       window.removeEventListener('exzibo-contact-changed', onContactChanged)
+      window.removeEventListener('exzibo-location-changed', onLocationChanged)
     }
   }, [])
 

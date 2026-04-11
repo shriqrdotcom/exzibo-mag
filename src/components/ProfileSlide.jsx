@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react'
 import {
   X, Share2, Power, MapPin, Phone, Store, Users, Image,
-  Loader2, AlertCircle, CheckCircle2, Check, XCircle, Mail
+  Loader2, AlertCircle, CheckCircle2, Check, XCircle, Mail,
+  Navigation, PenLine
 } from 'lucide-react'
 import { PiPencilCircle } from 'react-icons/pi'
 
@@ -26,6 +27,16 @@ function loadContact(restaurantId) {
   return { phone: r?.phone || '', email: r?.email || '' }
 }
 
+function loadLocation(restaurantId) {
+  if (!restaurantId || restaurantId === 'default') {
+    const config = JSON.parse(localStorage.getItem('exzibo_admin_global_config') || '{}')
+    return { address: config.location || '', lat: config.locationLat || null, lng: config.locationLng || null }
+  }
+  const all = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
+  const r = all.find(r => r.id === restaurantId)
+  return { address: r?.location || '', lat: r?.locationLat || null, lng: r?.locationLng || null }
+}
+
 export default function ProfileSlide({
   open, onClose,
   restaurantId, logoUrl, onLogoUpdate,
@@ -34,6 +45,7 @@ export default function ProfileSlide({
   const fileInputRef = useRef(null)
   const nameInputRef = useRef(null)
   const phoneInputRef = useRef(null)
+  const manualAddressRef = useRef(null)
 
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState('')
@@ -54,6 +66,18 @@ export default function ProfileSlide({
   const [contactSaving, setContactSaving] = useState(false)
   const [contactSuccess, setContactSuccess] = useState(false)
 
+  const [editingLocation, setEditingLocation] = useState(false)
+  const [locationAddress, setLocationAddress] = useState('')
+  const [locationLat, setLocationLat] = useState(null)
+  const [locationLng, setLocationLng] = useState(null)
+  const [manualAddress, setManualAddress] = useState('')
+  const [detectedAddress, setDetectedAddress] = useState('')
+  const [locationDetecting, setLocationDetecting] = useState(false)
+  const [locationDetectError, setLocationDetectError] = useState('')
+  const [locationSaving, setLocationSaving] = useState(false)
+  const [locationSuccess, setLocationSuccess] = useState(false)
+  const [locationMode, setLocationMode] = useState('manual')
+
   useEffect(() => { setPreviewUrl(logoUrl || '') }, [logoUrl])
   useEffect(() => { setNameInput(restaurantName || '') }, [restaurantName])
 
@@ -61,6 +85,12 @@ export default function ProfileSlide({
     const { phone, email } = loadContact(restaurantId)
     setContactPhone(phone)
     setContactEmail(email)
+  }, [restaurantId])
+
+  useEffect(() => {
+    const { address } = loadLocation(restaurantId)
+    setLocationAddress(address)
+    setManualAddress(address)
   }, [restaurantId])
 
   useEffect(() => {
@@ -77,33 +107,34 @@ export default function ProfileSlide({
       setContactPhoneError('')
       setContactEmailError('')
       setContactSuccess(false)
+      setEditingLocation(false)
+      setLocationDetectError('')
+      setDetectedAddress('')
+      setLocationSuccess(false)
+      setLocationMode('manual')
     }
     return () => { document.body.style.overflow = '' }
   }, [open])
 
   useEffect(() => {
-    if (editingName) {
-      setTimeout(() => nameInputRef.current?.focus(), 60)
-    }
+    if (editingName) setTimeout(() => nameInputRef.current?.focus(), 60)
   }, [editingName])
 
   useEffect(() => {
-    if (editingContact) {
-      setTimeout(() => phoneInputRef.current?.focus(), 60)
-    }
+    if (editingContact) setTimeout(() => phoneInputRef.current?.focus(), 60)
   }, [editingContact])
+
+  useEffect(() => {
+    if (editingLocation && locationMode === 'manual') {
+      setTimeout(() => manualAddressRef.current?.focus(), 60)
+    }
+  }, [editingLocation, locationMode])
 
   async function handleLogoUpload(file) {
     if (!file) return
     const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
-    if (!allowed.includes(file.type)) {
-      setUploadError('Only JPG, PNG, WEBP or GIF images are allowed.')
-      return
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      setUploadError('Image must be smaller than 5 MB.')
-      return
-    }
+    if (!allowed.includes(file.type)) { setUploadError('Only JPG, PNG, WEBP or GIF images are allowed.'); return }
+    if (file.size > 5 * 1024 * 1024) { setUploadError('Image must be smaller than 5 MB.'); return }
     setUploadError('')
     setUploading(true)
     setUploadSuccess(false)
@@ -130,10 +161,7 @@ export default function ProfileSlide({
 
   async function handleSaveName() {
     const trimmed = nameInput.trim()
-    if (!trimmed) {
-      setNameError('Restaurant name cannot be empty.')
-      return
-    }
+    if (!trimmed) { setNameError('Restaurant name cannot be empty.'); return }
     setNameError('')
     setNameSaving(true)
     setNameSuccess(false)
@@ -164,30 +192,14 @@ export default function ProfileSlide({
   function validateContact() {
     let valid = true
     const phoneDigits = contactPhone.replace(/\D/g, '')
-    if (!contactPhone.trim()) {
-      setContactPhoneError('Contact number is required.')
-      valid = false
-    } else if (!/^\d+$/.test(contactPhone.trim())) {
-      setContactPhoneError('Only numbers are allowed.')
-      valid = false
-    } else if (phoneDigits.length !== 10) {
-      setContactPhoneError('Must be exactly 10 digits.')
-      valid = false
-    } else {
-      setContactPhoneError('')
-    }
-
+    if (!contactPhone.trim()) { setContactPhoneError('Contact number is required.'); valid = false }
+    else if (!/^\d+$/.test(contactPhone.trim())) { setContactPhoneError('Only numbers are allowed.'); valid = false }
+    else if (phoneDigits.length !== 10) { setContactPhoneError('Must be exactly 10 digits.'); valid = false }
+    else setContactPhoneError('')
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!contactEmail.trim()) {
-      setContactEmailError('Email address is required.')
-      valid = false
-    } else if (!emailRegex.test(contactEmail.trim())) {
-      setContactEmailError('Enter a valid email address.')
-      valid = false
-    } else {
-      setContactEmailError('')
-    }
-
+    if (!contactEmail.trim()) { setContactEmailError('Email address is required.'); valid = false }
+    else if (!emailRegex.test(contactEmail.trim())) { setContactEmailError('Enter a valid email address.'); valid = false }
+    else setContactEmailError('')
     return valid
   }
 
@@ -226,6 +238,95 @@ export default function ProfileSlide({
     setContactPhoneError('')
   }
 
+  async function handleDetectLocation() {
+    if (!navigator.geolocation) {
+      setLocationDetectError('Geolocation is not supported by your browser.')
+      return
+    }
+    setLocationDetecting(true)
+    setLocationDetectError('')
+    setDetectedAddress('')
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const { latitude: lat, longitude: lng } = pos.coords
+        try {
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=en`,
+            { headers: { 'User-Agent': 'ExziboApp/1.0' } }
+          )
+          const data = await res.json()
+          const addr = data.display_name || `${lat.toFixed(5)}, ${lng.toFixed(5)}`
+          setDetectedAddress(addr)
+          setLocationLat(lat)
+          setLocationLng(lng)
+          setManualAddress(addr)
+        } catch {
+          setLocationDetectError('Could not fetch address. Check your connection.')
+        } finally {
+          setLocationDetecting(false)
+        }
+      },
+      (err) => {
+        setLocationDetecting(false)
+        if (err.code === err.PERMISSION_DENIED) {
+          setLocationDetectError('Location permission denied. Please allow location access and try again.')
+        } else if (err.code === err.POSITION_UNAVAILABLE) {
+          setLocationDetectError('Location unavailable. Try entering address manually.')
+        } else {
+          setLocationDetectError('Could not detect location. Try entering address manually.')
+        }
+      },
+      { timeout: 10000, enableHighAccuracy: true }
+    )
+  }
+
+  async function handleSaveLocation() {
+    const address = manualAddress.trim()
+    if (!address) return
+    setLocationSaving(true)
+    try {
+      await new Promise(r => setTimeout(r, 400))
+      if (!restaurantId || restaurantId === 'default') {
+        const config = JSON.parse(localStorage.getItem('exzibo_admin_global_config') || '{}')
+        config.location = address
+        if (locationLat) config.locationLat = locationLat
+        if (locationLng) config.locationLng = locationLng
+        localStorage.setItem('exzibo_admin_global_config', JSON.stringify(config))
+      } else {
+        const all = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
+        const updated = all.map(r => r.id === restaurantId
+          ? { ...r, location: address, ...(locationLat ? { locationLat } : {}), ...(locationLng ? { locationLng } : {}) }
+          : r
+        )
+        localStorage.setItem('exzibo_restaurants', JSON.stringify(updated))
+      }
+      window.dispatchEvent(new CustomEvent('exzibo-location-changed', {
+        detail: { restaurantId, location: address, locationLat, locationLng }
+      }))
+      setLocationAddress(address)
+      setLocationSuccess(true)
+      setEditingLocation(false)
+      setTimeout(() => setLocationSuccess(false), 2500)
+    } catch {
+      setLocationDetectError('Failed to save. Please try again.')
+    } finally {
+      setLocationSaving(false)
+    }
+  }
+
+  const InputField = ({ label, icon, children }) => (
+    <div style={{ marginBottom: '10px' }}>
+      <label style={{
+        display: 'flex', alignItems: 'center', gap: '5px',
+        fontSize: '11px', fontWeight: 700, color: '#888',
+        letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: '6px',
+      }}>
+        {icon} {label}
+      </label>
+      {children}
+    </div>
+  )
+
   return (
     <>
       <input
@@ -262,7 +363,7 @@ export default function ProfileSlide({
       }}>
         <div style={{ padding: '20px 16px 32px' }}>
 
-          {/* Close button */}
+          {/* Close */}
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '8px' }}>
             <button onClick={onClose} style={{
               background: 'rgba(0,0,0,0.07)', border: 'none', borderRadius: '50%',
@@ -320,46 +421,11 @@ export default function ProfileSlide({
           </div>
 
           {/* Status messages */}
-          {uploadError && (
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: '8px',
-              background: '#FEF2F2', border: '1px solid #FECACA',
-              borderRadius: '12px', padding: '10px 14px', marginBottom: '10px',
-              color: '#EF4444', fontSize: '12px', fontWeight: 600,
-            }}>
-              <AlertCircle size={14} /> {uploadError}
-            </div>
-          )}
-          {uploadSuccess && (
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: '8px',
-              background: '#F0FDF4', border: '1px solid #A7F3D0',
-              borderRadius: '12px', padding: '10px 14px', marginBottom: '10px',
-              color: '#10B981', fontSize: '12px', fontWeight: 600,
-            }}>
-              <CheckCircle2 size={14} /> Logo updated successfully!
-            </div>
-          )}
-          {nameSuccess && (
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: '8px',
-              background: '#F0FDF4', border: '1px solid #A7F3D0',
-              borderRadius: '12px', padding: '10px 14px', marginBottom: '10px',
-              color: '#10B981', fontSize: '12px', fontWeight: 600,
-            }}>
-              <CheckCircle2 size={14} /> Restaurant name updated!
-            </div>
-          )}
-          {contactSuccess && (
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: '8px',
-              background: '#F0FDF4', border: '1px solid #A7F3D0',
-              borderRadius: '12px', padding: '10px 14px', marginBottom: '10px',
-              color: '#10B981', fontSize: '12px', fontWeight: 600,
-            }}>
-              <CheckCircle2 size={14} /> Contact info updated successfully!
-            </div>
-          )}
+          {uploadError && <StatusMsg type="error"><AlertCircle size={14} /> {uploadError}</StatusMsg>}
+          {uploadSuccess && <StatusMsg type="success"><CheckCircle2 size={14} /> Logo updated successfully!</StatusMsg>}
+          {nameSuccess && <StatusMsg type="success"><CheckCircle2 size={14} /> Restaurant name updated!</StatusMsg>}
+          {contactSuccess && <StatusMsg type="success"><CheckCircle2 size={14} /> Contact info updated successfully!</StatusMsg>}
+          {locationSuccess && <StatusMsg type="success"><CheckCircle2 size={14} /> Location updated successfully!</StatusMsg>}
 
           {/* Menu list */}
           <div style={{ background: '#E9E9EF', borderRadius: '18px', padding: '8px 10px', marginBottom: '14px' }}>
@@ -404,75 +470,28 @@ export default function ProfileSlide({
                 </span>
                 {nameSuccess && !editingName && <CheckCircle2 size={16} color="#10B981" />}
               </div>
-
-              {/* Name inline editor */}
               {editingName && (
-                <div style={{
-                  background: '#fff', borderRadius: '0 0 14px 14px',
-                  padding: '12px 12px 14px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
-                }}>
+                <div style={{ background: '#fff', borderRadius: '0 0 14px 14px', padding: '12px 12px 14px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}>
                   <input
                     ref={nameInputRef}
                     value={nameInput}
                     onChange={e => { setNameInput(e.target.value); setNameError('') }}
                     onKeyDown={e => { if (e.key === 'Enter') handleSaveName(); if (e.key === 'Escape') setEditingName(false) }}
                     placeholder="Enter restaurant name..."
-                    style={{
-                      width: '100%', boxSizing: 'border-box',
-                      padding: '10px 12px', borderRadius: '10px',
-                      border: `1.5px solid ${nameError ? '#FECACA' : '#E0E0E8'}`,
-                      fontSize: '14px', fontWeight: 600, color: '#111',
-                      outline: 'none', background: '#F7F7FA',
-                      marginBottom: nameError ? '6px' : '10px',
-                      transition: 'border-color 0.15s',
-                    }}
+                    style={inputStyle(nameError)}
                     onFocus={e => e.target.style.borderColor = LIME}
                     onBlur={e => e.target.style.borderColor = nameError ? '#FECACA' : '#E0E0E8'}
                   />
-                  {nameError && (
-                    <div style={{
-                      display: 'flex', alignItems: 'center', gap: '6px',
-                      color: '#EF4444', fontSize: '11px', fontWeight: 600,
-                      marginBottom: '8px',
-                    }}>
-                      <AlertCircle size={12} /> {nameError}
-                    </div>
-                  )}
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <button
-                      onClick={handleSaveName}
-                      disabled={nameSaving}
-                      style={{
-                        flex: 1, padding: '9px 0', borderRadius: '10px',
-                        background: LIME, border: 'none',
-                        fontWeight: 700, fontSize: '12px', letterSpacing: '0.06em',
-                        color: '#1a1a1a', cursor: nameSaving ? 'not-allowed' : 'pointer',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
-                        opacity: nameSaving ? 0.7 : 1, transition: 'opacity 0.15s',
-                      }}
-                    >
-                      {nameSaving
-                        ? <><Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> SAVING…</>
-                        : <><Check size={13} /> SAVE</>}
-                    </button>
-                    <button
-                      onClick={() => { setEditingName(false); setNameError(''); setNameInput(restaurantName || '') }}
-                      style={{
-                        padding: '9px 14px', borderRadius: '10px',
-                        background: '#EBEBF0', border: 'none',
-                        fontWeight: 700, fontSize: '12px', letterSpacing: '0.06em',
-                        color: '#555', cursor: 'pointer',
-                        display: 'flex', alignItems: 'center', gap: '5px',
-                      }}
-                    >
-                      <XCircle size={13} /> CANCEL
-                    </button>
-                  </div>
+                  {nameError && <InlineError>{nameError}</InlineError>}
+                  <ActionButtons
+                    onSave={handleSaveName} onCancel={() => { setEditingName(false); setNameError(''); setNameInput(restaurantName || '') }}
+                    saving={nameSaving}
+                  />
                 </div>
               )}
             </div>
 
-            {/* CONTACT INFO — editable */}
+            {/* CONTACT INFO */}
             <div style={{ marginBottom: '2px' }}>
               <div
                 onClick={() => {
@@ -501,23 +520,9 @@ export default function ProfileSlide({
                 </span>
                 {contactSuccess && !editingContact && <CheckCircle2 size={16} color="#10B981" />}
               </div>
-
-              {/* Contact inline editor */}
               {editingContact && (
-                <div style={{
-                  background: '#fff', borderRadius: '0 0 14px 14px',
-                  padding: '12px 12px 14px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
-                }}>
-                  {/* Phone field */}
-                  <div style={{ marginBottom: contactPhoneError ? '6px' : '10px' }}>
-                    <label style={{
-                      display: 'flex', alignItems: 'center', gap: '6px',
-                      fontSize: '11px', fontWeight: 700, color: '#888',
-                      letterSpacing: '0.07em', textTransform: 'uppercase',
-                      marginBottom: '6px',
-                    }}>
-                      <Phone size={11} /> Contact Number
-                    </label>
+                <div style={{ background: '#fff', borderRadius: '0 0 14px 14px', padding: '12px 12px 14px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}>
+                  <InputField label="Contact Number" icon={<Phone size={11} />}>
                     <input
                       ref={phoneInputRef}
                       type="tel"
@@ -527,91 +532,243 @@ export default function ProfileSlide({
                       onKeyDown={e => { if (e.key === 'Escape') setEditingContact(false) }}
                       placeholder="10-digit number"
                       maxLength={10}
-                      style={{
-                        width: '100%', boxSizing: 'border-box',
-                        padding: '10px 12px', borderRadius: '10px',
-                        border: `1.5px solid ${contactPhoneError ? '#FECACA' : '#E0E0E8'}`,
-                        fontSize: '14px', fontWeight: 600, color: '#111',
-                        outline: 'none', background: '#F7F7FA',
-                        transition: 'border-color 0.15s',
-                      }}
+                      style={inputStyle(contactPhoneError)}
                       onFocus={e => e.target.style.borderColor = contactPhoneError ? '#FECACA' : LIME}
                       onBlur={e => e.target.style.borderColor = contactPhoneError ? '#FECACA' : '#E0E0E8'}
                     />
-                  </div>
-                  {contactPhoneError && (
-                    <div style={{
-                      display: 'flex', alignItems: 'center', gap: '6px',
-                      color: '#EF4444', fontSize: '11px', fontWeight: 600,
-                      marginBottom: '8px',
-                    }}>
-                      <AlertCircle size={12} /> {contactPhoneError}
-                    </div>
-                  )}
-
-                  {/* Email field */}
-                  <div style={{ marginBottom: contactEmailError ? '6px' : '10px' }}>
-                    <label style={{
-                      display: 'flex', alignItems: 'center', gap: '6px',
-                      fontSize: '11px', fontWeight: 700, color: '#888',
-                      letterSpacing: '0.07em', textTransform: 'uppercase',
-                      marginBottom: '6px',
-                    }}>
-                      <Mail size={11} /> Email Address
-                    </label>
+                  </InputField>
+                  {contactPhoneError && <InlineError>{contactPhoneError}</InlineError>}
+                  <InputField label="Email Address" icon={<Mail size={11} />}>
                     <input
                       type="email"
                       value={contactEmail}
                       onChange={e => { setContactEmail(e.target.value); setContactEmailError('') }}
                       onKeyDown={e => { if (e.key === 'Escape') setEditingContact(false) }}
                       placeholder="example@gmail.com"
-                      style={{
-                        width: '100%', boxSizing: 'border-box',
-                        padding: '10px 12px', borderRadius: '10px',
-                        border: `1.5px solid ${contactEmailError ? '#FECACA' : '#E0E0E8'}`,
-                        fontSize: '14px', fontWeight: 600, color: '#111',
-                        outline: 'none', background: '#F7F7FA',
-                        transition: 'border-color 0.15s',
-                      }}
+                      style={inputStyle(contactEmailError)}
                       onFocus={e => e.target.style.borderColor = contactEmailError ? '#FECACA' : LIME}
                       onBlur={e => e.target.style.borderColor = contactEmailError ? '#FECACA' : '#E0E0E8'}
                     />
-                  </div>
-                  {contactEmailError && (
+                  </InputField>
+                  {contactEmailError && <InlineError>{contactEmailError}</InlineError>}
+                  <ActionButtons
+                    onSave={handleSaveContact}
+                    onCancel={() => {
+                      setEditingContact(false)
+                      setContactPhoneError('')
+                      setContactEmailError('')
+                      const { phone, email } = loadContact(restaurantId)
+                      setContactPhone(phone)
+                      setContactEmail(email)
+                    }}
+                    saving={contactSaving}
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* LOCATION */}
+            <div style={{ marginBottom: '2px' }}>
+              <div
+                onClick={() => {
+                  setEditingLocation(v => !v)
+                  setLocationDetectError('')
+                  if (!editingLocation) {
+                    const { address } = loadLocation(restaurantId)
+                    setManualAddress(address)
+                    setDetectedAddress('')
+                    setLocationLat(null)
+                    setLocationLng(null)
+                  }
+                }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '14px',
+                  padding: '13px 10px',
+                  borderRadius: editingLocation ? '12px 12px 0 0' : '12px',
+                  background: editingLocation ? 'rgba(168,230,61,0.15)' : 'transparent',
+                  cursor: 'pointer', transition: 'background 0.15s',
+                }}
+              >
+                <span style={{ color: '#333', display: 'flex', alignItems: 'center' }}>
+                  <MapPin size={22} strokeWidth={1.4} />
+                </span>
+                <span style={{ fontWeight: 700, fontSize: '13px', letterSpacing: '0.08em', textTransform: 'uppercase', color: '#222', flex: 1 }}>
+                  LOCATION
+                </span>
+                {locationSuccess && !editingLocation && <CheckCircle2 size={16} color="#10B981" />}
+              </div>
+
+              {editingLocation && (
+                <div style={{ background: '#fff', borderRadius: '0 0 14px 14px', padding: '14px 12px 16px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}>
+
+                  {/* Current saved location */}
+                  {locationAddress && (
                     <div style={{
-                      display: 'flex', alignItems: 'center', gap: '6px',
-                      color: '#EF4444', fontSize: '11px', fontWeight: 600,
-                      marginBottom: '8px',
+                      background: '#F0FDF4', border: '1px solid #A7F3D0',
+                      borderRadius: '10px', padding: '8px 12px', marginBottom: '12px',
+                      display: 'flex', alignItems: 'flex-start', gap: '8px',
                     }}>
-                      <AlertCircle size={12} /> {contactEmailError}
+                      <MapPin size={13} color="#10B981" style={{ marginTop: '2px', flexShrink: 0 }} />
+                      <span style={{ fontSize: '12px', color: '#065F46', fontWeight: 600, lineHeight: 1.5 }}>
+                        {locationAddress}
+                      </span>
                     </div>
                   )}
 
-                  <div style={{ display: 'flex', gap: '8px' }}>
+                  {/* Mode tabs */}
+                  <div style={{ display: 'flex', gap: '6px', marginBottom: '14px' }}>
                     <button
-                      onClick={handleSaveContact}
-                      disabled={contactSaving}
+                      onClick={() => { setLocationMode('auto'); setLocationDetectError('') }}
                       style={{
-                        flex: 1, padding: '9px 0', borderRadius: '10px',
-                        background: LIME, border: 'none',
-                        fontWeight: 700, fontSize: '12px', letterSpacing: '0.06em',
-                        color: '#1a1a1a', cursor: contactSaving ? 'not-allowed' : 'pointer',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
-                        opacity: contactSaving ? 0.7 : 1, transition: 'opacity 0.15s',
+                        flex: 1, padding: '8px 0', borderRadius: '10px', border: 'none',
+                        background: locationMode === 'auto' ? '#1a1a1a' : '#F0F0F5',
+                        color: locationMode === 'auto' ? '#fff' : '#555',
+                        fontWeight: 700, fontSize: '11px', letterSpacing: '0.06em',
+                        cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px',
+                        transition: 'all 0.15s',
                       }}
                     >
-                      {contactSaving
+                      <Navigation size={12} /> AUTO DETECT
+                    </button>
+                    <button
+                      onClick={() => { setLocationMode('manual'); setLocationDetectError('') }}
+                      style={{
+                        flex: 1, padding: '8px 0', borderRadius: '10px', border: 'none',
+                        background: locationMode === 'manual' ? '#1a1a1a' : '#F0F0F5',
+                        color: locationMode === 'manual' ? '#fff' : '#555',
+                        fontWeight: 700, fontSize: '11px', letterSpacing: '0.06em',
+                        cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px',
+                        transition: 'all 0.15s',
+                      }}
+                    >
+                      <PenLine size={12} /> MANUAL
+                    </button>
+                  </div>
+
+                  {/* Auto detect section */}
+                  {locationMode === 'auto' && (
+                    <div>
+                      <button
+                        onClick={handleDetectLocation}
+                        disabled={locationDetecting}
+                        style={{
+                          width: '100%', padding: '11px 0', borderRadius: '10px',
+                          background: locationDetecting ? '#E9E9EF' : '#1a1a1a',
+                          border: 'none', color: locationDetecting ? '#999' : '#fff',
+                          fontWeight: 700, fontSize: '12px', letterSpacing: '0.06em',
+                          cursor: locationDetecting ? 'not-allowed' : 'pointer',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                          marginBottom: '10px', transition: 'all 0.15s',
+                        }}
+                      >
+                        {locationDetecting
+                          ? <><Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> DETECTING…</>
+                          : <><Navigation size={14} /> USE MY CURRENT LOCATION</>}
+                      </button>
+
+                      {locationDetectError && (
+                        <div style={{
+                          display: 'flex', alignItems: 'flex-start', gap: '7px',
+                          background: '#FEF2F2', border: '1px solid #FECACA',
+                          borderRadius: '10px', padding: '10px 12px', marginBottom: '10px',
+                          color: '#EF4444', fontSize: '12px', fontWeight: 600, lineHeight: 1.4,
+                        }}>
+                          <AlertCircle size={13} style={{ flexShrink: 0, marginTop: '1px' }} />
+                          {locationDetectError}
+                        </div>
+                      )}
+
+                      {detectedAddress && (
+                        <div style={{
+                          background: '#F0F9FF', border: '1px solid #BAE6FD',
+                          borderRadius: '10px', padding: '10px 12px', marginBottom: '10px',
+                        }}>
+                          <div style={{ fontSize: '10px', fontWeight: 700, color: '#0369A1', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '4px' }}>
+                            Detected Address
+                          </div>
+                          <div style={{ fontSize: '12px', color: '#0C4A6E', fontWeight: 600, lineHeight: 1.5 }}>
+                            {detectedAddress}
+                          </div>
+                          {locationLat && locationLng && (
+                            <a
+                              href={`https://www.google.com/maps?q=${locationLat},${locationLng}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{
+                                display: 'inline-flex', alignItems: 'center', gap: '4px',
+                                marginTop: '6px', fontSize: '11px', color: '#2563EB',
+                                fontWeight: 600, textDecoration: 'none',
+                              }}
+                            >
+                              <MapPin size={10} /> View on Google Maps ↗
+                            </a>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Manual section */}
+                  {locationMode === 'manual' && (
+                    <div>
+                      <InputField label="Restaurant Address" icon={<MapPin size={11} />}>
+                        <textarea
+                          ref={manualAddressRef}
+                          value={manualAddress}
+                          onChange={e => setManualAddress(e.target.value)}
+                          placeholder="Enter your full restaurant address..."
+                          rows={3}
+                          style={{
+                            width: '100%', boxSizing: 'border-box',
+                            padding: '10px 12px', borderRadius: '10px',
+                            border: '1.5px solid #E0E0E8',
+                            fontSize: '13px', fontWeight: 500, color: '#111',
+                            outline: 'none', background: '#F7F7FA',
+                            resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.5,
+                            transition: 'border-color 0.15s',
+                          }}
+                          onFocus={e => e.target.style.borderColor = LIME}
+                          onBlur={e => e.target.style.borderColor = '#E0E0E8'}
+                        />
+                      </InputField>
+                    </div>
+                  )}
+
+                  {locationDetectError && locationMode === 'manual' && (
+                    <div style={{
+                      display: 'flex', alignItems: 'center', gap: '6px',
+                      color: '#EF4444', fontSize: '11px', fontWeight: 600, marginBottom: '8px',
+                    }}>
+                      <AlertCircle size={12} /> {locationDetectError}
+                    </div>
+                  )}
+
+                  <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+                    <button
+                      onClick={handleSaveLocation}
+                      disabled={locationSaving || !manualAddress.trim()}
+                      style={{
+                        flex: 1, padding: '9px 0', borderRadius: '10px',
+                        background: (!manualAddress.trim()) ? '#E9E9EF' : LIME,
+                        border: 'none',
+                        fontWeight: 700, fontSize: '12px', letterSpacing: '0.06em',
+                        color: (!manualAddress.trim()) ? '#aaa' : '#1a1a1a',
+                        cursor: (locationSaving || !manualAddress.trim()) ? 'not-allowed' : 'pointer',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                        opacity: locationSaving ? 0.7 : 1, transition: 'all 0.15s',
+                      }}
+                    >
+                      {locationSaving
                         ? <><Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> SAVING…</>
-                        : <><Check size={13} /> SAVE</>}
+                        : <><Check size={13} /> SAVE LOCATION</>}
                     </button>
                     <button
                       onClick={() => {
-                        setEditingContact(false)
-                        setContactPhoneError('')
-                        setContactEmailError('')
-                        const { phone, email } = loadContact(restaurantId)
-                        setContactPhone(phone)
-                        setContactEmail(email)
+                        setEditingLocation(false)
+                        setLocationDetectError('')
+                        setDetectedAddress('')
+                        const { address } = loadLocation(restaurantId)
+                        setManualAddress(address)
                       }}
                       style={{
                         padding: '9px 14px', borderRadius: '10px',
@@ -628,25 +785,10 @@ export default function ProfileSlide({
               )}
             </div>
 
-            {/* LOCATION — active */}
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: '14px',
-              padding: '13px 10px', borderRadius: '12px',
-              background: LIME, marginBottom: '2px', cursor: 'default',
-            }}>
-              <span style={{ color: '#1a1a1a', display: 'flex', alignItems: 'center' }}>
-                <MapPin size={22} strokeWidth={1.4} />
-              </span>
-              <span style={{ fontWeight: 700, fontSize: '13px', letterSpacing: '0.08em', textTransform: 'uppercase', color: '#1a1a1a' }}>
-                LOCATION
-              </span>
-            </div>
-
             {/* TEAM MEMBERS */}
             <div style={{
               display: 'flex', alignItems: 'center', gap: '14px',
-              padding: '13px 10px', borderRadius: '12px',
-              cursor: 'default',
+              padding: '13px 10px', borderRadius: '12px', cursor: 'default',
             }}>
               <span style={{ color: '#333', display: 'flex', alignItems: 'center' }}>
                 <Users size={22} strokeWidth={1.4} />
@@ -695,4 +837,77 @@ export default function ProfileSlide({
       `}</style>
     </>
   )
+}
+
+function StatusMsg({ type, children }) {
+  const isError = type === 'error'
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: '8px',
+      background: isError ? '#FEF2F2' : '#F0FDF4',
+      border: `1px solid ${isError ? '#FECACA' : '#A7F3D0'}`,
+      borderRadius: '12px', padding: '10px 14px', marginBottom: '10px',
+      color: isError ? '#EF4444' : '#10B981', fontSize: '12px', fontWeight: 600,
+    }}>
+      {children}
+    </div>
+  )
+}
+
+function InlineError({ children }) {
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: '6px',
+      color: '#EF4444', fontSize: '11px', fontWeight: 600, marginBottom: '8px',
+    }}>
+      <AlertCircle size={12} /> {children}
+    </div>
+  )
+}
+
+function ActionButtons({ onSave, onCancel, saving }) {
+  return (
+    <div style={{ display: 'flex', gap: '8px' }}>
+      <button
+        onClick={onSave}
+        disabled={saving}
+        style={{
+          flex: 1, padding: '9px 0', borderRadius: '10px',
+          background: '#A8E63D', border: 'none',
+          fontWeight: 700, fontSize: '12px', letterSpacing: '0.06em',
+          color: '#1a1a1a', cursor: saving ? 'not-allowed' : 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+          opacity: saving ? 0.7 : 1, transition: 'opacity 0.15s',
+        }}
+      >
+        {saving
+          ? <><Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> SAVING…</>
+          : <><Check size={13} /> SAVE</>}
+      </button>
+      <button
+        onClick={onCancel}
+        style={{
+          padding: '9px 14px', borderRadius: '10px',
+          background: '#EBEBF0', border: 'none',
+          fontWeight: 700, fontSize: '12px', letterSpacing: '0.06em',
+          color: '#555', cursor: 'pointer',
+          display: 'flex', alignItems: 'center', gap: '5px',
+        }}
+      >
+        <XCircle size={13} /> CANCEL
+      </button>
+    </div>
+  )
+}
+
+function inputStyle(hasError) {
+  return {
+    width: '100%', boxSizing: 'border-box',
+    padding: '10px 12px', borderRadius: '10px',
+    border: `1.5px solid ${hasError ? '#FECACA' : '#E0E0E8'}`,
+    fontSize: '14px', fontWeight: 600, color: '#111',
+    outline: 'none', background: '#F7F7FA',
+    marginBottom: hasError ? '6px' : '10px',
+    transition: 'border-color 0.15s',
+  }
 }
