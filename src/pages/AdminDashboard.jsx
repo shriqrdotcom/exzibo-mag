@@ -1283,6 +1283,7 @@ function SettingsPanel({ draft, setDraft, accentStart, accentEnd, onSave, saved,
   const [socialLinks, setSocialLinks] = useState({
     facebook: '', instagram: '', twitter: '', website: '', linkedin: '', youtube: '',
   })
+  const [pastedKey, setPastedKey] = useState(null)
   const couponStorageKey = `exzibo_coupons_${restaurantId || 'default'}`
   const [coupons, setCoupons] = useState(() => {
     try { return JSON.parse(localStorage.getItem(couponStorageKey) || '[]') } catch { return [] }
@@ -1518,6 +1519,9 @@ function SettingsPanel({ draft, setDraft, accentStart, accentEnd, onSave, saved,
           .social-paste-btn:hover {
             background: #1d4ed8;
           }
+          .social-paste-btn.pasted {
+            background: #16a34a;
+          }
           @media (max-width: 500px) {
             .social-links-grid {
               grid-template-columns: 1fr;
@@ -1553,16 +1557,22 @@ function SettingsPanel({ draft, setDraft, accentStart, accentEnd, onSave, saved,
                     placeholder={p.placeholder}
                   />
                   <button
-                    className="social-paste-btn"
+                    className={`social-paste-btn${pastedKey === p.key ? ' pasted' : ''}`}
                     title={`Paste ${p.label} URL`}
                     onClick={async () => {
                       try {
                         const text = await navigator.clipboard.readText()
-                        setSocialLinks(s => ({ ...s, [p.key]: text }))
-                      } catch {}
+                        if (text) {
+                          setSocialLinks(s => ({ ...s, [p.key]: text }))
+                          setPastedKey(p.key)
+                          setTimeout(() => setPastedKey(null), 1500)
+                        }
+                      } catch {
+                        setPastedKey(null)
+                      }
                     }}
                   >
-                    PASTE
+                    {pastedKey === p.key ? '✓ PASTED' : 'PASTE'}
                   </button>
                 </div>
               </div>

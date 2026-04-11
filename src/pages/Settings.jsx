@@ -449,12 +449,18 @@ function Section({ title, subtitle, icon, children }) {
 }
 
 function SocialField({ label, icon, value, placeholder, onChange }) {
+  const [pasted, setPasted] = useState(false)
+
   const handlePaste = async () => {
     try {
       const text = await navigator.clipboard.readText()
-      onChange(text)
+      if (text) {
+        onChange(text)
+        setPasted(true)
+        setTimeout(() => setPasted(false), 1500)
+      }
     } catch {
-      // fallback: do nothing if clipboard permission denied
+      setPasted(false)
     }
   }
 
@@ -475,9 +481,14 @@ function SocialField({ label, icon, value, placeholder, onChange }) {
           placeholder={placeholder}
           onChange={e => onChange(e.target.value)}
         />
-        <button className="paste-btn" onClick={handlePaste} title={`Paste ${label} URL`}>
+        <button
+          className="paste-btn"
+          onClick={handlePaste}
+          title={`Paste ${label} URL`}
+          style={{ background: pasted ? 'rgba(34,197,94,0.2)' : undefined, color: pasted ? '#4ade80' : undefined }}
+        >
           <ClipboardPaste size={13} />
-          PASTE
+          {pasted ? '✓ PASTED' : 'PASTE'}
         </button>
       </div>
     </div>
