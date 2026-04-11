@@ -5,7 +5,7 @@ import {
   Star, MapPin, Bell, ShoppingCart, Home,
   UtensilsCrossed, ClipboardList, CalendarDays,
   Heart, Moon, Sun, ChevronRight, ChevronLeft,
-  Phone, Flame, Award, Clock, Users, AtSign,
+  Phone, Mail, Flame, Award, Clock, Users, AtSign,
   Share2, MessageCircle, Globe, Leaf, ExternalLink,
   Trash2, Minus, Plus, Tag, CheckCircle, ShoppingBag,
   Copy, PhoneCall, ArrowLeft
@@ -564,6 +564,7 @@ export default function RestaurantWebsite() {
     if (slug === 'demo') {
       const savedDemoLogo = localStorage.getItem('exzibo_logo_default') || ''
       const savedDemoName = localStorage.getItem('exzibo_name_default') || 'La Maison Noire'
+      const demoConfig = JSON.parse(localStorage.getItem('exzibo_admin_global_config') || '{}')
       setRestaurant({
         id: 'demo', slug: 'demo',
         name: savedDemoName,
@@ -571,7 +572,8 @@ export default function RestaurantWebsite() {
         description: 'An uncompromising culinary experience rooted in craft, quality, and atmosphere. Every dish is a conversation between heritage and innovation.',
         chefInfo: 'Chef Marcus Aurélius, trained in Paris and Tokyo, brings 20 years of Michelin-star experience to every plate.',
         rating: '4.9',
-        phone: '+91 98765 43210',
+        phone: demoConfig.phone || '+91 98765 43210',
+        email: demoConfig.email || '',
         tables: '24',
         images: FALLBACK_IMAGES,
         logo: savedDemoLogo,
@@ -1422,6 +1424,9 @@ export default function RestaurantWebsite() {
                 })()}
                 {restaurant.phone && (
                   <InfoRow icon={<Phone size={14} color="#60a5fa" />} label="Reservations" value={restaurant.phone} theme={theme} />
+                )}
+                {restaurant.email && (
+                  <InfoRow icon={<Mail size={14} color="#a78bfa" />} label="Email" value={restaurant.email} theme={theme} />
                 )}
                 {restaurant.rating && (
                   <InfoRow icon={<Star size={14} color="#FFB800" fill="#FFB800" />} label="Rating" value={`${restaurant.rating} / 5`} theme={theme} />
