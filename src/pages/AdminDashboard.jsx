@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAnalytics, notifyAnalyticsUpdate } from '../context/AnalyticsContext'
+import ProfileSlide from '../components/ProfileSlide'
 import {
   CheckCircle, XCircle,
   ClipboardList, BookOpen, Users, Settings, ArrowLeft, BarChart2,
@@ -146,6 +147,7 @@ export default function AdminDashboard() {
   const [showMenuSearch, setShowMenuSearch] = useState(false)
   const [menuSearch, setMenuSearch] = useState('')
   const menuSearchRef = useRef(null)
+  const [profileOpen, setProfileOpen] = useState(false)
 
   function loadBookings(restaurantId) {
     const key = `exzibo_bookings_${restaurantId}`
@@ -463,13 +465,26 @@ export default function AdminDashboard() {
             >
               <ArrowLeft size={16} />
             </button>
-            <div style={{
-              width: '44px', height: '44px', borderRadius: '14px',
-              background: `linear-gradient(135deg, ${accentStart}, ${accentEnd})`,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: `0 4px 12px ${accentStart}50`,
-              fontSize: '16px', fontWeight: 900, color: '#fff',
-            }}>
+            <div
+              onClick={() => setProfileOpen(true)}
+              style={{
+                width: '44px', height: '44px', borderRadius: '14px',
+                background: `linear-gradient(135deg, ${accentStart}, ${accentEnd})`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                boxShadow: `0 4px 12px ${accentStart}50`,
+                fontSize: '16px', fontWeight: 900, color: '#fff',
+                cursor: 'pointer',
+                transition: 'transform 0.15s, box-shadow 0.15s',
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.transform = 'scale(1.07)'
+                e.currentTarget.style.boxShadow = `0 6px 18px ${accentStart}70`
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.transform = 'scale(1)'
+                e.currentTarget.style.boxShadow = `0 4px 12px ${accentStart}50`
+              }}
+            >
               {initials}
             </div>
             <div>
@@ -858,6 +873,8 @@ export default function AdminDashboard() {
           )
         })}
       </div>
+
+      <ProfileSlide open={profileOpen} onClose={() => setProfileOpen(false)} />
     </div>
   )
 }
