@@ -1381,8 +1381,15 @@ function SettingsPanel({ draft, setDraft, accentStart, accentEnd, onSave, saved,
         {/* 1. Add Coupon Code */}
         <div style={cardStyle}>
           {/* Card header row with toggle */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: couponEnabled ? '14px' : '0' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div
+              onClick={() => couponEnabled && setShowCouponModal(true)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '12px',
+                cursor: couponEnabled ? 'pointer' : 'default',
+                flex: 1,
+              }}
+            >
               <div style={iconBoxStyle(couponEnabled ? '#EFF6FF' : '#f1f5f9', couponEnabled ? '#3B82F6' : '#94a3b8')}>
                 <Tag size={18} />
               </div>
@@ -1415,24 +1422,6 @@ function SettingsPanel({ draft, setDraft, accentStart, accentEnd, onSave, saved,
               }} />
             </div>
           </div>
-          {/* Clickable area shown only when enabled */}
-          {couponEnabled && (
-            <div
-              onClick={() => setShowCouponModal(true)}
-              style={{
-                padding: '10px 14px',
-                background: '#EFF6FF',
-                borderRadius: '10px',
-                border: '1.5px dashed #93C5FD',
-                cursor: 'pointer',
-                fontSize: '13px', fontWeight: 600, color: '#2E5BFF',
-                textAlign: 'center',
-                transition: 'background 0.15s',
-              }}
-            >
-              + Create / Manage Coupons
-            </div>
-          )}
         </div>
 
         {/* 2. About Section */}
