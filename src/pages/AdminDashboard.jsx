@@ -1285,6 +1285,15 @@ function SettingsPanel({ draft, setDraft, accentStart, accentEnd, onSave, saved,
   })
   const [pastedKey, setPastedKey] = useState(null)
   const couponStorageKey = `exzibo_coupons_${restaurantId || 'default'}`
+
+  useEffect(() => {
+    if (!restaurantId || restaurantId === 'demo') return
+    try {
+      const all = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
+      const found = all.find(r => r.id === restaurantId)
+      if (found?.socialLinks) setSocialLinks(prev => ({ ...prev, ...found.socialLinks }))
+    } catch {}
+  }, [restaurantId])
   const [coupons, setCoupons] = useState(() => {
     try { return JSON.parse(localStorage.getItem(couponStorageKey) || '[]') } catch { return [] }
   })
@@ -1582,7 +1591,17 @@ function SettingsPanel({ draft, setDraft, accentStart, accentEnd, onSave, saved,
 
         {/* Save Button */}
         <button
-          onClick={onSave}
+          onClick={() => {
+            if (restaurantId && restaurantId !== 'demo') {
+              try {
+                const all = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
+                const updated = all.map(r => r.id === restaurantId ? { ...r, socialLinks } : r)
+                localStorage.setItem('exzibo_restaurants', JSON.stringify(updated))
+                window.dispatchEvent(new Event('storage'))
+              } catch {}
+            }
+            onSave()
+          }}
           style={{
             width: '100%', padding: '16px',
             background: saved ? 'linear-gradient(135deg, #10B981, #059669)' : 'linear-gradient(135deg, #2563EB, #1D4ED8)',

@@ -10,7 +10,7 @@ import {
   Trash2, Minus, Plus, Tag, CheckCircle, ShoppingBag,
   Copy, PhoneCall, ArrowLeft
 } from 'lucide-react'
-import { FaInstagram, FaFacebook, FaWhatsapp } from 'react-icons/fa'
+import { FaInstagram, FaFacebook, FaWhatsapp, FaLinkedinIn, FaYoutube } from 'react-icons/fa'
 import { FaXTwitter, FaHouse, FaUtensils, FaCartShopping, FaClipboardList, FaCalendarDays, FaStore } from 'react-icons/fa6'
 
 const FALLBACK_IMAGES = [
@@ -1372,11 +1372,14 @@ export default function RestaurantWebsite() {
                 <MapPin size={10} /> {restaurant.location}
               </div>
             )}
-            {(restaurant.socialLinks?.instagram || restaurant.socialLinks?.facebook || restaurant.socialLinks?.twitter || restaurant.socialLinks?.whatsapp) && (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', marginBottom: '18px' }}>
-                {restaurant.socialLinks?.instagram && <SocialBtn href={restaurant.socialLinks.instagram} icon={<FaInstagram size={19} />} brandColor="#E1306C" theme={theme} />}
+            {(restaurant.socialLinks?.instagram || restaurant.socialLinks?.facebook || restaurant.socialLinks?.twitter || restaurant.socialLinks?.whatsapp || restaurant.socialLinks?.linkedin || restaurant.socialLinks?.youtube || restaurant.socialLinks?.website) && (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: '10px', marginBottom: '18px' }}>
                 {restaurant.socialLinks?.facebook && <SocialBtn href={restaurant.socialLinks.facebook} icon={<FaFacebook size={19} />} brandColor="#1877F2" theme={theme} />}
+                {restaurant.socialLinks?.instagram && <SocialBtn href={restaurant.socialLinks.instagram} icon={<FaInstagram size={19} />} brandColor="#E1306C" theme={theme} />}
                 {restaurant.socialLinks?.twitter && <SocialBtn href={restaurant.socialLinks.twitter} icon={<FaXTwitter size={18} />} brandColor="#000000" theme={theme} />}
+                {restaurant.socialLinks?.linkedin && <SocialBtn href={restaurant.socialLinks.linkedin} icon={<FaLinkedinIn size={18} />} brandColor="#0A66C2" theme={theme} />}
+                {restaurant.socialLinks?.youtube && <SocialBtn href={restaurant.socialLinks.youtube} icon={<FaYoutube size={19} />} brandColor="#FF0000" theme={theme} />}
+                {restaurant.socialLinks?.website && <SocialBtn href={restaurant.socialLinks.website} icon={<Globe size={18} />} brandColor="#0EA5E9" theme={theme} />}
                 {restaurant.socialLinks?.whatsapp && <SocialBtn href={restaurant.socialLinks.whatsapp} icon={<FaWhatsapp size={19} />} brandColor="#25D366" theme={theme} />}
               </div>
             )}
