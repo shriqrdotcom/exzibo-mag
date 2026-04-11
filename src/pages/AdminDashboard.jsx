@@ -233,15 +233,10 @@ export default function AdminDashboard() {
       }
     }
     function handleLocationChanged(e) {
-      const { restaurantId: changedId, location, locationLat, locationLng } = e.detail || {}
+      const { restaurantId: changedId, location } = e.detail || {}
       const myId = isDefault ? 'default' : id
       if (changedId === myId) {
-        setRestaurant(prev => prev ? {
-          ...prev,
-          location: location ?? prev.location,
-          locationLat: locationLat ?? prev.locationLat,
-          locationLng: locationLng ?? prev.locationLng,
-        } : prev)
+        setRestaurant(prev => prev ? { ...prev, location: location ?? prev.location } : prev)
       }
     }
     window.addEventListener('storage', refreshData)

@@ -696,17 +696,12 @@ export default function RestaurantWebsite() {
       })
     }
     function onLocationChanged(e) {
-      const { restaurantId: changedId, location, locationLat, locationLng } = e.detail || {}
+      const { restaurantId: changedId, location } = e.detail || {}
       setRestaurant(prev => {
         if (!prev) return prev
         const isDemoMatch = (changedId === 'default' && (prev.id === 'demo' || prev.slug === 'demo'))
         const isDirectMatch = changedId === prev.id || changedId === prev.slug
-        if (isDemoMatch || isDirectMatch) return {
-          ...prev,
-          location: location ?? prev.location,
-          locationLat: locationLat ?? prev.locationLat,
-          locationLng: locationLng ?? prev.locationLng,
-        }
+        if (isDemoMatch || isDirectMatch) return { ...prev, location: location ?? prev.location }
         return prev
       })
     }
