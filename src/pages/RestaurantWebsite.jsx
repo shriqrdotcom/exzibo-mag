@@ -562,6 +562,7 @@ export default function RestaurantWebsite() {
 
   useEffect(() => {
     if (slug === 'demo') {
+      const savedDemoLogo = localStorage.getItem('exzibo_logo_default') || ''
       setRestaurant({
         id: 'demo', slug: 'demo',
         name: 'La Maison Noire',
@@ -572,6 +573,7 @@ export default function RestaurantWebsite() {
         phone: '+91 98765 43210',
         tables: '24',
         images: FALLBACK_IMAGES,
+        logo: savedDemoLogo,
         socialLinks: { instagram: '', facebook: '', twitter: '', website: '', linkedin: '', youtube: '' },
       })
       const demoTabs = loadMenuTabs('demo')
@@ -661,8 +663,16 @@ export default function RestaurantWebsite() {
 
   useEffect(() => {
     function onLogoChanged(e) {
-      const { logo } = e.detail || {}
-      setRestaurant(prev => prev ? { ...prev, logo: logo || '' } : prev)
+      const { restaurantId: changedId, logo } = e.detail || {}
+      setRestaurant(prev => {
+        if (!prev) return prev
+        const isDemoMatch = (changedId === 'default' && (prev.id === 'demo' || prev.slug === 'demo'))
+        const isDirectMatch = changedId === prev.id || changedId === prev.slug
+        if (isDemoMatch || isDirectMatch) {
+          return { ...prev, logo: logo || '' }
+        }
+        return prev
+      })
     }
     window.addEventListener('exzibo-logo-changed', onLogoChanged)
     return () => window.removeEventListener('exzibo-logo-changed', onLogoChanged)
