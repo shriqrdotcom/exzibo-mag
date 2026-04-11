@@ -863,66 +863,99 @@ export default function AdminDashboard() {
 }
 
 /* ─── Create Coupon Modal ─── */
-function CreateCouponModal({ onClose }) {
-  const today = new Date()
-  const nextYear = new Date(today)
-  nextYear.setFullYear(today.getFullYear() + 1)
-  const fmt = d => `${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}/${d.getFullYear()}`
+function CreateCouponModal({ onClose, coupons = [], onCreateCoupon }) {
+  const todayISO = new Date().toISOString().split('T')[0]
+  const nextYearISO = (() => {
+    const d = new Date(); d.setFullYear(d.getFullYear() + 1)
+    return d.toISOString().split('T')[0]
+  })()
 
+  const [view, setView] = useState('form')
   const [couponCode, setCouponCode] = useState('')
   const [discountType, setDiscountType] = useState('Fixed Amount')
   const [discountAmount, setDiscountAmount] = useState('10.00')
   const [maxMin, setMaxMin] = useState('20')
   const [maxMax, setMaxMax] = useState('22')
-  const [active, setActive] = useState(true)
-  const [validFrom, setValidFrom] = useState(fmt(today))
-  const [expireDate, setExpireDate] = useState(fmt(nextYear))
+  const [validFrom, setValidFrom] = useState(todayISO)
+  const [expireDate, setExpireDate] = useState(nextYearISO)
 
+  const PREFIXES = ['SAVE', 'OFF', 'DEAL', 'GET', 'WIN', 'USE', 'BIG', 'FUN']
   const generateCode = () => {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
-    let code = ''
-    for (let i = 0; i < 8; i++) code += chars[Math.floor(Math.random() * chars.length)]
-    setCouponCode(code)
+    const prefix = PREFIXES[Math.floor(Math.random() * PREFIXES.length)]
+    const num = Math.floor(10 + Math.random() * 90)
+    setCouponCode(`${prefix}${num}`)
   }
 
-  const fieldLabel = (text, required) => (
-    <div style={{ fontSize: '12px', fontWeight: 600, color: '#64748b', marginBottom: '6px', letterSpacing: '0.01em' }}>
-      {text}{required && <span style={{ color: '#EF4444', marginLeft: '3px' }}>*</span>}
-    </div>
-  )
+  const fmtDisplay = iso => {
+    if (!iso) return ''
+    const [y, m, d] = iso.split('-')
+    return `${m}/${d}/${y}`
+  }
+
+  const isActive = iso => iso && new Date(iso) >= new Date(todayISO)
+
+  const handleCreate = () => {
+    if (!couponCode.trim()) return
+    const newCoupon = {
+      id: Date.now(),
+      code: couponCode.trim().toUpperCase(),
+      discountType,
+      discountAmount,
+      maxMin,
+      maxMax,
+      validFrom,
+      expireDate,
+    }
+    onCreateCoupon(newCoupon)
+    onClose()
+  }
 
   const baseInput = {
     width: '100%', boxSizing: 'border-box',
     padding: '12px 14px',
     background: '#fff',
     border: '1.5px solid #e2e8f0',
-    borderRadius: '12px',
+    borderRadius: '10px',
     fontSize: '14px', color: '#0f172a',
     outline: 'none', fontFamily: 'inherit',
   }
 
+  const label = (text, required, upper) => (
+    <div style={{
+      fontSize: '12px', fontWeight: 600, marginBottom: '6px',
+      color: upper ? '#0f172a' : '#64748b',
+      textTransform: upper ? 'uppercase' : 'none',
+      letterSpacing: upper ? '0.04em' : '0.01em',
+    }}>
+      {text}{required && <span style={{ color: '#EF4444', marginLeft: '3px' }}>*</span>}
+    </div>
+  )
+
+  const last6 = [...coupons].reverse().slice(0, 6)
+
   return (
     <div style={{
       position: 'fixed', inset: 0, zIndex: 9999,
-      background: 'rgba(238,241,248,0.7)',
-      backdropFilter: 'blur(4px)',
-      WebkitBackdropFilter: 'blur(4px)',
+      background: 'rgba(0,0,0,0.3)',
+      backdropFilter: 'blur(6px)',
+      WebkitBackdropFilter: 'blur(6px)',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       padding: '20px',
     }}>
       <div style={{
         background: '#fff',
-        borderRadius: '24px',
+        borderRadius: '16px',
         width: '100%', maxWidth: '420px',
         padding: '24px',
-        boxShadow: '0 20px 60px rgba(0,0,0,0.15)',
+        boxShadow: '0 20px 60px rgba(0,0,0,0.2)',
         maxHeight: '90vh', overflowY: 'auto',
       }}>
-        {/* Header */}
+
+        {/* ── HEADER ── */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '22px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <button
-              onClick={onClose}
+              onClick={view === 'history' ? () => setView('form') : onClose}
               style={{
                 width: '34px', height: '34px', borderRadius: '50%',
                 background: '#EFF6FF', border: 'none',
@@ -932,29 +965,74 @@ function CreateCouponModal({ onClose }) {
             >
               <ArrowLeft size={16} />
             </button>
-            <span style={{ fontSize: '17px', fontWeight: 800, color: '#0f172a' }}>Create New Coupon</span>
+            <span style={{ fontSize: '17px', fontWeight: 800, color: '#0f172a' }}>
+              {view === 'history' ? 'Coupon History' : 'Create New Coupon'}
+            </span>
           </div>
-          <button style={{
-            background: '#2E5BFF', border: 'none', borderRadius: '10px',
-            padding: '9px 18px',
-            color: '#fff', fontSize: '13px', fontWeight: 800,
-            letterSpacing: '0.06em', cursor: 'pointer',
-          }}>
-            HISTORY
-          </button>
+          {view === 'form' && (
+            <button
+              onClick={() => setView('history')}
+              style={{
+                background: '#2E5BFF', border: 'none', borderRadius: '10px',
+                padding: '9px 18px',
+                color: '#fff', fontSize: '13px', fontWeight: 800,
+                letterSpacing: '0.06em', cursor: 'pointer',
+              }}
+            >
+              HISTORY
+            </button>
+          )}
         </div>
 
+        {/* ── HISTORY VIEW ── */}
+        {view === 'history' ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {last6.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '40px 0', color: '#94a3b8', fontSize: '14px' }}>
+                No coupons created yet.
+              </div>
+            ) : last6.map(c => (
+              <div key={c.id} style={{
+                border: '1.5px solid #f1f5f9',
+                borderRadius: '12px',
+                padding: '14px 16px',
+                background: '#fafafa',
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
+                  <span style={{ fontSize: '16px', fontWeight: 800, color: '#0f172a', letterSpacing: '0.04em' }}>{c.code}</span>
+                  <span style={{
+                    fontSize: '11px', fontWeight: 700,
+                    padding: '3px 10px', borderRadius: '20px',
+                    background: isActive(c.expireDate) ? '#D1FAE5' : '#FEE2E2',
+                    color: isActive(c.expireDate) ? '#059669' : '#DC2626',
+                    letterSpacing: '0.06em',
+                  }}>
+                    {isActive(c.expireDate) ? 'ACTIVE' : 'INACTIVE'}
+                  </span>
+                </div>
+                <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '4px' }}>
+                  {c.discountType === 'Percentage' ? `${c.discountAmount}% off` : `₹${c.discountAmount} off`}
+                </div>
+                <div style={{ fontSize: '11px', color: '#94a3b8' }}>
+                  {fmtDisplay(c.validFrom)} → {fmtDisplay(c.expireDate)}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+
+        /* ── FORM VIEW ── */
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
 
           {/* Coupon Code */}
           <div>
-            {fieldLabel('Coupon Code', true)}
+            {label('Coupon Code', true)}
             <div style={{ position: 'relative' }}>
               <input
                 value={couponCode}
                 onChange={e => setCouponCode(e.target.value.toUpperCase())}
                 placeholder="e.g. SAVE20"
-                style={{ ...baseInput, paddingRight: '100px' }}
+                style={{ ...baseInput, paddingRight: '110px' }}
               />
               <button
                 onClick={generateCode}
@@ -974,16 +1052,12 @@ function CreateCouponModal({ onClose }) {
           {/* Discount Type + Amount */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
             <div>
-              {fieldLabel('Discount Type', true)}
+              {label('Discount Type', true)}
               <div style={{ position: 'relative' }}>
                 <select
                   value={discountType}
                   onChange={e => setDiscountType(e.target.value)}
-                  style={{
-                    ...baseInput,
-                    appearance: 'none', WebkitAppearance: 'none',
-                    paddingRight: '32px', cursor: 'pointer',
-                  }}
+                  style={{ ...baseInput, appearance: 'none', WebkitAppearance: 'none', paddingRight: '32px', cursor: 'pointer' }}
                 >
                   <option>Fixed Amount</option>
                   <option>Percentage</option>
@@ -992,7 +1066,7 @@ function CreateCouponModal({ onClose }) {
               </div>
             </div>
             <div>
-              {fieldLabel('Discount Amount', true)}
+              {label('Discount Amount', true)}
               <div style={{ position: 'relative' }}>
                 <input
                   type="number"
@@ -1007,71 +1081,32 @@ function CreateCouponModal({ onClose }) {
 
           {/* Maximum Discount Amount */}
           <div>
-            {fieldLabel('Maximum Discount Amount (₹)')}
+            {label('Maximum Discount Amount (₹)')}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-              <input
-                type="number"
-                value={maxMin}
-                onChange={e => setMaxMin(e.target.value)}
-                style={baseInput}
-              />
-              <input
-                type="number"
-                value={maxMax}
-                onChange={e => setMaxMax(e.target.value)}
-                style={baseInput}
-              />
+              <input type="number" value={maxMin} onChange={e => setMaxMin(e.target.value)} style={baseInput} />
+              <input type="number" value={maxMax} onChange={e => setMaxMax(e.target.value)} style={baseInput} />
             </div>
-          </div>
-
-          {/* Active Toggle */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-            <div
-              onClick={() => setActive(a => !a)}
-              style={{
-                width: '52px', height: '28px', borderRadius: '14px',
-                background: active ? '#2E5BFF' : '#cbd5e1',
-                position: 'relative', cursor: 'pointer',
-                transition: 'background 0.2s',
-                flexShrink: 0,
-              }}
-            >
-              <div style={{
-                position: 'absolute',
-                top: '3px',
-                left: active ? '27px' : '3px',
-                width: '22px', height: '22px',
-                borderRadius: '50%', background: '#fff',
-                boxShadow: '0 1px 4px rgba(0,0,0,0.2)',
-                transition: 'left 0.2s',
-              }} />
-            </div>
-            <span style={{ fontSize: '15px', fontWeight: 600, color: '#0f172a' }}>Active</span>
           </div>
 
           {/* Date Pickers */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
             <div>
-              <div style={{ fontSize: '12px', fontWeight: 600, color: '#64748b', marginBottom: '6px' }}>Valid From</div>
-              <div style={{ position: 'relative' }}>
-                <input
-                  value={validFrom}
-                  onChange={e => setValidFrom(e.target.value)}
-                  style={{ ...baseInput, paddingRight: '32px' }}
-                />
-                <ChevronDown size={14} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', pointerEvents: 'none' }} />
-              </div>
+              {label('Valid From')}
+              <input
+                type="date"
+                value={validFrom}
+                onChange={e => setValidFrom(e.target.value)}
+                style={baseInput}
+              />
             </div>
             <div>
-              <div style={{ fontSize: '12px', fontWeight: 700, color: '#0f172a', marginBottom: '6px', letterSpacing: '0.02em', textTransform: 'uppercase' }}>Expire Date</div>
-              <div style={{ position: 'relative' }}>
-                <input
-                  value={expireDate}
-                  onChange={e => setExpireDate(e.target.value)}
-                  style={{ ...baseInput, paddingRight: '32px' }}
-                />
-                <ChevronDown size={14} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', pointerEvents: 'none' }} />
-              </div>
+              {label('Expire Date', false, true)}
+              <input
+                type="date"
+                value={expireDate}
+                onChange={e => setExpireDate(e.target.value)}
+                style={baseInput}
+              />
             </div>
           </div>
 
@@ -1080,26 +1115,21 @@ function CreateCouponModal({ onClose }) {
             <button
               onClick={onClose}
               style={{
-                padding: '14px',
-                background: '#fff',
-                border: '1.5px solid #e2e8f0',
-                borderRadius: '50px',
-                fontSize: '13px', fontWeight: 800,
-                color: '#0f172a', cursor: 'pointer',
-                letterSpacing: '0.06em',
+                padding: '14px', background: '#fff',
+                border: '1.5px solid #e2e8f0', borderRadius: '50px',
+                fontSize: '13px', fontWeight: 800, color: '#0f172a',
+                cursor: 'pointer', letterSpacing: '0.06em',
               }}
             >
               CANCEL
             </button>
             <button
+              onClick={handleCreate}
               style={{
-                padding: '14px',
-                background: '#2E5BFF',
-                border: 'none',
-                borderRadius: '50px',
-                fontSize: '13px', fontWeight: 800,
-                color: '#fff', cursor: 'pointer',
-                letterSpacing: '0.06em',
+                padding: '14px', background: '#2E5BFF',
+                border: 'none', borderRadius: '50px',
+                fontSize: '13px', fontWeight: 800, color: '#fff',
+                cursor: 'pointer', letterSpacing: '0.06em',
                 boxShadow: '0 4px 16px rgba(46,91,255,0.4)',
               }}
             >
@@ -1108,6 +1138,7 @@ function CreateCouponModal({ onClose }) {
           </div>
 
         </div>
+        )}
       </div>
     </div>
   )
@@ -1120,6 +1151,17 @@ function SettingsPanel({ draft, setDraft, accentStart, accentEnd, onSave, saved,
   const [socialLinks, setSocialLinks] = useState({
     facebook: '', instagram: '', twitter: '', website: '', linkedin: '', youtube: '',
   })
+  const couponStorageKey = `exzibo_coupons_${restaurantId || 'default'}`
+  const [coupons, setCoupons] = useState(() => {
+    try { return JSON.parse(localStorage.getItem(couponStorageKey) || '[]') } catch { return [] }
+  })
+
+  const handleCreateCoupon = coupon => {
+    const updated = [...coupons, coupon]
+    setCoupons(updated)
+    localStorage.setItem(couponStorageKey, JSON.stringify(updated))
+  }
+
   if (!draft) return null
 
   const cardStyle = {
@@ -1163,7 +1205,13 @@ function SettingsPanel({ draft, setDraft, accentStart, accentEnd, onSave, saved,
     <div style={{ animation: 'settingsPanelIn 0.3s ease', paddingTop: '24px' }}>
 
       {/* Coupon Modal */}
-      {showCouponModal && <CreateCouponModal onClose={() => setShowCouponModal(false)} />}
+      {showCouponModal && (
+        <CreateCouponModal
+          onClose={() => setShowCouponModal(false)}
+          coupons={coupons}
+          onCreateCoupon={handleCreateCoupon}
+        />
+      )}
 
       {/* Settings heading chip */}
       <div style={{ marginBottom: '16px' }}>
