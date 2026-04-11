@@ -1483,55 +1483,54 @@ function SettingsPanel({ draft, setDraft, accentStart, accentEnd, onSave, saved,
           .social-link-item {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 7px;
             min-width: 0;
           }
-          .social-link-input-wrap {
-            flex: 1;
-            min-width: 0;
+          .social-link-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
             display: flex;
             align-items: center;
-            border: 1.5px solid #e2e8f0;
-            border-radius: 8px;
-            overflow: hidden;
-            background: #f8fafc;
+            justify-content: center;
+            flex-shrink: 0;
           }
-          .social-link-input-wrap input {
+          .social-link-input {
             flex: 1;
             min-width: 0;
-            padding: 8px 8px;
-            background: transparent;
+            padding: 8px 13px;
+            background: #f1f5f9;
             border: none;
+            border-radius: 999px;
             font-size: 11px;
             color: #0f172a;
             outline: none;
             font-family: inherit;
           }
+          .social-link-input::placeholder {
+            color: #94a3b8;
+          }
           .social-paste-btn {
             flex-shrink: 0;
-            display: flex;
-            align-items: center;
-            gap: 3px;
-            padding: 0 9px;
-            height: 34px;
-            background: #1e40af;
+            padding: 8px 13px;
+            background: #1a237e;
             border: none;
-            border-left: 1.5px solid #e2e8f0;
+            border-radius: 999px;
             color: #fff;
             font-size: 10px;
-            font-weight: 700;
-            letter-spacing: 0.05em;
+            font-weight: 800;
+            letter-spacing: 0.06em;
             cursor: pointer;
             white-space: nowrap;
             transition: background 0.2s;
           }
           .social-paste-btn:hover {
-            background: #1d4ed8;
+            background: #283593;
           }
           .social-paste-btn.pasted {
             background: #16a34a;
           }
-          @media (max-width: 500px) {
+          @media (max-width: 520px) {
             .social-links-grid {
               grid-template-columns: 1fr;
             }
@@ -1539,51 +1538,45 @@ function SettingsPanel({ draft, setDraft, accentStart, accentEnd, onSave, saved,
         `}</style>
         <div style={cardStyle}>
           <div style={cardHeaderStyle}>
-            <div style={iconBoxStyle('#EFF6FF', '#3B82F6')}>
-              <Share2 size={18} />
+            <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: '#EFF6FF', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#3B82F6', flexShrink: 0 }}>
+              <Share2 size={20} />
             </div>
             <div>
-              <div style={{ fontSize: '15px', fontWeight: 700, color: '#0f172a' }}>Add Social Media Links</div>
+              <div style={{ fontSize: '16px', fontWeight: 800, color: '#0f172a' }}>Add Social Media Links</div>
               <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '2px' }}>Enter social media profile URLs</div>
             </div>
           </div>
           <div className="social-links-grid">
             {socialPlatforms.map(p => (
               <div key={p.key} className="social-link-item">
-                <div style={{
-                  width: '34px', height: '34px', borderRadius: '9px',
-                  background: p.bg,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  color: p.color, flexShrink: 0,
-                }}>
+                <div className="social-link-icon" style={{ background: p.bg, color: p.color }}>
                   {p.icon}
                 </div>
-                <div className="social-link-input-wrap">
-                  <input
-                    type="url"
-                    value={socialLinks[p.key]}
-                    onChange={e => setSocialLinks(s => ({ ...s, [p.key]: e.target.value }))}
-                    placeholder={p.placeholder}
-                  />
-                  <button
-                    className={`social-paste-btn${pastedKey === p.key ? ' pasted' : ''}`}
-                    title={`Paste ${p.label} URL`}
-                    onClick={async () => {
-                      try {
-                        const text = await navigator.clipboard.readText()
-                        if (text) {
-                          setSocialLinks(s => ({ ...s, [p.key]: text }))
-                          setPastedKey(p.key)
-                          setTimeout(() => setPastedKey(null), 1500)
-                        }
-                      } catch {
-                        setPastedKey(null)
+                <input
+                  type="url"
+                  className="social-link-input"
+                  value={socialLinks[p.key]}
+                  onChange={e => setSocialLinks(s => ({ ...s, [p.key]: e.target.value }))}
+                  placeholder={p.placeholder}
+                />
+                <button
+                  className={`social-paste-btn${pastedKey === p.key ? ' pasted' : ''}`}
+                  title={`Paste ${p.label} URL`}
+                  onClick={async () => {
+                    try {
+                      const text = await navigator.clipboard.readText()
+                      if (text) {
+                        setSocialLinks(s => ({ ...s, [p.key]: text }))
+                        setPastedKey(p.key)
+                        setTimeout(() => setPastedKey(null), 1500)
                       }
-                    }}
-                  >
-                    {pastedKey === p.key ? '✓ PASTED' : 'PASTE'}
-                  </button>
-                </div>
+                    } catch {
+                      setPastedKey(null)
+                    }
+                  }}
+                >
+                  {pastedKey === p.key ? '✓' : 'PASTE'}
+                </button>
               </div>
             ))}
           </div>
