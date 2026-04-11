@@ -563,9 +563,10 @@ export default function RestaurantWebsite() {
   useEffect(() => {
     if (slug === 'demo') {
       const savedDemoLogo = localStorage.getItem('exzibo_logo_default') || ''
+      const savedDemoName = localStorage.getItem('exzibo_name_default') || 'La Maison Noire'
       setRestaurant({
         id: 'demo', slug: 'demo',
-        name: 'La Maison Noire',
+        name: savedDemoName,
         location: 'Cyber City, Gurugram',
         description: 'An uncompromising culinary experience rooted in craft, quality, and atmosphere. Every dish is a conversation between heritage and innovation.',
         chefInfo: 'Chef Marcus Aurélius, trained in Paris and Tokyo, brings 20 years of Michelin-star experience to every plate.',
@@ -668,14 +669,26 @@ export default function RestaurantWebsite() {
         if (!prev) return prev
         const isDemoMatch = (changedId === 'default' && (prev.id === 'demo' || prev.slug === 'demo'))
         const isDirectMatch = changedId === prev.id || changedId === prev.slug
-        if (isDemoMatch || isDirectMatch) {
-          return { ...prev, logo: logo || '' }
-        }
+        if (isDemoMatch || isDirectMatch) return { ...prev, logo: logo || '' }
+        return prev
+      })
+    }
+    function onNameChanged(e) {
+      const { restaurantId: changedId, name } = e.detail || {}
+      setRestaurant(prev => {
+        if (!prev) return prev
+        const isDemoMatch = (changedId === 'default' && (prev.id === 'demo' || prev.slug === 'demo'))
+        const isDirectMatch = changedId === prev.id || changedId === prev.slug
+        if (isDemoMatch || isDirectMatch) return { ...prev, name: name || prev.name }
         return prev
       })
     }
     window.addEventListener('exzibo-logo-changed', onLogoChanged)
-    return () => window.removeEventListener('exzibo-logo-changed', onLogoChanged)
+    window.addEventListener('exzibo-name-changed', onNameChanged)
+    return () => {
+      window.removeEventListener('exzibo-logo-changed', onLogoChanged)
+      window.removeEventListener('exzibo-name-changed', onNameChanged)
+    }
   }, [])
 
   useEffect(() => {

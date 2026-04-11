@@ -148,6 +148,7 @@ export default function AdminDashboard() {
   const [menuSearch, setMenuSearch] = useState('')
   const menuSearchRef = useRef(null)
   const [profileOpen, setProfileOpen] = useState(false)
+  const [overrideName, setOverrideName] = useState('')
   const [logoUrl, setLogoUrl] = useState(() => {
     if (!id || id === 'default') return localStorage.getItem('exzibo_logo_default') || ''
     try {
@@ -216,13 +217,23 @@ export default function AdminDashboard() {
         setLogoUrl(logo || '')
       }
     }
+    function handleNameChanged(e) {
+      const { restaurantId: changedId, name } = e.detail || {}
+      const myId = isDefault ? 'default' : id
+      if (changedId === myId) {
+        setOverrideName(name || '')
+        if (!isDefault) setRestaurant(prev => prev ? { ...prev, name: name || '' } : prev)
+      }
+    }
     window.addEventListener('storage', refreshData)
     window.addEventListener('exzibo-data-changed', refreshData)
     window.addEventListener('exzibo-logo-changed', handleLogoChanged)
+    window.addEventListener('exzibo-name-changed', handleNameChanged)
     return () => {
       window.removeEventListener('storage', refreshData)
       window.removeEventListener('exzibo-data-changed', refreshData)
       window.removeEventListener('exzibo-logo-changed', handleLogoChanged)
+      window.removeEventListener('exzibo-name-changed', handleNameChanged)
     }
   }, [id, isDefault])
 
@@ -318,9 +329,8 @@ export default function AdminDashboard() {
     showToast('✅ Settings saved — applies to all restaurants!')
   }
 
-  const displayName = isDefault
-    ? globalConfig.adminTitle
-    : (restaurant?.name || 'Admin')
+  const displayName = overrideName ||
+    (isDefault ? globalConfig.adminTitle : (restaurant?.name || 'Admin'))
 
   const initials = displayName
     .split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase()
@@ -899,6 +909,8 @@ export default function AdminDashboard() {
         restaurantId={isDefault ? 'default' : id}
         logoUrl={logoUrl}
         onLogoUpdate={url => setLogoUrl(url)}
+        restaurantName={displayName}
+        onNameUpdate={name => setOverrideName(name)}
       />
     </div>
   )
