@@ -660,6 +660,15 @@ export default function RestaurantWebsite() {
   }, [currentOrder, restaurant, slug])
 
   useEffect(() => {
+    function onLogoChanged(e) {
+      const { logo } = e.detail || {}
+      setRestaurant(prev => prev ? { ...prev, logo: logo || '' } : prev)
+    }
+    window.addEventListener('exzibo-logo-changed', onLogoChanged)
+    return () => window.removeEventListener('exzibo-logo-changed', onLogoChanged)
+  }, [])
+
+  useEffect(() => {
     function onStorageChange(e) {
       if (!e.key?.startsWith('exzibo_menu_') && !e.key?.startsWith('exzibo_tabs_') && !e.key?.startsWith('exzibo_filters_enabled_')) return
       const restaurants = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
@@ -898,8 +907,8 @@ export default function RestaurantWebsite() {
             boxShadow: 'none',
             overflow: 'hidden',
           }}>
-            {carouselImages[0] ? (
-              <img src={carouselImages[0]} alt={restaurant.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            {(restaurant.logo || carouselImages[0]) ? (
+              <img src={restaurant.logo || carouselImages[0]} alt={restaurant.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             ) : (
               <UtensilsCrossed size={26} color="#fff" />
             )}

@@ -148,6 +148,13 @@ export default function AdminDashboard() {
   const [menuSearch, setMenuSearch] = useState('')
   const menuSearchRef = useRef(null)
   const [profileOpen, setProfileOpen] = useState(false)
+  const [logoUrl, setLogoUrl] = useState(() => {
+    if (!id || id === 'default') return localStorage.getItem('exzibo_logo_default') || ''
+    try {
+      const all = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
+      return all.find(r => r.id === id)?.logo || ''
+    } catch { return '' }
+  })
 
   function loadBookings(restaurantId) {
     const key = `exzibo_bookings_${restaurantId}`
@@ -202,11 +209,20 @@ export default function AdminDashboard() {
       setOrders(cleanAndPersistOrders(restaurantId))
       setBookings(loadBookings(restaurantId))
     }
+    function handleLogoChanged(e) {
+      const { restaurantId: changedId, logo } = e.detail || {}
+      const myId = isDefault ? 'default' : id
+      if (changedId === myId || (isDefault && changedId === 'default')) {
+        setLogoUrl(logo || '')
+      }
+    }
     window.addEventListener('storage', refreshData)
     window.addEventListener('exzibo-data-changed', refreshData)
+    window.addEventListener('exzibo-logo-changed', handleLogoChanged)
     return () => {
       window.removeEventListener('storage', refreshData)
       window.removeEventListener('exzibo-data-changed', refreshData)
+      window.removeEventListener('exzibo-logo-changed', handleLogoChanged)
     }
   }, [id, isDefault])
 
@@ -475,6 +491,7 @@ export default function AdminDashboard() {
                 fontSize: '16px', fontWeight: 900, color: '#fff',
                 cursor: 'pointer',
                 transition: 'transform 0.15s, box-shadow 0.15s',
+                overflow: 'hidden',
               }}
               onMouseEnter={e => {
                 e.currentTarget.style.transform = 'scale(1.07)'
@@ -485,7 +502,9 @@ export default function AdminDashboard() {
                 e.currentTarget.style.boxShadow = `0 4px 12px ${accentStart}50`
               }}
             >
-              {initials}
+              {logoUrl
+                ? <img src={logoUrl} alt="logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                : initials}
             </div>
             <div>
               <div style={{ fontSize: '17px', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.01em' }}>
@@ -874,7 +893,13 @@ export default function AdminDashboard() {
         })}
       </div>
 
-      <ProfileSlide open={profileOpen} onClose={() => setProfileOpen(false)} />
+      <ProfileSlide
+        open={profileOpen}
+        onClose={() => setProfileOpen(false)}
+        restaurantId={isDefault ? 'default' : id}
+        logoUrl={logoUrl}
+        onLogoUpdate={url => setLogoUrl(url)}
+      />
     </div>
   )
 }
