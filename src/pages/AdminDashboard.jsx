@@ -1478,31 +1478,35 @@ function SettingsPanel({ draft, setDraft, accentStart, accentEnd, onSave, saved,
           .social-links-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 10px;
+            gap: clamp(6px, 2vw, 10px);
           }
           .social-link-item {
             display: flex;
             align-items: center;
-            gap: 7px;
+            gap: clamp(4px, 1.5vw, 7px);
             min-width: 0;
           }
           .social-link-icon {
-            width: 40px;
-            height: 40px;
-            border-radius: 12px;
+            width: clamp(28px, 7vw, 40px);
+            height: clamp(28px, 7vw, 40px);
+            border-radius: clamp(8px, 2vw, 12px);
             display: flex;
             align-items: center;
             justify-content: center;
             flex-shrink: 0;
           }
+          .social-link-icon svg {
+            width: clamp(13px, 3.5vw, 18px);
+            height: clamp(13px, 3.5vw, 18px);
+          }
           .social-link-input {
             flex: 1;
             min-width: 0;
-            padding: 8px 13px;
+            padding: clamp(5px, 1.5vw, 8px) clamp(7px, 2.5vw, 13px);
             background: #f1f5f9;
             border: none;
             border-radius: 999px;
-            font-size: 11px;
+            font-size: clamp(9px, 2vw, 11px);
             color: #0f172a;
             outline: none;
             font-family: inherit;
@@ -1512,12 +1516,12 @@ function SettingsPanel({ draft, setDraft, accentStart, accentEnd, onSave, saved,
           }
           .social-paste-btn {
             flex-shrink: 0;
-            padding: 8px 13px;
+            padding: clamp(5px, 1.5vw, 8px) clamp(7px, 2.5vw, 13px);
             background: #1a237e;
             border: none;
             border-radius: 999px;
             color: #fff;
-            font-size: 10px;
+            font-size: clamp(8px, 1.8vw, 10px);
             font-weight: 800;
             letter-spacing: 0.06em;
             cursor: pointer;
@@ -1529,11 +1533,6 @@ function SettingsPanel({ draft, setDraft, accentStart, accentEnd, onSave, saved,
           }
           .social-paste-btn.pasted {
             background: #16a34a;
-          }
-          @media (max-width: 520px) {
-            .social-links-grid {
-              grid-template-columns: 1fr;
-            }
           }
         `}</style>
         <div style={cardStyle}>
