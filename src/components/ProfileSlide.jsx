@@ -70,17 +70,17 @@ export default function ProfileSlide({ open, onClose }) {
         style={{
           position: 'fixed',
           top: 0,
-          right: 0,
+          left: 0,
           height: '100vh',
           width: '360px',
           maxWidth: '95vw',
           background: '#F2F2F7',
           zIndex: 1001,
-          transform: open ? 'translateX(0)' : 'translateX(110%)',
+          transform: open ? 'translateX(0)' : 'translateX(-110%)',
           transition: 'transform 0.35s cubic-bezier(0.4,0,0.2,1)',
           overflowY: 'auto',
-          boxShadow: '-8px 0 40px rgba(0,0,0,0.35)',
-          borderRadius: '20px 0 0 20px',
+          boxShadow: '8px 0 40px rgba(0,0,0,0.35)',
+          borderRadius: '0 20px 20px 0',
         }}
       >
         <div style={{ padding: '20px 16px 32px' }}>
