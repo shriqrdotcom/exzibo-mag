@@ -863,7 +863,7 @@ export default function AdminDashboard() {
 }
 
 /* ─── Create Coupon Modal ─── */
-function CreateCouponModal({ onClose, coupons = [], onCreateCoupon, onDeleteCoupon }) {
+function CreateCouponModal({ onClose, coupons = [], onCreateCoupon, onDeleteCoupon, onToggleCoupon }) {
   const todayISO = new Date().toISOString().split('T')[0]
   const nextYearISO = (() => {
     const d = new Date(); d.setFullYear(d.getFullYear() + 1)
@@ -894,7 +894,7 @@ function CreateCouponModal({ onClose, coupons = [], onCreateCoupon, onDeleteCoup
     return `${m}/${d}/${y}`
   }
 
-  const isActive = iso => iso && new Date(iso) >= new Date(todayISO)
+  const isCouponActive = c => c.active !== false && (!c.expireDate || new Date(c.expireDate) >= new Date(todayISO))
 
   const handleCreate = () => {
     if (!couponCode.trim()) return
@@ -1013,15 +1013,44 @@ function CreateCouponModal({ onClose, coupons = [], onCreateCoupon, onDeleteCoup
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
                   <span style={{ fontSize: '16px', fontWeight: 800, color: '#0f172a', letterSpacing: '0.04em' }}>{c.code}</span>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{
-                      fontSize: '11px', fontWeight: 700,
-                      padding: '3px 10px', borderRadius: '20px',
-                      background: isActive(c.expireDate) ? '#D1FAE5' : '#FEE2E2',
-                      color: isActive(c.expireDate) ? '#059669' : '#DC2626',
-                      letterSpacing: '0.06em',
-                    }}>
-                      {isActive(c.expireDate) ? 'ACTIVE' : 'INACTIVE'}
-                    </span>
+                    {/* Active / Inactive toggle */}
+                    <div
+                      onClick={() => onToggleCoupon && onToggleCoupon(c.id)}
+                      title={isCouponActive(c) ? 'Click to deactivate' : 'Click to activate'}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: '6px',
+                        padding: '4px 10px 4px 6px',
+                        borderRadius: '20px',
+                        background: isCouponActive(c) ? '#D1FAE5' : '#F1F5F9',
+                        border: `1.5px solid ${isCouponActive(c) ? '#6EE7B7' : '#e2e8f0'}`,
+                        cursor: 'pointer', userSelect: 'none',
+                        transition: 'all 0.2s',
+                      }}
+                    >
+                      {/* Mini toggle pill */}
+                      <div style={{
+                        width: '28px', height: '16px', borderRadius: '8px',
+                        background: isCouponActive(c) ? '#10B981' : '#cbd5e1',
+                        position: 'relative', flexShrink: 0,
+                        transition: 'background 0.2s',
+                      }}>
+                        <div style={{
+                          position: 'absolute', top: '2px',
+                          left: isCouponActive(c) ? '14px' : '2px',
+                          width: '12px', height: '12px',
+                          borderRadius: '50%', background: '#fff',
+                          boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                          transition: 'left 0.2s',
+                        }} />
+                      </div>
+                      <span style={{
+                        fontSize: '11px', fontWeight: 700,
+                        color: isCouponActive(c) ? '#059669' : '#94a3b8',
+                        letterSpacing: '0.04em',
+                      }}>
+                        {isCouponActive(c) ? 'ACTIVE' : 'INACTIVE'}
+                      </span>
+                    </div>
                     <button
                       onClick={() => setPendingDeleteId(c.id)}
                       style={{
@@ -1271,6 +1300,14 @@ function SettingsPanel({ draft, setDraft, accentStart, accentEnd, onSave, saved,
     localStorage.setItem(couponStorageKey, JSON.stringify(updated))
   }
 
+  const handleToggleCoupon = id => {
+    const updated = coupons.map(c =>
+      c.id === id ? { ...c, active: c.active === false ? true : false } : c
+    )
+    setCoupons(updated)
+    localStorage.setItem(couponStorageKey, JSON.stringify(updated))
+  }
+
   if (!draft) return null
 
   const cardStyle = {
@@ -1320,6 +1357,7 @@ function SettingsPanel({ draft, setDraft, accentStart, accentEnd, onSave, saved,
           coupons={coupons}
           onCreateCoupon={handleCreateCoupon}
           onDeleteCoupon={handleDeleteCoupon}
+          onToggleCoupon={handleToggleCoupon}
         />
       )}
 

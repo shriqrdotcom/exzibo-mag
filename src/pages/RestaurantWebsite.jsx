@@ -401,7 +401,7 @@ export default function RestaurantWebsite() {
         if (!Array.isArray(list)) return false
         for (const c of list) {
           // Normalise: new format uses discountAmount, old validator expects discountPct
-          const normalised = { ...c, discountPct: c.discountPct ?? c.discountAmount, active: true }
+          const normalised = { ...c, discountPct: c.discountPct ?? c.discountAmount, active: c.active !== false }
           if (tryCoupon(normalised)) return true
         }
       } catch { /* ignore */ }
