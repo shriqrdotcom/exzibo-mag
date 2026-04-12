@@ -240,27 +240,32 @@ export default function TeamMembers() {
           ))}
         </div>
 
-        {/* Member grid */}
+        {/* Member list */}
         {filtered.length === 0 ? (
           <div style={{
-            textAlign: 'center', padding: '40px 20px',
+            textAlign: 'center', padding: '44px 20px',
             background: '#fff', borderRadius: '18px',
-            boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
+            border: '1px solid #F0F0F5',
           }}>
             <Users size={40} color="#D1D5DB" style={{ marginBottom: '12px' }} />
             <div style={{ fontWeight: 700, fontSize: '15px', color: '#9CA3AF', marginBottom: '4px' }}>
               {search || filterRole !== 'All' ? 'No members match your search' : 'No team members yet'}
             </div>
             <div style={{ fontSize: '13px', color: '#C4C4C4' }}>
-              {search || filterRole !== 'All' ? 'Try adjusting your filters' : 'Tap "Add Member" to get started'}
+              {search || filterRole !== 'All' ? 'Try adjusting your filters' : 'Tap "+ Add Member" to get started'}
             </div>
           </div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-            {filtered.map(member => (
-              <MemberCard
+          <div style={{
+            background: '#fff', borderRadius: '18px',
+            border: '1px solid #F0F0F5',
+            overflow: 'hidden',
+          }}>
+            {filtered.map((member, idx) => (
+              <MemberRow
                 key={member.id}
                 member={member}
+                isLast={idx === filtered.length - 1}
                 onEdit={() => openEdit(member)}
                 onDelete={() => setDeleteId(member.id)}
               />
@@ -306,77 +311,70 @@ export default function TeamMembers() {
   )
 }
 
-function MemberCard({ member, onEdit, onDelete }) {
-  const style = ROLE_STYLE[member.role] || { bg: '#F3F4F6', color: '#374151', dot: '#6B7280' }
+function MemberRow({ member, isLast, onEdit, onDelete }) {
+  const rs = ROLE_STYLE[member.role] || { bg: '#F3F4F6', color: '#374151', dot: '#6B7280' }
   const [imgError, setImgError] = useState(false)
+  const [hovered, setHovered] = useState(false)
 
   return (
-    <div style={{
-      background: '#fff', borderRadius: '18px',
-      padding: '18px 14px 14px',
-      boxShadow: '0 2px 12px rgba(0,0,0,0.07)',
-      display: 'flex', flexDirection: 'column', alignItems: 'center',
-      position: 'relative', gap: '8px',
-      border: '1px solid rgba(0,0,0,0.04)',
-      transition: 'transform 0.15s, box-shadow 0.15s',
-    }}
-      onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 20px rgba(0,0,0,0.11)' }}
-      onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 12px rgba(0,0,0,0.07)' }}
+    <div
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        display: 'flex', alignItems: 'center', gap: '14px',
+        padding: '13px 16px',
+        background: hovered ? '#F7F7FA' : '#fff',
+        borderBottom: isLast ? 'none' : '1px solid #F0F0F5',
+        transition: 'background 0.15s',
+      }}
     >
-      {/* Action buttons */}
-      <div style={{ position: 'absolute', top: '10px', right: '10px', display: 'flex', gap: '4px' }}>
-        <button onClick={onEdit} style={{
-          width: '26px', height: '26px', borderRadius: '8px',
-          background: '#F0F0F5', border: 'none', cursor: 'pointer',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#666',
-        }}>
-          <Pencil size={12} />
-        </button>
-        <button onClick={onDelete} style={{
-          width: '26px', height: '26px', borderRadius: '8px',
-          background: '#FEF2F2', border: 'none', cursor: 'pointer',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#EF4444',
-        }}>
-          <Trash2 size={12} />
-        </button>
-      </div>
-
       {/* Avatar */}
       <div style={{
-        width: '72px', height: '72px', borderRadius: '50%',
+        width: '46px', height: '46px', borderRadius: '50%',
         background: 'linear-gradient(135deg, #6366F1, #8B5CF6)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        overflow: 'hidden', boxShadow: '0 4px 12px rgba(99,102,241,0.25)',
-        border: '3px solid #fff',
-        flexShrink: 0,
+        overflow: 'hidden', flexShrink: 0,
       }}>
         {member.avatar && !imgError
           ? <img src={member.avatar} alt={member.name}
               onError={() => setImgError(true)}
               style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-          : <span style={{ fontWeight: 800, fontSize: '22px', color: '#fff' }}>
+          : <span style={{ fontWeight: 800, fontSize: '17px', color: '#fff' }}>
               {member.name.slice(0, 1).toUpperCase()}
             </span>}
       </div>
 
-      {/* Name */}
-      <div style={{
-        fontWeight: 700, fontSize: '14px', color: '#111',
-        textAlign: 'center', lineHeight: 1.3,
-        maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-      }}>
-        {member.name}
+      {/* Name + role */}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{
+          fontWeight: 700, fontSize: '14px', color: '#111',
+          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          marginBottom: '3px',
+        }}>
+          {member.name}
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+          <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: rs.dot, display: 'inline-block', flexShrink: 0 }} />
+          <span style={{ fontSize: '12px', color: '#888', fontWeight: 500 }}>{member.role}</span>
+        </div>
       </div>
 
-      {/* Role badge */}
-      <div style={{
-        display: 'inline-flex', alignItems: 'center', gap: '5px',
-        padding: '4px 10px', borderRadius: '20px',
-        background: style.bg, color: style.color,
-        fontSize: '11px', fontWeight: 700, letterSpacing: '0.04em',
-      }}>
-        <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: style.dot, display: 'inline-block' }} />
-        {member.role}
+      {/* Actions */}
+      <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
+        <button onClick={onEdit} style={{
+          width: '32px', height: '32px', borderRadius: '10px',
+          background: '#F0F0F5', border: 'none', cursor: 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#555',
+        }}>
+          <Pencil size={13} />
+        </button>
+        <button onClick={onDelete} style={{
+          width: '32px', height: '32px', borderRadius: '10px',
+          background: '#FEF2F2', border: 'none', cursor: 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#EF4444',
+        }}>
+          <Trash2 size={13} />
+        </button>
       </div>
     </div>
   )
