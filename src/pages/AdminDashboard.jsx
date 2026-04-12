@@ -1354,7 +1354,10 @@ function SettingsPanel({ draft, setDraft, accentStart, accentEnd, onSave, saved,
   const [aboutImage, setAboutImage] = useState('')
   const fileInputRef = useRef(null)
   const [showCouponModal, setShowCouponModal] = useState(false)
-  const [couponEnabled, setCouponEnabled] = useState(true)
+  const couponEnabledKey = `exzibo_coupon_enabled_${restaurantId || 'default'}`
+  const [couponEnabled, setCouponEnabled] = useState(() => {
+    try { const v = localStorage.getItem(couponEnabledKey); return v === null ? true : v === 'true' } catch { return true }
+  })
   const [socialLinks, setSocialLinks] = useState({
     facebook: '', instagram: '', twitter: '', website: '', linkedin: '', youtube: '',
   })
@@ -1504,7 +1507,7 @@ function SettingsPanel({ draft, setDraft, accentStart, accentEnd, onSave, saved,
             </div>
             {/* Toggle switch */}
             <div
-              onClick={() => setCouponEnabled(e => !e)}
+              onClick={() => setCouponEnabled(e => { const next = !e; localStorage.setItem(couponEnabledKey, String(next)); return next })}
               style={{
                 width: '44px', height: '24px', borderRadius: '12px',
                 background: couponEnabled ? '#2E5BFF' : '#cbd5e1',

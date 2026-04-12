@@ -219,6 +219,7 @@ export default function RestaurantWebsite() {
   const [couponApplied, setCouponApplied] = useState(false)
   const [couponError, setCouponError] = useState('')
   const [appliedCouponData, setAppliedCouponData] = useState(null)
+  const [couponSectionEnabled, setCouponSectionEnabled] = useState(true)
   const [customerOrders, setCustomerOrders] = useState([])
   const currentOrder = customerOrders[0] ?? null
   const orderHistory = customerOrders.slice(1)
@@ -241,6 +242,15 @@ export default function RestaurantWebsite() {
       } catch (_) {}
     }
   }, [slug])
+
+  useEffect(() => {
+    const rid = restaurant?.id || 'default'
+    const key = `exzibo_coupon_enabled_${rid}`
+    try {
+      const v = localStorage.getItem(key)
+      setCouponSectionEnabled(v === null ? true : v === 'true')
+    } catch { setCouponSectionEnabled(true) }
+  }, [restaurant?.id])
 
   useEffect(() => {
     const rawId = restaurant?.id
@@ -1784,7 +1794,7 @@ export default function RestaurantWebsite() {
               }}>
 
                 {/* Coupon section */}
-                <div style={{ padding: '16px 16px 14px', borderBottom: `1px solid ${theme.cardBorder}` }}>
+                {couponSectionEnabled && <div style={{ padding: '16px 16px 14px', borderBottom: `1px solid ${theme.cardBorder}` }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
                     <Tag size={13} color="#E8321A" strokeWidth={2.5} />
                     <span style={{ fontSize: '11px', fontWeight: 800, letterSpacing: '0.12em', color: '#E8321A', textTransform: 'uppercase' }}>Apply Coupon</span>
@@ -1830,7 +1840,7 @@ export default function RestaurantWebsite() {
                       )}
                     </>
                   )}
-                </div>
+                </div>}
 
               </div>
             </div>
