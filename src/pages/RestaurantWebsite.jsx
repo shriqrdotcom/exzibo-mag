@@ -209,6 +209,7 @@ export default function RestaurantWebsite() {
     try { return JSON.parse(localStorage.getItem('exzibo_darkmode') || 'false') } catch { return false }
   })
   const [carouselIdx, setCarouselIdx] = useState(0)
+  const [customCarouselImages, setCustomCarouselImages] = useState(null)
   const [liked, setLiked] = useState({})
   const [cartItems, setCartItems] = useState([])
   const [cartBounce, setCartBounce] = useState(false)
@@ -766,13 +767,36 @@ export default function RestaurantWebsite() {
   }, [filtersEnabled, activeMenuTab])
 
   useEffect(() => {
-    const images = restaurant?.images?.length ? restaurant.images : FALLBACK_IMAGES
-    if (images.length <= 1) return
-    const interval = setInterval(() => setCarouselIdx(i => (i + 1) % images.length), 4000)
-    return () => clearInterval(interval)
+    if (!restaurant) return
+    const rid = restaurant.id || slug || 'default'
+    const loadCustom = () => {
+      try {
+        const stored = JSON.parse(localStorage.getItem(`exzibo_carousel_${rid}`) || 'null')
+        const fallback = JSON.parse(localStorage.getItem('exzibo_carousel_default') || 'null')
+        const imgs = (Array.isArray(stored) && stored.length ? stored : null)
+          || (Array.isArray(fallback) && fallback.length ? fallback : null)
+        setCustomCarouselImages(imgs)
+      } catch { setCustomCarouselImages(null) }
+    }
+    loadCustom()
+    const handler = e => {
+      const d = e.detail
+      if (d?.restaurantId === rid || d?.restaurantId === 'default') {
+        setCustomCarouselImages(Array.isArray(d.images) && d.images.length ? d.images : null)
+      }
+    }
+    window.addEventListener('exzibo-carousel-changed', handler)
+    return () => window.removeEventListener('exzibo-carousel-changed', handler)
   }, [restaurant])
 
-  const carouselImages = restaurant?.images?.length ? restaurant.images : FALLBACK_IMAGES
+  const carouselImages = (customCarouselImages?.length ? customCarouselImages : null)
+    || (restaurant?.images?.length ? restaurant.images : FALLBACK_IMAGES)
+
+  useEffect(() => {
+    if (carouselImages.length <= 1) return
+    const interval = setInterval(() => setCarouselIdx(i => (i + 1) % carouselImages.length), 4000)
+    return () => clearInterval(interval)
+  }, [carouselImages])
 
   const visibleMenuData = Object.fromEntries(
     menuTabs.map(tab => [tab.id, (menuData[tab.id] || []).filter(m => m.available !== false)])
