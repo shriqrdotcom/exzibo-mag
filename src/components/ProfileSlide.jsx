@@ -93,7 +93,7 @@ export default function ProfileSlide({
   useEffect(() => { setNameInput(restaurantName || '') }, [restaurantName])
 
   useEffect(() => {
-    if (!restaurantId || restaurantId === 'default') { setRestaurantUID(''); return }
+    if (!restaurantId || restaurantId === 'default') { setRestaurantUID('0000000001'); return }
     const all = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
     const r = all.find(r => r.id === restaurantId)
     setRestaurantUID(r?.uid || '')

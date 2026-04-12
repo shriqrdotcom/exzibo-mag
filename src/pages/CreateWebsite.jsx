@@ -90,7 +90,7 @@ export default function CreateWebsite() {
 
   const generateUID = (existingRestaurants) => {
     const usedUIDs = existingRestaurants.map(r => r.uid).filter(Boolean)
-    let num = 1
+    let num = 2
     while (usedUIDs.includes(String(num).padStart(10, '0'))) {
       num++
     }
