@@ -3,20 +3,26 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Search, X, Users } from 'lucide-react'
 
 const ROLE_STYLE = {
-  Admin:    { bg: '#EDE9FE', color: '#6D28D9', dot: '#7C3AED' },
-  Owner:    { bg: '#FEF3C7', color: '#92400E', dot: '#D97706' },
-  Manager:  { bg: '#DBEAFE', color: '#1D4ED8', dot: '#3B82F6' },
-  Waiter:   { bg: '#D1FAE5', color: '#065F46', dot: '#10B981' },
-  Chef:     { bg: '#FFEDD5', color: '#9A3412', dot: '#F97316' },
-  Cleaner:  { bg: '#F0FDF4', color: '#15803D', dot: '#22C55E' },
-  Security: { bg: '#FEE2E2', color: '#991B1B', dot: '#EF4444' },
+  OWNER:   { dot: '#3B82F6', color: '#1D4ED8' },
+  MANAGER: { dot: '#7C3AED', color: '#5B21B6' },
+  STAFF:   { dot: '#10B981', color: '#065F46' },
 }
 
+const ROLE_MAP = {
+  Admin: 'STAFF', Waiter: 'STAFF', Chef: 'STAFF',
+  Cleaner: 'STAFF', Security: 'STAFF', Cashier: 'STAFF', Delivery: 'STAFF',
+  Manager: 'MANAGER', 'Assistant Manager': 'MANAGER', 'Floor Manager': 'MANAGER',
+  Owner: 'OWNER', 'Co-Owner': 'OWNER', Director: 'OWNER',
+  STAFF: 'STAFF', MANAGER: 'MANAGER', OWNER: 'OWNER',
+}
+
+function normalizeRole(role) { return ROLE_MAP[role] || 'STAFF' }
+
 const DEMO_MEMBERS = [
-  { id: 'demo1', name: 'Trish Sharma', role: 'Admin',   avatar: 'https://i.pravatar.cc/150?img=1', active: true },
-  { id: 'demo2', name: 'Avinav Kumar', role: 'Waiter',  avatar: 'https://i.pravatar.cc/150?img=2', active: true },
-  { id: 'demo3', name: 'Rahul Mehta',  role: 'Chef',    avatar: 'https://i.pravatar.cc/150?img=3', active: true },
-  { id: 'demo4', name: 'Priya Singh',  role: 'Manager', avatar: 'https://i.pravatar.cc/150?img=5', active: false },
+  { id: 'demo1', name: 'Trish Sharma', role: 'STAFF',   avatar: 'https://i.pravatar.cc/150?img=1', active: true },
+  { id: 'demo2', name: 'Avinav Kumar', role: 'STAFF',   avatar: 'https://i.pravatar.cc/150?img=2', active: true },
+  { id: 'demo3', name: 'Rahul Mehta',  role: 'STAFF',   avatar: 'https://i.pravatar.cc/150?img=3', active: true },
+  { id: 'demo4', name: 'Priya Singh',  role: 'MANAGER', avatar: 'https://i.pravatar.cc/150?img=5', active: false },
 ]
 
 function storageKey(id) { return `exzibo_team_${id || 'default'}` }
@@ -50,7 +56,6 @@ export default function TeamMembers() {
     m.role.toLowerCase().includes(search.toLowerCase())
   )
 
-  const roleCounts = members.reduce((acc, m) => { acc[m.role] = (acc[m.role] || 0) + 1; return acc }, {})
   const accentStart = '#6366F1'
   const accentEnd = '#8B5CF6'
 
@@ -99,23 +104,6 @@ export default function TeamMembers() {
             </div>
           </div>
 
-          {/* Stats chips — read only */}
-          <div style={{ display: 'flex', gap: '8px', marginTop: '14px', flexWrap: 'wrap' }}>
-            {[
-              { label: `${members.length} Total`, bg: 'rgba(255,255,255,0.22)' },
-              ...Object.entries(roleCounts).slice(0, 4).map(([role, count]) => ({
-                label: `${count} ${role}`, bg: 'rgba(255,255,255,0.12)',
-              })),
-            ].map((chip, i) => (
-              <div key={i} style={{
-                padding: '4px 10px', borderRadius: '20px',
-                background: chip.bg, border: '1px solid rgba(255,255,255,0.2)',
-                fontSize: '11px', fontWeight: 700, color: '#fff', letterSpacing: '0.04em',
-              }}>
-                {chip.label}
-              </div>
-            ))}
-          </div>
         </div>
       </div>
 
@@ -177,7 +165,8 @@ export default function TeamMembers() {
 }
 
 function MemberRow({ member, isLast, onToggle }) {
-  const rs = ROLE_STYLE[member.role] || { bg: '#F3F4F6', color: '#374151', dot: '#6B7280' }
+  const displayRole = normalizeRole(member.role)
+  const rs = ROLE_STYLE[displayRole] || { dot: '#6B7280', color: '#374151' }
   const [imgError, setImgError] = useState(false)
   const [hovered, setHovered] = useState(false)
 
@@ -233,7 +222,7 @@ function MemberRow({ member, isLast, onToggle }) {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
           <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: rs.dot, display: 'inline-block', flexShrink: 0 }} />
-          <span style={{ fontSize: '12px', color: '#888', fontWeight: 500 }}>{member.role}</span>
+          <span style={{ fontSize: '12px', color: rs.color, fontWeight: 600 }}>{displayRole}</span>
         </div>
       </div>
 
