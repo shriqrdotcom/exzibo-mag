@@ -947,8 +947,7 @@ function CreateCouponModal({ onClose, coupons = [], onCreateCoupon, onDeleteCoup
   const [couponCode, setCouponCode] = useState('')
   const [discountType, setDiscountType] = useState('Fixed Amount')
   const [discountAmount, setDiscountAmount] = useState('10')
-  const [maxMin, setMaxMin] = useState('20')
-  const [maxMax, setMaxMax] = useState('22')
+  const [minimumOrderValue, setMinimumOrderValue] = useState('')
   const [validFrom, setValidFrom] = useState(todayISO)
   const [expireDate, setExpireDate] = useState(nextYearISO)
   const [pendingDeleteId, setPendingDeleteId] = useState(null)
@@ -976,8 +975,7 @@ function CreateCouponModal({ onClose, coupons = [], onCreateCoupon, onDeleteCoup
       code: couponCode.trim().toUpperCase(),
       discountType,
       discountAmount,
-      maxMin,
-      maxMax,
+      minimumOrderValue: minimumOrderValue ? parseFloat(minimumOrderValue) : 0,
       validFrom,
       expireDate,
     }
@@ -1208,12 +1206,21 @@ function CreateCouponModal({ onClose, coupons = [], onCreateCoupon, onDeleteCoup
             </div>
           </div>
 
-          {/* Maximum Discount Amount */}
+          {/* Eligibility */}
           <div>
-            {label('Maximum Discount Amount (₹)')}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-              <input type="number" value={maxMin} onChange={e => setMaxMin(e.target.value)} style={baseInput} />
-              <input type="number" value={maxMax} onChange={e => setMaxMax(e.target.value)} style={baseInput} />
+            {label('Eligibility')}
+            <div style={{ position: 'relative' }}>
+              <input
+                type="number"
+                placeholder="e.g. 400"
+                value={minimumOrderValue}
+                onChange={e => setMinimumOrderValue(e.target.value)}
+                style={{ ...baseInput, paddingRight: '36px' }}
+              />
+              <span style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontSize: '15px' }}>₹</span>
+            </div>
+            <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '5px' }}>
+              Coupon will only apply if the customer's total bill exceeds this amount.
             </div>
           </div>
 
@@ -2042,31 +2049,24 @@ function AdminCouponManagement({ accentStart, restaurantId }) {
             </div>
           </div>
 
-          {coupon.active && (
-            <div>
-              <label style={labelStyle}>Maximum Discount Amount (₹)</label>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <input
-                  type="number" step="0.01"
-                  value={coupon.minDiscount}
-                  onChange={e => setCoupon(p => ({ ...p, minDiscount: e.target.value }))}
-                  style={inputStyle}
-                  placeholder="Minimum"
-                  onFocus={e => e.target.style.borderColor = '#2563EB'}
-                  onBlur={e => e.target.style.borderColor = '#e2e8f0'}
-                />
-                <input
-                  type="number" step="0.01"
-                  value={coupon.maxDiscount}
-                  onChange={e => setCoupon(p => ({ ...p, maxDiscount: e.target.value }))}
-                  style={inputStyle}
-                  placeholder="Maximum"
-                  onFocus={e => e.target.style.borderColor = '#2563EB'}
-                  onBlur={e => e.target.style.borderColor = '#e2e8f0'}
-                />
-              </div>
+          <div>
+            <label style={labelStyle}>Eligibility — Minimum Order Value (₹)</label>
+            <div style={{ position: 'relative' }}>
+              <input
+                type="number" step="1"
+                placeholder="e.g. 400"
+                value={coupon.minimumOrderValue || ''}
+                onChange={e => setCoupon(p => ({ ...p, minimumOrderValue: e.target.value }))}
+                style={{ ...inputStyle, paddingRight: '36px' }}
+                onFocus={e => e.target.style.borderColor = '#2563EB'}
+                onBlur={e => e.target.style.borderColor = '#e2e8f0'}
+              />
+              <span style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontSize: '15px' }}>₹</span>
             </div>
-          )}
+            <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '5px' }}>
+              Coupon will only apply if the customer's total bill exceeds this amount.
+            </div>
+          </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <button

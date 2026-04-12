@@ -445,6 +445,11 @@ export default function RestaurantWebsite() {
           return true
         }
       }
+      const minOrder = parseFloat(couponObj.minimumOrderValue) || 0
+      if (minOrder > 0 && subtotal < minOrder) {
+        setCouponError(`This coupon is applicable on orders above ₹${minOrder} only.`)
+        return true
+      }
       setAppliedCouponData(couponObj)
       setCouponApplied(true)
       setCouponError('')
