@@ -88,6 +88,15 @@ export default function CreateWebsite() {
     return slug
   }
 
+  const generateUID = (existingRestaurants) => {
+    const usedUIDs = existingRestaurants.map(r => r.uid).filter(Boolean)
+    let num = 1
+    while (usedUIDs.includes(String(num).padStart(10, '0'))) {
+      num++
+    }
+    return String(num).padStart(10, '0')
+  }
+
   const fileToBase64 = (file) => new Promise((resolve) => {
     const reader = new FileReader()
     reader.onload = (e) => resolve(e.target.result)
@@ -105,8 +114,10 @@ export default function CreateWebsite() {
     const existing = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
     const existingSlugs = existing.map(r => r.slug).filter(Boolean)
     const slug = generateSlug(form.restaurantName, existingSlugs)
+    const uid = generateUID(existing)
     const newRestaurant = {
       id: Date.now().toString(),
+      uid,
       slug,
       name: form.restaurantName,
       logo: logoBase64,

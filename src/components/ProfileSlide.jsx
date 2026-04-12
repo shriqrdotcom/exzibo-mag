@@ -87,9 +87,17 @@ export default function ProfileSlide({
   const [carouselIdx, setCarouselIdx] = useState(0)
   const [descText, setDescText] = useState('')
   const [badgeText, setBadgeText] = useState('')
+  const [restaurantUID, setRestaurantUID] = useState('')
 
   useEffect(() => { setPreviewUrl(logoUrl || '') }, [logoUrl])
   useEffect(() => { setNameInput(restaurantName || '') }, [restaurantName])
+
+  useEffect(() => {
+    if (!restaurantId || restaurantId === 'default') { setRestaurantUID(''); return }
+    const all = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
+    const r = all.find(r => r.id === restaurantId)
+    setRestaurantUID(r?.uid || '')
+  }, [restaurantId])
 
   useEffect(() => {
     const key = `exzibo_carousel_${restaurantId || 'default'}`
@@ -375,7 +383,11 @@ export default function ProfileSlide({
               <div style={{ fontWeight: 800, fontSize: '16px', color: '#111', letterSpacing: '0.01em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {restaurantName || 'Exzibo'}
               </div>
-              <div style={{ fontWeight: 400, fontSize: '13px', color: '#888', marginTop: '2px' }}>exzibonew@exzibo.com</div>
+              {restaurantUID && (
+                <div style={{ fontWeight: 500, fontSize: '12px', color: '#888', marginTop: '2px', fontFamily: 'monospace', letterSpacing: '0.05em' }}>
+                  UID: {restaurantUID}
+                </div>
+              )}
             </div>
             <button style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#999', padding: '4px', display: 'flex', alignItems: 'center' }}>
               <Share2 size={18} strokeWidth={1.6} />
