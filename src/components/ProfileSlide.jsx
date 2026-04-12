@@ -696,14 +696,14 @@ export default function ProfileSlide({
               <button
                 style={{
                   width: '100%', display: 'flex', alignItems: 'center',
-                  justifyContent: 'center', gap: '10px',
-                  background: '#E8321A', border: 'none', borderRadius: '12px',
-                  padding: '13px 16px', cursor: 'default',
+                  justifyContent: 'center', gap: '6px',
+                  background: '#E8321A', border: 'none', borderRadius: '10px',
+                  padding: '7px 12px', cursor: 'default',
                 }}
               >
-                <span style={{ fontSize: '16px' }}>🔥</span>
+                <span style={{ fontSize: '12px' }}>🔥</span>
                 <span style={{
-                  fontWeight: 800, fontSize: '13px', color: '#fff',
+                  fontWeight: 700, fontSize: '11px', color: '#fff',
                   letterSpacing: '0.1em', textTransform: 'uppercase',
                 }}>ENTER TEXT</span>
               </button>
