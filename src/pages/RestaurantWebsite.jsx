@@ -1229,9 +1229,6 @@ export default function RestaurantWebsite() {
                 <div style={{ fontSize: '22px', fontWeight: 900, color: '#fff', lineHeight: 1.2, marginBottom: '6px', textShadow: '0 2px 12px rgba(0,0,0,0.8)' }}>
                   An Unforgettable<br />Culinary Experience
                 </div>
-                <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.7)', lineHeight: 1.5 }}>
-                  {(restaurant.description || '').slice(0, 70)}{(restaurant.description?.length || 0) > 70 ? '…' : ''}
-                </div>
               </div>
               {carouselImages.length > 1 && (
                 <>
