@@ -218,15 +218,16 @@ export default function ProfileSlide({
       <div onClick={onClose} style={{
         position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 1000,
         opacity: open ? 1 : 0, pointerEvents: open ? 'all' : 'none',
-        transition: 'opacity 0.3s ease', backdropFilter: 'blur(2px)',
+        transition: 'opacity 0.3s ease',
+        backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
       }} />
 
       <div style={{
-        position: 'fixed', top: 0, left: 0, height: '100vh', width: '360px', maxWidth: '95vw',
+        position: 'fixed', top: 0, right: 0, height: '100vh', width: '360px', maxWidth: '85vw',
         background: '#F2F2F7', zIndex: 1001,
-        transform: open ? 'translateX(0)' : 'translateX(-110%)',
+        transform: open ? 'translateX(0)' : 'translateX(110%)',
         transition: 'transform 0.35s cubic-bezier(0.4,0,0.2,1)',
-        overflowY: 'auto', boxShadow: '8px 0 40px rgba(0,0,0,0.35)', borderRadius: '0 20px 20px 0',
+        overflowY: 'auto', boxShadow: '-8px 0 40px rgba(0,0,0,0.35)', borderRadius: '20px 0 0 20px',
       }}>
         <div style={{ padding: '20px 16px 32px' }}>
 

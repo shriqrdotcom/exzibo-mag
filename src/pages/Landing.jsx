@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowRight, Store, Wrench, Bell, User, Search, Palette, X, ExternalLink, LayoutDashboard } from 'lucide-react'
+import ProfileSlide from '../components/ProfileSlide'
 
 const THEMES = [
   {
@@ -70,6 +71,7 @@ export default function Landing() {
   const [loaded, setLoaded] = useState(false)
   const [showThemes, setShowThemes] = useState(false)
   const [selectedTheme, setSelectedTheme] = useState(null)
+  const [showProfile, setShowProfile] = useState(false)
 
   useEffect(() => {
     setTimeout(() => setLoaded(true), 100)
@@ -105,14 +107,16 @@ export default function Landing() {
             <span style={{ color: '#555', fontSize: '12px' }}>SEARCH SYSTEM...</span>
           </div>
           <button style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer' }}><Bell size={18} /></button>
-          <button style={{
-            background: 'rgba(255,255,255,0.06)',
-            border: '1px solid rgba(255,255,255,0.08)',
-            borderRadius: '8px',
-            color: '#888',
-            cursor: 'pointer',
-            padding: '6px 8px',
-          }}><User size={18} /></button>
+          <button
+            onClick={() => setShowProfile(true)}
+            style={{
+              background: 'rgba(255,255,255,0.06)',
+              border: '1px solid rgba(255,255,255,0.08)',
+              borderRadius: '8px',
+              color: '#888',
+              cursor: 'pointer',
+              padding: '6px 8px',
+            }}><User size={18} /></button>
         </div>
       </nav>
 
@@ -176,6 +180,13 @@ export default function Landing() {
           </CTAButton>
         </div>
       </main>
+
+      <ProfileSlide
+        open={showProfile}
+        onClose={() => setShowProfile(false)}
+        restaurantId="default"
+        restaurantName="Exzibo Admin"
+      />
 
       {/* ── THEMES MODAL ── */}
       {showThemes && (
