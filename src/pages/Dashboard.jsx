@@ -20,7 +20,8 @@ export default function Dashboard() {
   useEffect(() => {
     const saved = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
     const mapped = saved.map(r => ({
-      uid: r.id,
+      id: r.id,
+      uid: r.uid || r.id,
       name: r.name.toUpperCase(),
       status: r.status === 'active' ? 'RUNNING' : r.status === 'paused' ? 'PAUSED' : 'PENDING',
       date: formatDate(r.createdAt),
@@ -161,7 +162,7 @@ export default function Dashboard() {
                       <td style={{ padding: '20px 28px', color: '#ccc', fontSize: '14px', fontWeight: 600 }}>{r.tables}</td>
                       <td style={{ padding: '20px 28px', color: '#ccc', fontSize: '14px', fontWeight: 600 }}>{r.payment}</td>
                       <td style={{ padding: '20px 28px' }}>
-                        <EditMenuBtn onClick={() => navigate(`/menu-editor/${r.uid}`)} active={r.status === 'RUNNING'} />
+                        <EditMenuBtn onClick={() => navigate(`/menu-editor/${r.id}`)} active={r.status === 'RUNNING'} />
                       </td>
                     </tr>
                   )
