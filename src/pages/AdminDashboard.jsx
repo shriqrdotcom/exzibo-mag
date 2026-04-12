@@ -946,7 +946,7 @@ function CreateCouponModal({ onClose, coupons = [], onCreateCoupon, onDeleteCoup
   const [view, setView] = useState('form')
   const [couponCode, setCouponCode] = useState('')
   const [discountType, setDiscountType] = useState('Fixed Amount')
-  const [discountAmount, setDiscountAmount] = useState('10.00')
+  const [discountAmount, setDiscountAmount] = useState('10')
   const [maxMin, setMaxMin] = useState('20')
   const [maxMax, setMaxMax] = useState('22')
   const [validFrom, setValidFrom] = useState(todayISO)
@@ -1183,7 +1183,7 @@ function CreateCouponModal({ onClose, coupons = [], onCreateCoupon, onDeleteCoup
               <div style={{ position: 'relative' }}>
                 <select
                   value={discountType}
-                  onChange={e => setDiscountType(e.target.value)}
+                  onChange={e => { setDiscountType(e.target.value); setDiscountAmount('10') }}
                   style={{ ...baseInput, appearance: 'none', WebkitAppearance: 'none', paddingRight: '32px', cursor: 'pointer' }}
                 >
                   <option>Fixed Amount</option>
@@ -1193,15 +1193,17 @@ function CreateCouponModal({ onClose, coupons = [], onCreateCoupon, onDeleteCoup
               </div>
             </div>
             <div>
-              {label('Discount Amount', true)}
+              {label(discountType === 'Fixed Amount' ? 'Discount Amount (INR)' : 'Discount (%)', true)}
               <div style={{ position: 'relative' }}>
                 <input
                   type="number"
                   value={discountAmount}
                   onChange={e => setDiscountAmount(e.target.value)}
-                  style={{ ...baseInput, paddingRight: '36px' }}
+                  style={{ ...baseInput, paddingRight: discountType === 'Fixed Amount' ? '48px' : '32px' }}
                 />
-                <span style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontSize: '15px' }}>₹</span>
+                <span style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontSize: '12px', fontWeight: 600, letterSpacing: '0.03em' }}>
+                  {discountType === 'Fixed Amount' ? 'INR' : '%'}
+                </span>
               </div>
             </div>
           </div>
