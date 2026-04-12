@@ -89,12 +89,14 @@ export default function CreateWebsite() {
   }
 
   const generateUID = (existingRestaurants) => {
-    const usedUIDs = existingRestaurants.map(r => r.uid).filter(Boolean)
-    let num = 2
-    while (usedUIDs.includes(String(num).padStart(10, '0'))) {
-      num++
-    }
-    return String(num).padStart(10, '0')
+    const usedUIDs = new Set(existingRestaurants.map(r => r.uid).filter(Boolean))
+    let uid
+    do {
+      const firstDigit = [6, 7, 8, 9][Math.floor(Math.random() * 4)]
+      const rest = Math.floor(Math.random() * 1_000_000_000).toString().padStart(9, '0')
+      uid = `${firstDigit}${rest}`
+    } while (usedUIDs.has(uid))
+    return uid
   }
 
   const fileToBase64 = (file) => new Promise((resolve) => {
