@@ -228,6 +228,7 @@ export default function RestaurantWebsite() {
   const [viewingHistoryOrder, setViewingHistoryOrder] = useState(null)
   const [showOrderConfirm, setShowOrderConfirm] = useState(false)
   const [openingHours, setOpeningHours] = useState(null)
+  const [heroBadge, setHeroBadge] = useState('')
 
   useEffect(() => {
     const cartKey = `exzibo_cart_${slug}`
@@ -255,6 +256,22 @@ export default function RestaurantWebsite() {
     }
     window.addEventListener('exzibo-hours-changed', onHoursChanged)
     return () => window.removeEventListener('exzibo-hours-changed', onHoursChanged)
+  }, [restaurant?.id])
+
+  useEffect(() => {
+    const rawId = restaurant?.id
+    const rid = (!rawId || rawId === 'demo') ? 'default' : rawId
+    const key = `exzibo_carousel_badge_${rid}`
+    setHeroBadge(localStorage.getItem(key) || '')
+
+    function onBadgeChanged(e) {
+      const { restaurantId: changedId, badge } = e.detail || {}
+      const matches = changedId === rid || changedId === rawId ||
+        (rid === 'default' && (!changedId || changedId === 'default' || changedId === 'demo'))
+      if (matches) setHeroBadge(badge || '')
+    }
+    window.addEventListener('exzibo-carousel-badge-changed', onBadgeChanged)
+    return () => window.removeEventListener('exzibo-carousel-badge-changed', onBadgeChanged)
   }, [restaurant?.id])
 
   useEffect(() => {
@@ -1266,7 +1283,7 @@ export default function RestaurantWebsite() {
               <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', padding: '18px' }}>
                 <div style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', background: 'rgba(232,50,26,0.9)', borderRadius: '8px', padding: '4px 10px', marginBottom: '8px', width: 'fit-content' }}>
                   <Flame size={10} color="#fff" />
-                  <span style={{ fontSize: '10px', fontWeight: 800, color: '#fff', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Premium Dining</span>
+                  <span style={{ fontSize: '10px', fontWeight: 800, color: '#fff', letterSpacing: '0.08em', textTransform: 'uppercase' }}>{heroBadge || 'Premium Dining'}</span>
                 </div>
                 <div style={{ fontSize: '22px', fontWeight: 900, color: '#fff', lineHeight: 1.2, marginBottom: '6px', textShadow: '0 2px 12px rgba(0,0,0,0.8)' }}>
                   An Unforgettable<br />Culinary Experience

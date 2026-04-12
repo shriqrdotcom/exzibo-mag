@@ -86,6 +86,7 @@ export default function ProfileSlide({
   const [carouselImages, setCarouselImages] = useState([])
   const [carouselIdx, setCarouselIdx] = useState(0)
   const [descText, setDescText] = useState('')
+  const [badgeText, setBadgeText] = useState('')
 
   useEffect(() => { setPreviewUrl(logoUrl || '') }, [logoUrl])
   useEffect(() => { setNameInput(restaurantName || '') }, [restaurantName])
@@ -99,6 +100,8 @@ export default function ProfileSlide({
     setCarouselIdx(0)
     const descKey = `exzibo_carousel_desc_${restaurantId || 'default'}`
     setDescText(localStorage.getItem(descKey) || '')
+    const badgeKey = `exzibo_carousel_badge_${restaurantId || 'default'}`
+    setBadgeText(localStorage.getItem(badgeKey) || '')
   }, [restaurantId])
 
   async function handleCarouselFiles(files) {
@@ -693,20 +696,33 @@ export default function ProfileSlide({
               padding: '14px 14px 16px',
               display: 'flex', flexDirection: 'column', gap: '12px',
             }}>
-              <button
-                style={{
-                  width: '100%', display: 'flex', alignItems: 'center',
-                  justifyContent: 'center', gap: '6px',
-                  background: '#E8321A', border: 'none', borderRadius: '10px',
-                  padding: '7px 12px', cursor: 'default',
-                }}
-              >
-                <span style={{ fontSize: '12px' }}>🔥</span>
-                <span style={{
-                  fontWeight: 700, fontSize: '11px', color: '#fff',
-                  letterSpacing: '0.1em', textTransform: 'uppercase',
-                }}>ENTER TEXT</span>
-              </button>
+              <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                <span style={{ position: 'absolute', left: '10px', fontSize: '12px', pointerEvents: 'none', zIndex: 1 }}>🔥</span>
+                <input
+                  type="text"
+                  value={badgeText}
+                  onChange={e => {
+                    const val = e.target.value
+                    setBadgeText(val)
+                    const key = `exzibo_carousel_badge_${restaurantId || 'default'}`
+                    localStorage.setItem(key, val)
+                    window.dispatchEvent(new CustomEvent('exzibo-carousel-badge-changed', {
+                      detail: { restaurantId, badge: val }
+                    }))
+                  }}
+                  placeholder="ENTER BADGE TEXT…"
+                  style={{
+                    width: '100%', boxSizing: 'border-box',
+                    background: '#E8321A', border: 'none', borderRadius: '10px',
+                    padding: '7px 12px 7px 30px',
+                    fontSize: '11px', fontWeight: 700, color: '#fff',
+                    letterSpacing: '0.1em', textTransform: 'uppercase',
+                    outline: 'none', caretColor: '#fff', fontFamily: 'inherit',
+                  }}
+                  onFocus={e => e.target.style.background = '#c42a14'}
+                  onBlur={e => e.target.style.background = '#E8321A'}
+                />
+              </div>
 
               <textarea
                 value={descText}
