@@ -1298,13 +1298,17 @@ export default function RestaurantWebsite() {
               ))}
               <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.65) 100%)', borderRadius: '20px' }} />
               <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', padding: '18px' }}>
-                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', background: 'rgba(232,50,26,0.9)', borderRadius: '8px', padding: '4px 10px', marginBottom: '8px', width: 'fit-content' }}>
-                  <Flame size={10} color="#fff" />
-                  <span style={{ fontSize: '10px', fontWeight: 800, color: '#fff', letterSpacing: '0.08em', textTransform: 'uppercase' }}>{heroBadge || 'Premium Dining'}</span>
-                </div>
-                <div style={{ fontSize: '22px', fontWeight: 900, color: '#fff', lineHeight: 1.2, marginBottom: '6px', textShadow: '0 2px 12px rgba(0,0,0,0.8)', whiteSpace: 'pre-line' }}>
-                  {heroText || 'An Unforgettable\nCulinary Experience'}
-                </div>
+                {heroBadge && (
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', background: 'rgba(232,50,26,0.9)', borderRadius: '8px', padding: '4px 10px', marginBottom: '8px', width: 'fit-content' }}>
+                    <Flame size={10} color="#fff" />
+                    <span style={{ fontSize: '10px', fontWeight: 800, color: '#fff', letterSpacing: '0.08em', textTransform: 'uppercase' }}>{heroBadge}</span>
+                  </div>
+                )}
+                {heroText && (
+                  <div style={{ fontSize: '22px', fontWeight: 900, color: '#fff', lineHeight: 1.2, marginBottom: '6px', textShadow: '0 2px 12px rgba(0,0,0,0.8)', whiteSpace: 'pre-line' }}>
+                    {heroText}
+                  </div>
+                )}
               </div>
               {carouselImages.length > 1 && (
                 <>
