@@ -43,6 +43,7 @@ export default function ProfileSlide({
   onTeamClick,
 }) {
   const fileInputRef = useRef(null)
+  const carouselInputRef = useRef(null)
   const nameInputRef = useRef(null)
   const phoneInputRef = useRef(null)
   const addressRef = useRef(null)
@@ -73,8 +74,44 @@ export default function ProfileSlide({
   const [locationSaving, setLocationSaving] = useState(false)
   const [locationSuccess, setLocationSuccess] = useState(false)
 
+  const [carouselImages, setCarouselImages] = useState([])
+  const [carouselIdx, setCarouselIdx] = useState(0)
+
   useEffect(() => { setPreviewUrl(logoUrl || '') }, [logoUrl])
   useEffect(() => { setNameInput(restaurantName || '') }, [restaurantName])
+
+  useEffect(() => {
+    const key = `exzibo_carousel_${restaurantId || 'default'}`
+    try {
+      const stored = JSON.parse(localStorage.getItem(key) || '[]')
+      setCarouselImages(Array.isArray(stored) ? stored : [])
+    } catch { setCarouselImages([]) }
+    setCarouselIdx(0)
+  }, [restaurantId])
+
+  async function handleCarouselFiles(files) {
+    const valid = Array.from(files).filter(f => f.type.startsWith('image/'))
+    if (!valid.length) return
+    const base64s = await Promise.all(valid.map(fileToBase64))
+    setCarouselImages(prev => {
+      const updated = [...prev, ...base64s]
+      const key = `exzibo_carousel_${restaurantId || 'default'}`
+      localStorage.setItem(key, JSON.stringify(updated))
+      window.dispatchEvent(new CustomEvent('exzibo-carousel-changed', { detail: { restaurantId, images: updated } }))
+      return updated
+    })
+    setCarouselIdx(prev => prev)
+  }
+
+  function removeCarouselImage(idx) {
+    setCarouselImages(prev => {
+      const updated = prev.filter((_, i) => i !== idx)
+      const key = `exzibo_carousel_${restaurantId || 'default'}`
+      localStorage.setItem(key, JSON.stringify(updated))
+      return updated
+    })
+    setCarouselIdx(0)
+  }
 
   useEffect(() => {
     const { phone, email } = loadContact(restaurantId)
@@ -446,25 +483,114 @@ export default function ProfileSlide({
           </div>
 
           {/* Image Carousel */}
+          <input
+            ref={carouselInputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            style={{ display: 'none' }}
+            onChange={e => { if (e.target.files?.length) handleCarouselFiles(e.target.files); e.target.value = '' }}
+          />
           <div style={{ marginBottom: '14px' }}>
             <div style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#999', marginBottom: '10px', paddingLeft: '4px' }}>
               Image Carousel
             </div>
-            <div style={{
-              background: '#E2E2E8', borderRadius: '18px', height: '130px',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              position: 'relative', overflow: 'hidden',
-            }}>
-              <div style={{
-                position: 'absolute', inset: 0,
-                backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)',
-                background: 'rgba(235,235,241,0.55)',
-                borderRadius: '18px',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}>
-                <Image size={32} color="#bbb" strokeWidth={1.2} style={{ filter: 'blur(0px)' }} />
+
+            {carouselImages.length === 0 ? (
+              <div
+                onClick={() => carouselInputRef.current?.click()}
+                style={{
+                  background: '#E2E2E8', borderRadius: '18px', height: '130px',
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                  cursor: 'pointer', position: 'relative', gap: '6px',
+                  border: '2px dashed #ccc',
+                }}
+              >
+                <Image size={28} color="#bbb" strokeWidth={1.2} />
+                <span style={{ fontSize: '11px', color: '#bbb', fontWeight: 500 }}>Tap to add photos</span>
+                <button
+                  onClick={e => { e.stopPropagation(); carouselInputRef.current?.click() }}
+                  style={{
+                    position: 'absolute', bottom: '10px', right: '10px',
+                    width: '28px', height: '28px', borderRadius: '8px',
+                    background: '#fff', border: '1.5px solid #d1d1d6',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    cursor: 'pointer', fontSize: '18px', color: '#555',
+                    boxShadow: '0 1px 4px rgba(0,0,0,0.1)', zIndex: 2,
+                  }}
+                >+</button>
               </div>
-            </div>
+            ) : (
+              <div style={{
+                background: '#E2E2E8', borderRadius: '18px', height: '130px',
+                position: 'relative', overflow: 'hidden',
+              }}>
+                <img
+                  src={carouselImages[carouselIdx]}
+                  alt=""
+                  style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '18px', display: 'block' }}
+                />
+                {carouselImages.length > 1 && (
+                  <>
+                    <button
+                      onClick={() => setCarouselIdx(i => (i - 1 + carouselImages.length) % carouselImages.length)}
+                      style={{
+                        position: 'absolute', left: '8px', top: '50%', transform: 'translateY(-50%)',
+                        background: 'rgba(0,0,0,0.45)', border: 'none', borderRadius: '50%',
+                        width: '26px', height: '26px', display: 'flex', alignItems: 'center',
+                        justifyContent: 'center', cursor: 'pointer', color: '#fff', fontSize: '16px',
+                      }}
+                    >‹</button>
+                    <button
+                      onClick={() => setCarouselIdx(i => (i + 1) % carouselImages.length)}
+                      style={{
+                        position: 'absolute', right: '42px', top: '50%', transform: 'translateY(-50%)',
+                        background: 'rgba(0,0,0,0.45)', border: 'none', borderRadius: '50%',
+                        width: '26px', height: '26px', display: 'flex', alignItems: 'center',
+                        justifyContent: 'center', cursor: 'pointer', color: '#fff', fontSize: '16px',
+                      }}
+                    >›</button>
+                    <div style={{ position: 'absolute', bottom: '8px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '4px' }}>
+                      {carouselImages.map((_, i) => (
+                        <div
+                          key={i}
+                          onClick={() => setCarouselIdx(i)}
+                          style={{
+                            width: i === carouselIdx ? '14px' : '5px', height: '5px',
+                            borderRadius: '3px', cursor: 'pointer',
+                            background: i === carouselIdx ? '#fff' : 'rgba(255,255,255,0.5)',
+                            transition: 'all 0.2s',
+                          }}
+                        />
+                      ))}
+                    </div>
+                  </>
+                )}
+                <button
+                  onClick={e => { e.stopPropagation(); carouselInputRef.current?.click() }}
+                  style={{
+                    position: 'absolute', bottom: '10px', right: '10px',
+                    width: '28px', height: '28px', borderRadius: '8px',
+                    background: 'rgba(255,255,255,0.92)', border: 'none',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    cursor: 'pointer', fontSize: '18px', color: '#555',
+                    boxShadow: '0 1px 4px rgba(0,0,0,0.15)', zIndex: 2,
+                  }}
+                >+</button>
+                <button
+                  onClick={e => { e.stopPropagation(); removeCarouselImage(carouselIdx) }}
+                  style={{
+                    position: 'absolute', top: '8px', right: '8px',
+                    width: '24px', height: '24px', borderRadius: '50%',
+                    background: 'rgba(0,0,0,0.5)', border: 'none',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    cursor: 'pointer', color: '#fff', zIndex: 2,
+                  }}
+                >
+                  <X size={12} />
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Logout */}
