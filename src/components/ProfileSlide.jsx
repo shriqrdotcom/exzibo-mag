@@ -76,6 +76,8 @@ export default function ProfileSlide({
 
   const [carouselImages, setCarouselImages] = useState([])
   const [carouselIdx, setCarouselIdx] = useState(0)
+  const [descText, setDescText] = useState('')
+  const [showDescInput, setShowDescInput] = useState(false)
 
   useEffect(() => { setPreviewUrl(logoUrl || '') }, [logoUrl])
   useEffect(() => { setNameInput(restaurantName || '') }, [restaurantName])
@@ -87,6 +89,9 @@ export default function ProfileSlide({
       setCarouselImages(Array.isArray(stored) ? stored : [])
     } catch { setCarouselImages([]) }
     setCarouselIdx(0)
+    const descKey = `exzibo_carousel_desc_${restaurantId || 'default'}`
+    setDescText(localStorage.getItem(descKey) || '')
+    setShowDescInput(false)
   }, [restaurantId])
 
   async function handleCarouselFiles(files) {
@@ -591,6 +596,64 @@ export default function ProfileSlide({
                 </button>
               </div>
             )}
+          </div>
+
+          {/* Description Text Carousel */}
+          <div style={{ marginBottom: '14px' }}>
+            <div style={{
+              fontSize: '14px', fontWeight: 900, letterSpacing: '0.05em',
+              textTransform: 'uppercase', color: '#111',
+              marginBottom: '10px', paddingLeft: '4px',
+            }}>
+              Description Text&nbsp;&nbsp;Carousel
+            </div>
+            <div style={{
+              background: '#E9E9EF', borderRadius: '18px',
+              padding: '14px 14px 16px',
+            }}>
+              <button
+                onClick={() => setShowDescInput(v => !v)}
+                style={{
+                  width: '100%', display: 'flex', alignItems: 'center',
+                  justifyContent: 'center', gap: '10px',
+                  background: '#E8321A', border: 'none', borderRadius: '12px',
+                  padding: '13px 16px', cursor: 'pointer',
+                  marginBottom: showDescInput ? '12px' : '0',
+                }}
+              >
+                <span style={{ fontSize: '16px' }}>🔥</span>
+                <span style={{
+                  fontWeight: 800, fontSize: '13px', color: '#fff',
+                  letterSpacing: '0.1em', textTransform: 'uppercase',
+                }}>ENTER TEXT</span>
+              </button>
+
+              {showDescInput && (
+                <textarea
+                  value={descText}
+                  onChange={e => {
+                    setDescText(e.target.value)
+                    const key = `exzibo_carousel_desc_${restaurantId || 'default'}`
+                    localStorage.setItem(key, e.target.value)
+                    window.dispatchEvent(new CustomEvent('exzibo-carousel-desc-changed', {
+                      detail: { restaurantId, text: e.target.value }
+                    }))
+                  }}
+                  placeholder="WRITE HERE"
+                  rows={4}
+                  style={{
+                    width: '100%', boxSizing: 'border-box',
+                    background: '#fff', border: 'none', borderRadius: '12px',
+                    padding: '14px 16px',
+                    fontSize: '14px', fontWeight: 700, color: '#111',
+                    letterSpacing: '0.02em',
+                    resize: 'vertical', fontFamily: 'inherit',
+                    outline: 'none', lineHeight: 1.6,
+                    boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+                  }}
+                />
+              )}
+            </div>
           </div>
 
           {/* Logout */}
