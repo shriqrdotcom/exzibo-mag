@@ -742,7 +742,7 @@ export default function ProfileSlide({
                   padding: '14px 16px',
                   fontSize: '14px', fontWeight: 700, color: '#111',
                   letterSpacing: '0.02em',
-                  resize: 'vertical', fontFamily: 'inherit',
+                  resize: 'none', fontFamily: 'inherit',
                   outline: 'none', lineHeight: 1.6,
                   boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
                 }}
