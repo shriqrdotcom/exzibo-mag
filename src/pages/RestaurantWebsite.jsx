@@ -1401,11 +1401,6 @@ export default function RestaurantWebsite() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
                   <div style={{ fontSize: '9px', fontWeight: 800, letterSpacing: '0.22em', color: '#E8321A', textTransform: 'uppercase' }}>The Philosophy</div>
                 </div>
-                {/* Opening quote mark */}
-                <div style={{ fontSize: '42px', lineHeight: 0.6, color: '#E8321A', opacity: 0.25, fontFamily: 'Georgia, serif', marginBottom: '8px', userSelect: 'none' }}>"</div>
-                <p style={{ fontSize: '14px', lineHeight: 1.8, color: theme.aboutText, margin: 0, fontStyle: 'italic' }}>
-                  {aboutData.description || restaurant.description || 'An uncompromising culinary experience rooted in craft, quality, and atmosphere. Every dish is a conversation between heritage and innovation.'}
-                </p>
                 {restaurant.additionalInfo && (
                   <p style={{ fontSize: '12px', lineHeight: 1.7, color: theme.aboutSub, marginTop: '12px', paddingTop: '12px', borderTop: `1px solid ${theme.aboutSubBorder}`, margin: '12px 0 0', fontStyle: 'normal' }}>
                     {restaurant.additionalInfo}
