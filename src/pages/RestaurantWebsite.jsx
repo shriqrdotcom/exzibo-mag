@@ -229,6 +229,7 @@ export default function RestaurantWebsite() {
   const [showOrderConfirm, setShowOrderConfirm] = useState(false)
   const [openingHours, setOpeningHours] = useState(null)
   const [heroBadge, setHeroBadge] = useState('')
+  const [heroText, setHeroText] = useState('')
 
   useEffect(() => {
     const cartKey = `exzibo_cart_${slug}`
@@ -272,6 +273,22 @@ export default function RestaurantWebsite() {
     }
     window.addEventListener('exzibo-carousel-badge-changed', onBadgeChanged)
     return () => window.removeEventListener('exzibo-carousel-badge-changed', onBadgeChanged)
+  }, [restaurant?.id])
+
+  useEffect(() => {
+    const rawId = restaurant?.id
+    const rid = (!rawId || rawId === 'demo') ? 'default' : rawId
+    const key = `exzibo_carousel_desc_${rid}`
+    setHeroText(localStorage.getItem(key) || '')
+
+    function onDescChanged(e) {
+      const { restaurantId: changedId, text } = e.detail || {}
+      const matches = changedId === rid || changedId === rawId ||
+        (rid === 'default' && (!changedId || changedId === 'default' || changedId === 'demo'))
+      if (matches) setHeroText(text || '')
+    }
+    window.addEventListener('exzibo-carousel-desc-changed', onDescChanged)
+    return () => window.removeEventListener('exzibo-carousel-desc-changed', onDescChanged)
   }, [restaurant?.id])
 
   useEffect(() => {
@@ -1285,8 +1302,8 @@ export default function RestaurantWebsite() {
                   <Flame size={10} color="#fff" />
                   <span style={{ fontSize: '10px', fontWeight: 800, color: '#fff', letterSpacing: '0.08em', textTransform: 'uppercase' }}>{heroBadge || 'Premium Dining'}</span>
                 </div>
-                <div style={{ fontSize: '22px', fontWeight: 900, color: '#fff', lineHeight: 1.2, marginBottom: '6px', textShadow: '0 2px 12px rgba(0,0,0,0.8)' }}>
-                  An Unforgettable<br />Culinary Experience
+                <div style={{ fontSize: '22px', fontWeight: 900, color: '#fff', lineHeight: 1.2, marginBottom: '6px', textShadow: '0 2px 12px rgba(0,0,0,0.8)', whiteSpace: 'pre-line' }}>
+                  {heroText || 'An Unforgettable\nCulinary Experience'}
                 </div>
               </div>
               {carouselImages.length > 1 && (
