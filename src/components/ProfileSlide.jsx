@@ -216,19 +216,30 @@ export default function ProfileSlide({
       />
 
       <div onClick={onClose} style={{
-        position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 1000,
+        position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000,
         opacity: open ? 1 : 0, pointerEvents: open ? 'all' : 'none',
         transition: 'opacity 0.3s ease',
         backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
       }} />
 
-      <div style={{
-        position: 'fixed', top: 0, right: 0, height: '100vh', width: '360px', maxWidth: '85vw',
-        background: '#F2F2F7', zIndex: 1001,
-        transform: open ? 'translateX(0)' : 'translateX(110%)',
-        transition: 'transform 0.35s cubic-bezier(0.4,0,0.2,1)',
-        overflowY: 'auto', boxShadow: '-8px 0 40px rgba(0,0,0,0.35)', borderRadius: '20px 0 0 20px',
-      }}>
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          position: 'fixed',
+          top: '50%', left: '50%',
+          width: '380px', maxWidth: '92vw',
+          maxHeight: '88vh',
+          background: '#EFEFF4',
+          zIndex: 1001,
+          borderRadius: '28px',
+          overflowY: 'auto',
+          boxShadow: '0 24px 80px rgba(0,0,0,0.45), 0 8px 24px rgba(0,0,0,0.25)',
+          opacity: open ? 1 : 0,
+          transform: open ? 'translate(-50%, -50%) scale(1)' : 'translate(-50%, -50%) scale(0.93)',
+          pointerEvents: open ? 'all' : 'none',
+          transition: 'opacity 0.3s ease, transform 0.3s cubic-bezier(0.34,1.1,0.64,1)',
+        }}
+      >
         <div style={{ padding: '20px 16px 32px' }}>
 
           {/* Close */}
@@ -439,8 +450,20 @@ export default function ProfileSlide({
             <div style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#999', marginBottom: '10px', paddingLeft: '4px' }}>
               Image Carousel
             </div>
-            <div style={{ background: '#E9E9EF', borderRadius: '18px', height: '130px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Image size={32} color="#bbb" strokeWidth={1.2} />
+            <div style={{
+              background: '#E2E2E8', borderRadius: '18px', height: '130px',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              position: 'relative', overflow: 'hidden',
+            }}>
+              <div style={{
+                position: 'absolute', inset: 0,
+                backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)',
+                background: 'rgba(235,235,241,0.55)',
+                borderRadius: '18px',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <Image size={32} color="#bbb" strokeWidth={1.2} style={{ filter: 'blur(0px)' }} />
+              </div>
             </div>
           </div>
 
