@@ -10,6 +10,7 @@ import RestaurantWebsite from './pages/RestaurantWebsite'
 import FoodDetail from './pages/FoodDetail'
 import AdminDashboard from './pages/AdminDashboard'
 import TeamMembers from './pages/TeamMembers'
+import SuperAdminDashboard from './pages/SuperAdminDashboard'
 import { AnalyticsProvider } from './context/AnalyticsContext'
 
 export default function App() {
@@ -21,6 +22,7 @@ export default function App() {
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/admin/:id" element={<AdminDashboard />} />
           <Route path="/admin/:id/team" element={<TeamMembers />} />
+          <Route path="/super-admin" element={<SuperAdminDashboard />} />
           <Route path="/menu-editor" element={<MenuEditor />} />
           <Route path="/menu-editor/:uid" element={<MenuEditor />} />
           <Route path="/settings" element={<Settings />} />
