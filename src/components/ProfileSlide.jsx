@@ -272,7 +272,8 @@ export default function ProfileSlide({
           background: '#EFEFF4',
           zIndex: 1001,
           borderRadius: '28px',
-          overflowY: 'auto',
+          display: 'flex', flexDirection: 'column',
+          overflowY: 'hidden',
           boxShadow: '0 24px 80px rgba(0,0,0,0.45), 0 8px 24px rgba(0,0,0,0.25)',
           opacity: open ? 1 : 0,
           transform: open ? 'translate(-50%, -50%) scale(1)' : 'translate(-50%, -50%) scale(0.93)',
@@ -280,8 +281,14 @@ export default function ProfileSlide({
           transition: 'opacity 0.3s ease, transform 0.3s cubic-bezier(0.34,1.1,0.64,1)',
         }}
       >
-        <div style={{ padding: '20px 16px 32px' }}>
-
+        {/* Sticky header */}
+        <div style={{
+          padding: '20px 16px 14px',
+          background: '#EFEFF4',
+          borderRadius: '28px 28px 0 0',
+          flexShrink: 0,
+          zIndex: 2,
+        }}>
           {/* Close */}
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '8px' }}>
             <button onClick={onClose} style={{
@@ -297,7 +304,7 @@ export default function ProfileSlide({
           <div style={{
             background: '#fff', borderRadius: '18px', padding: '16px 18px',
             display: 'flex', alignItems: 'center', gap: '14px',
-            marginBottom: '14px', boxShadow: '0 1px 6px rgba(0,0,0,0.06)',
+            boxShadow: '0 1px 6px rgba(0,0,0,0.06)',
           }}>
             <div onClick={() => fileInputRef.current?.click()} title="Click to change logo" style={{
               width: '52px', height: '52px', borderRadius: '50%',
@@ -325,6 +332,10 @@ export default function ProfileSlide({
               <Share2 size={18} strokeWidth={1.6} />
             </button>
           </div>
+        </div>{/* end sticky header */}
+
+        {/* Scrollable body */}
+        <div style={{ overflowY: 'auto', flex: 1, padding: '0 16px 32px' }}>
 
           {/* Status banners */}
           {uploadError && <StatusMsg type="error"><AlertCircle size={14} />{uploadError}</StatusMsg>}
