@@ -485,7 +485,7 @@ export default function ProfileSlide({
 
           </div>
 
-          {/* Image Carousel */}
+          {/* Image Gallery */}
           <input
             ref={carouselInputRef}
             type="file"
@@ -496,7 +496,7 @@ export default function ProfileSlide({
           />
           <div style={{ marginBottom: '14px' }}>
             <div style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#999', marginBottom: '10px', paddingLeft: '4px' }}>
-              Image Carousel
+              Image Gallery
             </div>
 
             {carouselImages.length === 0 ? (
