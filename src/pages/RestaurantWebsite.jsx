@@ -241,16 +241,17 @@ export default function RestaurantWebsite() {
   }, [slug])
 
   useEffect(() => {
-    const rid = restaurant?.id || 'default'
+    const rawId = restaurant?.id
+    const rid = (!rawId || rawId === 'demo') ? 'default' : rawId
     const key = `exzibo_hours_${rid}`
     const stored = localStorage.getItem(key)
     setOpeningHours(stored ? JSON.parse(stored) : null)
 
     function onHoursChanged(e) {
       const { restaurantId: changedId, hours } = e.detail || {}
-      if (changedId === rid || (!changedId && rid === 'default')) {
-        setOpeningHours(hours)
-      }
+      const matches = changedId === rid || changedId === rawId ||
+        (rid === 'default' && (!changedId || changedId === 'default' || changedId === 'demo'))
+      if (matches) setOpeningHours(hours)
     }
     window.addEventListener('exzibo-hours-changed', onHoursChanged)
     return () => window.removeEventListener('exzibo-hours-changed', onHoursChanged)
