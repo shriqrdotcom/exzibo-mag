@@ -40,6 +40,7 @@ export default function ProfileSlide({
   open, onClose,
   restaurantId, logoUrl, onLogoUpdate,
   restaurantName, onNameUpdate,
+  onTeamClick,
 }) {
   const fileInputRef = useRef(null)
   const nameInputRef = useRef(null)
@@ -410,9 +411,24 @@ export default function ProfileSlide({
             </ExpandableRow>
 
             {/* TEAM MEMBERS */}
-            <div style={rowStyle}>
+            <div
+              onClick={onTeamClick}
+              style={{
+                ...rowStyle,
+                cursor: onTeamClick ? 'pointer' : 'default',
+                borderRadius: '12px',
+                transition: 'background 0.15s',
+              }}
+              onMouseEnter={e => { if (onTeamClick) e.currentTarget.style.background = 'rgba(99,102,241,0.09)' }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
+            >
               <span style={iconWrap}><Users size={22} strokeWidth={1.4} /></span>
-              <span style={rowLabel}>TEAM MEMBERS</span>
+              <span style={{ ...rowLabel, flex: 1 }}>TEAM MEMBERS</span>
+              {onTeamClick && (
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#bbb" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="9 18 15 12 9 6" />
+                </svg>
+              )}
             </div>
 
           </div>

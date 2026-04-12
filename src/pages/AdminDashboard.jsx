@@ -929,6 +929,7 @@ export default function AdminDashboard() {
         onLogoUpdate={url => setLogoUrl(url)}
         restaurantName={displayName}
         onNameUpdate={name => setOverrideName(name)}
+        onTeamClick={() => { setProfileOpen(false); navigate(`/admin/${id || 'default'}/team`) }}
       />
     </div>
   )

@@ -1,0 +1,104 @@
+> Enable the **"TEAM MEMBERS"** button in the admin sidebar and implement a complete **Team Members management page**.
+>
+> ### 1. Navigation Behavior
+>
+> * When clicking **TEAM MEMBERS**, open a **new page/view** (not modal).
+> * Route path: `/admin/team`
+> * Smooth transition (slide-in or fade-in animation like a mobile dashboard).
+>
+> ---
+>
+> ### 2. Page Layout (Match Reference UI)
+>
+> Create a **modern card-style dashboard UI** similar to the reference:
+>
+> #### Header Section
+>
+> * Title: **"Team Members"**
+> * Subtitle: "Manage your restaurant staff"
+> * Add a **back button** (top-left)
+> * Optional: 3-dot menu (top-right)
+>
+> #### Categories (Optional but stylish)
+>
+> * Pills/tags like:
+>
+>   * Admin
+>   * Staff
+>   * Kitchen
+>
+> ---
+>
+> ### 3. Team Members List UI
+>
+> * Show members in **horizontal scroll OR grid cards**
+> * Each member card should contain:
+>
+>   * Profile Image (rounded)
+>   * Name
+>   * Role (IMPORTANT)
+>
+> #### Example Data:
+>
+> ```json
+> [
+>   { "name": "Trish", "role": "Main Admin", "avatar": "https://i.pravatar.cc/150?img=1" },
+>   { "name": "Avinav", "role": "Waiter", "avatar": "https://i.pravatar.cc/150?img=2" },
+>   { "name": "Rahul", "role": "Chef", "avatar": "https://i.pravatar.cc/150?img=3" }
+> ]
+> ```
+>
+> ---
+>
+> ### 4. Functional Features
+>
+> * Add **"Add Member" button**
+>
+>   * Opens a form:
+>
+>     * Name
+>     * Role (dropdown: Admin, Waiter, Chef, Manager)
+>     * Profile Image upload
+> * Allow:
+>
+>   * Edit member
+>   * Delete member
+>
+> ---
+>
+> ### 5. UI/UX Style
+>
+> * Use **soft shadows + rounded cards**
+> * Gradient header (blue/purple like reference)
+> * Smooth hover effects
+> * Mobile-first design
+>
+> ---
+>
+> ### 6. State Management
+>
+> * Store members in:
+>
+>   * Local state OR backend DB (if available)
+> * Persist data after refresh (if backend exists)
+>
+> ---
+>
+> ### 7. Bonus (Optional but recommended)
+>
+> * Add role badge colors:
+>
+>   * Admin → Purple
+>   * Waiter → Green
+>   * Chef → Orange
+> * Add search bar to filter members
+>
+> ---
+>
+> ### 8. Important
+>
+> * Make sure sidebar button is **fully clickable**
+> * Highlight active menu item
+> * Keep design consistent with existing dashboard
+
+---
