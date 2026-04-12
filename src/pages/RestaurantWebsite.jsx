@@ -227,6 +227,7 @@ export default function RestaurantWebsite() {
   const [orderStatus, setOrderStatus] = useState(1)
   const [viewingHistoryOrder, setViewingHistoryOrder] = useState(null)
   const [showOrderConfirm, setShowOrderConfirm] = useState(false)
+  const [openingHours, setOpeningHours] = useState(null)
 
   useEffect(() => {
     const cartKey = `exzibo_cart_${slug}`
@@ -238,6 +239,22 @@ export default function RestaurantWebsite() {
       } catch (_) {}
     }
   }, [slug])
+
+  useEffect(() => {
+    const rid = restaurant?.id || 'default'
+    const key = `exzibo_hours_${rid}`
+    const stored = localStorage.getItem(key)
+    setOpeningHours(stored ? JSON.parse(stored) : null)
+
+    function onHoursChanged(e) {
+      const { restaurantId: changedId, hours } = e.detail || {}
+      if (changedId === rid || (!changedId && rid === 'default')) {
+        setOpeningHours(hours)
+      }
+    }
+    window.addEventListener('exzibo-hours-changed', onHoursChanged)
+    return () => window.removeEventListener('exzibo-hours-changed', onHoursChanged)
+  }, [restaurant?.id])
 
   useEffect(() => {
     const cartKey = `exzibo_cart_${slug}`
@@ -1438,14 +1455,26 @@ export default function RestaurantWebsite() {
                   <InfoRow icon={<MapPin size={14} color="#E8321A" />} label="Location" value={restaurant.location} theme={theme} />
                 )}
                 {(() => {
+                  if (!openingHours) return null
+                  const { openH, openM, openAmPm, closeH, closeM, closeAmPm } = openingHours
+                  const fmtT = (h, m, ap) => `${h}:${String(m).padStart(2, '0')} ${ap}`
+                  const toMins = (h, m, ap) => {
+                    let h24 = h % 12
+                    if (ap === 'PM') h24 += 12
+                    return h24 * 60 + m
+                  }
                   const now = new Date()
-                  const h = now.getHours()
-                  const isOpen = h >= 12 && h < 23
+                  const nowMins = now.getHours() * 60 + now.getMinutes()
+                  const openMins = toMins(openH, openM, openAmPm)
+                  const closeMins = toMins(closeH, closeM, closeAmPm)
+                  const isOpen = openMins <= closeMins
+                    ? nowMins >= openMins && nowMins < closeMins
+                    : nowMins >= openMins || nowMins < closeMins
                   return (
                     <InfoRow
                       icon={<Clock size={14} color={isOpen ? '#4ade80' : '#E8321A'} />}
                       label="Opening Hours"
-                      value={`12:00 PM – 11:00 PM · ${isOpen ? 'Open Now' : 'Closed'}`}
+                      value={`${fmtT(openH, openM, openAmPm)} – ${fmtT(closeH, closeM, closeAmPm)} · ${isOpen ? 'Open Now' : 'Closed'}`}
                       theme={theme}
                     />
                   )

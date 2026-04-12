@@ -154,6 +154,7 @@ export default function ProfileSlide({
     const key = `exzibo_hours_${restaurantId || 'default'}`
     localStorage.setItem(key, JSON.stringify(data))
     setSavedHours(data)
+    window.dispatchEvent(new CustomEvent('exzibo-hours-changed', { detail: { restaurantId, hours: data } }))
     setHoursModalOpen(false)
   }
 
