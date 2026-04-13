@@ -4540,9 +4540,10 @@ const WEEKLY_REVENUE = [8200, 9450, 8800, 8178]
 function AnalyticsPanel({ accentStart, accentEnd, restaurantId }) {
   const [showSheet, setShowSheet] = React.useState(false)
   const [showRevenueModal, setShowRevenueModal] = React.useState(false)
+  const [showCustomerModal, setShowCustomerModal] = React.useState(false)
   const [categoryItems, setCategoryItems] = React.useState(() => buildCategoryItems(restaurantId))
 
-  const { totalWealth, todaysCollection, totalCustomers, totalBookings, categoryData, setRestaurantId, monthlyRevenue, weeklyRevenue } = useAnalytics()
+  const { totalWealth, todaysCollection, totalCustomers, totalCustomersThisMonth, customerGrowth, weeklyCustomerData, totalBookings, categoryData, setRestaurantId, monthlyRevenue, weeklyRevenue } = useAnalytics()
 
   const chartData = (monthlyRevenue && monthlyRevenue.some(v => v > 0)) ? monthlyRevenue : null
   const chartMax  = chartData ? Math.max(...chartData) : 75000
@@ -4634,13 +4635,18 @@ function AnalyticsPanel({ accentStart, accentEnd, restaurantId }) {
             <div style={{ fontSize: '10px', fontWeight: 700, color: 'rgba(255,255,255,0.65)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Total in INR.</div>
           </div>
 
-          <div style={card}>
+          <div
+            style={{ ...card, cursor: 'pointer' }}
+            onClick={() => setShowCustomerModal(true)}
+          >
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '14px' }}>
               <span style={{ fontSize: '13px', fontWeight: 700, color: '#334155', lineHeight: 1.4 }}>Total<br />customer</span>
               <AUsers size={16} color="#94a3b8" />
             </div>
             <div style={{ fontSize: '28px', fontWeight: 900, color: '#0f172a', marginBottom: '4px' }}>{totalCustomers.toLocaleString()}</div>
-            <div style={{ fontSize: '11px', color: accent, fontWeight: 700 }}>+12% this month</div>
+            <div style={{ fontSize: '11px', color: parseFloat(customerGrowth) >= 0 ? accent : '#ef4444', fontWeight: 700 }}>
+              {customerGrowth}% this month
+            </div>
           </div>
         </div>
 
@@ -4766,6 +4772,142 @@ function AnalyticsPanel({ accentStart, accentEnd, restaurantId }) {
                     </div>
                   )
                 })}
+              </div>
+            </div>
+          </div>
+        )
+      })()}
+
+      {/* ── Customer Details Modal ── */}
+      {showCustomerModal && (() => {
+        const monthName = new Date().toLocaleString('default', { month: 'long', year: 'numeric' })
+        const bestIdx = (weeklyCustomerData || []).reduce((bi, w, i, arr) => w.total > arr[bi].total ? i : bi, 0)
+        const grandTotal = (weeklyCustomerData || []).reduce((s, w) => s + w.total, 0)
+        const growthNum = parseFloat(customerGrowth)
+        const growthColor = growthNum >= 0 ? '#10b981' : '#ef4444'
+        return (
+          <div
+            onClick={() => setShowCustomerModal(false)}
+            style={{
+              position: 'fixed', inset: 0, zIndex: 1001,
+              background: 'rgba(0,0,0,0.4)',
+              backdropFilter: 'blur(10px)',
+              WebkitBackdropFilter: 'blur(10px)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              padding: '16px',
+              animation: 'overlayFadeIn 0.25s ease',
+            }}
+          >
+            <div
+              onClick={e => e.stopPropagation()}
+              style={{
+                background: '#fff',
+                borderRadius: '20px',
+                padding: '28px 24px',
+                width: '90%',
+                maxWidth: '420px',
+                maxHeight: '85vh',
+                overflowY: 'auto',
+                boxShadow: '0 20px 60px rgba(0,0,0,0.25)',
+                animation: 'modalScaleIn 0.25s cubic-bezier(0.34,1.56,0.64,1)',
+                position: 'relative',
+              }}
+            >
+              <button
+                onClick={() => setShowCustomerModal(false)}
+                style={{
+                  position: 'absolute', top: 16, right: 16,
+                  background: '#f0f0f5', border: 'none', borderRadius: '50%',
+                  width: 32, height: 32, display: 'flex', alignItems: 'center',
+                  justifyContent: 'center', cursor: 'pointer', fontSize: 16, color: '#555',
+                  lineHeight: 1,
+                }}
+              >✕</button>
+
+              <h2 style={{ fontSize: 18, fontWeight: 800, color: '#111', margin: '0 0 4px' }}>Customer Details</h2>
+              <p style={{ fontSize: 13, color: '#888', margin: '0 0 20px' }}>{monthName}</p>
+
+              <div style={{ background: '#f7f7fb', borderRadius: 14, padding: '14px 18px', marginBottom: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <span style={{ fontSize: 11, color: '#888', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                    This Month
+                  </span>
+                  <div style={{ fontSize: 28, fontWeight: 900, color: '#111', marginTop: 2 }}>
+                    {totalCustomersThisMonth.toLocaleString()}
+                  </div>
+                  <span style={{ fontSize: 11, color: '#888' }}>unique customers</span>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <span style={{ fontSize: 11, color: '#888', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                    vs Last Month
+                  </span>
+                  <div style={{ fontSize: 20, fontWeight: 800, color: growthColor, marginTop: 4 }}>
+                    {customerGrowth}%
+                  </div>
+                  <span style={{ fontSize: 10, color: '#aaa' }}>growth</span>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
+                {(weeklyCustomerData || []).map((w, i) => {
+                  const isBest = i === bestIdx
+                  const barPct = grandTotal > 0 ? Math.round((w.total / grandTotal) * 100) : 0
+                  return (
+                    <div
+                      key={i}
+                      style={{
+                        padding: '14px 16px',
+                        background: isBest ? '#f0eeff' : '#fafafa',
+                        borderRadius: 14,
+                        border: isBest ? '1.5px solid #6C63FF' : '1.5px solid #f0f0f0',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span style={{ fontSize: 13, fontWeight: isBest ? 800 : 700, color: isBest ? '#6C63FF' : '#334155' }}>
+                            {w.label}
+                          </span>
+                          {isBest && (
+                            <span style={{ fontSize: 10, fontWeight: 700, color: '#6C63FF', background: '#e4e1ff', borderRadius: 6, padding: '2px 6px' }}>
+                              MOST ACTIVE
+                            </span>
+                          )}
+                        </div>
+                        <span style={{ fontSize: 15, fontWeight: 800, color: isBest ? '#6C63FF' : '#111' }}>
+                          {w.total}
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', gap: 10, fontSize: 11, color: '#64748b', marginBottom: 8 }}>
+                        <span>📦 {w.ordersCount} orders</span>
+                        <span>📅 {w.bookingsCount} bookings</span>
+                      </div>
+                      <div style={{ height: 4, background: '#e2e8f0', borderRadius: 2, overflow: 'hidden' }}>
+                        <div style={{
+                          height: '100%', width: `${barPct}%`,
+                          background: isBest ? '#6C63FF' : '#94a3b8',
+                          borderRadius: 2, transition: 'width 0.5s ease',
+                        }} />
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+
+              <div style={{ background: '#0f172a', borderRadius: 14, padding: '16px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                    Grand Total
+                  </span>
+                  <div style={{ fontSize: 24, fontWeight: 900, color: '#fff', marginTop: 2 }}>
+                    {grandTotal.toLocaleString()} customers
+                  </div>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', marginBottom: 2 }}>Best week</div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: '#a5b4fc' }}>
+                    {(weeklyCustomerData || [])[bestIdx]?.label}
+                  </div>
+                </div>
               </div>
             </div>
           </div>

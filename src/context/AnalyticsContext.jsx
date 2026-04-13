@@ -5,10 +5,20 @@ const AnalyticsContext = createContext(null)
 const DEMO_MONTHLY = [38000, 62000, 58000, 44000, 42000, 60000, 64000, 58000, 62000, 55000, 48000, 42000]
 const DEMO_WEEKLY  = [8200, 9450, 8800, 8178]
 
+const DEMO_WEEKLY_CUSTOMERS = [
+  { label: 'Week 1', ordersCount: 4, bookingsCount: 3, bothCount: 0, total: 7 },
+  { label: 'Week 2', ordersCount: 6, bookingsCount: 5, bothCount: 0, total: 11 },
+  { label: 'Week 3', ordersCount: 5, bookingsCount: 4, bothCount: 0, total: 9 },
+  { label: 'Week 4', ordersCount: 3, bookingsCount: 2, bothCount: 0, total: 5 },
+]
+
 const DEMO_VALUES = {
   totalWealth: '₹34,628',
   todaysCollection: '₹0.00',
   totalCustomers: 1482,
+  totalCustomersThisMonth: 32,
+  customerGrowth: '+12.0',
+  weeklyCustomerData: DEMO_WEEKLY_CUSTOMERS,
   totalBookings: 256,
   categoryData: [
     { value: 55, color: '#6C63FF' },
@@ -20,6 +30,12 @@ const DEMO_VALUES = {
 }
 
 const COLORS = ['#6C63FF', '#3d3799', '#a5d8f0', '#f59e0b', '#10b981', '#ec4899', '#3b82f6']
+
+function bookingKey(b) {
+  if (b.phone && b.phone.trim()) return b.phone.trim()
+  if (b.name && b.name.trim()) return b.name.trim().toLowerCase()
+  return null
+}
 
 function buildCategoryDataFromMenu(restaurantId) {
   try {
@@ -65,6 +81,80 @@ function computeWeeklyRevenue(orders) {
   return weekly
 }
 
+function computeCustomerStats(orders, bookings) {
+  const now = new Date()
+  const currentYear = now.getFullYear()
+  const currentMonth = now.getMonth()
+  const lastMonth = currentMonth === 0 ? 11 : currentMonth - 1
+  const lastMonthYear = currentMonth === 0 ? currentYear - 1 : currentYear
+
+  const confirmedOrders = orders.filter(o => o.status === 'confirmed')
+
+  const allBookingKeys = new Set()
+  bookings.forEach(b => { const k = bookingKey(b); if (k) allBookingKeys.add(k) })
+
+  const totalCustomers = allBookingKeys.size + confirmedOrders.length
+
+  const thisMonthBookings = bookings.filter(b => {
+    const d = new Date(b.submittedAt || b.date)
+    return !isNaN(d) && d.getMonth() === currentMonth && d.getFullYear() === currentYear
+  })
+  const thisMonthOrders = confirmedOrders.filter(o => {
+    const d = new Date(o.createdAt || o.submittedAt)
+    return !isNaN(d) && d.getMonth() === currentMonth && d.getFullYear() === currentYear
+  })
+  const thisMonthBKeys = new Set()
+  thisMonthBookings.forEach(b => { const k = bookingKey(b); if (k) thisMonthBKeys.add(k) })
+  const thisMonthTotal = thisMonthBKeys.size + thisMonthOrders.length
+
+  const lastMonthBookings = bookings.filter(b => {
+    const d = new Date(b.submittedAt || b.date)
+    return !isNaN(d) && d.getMonth() === lastMonth && d.getFullYear() === lastMonthYear
+  })
+  const lastMonthOrders = confirmedOrders.filter(o => {
+    const d = new Date(o.createdAt || o.submittedAt)
+    return !isNaN(d) && d.getMonth() === lastMonth && d.getFullYear() === lastMonthYear
+  })
+  const lastMonthBKeys = new Set()
+  lastMonthBookings.forEach(b => { const k = bookingKey(b); if (k) lastMonthBKeys.add(k) })
+  const lastMonthTotal = lastMonthBKeys.size + lastMonthOrders.length
+
+  const growthVal = lastMonthTotal > 0
+    ? (((thisMonthTotal - lastMonthTotal) / lastMonthTotal) * 100).toFixed(1)
+    : thisMonthTotal > 0 ? '100.0' : '0.0'
+  const customerGrowth = (parseFloat(growthVal) >= 0 ? '+' : '') + growthVal
+
+  const weeks = [
+    { label: 'Week 1', minDay: 1,  maxDay: 7,  orders: 0, bKeys: new Set() },
+    { label: 'Week 2', minDay: 8,  maxDay: 14, orders: 0, bKeys: new Set() },
+    { label: 'Week 3', minDay: 15, maxDay: 21, orders: 0, bKeys: new Set() },
+    { label: 'Week 4', minDay: 22, maxDay: 31, orders: 0, bKeys: new Set() },
+  ]
+
+  thisMonthBookings.forEach(b => {
+    const d = new Date(b.submittedAt || b.date)
+    const day = isNaN(d) ? 1 : d.getDate()
+    const wi = day <= 7 ? 0 : day <= 14 ? 1 : day <= 21 ? 2 : 3
+    const k = bookingKey(b); if (k) weeks[wi].bKeys.add(k)
+  })
+  thisMonthOrders.forEach(o => {
+    const d = new Date(o.createdAt || o.submittedAt)
+    const day = isNaN(d) ? 1 : d.getDate()
+    const wi = day <= 7 ? 0 : day <= 14 ? 1 : day <= 21 ? 2 : 3
+    weeks[wi].orders++
+  })
+
+  const weeklyCustomerData = weeks.map(w => ({
+    label: w.label,
+    ordersCount: w.orders,
+    bookingsCount: w.bKeys.size,
+    bothCount: 0,
+    total: w.orders + w.bKeys.size,
+  }))
+
+  return { totalCustomers, thisMonthTotal, customerGrowth, weeklyCustomerData }
+}
+
 function computeAnalytics(restaurantId) {
   const rid = restaurantId || 'demo'
 
@@ -80,13 +170,13 @@ function computeAnalytics(restaurantId) {
     if (raw) bookings = JSON.parse(raw)
   } catch { bookings = [] }
 
-  const confirmedOrders = orders.filter(o => o.status === 'confirmed')
   const liveCategory = buildCategoryDataFromMenu(rid)
 
   if (orders.length === 0 && bookings.length === 0) {
     return { ...DEMO_VALUES, categoryData: liveCategory || DEMO_VALUES.categoryData }
   }
 
+  const confirmedOrders = orders.filter(o => o.status === 'confirmed')
   const totalWealthVal = confirmedOrders.reduce((s, o) => s + (parseFloat(o.grandTotal) || 0), 0)
 
   const today = new Date().toISOString().slice(0, 10)
@@ -96,20 +186,21 @@ function computeAnalytics(restaurantId) {
   })
   const todaysCollectionVal = todayConfirmed.reduce((s, o) => s + (parseFloat(o.grandTotal) || 0), 0)
 
-  const uniquePhones = new Set(bookings.map(b => b.phone).filter(Boolean))
-  const totalCustomers = uniquePhones.size || bookings.length || confirmedOrders.length || DEMO_VALUES.totalCustomers
+  const { totalCustomers, thisMonthTotal, customerGrowth, weeklyCustomerData } =
+    computeCustomerStats(orders, bookings)
 
   const monthlyRevenue = computeMonthlyRevenue(orders)
   const weeklyRevenue  = computeWeeklyRevenue(orders)
 
-  const hasRealRevenue = confirmedOrders.length > 0
-
   return {
-    totalWealth: hasRealRevenue
+    totalWealth: confirmedOrders.length > 0
       ? `₹${totalWealthVal.toLocaleString('en-IN')}`
       : DEMO_VALUES.totalWealth,
     todaysCollection: `₹${todaysCollectionVal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
     totalCustomers,
+    totalCustomersThisMonth: thisMonthTotal,
+    customerGrowth,
+    weeklyCustomerData,
     totalBookings: bookings.length || DEMO_VALUES.totalBookings,
     categoryData: liveCategory || DEMO_VALUES.categoryData,
     monthlyRevenue: monthlyRevenue.some(v => v > 0) ? monthlyRevenue : DEMO_MONTHLY,
