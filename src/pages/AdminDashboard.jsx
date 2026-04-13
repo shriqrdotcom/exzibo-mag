@@ -2390,28 +2390,52 @@ const DEFAULT_CAT_FILTERS = {
   ],
 }
 
-function compressToLimit(dataUrl, maxKB) {
+async function compressToLimit(dataUrl, maxKB) {
   return new Promise((resolve) => {
     const img = new window.Image()
     img.onload = () => {
-      let quality = 0.85
-      let scale = 1.0
-      const attempt = () => {
-        try {
-          const canvas = document.createElement('canvas')
-          canvas.width = Math.round(img.naturalWidth * scale)
-          canvas.height = Math.round(img.naturalHeight * scale)
-          const ctx = canvas.getContext('2d')
+      try {
+        const rawKB = (dataUrl.length * 0.75) / 1024
+        // Aggressively pre-scale the canvas dimensions so we only draw once.
+        // Target ~4× the maxKB in pixel budget (JPEG is ~4:1 vs raw pixels).
+        const pixelBudgetRatio = (maxKB * 4) / rawKB
+        let scale = Math.min(1, Math.sqrt(pixelBudgetRatio))
+        scale = Math.max(0.05, scale)
+
+        const canvas = document.createElement('canvas')
+        canvas.width  = Math.max(1, Math.round(img.naturalWidth  * scale))
+        canvas.height = Math.max(1, Math.round(img.naturalHeight * scale))
+        const ctx = canvas.getContext('2d')
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+
+        // Binary-search quality — max 10 iterations, never recurse
+        let lo = 0.1, hi = 0.92, best = null
+        for (let i = 0; i < 10; i++) {
+          const mid = (lo + hi) / 2
+          const candidate = canvas.toDataURL('image/jpeg', mid)
+          const kb = (candidate.length * 0.75) / 1024
+          if (kb <= maxKB) {
+            best = candidate
+            lo = mid        // fits — try higher quality
+          } else {
+            hi = mid        // too big — try lower quality
+          }
+          if (hi - lo < 0.02) break  // converged
+        }
+
+        // If still over limit after binary search, halve scale and retry once
+        if (!best || (best.length * 0.75) / 1024 > maxKB) {
+          canvas.width  = Math.max(1, Math.round(canvas.width  * 0.5))
+          canvas.height = Math.max(1, Math.round(canvas.height * 0.5))
           ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
-          const result = canvas.toDataURL('image/jpeg', quality)
-          const sizeKB = (result.length * 0.75) / 1024
-          if (sizeKB <= maxKB) { resolve(result); return }
-          if (quality > 0.32) { quality = Math.max(quality - 0.08, 0.3); attempt(); return }
-          if (scale > 0.32) { scale = Math.max(scale - 0.12, 0.3); quality = 0.75; attempt(); return }
-          resolve(result)
-        } catch (e) { console.error('compress error', e); resolve(null) }
+          best = canvas.toDataURL('image/jpeg', 0.55)
+        }
+
+        resolve(best || canvas.toDataURL('image/jpeg', 0.3))
+      } catch (e) {
+        console.error('compress error', e)
+        resolve(null)
       }
-      attempt()
     }
     img.onerror = () => resolve(null)
     img.src = dataUrl
@@ -2420,9 +2444,13 @@ function compressToLimit(dataUrl, maxKB) {
 
 function ImageUploadField({ value, onChange, accentStart }) {
   const inputRef = React.useRef(null)
+  const onChangeRef = React.useRef(onChange)
+  React.useEffect(() => { onChangeRef.current = onChange }, [onChange])
+
   const [sizeError, setSizeError] = React.useState('')
   const [compressModal, setCompressModal] = React.useState(false)
-  const [pendingSrc, setPendingSrc] = React.useState(null)
+  const pendingSrcRef = React.useRef(null)
+  const [pendingPreview, setPendingPreview] = React.useState(null)
   const [compressing, setCompressing] = React.useState(false)
 
   function handleFileSelect(e) {
@@ -2441,32 +2469,39 @@ function ImageUploadField({ value, onChange, accentStart }) {
     const reader = new FileReader()
     reader.onload = (ev) => {
       if (sizeKB > 200) {
-        setPendingSrc(ev.target.result)
+        pendingSrcRef.current = ev.target.result
+        setPendingPreview(ev.target.result)
         setCompressModal(true)
       } else {
-        onChange(ev.target.result)
+        onChangeRef.current(ev.target.result)
       }
     }
     reader.readAsDataURL(file)
   }
 
   async function handleCompressConfirm() {
-    if (!pendingSrc) return
+    const src = pendingSrcRef.current
+    if (!src) return
     setCompressing(true)
     try {
-      const compressed = await compressToLimit(pendingSrc, 200)
-      if (compressed) onChange(compressed)
+      const compressed = await compressToLimit(src, 200)
+      if (compressed) {
+        onChangeRef.current(compressed)
+      }
     } catch (err) {
       console.error('Compression failed:', err)
+    } finally {
+      pendingSrcRef.current = null
+      setPendingPreview(null)
+      setCompressing(false)
+      setCompressModal(false)
     }
-    setCompressing(false)
-    setCompressModal(false)
-    setPendingSrc(null)
   }
 
   function handleCompressCancel() {
+    pendingSrcRef.current = null
+    setPendingPreview(null)
     setCompressModal(false)
-    setPendingSrc(null)
   }
 
   return (
@@ -2515,10 +2550,10 @@ function ImageUploadField({ value, onChange, accentStart }) {
             </div>
 
             {/* Preview thumbnail */}
-            {pendingSrc && (
+            {pendingPreview && (
               <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '20px' }}>
                 <img
-                  src={pendingSrc}
+                  src={pendingPreview}
                   alt="preview"
                   style={{
                     width: '80px', height: '80px', borderRadius: '14px',
