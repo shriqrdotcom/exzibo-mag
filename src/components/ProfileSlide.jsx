@@ -16,6 +16,39 @@ function fileToBase64(file) {
   })
 }
 
+function compressImageToLimit(file, maxKB = 200) {
+  return new Promise((resolve) => {
+    const objectUrl = URL.createObjectURL(file)
+    const img = new window.Image()
+    img.onload = () => {
+      URL.revokeObjectURL(objectUrl)
+      let quality = 0.85
+      let scale = 1.0
+      const attempt = () => {
+        try {
+          const canvas = document.createElement('canvas')
+          canvas.width = Math.round(img.naturalWidth * scale)
+          canvas.height = Math.round(img.naturalHeight * scale)
+          const ctx = canvas.getContext('2d')
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+          const dataUrl = canvas.toDataURL('image/jpeg', quality)
+          const sizeKB = (dataUrl.length * 0.75) / 1024
+          if (sizeKB <= maxKB) { resolve(dataUrl); return }
+          if (quality > 0.35) { quality = Math.max(quality - 0.1, 0.3); attempt(); return }
+          if (scale > 0.35) { scale = Math.max(scale - 0.15, 0.3); quality = 0.7; attempt(); return }
+          resolve(null)
+        } catch (e) {
+          console.error('compressImageToLimit error:', e)
+          resolve(null)
+        }
+      }
+      attempt()
+    }
+    img.onerror = () => { URL.revokeObjectURL(objectUrl); resolve(null) }
+    img.src = objectUrl
+  })
+}
+
 function loadContact(restaurantId) {
   if (!restaurantId || restaurantId === 'default') {
     const config = JSON.parse(localStorage.getItem('exzibo_admin_global_config') || '{}')
@@ -85,6 +118,8 @@ export default function ProfileSlide({
 
   const [carouselImages, setCarouselImages] = useState([])
   const [carouselIdx, setCarouselIdx] = useState(0)
+  const [galleryLoading, setGalleryLoading] = useState(false)
+  const [galleryErrors, setGalleryErrors] = useState([])
   const [descText, setDescText] = useState('')
   const [badgeText, setBadgeText] = useState('')
   const [restaurantUID, setRestaurantUID] = useState('')
@@ -113,17 +148,71 @@ export default function ProfileSlide({
   }, [restaurantId])
 
   async function handleCarouselFiles(files) {
-    const valid = Array.from(files).filter(f => f.type.startsWith('image/'))
-    if (!valid.length) return
-    const base64s = await Promise.all(valid.map(fileToBase64))
-    setCarouselImages(prev => {
-      const updated = [...prev, ...base64s]
-      const key = `exzibo_carousel_${restaurantId || 'default'}`
-      localStorage.setItem(key, JSON.stringify(updated))
-      window.dispatchEvent(new CustomEvent('exzibo-carousel-changed', { detail: { restaurantId, images: updated } }))
-      return updated
-    })
-    setCarouselIdx(prev => prev)
+    const fileArray = Array.from(files).filter(f => f.type.startsWith('image/'))
+    if (!fileArray.length) return
+
+    setGalleryLoading(true)
+    setGalleryErrors([])
+
+    const accepted = []
+    const errors = []
+
+    for (let i = 0; i < fileArray.length; i++) {
+      const file = fileArray[i]
+      const num = i + 1
+      try {
+        const sizeKB = file.size / 1024
+
+        if (sizeKB < 50) {
+          errors.push(`Image no. ${num} does not meet the size requirement (50KB–200KB) — file is too small (${sizeKB.toFixed(0)} KB).`)
+          continue
+        }
+
+        let dataUrl = null
+
+        if (sizeKB > 200) {
+          const compressed = await compressImageToLimit(file, 200)
+          if (!compressed) {
+            errors.push(`Image no. ${num} does not meet the size requirement (50KB–200KB) — too large and could not be compressed.`)
+            continue
+          }
+          const compressedKB = (compressed.length * 0.75) / 1024
+          if (compressedKB < 50) {
+            errors.push(`Image no. ${num} does not meet the size requirement (50KB–200KB) — compressed result is too small.`)
+            continue
+          }
+          dataUrl = compressed
+        } else {
+          dataUrl = await fileToBase64(file)
+        }
+
+        if (dataUrl) accepted.push(dataUrl)
+      } catch (err) {
+        console.error(`Gallery: error processing image ${num}:`, err)
+        errors.push(`Image no. ${num} could not be processed due to an unexpected error.`)
+      }
+    }
+
+    if (errors.length) setGalleryErrors(errors)
+
+    if (accepted.length) {
+      setCarouselImages(prev => {
+        const deduped = accepted.filter(a => !prev.includes(a))
+        const updated = [...prev, ...deduped]
+        try {
+          const key = `exzibo_carousel_${restaurantId || 'default'}`
+          localStorage.setItem(key, JSON.stringify(updated))
+          window.dispatchEvent(new CustomEvent('exzibo-carousel-changed', { detail: { restaurantId, images: updated } }))
+        } catch (storageErr) {
+          console.error('Gallery: localStorage write failed:', storageErr)
+          errors.push('Storage limit reached — some images could not be saved. Try removing older images first.')
+          setGalleryErrors(e => [...e, 'Storage limit reached — some images could not be saved.'])
+        }
+        return updated
+      })
+    }
+
+    setGalleryLoading(false)
   }
 
   function removeCarouselImage(idx) {
@@ -593,11 +682,59 @@ export default function ProfileSlide({
             onChange={e => { if (e.target.files?.length) handleCarouselFiles(e.target.files); e.target.value = '' }}
           />
           <div style={{ marginBottom: '14px' }}>
-            <div style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#999', marginBottom: '10px', paddingLeft: '4px' }}>
-              Image Gallery
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px', paddingLeft: '4px' }}>
+              <div style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#999' }}>
+                Image Gallery
+              </div>
+              {galleryLoading && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Loader2 size={14} color="#6366F1" style={{ animation: 'spin 1s linear infinite' }} />
+                  <span style={{ fontSize: '10px', fontWeight: 600, color: '#6366F1' }}>Processing…</span>
+                </div>
+              )}
             </div>
 
-            {carouselImages.length === 0 ? (
+            {/* Gallery validation errors */}
+            {galleryErrors.length > 0 && (
+              <div style={{
+                background: '#FEF2F2', border: '1.5px solid #FECACA',
+                borderRadius: '12px', padding: '10px 12px',
+                marginBottom: '10px', display: 'flex', flexDirection: 'column', gap: '4px',
+              }}>
+                {galleryErrors.map((err, i) => (
+                  <div key={i} style={{ fontSize: '11px', color: '#EF4444', fontWeight: 600, lineHeight: 1.4 }}>
+                    ⚠ {err}
+                  </div>
+                ))}
+                <button
+                  onClick={() => setGalleryErrors([])}
+                  style={{
+                    alignSelf: 'flex-end', marginTop: '4px',
+                    background: 'none', border: 'none',
+                    fontSize: '10px', fontWeight: 700,
+                    color: '#EF4444', cursor: 'pointer', letterSpacing: '0.05em',
+                  }}
+                >
+                  DISMISS
+                </button>
+              </div>
+            )}
+
+            {/* Size hint */}
+            <div style={{ fontSize: '10px', color: '#aaa', fontWeight: 500, marginBottom: '8px', paddingLeft: '2px' }}>
+              Accepted image size: 50 KB – 200 KB
+            </div>
+
+            {galleryLoading ? (
+              <div style={{
+                background: '#E2E2E8', borderRadius: '18px', height: '130px',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                gap: '8px',
+              }}>
+                <Loader2 size={28} color="#999" style={{ animation: 'spin 1s linear infinite' }} />
+                <span style={{ fontSize: '11px', color: '#999', fontWeight: 500 }}>Processing images…</span>
+              </div>
+            ) : carouselImages.length === 0 ? (
               <div
                 onClick={() => carouselInputRef.current?.click()}
                 style={{
