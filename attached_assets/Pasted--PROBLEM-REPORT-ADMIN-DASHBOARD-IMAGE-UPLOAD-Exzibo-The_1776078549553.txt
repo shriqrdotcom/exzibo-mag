@@ -1,0 +1,75 @@
+:
+
+---
+
+```
+PROBLEM REPORT — ADMIN DASHBOARD IMAGE UPLOAD (Exzibo)
+
+There are TWO "Save Changes" buttons in the admin dashboard. 
+BOTH must work correctly. Currently nothing saves properly.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FULL FLOW THAT MUST WORK END TO END:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+STEP 1 — IMAGE UPLOAD & SIZE CHECK
+- User uploads an image in the Image Section of Admin Dashboard
+- System checks the file size immediately on upload
+- Allowed size: 60 KB to 200 KB
+- If image is UNDER 60 KB → show warning: "Image resolution too low"
+- If image is OVER 200 KB → trigger the compression popup (see Step 2)
+- If image is within range → load it directly into preview
+
+STEP 2 — COMPRESSION POPUP (for images over 200 KB)
+- Show a floating modal popup with blurred background 
+  (use backdrop-filter: blur(8px) on overlay)
+- Popup must display:
+    Title: "Image Too Large"
+    Message: "This image exceeds the 200 KB limit. 
+              Click Confirm to automatically compress it."
+    Buttons: [Cancel] [Confirm]
+- Cancel → discard image, close popup
+- Confirm → compress image instantly to under 200 KB using 
+  HTML5 Canvas API (reduce quality in a loop until size <= 200 KB)
+  then load compressed image into the preview field
+
+STEP 3 — SAVE CHANGES (THIS IS THE CRITICAL BROKEN PART)
+- After image loads into preview (compressed or original)
+- When user clicks SAVE CHANGES button:
+    → The image must ACTUALLY SAVE to the database/backend
+    → The image must INSTANTLY appear in the MENU SECTION 
+      on the live/front-end side
+    → No page reload should be needed
+    → Show a success toast: "Image saved successfully ✓"
+- BOTH Save Changes buttons in the dashboard must 
+  trigger this same save logic
+- Check and fix the broken connection between:
+    → The image state/variable holding the compressed image
+    → The save function / API call
+    → The database write or file storage update
+    → The menu section rendering that displays the image
+
+STEP 4 — MENU SECTION MUST REFLECT THE CHANGE
+- After saving, the Menu Section must show the NEW image
+- Fix any caching or state issue preventing the update
+- If image URL is the same filename, force a cache bust 
+  by appending ?t=timestamp to the image src after save
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TECHNICAL REQUIREMENTS:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+- Use HTML5 Canvas API for client-side compression
+- Compress iteratively: reduce quality in a while loop 
+  until blob size is <= 200 KB
+- Support formats: JPG, PNG, WEBP
+- DO NOT change the existing UI layout or design
+- Find ALL files related to: image upload, admin dashboard, 
+  menu section, save/update API calls
+- Fix the full broken chain from upload → compress → 
+  save → display in menu
+
+Scan the entire codebase, find every broken piece 
+in this flow, and fix all of it.
+```
+
+---

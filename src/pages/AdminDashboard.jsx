@@ -2839,12 +2839,13 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
       ),
     }
     setMenu(updated)
-    saveMenu(updated)
+    localStorage.setItem(storageKey, JSON.stringify(updated))
+    window.dispatchEvent(new StorageEvent('storage', { key: storageKey, newValue: JSON.stringify(updated) }))
     setSavedAll(true)
     setHasDraftChanges(false)
     setEditingId(null)
     setEditDraft(null)
-    showToast('✅ Image saved successfully!')
+    showToast('✅ Image saved successfully ✓')
     clearTimeout(saveAllTimer.current)
     saveAllTimer.current = setTimeout(() => setSavedAll(false), 2500)
   }
