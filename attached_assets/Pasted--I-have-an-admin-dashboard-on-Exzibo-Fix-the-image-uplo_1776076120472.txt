@@ -1,0 +1,46 @@
+```
+I have an admin dashboard on Exzibo. Fix the image upload system with these exact requirements:
+
+PROBLEM:
+- Image upload in the Image Section is broken
+- "Save Changes" button does not work
+- Need automatic image compression built in
+
+SOLUTION TO BUILD:
+
+1. IMAGE COMPRESSION LOGIC
+- Accepted image size range: 60 KB to 200 KB maximum
+- If any uploaded image exceeds 200 KB, automatically compress it to exactly 200 KB (or just under)
+- Use browser-side canvas compression (no server upload before compression)
+- Compression must happen INSTANTLY before saving — use canvas.toBlob() or similar method to reduce quality/resolution until file size is within limit
+- If image is already under 200 KB, accept it as-is
+- If image is under 60 KB, show a warning that image quality is too low
+
+2. FLOATING POPUP NOTIFICATION (when image is oversized)
+- Trigger a floating modal/popup when uploaded image exceeds 200 KB
+- Popup must have a BLURRED background overlay (use backdrop-filter: blur(8px))
+- Popup content should show:
+    Title: "Image Too Large"
+    Message: "This image exceeds the 200 KB limit. Click Confirm to automatically compress it."
+    Two buttons: [Cancel] and [Confirm]
+- If user clicks Cancel → discard the uploaded image
+- If user clicks Confirm → instantly compress the image to 200 KB and load it into the image preview
+
+3. SAVE CHANGES BUTTON FIX
+- After compression and confirmation, the Save Changes button must work and instantly reflect the new image on the page
+- Make sure the Save Changes button is correctly wired to the save/update function
+- After saving, show a small success toast notification: "Image saved successfully"
+
+4. INSTANT PREVIEW
+- After compression is confirmed, the image preview in the Image Section must update INSTANTLY without page reload
+
+TECH NOTES:
+- Use HTML5 Canvas API for client-side image compression
+- Compress by reducing image quality iteratively in a loop until size is <= 200 KB
+- Handle formats: JPG, PNG, WEBP
+- All of this should work on the existing admin dashboard UI — do not redesign the layout
+
+Fix all broken connections between the image upload input, preview, compression logic, and save button.
+```
+
+---

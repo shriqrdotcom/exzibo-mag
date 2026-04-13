@@ -1,7 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import ReactCrop, { centerCrop, makeAspectCrop } from 'react-image-crop'
-import 'react-image-crop/dist/ReactCrop.css'
 import { useAnalytics, notifyAnalyticsUpdate } from '../context/AnalyticsContext'
 import ProfileSlide from '../components/ProfileSlide'
 import {
@@ -2392,105 +2390,83 @@ const DEFAULT_CAT_FILTERS = {
   ],
 }
 
-const CROP_ASPECT_OPTIONS = [
-  { label: '1:1', value: 1 },
-  { label: '4:3', value: 4 / 3 },
-  { label: '16:9', value: 16 / 9 },
-]
+function compressToLimit(dataUrl, maxKB) {
+  return new Promise((resolve) => {
+    const img = new window.Image()
+    img.onload = () => {
+      let quality = 0.85
+      let scale = 1.0
+      const attempt = () => {
+        try {
+          const canvas = document.createElement('canvas')
+          canvas.width = Math.round(img.naturalWidth * scale)
+          canvas.height = Math.round(img.naturalHeight * scale)
+          const ctx = canvas.getContext('2d')
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+          const result = canvas.toDataURL('image/jpeg', quality)
+          const sizeKB = (result.length * 0.75) / 1024
+          if (sizeKB <= maxKB) { resolve(result); return }
+          if (quality > 0.32) { quality = Math.max(quality - 0.08, 0.3); attempt(); return }
+          if (scale > 0.32) { scale = Math.max(scale - 0.12, 0.3); quality = 0.75; attempt(); return }
+          resolve(result)
+        } catch (e) { console.error('compress error', e); resolve(null) }
+      }
+      attempt()
+    }
+    img.onerror = () => resolve(null)
+    img.src = dataUrl
+  })
+}
 
 function ImageUploadField({ value, onChange, accentStart }) {
   const inputRef = React.useRef(null)
-  const imgRef = React.useRef(null)
-  const [cropOpen, setCropOpen] = React.useState(false)
-  const [srcImg, setSrcImg] = React.useState(null)
-  const [crop, setCrop] = React.useState()
-  const [completedCrop, setCompletedCrop] = React.useState(null)
-  const [aspect, setAspect] = React.useState(1)
-  const [cropError, setCropError] = React.useState('')
+  const [sizeError, setSizeError] = React.useState('')
+  const [compressModal, setCompressModal] = React.useState(false)
+  const [pendingSrc, setPendingSrc] = React.useState(null)
+  const [compressing, setCompressing] = React.useState(false)
 
   function handleFileSelect(e) {
     const file = e.target.files?.[0]
     if (!file) return
     e.target.value = ''
     if (!file.type.startsWith('image/')) return
+    setSizeError('')
+
+    const sizeKB = file.size / 1024
+    if (sizeKB < 60) {
+      setSizeError('Image quality too low. Minimum size is 60 KB.')
+      return
+    }
+
     const reader = new FileReader()
     reader.onload = (ev) => {
-      setSrcImg(ev.target.result)
-      setCropError('')
-      setCompletedCrop(null)
-      setCropOpen(true)
+      if (sizeKB > 200) {
+        setPendingSrc(ev.target.result)
+        setCompressModal(true)
+      } else {
+        onChange(ev.target.result)
+      }
     }
     reader.readAsDataURL(file)
   }
 
-  function onImageLoad(e) {
-    const { width, height } = e.currentTarget
-    const newCrop = centerCrop(
-      makeAspectCrop({ unit: '%', width: 80 }, aspect, width, height),
-      width, height
-    )
-    setCrop(newCrop)
-  }
-
-  function handleAspectChange(newAspect) {
-    setAspect(newAspect)
-    if (imgRef.current) {
-      const { width, height } = imgRef.current
-      const newCrop = centerCrop(
-        makeAspectCrop({ unit: '%', width: 80 }, newAspect, width, height),
-        width, height
-      )
-      setCrop(newCrop)
+  async function handleCompressConfirm() {
+    if (!pendingSrc) return
+    setCompressing(true)
+    try {
+      const compressed = await compressToLimit(pendingSrc, 200)
+      if (compressed) onChange(compressed)
+    } catch (err) {
+      console.error('Compression failed:', err)
     }
+    setCompressing(false)
+    setCompressModal(false)
+    setPendingSrc(null)
   }
 
-  function handleConfirm() {
-    if (!completedCrop || !imgRef.current) {
-      setCropError('Please select a crop area first.')
-      return
-    }
-    const canvas = document.createElement('canvas')
-    const image = imgRef.current
-    const scaleX = image.naturalWidth / image.width
-    const scaleY = image.naturalHeight / image.height
-    canvas.width = Math.round(completedCrop.width * scaleX)
-    canvas.height = Math.round(completedCrop.height * scaleY)
-    const ctx = canvas.getContext('2d')
-    ctx.drawImage(
-      image,
-      completedCrop.x * scaleX,
-      completedCrop.y * scaleY,
-      completedCrop.width * scaleX,
-      completedCrop.height * scaleY,
-      0, 0,
-      canvas.width, canvas.height
-    )
-    canvas.toBlob((blob) => {
-      if (!blob) return
-      const sizeKB = blob.size / 1024
-      if (sizeKB < 50) {
-        setCropError('Image too small. Minimum size is 50 KB.')
-        return
-      }
-      if (sizeKB > 200) {
-        setCropError('Image too large. Maximum size is 200 KB.')
-        return
-      }
-      const reader = new FileReader()
-      reader.onload = (ev) => {
-        onChange(ev.target.result)
-        setCropOpen(false)
-        setSrcImg(null)
-        setCropError('')
-      }
-      reader.readAsDataURL(blob)
-    }, 'image/jpeg', 0.92)
-  }
-
-  function handleCancel() {
-    setCropOpen(false)
-    setSrcImg(null)
-    setCropError('')
+  function handleCompressCancel() {
+    setCompressModal(false)
+    setPendingSrc(null)
   }
 
   return (
@@ -2503,148 +2479,90 @@ function ImageUploadField({ value, onChange, accentStart }) {
         onChange={handleFileSelect}
       />
 
-      {/* ── CROP MODAL ── */}
-      {cropOpen && (
+      {/* ── IMAGE TOO LARGE MODAL ── */}
+      {compressModal && (
         <div
           style={{
             position: 'fixed', inset: 0, zIndex: 2000,
-            background: 'rgba(0,0,0,0.72)',
             backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
+            background: 'rgba(0,0,0,0.55)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            padding: '16px',
+            padding: '20px',
           }}
         >
           <div style={{
             background: '#fff', borderRadius: '22px',
-            width: '100%', maxWidth: '420px',
-            padding: '22px',
-            boxShadow: '0 24px 64px rgba(0,0,0,0.35)',
-            maxHeight: '92vh', overflowY: 'auto',
+            width: '100%', maxWidth: '380px',
+            padding: '28px 24px',
+            boxShadow: '0 24px 64px rgba(0,0,0,0.3)',
           }}>
-            {/* Modal header */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-              <div style={{ fontSize: '15px', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.01em' }}>
-                Crop Image
-              </div>
-              <button
-                onClick={handleCancel}
-                style={{
-                  width: '30px', height: '30px', borderRadius: '8px',
-                  background: '#f1f5f9', border: 'none',
-                  cursor: 'pointer', color: '#64748b',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: '14px', fontWeight: 700,
-                }}
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* Aspect ratio selector */}
-            <div style={{ marginBottom: '14px' }}>
-              <div style={{ fontSize: '10px', fontWeight: 800, color: '#94a3b8', letterSpacing: '0.1em', marginBottom: '8px' }}>
-                ASPECT RATIO
-              </div>
-              <div style={{ display: 'flex', gap: '8px' }}>
-                {CROP_ASPECT_OPTIONS.map(opt => (
-                  <button
-                    key={opt.label}
-                    type="button"
-                    onClick={() => handleAspectChange(opt.value)}
-                    style={{
-                      flex: 1, padding: '9px 0',
-                      borderRadius: '10px',
-                      border: `2px solid ${aspect === opt.value ? accentStart : '#e2e8f0'}`,
-                      background: aspect === opt.value ? `${accentStart}15` : '#f8fafc',
-                      color: aspect === opt.value ? accentStart : '#64748b',
-                      fontSize: '12px', fontWeight: 800,
-                      cursor: 'pointer', letterSpacing: '0.04em',
-                      transition: 'all 0.15s',
-                    }}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Crop area */}
-            <div style={{
-              display: 'flex', justifyContent: 'center',
-              marginBottom: '14px',
-              background: '#0f172a',
-              borderRadius: '14px',
-              padding: '10px',
-              overflow: 'hidden',
-            }}>
-              <ReactCrop
-                crop={crop}
-                onChange={(c) => setCrop(c)}
-                onComplete={(c) => { setCompletedCrop(c); setCropError('') }}
-                aspect={aspect}
-                style={{ maxWidth: '100%' }}
-              >
-                <img
-                  ref={imgRef}
-                  src={srcImg}
-                  alt="Crop preview"
-                  onLoad={onImageLoad}
-                  style={{ maxWidth: '100%', maxHeight: '280px', display: 'block' }}
-                />
-              </ReactCrop>
-            </div>
-
-            {/* Size hint */}
-            <div style={{
-              fontSize: '11px', color: '#64748b', fontWeight: 600,
-              textAlign: 'center', marginBottom: '10px',
-              padding: '8px 12px', background: '#f8fafc',
-              borderRadius: '8px', border: '1px solid #e2e8f0',
-            }}>
-              Accepted image size: 50 KB – 200 KB
-            </div>
-
-            {/* Error */}
-            {cropError && (
+            {/* Icon */}
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
               <div style={{
-                padding: '10px 14px', borderRadius: '10px',
-                background: '#FEF2F2', border: '1.5px solid #FECACA',
-                color: '#EF4444', fontSize: '12px', fontWeight: 600,
-                marginBottom: '12px',
-              }}>
-                ⚠ {cropError}
+                width: '56px', height: '56px', borderRadius: '16px',
+                background: '#FEF3C7',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '26px',
+              }}>⚠️</div>
+            </div>
+
+            {/* Title */}
+            <div style={{ textAlign: 'center', fontSize: '17px', fontWeight: 900, color: '#0f172a', marginBottom: '8px' }}>
+              Image Too Large
+            </div>
+            <div style={{ textAlign: 'center', fontSize: '13px', color: '#64748b', fontWeight: 500, lineHeight: 1.5, marginBottom: '24px' }}>
+              This image exceeds the 200 KB limit. Click Confirm to automatically compress it.
+            </div>
+
+            {/* Preview thumbnail */}
+            {pendingSrc && (
+              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '20px' }}>
+                <img
+                  src={pendingSrc}
+                  alt="preview"
+                  style={{
+                    width: '80px', height: '80px', borderRadius: '14px',
+                    objectFit: 'cover', border: '2px solid #e2e8f0',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                  }}
+                />
               </div>
             )}
 
-            {/* Action buttons */}
             <div style={{ display: 'flex', gap: '10px' }}>
               <button
                 type="button"
-                onClick={handleCancel}
+                onClick={handleCompressCancel}
+                disabled={compressing}
                 style={{
                   flex: 1, padding: '13px',
                   background: '#f1f5f9', border: 'none',
                   borderRadius: '13px', color: '#374151',
                   fontSize: '13px', fontWeight: 700,
-                  cursor: 'pointer', fontFamily: 'inherit',
+                  cursor: compressing ? 'not-allowed' : 'pointer',
+                  fontFamily: 'inherit', opacity: compressing ? 0.6 : 1,
                 }}
               >
                 Cancel
               </button>
               <button
                 type="button"
-                onClick={handleConfirm}
+                onClick={handleCompressConfirm}
+                disabled={compressing}
                 style={{
                   flex: 2, padding: '13px',
-                  background: `linear-gradient(135deg, ${accentStart}, ${accentStart}cc)`,
+                  background: compressing
+                    ? '#94a3b8'
+                    : `linear-gradient(135deg, ${accentStart}, ${accentStart}cc)`,
                   border: 'none', borderRadius: '13px',
                   color: '#fff', fontSize: '13px', fontWeight: 800,
-                  cursor: 'pointer', fontFamily: 'inherit',
-                  boxShadow: `0 6px 20px ${accentStart}40`,
+                  cursor: compressing ? 'not-allowed' : 'pointer',
+                  fontFamily: 'inherit',
+                  boxShadow: compressing ? 'none' : `0 6px 20px ${accentStart}40`,
                   letterSpacing: '0.01em',
                 }}
               >
-                Confirm & Upload
+                {compressing ? 'Compressing…' : 'Confirm'}
               </button>
             </div>
           </div>
@@ -2668,7 +2586,7 @@ function ImageUploadField({ value, onChange, accentStart }) {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1 }}>
             <button
               type="button"
-              onClick={() => inputRef.current?.click()}
+              onClick={() => { setSizeError(''); inputRef.current?.click() }}
               style={{
                 padding: '8px 14px',
                 background: `${accentStart}12`,
@@ -2682,7 +2600,7 @@ function ImageUploadField({ value, onChange, accentStart }) {
             </button>
             <button
               type="button"
-              onClick={() => onChange(null)}
+              onClick={() => { onChange(null); setSizeError('') }}
               style={{
                 padding: '6px 14px',
                 background: 'transparent',
@@ -2699,38 +2617,43 @@ function ImageUploadField({ value, onChange, accentStart }) {
         <div>
           <button
             type="button"
-            onClick={() => inputRef.current?.click()}
+            onClick={() => { setSizeError(''); inputRef.current?.click() }}
             style={{
               width: '100%', padding: '18px',
-              background: 'rgba(248,250,252,0.9)',
-              border: '1.5px dashed #CBD5E1',
+              background: sizeError ? '#FEF2F2' : 'rgba(248,250,252,0.9)',
+              border: `1.5px dashed ${sizeError ? '#FECACA' : '#CBD5E1'}`,
               borderRadius: '14px', cursor: 'pointer',
               display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px',
               transition: 'border-color 0.2s, background 0.2s',
             }}
             onMouseEnter={e => {
-              e.currentTarget.style.borderColor = accentStart
-              e.currentTarget.style.background = `${accentStart}08`
+              if (!sizeError) {
+                e.currentTarget.style.borderColor = accentStart
+                e.currentTarget.style.background = `${accentStart}08`
+              }
             }}
             onMouseLeave={e => {
-              e.currentTarget.style.borderColor = '#CBD5E1'
-              e.currentTarget.style.background = 'rgba(248,250,252,0.9)'
+              e.currentTarget.style.borderColor = sizeError ? '#FECACA' : '#CBD5E1'
+              e.currentTarget.style.background = sizeError ? '#FEF2F2' : 'rgba(248,250,252,0.9)'
             }}
           >
             <span style={{ fontSize: '24px' }}>📷</span>
-            <span style={{ fontSize: '12px', fontWeight: 700, color: '#64748B', letterSpacing: '0.04em' }}>
+            <span style={{ fontSize: '12px', fontWeight: 700, color: sizeError ? '#EF4444' : '#64748B', letterSpacing: '0.04em' }}>
               TAP TO UPLOAD PHOTO
             </span>
             <span style={{ fontSize: '10px', color: '#94A3B8', fontWeight: 500 }}>
               JPG, PNG, WEBP supported
             </span>
           </button>
-          <div style={{
-            fontSize: '11px', color: '#94a3b8', fontWeight: 500,
-            textAlign: 'center', marginTop: '6px',
-          }}>
-            Accepted image size: 50 KB – 200 KB
-          </div>
+          {sizeError ? (
+            <div style={{ fontSize: '11px', color: '#EF4444', fontWeight: 600, textAlign: 'center', marginTop: '6px' }}>
+              ⚠ {sizeError}
+            </div>
+          ) : (
+            <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 500, textAlign: 'center', marginTop: '6px' }}>
+              Accepted image size: 60 KB – 200 KB
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -2916,10 +2839,14 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
       ),
     }
     setMenu(updated)
-    setSavedAll(false)
-    setHasDraftChanges(true)
+    saveMenu(updated)
+    setSavedAll(true)
+    setHasDraftChanges(false)
     setEditingId(null)
     setEditDraft(null)
+    showToast('✅ Image saved successfully!')
+    clearTimeout(saveAllTimer.current)
+    saveAllTimer.current = setTimeout(() => setSavedAll(false), 2500)
   }
 
   function addItem() {
