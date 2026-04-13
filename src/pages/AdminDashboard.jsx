@@ -2746,15 +2746,27 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
   }
 
   function handleSaveAll() {
-    localStorage.setItem(storageKey, JSON.stringify(menu))
-    window.dispatchEvent(new StorageEvent('storage', { key: storageKey, newValue: JSON.stringify(menu) }))
+    let menuToSave = menu
+    if (editingId !== null && editDraft !== null) {
+      menuToSave = {
+        ...menu,
+        [activeCategory]: (menu[activeCategory] || []).map(i =>
+          i.id === editingId ? { ...editDraft, price: parseFloat(editDraft.price) || 0 } : i
+        ),
+      }
+      setMenu(menuToSave)
+      setEditingId(null)
+      setEditDraft(null)
+    }
+    localStorage.setItem(storageKey, JSON.stringify(menuToSave))
+    window.dispatchEvent(new StorageEvent('storage', { key: storageKey, newValue: JSON.stringify(menuToSave) }))
     localStorage.setItem(filtersKey, JSON.stringify(catFilters))
     window.dispatchEvent(new StorageEvent('storage', { key: filtersKey, newValue: JSON.stringify(catFilters) }))
     localStorage.setItem(enabledKey, JSON.stringify(filtersEnabled))
     window.dispatchEvent(new StorageEvent('storage', { key: enabledKey, newValue: JSON.stringify(filtersEnabled) }))
     localStorage.setItem(tabsKey, JSON.stringify(categoryTabs))
     window.dispatchEvent(new StorageEvent('storage', { key: tabsKey, newValue: JSON.stringify(categoryTabs) }))
-    showToast('✅ Menu published to website!')
+    showToast('✅ Menu saved successfully ✓')
     setSavedAll(true)
     setHasDraftChanges(false)
     clearTimeout(saveAllTimer.current)
@@ -2832,9 +2844,10 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
   }
 
   function saveEdit() {
+    if (!editDraft || editingId === null) return
     const updated = {
       ...menu,
-      [activeCategory]: menu[activeCategory].map(i =>
+      [activeCategory]: (menu[activeCategory] || []).map(i =>
         i.id === editingId ? { ...editDraft, price: parseFloat(editDraft.price) || 0 } : i
       ),
     }
@@ -2845,7 +2858,7 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
     setHasDraftChanges(false)
     setEditingId(null)
     setEditDraft(null)
-    showToast('✅ Image saved successfully ✓')
+    showToast('✅ Item saved successfully ✓')
     clearTimeout(saveAllTimer.current)
     saveAllTimer.current = setTimeout(() => setSavedAll(false), 2500)
   }
