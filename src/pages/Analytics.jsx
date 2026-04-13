@@ -99,6 +99,7 @@ function DonutChart({ segments }) {
         gap: 2,
       }}>
         <span style={{ fontSize: 20 }}>🏠</span>
+        <span style={{ fontSize: 11, color: '#555', fontWeight: 600 }}>   </span>
       </div>
     </div>
   )
