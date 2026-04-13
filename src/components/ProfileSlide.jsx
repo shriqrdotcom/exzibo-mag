@@ -164,9 +164,9 @@ export default function ProfileSlide({
     setGalleryError(''); setGallerySuccess(false)
     const allowed = ['image/jpeg', 'image/png', 'image/webp']
     const valid = Array.from(files).filter(f => allowed.includes(f.type))
-    if (!valid.length) { setGalleryError('Only JPG, PNG, or WEBP images are allowed.'); return }
+    if (!valid.length) { setGalleryError('Only JPG, PNG, or WEBP images are supported.'); return }
 
-    // Check max-10 limit up front
+    // Enforce max-10 limit
     const currentCount = carouselImages.length
     if (currentCount >= MAX_GALLERY) {
       setGalleryError(`Maximum ${MAX_GALLERY} images allowed in the gallery.`)
@@ -175,48 +175,41 @@ export default function ProfileSlide({
     const canAdd = MAX_GALLERY - currentCount
     const toProcess = valid.slice(0, canAdd)
 
-    // Filter by minimum size
-    const tooSmall = toProcess.filter(f => f.size / 1024 < 60)
-    if (tooSmall.length === toProcess.length) {
-      setGalleryError('Image quality too low. Please upload better images (min 60 KB each).')
-      return
-    }
-    const acceptable = toProcess.filter(f => f.size / 1024 >= 60)
-
     setGalleryCompressing(true)
     try {
-      const results = await Promise.all(acceptable.map(async f => {
-        const sizeKB = f.size / 1024
+      const results = await Promise.all(toProcess.map(async f => {
         const src = await fileToBase64(f)
-        if (sizeKB > 200) {
+        // Auto-compress anything over 200 KB; accept smaller images as-is
+        if (f.size / 1024 > 200) {
           const compressed = await compressToLimit(src, 200)
           return compressed || src
         }
         return src
       }))
 
+      // Filter out any null/failed results
+      const good = results.filter(Boolean)
+      if (!good.length) { setGalleryError('Failed to process images. Please try again.'); return }
+
       setCarouselImages(prev => {
-        const updated = [...prev, ...results]
+        const updated = [...prev, ...good]
         const key = `exzibo_carousel_${restaurantId || 'default'}`
         localStorage.setItem(key, JSON.stringify(updated))
         window.dispatchEvent(new CustomEvent('exzibo-carousel-changed', { detail: { restaurantId, images: updated } }))
         return updated
       })
-      setCarouselIdx(prev => prev)
+      setCarouselIdx(0)
 
-      // Notify if some were skipped due to limit or size
-      const skipped = valid.length - acceptable.length
-      if (skipped > 0 || valid.length > canAdd) {
-        const msg = []
-        if (valid.length > canAdd) msg.push(`only ${canAdd} added (gallery limit)`)
-        if (skipped > 0) msg.push(`${skipped} skipped (too small)`)
-        setGalleryError(msg.join(', ').replace(/^./, c => c.toUpperCase()) + '.')
+      if (valid.length > canAdd) {
+        setGalleryError(`Only ${canAdd} image${canAdd !== 1 ? 's' : ''} added — gallery is now full (max ${MAX_GALLERY}).`)
       } else {
         setGallerySuccess(true)
         setTimeout(() => setGallerySuccess(false), 2500)
       }
-    } catch { setGalleryError('Failed to process images. Please try again.') }
-    finally { setGalleryCompressing(false) }
+    } catch (err) {
+      console.error('Gallery upload error:', err)
+      setGalleryError('Failed to process images. Please try again.')
+    } finally { setGalleryCompressing(false) }
   }
 
   function removeCarouselImage(idx) {
