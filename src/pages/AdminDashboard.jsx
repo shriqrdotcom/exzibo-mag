@@ -4526,8 +4526,11 @@ function buildCategoryItems(restaurantId) {
   }
 }
 
+const WEEKLY_REVENUE = [8200, 9450, 8800, 8178]
+
 function AnalyticsPanel({ accentStart, accentEnd, restaurantId }) {
   const [showSheet, setShowSheet] = React.useState(false)
+  const [showRevenueModal, setShowRevenueModal] = React.useState(false)
   const [categoryItems, setCategoryItems] = React.useState(() => buildCategoryItems(restaurantId))
 
   const { totalWealth, todaysCollection, totalCustomers, totalBookings, categoryData, setRestaurantId } = useAnalytics()
@@ -4569,6 +4572,8 @@ function AnalyticsPanel({ accentStart, accentEnd, restaurantId }) {
           to   { transform: translateY(100%); opacity: 0; }
         }
         @keyframes overlayIn  { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes overlayFadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes modalScaleIn { from { opacity: 0; transform: scale(0.88); } to { opacity: 1; transform: scale(1); } }
       `}</style>
 
       <div style={{ paddingTop: '8px', display: 'flex', flexDirection: 'column', gap: '14px', animation: 'fadeSlideUp 0.3s ease' }}>
@@ -4585,7 +4590,10 @@ function AnalyticsPanel({ accentStart, accentEnd, restaurantId }) {
           </div>
         </div>
 
-        <div style={card}>
+        <div
+          style={{ ...card, cursor: 'pointer' }}
+          onClick={() => setShowRevenueModal(true)}
+        >
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
             <span style={{ fontSize: '14px', fontWeight: 700, color: '#334155' }}>Overview</span>
             <ABarChart2 size={16} color="#94a3b8" />
@@ -4647,6 +4655,106 @@ function AnalyticsPanel({ accentStart, accentEnd, restaurantId }) {
           </div>
         </div>
       </div>
+
+      {/* ── Revenue Modal ── */}
+      {showRevenueModal && (() => {
+        const monthName = new Date().toLocaleString('default', { month: 'long', year: 'numeric' })
+        const totalMonthly = WEEKLY_REVENUE.reduce((s, v) => s + v, 0)
+        const bestIdx = WEEKLY_REVENUE.indexOf(Math.max(...WEEKLY_REVENUE))
+        return (
+          <div
+            onClick={() => setShowRevenueModal(false)}
+            style={{
+              position: 'fixed', inset: 0, zIndex: 1000,
+              background: 'rgba(0,0,0,0.4)',
+              backdropFilter: 'blur(10px)',
+              WebkitBackdropFilter: 'blur(10px)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              padding: '16px',
+              animation: 'overlayFadeIn 0.25s ease',
+            }}
+          >
+            <div
+              onClick={e => e.stopPropagation()}
+              style={{
+                background: '#fff',
+                borderRadius: '20px',
+                padding: '28px 24px',
+                width: '90%',
+                maxWidth: '400px',
+                boxShadow: '0 20px 60px rgba(0,0,0,0.25)',
+                animation: 'modalScaleIn 0.25s cubic-bezier(0.34,1.56,0.64,1)',
+                position: 'relative',
+              }}
+            >
+              <button
+                onClick={() => setShowRevenueModal(false)}
+                style={{
+                  position: 'absolute', top: 16, right: 16,
+                  background: '#f0f0f5', border: 'none', borderRadius: '50%',
+                  width: 32, height: 32, display: 'flex', alignItems: 'center',
+                  justifyContent: 'center', cursor: 'pointer', fontSize: 16, color: '#555',
+                  lineHeight: 1,
+                }}
+              >✕</button>
+
+              <h2 style={{ fontSize: 18, fontWeight: 800, color: '#111', margin: '0 0 4px' }}>{monthName}</h2>
+              <p style={{ fontSize: 13, color: '#888', margin: '0 0 20px' }}>Monthly Revenue Breakdown</p>
+
+              <div style={{ background: '#f7f7fb', borderRadius: 14, padding: '16px 18px', marginBottom: 20 }}>
+                <span style={{ fontSize: 12, color: '#888', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                  Total Monthly Revenue
+                </span>
+                <div style={{ fontSize: 30, fontWeight: 900, color: '#111', marginTop: 4 }}>
+                  ₹{totalMonthly.toLocaleString('en-IN')}
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {WEEKLY_REVENUE.map((rev, i) => {
+                  const prev = i > 0 ? WEEKLY_REVENUE[i - 1] : null
+                  const change = prev !== null ? (((rev - prev) / prev) * 100).toFixed(1) : null
+                  const isUp = change !== null && parseFloat(change) >= 0
+                  const isBest = i === bestIdx
+                  return (
+                    <div
+                      key={i}
+                      style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        padding: '12px 14px',
+                        background: isBest ? '#f0eeff' : '#fafafa',
+                        borderRadius: 12,
+                        border: isBest ? '1.5px solid #6C63FF' : '1.5px solid #f0f0f0',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontSize: 13, fontWeight: isBest ? 800 : 600, color: isBest ? '#6C63FF' : '#444' }}>
+                          Week {i + 1}
+                        </span>
+                        {isBest && (
+                          <span style={{ fontSize: 10, fontWeight: 700, color: '#6C63FF', background: '#e4e1ff', borderRadius: 6, padding: '2px 6px' }}>
+                            BEST
+                          </span>
+                        )}
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        {change !== null && (
+                          <span style={{ fontSize: 11, fontWeight: 700, color: isUp ? '#10b981' : '#ef4444' }}>
+                            {isUp ? '↑' : '↓'} {isUp ? '+' : ''}{change}%
+                          </span>
+                        )}
+                        <span style={{ fontSize: 14, fontWeight: isBest ? 800 : 600, color: isBest ? '#6C63FF' : '#111' }}>
+                          ₹{rev.toLocaleString('en-IN')}
+                        </span>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          </div>
+        )
+      })()}
 
       {/* ── Category Bottom Sheet ── */}
       {showSheet && (

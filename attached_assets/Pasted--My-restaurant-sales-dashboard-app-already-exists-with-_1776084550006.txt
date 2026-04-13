@@ -1,0 +1,40 @@
+---
+
+My restaurant sales dashboard app already exists with a working graph showing Week 1, Week 2, Week 3, Week 4 data. **Do not change or rebuild anything that already works.**
+
+**Only add this one new feature:**
+
+When the user clicks on the graph card/section, a new modal window should open on top of the existing page with the following behavior:
+
+**Blurry Background Overlay**
+- When the modal opens, the entire existing page behind it should become blurred using CSS `backdrop-filter: blur(10px)` and a semi-transparent dark overlay `rgba(0, 0, 0, 0.4)`
+- The original page content should NOT disappear, it should just be visible but blurred behind the modal
+
+**Modal Window Design**
+- The modal should appear centered on screen as a clean white card with rounded corners and a soft shadow
+- Inside the modal show the following live data pulled from existing app state:
+  - Current month name as the title
+  - Total monthly revenue in ₹
+  - Each week's revenue breakdown (Week 1, Week 2, Week 3, Week 4) as individual rows
+  - Revenue change compared to last week as a percentage with green arrow (up) or red arrow (down)
+  - Best performing week highlighted in bold
+
+**Open and Close Behavior**
+- Modal opens when user clicks the graph card
+- Modal closes when user clicks outside the modal card
+- Modal also closes when user presses a visible X button in the top right corner of the modal
+- Add a smooth fade-in and scale-up CSS animation when modal opens
+- Add a smooth fade-out animation when modal closes
+- Make sure clicking inside the modal does NOT close it (stop event propagation)
+
+**Mobile Responsive**
+- On small screens the modal should take up 90% of screen width
+- All text should remain readable on mobile
+
+**Important Rules**
+- Do NOT modify the existing graph component or sales data logic
+- Only add the modal component and the click trigger on the graph card
+- Make sure there are no z-index conflicts with existing elements
+- Test that blur applies to the background and not to the modal itself
+
+---

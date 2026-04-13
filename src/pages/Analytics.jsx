@@ -1,7 +1,7 @@
-import React from 'react'
+import React, { useState } from 'react'
 import Sidebar from '../components/Sidebar'
 import AdminHeader from '../components/AdminHeader'
-import { BarChart2, CalendarDays, LayoutGrid, CalendarCheck, Users } from 'lucide-react'
+import { BarChart2, CalendarDays, LayoutGrid, CalendarCheck, Users, X, TrendingUp, TrendingDown } from 'lucide-react'
 import { useAnalytics } from '../context/AnalyticsContext'
 
 const wealthData = [38, 62, 58, 44, 42, 60, 64, 58, 62, 55, 48, 42]
@@ -9,6 +9,8 @@ const chartW = 340
 const chartH = 120
 const minV = 35
 const maxV = 75
+
+const weeklyRevenue = [8200, 9450, 8800, 8178]
 
 function pointsFromData(data, w, h) {
   const step = w / (data.length - 1)
@@ -105,6 +107,137 @@ function DonutChart({ segments }) {
   )
 }
 
+function RevenueModal({ onClose, totalWealth }) {
+  const monthName = new Date().toLocaleString('default', { month: 'long', year: 'numeric' })
+  const totalMonthly = weeklyRevenue.reduce((s, v) => s + v, 0)
+  const bestWeekIdx = weeklyRevenue.indexOf(Math.max(...weeklyRevenue))
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 1000,
+        background: 'rgba(0,0,0,0.4)',
+        backdropFilter: 'blur(10px)',
+        WebkitBackdropFilter: 'blur(10px)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: '16px',
+        animation: 'overlayFadeIn 0.25s ease',
+      }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          background: '#fff',
+          borderRadius: '20px',
+          padding: '28px 24px',
+          width: '100%',
+          maxWidth: '400px',
+          boxShadow: '0 20px 60px rgba(0,0,0,0.25)',
+          animation: 'modalScaleIn 0.25s cubic-bezier(0.34,1.56,0.64,1)',
+          position: 'relative',
+        }}
+      >
+        <button
+          onClick={onClose}
+          style={{
+            position: 'absolute', top: 16, right: 16,
+            background: '#f0f0f5', border: 'none', borderRadius: '50%',
+            width: 32, height: 32, display: 'flex', alignItems: 'center',
+            justifyContent: 'center', cursor: 'pointer',
+          }}
+        >
+          <X size={16} color="#555" />
+        </button>
+
+        <h2 style={{ fontSize: 18, fontWeight: 800, color: '#111', margin: '0 0 4px' }}>
+          {monthName}
+        </h2>
+        <p style={{ fontSize: 13, color: '#888', margin: '0 0 20px' }}>Monthly Revenue Breakdown</p>
+
+        <div style={{
+          background: '#f7f7fb', borderRadius: 14, padding: '16px 18px', marginBottom: 20,
+        }}>
+          <span style={{ fontSize: 12, color: '#888', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+            Total Monthly Revenue
+          </span>
+          <div style={{ fontSize: 30, fontWeight: 900, color: '#111', marginTop: 4 }}>
+            ₹{totalMonthly.toLocaleString('en-IN')}
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {weeklyRevenue.map((rev, i) => {
+            const prevRev = i > 0 ? weeklyRevenue[i - 1] : null
+            const change = prevRev !== null ? (((rev - prevRev) / prevRev) * 100).toFixed(1) : null
+            const isUp = change !== null && parseFloat(change) >= 0
+            const isBest = i === bestWeekIdx
+
+            return (
+              <div
+                key={i}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '12px 14px',
+                  background: isBest ? '#f0eeff' : '#fafafa',
+                  borderRadius: 12,
+                  border: isBest ? '1.5px solid #6C63FF' : '1.5px solid #f0f0f0',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{
+                    fontSize: 12, fontWeight: isBest ? 800 : 600,
+                    color: isBest ? '#6C63FF' : '#444',
+                  }}>
+                    Week {i + 1}
+                  </span>
+                  {isBest && (
+                    <span style={{
+                      fontSize: 10, fontWeight: 700, color: '#6C63FF',
+                      background: '#e4e1ff', borderRadius: 6, padding: '2px 6px',
+                    }}>
+                      BEST
+                    </span>
+                  )}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  {change !== null && (
+                    <span style={{
+                      fontSize: 11, fontWeight: 700,
+                      color: isUp ? '#10b981' : '#ef4444',
+                      display: 'flex', alignItems: 'center', gap: 2,
+                    }}>
+                      {isUp ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
+                      {isUp ? '+' : ''}{change}%
+                    </span>
+                  )}
+                  <span style={{
+                    fontSize: 14, fontWeight: isBest ? 800 : 600,
+                    color: isBest ? '#6C63FF' : '#111',
+                  }}>
+                    ₹{rev.toLocaleString('en-IN')}
+                  </span>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
+      <style>{`
+        @keyframes overlayFadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes modalScaleIn {
+          from { opacity: 0; transform: scale(0.88); }
+          to { opacity: 1; transform: scale(1); }
+        }
+      `}</style>
+    </div>
+  )
+}
+
 const card = {
   background: '#fff',
   borderRadius: '20px',
@@ -114,6 +247,7 @@ const card = {
 
 export default function Analytics() {
   const { totalWealth, todaysCollection, totalCustomers, totalBookings, categoryData } = useAnalytics()
+  const [modalOpen, setModalOpen] = useState(false)
 
   return (
     <div style={{ display: 'flex', height: '100vh', background: '#0A0A0A', overflow: 'hidden' }}>
@@ -137,7 +271,10 @@ export default function Analytics() {
               </div>
             </div>
 
-            <div style={{ ...card, marginBottom: 16 }}>
+            <div
+              style={{ ...card, marginBottom: 16, cursor: 'pointer' }}
+              onClick={() => setModalOpen(true)}
+            >
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
                 <span style={{ fontSize: 15, fontWeight: 600, color: '#333' }}>Overview</span>
                 <BarChart2 size={18} color="#aaa" />
@@ -219,6 +356,13 @@ export default function Analytics() {
           </div>
         </main>
       </div>
+
+      {modalOpen && (
+        <RevenueModal
+          onClose={() => setModalOpen(false)}
+          totalWealth={totalWealth}
+        />
+      )}
     </div>
   )
 }
