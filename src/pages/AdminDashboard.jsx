@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import ReactCrop, { centerCrop, makeAspectCrop } from 'react-image-crop'
+import 'react-image-crop/dist/ReactCrop.css'
 import { useAnalytics, notifyAnalyticsUpdate } from '../context/AnalyticsContext'
 import ProfileSlide from '../components/ProfileSlide'
 import {
@@ -2390,16 +2392,105 @@ const DEFAULT_CAT_FILTERS = {
   ],
 }
 
+const CROP_ASPECT_OPTIONS = [
+  { label: '1:1', value: 1 },
+  { label: '4:3', value: 4 / 3 },
+  { label: '16:9', value: 16 / 9 },
+]
+
 function ImageUploadField({ value, onChange, accentStart }) {
   const inputRef = React.useRef(null)
+  const imgRef = React.useRef(null)
+  const [cropOpen, setCropOpen] = React.useState(false)
+  const [srcImg, setSrcImg] = React.useState(null)
+  const [crop, setCrop] = React.useState()
+  const [completedCrop, setCompletedCrop] = React.useState(null)
+  const [aspect, setAspect] = React.useState(1)
+  const [cropError, setCropError] = React.useState('')
 
-  function handleFile(e) {
+  function handleFileSelect(e) {
     const file = e.target.files?.[0]
     if (!file) return
-    const reader = new FileReader()
-    reader.onload = (ev) => onChange(ev.target.result)
-    reader.readAsDataURL(file)
     e.target.value = ''
+    if (!file.type.startsWith('image/')) return
+    const reader = new FileReader()
+    reader.onload = (ev) => {
+      setSrcImg(ev.target.result)
+      setCropError('')
+      setCompletedCrop(null)
+      setCropOpen(true)
+    }
+    reader.readAsDataURL(file)
+  }
+
+  function onImageLoad(e) {
+    const { width, height } = e.currentTarget
+    const newCrop = centerCrop(
+      makeAspectCrop({ unit: '%', width: 80 }, aspect, width, height),
+      width, height
+    )
+    setCrop(newCrop)
+  }
+
+  function handleAspectChange(newAspect) {
+    setAspect(newAspect)
+    if (imgRef.current) {
+      const { width, height } = imgRef.current
+      const newCrop = centerCrop(
+        makeAspectCrop({ unit: '%', width: 80 }, newAspect, width, height),
+        width, height
+      )
+      setCrop(newCrop)
+    }
+  }
+
+  function handleConfirm() {
+    if (!completedCrop || !imgRef.current) {
+      setCropError('Please select a crop area first.')
+      return
+    }
+    const canvas = document.createElement('canvas')
+    const image = imgRef.current
+    const scaleX = image.naturalWidth / image.width
+    const scaleY = image.naturalHeight / image.height
+    canvas.width = Math.round(completedCrop.width * scaleX)
+    canvas.height = Math.round(completedCrop.height * scaleY)
+    const ctx = canvas.getContext('2d')
+    ctx.drawImage(
+      image,
+      completedCrop.x * scaleX,
+      completedCrop.y * scaleY,
+      completedCrop.width * scaleX,
+      completedCrop.height * scaleY,
+      0, 0,
+      canvas.width, canvas.height
+    )
+    canvas.toBlob((blob) => {
+      if (!blob) return
+      const sizeKB = blob.size / 1024
+      if (sizeKB < 50) {
+        setCropError('Image too small. Minimum size is 50 KB.')
+        return
+      }
+      if (sizeKB > 200) {
+        setCropError('Image too large. Maximum size is 200 KB.')
+        return
+      }
+      const reader = new FileReader()
+      reader.onload = (ev) => {
+        onChange(ev.target.result)
+        setCropOpen(false)
+        setSrcImg(null)
+        setCropError('')
+      }
+      reader.readAsDataURL(blob)
+    }, 'image/jpeg', 0.92)
+  }
+
+  function handleCancel() {
+    setCropOpen(false)
+    setSrcImg(null)
+    setCropError('')
   }
 
   return (
@@ -2409,8 +2500,158 @@ function ImageUploadField({ value, onChange, accentStart }) {
         type="file"
         accept="image/*"
         style={{ display: 'none' }}
-        onChange={handleFile}
+        onChange={handleFileSelect}
       />
+
+      {/* ── CROP MODAL ── */}
+      {cropOpen && (
+        <div
+          style={{
+            position: 'fixed', inset: 0, zIndex: 2000,
+            background: 'rgba(0,0,0,0.72)',
+            backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: '16px',
+          }}
+        >
+          <div style={{
+            background: '#fff', borderRadius: '22px',
+            width: '100%', maxWidth: '420px',
+            padding: '22px',
+            boxShadow: '0 24px 64px rgba(0,0,0,0.35)',
+            maxHeight: '92vh', overflowY: 'auto',
+          }}>
+            {/* Modal header */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+              <div style={{ fontSize: '15px', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.01em' }}>
+                Crop Image
+              </div>
+              <button
+                onClick={handleCancel}
+                style={{
+                  width: '30px', height: '30px', borderRadius: '8px',
+                  background: '#f1f5f9', border: 'none',
+                  cursor: 'pointer', color: '#64748b',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: '14px', fontWeight: 700,
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Aspect ratio selector */}
+            <div style={{ marginBottom: '14px' }}>
+              <div style={{ fontSize: '10px', fontWeight: 800, color: '#94a3b8', letterSpacing: '0.1em', marginBottom: '8px' }}>
+                ASPECT RATIO
+              </div>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                {CROP_ASPECT_OPTIONS.map(opt => (
+                  <button
+                    key={opt.label}
+                    type="button"
+                    onClick={() => handleAspectChange(opt.value)}
+                    style={{
+                      flex: 1, padding: '9px 0',
+                      borderRadius: '10px',
+                      border: `2px solid ${aspect === opt.value ? accentStart : '#e2e8f0'}`,
+                      background: aspect === opt.value ? `${accentStart}15` : '#f8fafc',
+                      color: aspect === opt.value ? accentStart : '#64748b',
+                      fontSize: '12px', fontWeight: 800,
+                      cursor: 'pointer', letterSpacing: '0.04em',
+                      transition: 'all 0.15s',
+                    }}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Crop area */}
+            <div style={{
+              display: 'flex', justifyContent: 'center',
+              marginBottom: '14px',
+              background: '#0f172a',
+              borderRadius: '14px',
+              padding: '10px',
+              overflow: 'hidden',
+            }}>
+              <ReactCrop
+                crop={crop}
+                onChange={(c) => setCrop(c)}
+                onComplete={(c) => { setCompletedCrop(c); setCropError('') }}
+                aspect={aspect}
+                style={{ maxWidth: '100%' }}
+              >
+                <img
+                  ref={imgRef}
+                  src={srcImg}
+                  alt="Crop preview"
+                  onLoad={onImageLoad}
+                  style={{ maxWidth: '100%', maxHeight: '280px', display: 'block' }}
+                />
+              </ReactCrop>
+            </div>
+
+            {/* Size hint */}
+            <div style={{
+              fontSize: '11px', color: '#64748b', fontWeight: 600,
+              textAlign: 'center', marginBottom: '10px',
+              padding: '8px 12px', background: '#f8fafc',
+              borderRadius: '8px', border: '1px solid #e2e8f0',
+            }}>
+              Accepted image size: 50 KB – 200 KB
+            </div>
+
+            {/* Error */}
+            {cropError && (
+              <div style={{
+                padding: '10px 14px', borderRadius: '10px',
+                background: '#FEF2F2', border: '1.5px solid #FECACA',
+                color: '#EF4444', fontSize: '12px', fontWeight: 600,
+                marginBottom: '12px',
+              }}>
+                ⚠ {cropError}
+              </div>
+            )}
+
+            {/* Action buttons */}
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button
+                type="button"
+                onClick={handleCancel}
+                style={{
+                  flex: 1, padding: '13px',
+                  background: '#f1f5f9', border: 'none',
+                  borderRadius: '13px', color: '#374151',
+                  fontSize: '13px', fontWeight: 700,
+                  cursor: 'pointer', fontFamily: 'inherit',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirm}
+                style={{
+                  flex: 2, padding: '13px',
+                  background: `linear-gradient(135deg, ${accentStart}, ${accentStart}cc)`,
+                  border: 'none', borderRadius: '13px',
+                  color: '#fff', fontSize: '13px', fontWeight: 800,
+                  cursor: 'pointer', fontFamily: 'inherit',
+                  boxShadow: `0 6px 20px ${accentStart}40`,
+                  letterSpacing: '0.01em',
+                }}
+              >
+                Confirm & Upload
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── FIELD DISPLAY ── */}
       {value ? (
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <img
@@ -2455,34 +2696,42 @@ function ImageUploadField({ value, onChange, accentStart }) {
           </div>
         </div>
       ) : (
-        <button
-          type="button"
-          onClick={() => inputRef.current?.click()}
-          style={{
-            width: '100%', padding: '18px',
-            background: 'rgba(248,250,252,0.9)',
-            border: '1.5px dashed #CBD5E1',
-            borderRadius: '14px', cursor: 'pointer',
-            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px',
-            transition: 'border-color 0.2s, background 0.2s',
-          }}
-          onMouseEnter={e => {
-            e.currentTarget.style.borderColor = accentStart
-            e.currentTarget.style.background = `${accentStart}08`
-          }}
-          onMouseLeave={e => {
-            e.currentTarget.style.borderColor = '#CBD5E1'
-            e.currentTarget.style.background = 'rgba(248,250,252,0.9)'
-          }}
-        >
-          <span style={{ fontSize: '24px' }}>📷</span>
-          <span style={{ fontSize: '12px', fontWeight: 700, color: '#64748B', letterSpacing: '0.04em' }}>
-            TAP TO UPLOAD PHOTO
-          </span>
-          <span style={{ fontSize: '10px', color: '#94A3B8', fontWeight: 500 }}>
-            JPG, PNG, WEBP supported
-          </span>
-        </button>
+        <div>
+          <button
+            type="button"
+            onClick={() => inputRef.current?.click()}
+            style={{
+              width: '100%', padding: '18px',
+              background: 'rgba(248,250,252,0.9)',
+              border: '1.5px dashed #CBD5E1',
+              borderRadius: '14px', cursor: 'pointer',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px',
+              transition: 'border-color 0.2s, background 0.2s',
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.borderColor = accentStart
+              e.currentTarget.style.background = `${accentStart}08`
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.borderColor = '#CBD5E1'
+              e.currentTarget.style.background = 'rgba(248,250,252,0.9)'
+            }}
+          >
+            <span style={{ fontSize: '24px' }}>📷</span>
+            <span style={{ fontSize: '12px', fontWeight: 700, color: '#64748B', letterSpacing: '0.04em' }}>
+              TAP TO UPLOAD PHOTO
+            </span>
+            <span style={{ fontSize: '10px', color: '#94A3B8', fontWeight: 500 }}>
+              JPG, PNG, WEBP supported
+            </span>
+          </button>
+          <div style={{
+            fontSize: '11px', color: '#94a3b8', fontWeight: 500,
+            textAlign: 'center', marginTop: '6px',
+          }}>
+            Accepted image size: 50 KB – 200 KB
+          </div>
+        </div>
       )}
     </div>
   )
