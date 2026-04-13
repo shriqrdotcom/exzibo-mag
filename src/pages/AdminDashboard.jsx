@@ -2390,17 +2390,21 @@ const DEFAULT_CAT_FILTERS = {
   ],
 }
 
+// Yield one frame to the browser so the UI stays alive during heavy work.
+const yieldFrame = () => new Promise(r => setTimeout(r, 0))
+
 async function compressToLimit(dataUrl, maxKB) {
   return new Promise((resolve) => {
     const img = new window.Image()
-    img.onload = () => {
+    img.onload = async () => {
       try {
         const rawKB = (dataUrl.length * 0.75) / 1024
-        // Aggressively pre-scale the canvas dimensions so we only draw once.
-        // Target ~4× the maxKB in pixel budget (JPEG is ~4:1 vs raw pixels).
         const pixelBudgetRatio = (maxKB * 4) / rawKB
         let scale = Math.min(1, Math.sqrt(pixelBudgetRatio))
         scale = Math.max(0.05, scale)
+
+        // Yield before the heavy drawImage call so the page stays responsive
+        await yieldFrame()
 
         const canvas = document.createElement('canvas')
         canvas.width  = Math.max(1, Math.round(img.naturalWidth  * scale))
@@ -2408,26 +2412,27 @@ async function compressToLimit(dataUrl, maxKB) {
         const ctx = canvas.getContext('2d')
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
 
-        // Binary-search quality — max 10 iterations, never recurse
+        // Yield again before the binary-search loop
+        await yieldFrame()
+
         let lo = 0.1, hi = 0.92, best = null
         for (let i = 0; i < 10; i++) {
+          await yieldFrame()          // yield between every toDataURL call
           const mid = (lo + hi) / 2
           const candidate = canvas.toDataURL('image/jpeg', mid)
           const kb = (candidate.length * 0.75) / 1024
-          if (kb <= maxKB) {
-            best = candidate
-            lo = mid        // fits — try higher quality
-          } else {
-            hi = mid        // too big — try lower quality
-          }
-          if (hi - lo < 0.02) break  // converged
+          if (kb <= maxKB) { best = candidate; lo = mid }
+          else              { hi = mid }
+          if (hi - lo < 0.02) break
         }
 
-        // If still over limit after binary search, halve scale and retry once
+        // Safety fallback — halve dimensions once if still over limit
         if (!best || (best.length * 0.75) / 1024 > maxKB) {
+          await yieldFrame()
           canvas.width  = Math.max(1, Math.round(canvas.width  * 0.5))
           canvas.height = Math.max(1, Math.round(canvas.height * 0.5))
           ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+          await yieldFrame()
           best = canvas.toDataURL('image/jpeg', 0.55)
         }
 

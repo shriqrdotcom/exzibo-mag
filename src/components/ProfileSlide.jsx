@@ -16,35 +16,58 @@ function fileToBase64(file) {
   })
 }
 
-// Binary-search compression: pre-scale the image then binary-search quality.
-// Returns a data URL ≤ maxKB, or null on failure.
+// Yield one frame to the browser so heavy canvas work never freezes the page.
+const yieldFrame = () => new Promise(r => setTimeout(r, 0))
+
+// Binary-search compression: pre-scale then search quality, yielding between
+// every heavy operation so the page stays fully responsive.
 function compressToLimit(dataUrl, maxKB) {
   return new Promise(resolve => {
     const img = new window.Image()
-    img.onload = () => {
+    img.onload = async () => {
       try {
         const maxBytes = maxKB * 1024
-        let { width, height } = img
-        // Pre-scale if raw size is much larger than target
-        const rawEst = (dataUrl.length * 3) / 4
-        if (rawEst > maxBytes) {
-          const scaleFactor = Math.sqrt(maxBytes / rawEst) * 0.95
-          width = Math.max(1, Math.round(width * scaleFactor))
-          height = Math.max(1, Math.round(height * scaleFactor))
-        }
+        const rawKB = (dataUrl.length * 0.75) / 1024
+        const pixelBudgetRatio = (maxKB * 4) / rawKB
+        let scale = Math.min(1, Math.sqrt(pixelBudgetRatio))
+        scale = Math.max(0.05, scale)
+
+        // Yield before the heavy drawImage so the browser stays alive
+        await yieldFrame()
+
         const canvas = document.createElement('canvas')
-        canvas.width = width; canvas.height = height
-        canvas.getContext('2d').drawImage(img, 0, 0, width, height)
-        let lo = 0.01, hi = 0.95, best = null
-        for (let i = 0; i < 12; i++) {
+        canvas.width  = Math.max(1, Math.round(img.naturalWidth  * scale))
+        canvas.height = Math.max(1, Math.round(img.naturalHeight * scale))
+        const ctx = canvas.getContext('2d')
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+
+        await yieldFrame()
+
+        let lo = 0.1, hi = 0.92, best = null
+        for (let i = 0; i < 10; i++) {
+          await yieldFrame()   // yield between every toDataURL call
           const mid = (lo + hi) / 2
           const attempt = canvas.toDataURL('image/jpeg', mid)
-          const bytes = (attempt.length * 3) / 4
+          const bytes = attempt.length * 0.75
           if (bytes <= maxBytes) { best = attempt; lo = mid } else { hi = mid }
-          if (hi - lo < 0.005) break
+          if (hi - lo < 0.02) break
         }
+
+        // Safety fallback if still over limit
+        if (!best || (best.length * 0.75) / 1024 > maxKB) {
+          await yieldFrame()
+          canvas.width  = Math.max(1, Math.round(canvas.width  * 0.5))
+          canvas.height = Math.max(1, Math.round(canvas.height * 0.5))
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+          await yieldFrame()
+          best = canvas.toDataURL('image/jpeg', 0.5)
+        }
+
         resolve(best || canvas.toDataURL('image/jpeg', 0.3))
-      } catch { resolve(null) }
+      } catch (e) {
+        console.error('compress error', e)
+        resolve(null)
+      }
     }
     img.onerror = () => resolve(null)
     img.src = dataUrl
