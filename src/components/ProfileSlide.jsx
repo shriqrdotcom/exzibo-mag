@@ -16,6 +16,43 @@ function fileToBase64(file) {
   })
 }
 
+// Binary-search compression: pre-scale the image then binary-search quality.
+// Returns a data URL ≤ maxKB, or null on failure.
+function compressToLimit(dataUrl, maxKB) {
+  return new Promise(resolve => {
+    const img = new window.Image()
+    img.onload = () => {
+      try {
+        const maxBytes = maxKB * 1024
+        let { width, height } = img
+        // Pre-scale if raw size is much larger than target
+        const rawEst = (dataUrl.length * 3) / 4
+        if (rawEst > maxBytes) {
+          const scaleFactor = Math.sqrt(maxBytes / rawEst) * 0.95
+          width = Math.max(1, Math.round(width * scaleFactor))
+          height = Math.max(1, Math.round(height * scaleFactor))
+        }
+        const canvas = document.createElement('canvas')
+        canvas.width = width; canvas.height = height
+        canvas.getContext('2d').drawImage(img, 0, 0, width, height)
+        let lo = 0.01, hi = 0.95, best = null
+        for (let i = 0; i < 12; i++) {
+          const mid = (lo + hi) / 2
+          const attempt = canvas.toDataURL('image/jpeg', mid)
+          const bytes = (attempt.length * 3) / 4
+          if (bytes <= maxBytes) { best = attempt; lo = mid } else { hi = mid }
+          if (hi - lo < 0.005) break
+        }
+        resolve(best || canvas.toDataURL('image/jpeg', 0.3))
+      } catch { resolve(null) }
+    }
+    img.onerror = () => resolve(null)
+    img.src = dataUrl
+  })
+}
+
+const MAX_GALLERY = 10
+
 function loadContact(restaurantId) {
   if (!restaurantId || restaurantId === 'default') {
     const config = JSON.parse(localStorage.getItem('exzibo_admin_global_config') || '{}')
@@ -52,6 +89,17 @@ export default function ProfileSlide({
   const [uploadError, setUploadError] = useState('')
   const [uploadSuccess, setUploadSuccess] = useState(false)
   const [previewUrl, setPreviewUrl] = useState(logoUrl || '')
+
+  // Logo compression popup state
+  const logoPendingSrcRef = useRef(null)
+  const [logoPendingPreview, setLogoPendingPreview] = useState(null)
+  const [logoCompressModal, setLogoCompressModal] = useState(false)
+  const [logoCompressing, setLogoCompressing] = useState(false)
+
+  // Gallery state
+  const [galleryError, setGalleryError] = useState('')
+  const [galleryCompressing, setGalleryCompressing] = useState(false)
+  const [gallerySuccess, setGallerySuccess] = useState(false)
 
   const [editingName, setEditingName] = useState(false)
   const [nameInput, setNameInput] = useState(restaurantName || '')
@@ -113,17 +161,62 @@ export default function ProfileSlide({
   }, [restaurantId])
 
   async function handleCarouselFiles(files) {
-    const valid = Array.from(files).filter(f => f.type.startsWith('image/'))
-    if (!valid.length) return
-    const base64s = await Promise.all(valid.map(fileToBase64))
-    setCarouselImages(prev => {
-      const updated = [...prev, ...base64s]
-      const key = `exzibo_carousel_${restaurantId || 'default'}`
-      localStorage.setItem(key, JSON.stringify(updated))
-      window.dispatchEvent(new CustomEvent('exzibo-carousel-changed', { detail: { restaurantId, images: updated } }))
-      return updated
-    })
-    setCarouselIdx(prev => prev)
+    setGalleryError(''); setGallerySuccess(false)
+    const allowed = ['image/jpeg', 'image/png', 'image/webp']
+    const valid = Array.from(files).filter(f => allowed.includes(f.type))
+    if (!valid.length) { setGalleryError('Only JPG, PNG, or WEBP images are allowed.'); return }
+
+    // Check max-10 limit up front
+    const currentCount = carouselImages.length
+    if (currentCount >= MAX_GALLERY) {
+      setGalleryError(`Maximum ${MAX_GALLERY} images allowed in the gallery.`)
+      return
+    }
+    const canAdd = MAX_GALLERY - currentCount
+    const toProcess = valid.slice(0, canAdd)
+
+    // Filter by minimum size
+    const tooSmall = toProcess.filter(f => f.size / 1024 < 60)
+    if (tooSmall.length === toProcess.length) {
+      setGalleryError('Image quality too low. Please upload better images (min 60 KB each).')
+      return
+    }
+    const acceptable = toProcess.filter(f => f.size / 1024 >= 60)
+
+    setGalleryCompressing(true)
+    try {
+      const results = await Promise.all(acceptable.map(async f => {
+        const sizeKB = f.size / 1024
+        const src = await fileToBase64(f)
+        if (sizeKB > 200) {
+          const compressed = await compressToLimit(src, 200)
+          return compressed || src
+        }
+        return src
+      }))
+
+      setCarouselImages(prev => {
+        const updated = [...prev, ...results]
+        const key = `exzibo_carousel_${restaurantId || 'default'}`
+        localStorage.setItem(key, JSON.stringify(updated))
+        window.dispatchEvent(new CustomEvent('exzibo-carousel-changed', { detail: { restaurantId, images: updated } }))
+        return updated
+      })
+      setCarouselIdx(prev => prev)
+
+      // Notify if some were skipped due to limit or size
+      const skipped = valid.length - acceptable.length
+      if (skipped > 0 || valid.length > canAdd) {
+        const msg = []
+        if (valid.length > canAdd) msg.push(`only ${canAdd} added (gallery limit)`)
+        if (skipped > 0) msg.push(`${skipped} skipped (too small)`)
+        setGalleryError(msg.join(', ').replace(/^./, c => c.toUpperCase()) + '.')
+      } else {
+        setGallerySuccess(true)
+        setTimeout(() => setGallerySuccess(false), 2500)
+      }
+    } catch { setGalleryError('Failed to process images. Please try again.') }
+    finally { setGalleryCompressing(false) }
   }
 
   function removeCarouselImage(idx) {
@@ -202,14 +295,53 @@ export default function ProfileSlide({
   useEffect(() => { if (editingContact) setTimeout(() => phoneInputRef.current?.focus(), 60) }, [editingContact])
   useEffect(() => { if (editingLocation) setTimeout(() => addressRef.current?.focus(), 60) }, [editingLocation])
 
-  async function handleLogoUpload(file) {
+  function handleLogoUpload(file) {
     if (!file) return
-    const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
-    if (!allowed.includes(file.type)) { setUploadError('Only JPG, PNG, WEBP or GIF images are allowed.'); return }
-    if (file.size > 5 * 1024 * 1024) { setUploadError('Image must be smaller than 5 MB.'); return }
-    setUploadError(''); setUploading(true); setUploadSuccess(false)
+    const allowed = ['image/jpeg', 'image/png', 'image/webp']
+    if (!allowed.includes(file.type)) { setUploadError('Only JPG, PNG, or WEBP images are allowed.'); return }
+    setUploadError(''); setUploadSuccess(false)
+
+    const sizeKB = file.size / 1024
+    if (sizeKB < 60) { setUploadError('Image quality too low. Please upload a better image (min 60 KB).'); return }
+
+    const reader = new FileReader()
+    reader.onload = ev => {
+      const src = ev.target.result
+      if (sizeKB > 200) {
+        logoPendingSrcRef.current = src
+        setLogoPendingPreview(src)
+        setLogoCompressModal(true)
+      } else {
+        saveLogo(src)
+      }
+    }
+    reader.readAsDataURL(file)
+  }
+
+  async function handleLogoCompressConfirm() {
+    const src = logoPendingSrcRef.current
+    if (!src) return
+    setLogoCompressing(true)
+    let result = null
     try {
-      const base64 = await fileToBase64(file)
+      result = await compressToLimit(src, 200)
+    } catch {}
+    logoPendingSrcRef.current = null
+    setLogoPendingPreview(null)
+    setLogoCompressing(false)
+    setLogoCompressModal(false)
+    if (result) saveLogo(result)
+  }
+
+  function handleLogoCompressCancel() {
+    logoPendingSrcRef.current = null
+    setLogoPendingPreview(null)
+    setLogoCompressModal(false)
+  }
+
+  function saveLogo(base64) {
+    setUploading(true)
+    try {
       setPreviewUrl(base64)
       if (!restaurantId || restaurantId === 'default') {
         localStorage.setItem('exzibo_logo_default', base64)
@@ -220,7 +352,7 @@ export default function ProfileSlide({
       window.dispatchEvent(new CustomEvent('exzibo-logo-changed', { detail: { restaurantId, logo: base64 } }))
       onLogoUpdate && onLogoUpdate(base64)
       setUploadSuccess(true); setTimeout(() => setUploadSuccess(false), 2500)
-    } catch { setUploadError('Upload failed. Please try again.') }
+    } catch { setUploadError('Failed to save logo. Please try again.') }
     finally { setUploading(false) }
   }
 
@@ -307,7 +439,7 @@ export default function ProfileSlide({
 
   return (
     <>
-      <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif"
+      <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp"
         style={{ display: 'none' }}
         onChange={e => { const f = e.target.files?.[0]; if (f) handleLogoUpload(f); e.target.value = '' }}
       />
@@ -587,15 +719,26 @@ export default function ProfileSlide({
           <input
             ref={carouselInputRef}
             type="file"
-            accept="image/*"
+            accept="image/jpeg,image/png,image/webp"
             multiple
             style={{ display: 'none' }}
             onChange={e => { if (e.target.files?.length) handleCarouselFiles(e.target.files); e.target.value = '' }}
           />
           <div style={{ marginBottom: '14px' }}>
-            <div style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#999', marginBottom: '10px', paddingLeft: '4px' }}>
-              Image Gallery
+            <div style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#999', marginBottom: '6px', paddingLeft: '4px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span>Image Gallery ({carouselImages.length}/{MAX_GALLERY})</span>
+              {galleryCompressing && <span style={{ fontSize: '10px', color: '#888', fontWeight: 500, letterSpacing: '0.04em' }}>Compressing…</span>}
             </div>
+            {galleryError && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: '10px', padding: '8px 12px', marginBottom: '8px', color: '#EF4444', fontSize: '11px', fontWeight: 600 }}>
+                <AlertCircle size={12} /> {galleryError}
+              </div>
+            )}
+            {gallerySuccess && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#F0FDF4', border: '1px solid #A7F3D0', borderRadius: '10px', padding: '8px 12px', marginBottom: '8px', color: '#10B981', fontSize: '11px', fontWeight: 600 }}>
+                <CheckCircle2 size={12} /> Images saved successfully!
+              </div>
+            )}
 
             {carouselImages.length === 0 ? (
               <div
@@ -777,6 +920,64 @@ export default function ProfileSlide({
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         .drum-hide-scrollbar::-webkit-scrollbar { display: none; }
       `}</style>
+
+      {/* Logo compression modal */}
+      {logoCompressModal && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 2000,
+          background: 'rgba(0,0,0,0.5)',
+          backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          padding: '20px',
+        }}>
+          <div style={{
+            background: '#fff', borderRadius: '22px', padding: '26px 24px',
+            maxWidth: '340px', width: '100%',
+            boxShadow: '0 24px 60px rgba(0,0,0,0.4)',
+          }}>
+            {logoPendingPreview && (
+              <img src={logoPendingPreview} alt="preview" style={{
+                width: '80px', height: '80px', borderRadius: '12px',
+                objectFit: 'cover', display: 'block', margin: '0 auto 16px',
+                border: '2px solid #F0F0F8',
+              }} />
+            )}
+            <div style={{ fontWeight: 800, fontSize: '16px', color: '#111', textAlign: 'center', marginBottom: '6px' }}>
+              Image Too Large
+            </div>
+            <div style={{ fontSize: '13px', color: '#666', textAlign: 'center', lineHeight: 1.5, marginBottom: '20px' }}>
+              This image exceeds the 200 KB limit. Click Confirm to automatically compress it.
+            </div>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button
+                onClick={handleLogoCompressCancel}
+                disabled={logoCompressing}
+                style={{
+                  flex: 1, padding: '12px', borderRadius: '12px',
+                  background: '#F0F0F5', border: 'none',
+                  color: '#555', fontSize: '13px', fontWeight: 700,
+                  cursor: logoCompressing ? 'not-allowed' : 'pointer',
+                }}
+              >Cancel</button>
+              <button
+                onClick={handleLogoCompressConfirm}
+                disabled={logoCompressing}
+                style={{
+                  flex: 2, padding: '12px', borderRadius: '12px',
+                  background: logoCompressing ? '#94a3b8' : LIME,
+                  border: 'none', color: '#111', fontSize: '13px', fontWeight: 800,
+                  cursor: logoCompressing ? 'not-allowed' : 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                }}
+              >
+                {logoCompressing
+                  ? <><Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> Compressing…</>
+                  : 'Confirm'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {hoursModalOpen && (
         <OpeningHoursModal

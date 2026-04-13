@@ -1,0 +1,106 @@
+---
+
+```
+Hey, I'm working on my admin dashboard for Exzibo and 
+I'm running into several image-related issues that need 
+to be fixed properly. Let me explain everything clearly.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+THE PROBLEMS I'M FACING RIGHT NOW:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. IMAGE GALLERY SECTION — Images are not being added 
+   at all when I try to upload them. The upload does 
+   nothing. This needs to be completely fixed.
+
+2. FOOD MENU ITEM SECTION — Same issue. When I try to 
+   add an image to a food menu item, it doesn't work 
+   or save properly.
+
+3. LOGO SECTION — When I upload a logo image, it doesn't 
+   compress or save correctly either.
+
+All three sections are broken in terms of image upload 
+and saving. Please find all related files and fix them.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+WHAT I NEED YOU TO BUILD AND FIX:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+For ALL three sections (Image Gallery, Food Menu Item, 
+Logo), apply this same image handling logic:
+
+INSTANT COMPRESSION ON UPLOAD:
+- The moment a user selects any image, check its size
+- Accepted size: 60 KB to 200 KB
+- If the image is larger than 200 KB, compress it 
+  instantly using HTML5 Canvas API
+- Keep reducing the image quality in a loop until 
+  the file size is at or under 200 KB
+- If image is already between 60 KB and 200 KB, 
+  accept it directly without compression
+- If image is under 60 KB, show a small warning: 
+  "Image quality too low, please upload a better image"
+- Support only  JPG, PNG, and WEBP formats
+- All compression must happen on the client side 
+  before anything is sent to the server
+
+COMPRESSION POPUP (when image exceeds 200 KB):
+- Show a floating popup with a blurred background 
+  overlay (backdrop-filter: blur 8px)
+- Popup should say:
+    "Image Too Large — This image exceeds the 200 KB 
+    limit. Click Confirm to automatically compress it."
+- Two buttons: Cancel and Confirm
+- If Cancel is clicked, discard the image
+- If Confirm is clicked, compress it instantly and 
+  load the compressed version into the preview
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+IMAGE GALLERY — SPECIAL RULES:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+- Maximum 10 images allowed in the Image Gallery
+- If user tries to add more than 10, show a message: 
+  "Maximum 10 images allowed in the gallery"
+- Each of the 10 images must go through the same 
+  compression check individually
+- All 10 images must compress instantly and show 
+  previews before saving
+- When Save is clicked, all images must save properly 
+  and appear in the gallery on the front end immediately
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SAVE CHANGES — MUST WORK EVERYWHERE:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+- After compression and preview, when Save Changes 
+  is clicked the image must actually save to the 
+  backend or database
+- The saved image must instantly reflect on the 
+  live front end without any page reload
+- Fix any broken connection between the image state, 
+  the save function, the API call, and the database
+- If the image filename stays the same, add a 
+  timestamp at the end of the image URL to bust 
+  the cache so the new image always loads fresh
+- Show a success notification after saving: 
+  "Image saved successfully"
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+QUICK SUMMARY OF WHAT TO FIX:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+- Image Gallery upload is completely broken — fix it
+- Food Menu Item image upload is broken — fix it  
+- Logo image upload is broken — fix it
+- Add instant compression (60 KB to 200 KB) to all 3
+- Add the compression popup with blurred background
+- Limit Image Gallery to 10 images max
+- Make Save Changes work and reflect on front end
+- Scan the entire codebase to find every broken 
+  piece in the upload, compress, save, and display 
+  flow and fix all of it completely
+```
+
+---

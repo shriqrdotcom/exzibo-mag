@@ -2452,6 +2452,16 @@ function ImageUploadField({ value, onChange, accentStart }) {
   const pendingSrcRef = React.useRef(null)
   const [pendingPreview, setPendingPreview] = React.useState(null)
   const [compressing, setCompressing] = React.useState(false)
+  const [compressedResult, setCompressedResult] = React.useState(null)
+
+  // Deliver the compressed image to the parent AFTER the modal has fully closed,
+  // so the parent state update never races with the modal's own state updates.
+  React.useEffect(() => {
+    if (compressedResult) {
+      onChangeRef.current(compressedResult)
+      setCompressedResult(null)
+    }
+  }, [compressedResult])
 
   function handleFileSelect(e) {
     const file = e.target.files?.[0]
@@ -2483,19 +2493,19 @@ function ImageUploadField({ value, onChange, accentStart }) {
     const src = pendingSrcRef.current
     if (!src) return
     setCompressing(true)
+    let result = null
     try {
-      const compressed = await compressToLimit(src, 200)
-      if (compressed) {
-        onChangeRef.current(compressed)
-      }
+      result = await compressToLimit(src, 200)
     } catch (err) {
       console.error('Compression failed:', err)
-    } finally {
-      pendingSrcRef.current = null
-      setPendingPreview(null)
-      setCompressing(false)
-      setCompressModal(false)
     }
+    // Always clear modal state first so the modal unmounts cleanly.
+    pendingSrcRef.current = null
+    setPendingPreview(null)
+    setCompressing(false)
+    setCompressModal(false)
+    // Deliver via effect so it fires after the modal-close render cycle.
+    if (result) setCompressedResult(result)
   }
 
   function handleCompressCancel() {
