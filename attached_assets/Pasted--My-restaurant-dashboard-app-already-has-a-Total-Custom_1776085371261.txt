@@ -1,0 +1,54 @@
+---
+
+My restaurant dashboard app already has a **Total Customer card** showing total count and +12% this month. The card exists but clicking it does nothing. **Do not rebuild or remove anything existing.**
+
+**Fix the existing Total Customer card first:**
+- The total customer count should correctly count **unique customers only**
+- If one person places multiple orders or multiple bookings in a day, they are counted as **1 customer only** (deduplicate by customer name or phone number)
+- Formula: Total Customers = unique people who either placed an order OR made a booking
+- The +% this month badge should compare this month's unique customers vs last month's unique customers
+
+**Add click behavior — open a modal with blurry background:**
+- When user clicks the Total Customer card, open a modal overlay
+- Background of the existing page should blur using `backdrop-filter: blur(10px)` with a dark semi-transparent overlay
+- Modal should be a clean white centered card with rounded corners and shadow
+- Modal title: **"Customer Details"** with current month name
+
+**Inside the modal show week-wise customer breakdown:**
+
+Display 4 sections — Week 1 (days 1–7), Week 2 (days 8–14), Week 3 (days 15–21), Week 4 (days 22–31)
+
+For each week show:
+- Total unique customers that week
+- Customers from Orders only
+- Customers from Bookings only
+- Customers who did both (order + booking)
+- A small visual bar or number showing which week had the most customers
+
+At the bottom of the modal show:
+- Grand total unique customers this month
+- Most active week (highlighted in bold)
+- Month-over-month growth percentage
+
+**Counting Logic Rules — very important:**
+- One person = 1 customer regardless of how many items they ordered
+- One person = 1 customer regardless of how many bookings they made
+- If same person appears in both orders and bookings, still count as 1 customer
+- Use phone number or customer name as the unique identifier for deduplication
+- Each month resets the count fresh on the 1st automatically
+
+**Modal Close Behavior:**
+- Close when clicking outside the modal
+- Close when pressing the X button in top right corner
+- Clicking inside modal should NOT close it
+- Smooth fade-in animation on open, fade-out on close
+
+**Mobile Responsive:**
+- Modal should be 90% width on small screens
+- Week sections should stack vertically on mobile
+
+**Important Rules:**
+- Do NOT modify existing orders or bookings logic
+- Only add deduplication layer on top of existing data
+- Do NOT change the card UI design, only add the click handler
+- No z-index conflicts with existing modals or graph popups

@@ -4435,13 +4435,23 @@ const CHART_H = 110
 const MIN_V = 35
 const MAX_V = 75
 
-function AnalyticsLineChart() {
-  const pts = WEALTH_DATA.map((v, i) => [
-    (i / (WEALTH_DATA.length - 1)) * CHART_W,
-    CHART_H - ((v - MIN_V) / (MAX_V - MIN_V)) * CHART_H,
+function AnalyticsLineChart({ data, minV: propMin, maxV: propMax }) {
+  const chartData = (data && data.length > 0) ? data : WEALTH_DATA.map(v => v * 1000)
+  const rawMax = Math.max(...chartData)
+  const rawMin = Math.min(...chartData)
+  const minV = propMin !== undefined ? propMin : (rawMin > 0 ? 0 : rawMin)
+  const maxV = propMax !== undefined ? propMax : (rawMax > 0 ? rawMax * 1.15 : 1)
+  const range = maxV - minV || 1
+
+  const pts = chartData.map((v, i) => [
+    (i / (chartData.length - 1)) * CHART_W,
+    CHART_H - ((v - minV) / range) * CHART_H,
   ])
   const polyline = pts.map(([x, y]) => `${x},${y}`).join(' ')
   const area = `M ${pts[0][0]},${CHART_H} ` + pts.map(([x, y]) => `L ${x},${y}`).join(' ') + ` L ${pts[pts.length - 1][0]},${CHART_H} Z`
+
+  const gridLines = [0.25, 0.5, 0.75].map(f => CHART_H - f * CHART_H)
+
   return (
     <svg viewBox={`0 0 ${CHART_W} ${CHART_H + 6}`} style={{ width: '100%', height: '120px' }} preserveAspectRatio="none">
       <defs>
@@ -4450,10 +4460,9 @@ function AnalyticsLineChart() {
           <stop offset="100%" stopColor="#E8321A" stopOpacity="0" />
         </linearGradient>
       </defs>
-      {[35, 55, 75].map((v, i) => {
-        const y = CHART_H - ((v - MIN_V) / (MAX_V - MIN_V)) * CHART_H
-        return <line key={i} x1={0} y1={y} x2={CHART_W} y2={y} stroke="#e2e8f0" strokeWidth="1" strokeDasharray="4 3" />
-      })}
+      {gridLines.map((y, i) => (
+        <line key={i} x1={0} y1={y} x2={CHART_W} y2={y} stroke="#e2e8f0" strokeWidth="1" strokeDasharray="4 3" />
+      ))}
       <path d={area} fill="url(#ag)" />
       <polyline points={polyline} fill="none" stroke="#E8321A" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
       {pts.map(([x, y], i) => <circle key={i} cx={x} cy={y} r="3.5" fill="#fff" stroke="#E8321A" strokeWidth="2" />)}
@@ -4533,7 +4542,13 @@ function AnalyticsPanel({ accentStart, accentEnd, restaurantId }) {
   const [showRevenueModal, setShowRevenueModal] = React.useState(false)
   const [categoryItems, setCategoryItems] = React.useState(() => buildCategoryItems(restaurantId))
 
-  const { totalWealth, todaysCollection, totalCustomers, totalBookings, categoryData, setRestaurantId } = useAnalytics()
+  const { totalWealth, todaysCollection, totalCustomers, totalBookings, categoryData, setRestaurantId, monthlyRevenue, weeklyRevenue } = useAnalytics()
+
+  const chartData = (monthlyRevenue && monthlyRevenue.some(v => v > 0)) ? monthlyRevenue : null
+  const chartMax  = chartData ? Math.max(...chartData) : 75000
+  const chartMin  = 0
+  const fmtK = v => v >= 1000000 ? `${(v/1000000).toFixed(1)}M` : v >= 1000 ? `${Math.round(v/1000)}k` : String(v)
+  const realWeekly = (weeklyRevenue && weeklyRevenue.some(v => v > 0)) ? weeklyRevenue : null
 
   React.useEffect(() => {
     setRestaurantId(restaurantId)
@@ -4602,10 +4617,10 @@ function AnalyticsPanel({ accentStart, accentEnd, restaurantId }) {
             <span style={{ fontSize: '24px', fontWeight: 900, color: '#0f172a' }}>{totalWealth}</span>
             <span style={{ fontSize: '12px', color: '#94a3b8', fontWeight: 500 }}>Total wealth</span>
           </div>
-          <div style={{ fontSize: '10px', color: '#94a3b8', marginBottom: '2px' }}>75k</div>
-          <AnalyticsLineChart />
+          <div style={{ fontSize: '10px', color: '#94a3b8', marginBottom: '2px' }}>{fmtK(chartMax)}</div>
+          <AnalyticsLineChart data={chartData || WEALTH_DATA.map(v => v * 1000)} minV={chartMin} maxV={chartMax * 1.15} />
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: '#94a3b8', marginTop: '2px' }}>
-            <span>35k</span><span>55k</span><span>75k</span>
+            <span>{fmtK(chartMin)}</span><span>{fmtK(Math.round(chartMax / 2))}</span><span>{fmtK(chartMax)}</span>
           </div>
         </div>
 
@@ -4658,9 +4673,10 @@ function AnalyticsPanel({ accentStart, accentEnd, restaurantId }) {
 
       {/* ── Revenue Modal ── */}
       {showRevenueModal && (() => {
+        const displayWeekly = realWeekly || WEEKLY_REVENUE
         const monthName = new Date().toLocaleString('default', { month: 'long', year: 'numeric' })
-        const totalMonthly = WEEKLY_REVENUE.reduce((s, v) => s + v, 0)
-        const bestIdx = WEEKLY_REVENUE.indexOf(Math.max(...WEEKLY_REVENUE))
+        const totalMonthly = displayWeekly.reduce((s, v) => s + v, 0)
+        const bestIdx = displayWeekly.indexOf(Math.max(...displayWeekly))
         return (
           <div
             onClick={() => setShowRevenueModal(false)}
@@ -4711,8 +4727,8 @@ function AnalyticsPanel({ accentStart, accentEnd, restaurantId }) {
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {WEEKLY_REVENUE.map((rev, i) => {
-                  const prev = i > 0 ? WEEKLY_REVENUE[i - 1] : null
+                {displayWeekly.map((rev, i) => {
+                  const prev = i > 0 ? displayWeekly[i - 1] : null
                   const change = prev !== null ? (((rev - prev) / prev) * 100).toFixed(1) : null
                   const isUp = change !== null && parseFloat(change) >= 0
                   const isBest = i === bestIdx
