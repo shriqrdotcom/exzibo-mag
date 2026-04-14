@@ -427,9 +427,13 @@ export default function RestaurantWebsite() {
   const grandTotal = +(subtotal + gstAmt + platformFee - discountAmt).toFixed(2)
 
   function updateQty(id, delta) {
-    setCartItems(prev => prev.map(item =>
-      item.id === id ? { ...item, qty: Math.max(1, item.qty + delta) } : item
-    ))
+    setCartItems(prev => {
+      const item = prev.find(i => i.id === id)
+      if (item && item.qty === 1 && delta === -1) {
+        return prev.filter(i => i.id !== id)
+      }
+      return prev.map(i => i.id === id ? { ...i, qty: Math.max(1, i.qty + delta) } : i)
+    })
   }
   function removeItem(id) {
     setCartItems(prev => prev.filter(item => item.id !== id))
