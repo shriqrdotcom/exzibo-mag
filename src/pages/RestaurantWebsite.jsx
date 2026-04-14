@@ -1760,10 +1760,6 @@ export default function RestaurantWebsite() {
                         {item.description && (
                           <div style={{ fontSize: '13px', color: '#888', marginTop: '3px' }}>{item.description}</div>
                         )}
-                        <button
-                          onClick={() => removeItem(item.id)}
-                          style={{ background: 'none', border: 'none', color: '#999', fontSize: '13px', cursor: 'pointer', padding: '0', marginTop: '8px', textDecoration: 'underline', textDecorationStyle: 'dashed', textUnderlineOffset: '3px', fontFamily: 'inherit' }}
-                        >Move to wishlist</button>
                       </div>
 
                       {/* Right: green stepper + prices */}
