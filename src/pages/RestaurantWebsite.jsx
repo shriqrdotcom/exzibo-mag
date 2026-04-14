@@ -1250,13 +1250,16 @@ export default function RestaurantWebsite() {
           {/* Results List */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', padding: '0 14px' }}>
             {searchFilteredAll.map((item, i) => (
-              <div key={i} style={{
+              <div key={i}
+                onClick={() => navigate(`/restaurant/${slug}/food/${encodeURIComponent(item.name)}`, { state: { item, returnTab: activeNav, darkMode } })}
+                style={{
                 display: 'flex', gap: '12px', alignItems: 'center',
                 background: theme.cardBg,
                 border: `1px solid ${theme.cardBorder}`,
                 borderRadius: '16px',
                 padding: '12px',
                 boxShadow: theme.cardShadow,
+                cursor: 'pointer',
                 animation: 'fadeUp 0.3s ease both',
                 animationDelay: `${i * 40}ms`,
               }}>
@@ -1291,7 +1294,7 @@ export default function RestaurantWebsite() {
                       {item.oldPrice && <span style={{ fontSize: '11px', color: theme.priceOld, textDecoration: 'line-through' }}>₹{item.oldPrice.toLocaleString()}</span>}
                     </div>
                     <button
-                      onClick={(e) => addToCart(item, e)}
+                      onClick={(e) => { e.stopPropagation(); addToCart(item, e) }}
                       style={{
                         background: '#E8321A', color: '#fff', border: 'none',
                         borderRadius: '10px', padding: '7px 14px',
@@ -1734,67 +1737,62 @@ export default function RestaurantWebsite() {
 
           {/* Cart items */}
           {cartItems.length > 0 && (
-            <div style={{ padding: '4px 14px 0' }}>
-              {cartItems.map(item => (
-                <div
-                  key={item.id}
-                  className="cart-item-card"
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: '12px',
-                    background: theme.cardBg,
-                    border: `1px solid ${theme.cardBorder}`,
-                    borderRadius: '18px',
-                    padding: '14px',
-                    marginBottom: '12px',
-                    boxShadow: theme.cardShadow,
-                    position: 'relative',
-                  }}
-                >
-                  {/* Food image */}
-                  <div style={{ flexShrink: 0, width: '72px', height: '72px', borderRadius: '13px', overflow: 'hidden', background: darkMode ? '#222' : '#f5f1ee' }}>
-                    <img
-                      src={item.img}
-                      alt={item.name}
-                      style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-                      onError={e => { e.target.src = '/menu/wagyu-ribeye.png' }}
-                    />
-                  </div>
+            <div style={{ margin: '8px 14px 0', background: '#fff', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 2px 10px rgba(0,0,0,0.06)' }}>
+              {cartItems.map((item, idx) => {
+                const unitPrice = item.price
+                const originalPrice = item.oldPrice || Math.round(unitPrice * 1.28)
+                return (
+                  <div key={item.id}>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', padding: '16px', gap: '14px' }}>
+                      {/* Food image */}
+                      <div style={{ flexShrink: 0, width: '80px', height: '80px', borderRadius: '12px', overflow: 'hidden', background: '#f5f5f5' }}>
+                        <img
+                          src={item.img}
+                          alt={item.name}
+                          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                          onError={e => { e.target.src = '/menu/wagyu-ribeye.png' }}
+                        />
+                      </div>
 
-                  {/* Details */}
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '6px' }}>
-                      <div style={{ fontSize: '14px', fontWeight: 700, color: theme.color, lineHeight: 1.3, flex: 1 }}>{item.name}</div>
-                      <button
-                        className="delete-btn"
-                        onClick={() => removeItem(item.id)}
-                        style={{ flexShrink: 0, background: darkMode ? 'rgba(255,255,255,0.06)' : '#f5f1ee', border: 'none', borderRadius: '8px', width: '30px', height: '30px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: darkMode ? '#666' : '#bbb', cursor: 'pointer' }}
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                    <div style={{ fontSize: '15px', fontWeight: 800, color: '#E8321A', marginTop: '4px' }}>₹{(item.price * item.qty).toLocaleString('en-IN')}</div>
+                      {/* Middle info */}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: '15px', fontWeight: 700, color: '#1a1a1a', lineHeight: 1.3 }}>{item.name}</div>
+                        {item.description && (
+                          <div style={{ fontSize: '13px', color: '#888', marginTop: '3px' }}>{item.description}</div>
+                        )}
+                        <button
+                          onClick={() => removeItem(item.id)}
+                          style={{ background: 'none', border: 'none', color: '#999', fontSize: '13px', cursor: 'pointer', padding: '0', marginTop: '8px', textDecoration: 'underline', textDecorationStyle: 'dashed', textUnderlineOffset: '3px', fontFamily: 'inherit' }}
+                        >Move to wishlist</button>
+                      </div>
 
-                    {/* Quantity stepper */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '2px', marginTop: '8px', width: 'fit-content' }}>
-                      <button
-                        className="qty-btn"
-                        onClick={() => updateQty(item.id, -1)}
-                        style={{ width: '28px', height: '28px', borderRadius: '8px', border: `1.5px solid ${darkMode ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.10)'}`, background: darkMode ? 'rgba(255,255,255,0.05)' : '#f5f5f5', color: theme.color, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
-                      >
-                        <Minus size={12} strokeWidth={2.5} />
-                      </button>
-                      <span style={{ minWidth: '28px', textAlign: 'center', fontSize: '14px', fontWeight: 700, color: theme.color }}>{item.qty}</span>
-                      <button
-                        className="qty-btn"
-                        onClick={() => updateQty(item.id, 1)}
-                        style={{ width: '28px', height: '28px', borderRadius: '8px', border: 'none', background: '#E8321A', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
-                      >
-                        <Plus size={12} strokeWidth={2.5} />
-                      </button>
+                      {/* Right: green stepper + prices */}
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px', flexShrink: 0 }}>
+                        {/* Dark green pill stepper */}
+                        <div style={{ display: 'flex', alignItems: 'center', background: '#2e7d32', borderRadius: '24px', height: '40px', padding: '0 8px', gap: '4px' }}>
+                          <button
+                            onClick={() => updateQty(item.id, -1)}
+                            style={{ background: 'none', border: 'none', color: '#fff', fontSize: '20px', lineHeight: 1, cursor: 'pointer', width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'inherit', padding: 0 }}
+                          >−</button>
+                          <span style={{ color: '#fff', fontWeight: 700, fontSize: '15px', minWidth: '22px', textAlign: 'center' }}>{item.qty}</span>
+                          <button
+                            onClick={() => updateQty(item.id, 1)}
+                            style={{ background: 'none', border: 'none', color: '#fff', fontSize: '20px', lineHeight: 1, cursor: 'pointer', width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'inherit', padding: 0 }}
+                          >+</button>
+                        </div>
+                        {/* Prices */}
+                        <div style={{ textAlign: 'right', display: 'flex', alignItems: 'baseline', gap: '5px' }}>
+                          <span style={{ fontSize: '13px', color: '#aaa', textDecoration: 'line-through' }}>₹{(originalPrice * item.qty).toLocaleString('en-IN')}</span>
+                          <span style={{ fontSize: '15px', fontWeight: 700, color: '#1a1a1a' }}>₹{(unitPrice * item.qty).toLocaleString('en-IN')}</span>
+                        </div>
+                      </div>
                     </div>
+                    {idx < cartItems.length - 1 && (
+                      <div style={{ height: '1px', background: '#f0f0f0', margin: '0 16px' }} />
+                    )}
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           )}
 
@@ -2830,8 +2828,8 @@ function MenuCard({ item, theme, onAddToCart, cartQty, onPress }) {
   const fallbackImg = '/menu/wagyu-ribeye.png'
   const oldPrice = item.oldPrice || Math.round((item.price || 0) * 1.5)
   return (
-    <div className="menu-card" style={{ background: theme.cardBg, border: `1px solid ${theme.cardBorder}`, borderRadius: '18px', marginBottom: '14px', boxShadow: theme.cardShadow, padding: '10px 10px 0' }}>
-      <div onClick={onPress} style={{ position: 'relative', width: '100%', height: '200px', overflow: 'hidden', borderRadius: '12px', cursor: 'pointer' }}>
+    <div className="menu-card" onClick={onPress} style={{ background: theme.cardBg, border: `1px solid ${theme.cardBorder}`, borderRadius: '18px', marginBottom: '14px', boxShadow: theme.cardShadow, padding: '10px 10px 0', cursor: 'pointer' }}>
+      <div style={{ position: 'relative', width: '100%', height: '200px', overflow: 'hidden', borderRadius: '12px' }}>
         <img src={item.img || fallbackImg} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', transition: 'transform 0.35s ease' }} onError={e => { e.target.src = fallbackImg }} loading="lazy"
           onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.04)' }}
           onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)' }}
@@ -2857,7 +2855,7 @@ function MenuCard({ item, theme, onAddToCart, cartQty, onPress }) {
           </div>
           <button
             className="view-cart-btn"
-            onClick={(e) => onAddToCart && onAddToCart(item, e)}
+            onClick={(e) => { e.stopPropagation(); onAddToCart && onAddToCart(item, e) }}
             style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '9px 16px', borderRadius: '10px', background: cartQty > 0 ? 'rgba(232,50,26,0.10)' : 'transparent', border: `1.5px solid #E8321A`, color: '#E8321A', fontSize: '12px', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
           >
             {cartQty > 0 ? `In cart (${cartQty})` : <><Plus size={12} strokeWidth={3} /> Add</>}

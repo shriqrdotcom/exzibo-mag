@@ -1,0 +1,48 @@
+```
+I need TWO fixes in my app:
+
+---
+
+### FIX 1: Update my Cart Section UI to match this exact design:
+
+**Cart Item Card Layout (each item row):**
+- White background, full width, separated by a thin light gray horizontal divider line between items
+- Light grayish-white page background (#f0f2f5)
+
+**Left side of each row:**
+- Rounded square product image (about 80x80px), slight rounded corners, light gray background behind image
+
+**Middle section (item info):**
+- Product name in bold dark text (~16-17px), e.g. "Red-Globe Grapes"
+- Below name: quantity/weight in gray text (~13px), e.g. "200 g" or "2 - 3 pcs"
+- Below that: "Move to wishlist" as a dashed underline gray link text (~13px)
+
+**Right side:**
+- A dark green rounded rectangle button (background: #2e7d32 or similar deep green)
+- Inside: "−" (minus), then bold white quantity number "1", then "+" (plus), all in white
+- Button is pill/rounded shape, about 110px wide × 45px tall
+- Below the green button: original price with strikethrough in gray (e.g. ₹186), followed by discounted price in bold dark black (e.g. ₹146), both right-aligned
+
+**Spacing:** Each card has generous vertical padding (~16px top and bottom). No card shadow, just clean white rows.
+
+---
+
+### FIX 2: Food Item Detail View on Menu Click
+
+When a user clicks on any food/product item in the menu section, it should open a detail view/modal/page showing:
+- Large product image at the top
+- Product name (bold, large)
+- Weight or quantity info (gray subtext)
+- Original price (strikethrough) and discounted price (bold)
+- A description or short detail about the item
+- An "Add to Cart" button (same dark green style as the cart quantity button)
+- A "Move to Wishlist" option
+
+Right now clicking a menu item does nothing — please make it navigate to or open the item detail screen properly.
+
+---
+
+Please update both the cart item component and the menu item click handler/navigation. Keep the existing color scheme (dark green #2e7d32 as primary) consistent throughout.
+```
+
+---
