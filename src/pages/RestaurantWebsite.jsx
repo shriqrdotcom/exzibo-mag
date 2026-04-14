@@ -415,7 +415,6 @@ export default function RestaurantWebsite() {
   const cartCount = cartItems.reduce((s, i) => s + i.qty, 0)
   const subtotal = cartItems.reduce((s, i) => s + i.price * i.qty, 0)
   const deliveryFee = subtotal > 500 ? 0 : 40
-  const platformFee = 23
   const gstAmt = +(subtotal * 0.05).toFixed(2)
   const discountAmt = (() => {
     if (!couponApplied || !appliedCouponData) return 0
@@ -424,7 +423,7 @@ export default function RestaurantWebsite() {
     }
     return +(subtotal * +appliedCouponData.discountPct / 100).toFixed(2)
   })()
-  const grandTotal = +(subtotal + gstAmt + platformFee - discountAmt).toFixed(2)
+  const grandTotal = +(subtotal + gstAmt - discountAmt).toFixed(2)
 
   function updateQty(id, delta) {
     setCartItems(prev => {
@@ -1840,15 +1839,6 @@ export default function RestaurantWebsite() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '13px' }}>
                   <span style={{ fontSize: '14px', color: '#444', fontWeight: 400 }}>GST (5%)</span>
                   <span style={{ fontSize: '14px', color: '#1a1a1a', fontWeight: 500 }}>₹{gstAmt.toLocaleString('en-IN')}</span>
-                </div>
-
-                {/* Platform Fee */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span style={{ fontSize: '14px', color: '#444', fontWeight: 400 }}>Platform Fee</span>
-                    <span style={{ fontSize: '11px', color: '#aaa', textDecoration: 'underline', cursor: 'pointer' }}>Know More</span>
-                  </div>
-                  <span style={{ fontSize: '14px', color: '#1a1a1a', fontWeight: 500 }}>₹{platformFee}</span>
                 </div>
 
                 {/* Dashed divider */}
