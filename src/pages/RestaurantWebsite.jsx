@@ -219,6 +219,7 @@ export default function RestaurantWebsite() {
   const [couponApplied, setCouponApplied] = useState(false)
   const [couponError, setCouponError] = useState('')
   const [appliedCouponData, setAppliedCouponData] = useState(null)
+  const [showCouponModal, setShowCouponModal] = useState(false)
   const [couponSectionEnabled, setCouponSectionEnabled] = useState(true)
   const [customerOrders, setCustomerOrders] = useState([])
   const currentOrder = customerOrders[0] ?? null
@@ -405,6 +406,7 @@ export default function RestaurantWebsite() {
   const cartCount = cartItems.reduce((s, i) => s + i.qty, 0)
   const subtotal = cartItems.reduce((s, i) => s + i.price * i.qty, 0)
   const deliveryFee = subtotal > 500 ? 0 : 40
+  const platformFee = 23
   const gstAmt = +(subtotal * 0.05).toFixed(2)
   const discountAmt = (() => {
     if (!couponApplied || !appliedCouponData) return 0
@@ -413,7 +415,7 @@ export default function RestaurantWebsite() {
     }
     return +(subtotal * +appliedCouponData.discountPct / 100).toFixed(2)
   })()
-  const grandTotal = +(subtotal + gstAmt + deliveryFee - discountAmt).toFixed(2)
+  const grandTotal = +(subtotal + gstAmt + platformFee - discountAmt).toFixed(2)
 
   function updateQty(id, delta) {
     setCartItems(prev => prev.map(item =>
@@ -453,6 +455,7 @@ export default function RestaurantWebsite() {
       setAppliedCouponData(couponObj)
       setCouponApplied(true)
       setCouponError('')
+      setTimeout(() => setShowCouponModal(false), 1500)
       return true
     }
 
@@ -1786,137 +1789,180 @@ export default function RestaurantWebsite() {
             </div>
           )}
 
-          {/* Coupon + Summary card */}
+          {/* Price Details + Place Order */}
           {cartItems.length > 0 && (
             <>
-            <div style={{ padding: '4px 14px 0' }}>
+            {/* Price Details card */}
+            <div style={{ padding: '8px 14px 0' }}>
               <div style={{
-                background: theme.cardBg,
-                border: `1px solid ${theme.cardBorder}`,
-                borderRadius: '20px',
-                overflow: 'hidden',
-                boxShadow: theme.cardShadow,
+                background: '#fff',
+                borderRadius: '16px',
+                padding: '18px 18px 14px',
+                boxShadow: '0 2px 12px rgba(0,0,0,0.08)',
               }}>
+                <div style={{ fontSize: '16px', fontWeight: 700, color: '#1a1a1a', marginBottom: '16px' }}>Price Details</div>
 
-                {/* Coupon section */}
-                {couponSectionEnabled && <div style={{ padding: '16px 16px 14px', borderBottom: `1px solid ${theme.cardBorder}` }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
-                    <Tag size={13} color="#E8321A" strokeWidth={2.5} />
-                    <span style={{ fontSize: '11px', fontWeight: 800, letterSpacing: '0.12em', color: '#E8321A', textTransform: 'uppercase' }}>Apply Coupon</span>
+                {/* Total MRP */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '13px' }}>
+                  <span style={{ fontSize: '14px', color: '#444', fontWeight: 400 }}>Total MRP</span>
+                  <span style={{ fontSize: '14px', color: '#1a1a1a', fontWeight: 500 }}>₹{subtotal.toLocaleString('en-IN')}</span>
+                </div>
+
+                {/* Coupon Discount */}
+                {couponSectionEnabled && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '13px' }}>
+                    <span style={{ fontSize: '14px', color: '#444', fontWeight: 400 }}>Coupon Discount</span>
+                    {couponApplied ? (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontSize: '14px', color: '#22c55e', fontWeight: 600 }}>− ₹{discountAmt.toLocaleString('en-IN')}</span>
+                        <button
+                          onClick={() => { setCouponApplied(false); setCouponInput(''); setAppliedCouponData(null) }}
+                          style={{ background: 'none', border: 'none', color: '#999', fontSize: '11px', fontWeight: 600, cursor: 'pointer', padding: '0', textDecoration: 'underline' }}
+                        >Remove</button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => { setCouponError(''); setShowCouponModal(true) }}
+                        style={{ background: 'none', border: 'none', color: '#e91e8c', fontSize: '14px', fontWeight: 600, cursor: 'pointer', padding: '0' }}
+                      >Apply Coupon</button>
+                    )}
                   </div>
-                  {couponApplied ? (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(34,197,94,0.08)', border: '1.5px solid rgba(34,197,94,0.25)', borderRadius: '12px', padding: '11px 14px' }}>
+                )}
+
+                {/* GST */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '13px' }}>
+                  <span style={{ fontSize: '14px', color: '#444', fontWeight: 400 }}>GST (5%)</span>
+                  <span style={{ fontSize: '14px', color: '#1a1a1a', fontWeight: 500 }}>₹{gstAmt.toLocaleString('en-IN')}</span>
+                </div>
+
+                {/* Platform Fee */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span style={{ fontSize: '14px', color: '#444', fontWeight: 400 }}>Platform Fee</span>
+                    <span style={{ fontSize: '11px', color: '#aaa', textDecoration: 'underline', cursor: 'pointer' }}>Know More</span>
+                  </div>
+                  <span style={{ fontSize: '14px', color: '#1a1a1a', fontWeight: 500 }}>₹{platformFee}</span>
+                </div>
+
+                {/* Dashed divider */}
+                <div style={{ borderTop: '1.5px dashed #ddd', margin: '4px 0 16px' }} />
+
+                {/* Total Amount */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '16px', fontWeight: 800, color: '#1a1a1a' }}>Total Amount</span>
+                  <span style={{ fontSize: '17px', fontWeight: 900, color: '#1a1a1a' }}>₹{grandTotal.toLocaleString('en-IN')}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Place Order button */}
+            <div style={{ padding: '14px 14px 8px' }}>
+              <button
+                className="checkout-btn"
+                onClick={() => setShowOrderConfirm(true)}
+                style={{
+                  width: '100%',
+                  background: '#e53935',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '14px',
+                  padding: '16px',
+                  fontSize: '15px',
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  letterSpacing: '0.01em',
+                  boxShadow: '0 6px 20px rgba(229,57,53,0.40)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                }}
+              >
+                Place Order <span style={{ fontSize: '16px' }}>→</span>
+              </button>
+            </div>
+
+            {/* Coupon Modal */}
+            {showCouponModal && (
+              <div
+                onClick={e => { if (e.target === e.currentTarget) { setShowCouponModal(false); setCouponError('') } }}
+                style={{
+                  position: 'fixed', inset: 0, zIndex: 9999,
+                  backdropFilter: 'blur(6px)',
+                  WebkitBackdropFilter: 'blur(6px)',
+                  background: 'rgba(0,0,0,0.45)',
+                  display: 'flex',
+                  alignItems: 'flex-end',
+                  justifyContent: 'center',
+                }}
+              >
+                <div style={{
+                  width: '100%',
+                  maxWidth: '480px',
+                  background: '#fff',
+                  borderRadius: '24px 24px 0 0',
+                  padding: '24px 20px 32px',
+                  boxShadow: '0 -8px 40px rgba(0,0,0,0.18)',
+                  animation: 'slideUp 0.28s ease',
+                }}>
+                  <style>{`@keyframes slideUp { from { transform: translateY(60px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }`}</style>
+                  {/* Header */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+                    <span style={{ fontSize: '17px', fontWeight: 800, color: '#1a1a1a' }}>Apply Coupon</span>
+                    <button
+                      onClick={() => { setShowCouponModal(false); setCouponError('') }}
+                      style={{ background: '#f5f5f5', border: 'none', borderRadius: '50%', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '16px', color: '#555', fontWeight: 700 }}
+                    >✕</button>
+                  </div>
+
+                  {/* Input + button */}
+                  <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                    <input
+                      value={couponInput}
+                      onChange={e => { setCouponInput(e.target.value.toUpperCase()); setCouponError('') }}
+                      onKeyDown={e => e.key === 'Enter' && handleApplyCoupon()}
+                      placeholder="Enter coupon code"
+                      autoFocus
+                      style={{
+                        flex: 1,
+                        border: `1.5px solid ${couponError ? '#e53935' : '#ddd'}`,
+                        borderRadius: '12px',
+                        padding: '13px 14px',
+                        fontSize: '14px',
+                        color: '#1a1a1a',
+                        outline: 'none',
+                        fontFamily: 'inherit',
+                        letterSpacing: '0.05em',
+                        fontWeight: 600,
+                        background: '#fafafa',
+                        transition: 'border-color 0.2s',
+                      }}
+                    />
+                    <button
+                      onClick={handleApplyCoupon}
+                      style={{ background: '#e53935', color: '#fff', border: 'none', borderRadius: '12px', padding: '13px 20px', fontSize: '14px', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: '0 4px 14px rgba(229,57,53,0.30)' }}
+                    >Apply</button>
+                  </div>
+
+                  {/* Error message */}
+                  {couponError && !couponApplied && (
+                    <div style={{ fontSize: '12px', color: '#e53935', marginTop: '8px', fontWeight: 600 }}>{couponError}</div>
+                  )}
+
+                  {/* Success message */}
+                  {couponApplied && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '12px', background: 'rgba(34,197,94,0.08)', border: '1.5px solid rgba(34,197,94,0.25)', borderRadius: '10px', padding: '10px 14px' }}>
                       <CheckCircle size={16} color="#22c55e" />
-                      <span style={{ fontSize: '13px', fontWeight: 700, color: '#22c55e', flex: 1 }}>
+                      <span style={{ fontSize: '13px', fontWeight: 700, color: '#22c55e' }}>
                         {appliedCouponData
                           ? `${appliedCouponData.code} applied — ${appliedCouponData.discountType === 'Fixed Amount' ? `₹${appliedCouponData.discountPct} off!` : `${appliedCouponData.discountPct}% off!`}`
                           : 'Coupon applied!'}
                       </span>
-                      <button
-                        onClick={() => { setCouponApplied(false); setCouponInput(''); setAppliedCouponData(null) }}
-                        style={{ background: 'none', border: 'none', color: '#aaa', fontSize: '11px', fontWeight: 600, cursor: 'pointer', padding: '0' }}
-                      >Remove</button>
                     </div>
-                  ) : (
-                    <>
-                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                        <input
-                          value={couponInput}
-                          onChange={e => { setCouponInput(e.target.value); setCouponError('') }}
-                          onKeyDown={e => e.key === 'Enter' && handleApplyCoupon()}
-                          placeholder="Enter coupon code"
-                          style={{
-                            flex: 1, background: darkMode ? 'rgba(255,255,255,0.05)' : '#f7f3f0',
-                            border: `1.5px solid ${couponError ? 'rgba(232,50,26,0.4)' : (darkMode ? 'rgba(255,255,255,0.09)' : 'rgba(0,0,0,0.09)')}`,
-                            borderRadius: '12px', padding: '11px 14px', fontSize: '13px', color: theme.color,
-                            outline: 'none', fontFamily: 'inherit', transition: 'border-color 0.2s',
-                          }}
-                        />
-                        <button
-                          className="coupon-apply-btn"
-                          onClick={handleApplyCoupon}
-                          style={{ background: '#E8321A', color: '#fff', border: 'none', borderRadius: '12px', padding: '11px 18px', fontSize: '13px', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: '0 4px 14px rgba(232,50,26,0.30)' }}
-                        >
-                          Apply
-                        </button>
-                      </div>
-                      {couponError && (
-                        <div style={{ fontSize: '11px', color: '#E8321A', marginTop: '6px', fontWeight: 600, paddingLeft: '2px' }}>{couponError}</div>
-                      )}
-                    </>
                   )}
-                </div>}
-
+                </div>
               </div>
-            </div>
-
-            {/* Dark Order Summary + Place Order Card */}
-            <div style={{ padding: '14px 14px 8px' }}>
-              <div style={{
-                background: 'linear-gradient(160deg, #1e1e1e 0%, #141414 100%)',
-                borderRadius: '22px',
-                padding: '20px 20px 6px',
-                boxShadow: '0 8px 32px rgba(0,0,0,0.35)',
-                border: '1px solid rgba(255,255,255,0.07)',
-              }}>
-                {/* Subtotal row */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                  <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.55)', fontWeight: 500 }}>Subtotal</span>
-                  <span style={{ fontSize: '13px', fontWeight: 600, color: 'rgba(255,255,255,0.85)' }}>₹{subtotal.toLocaleString('en-IN')}</span>
-                </div>
-                {/* GST row */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                  <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.55)', fontWeight: 500 }}>GST (5%)</span>
-                  <span style={{ fontSize: '13px', fontWeight: 600, color: 'rgba(255,255,255,0.85)' }}>₹{gstAmt.toLocaleString('en-IN')}</span>
-                </div>
-                {/* Delivery row */}
-                {deliveryFee > 0 && (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                    <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.55)', fontWeight: 500 }}>Delivery</span>
-                    <span style={{ fontSize: '13px', fontWeight: 600, color: 'rgba(255,255,255,0.85)' }}>₹{deliveryFee}</span>
-                  </div>
-                )}
-                {/* Discount row */}
-                {couponApplied && (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                    <span style={{ fontSize: '13px', color: '#22c55e', fontWeight: 600 }}>Discount {appliedCouponData?.code ? `(${appliedCouponData.code})` : ''}</span>
-                    <span style={{ fontSize: '13px', fontWeight: 700, color: '#22c55e' }}>−₹{discountAmt.toLocaleString('en-IN')}</span>
-                  </div>
-                )}
-                {/* Divider */}
-                <div style={{ height: '1px', background: 'rgba(255,255,255,0.08)', margin: '6px 0 14px' }} />
-                {/* Grand Total */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
-                  <span style={{ fontSize: '17px', fontWeight: 900, color: '#fff' }}>Grand Total</span>
-                  <span style={{ fontSize: '20px', fontWeight: 900, color: '#FFB800' }}>₹{grandTotal.toLocaleString('en-IN')}</span>
-                </div>
-                {/* Place Order button */}
-                <button
-                  className="checkout-btn"
-                  onClick={() => setShowOrderConfirm(true)}
-                  style={{
-                    width: '100%',
-                    background: '#E8321A',
-                    color: '#fff',
-                    border: 'none',
-                    borderRadius: '16px',
-                    padding: '16px',
-                    fontSize: '15px',
-                    fontWeight: 800,
-                    cursor: 'pointer',
-                    letterSpacing: '0.01em',
-                    boxShadow: '0 6px 24px rgba(232,50,26,0.45)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '8px',
-                    marginBottom: '14px',
-                  }}
-                >
-                  Place Order <span style={{ fontSize: '16px' }}>→</span>
-                </button>
-              </div>
-            </div>
+            )}
             </>
           )}
         </div>

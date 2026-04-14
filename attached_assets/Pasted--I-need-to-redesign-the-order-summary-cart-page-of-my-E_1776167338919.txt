@@ -1,0 +1,64 @@
+```
+I need to redesign the order summary / cart page of my Exzibo project. Here are the exact changes needed:
+
+---
+
+## 1. REMOVE THE CURRENT BLACK CHECKOUT SECTION
+Remove the existing dark/black bottom section that shows Subtotal, GST, Grand Total, and the Place Order button.
+
+Also remove the current "APPLY COUPON" section that is visible above it (the one with the red tag icon and input field).
+
+---
+
+## 2. ADD A NEW "PRICE DETAILS" SECTION (like Myntra/Flipkart style)
+
+Replace it with a clean, white card section titled "Price Details" with the following rows:
+
+- **Total MRP** → shows item total (e.g., ₹2,850)
+- **Coupon Discount** → shows "Apply Coupon" as a clickable pink/red link text (not an input field). When no coupon is applied, it shows "Apply Coupon" in accent color. When a coupon IS applied, it shows the discount amount in green (e.g., - ₹200).
+- **GST (5%)** → calculated as 5% of MRP
+- **Platform Fee** → fixed ₹23, with a small "Know More" text link next to it (underlined, gray)
+- A dashed/dotted horizontal divider line
+- **Total Amount** → bold, large text showing final total (MRP + GST + Platform Fee - Coupon Discount)
+
+Style: white rounded card, light gray background page, clean typography, black labels, bold total row. No dark background. Professional e-commerce look.
+
+---
+
+## 3. COUPON MODAL (Popup with Blur Background)
+
+When user clicks "Apply Coupon" text:
+- Open a **modal/bottom sheet** with a **blurred background overlay** (backdrop-filter: blur)
+- Inside the modal:
+  - Title: "Apply Coupon"
+  - An input field to type coupon code
+  - An "Apply" button
+  - A close/X button to dismiss
+- When a valid coupon is applied:
+  - Show a success message briefly
+  - Modal **automatically closes** after 1.5 seconds
+  - The "Apply Coupon" link in Price Details changes to show discount amount
+- When an invalid coupon is entered:
+  - Show an inline error message inside the modal ("Invalid coupon code")
+  - Modal stays open
+
+---
+
+## 4. PLACE ORDER BUTTON
+Keep a full-width "Place Order →" button below the Price Details card. Style it with a red/coral background and white bold text. Rounded corners.
+
+---
+
+## 5. GENERAL STYLE NOTES
+- Page background: light gray (#f5f5f5)
+- Cards: white, border-radius 12-16px, subtle shadow
+- Accent color: red/coral (#e53935 or similar) for buttons
+- Coupon link color: pink/magenta (#e91e8c or similar)
+- Font: clean sans-serif
+- Mobile-first responsive design
+- No layout shifts or glitches when modal opens/closes
+
+---
+
+Make sure all price calculations update reactively when a coupon discount is applied or removed.
+```
