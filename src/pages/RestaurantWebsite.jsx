@@ -308,6 +308,15 @@ export default function RestaurantWebsite() {
   }, [cartItems, slug])
 
   useEffect(() => {
+    if (showCouponModal) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+    return () => { document.body.style.overflow = '' }
+  }, [showCouponModal])
+
+  useEffect(() => {
     localStorage.setItem('exzibo_darkmode', JSON.stringify(darkMode))
     document.body.style.background = darkMode ? '#0a0a0a' : '#f2f2f2'
     document.documentElement.style.background = darkMode ? '#0a0a0a' : '#f2f2f2'
@@ -1884,28 +1893,35 @@ export default function RestaurantWebsite() {
 
             {/* Coupon Modal */}
             {showCouponModal && (
-              <div
-                onClick={e => { if (e.target === e.currentTarget) { setShowCouponModal(false); setCouponError('') } }}
-                style={{
-                  position: 'fixed', inset: 0, zIndex: 9999,
-                  backdropFilter: 'blur(6px)',
-                  WebkitBackdropFilter: 'blur(6px)',
-                  background: 'rgba(0,0,0,0.45)',
-                  display: 'flex',
-                  alignItems: 'flex-end',
-                  justifyContent: 'center',
-                }}
-              >
+              <>
+                <style>{`@keyframes couponFadeIn { from { opacity: 0; transform: translate(-50%, -48%); } to { opacity: 1; transform: translate(-50%, -50%); } }`}</style>
+                {/* Overlay */}
+                <div
+                  onClick={() => { setShowCouponModal(false); setCouponError('') }}
+                  style={{
+                    position: 'fixed',
+                    top: 0, left: 0,
+                    width: '100%', height: '100%',
+                    backdropFilter: 'blur(6px)',
+                    WebkitBackdropFilter: 'blur(6px)',
+                    backgroundColor: 'rgba(0,0,0,0.4)',
+                    zIndex: 999,
+                  }}
+                />
+                {/* Centered modal */}
                 <div style={{
-                  width: '100%',
-                  maxWidth: '480px',
+                  position: 'fixed',
+                  top: '50%', left: '50%',
+                  transform: 'translate(-50%, -50%)',
+                  zIndex: 1000,
+                  width: '85%',
+                  maxWidth: '400px',
                   background: '#fff',
-                  borderRadius: '24px 24px 0 0',
-                  padding: '24px 20px 32px',
-                  boxShadow: '0 -8px 40px rgba(0,0,0,0.18)',
-                  animation: 'slideUp 0.28s ease',
+                  borderRadius: '16px',
+                  padding: '24px',
+                  boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+                  animation: 'couponFadeIn 0.2s ease both',
                 }}>
-                  <style>{`@keyframes slideUp { from { transform: translateY(60px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }`}</style>
                   {/* Header */}
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
                     <span style={{ fontSize: '17px', fontWeight: 800, color: '#1a1a1a' }}>Apply Coupon</span>
@@ -1961,7 +1977,7 @@ export default function RestaurantWebsite() {
                     </div>
                   )}
                 </div>
-              </div>
+              </>
             )}
             </>
           )}
