@@ -358,12 +358,6 @@ export default function FoodDetail() {
                 </div>
               )}
 
-              {item?.ingredients && (
-                <div style={{ marginBottom: '12px' }}>
-                  <div style={{ fontSize: '10px', fontWeight: 700, color: '#555', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '5px' }}>Ingredients</div>
-                  <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.6)', lineHeight: 1.6 }}>{item.ingredients}</p>
-                </div>
-              )}
 
               {item?.spice && item.spice !== 'None' && (
                 <div style={{ marginBottom: '12px' }}>
