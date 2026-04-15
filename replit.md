@@ -18,6 +18,7 @@ A luxury dark-themed restaurant management web platform with a cinematic, premiu
 | `/menu-editor` | Real-time menu editor with categories, item CRUD, restaurant info |
 | `/settings` | Profile, security, preferences, session management |
 | `/create-website` | Deployment console for onboarding new restaurants |
+| `/restaurant/:slug/food/:itemName` | Premium dark-theme food detail page (upgraded) |
 
 ## Design System
 

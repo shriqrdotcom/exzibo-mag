@@ -1254,7 +1254,7 @@ export default function RestaurantWebsite() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', padding: '0 14px' }}>
             {searchFilteredAll.map((item, i) => (
               <div key={i}
-                onClick={() => navigate(`/restaurant/${slug}/food/${encodeURIComponent(item.name)}`, { state: { item, returnTab: activeNav, darkMode } })}
+                onClick={() => navigate(`/restaurant/${slug}/food/${encodeURIComponent(item.name)}`, { state: { item, returnTab: activeNav, darkMode, themeColor: restaurant?.primaryColor || '#E8321A' } })}
                 style={{
                 display: 'flex', gap: '12px', alignItems: 'center',
                 background: theme.cardBg,
@@ -1431,7 +1431,7 @@ export default function RestaurantWebsite() {
                     animationDelay: `${i * 60}ms`,
                     scrollSnapAlign: 'start',
                   }}
-                  onClick={() => navigate(`/restaurant/${slug}/food/${encodeURIComponent(item.name)}`, { state: { item, returnTab: 'home', darkMode } })}
+                  onClick={() => navigate(`/restaurant/${slug}/food/${encodeURIComponent(item.name)}`, { state: { item, returnTab: 'home', darkMode, themeColor: restaurant?.primaryColor || '#E8321A' } })}
                 >
                   {/* Full-bleed image */}
                   <img
@@ -1619,7 +1619,7 @@ export default function RestaurantWebsite() {
                   theme={theme}
                   onAddToCart={addToCart}
                   cartQty={inCart ? inCart.qty : 0}
-                  onPress={() => navigate(`/restaurant/${slug}/food/${encodeURIComponent(item.name)}`, { state: { item, returnTab: activeNav, darkMode } })}
+                  onPress={() => navigate(`/restaurant/${slug}/food/${encodeURIComponent(item.name)}`, { state: { item, returnTab: activeNav, darkMode, themeColor: restaurant?.primaryColor || '#E8321A' } })}
                 />
               )
             })}
