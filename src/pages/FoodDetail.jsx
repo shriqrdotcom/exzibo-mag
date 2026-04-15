@@ -268,9 +268,6 @@ export default function FoodDetail() {
               <span style={{ fontSize: '12px', fontWeight: 700, color: '#FFB800', marginLeft: '1px' }}>
                 {item.rating.toFixed(1)}
               </span>
-              <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.3)', fontWeight: 400 }}>
-                ({item.ratingCount})
-              </span>
             </div>
           ) : (
             <div className="shimmer" style={{ height: '14px', width: '120px', borderRadius: '6px', background: shimmer, marginBottom: '10px' }} />
@@ -509,9 +506,6 @@ export default function FoodDetail() {
                         <span style={{ fontSize: '11px', fontWeight: 600, color: 'rgba(255,255,255,0.4)' }}>
                           {sug.rating.toFixed(1)}
                         </span>
-                        {sug.ratingCount && (
-                          <span style={{ fontSize: '10px', color: '#444' }}>({sug.ratingCount})</span>
-                        )}
                       </div>
                     )}
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
