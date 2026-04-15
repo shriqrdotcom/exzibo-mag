@@ -1,0 +1,128 @@
+Upgrade my Food Details Page UI to match a modern dark-theme food commerce experience similar to the reference image I provided, with additional premium enhancements and dynamic theme color support.
+
+🎯 Design Goal:
+Create a visually rich, dark-mode, mobile-first UI with smooth interactions, strong hierarchy, and restaurant-brand color integration.
+
+----------------------------
+
+1. HERO IMAGE SECTION
+- Full-width image with slight zoom/parallax effect
+- Add dark gradient overlay (top + bottom)
+- Floating icons on top:
+  - Back button (left)
+  - Wishlist (heart)
+  - Search
+  - Share
+- Icons should be circular with blur/glass effect
+
+----------------------------
+
+2. PRODUCT INFO CARD (OVERLAY STYLE)
+- Floating card overlapping the image (like the reference)
+- Rounded corners (20px) + soft shadow
+- Show:
+  - ⭐ Rating with count
+  - Product title (bold, large)
+  - Price
+  - Stock status:
+    - “Out of stock” (grey badge)
+    - OR “Only X left” (highlight in theme color)
+
+----------------------------
+
+3. DYNAMIC THEME COLOR SYSTEM
+- Use restaurant theme color (primary color variable)
+- Apply it to:
+  - Buttons
+  - Highlights (rating stars, badges)
+  - Add button
+  - Active states
+- Ensure contrast works in dark mode
+
+----------------------------
+
+4. INTERACTIVE CTA SECTION
+- If item is OUT OF STOCK:
+  - Show "Notify Me" button (outlined with theme color)
+- If IN STOCK:
+  - Show quantity selector + “Add to Cart” button
+- Add animation when button is tapped (scale + ripple)
+
+----------------------------
+
+5. COLLAPSIBLE PRODUCT DETAILS
+- Add "View product details" dropdown
+- Smooth expand/collapse animation
+- Include:
+  - Description
+  - Ingredients
+  - Spice level
+  - Tags (use modern chips instead of bullets)
+
+----------------------------
+
+6. BRAND / RESTAURANT CARD
+- Show brand logo + name
+- “Explore all products” CTA
+- Make it clickable
+- Use subtle card background + hover/tap animation
+
+----------------------------
+
+7. SIMILAR PRODUCTS SECTION
+- Horizontal scroll cards
+- Each card includes:
+  - Image
+  - Name
+  - Weight (e.g., 20g)
+  - Rating
+  - Price
+  - "ADD" button (theme color outline or fill)
+- Add hover/tap scale animation
+
+----------------------------
+
+8. FLOATING CART BAR
+- Sticky bottom "View Cart" bar
+- Show:
+  - Item count
+  - Small preview images
+- Rounded pill design
+- Smooth slide-in animation when items added
+
+----------------------------
+
+9. MICRO-INTERACTIONS
+- Add subtle animations:
+  - Image fade-in
+  - Button press feedback
+  - Card hover/tap scale
+  - Smooth transitions everywhere
+
+----------------------------
+
+10. UI POLISH
+- Use dark background (#0F0F0F or similar)
+- Cards slightly lighter (#1A1A1A)
+- Proper spacing and padding
+- Modern typography hierarchy
+- Rounded corners everywhere (12–20px)
+
+----------------------------
+
+11. PERFORMANCE
+- Optimize all images (50KB–200KB)
+- Lazy load below-the-fold content
+- Ensure smooth performance on mobile devices
+
+----------------------------
+
+12. CODE QUALITY
+- Keep components modular and reusable
+- Follow my existing project structure
+- Clean and maintainable code
+
+----------------------------
+
+Final Goal:
+Make the UI feel like a premium food ordering app (Zomato/Swiggy level), with smooth UX, strong visual hierarchy, and consistent theme branding.
