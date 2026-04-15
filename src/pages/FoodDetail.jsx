@@ -359,15 +359,6 @@ export default function FoodDetail() {
               )}
 
 
-              {item?.spice && item.spice !== 'None' && (
-                <div style={{ marginBottom: '12px' }}>
-                  <div style={{ fontSize: '10px', fontWeight: 700, color: '#555', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '5px' }}>Spice Level</div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <Flame size={12} color={spiceColors[item.spice] || '#fbbf24'} />
-                    <span style={{ fontSize: '13px', fontWeight: 600, color: spiceColors[item.spice] || '#fbbf24' }}>{item.spice}</span>
-                  </div>
-                </div>
-              )}
 
               {item?.tags?.length > 0 && (
                 <div>
