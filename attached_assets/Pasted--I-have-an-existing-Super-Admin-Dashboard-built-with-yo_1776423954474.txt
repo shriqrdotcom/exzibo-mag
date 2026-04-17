@@ -1,0 +1,124 @@
+---
+
+```
+I have an existing Super Admin Dashboard built with [your stack — e.g. React + Firebase / Next.js + Supabase].
+I already have a working "DASHBOARD" section. Now I need to add a new "TEAM MEMBERS" section.
+Do NOT break or modify any existing code. Only ADD new components/routes.
+
+=============================================================
+SECTION 1: DEFAULT ROLES (Static Permission Templates)
+=============================================================
+
+Create a read-only "Default Section" card at the top of the Team Members page.
+It displays 3 default role cards side by side:
+
+--- CARD 1: OWNER ---
+- Label: "OWNER"
+- Badge: "Full Control"
+- Description: Has access to ALL features:
+  Orders, Bookings, Menu Edit, Settings, Profile, Team Management.
+- Color accent: Gold / Yellow
+
+--- CARD 2: MANAGER ---
+- Label: "MANAGER"
+- Badge: "Specific Control"
+- Permissions list (checkboxes, read-only display):
+  ✅ Orders Page Access
+  ✅ Booking Page Access
+  ✅ Settings Page Access
+  ❌ Profile Section (No Access)
+  ⚙️ Menu Edit: Only if Owner explicitly enables it per restaurant
+- Color accent: Blue
+
+--- CARD 3: STAFF ---
+- Label: "STAFF"
+- Badge: "Limited Access"
+- Permissions list:
+  ✅ Confirm Orders
+  ✅ Confirm Bookings
+  ❌ Everything else
+- Color accent: Gray/Green
+
+These 3 cards are DISPLAY ONLY — no editing. They are permission templates shown for reference.
+
+=============================================================
+SECTION 2: PER-RESTAURANT TEAM MEMBERS LIST
+=============================================================
+
+Below the Default Section, render a list of all restaurants from the database.
+
+Each restaurant row/card shows:
+- Restaurant Name
+- Restaurant UID
+- An expandable panel OR a "Manage Team" button that opens a modal/drawer
+
+Inside each restaurant's team panel:
+- Show current team members in a table with columns:
+  | Gmail / Email | Role (Owner / Manager / Staff) | Status (Active/Invited) | Actions |
+
+- At the bottom of each restaurant's team panel, show an "Add Member" form:
+  - Input: Gmail address (text field with email validation)
+  - Dropdown: Select Role (Owner / Manager / Staff)
+  - Button: "Add Member" → saves to database under that restaurant's team subcollection
+
+- Each existing member row has:
+  - A "Remove" button (with confirmation dialog: "Are you sure you want to remove [email]?")
+  - A role change dropdown (Owner can change Manager → Staff or vice versa)
+
+=============================================================
+DATA STRUCTURE (Firebase Firestore — adjust if using different DB)
+=============================================================
+
+restaurants (collection)
+  └── {restaurantId} (document)
+        ├── name: string
+        ├── uid: string
+        └── team (subcollection)
+              └── {memberId} (document)
+                    ├── email: string
+                    ├── role: "owner" | "manager" | "staff"
+                    ├── status: "active" | "invited"
+                    └── menuEditAllowed: boolean (only relevant for managers)
+
+=============================================================
+UI / STYLE REQUIREMENTS
+=============================================================
+
+- Match the existing dark dashboard theme (dark background #1a1a1a, white text, green accent for LIVE/active status)
+- Navigation: Add "TEAM MEMBERS" as a new tab/button in the top nav alongside "DASHBOARD"
+- Fully responsive layout
+- Use toast notifications for success/error on add/remove actions
+- No page reload on add/remove — update UI reactively
+- Show loading spinners during async operations
+- Validate email format before submission
+- Prevent duplicate email entries per restaurant
+
+=============================================================
+IMPORTANT — DO NOT BREAK EXISTING CODE
+=============================================================
+
+- Only add new files/components for this feature
+- Add the new route (/team-members or equivalent) without touching existing routes
+- If using shared state/context, extend it — do not replace it
+- Test that the Dashboard section still works after adding this
+
+=============================================================
+SUMMARY OF DELIVERABLES
+=============================================================
+
+1. TeamMembers page component
+2. DefaultRolesCard component (3 role display cards)
+3. RestaurantTeamList component (lists all restaurants)
+4. RestaurantTeamPanel component (expandable per-restaurant member manager)
+5. AddMemberForm component (email + role + submit)
+6. Firebase read/write functions for team subcollection
+7. Navigation update to include "TEAM MEMBERS" tab
+```
+
+---
+
+### 💡 Tips before you paste this into Replit:
+
+- Replace `[your stack]` at the top with your actual tech (React, Next.js, Vue, etc.)
+- If you're using **Supabase** instead of Firebase, mention it — the data structure section should say "Supabase tables" instead
+- If you already have a restaurant list fetched somewhere, mention: *"restaurants are already fetched in context/state — reuse that"*

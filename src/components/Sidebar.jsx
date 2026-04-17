@@ -1,10 +1,11 @@
 import React from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { LayoutDashboard, UtensilsCrossed, Settings, Zap } from 'lucide-react'
+import { LayoutDashboard, UtensilsCrossed, Settings, Zap, Users } from 'lucide-react'
 
 const navItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
   { icon: UtensilsCrossed, label: 'Restaurant Editor', path: '/menu-editor' },
+  { icon: Users, label: 'Team Members', path: '/team-members' },
   { icon: Settings, label: 'Settings', path: '/settings' },
 ]
 
