@@ -11,14 +11,31 @@ A luxury dark-themed restaurant management web platform with a cinematic, premiu
 
 ## Pages
 
-| Route | Description |
-|-------|-------------|
-| `/` | Landing page — cinematic hero with CTA buttons |
-| `/dashboard` | Admin dashboard with KPI cards and enterprise partners table |
-| `/menu-editor` | Real-time menu editor with categories, item CRUD, restaurant info |
-| `/settings` | Profile, security, preferences, session management |
-| `/create-website` | Deployment console for onboarding new restaurants |
-| `/restaurant/:slug/food/:itemName` | Premium dark-theme food detail page (upgraded) |
+| Route | File | Description |
+|-------|------|-------------|
+| `/` | `Landing.jsx` | Landing page — cinematic hero with CTA buttons |
+| `/dashboard` | `Dashboard.jsx` | Super admin dashboard with KPI cards and enterprise partners table |
+| `/admin/:id` | `AdminDashboard.jsx` | **DEFAULT ADMIN PANEL** — per-restaurant admin with Orders, Bookings, Menu, Analytics tabs (mobile-first, light theme, bottom nav bar) |
+| `/admin/:id/team` | `TeamMembers.jsx` | Restaurant-specific team view with active/inactive toggles |
+| `/super-admin` | `SuperAdminDashboard.jsx` | Super admin staff management (add/edit/delete staff across all restaurants) |
+| `/team-members` | `TeamMembersAdmin.jsx` | Team members admin view with per-restaurant role management and role-based preview mode |
+| `/menu-editor` | `MenuEditor.jsx` | Real-time menu editor with categories, item CRUD, restaurant info |
+| `/settings` | `Settings.jsx` | Profile, security, preferences, session management |
+| `/create-website` | `CreateWebsite.jsx` | Deployment console for onboarding new restaurants |
+| `/restaurant/:slug` | `RestaurantWebsite.jsx` | Customer-facing restaurant website/menu |
+| `/restaurant/:slug/food/:itemName` | `FoodDetail.jsx` | Premium dark-theme food detail page |
+
+## Key Terminology
+
+- **"Default Admin Panel"** → `src/pages/AdminDashboard.jsx` at route `/admin/:id`. Mobile-first light-theme UI with bottom navigation bar (Orders, Bookings, Menu, Analytics, Settings tabs). This is the per-restaurant admin interface seen by restaurant owners/managers.
+- **"Super Admin Dashboard"** → `src/pages/SuperAdminDashboard.jsx` at `/super-admin`. Manages all staff across all restaurants.
+- **"Dashboard"** → `src/pages/Dashboard.jsx` at `/dashboard`. Top-level admin view with KPI cards.
+
+## Role-Based Access
+
+- **RoleContext** (`src/context/RoleContext.jsx`) — manages preview role state (owner/manager/staff)
+- **PermissionGate** (`src/components/PermissionGate.jsx`) — conditionally renders nav items by role
+- **RoleBanner** (`src/components/RoleBanner.jsx`) — shown in AdminHeader when previewing a role
 
 ## Design System
 
