@@ -412,9 +412,7 @@ function DefaultRolesSection() {
   const navigate = useNavigate()
 
   function openDefaultAdmin() {
-    const restaurants = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
-    const firstId = restaurants.length > 0 ? restaurants[0].id : 'default'
-    navigate(`/admin/${firstId}`)
+    navigate('/admin/0000000001')
   }
 
   return (
