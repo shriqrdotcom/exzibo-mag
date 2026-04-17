@@ -410,9 +410,20 @@ export default function TeamMembersAdmin() {
 
 function DefaultRolesSection() {
   const navigate = useNavigate()
+  const { activateRole } = useRole()
 
   function openDefaultAdmin() {
     navigate('/admin/default')
+  }
+
+  function openManagerDashboard() {
+    activateRole('manager')
+    navigate('/dashboard')
+  }
+
+  function openStaffDashboard() {
+    activateRole('staff')
+    navigate('/dashboard')
   }
 
   return (
@@ -426,7 +437,6 @@ function DefaultRolesSection() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px' }}>
         {DEFAULT_ROLES.map(role => {
           const Icon = role.icon
-          const isOwner = role.key === 'owner'
           return (
             <div key={role.key} style={{
               background: '#111',
@@ -444,14 +454,14 @@ function DefaultRolesSection() {
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <div
-                    onClick={isOwner ? openDefaultAdmin : undefined}
-                    title={isOwner ? 'Open Admin Panel' : undefined}
+                    onClick={role.key === 'owner' ? openDefaultAdmin : role.key === 'manager' ? openManagerDashboard : openStaffDashboard}
+                    title={role.key === 'owner' ? 'Open Admin Panel' : role.key === 'manager' ? 'Open Manager Dashboard' : 'Open Staff Dashboard'}
                     style={{
                       width: '36px', height: '36px', borderRadius: '10px',
                       background: role.accentBg,
                       border: `1px solid ${role.borderColor}`,
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      cursor: isOwner ? 'pointer' : 'default',
+                      cursor: 'pointer',
                     }}>
                     <Icon size={17} color={role.accent} />
                   </div>
@@ -496,7 +506,7 @@ function DefaultRolesSection() {
                 })}
               </div>
 
-              {isOwner && (
+              {role.key === 'owner' && (
                 <button
                   onClick={openDefaultAdmin}
                   style={{
@@ -514,6 +524,46 @@ function DefaultRolesSection() {
                 >
                   <LayoutDashboard size={13} />
                   OPEN ADMIN
+                </button>
+              )}
+              {role.key === 'manager' && (
+                <button
+                  onClick={openManagerDashboard}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '7px',
+                    background: 'rgba(255,255,255,0.1)',
+                    border: '1px solid rgba(255,255,255,0.2)',
+                    borderRadius: '50px',
+                    padding: '9px 20px', fontSize: '12px', fontWeight: 800,
+                    color: '#fff', letterSpacing: '0.06em', cursor: 'pointer',
+                    width: '100%', justifyContent: 'center', marginTop: '14px',
+                    transition: 'transform 0.15s ease, background 0.2s ease',
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.04)'; e.currentTarget.style.background = 'rgba(255,255,255,0.18)' }}
+                  onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.background = 'rgba(255,255,255,0.1)' }}
+                >
+                  <LayoutDashboard size={13} />
+                  OPEN MANAGER
+                </button>
+              )}
+              {role.key === 'staff' && (
+                <button
+                  onClick={openStaffDashboard}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '7px',
+                    background: 'rgba(255,255,255,0.1)',
+                    border: '1px solid rgba(255,255,255,0.2)',
+                    borderRadius: '50px',
+                    padding: '9px 20px', fontSize: '12px', fontWeight: 800,
+                    color: '#fff', letterSpacing: '0.06em', cursor: 'pointer',
+                    width: '100%', justifyContent: 'center', marginTop: '14px',
+                    transition: 'transform 0.15s ease, background 0.2s ease',
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.04)'; e.currentTarget.style.background = 'rgba(255,255,255,0.18)' }}
+                  onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.background = 'rgba(255,255,255,0.1)' }}
+                >
+                  <LayoutDashboard size={13} />
+                  OPEN STAFF
                 </button>
               )}
             </div>
