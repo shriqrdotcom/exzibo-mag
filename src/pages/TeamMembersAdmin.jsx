@@ -412,7 +412,7 @@ function DefaultRolesSection() {
   const navigate = useNavigate()
 
   function openDefaultAdmin() {
-    navigate('/admin/0000000001')
+    navigate('/admin/default')
   }
 
   return (
