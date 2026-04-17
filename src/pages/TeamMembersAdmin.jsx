@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Users, Crown, Shield, UtensilsCrossed, Plus, X, Trash2,
-  ChevronDown, CheckCircle2, XCircle, Loader2, Check, Eye
+  ChevronDown, CheckCircle2, XCircle, Loader2, Check, Eye, LayoutDashboard
 } from 'lucide-react'
 import Sidebar from '../components/Sidebar'
 import AdminHeader from '../components/AdminHeader'
@@ -495,6 +495,27 @@ function DefaultRolesSection() {
                   )
                 })}
               </div>
+
+              {isOwner && (
+                <button
+                  onClick={openDefaultAdmin}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '7px',
+                    background: 'rgba(255,255,255,0.1)',
+                    border: '1px solid rgba(255,255,255,0.2)',
+                    borderRadius: '50px',
+                    padding: '9px 20px', fontSize: '12px', fontWeight: 800,
+                    color: '#fff', letterSpacing: '0.06em', cursor: 'pointer',
+                    width: '100%', justifyContent: 'center', marginTop: '14px',
+                    transition: 'transform 0.15s ease, background 0.2s ease',
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.04)'; e.currentTarget.style.background = 'rgba(255,255,255,0.18)' }}
+                  onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.background = 'rgba(255,255,255,0.1)' }}
+                >
+                  <LayoutDashboard size={13} />
+                  OPEN ADMIN
+                </button>
+              )}
             </div>
           )
         })}
