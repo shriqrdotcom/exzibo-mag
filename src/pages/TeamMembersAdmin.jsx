@@ -409,6 +409,14 @@ export default function TeamMembersAdmin() {
 }
 
 function DefaultRolesSection() {
+  const navigate = useNavigate()
+
+  function openDefaultAdmin() {
+    const restaurants = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
+    const firstId = restaurants.length > 0 ? restaurants[0].id : 'default'
+    navigate(`/admin/${firstId}`)
+  }
+
   return (
     <div>
       <div style={{
@@ -420,6 +428,7 @@ function DefaultRolesSection() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px' }}>
         {DEFAULT_ROLES.map(role => {
           const Icon = role.icon
+          const isOwner = role.key === 'owner'
           return (
             <div key={role.key} style={{
               background: '#111',
@@ -436,12 +445,16 @@ function DefaultRolesSection() {
               }} />
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <div style={{
-                    width: '36px', height: '36px', borderRadius: '10px',
-                    background: role.accentBg,
-                    border: `1px solid ${role.borderColor}`,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  }}>
+                  <div
+                    onClick={isOwner ? openDefaultAdmin : undefined}
+                    title={isOwner ? 'Open Admin Panel' : undefined}
+                    style={{
+                      width: '36px', height: '36px', borderRadius: '10px',
+                      background: role.accentBg,
+                      border: `1px solid ${role.borderColor}`,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      cursor: isOwner ? 'pointer' : 'default',
+                    }}>
                     <Icon size={17} color={role.accent} />
                   </div>
                   <span style={{ fontSize: '15px', fontWeight: 800, color: '#fff', letterSpacing: '0.04em' }}>
