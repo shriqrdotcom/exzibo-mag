@@ -2,10 +2,11 @@ import React, { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Users, Crown, Shield, UtensilsCrossed, Plus, X, Trash2,
-  ChevronDown, CheckCircle2, XCircle, Loader2, Check
+  ChevronDown, CheckCircle2, XCircle, Loader2, Check, Eye
 } from 'lucide-react'
 import Sidebar from '../components/Sidebar'
 import AdminHeader from '../components/AdminHeader'
+import { useRole } from '../context/RoleContext'
 
 const TEAM_KEY = id => `exzibo_team_admin_${id}`
 
@@ -97,11 +98,17 @@ const DEFAULT_ROLES = [
 
 export default function TeamMembersAdmin() {
   const navigate = useNavigate()
+  const { activateRole } = useRole()
   const [restaurants, setRestaurants] = useState([])
   const [teams, setTeams] = useState({})
   const [expandedId, setExpandedId] = useState(null)
   const [modal, setModal] = useState(null)
   const [toast, setToast] = useState(null)
+
+  function previewRole(role) {
+    activateRole(role)
+    navigate('/dashboard')
+  }
 
   useEffect(() => {
     const saved = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
@@ -252,7 +259,7 @@ export default function TeamMembersAdmin() {
                                     }}>
                                       <Icon size={14} color={col.accent} />
                                     </div>
-                                    <div>
+                                    <div style={{ flex: 1 }}>
                                       {roleMembers.length === 0 ? (
                                         <div style={{ fontSize: '11px', color: '#444', fontWeight: 600 }}>No {col.label}</div>
                                       ) : (
@@ -272,6 +279,28 @@ export default function TeamMembersAdmin() {
                                         + ADD GMAIL
                                       </button>
                                     </div>
+                                    <button
+                                      title={`Preview as ${col.label}`}
+                                      onClick={() => previewRole(col.key)}
+                                      style={{
+                                        width: '26px', height: '26px', borderRadius: '7px',
+                                        background: `${col.accent}15`,
+                                        border: `1px solid ${col.accent}30`,
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        cursor: 'pointer', flexShrink: 0,
+                                        transition: 'all 0.2s',
+                                      }}
+                                      onMouseEnter={e => {
+                                        e.currentTarget.style.background = `${col.accent}30`
+                                        e.currentTarget.style.borderColor = `${col.accent}60`
+                                      }}
+                                      onMouseLeave={e => {
+                                        e.currentTarget.style.background = `${col.accent}15`
+                                        e.currentTarget.style.borderColor = `${col.accent}30`
+                                      }}
+                                    >
+                                      <Eye size={12} color={col.accent} />
+                                    </button>
                                   </div>
                                 </td>
                               )
@@ -342,7 +371,10 @@ export default function TeamMembersAdmin() {
           defaultRole={modal.role}
           onAdd={(email, role) => {
             const ok = addMember(modal.restaurantId, email, role)
-            if (ok) setModal(null)
+            if (ok) {
+              setModal(null)
+              previewRole(role)
+            }
           }}
           onClose={() => setModal(null)}
         />

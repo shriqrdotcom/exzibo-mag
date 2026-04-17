@@ -1,0 +1,155 @@
+:
+
+---
+
+```
+I have an existing EXZIBO Super Admin Dashboard with a working "TEAM MEMBERS" section.
+The UI is already built (dark theme, red accents). I need to add ROLE-BASED VIEW SWITCHING.
+DO NOT rebuild anything. Only ADD the role switching logic on top of existing code.
+
+=============================================================
+FEATURE: ROLE-BASED DASHBOARD VIEW SWITCHING
+=============================================================
+
+When a user clicks on a role button (OWNER / MANAGER / STAFF) in the 
+Per-Restaurant Teams row, the dashboard should switch to show that 
+role's specific view. Think of it like "Preview as this role."
+
+=============================================================
+ROLE 1: OWNER VIEW
+=============================================================
+
+When "+ ADD GMAIL" or the OWNER area is clicked for Owner role:
+→ Open the EXISTING default Admin Dashboard as-is.
+→ No changes needed. Owner sees EVERYTHING.
+→ Just navigate/switch to the existing full dashboard view.
+→ Show a top banner: "Viewing as: OWNER — Full Access" (gold color)
+
+=============================================================
+ROLE 2: MANAGER VIEW  
+=============================================================
+
+When "+ ADD GMAIL" or MANAGER area is clicked:
+→ Load the existing Admin Dashboard BUT hide/remove these sections:
+   ❌ Hide: Profile Section (nav item + page)
+   ❌ Hide: Team Management section
+   ✅ Show: Orders Page
+   ✅ Show: Bookings Page
+   ✅ Show: Settings Page
+   ⚙️  Menu Edit: Conditionally shown — only if "menuEditAllowed: true" 
+       is set for this manager in the database. Otherwise hide it.
+
+→ Do NOT create a new Manager page/component from scratch.
+→ Just apply a permission filter/wrapper over the existing dashboard.
+→ Show a top banner: "Viewing as: MANAGER — Limited Access" (blue color)
+
+Implementation approach:
+- Create a React Context called "RoleContext" (or similar)
+- Store current active role: "owner" | "manager" | "staff"
+- In each existing nav item / section, wrap with a permission check:
+  Example: <PermissionGate allowedRoles={["owner", "manager"]}> ... </PermissionGate>
+- The PermissionGate component reads from RoleContext and renders 
+  children only if the current role is in allowedRoles array.
+- Apply this to EXISTING components — do not rewrite them.
+
+=============================================================
+ROLE 3: STAFF VIEW
+=============================================================
+
+When "+ ADD GMAIL" or STAFF area is clicked:
+→ Load the existing dashboard BUT show ONLY these two sections:
+   ✅ Confirm Orders (order status update only — no delete, no edit)
+   ✅ Confirm Bookings (booking status update only — no delete, no edit)
+   ❌ Hide everything else
+
+→ Show a top banner: "Viewing as: STAFF — Operational Access Only" (green color)
+
+→ In Orders page: hide Delete button, hide Edit button, show only "Confirm" action
+→ In Bookings page: hide Delete button, hide Edit button, show only "Confirm" action
+→ Use the same PermissionGate pattern described above
+
+=============================================================
+ROLE BANNER COMPONENT
+=============================================================
+
+Create a <RoleBanner /> component that shows at the top of the dashboard
+when a non-owner role is active. Design to match dark theme:
+
+- Gold banner for OWNER: "👑 Owner View — Full Control"
+- Blue banner for MANAGER: "🛡️ Manager View — Specific Access"  
+- Green banner for STAFF: "⚒️ Staff View — Operational Only"
+- A small "Exit Role View" button on the right side of the banner
+  that returns to the Super Admin full view (no role filter)
+
+=============================================================
+CLICK TRIGGER (in Team Members section)
+=============================================================
+
+In the Per-Restaurant Teams table row:
+- Clicking the OWNER crown icon / "No OWNER" / "+ ADD GMAIL" area 
+  → sets role context to "owner" AND opens add gmail modal
+- Clicking the MANAGER shield icon / "No MANAGER" / "+ ADD GMAIL"
+  → sets role context to "manager" AND opens add gmail modal  
+- Clicking the STAFF icon / "No STAFF" / "+ ADD GMAIL"
+  → sets role context to "staff" AND opens add gmail modal
+
+After adding gmail and closing modal → switch dashboard to that role's view
+so the super admin can preview what that team member will see.
+
+Also add a "PREVIEW" icon button (eye icon) next to each role column
+that lets super admin preview that role's view WITHOUT adding a gmail.
+
+=============================================================
+PERMISSION MAP (for PermissionGate)
+=============================================================
+
+const PERMISSIONS = {
+  owner:   ["dashboard", "orders", "bookings", "menuEdit", "settings", "profile", "teamManagement"],
+  manager: ["dashboard", "orders", "bookings", "settings"], // + "menuEdit" if menuEditAllowed
+  staff:   ["orders-confirm-only", "bookings-confirm-only"]
+}
+
+=============================================================
+DATABASE (Firestore — adjust if different)
+=============================================================
+
+When adding a gmail to a role, save to:
+restaurants/{restaurantId}/team/{newDocId}
+{
+  email: "gmail@example.com",
+  role: "owner" | "manager" | "staff",
+  menuEditAllowed: false,   // default false, owner can toggle for managers
+  status: "invited",
+  addedAt: timestamp
+}
+
+=============================================================
+DO NOT BREAK EXISTING CODE — RULES
+=============================================================
+
+1. Do NOT rewrite existing dashboard components
+2. Do NOT change existing routing
+3. Only ADD: RoleContext, PermissionGate, RoleBanner, permission wraps
+4. All existing super admin functionality stays 100% intact
+5. Role view is a PREVIEW MODE only — not a separate login system
+6. When super admin refreshes page → return to full super admin view (no role persistence needed)
+
+=============================================================
+FILES TO CREATE (new only)
+=============================================================
+
+1. context/RoleContext.jsx — role state management
+2. components/PermissionGate.jsx — conditional render wrapper
+3. components/RoleBanner.jsx — top banner showing active role
+4. Update: TeamMembers.jsx — add preview/click triggers
+5. Update: Sidebar/Nav — wrap nav items with PermissionGate
+6. Update: Orders page — hide edit/delete for staff role
+7. Update: Bookings page — hide edit/delete for staff role
+
+=============================================================
+TECH STACK (update if different)
+=============================================================
+
+React + Firebase Firestore, dark theme (#0f0f0f background, 
+#FF3B3B red accent, existing EXZIBO styling)
+```

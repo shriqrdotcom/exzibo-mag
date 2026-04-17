@@ -1,17 +1,20 @@
 import React from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { LayoutDashboard, UtensilsCrossed, Settings, Zap, Users } from 'lucide-react'
+import PermissionGate from './PermissionGate'
+import { useRole } from '../context/RoleContext'
 
 const navItems = [
-  { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
-  { icon: UtensilsCrossed, label: 'Restaurant Editor', path: '/menu-editor' },
-  { icon: Users, label: 'Team Members', path: '/team-members' },
-  { icon: Settings, label: 'Settings', path: '/settings' },
+  { icon: LayoutDashboard, label: 'Dashboard',       path: '/dashboard',     permission: 'dashboard' },
+  { icon: UtensilsCrossed, label: 'Restaurant Editor', path: '/menu-editor', permission: 'restaurantEditor' },
+  { icon: Users,           label: 'Team Members',    path: '/team-members',  permission: 'teamManagement' },
+  { icon: Settings,        label: 'Settings',        path: '/settings',      permission: 'settings' },
 ]
 
 export default function Sidebar() {
   const navigate = useNavigate()
   const location = useLocation()
+  const { activeRole, exitRoleView } = useRole()
 
   return (
     <aside style={{
@@ -36,47 +39,65 @@ export default function Sidebar() {
       </div>
 
       <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
-        {navItems.map(({ icon: Icon, label, path }) => {
+        {navItems.map(({ icon: Icon, label, path, permission }) => {
           const isActive = location.pathname === path
           return (
-            <button
-              key={path}
-              onClick={() => navigate(path)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-                padding: '12px 16px',
-                borderRadius: '12px',
-                background: isActive ? '#E8321A' : 'transparent',
-                border: isActive ? 'none' : '1px solid rgba(255,255,255,0.06)',
-                color: isActive ? '#fff' : '#888',
-                fontSize: '14px',
-                fontWeight: isActive ? 600 : 500,
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                textAlign: 'left',
-              }}
-              onMouseEnter={e => {
-                if (!isActive) {
-                  e.currentTarget.style.background = 'rgba(255,255,255,0.04)'
-                  e.currentTarget.style.color = '#fff'
-                  e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'
-                }
-              }}
-              onMouseLeave={e => {
-                if (!isActive) {
-                  e.currentTarget.style.background = 'transparent'
-                  e.currentTarget.style.color = '#888'
-                  e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)'
-                }
-              }}
-            >
-              <Icon size={18} />
-              {label}
-            </button>
+            <PermissionGate key={path} permission={permission}>
+              <button
+                onClick={() => navigate(path)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  padding: '12px 16px',
+                  borderRadius: '12px',
+                  background: isActive ? '#E8321A' : 'transparent',
+                  border: isActive ? 'none' : '1px solid rgba(255,255,255,0.06)',
+                  color: isActive ? '#fff' : '#888',
+                  fontSize: '14px',
+                  fontWeight: isActive ? 600 : 500,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  textAlign: 'left',
+                  width: '100%',
+                }}
+                onMouseEnter={e => {
+                  if (!isActive) {
+                    e.currentTarget.style.background = 'rgba(255,255,255,0.04)'
+                    e.currentTarget.style.color = '#fff'
+                    e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'
+                  }
+                }}
+                onMouseLeave={e => {
+                  if (!isActive) {
+                    e.currentTarget.style.background = 'transparent'
+                    e.currentTarget.style.color = '#888'
+                    e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)'
+                  }
+                }}
+              >
+                <Icon size={18} />
+                {label}
+              </button>
+            </PermissionGate>
           )
         })}
+
+        {activeRole === 'staff' && (
+          <div style={{
+            marginTop: '8px', padding: '14px',
+            background: 'rgba(16,185,129,0.06)',
+            border: '1px solid rgba(16,185,129,0.2)',
+            borderRadius: '12px',
+          }}>
+            <div style={{ fontSize: '11px', fontWeight: 700, color: '#10B981', marginBottom: '8px', letterSpacing: '0.06em' }}>
+              STAFF ACCESS
+            </div>
+            <div style={{ fontSize: '12px', color: '#555', lineHeight: 1.6 }}>
+              Only order & booking confirmation visible.
+            </div>
+          </div>
+        )}
       </nav>
 
       <button

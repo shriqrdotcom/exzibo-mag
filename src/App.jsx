@@ -13,9 +13,11 @@ import TeamMembers from './pages/TeamMembers'
 import SuperAdminDashboard from './pages/SuperAdminDashboard'
 import TeamMembersAdmin from './pages/TeamMembersAdmin'
 import { AnalyticsProvider } from './context/AnalyticsContext'
+import { RoleProvider } from './context/RoleContext'
 
 export default function App() {
   return (
+    <RoleProvider>
     <AnalyticsProvider>
       <BrowserRouter>
         <Routes>
@@ -37,5 +39,6 @@ export default function App() {
         </Routes>
       </BrowserRouter>
     </AnalyticsProvider>
+    </RoleProvider>
   )
 }
