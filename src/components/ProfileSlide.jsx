@@ -1,9 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react'
 import {
   X, Share2, Power, MapPin, Phone, Store, Users, Image,
-  Loader2, AlertCircle, CheckCircle2, Check, XCircle, Mail, Clock,
+  Loader2, AlertCircle, CheckCircle2, Check, XCircle, Mail, Clock, UserPlus,
 } from 'lucide-react'
 import { PiPencilCircle } from 'react-icons/pi'
+import AddMembersModal from './AddMembersModal'
 
 const LIME = '#A8E63D'
 
@@ -117,6 +118,8 @@ export default function ProfileSlide({
   const [galleryError, setGalleryError] = useState('')
   const [galleryCompressing, setGalleryCompressing] = useState(false)
   const [gallerySuccess, setGallerySuccess] = useState(false)
+
+  const [showAddMembers, setShowAddMembers] = useState(false)
 
   const [editingName, setEditingName] = useState(false)
   const [nameInput, setNameInput] = useState(restaurantName || '')
@@ -723,7 +726,32 @@ export default function ProfileSlide({
               )}
             </div>
 
+            {/* ADD MEMBERS */}
+            <div
+              onClick={() => setShowAddMembers(true)}
+              style={{
+                ...rowStyle,
+                cursor: 'pointer',
+                borderRadius: '12px',
+                transition: 'background 0.15s',
+              }}
+              onMouseEnter={e => e.currentTarget.style.background = 'rgba(232,56,13,0.07)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+            >
+              <span style={iconWrap}><UserPlus size={22} strokeWidth={1.4} /></span>
+              <span style={{ ...rowLabel, flex: 1 }}>ADD MEMBERS</span>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#bbb" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="9 18 15 12 9 6" />
+              </svg>
+            </div>
+
           </div>
+
+          <AddMembersModal
+            open={showAddMembers}
+            onClose={() => setShowAddMembers(false)}
+            restaurantId={restaurantId}
+          />
 
           {/* Image Gallery */}
           <input

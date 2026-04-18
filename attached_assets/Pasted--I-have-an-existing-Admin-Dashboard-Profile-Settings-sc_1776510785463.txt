@@ -1,0 +1,129 @@
+```
+I have an existing Admin Dashboard Profile Settings screen (mobile UI). 
+After the "TEAM MEMBERS" section, I need to add a new "ADD MEMBERS" 
+section with a floating modal. Here are the full requirements:
+
+---
+
+## EXISTING STRUCTURE (do not change these sections):
+- Header: Restaurant name + UID + share icon
+- Edit Logo
+- Edit Restaurant Name
+- Opening Hours
+- Contact Info
+- Location
+- Team Members  ← ADD THE NEW SECTION RIGHT AFTER THIS
+
+---
+
+## NEW SECTION TO ADD: "ADD MEMBERS"
+
+### List Item (same style as other menu rows):
+- Icon: person-add icon (outline style, matching existing icons)
+- Label: "ADD MEMBERS" (bold, uppercase, same font as other labels)
+- Right arrow (chevron) like "Opening Hours" and "Team Members"
+- Same background, padding, and border-radius as existing rows
+
+---
+
+## FLOATING MODAL (appears when "ADD MEMBERS" is tapped):
+
+### Backdrop:
+- Full-screen overlay
+- Background: blurred (backdrop-filter: blur(12px)) + 
+  semi-transparent dark overlay (rgba(0,0,0,0.5))
+- Tapping outside the modal closes it
+
+### Modal Card:
+- Centered, rounded corners (border-radius: 20px)
+- White background
+- Max width: 340px
+- Padding: 24px
+- Smooth slide-up + fade-in animation on open
+
+### Modal Header:
+- Title: "Add Members" (bold, large)
+- Subtitle: "Send a Google login invite to your team"
+- X close button (top-right corner)
+
+---
+
+## TWO INVITE SECTIONS INSIDE THE MODAL:
+
+### Section 1 — ADD MANAGER
+- Section label: "MANAGER" with a manager/briefcase icon
+- Limit badge: shows current count vs max, e.g. "2 / 4" 
+  (max 4 managers)
+- If limit reached (4/4): show red badge "Limit Reached", 
+  disable the invite button
+- Input field: placeholder "Enter Google email..."
+- Button: "Send Invite via Google" 
+  - Color: red/orange (matching dashboard's primary red #E8380D)
+  - Google icon on the left of button text
+  - On click: simulate sending a Google login notification/invite
+  - Show success toast: "✅ Invite sent to [email]"
+
+### Section 2 — ADD STAFF
+- Section label: "STAFF" with a people/group icon
+- Limit badge: e.g. "5 / 20" (max 20 staff)
+- If limit reached (20/20): show red badge "Limit Reached", 
+  disable the invite button
+- Input field: placeholder "Enter Google email..."
+- Button: "Send Invite via Google"
+  - Same style as Manager invite button
+  - On click: simulate sending Google invite
+  - Show success toast: "✅ Invite sent to [email]"
+
+---
+
+## INVITE LOGIC / BEHAVIOR:
+- Validate that the email field is not empty before sending
+- Validate basic email format (must contain @ and .)
+- If invalid: show inline error "Please enter a valid email"
+- After successful invite: 
+  - Increment the member count (e.g. 2/4 → 3/4)
+  - Clear the input field
+  - Show a green success toast notification for 3 seconds
+- Prevent sending if limit is already reached
+
+---
+
+## DESIGN SYSTEM (match existing dashboard style):
+- Primary color: #E8380D (red-orange)
+- Background: #F2F2F7 (light gray sections)
+- Card background: #FFFFFF
+- Text primary: #1C1C1E (near black, bold uppercase for labels)
+- Text secondary: #8E8E93 (gray for subtitles/placeholders)
+- Border radius on cards: 14px
+- Font: SF Pro Display or system-ui
+- Icons: outline style, 22-24px, same as existing menu icons
+- Buttons: full width, 50px height, border-radius 12px
+- Inputs: border 1px solid #E0E0E0, border-radius 10px, 
+  padding 12px 16px
+
+---
+
+## TECH STACK:
+- Use React (functional components + hooks)
+- useState for modal open/close, member counts, form values
+- No external libraries needed except lucide-react for icons
+- CSS-in-JS or Tailwind (whichever is already in the project)
+- Make it fully mobile-responsive (max-width 390px container)
+
+---
+
+## FILES TO MODIFY:
+- Find the component that renders the profile/settings list 
+  (likely ProfileSettings.jsx or AdminDashboard.jsx)
+- Add the new "ADD MEMBERS" list row after Team Members
+- Create a new component: AddMembersModal.jsx
+- Import and render the modal conditionally in the settings screen
+
+---
+
+Please implement all of this cleanly, with proper component 
+separation, and make sure the modal animation (slide-up + fade) 
+works smoothly on mobile.
+```
+
+---
