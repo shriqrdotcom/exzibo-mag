@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useLayoutEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Users, Crown, Shield, UtensilsCrossed, Plus, X, Trash2,
@@ -105,7 +105,7 @@ export default function TeamMembersAdmin() {
   const [modal, setModal] = useState(null)
   const [toast, setToast] = useState(null)
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     exitRoleView()
   }, [])
 

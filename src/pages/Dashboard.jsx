@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useLayoutEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Sidebar from '../components/Sidebar'
 import AdminHeader from '../components/AdminHeader'
 import { TrendingUp, Filter, Download, ChevronLeft, ChevronRight, Plus } from 'lucide-react'
+import { useRole } from '../context/RoleContext'
 
 function getAvatarFromName(name) {
   return name.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase()
@@ -14,8 +15,13 @@ function formatDate(iso) {
 
 export default function Dashboard() {
   const navigate = useNavigate()
+  const { exitRoleView } = useRole()
   const [currentPage, setCurrentPage] = useState(1)
   const [restaurants, setRestaurants] = useState([])
+
+  useLayoutEffect(() => {
+    exitRoleView()
+  }, [])
 
   useEffect(() => {
     const saved = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
