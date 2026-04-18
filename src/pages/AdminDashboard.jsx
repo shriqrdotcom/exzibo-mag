@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAnalytics, notifyAnalyticsUpdate } from '../context/AnalyticsContext'
+import { useRole } from '../context/RoleContext'
 import ProfileSlide from '../components/ProfileSlide'
 import {
   CheckCircle, XCircle,
@@ -40,11 +41,11 @@ const STATUS_CONFIG = {
 }
 
 const NAV_ITEMS = [
-  { id: 'orders',    icon: ClipboardList, label: 'Orders' },
-  { id: 'bookings',  icon: CalendarDays,  label: 'Bookings' },
-  { id: 'menu',      icon: BookOpen,      label: 'Menu' },
-  { id: 'customers', icon: BarChart2,      label: 'Analytics' },
-  { id: 'settings',  icon: Settings,      label: 'Settings' },
+  { id: 'orders',    icon: ClipboardList, label: 'Orders',    permission: 'orders' },
+  { id: 'bookings',  icon: CalendarDays,  label: 'Bookings',  permission: 'bookings' },
+  { id: 'menu',      icon: BookOpen,      label: 'Menu',      permission: 'menuEdit' },
+  { id: 'customers', icon: BarChart2,     label: 'Analytics', permission: 'analytics' },
+  { id: 'settings',  icon: Settings,      label: 'Settings',  permission: 'settings' },
 ]
 
 const DEMO_ORDERS = [
@@ -121,6 +122,7 @@ export default function AdminDashboard() {
   const { id } = useParams()
   const navigate = useNavigate()
   const isDefault = !id || id === 'default'
+  const { hasPermission } = useRole()
 
   const [restaurant, setRestaurant] = useState(null)
   const [orders, setOrders] = useState([])
@@ -156,6 +158,14 @@ export default function AdminDashboard() {
       return all.find(r => r.id === id)?.logo || ''
     } catch { return '' }
   })
+
+  const visibleNavItems = NAV_ITEMS.filter(item => hasPermission(item.permission))
+
+  useEffect(() => {
+    if (visibleNavItems.length > 0 && !visibleNavItems.find(item => item.id === activeNav)) {
+      setActiveNav(visibleNavItems[0].id)
+    }
+  }, [activeNav, visibleNavItems.map(i => i.id).join(',')])
 
   function loadBookings(restaurantId) {
     const key = `exzibo_bookings_${restaurantId}`
@@ -510,14 +520,14 @@ export default function AdminDashboard() {
               <ArrowLeft size={16} />
             </button>
             <div
-              onClick={() => setProfileOpen(true)}
+              onClick={() => hasPermission('profile') && setProfileOpen(true)}
               style={{
                 width: '44px', height: '44px', borderRadius: '14px',
                 background: `linear-gradient(135deg, ${accentStart}, ${accentEnd})`,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 boxShadow: `0 4px 12px ${accentStart}50`,
                 fontSize: '16px', fontWeight: 900, color: '#fff',
-                cursor: 'pointer',
+                cursor: hasPermission('profile') ? 'pointer' : 'default',
                 transition: 'transform 0.15s, box-shadow 0.15s',
                 overflow: 'hidden',
               }}
@@ -897,7 +907,7 @@ export default function AdminDashboard() {
         border: '1px solid rgba(255,255,255,0.6)',
         zIndex: 100,
       }}>
-        {NAV_ITEMS.map(item => {
+        {visibleNavItems.map(item => {
           const active = activeNav === item.id
           return (
             <button

@@ -1,9 +1,9 @@
 import React, { createContext, useContext, useState } from 'react'
 
 const PERMISSIONS = {
-  owner:   ['dashboard', 'restaurantEditor', 'menuEdit', 'settings', 'profile', 'teamManagement'],
-  manager: ['dashboard', 'settings'],
-  staff:   [],
+  owner:   ['dashboard', 'restaurantEditor', 'menuEdit', 'settings', 'profile', 'teamManagement', 'orders', 'bookings', 'analytics'],
+  manager: ['dashboard', 'orders', 'bookings', 'menuEdit', 'analytics', 'settings'],
+  staff:   ['orders', 'bookings'],
 }
 
 const RoleContext = createContext(null)
@@ -24,7 +24,6 @@ export function RoleProvider({ children }) {
 
   function hasPermission(permission) {
     if (!activeRole) return true
-    if (activeRole === 'manager' && permission === 'menuEdit') return menuEditAllowed
     return PERMISSIONS[activeRole]?.includes(permission) ?? false
   }
 

@@ -418,12 +418,12 @@ function DefaultRolesSection() {
 
   function openManagerDashboard() {
     activateRole('manager')
-    navigate('/dashboard')
+    navigate('/admin/default')
   }
 
   function openStaffDashboard() {
     activateRole('staff')
-    navigate('/dashboard')
+    navigate('/admin/default')
   }
 
   return (
