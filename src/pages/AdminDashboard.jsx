@@ -122,7 +122,7 @@ export default function AdminDashboard() {
   const { id } = useParams()
   const navigate = useNavigate()
   const isDefault = !id || id === 'default'
-  const { hasPermission } = useRole()
+  const { hasPermission, activeRole } = useRole()
 
   const [restaurant, setRestaurant] = useState(null)
   const [orders, setOrders] = useState([])
@@ -559,7 +559,7 @@ export default function AdminDashboard() {
                 )}
               </div>
               <div style={{ fontSize: '11px', fontWeight: 700, color: accentStart, letterSpacing: '0.1em' }}>
-                ADMIN
+                {activeRole ? activeRole.toUpperCase() : 'ADMIN'}
               </div>
             </div>
           </div>
