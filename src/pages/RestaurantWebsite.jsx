@@ -672,7 +672,10 @@ export default function RestaurantWebsite() {
       setCustomerOrders(demoOrders)
       return
     }
-    const restaurants = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
+    const restaurants = [
+      ...JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]'),
+      ...JSON.parse(localStorage.getItem('exzibo_demo_restaurants') || '[]'),
+    ]
     const found = restaurants.find(r => r.slug === slug || r.id === slug)
     if (found) {
       const tabs = loadMenuTabs(found.id)
@@ -803,7 +806,10 @@ export default function RestaurantWebsite() {
   useEffect(() => {
     function onStorageChange(e) {
       if (!e.key?.startsWith('exzibo_menu_') && !e.key?.startsWith('exzibo_tabs_') && !e.key?.startsWith('exzibo_filters_enabled_')) return
-      const restaurants = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
+      const restaurants = [
+        ...JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]'),
+        ...JSON.parse(localStorage.getItem('exzibo_demo_restaurants') || '[]'),
+      ]
       const found = restaurants.find(r => r.slug === slug || r.id === slug)
       const id = found?.id || (slug === 'demo' ? 'demo' : null)
       if (!id) return

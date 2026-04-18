@@ -249,10 +249,10 @@ export default function Landing() {
                 What would you like to do?
               </div>
             </div>
-            <CTAButton onClick={() => setShowDemoDropdown(false)} icon={<Wrench size={15} />} dashed>
+            <CTAButton onClick={() => { setShowDemoDropdown(false); navigate('/demo/create') }} icon={<Wrench size={15} />} dashed>
               CREATE DEMO APP
             </CTAButton>
-            <CTAButton onClick={() => setShowDemoDropdown(false)} icon={<ArrowRight size={15} />} dashed>
+            <CTAButton onClick={() => { setShowDemoDropdown(false); navigate('/demo/list') }} icon={<ArrowRight size={15} />} dashed>
               LIST OF DEMO
             </CTAButton>
           </div>

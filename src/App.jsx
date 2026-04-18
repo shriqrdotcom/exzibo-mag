@@ -12,6 +12,8 @@ import AdminDashboard from './pages/AdminDashboard'
 import TeamMembers from './pages/TeamMembers'
 import SuperAdminDashboard from './pages/SuperAdminDashboard'
 import TeamMembersAdmin from './pages/TeamMembersAdmin'
+import DemoCreateWebsite from './pages/DemoCreateWebsite'
+import DemoList from './pages/DemoList'
 import { AnalyticsProvider } from './context/AnalyticsContext'
 import { RoleProvider } from './context/RoleContext'
 
@@ -35,6 +37,8 @@ export default function App() {
           <Route path="/restaurant/:slug" element={<RestaurantWebsite />} />
           <Route path="/restaurant/:slug/food/:itemName" element={<FoodDetail />} />
           <Route path="/r/:slug" element={<RestaurantWebsite />} />
+          <Route path="/demo/create" element={<DemoCreateWebsite />} />
+          <Route path="/demo/list" element={<DemoList />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
