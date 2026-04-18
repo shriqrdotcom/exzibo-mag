@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import { X, Briefcase, Users } from 'lucide-react'
 
 const PRIMARY = '#E8380D'
@@ -148,16 +148,13 @@ function GoogleIcon() {
 export default function AddMembersModal({ open, onClose, restaurantId }) {
   const storageBase = restaurantId || 'default'
 
-  const [mounted, setMounted] = useState(false)
-  useEffect(() => { if (open) setMounted(true) }, [open])
-
   const managerStorageKey = `exzibo_invite_managers_${storageBase}`
   const staffStorageKey = `exzibo_invite_staff_${storageBase}`
 
   const initManagerCount = () => Math.min(parseInt(localStorage.getItem(managerStorageKey) || '0'), MAX_MANAGERS)
   const initStaffCount = () => Math.min(parseInt(localStorage.getItem(staffStorageKey) || '0'), MAX_STAFF)
 
-  if (!open && !mounted) return null
+  if (!open) return null
 
   return (
     <>
@@ -167,8 +164,8 @@ export default function AddMembersModal({ open, onClose, restaurantId }) {
           to   { opacity: 1; transform: translateY(0) scale(1); }
         }
         @keyframes addMemberFadeIn {
-          from { opacity: 0; transform: translateY(-6px); }
-          to   { opacity: 1; transform: translateY(0); }
+          from { opacity: 0; }
+          to   { opacity: 1; }
         }
       `}</style>
 
@@ -176,9 +173,7 @@ export default function AddMembersModal({ open, onClose, restaurantId }) {
         onClick={onClose}
         style={{
           position: 'fixed', inset: 0, zIndex: 1100,
-          background: 'rgba(0,0,0,0.5)',
-          backdropFilter: 'blur(12px)',
-          WebkitBackdropFilter: 'blur(12px)',
+          background: 'rgba(0,0,0,0.55)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           padding: '20px',
           animation: 'addMemberFadeIn 0.2s ease',
