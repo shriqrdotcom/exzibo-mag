@@ -1,12 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, Plus, Utensils, Store, MapPin, Star, ExternalLink, Settings, Globe } from 'lucide-react'
-
-const PLAN_STYLES = {
-  PRO:  { label: 'PRO',  bg: 'rgba(234,179,8,0.15)',  border: 'rgba(234,179,8,0.35)',  color: '#EAB308' },
-  PLUS: { label: 'PLUS', bg: 'rgba(59,130,246,0.15)', border: 'rgba(59,130,246,0.35)', color: '#3B82F6' },
-  MAX:  { label: 'MAX',  bg: 'rgba(139,92,246,0.15)', border: 'rgba(139,92,246,0.35)', color: '#8B5CF6' },
-}
+import PlanBadge from '../components/PlanBadge'
 
 export default function Restaurants() {
   const navigate = useNavigate()
@@ -241,19 +236,6 @@ function FilterTabs({ activeFilter, onChange }) {
   )
 }
 
-function PlanBadge({ plan }) {
-  if (!plan) return null
-  const s = PLAN_STYLES[plan.toUpperCase()] || PLAN_STYLES.PRO
-  return (
-    <span style={{
-      fontSize: '10px', fontWeight: 800, letterSpacing: '0.1em',
-      padding: '3px 8px', borderRadius: '20px',
-      background: s.bg, border: `1px solid ${s.border}`, color: s.color,
-    }}>
-      {s.label}
-    </span>
-  )
-}
 
 function RestaurantCard({ restaurant, onAdmin, onCustomer }) {
   const slug = restaurant.slug || restaurant.id

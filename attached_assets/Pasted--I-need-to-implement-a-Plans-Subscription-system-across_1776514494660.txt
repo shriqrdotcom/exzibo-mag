@@ -1,0 +1,104 @@
+```
+I need to implement a Plans & Subscription system across my restaurant management platform. This includes:
+
+1. A Plans display section on the "My Restaurants" page
+2. A Plan selection step when creating a new restaurant/menu
+
+---
+
+## 🎨 PLAN DEFINITIONS
+
+There are 3 plans. Use EXACTLY these styles:
+
+| Plan | Color | Badge Style |
+|------|-------|-------------|
+| PLUS | Blue 🟦 | Blue background, white text |
+| PRO  | White/Light ⬜ | White/Light Grey background, black text |
+| MAX  | Gold/Yellow 🟨 | Gold/Amber background, black text |
+
+---
+
+## 📍 PART 1 — Show Active Plan on "My Restaurants" Page
+
+On each restaurant card in the My Restaurants list:
+
+- Show a **plan badge** (PLUS / PRO / MAX) in the top-right corner of the card
+- The badge must use the exact color scheme above
+- The badge should be a **pill/rounded tag** with bold uppercase text
+- If the restaurant is on the **currently running/active plan**, show a small 
+  ✅ "Active" indicator or a subtle glow border on the badge
+- Example card layout:
+  ```
+  [ Restaurant Logo ]  [ Plan Badge → PLUS 🟦 ]
+  Restaurant Name
+  Status: 🟢 LIVE / ⏸ PAUSED
+  ```
+
+---
+
+## 📍 PART 2 — Plan Selection on "Create New Restaurant / Menu" Page
+
+When a user creates a new restaurant or menu, add a **Plan Selection Section** as a required step in the form/flow.
+
+### UI Requirements:
+- Show all 3 plan cards side by side (or stacked on mobile)
+- Each plan card must display:
+  - Plan name (PLUS / PRO / MAX) in bold uppercase
+  - Plan color/icon (🟦 / ⬜ / 🟨)
+  - A short feature list (use placeholder features for now):
+    - PLUS: "Up to 2 Menus, Basic Analytics, Standard Support"
+    - PRO: "Up to 10 Menus, Advanced Analytics, Priority Support"
+    - MAX: "Unlimited Menus, Full Analytics, Dedicated Support, Custom Branding"
+  - A "Select Plan" button
+
+### Interaction:
+- Clicking a plan card **selects** it (highlighted border/glow matching plan color)
+- Only ONE plan can be selected at a time
+- Selected plan is stored in form state: `selectedPlan: "PLUS" | "PRO" | "MAX"`
+- The selected plan value must be saved when the restaurant/menu is created
+- Default selected plan: **PLUS**
+
+### Visual:
+- Selected card: glowing border in the plan's color + checkmark icon ✓ in top-right
+- Unselected cards: muted border, slightly faded
+- Smooth transition animation on selection
+
+---
+
+## 🗃️ DATA — Update Restaurant Model
+
+Make sure each restaurant object includes a `plan` field:
+
+```js
+const restaurant = {
+  id: 1,
+  name: "Burger House",
+  status: "live",       // "live" | "paused"
+  plan: "PRO",          // "PLUS" | "PRO" | "MAX"
+  image: "/images/r1.png"
+};
+```
+
+---
+
+## ⚙️ TECH STACK
+- React + Tailwind CSS
+- Components to create/update:
+  - `MyRestaurants.jsx` → add plan badge to each card
+  - `CreateRestaurant.jsx` → add plan selection step
+  - `PlanBadge.jsx` → reusable badge component (PLUS/PRO/MAX)
+  - `PlanSelector.jsx` → reusable plan selection card grid
+
+---
+
+## ✅ EXPECTED OUTPUT
+
+1. `PlanBadge.jsx` — reusable colored pill badge for PLUS 🟦 / PRO ⬜ / MAX 🟨
+2. `PlanSelector.jsx` — plan selection card grid with selection state
+3. Updated `MyRestaurants.jsx` — shows plan badge on every restaurant card
+4. Updated `CreateRestaurant.jsx` — includes plan selection step in the create flow
+5. Plan colors consistent everywhere:
+   - PLUS = Blue (#3B82F6)
+   - PRO = White/Light (#F3F4F6 bg, #111 text)
+   - MAX = Gold (#F59E0B)
+```

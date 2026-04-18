@@ -5,6 +5,7 @@ import {
   Link, Link2, Globe, MapPin,
   ChefHat, Users, Zap, Bell
 } from 'lucide-react'
+import PlanSelector from '../components/PlanSelector'
 
 export default function CreateWebsite() {
   const navigate = useNavigate()
@@ -26,6 +27,7 @@ export default function CreateWebsite() {
     digitalServiceBell: false,
     uploadedImages: [],
     logo: null,
+    selectedPlan: 'PLUS',
   })
 
   const [errors, setErrors] = useState({})
@@ -139,6 +141,7 @@ export default function CreateWebsite() {
       digitalMenuLink: form.digitalMenuLink,
       digitalServiceBell: form.digitalServiceBell,
       status: 'active',
+      plan: form.selectedPlan,
       createdAt: new Date().toISOString(),
     }
     localStorage.setItem('exzibo_restaurants', JSON.stringify([...existing, newRestaurant]))
@@ -318,6 +321,31 @@ export default function CreateWebsite() {
           <BottomCards form={form} set={set} />
 
           <AdditionalSection form={form} set={set} />
+
+          {/* Plan Selection */}
+          <div style={{
+            marginBottom: '28px',
+            background: 'rgba(255,255,255,0.02)',
+            border: '1px solid rgba(255,255,255,0.05)',
+            borderRadius: '18px',
+            padding: '28px',
+          }}>
+            <div style={{ marginBottom: '20px' }}>
+              <div style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '0.2em', color: '#555', textTransform: 'uppercase', marginBottom: '6px' }}>
+                Subscription Plan
+              </div>
+              <div style={{ fontSize: '16px', fontWeight: 800, color: '#fff' }}>
+                Choose Your Plan
+              </div>
+              <div style={{ fontSize: '12px', color: '#555', marginTop: '4px' }}>
+                You can upgrade or change your plan at any time.
+              </div>
+            </div>
+            <PlanSelector
+              selected={form.selectedPlan}
+              onChange={val => set('selectedPlan', val)}
+            />
+          </div>
         </div>
 
         <FooterCTA onGenerate={handleGenerate} submitting={submitting} />
