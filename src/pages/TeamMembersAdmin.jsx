@@ -98,12 +98,16 @@ const DEFAULT_ROLES = [
 
 export default function TeamMembersAdmin() {
   const navigate = useNavigate()
-  const { activateRole } = useRole()
+  const { activateRole, exitRoleView } = useRole()
   const [restaurants, setRestaurants] = useState([])
   const [teams, setTeams] = useState({})
   const [expandedId, setExpandedId] = useState(null)
   const [modal, setModal] = useState(null)
   const [toast, setToast] = useState(null)
+
+  useEffect(() => {
+    exitRoleView()
+  }, [])
 
   function previewRole(role) {
     activateRole(role)
