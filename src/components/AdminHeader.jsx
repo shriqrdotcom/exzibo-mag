@@ -1,7 +1,6 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Bell, User, Search, ArrowRight } from 'lucide-react'
-import RoleBanner from './RoleBanner'
 
 export default function AdminHeader({ title, subtitle, showSearch = true }) {
   const [searchVal, setSearchVal] = useState('')
@@ -14,7 +13,6 @@ export default function AdminHeader({ title, subtitle, showSearch = true }) {
   }
 
   return (
-    <>
     <header style={{
       display: 'flex',
       alignItems: 'center',
@@ -125,7 +123,5 @@ export default function AdminHeader({ title, subtitle, showSearch = true }) {
         </button>
       </div>
     </header>
-    <RoleBanner />
-    </>
   )
 }

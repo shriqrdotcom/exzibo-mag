@@ -2,7 +2,6 @@ import React from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { LayoutDashboard, UtensilsCrossed, Settings, Zap, Users } from 'lucide-react'
 import PermissionGate from './PermissionGate'
-import { useRole } from '../context/RoleContext'
 
 const navItems = [
   { icon: LayoutDashboard, label: 'Dashboard',       path: '/dashboard',     permission: 'dashboard' },
@@ -14,8 +13,6 @@ const navItems = [
 export default function Sidebar() {
   const navigate = useNavigate()
   const location = useLocation()
-  const { activeRole, exitRoleView } = useRole()
-
   return (
     <aside style={{
       width: '270px',
@@ -83,21 +80,6 @@ export default function Sidebar() {
           )
         })}
 
-        {activeRole === 'staff' && (
-          <div style={{
-            marginTop: '8px', padding: '14px',
-            background: 'rgba(16,185,129,0.06)',
-            border: '1px solid rgba(16,185,129,0.2)',
-            borderRadius: '12px',
-          }}>
-            <div style={{ fontSize: '11px', fontWeight: 700, color: '#10B981', marginBottom: '8px', letterSpacing: '0.06em' }}>
-              STAFF ACCESS
-            </div>
-            <div style={{ fontSize: '12px', color: '#555', lineHeight: 1.6 }}>
-              Only order & booking confirmation visible.
-            </div>
-          </div>
-        )}
       </nav>
 
       <button
