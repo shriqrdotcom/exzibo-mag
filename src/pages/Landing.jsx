@@ -178,6 +178,9 @@ export default function Landing() {
           <CTAButton onClick={() => setShowThemes(true)} icon={<Palette size={15} />} dashed>
             THEME'S
           </CTAButton>
+          <CTAButton icon={<ArrowRight size={15} />} dashed>
+            DEMO
+          </CTAButton>
         </div>
       </main>
 
