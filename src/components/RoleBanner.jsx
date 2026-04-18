@@ -1,4 +1,5 @@
 import React from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useRole } from '../context/RoleContext'
 import { Crown, Shield, UtensilsCrossed, X } from 'lucide-react'
 
@@ -34,7 +35,13 @@ const ROLE_CONFIG = {
 
 export default function RoleBanner() {
   const { activeRole, exitRoleView } = useRole()
+  const navigate = useNavigate()
   if (!activeRole) return null
+
+  function handleExit() {
+    exitRoleView()
+    navigate('/team-members')
+  }
 
   const cfg = ROLE_CONFIG[activeRole]
   const Icon = cfg.icon
@@ -74,7 +81,7 @@ export default function RoleBanner() {
       </div>
 
       <button
-        onClick={exitRoleView}
+        onClick={handleExit}
         style={{
           display: 'flex', alignItems: 'center', gap: '6px',
           padding: '6px 14px',
