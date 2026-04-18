@@ -171,7 +171,7 @@ function DemoCard({ demo, index, onDelete }) {
         {/* Actions */}
         <div style={{ display: 'flex', gap: '10px' }}>
           <button
-            onClick={() => window.open(`/restaurant/${demo.slug}`, '_blank')}
+            onClick={() => navigate(`/restaurant/${demo.slug}`)}
             style={{
               flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
               padding: '10px', background: '#E8321A', border: 'none', borderRadius: '10px',
