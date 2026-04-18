@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import React, { useState, useEffect, useRef } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { ArrowRight, Store, Wrench, Bell, User, Search, Palette, X, ExternalLink, LayoutDashboard } from 'lucide-react'
 import ProfileSlide from '../components/ProfileSlide'
 
@@ -68,13 +68,28 @@ const THEMES = [
 
 export default function Landing() {
   const navigate = useNavigate()
+  const location = useLocation()
   const [loaded, setLoaded] = useState(false)
   const [showThemes, setShowThemes] = useState(false)
   const [selectedTheme, setSelectedTheme] = useState(null)
   const [showProfile, setShowProfile] = useState(false)
+  const [showDemoDropdown, setShowDemoDropdown] = useState(false)
+  const demoRef = useRef(null)
+
+  const isHomePage = location.pathname === '/'
 
   useEffect(() => {
     setTimeout(() => setLoaded(true), 100)
+  }, [])
+
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (demoRef.current && !demoRef.current.contains(e.target)) {
+        setShowDemoDropdown(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
   return (
@@ -178,9 +193,38 @@ export default function Landing() {
           <CTAButton onClick={() => setShowThemes(true)} icon={<Palette size={15} />} dashed>
             THEME'S
           </CTAButton>
-          <CTAButton icon={<ArrowRight size={15} />} dashed>
-            DEMO
-          </CTAButton>
+          {isHomePage && (
+            <div ref={demoRef} style={{ position: 'relative' }}>
+              <CTAButton
+                onClick={() => setShowDemoDropdown(prev => !prev)}
+                icon={<ArrowRight size={15} />}
+                dashed
+              >
+                DEMO
+              </CTAButton>
+              {showDemoDropdown && (
+                <div style={{
+                  position: 'absolute',
+                  top: 'calc(100% + 12px)',
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '10px',
+                  zIndex: 200,
+                  minWidth: '220px',
+                  alignItems: 'stretch',
+                }}>
+                  <CTAButton onClick={() => { setShowDemoDropdown(false) }} icon={<Wrench size={15} />} dashed>
+                    CREATE DEMO APP
+                  </CTAButton>
+                  <CTAButton onClick={() => { setShowDemoDropdown(false) }} icon={<ArrowRight size={15} />} dashed>
+                    LIST OF DEMO
+                  </CTAButton>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </main>
 
