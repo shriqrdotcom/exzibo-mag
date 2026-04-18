@@ -2,14 +2,29 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, Plus, Utensils, Store, MapPin, Star, ExternalLink, Settings, Globe } from 'lucide-react'
 
+const PLAN_STYLES = {
+  PRO:  { label: 'PRO',  bg: 'rgba(234,179,8,0.15)',  border: 'rgba(234,179,8,0.35)',  color: '#EAB308' },
+  PLUS: { label: 'PLUS', bg: 'rgba(59,130,246,0.15)', border: 'rgba(59,130,246,0.35)', color: '#3B82F6' },
+  MAX:  { label: 'MAX',  bg: 'rgba(139,92,246,0.15)', border: 'rgba(139,92,246,0.35)', color: '#8B5CF6' },
+}
+
 export default function Restaurants() {
   const navigate = useNavigate()
   const [restaurants, setRestaurants] = useState([])
+  const [activeFilter, setActiveFilter] = useState('live')
 
   useEffect(() => {
     const saved = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
     setRestaurants(saved)
   }, [])
+
+  const filtered = restaurants.filter(r =>
+    activeFilter === 'live'
+      ? r.status === 'active'
+      : r.status !== 'active'
+  )
+
+  const hasAny = restaurants.length > 0
 
   return (
     <div style={{
@@ -18,6 +33,16 @@ export default function Restaurants() {
       color: '#fff',
       fontFamily: "'Inter', -apple-system, sans-serif",
     }}>
+      <style>{`
+        @keyframes filterFadeIn {
+          from { opacity: 0; transform: translateY(10px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        .restaurant-grid-item {
+          animation: filterFadeIn 0.3s ease both;
+        }
+      `}</style>
+
       {/* Nav */}
       <nav style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -61,7 +86,7 @@ export default function Restaurants() {
 
       <div style={{ padding: '60px 48px', maxWidth: '1100px', margin: '0 auto' }}>
         {/* Header */}
-        <div style={{ marginBottom: '52px' }}>
+        <div style={{ marginBottom: '48px' }}>
           <div style={{
             fontSize: '11px', fontWeight: 700, letterSpacing: '0.2em',
             color: '#E8321A', textTransform: 'uppercase', marginBottom: '14px',
@@ -77,26 +102,156 @@ export default function Restaurants() {
           </p>
         </div>
 
-        {restaurants.length === 0 ? (
+        {!hasAny ? (
           <EmptyState onAdd={() => navigate('/create-website')} />
         ) : (
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
-            gap: '20px',
-          }}>
-            {restaurants.map(r => (
-              <RestaurantCard
-                key={r.id}
-                restaurant={r}
-                onCustomer={() => navigate(`/restaurant/${r.slug || r.id}`)}
-                onAdmin={() => navigate(`/admin/${r.id}`)}
-              />
-            ))}
-          </div>
+          <>
+            {/* ── Filter Tab Bar ── */}
+            <div style={{ marginBottom: '36px', display: 'flex', alignItems: 'center', gap: '20px' }}>
+              <FilterTabs activeFilter={activeFilter} onChange={setActiveFilter} />
+              <span style={{ fontSize: '12px', color: '#444', fontWeight: 500 }}>
+                {filtered.length} restaurant{filtered.length !== 1 ? 's' : ''}
+              </span>
+            </div>
+
+            {filtered.length === 0 ? (
+              <div style={{
+                display: 'flex', flexDirection: 'column', alignItems: 'center',
+                padding: '80px 24px', textAlign: 'center',
+                color: '#444', fontSize: '14px',
+              }}>
+                <Store size={36} style={{ marginBottom: '16px', opacity: 0.3 }} />
+                <div style={{ fontWeight: 700, marginBottom: '6px' }}>
+                  No {activeFilter === 'live' ? 'live' : 'paused'} restaurants
+                </div>
+                <div style={{ fontSize: '12px', color: '#555' }}>
+                  {activeFilter === 'live'
+                    ? 'Activate a restaurant to see it here'
+                    : 'Pause a restaurant to see it here'}
+                </div>
+              </div>
+            ) : (
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
+                gap: '20px',
+              }}>
+                {filtered.map((r, i) => (
+                  <div
+                    key={r.id}
+                    className="restaurant-grid-item"
+                    style={{ animationDelay: `${i * 60}ms` }}
+                  >
+                    <RestaurantCard
+                      restaurant={r}
+                      onCustomer={() => navigate(`/restaurant/${r.slug || r.id}`)}
+                      onAdmin={() => navigate(`/admin/${r.id}`)}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
+  )
+}
+
+function FilterTabs({ activeFilter, onChange }) {
+  return (
+    <div style={{ position: 'relative', display: 'inline-flex' }}>
+      <div style={{
+        display: 'flex',
+        background: '#161616',
+        borderRadius: '60px',
+        padding: '5px',
+        gap: '2px',
+        border: '1px solid rgba(255,255,255,0.07)',
+        boxShadow: '0 4px 24px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.04)',
+        position: 'relative',
+      }}>
+        {['live', 'paused'].map(tab => {
+          const isActive = activeFilter === tab
+          return (
+            <button
+              key={tab}
+              onClick={() => onChange(tab)}
+              style={{
+                padding: '11px 36px',
+                borderRadius: '50px',
+                border: 'none',
+                cursor: 'pointer',
+                fontSize: '13px',
+                fontWeight: 800,
+                letterSpacing: '0.12em',
+                textTransform: 'uppercase',
+                transition: 'all 0.25s cubic-bezier(0.4,0,0.2,1)',
+                background: isActive ? '#fff' : 'transparent',
+                color: isActive ? '#0A0A0A' : '#444',
+                boxShadow: isActive
+                  ? '0 0 20px rgba(255,255,255,0.55), 0 0 40px rgba(255,255,255,0.2), 0 2px 8px rgba(0,0,0,0.3)'
+                  : 'none',
+                position: 'relative',
+                zIndex: 1,
+              }}
+              onMouseEnter={e => { if (!isActive) e.currentTarget.style.color = '#888' }}
+              onMouseLeave={e => { if (!isActive) e.currentTarget.style.color = '#444' }}
+            >
+              {tab === 'live' && (
+                <span style={{
+                  display: 'inline-block',
+                  width: '7px', height: '7px', borderRadius: '50%',
+                  background: isActive ? '#22c55e' : '#333',
+                  boxShadow: isActive ? '0 0 6px rgba(34,197,94,0.8)' : 'none',
+                  marginRight: '8px',
+                  verticalAlign: 'middle',
+                  marginTop: '-2px',
+                  transition: 'all 0.25s',
+                }} />
+              )}
+              {tab === 'paused' && (
+                <span style={{
+                  display: 'inline-block',
+                  marginRight: '8px',
+                  verticalAlign: 'middle',
+                  marginTop: '-2px',
+                  fontSize: '11px',
+                  opacity: isActive ? 1 : 0.4,
+                  transition: 'opacity 0.25s',
+                }}>⏸</span>
+              )}
+              {tab}
+            </button>
+          )
+        })}
+      </div>
+      {/* Decorative sparkle */}
+      <span style={{
+        position: 'absolute',
+        bottom: '-4px',
+        right: '-8px',
+        fontSize: '11px',
+        color: 'rgba(255,255,255,0.25)',
+        pointerEvents: 'none',
+        userSelect: 'none',
+        lineHeight: 1,
+      }}>✦</span>
+    </div>
+  )
+}
+
+function PlanBadge({ plan }) {
+  if (!plan) return null
+  const s = PLAN_STYLES[plan.toUpperCase()] || PLAN_STYLES.PRO
+  return (
+    <span style={{
+      fontSize: '10px', fontWeight: 800, letterSpacing: '0.1em',
+      padding: '3px 8px', borderRadius: '20px',
+      background: s.bg, border: `1px solid ${s.border}`, color: s.color,
+    }}>
+      {s.label}
+    </span>
   )
 }
 
@@ -123,7 +278,7 @@ function RestaurantCard({ restaurant, onAdmin, onCustomer }) {
         e.currentTarget.style.boxShadow = 'none'
       }}
     >
-      {/* Card header with restaurant image or gradient */}
+      {/* Card header */}
       <div style={{
         height: '120px',
         background: restaurant.images?.[0]
@@ -135,23 +290,30 @@ function RestaurantCard({ restaurant, onAdmin, onCustomer }) {
           position: 'absolute', inset: 0,
           background: 'linear-gradient(to bottom, rgba(0,0,0,0.1), rgba(0,0,0,0.7))',
         }} />
-        {/* Status badge */}
+
+        {/* Top badges row */}
         <div style={{
           position: 'absolute', top: '12px', right: '12px',
-          display: 'flex', alignItems: 'center', gap: '5px',
-          background: isActive ? 'rgba(74,222,128,0.15)' : 'rgba(255,255,255,0.08)',
-          border: isActive ? '1px solid rgba(74,222,128,0.3)' : '1px solid rgba(255,255,255,0.12)',
-          borderRadius: '20px', padding: '4px 10px',
+          display: 'flex', alignItems: 'center', gap: '6px',
         }}>
+          {restaurant.plan && <PlanBadge plan={restaurant.plan} />}
           <div style={{
-            width: '6px', height: '6px', borderRadius: '50%',
-            background: isActive ? '#4ade80' : '#555',
-            boxShadow: isActive ? '0 0 6px rgba(74,222,128,0.8)' : 'none',
-          }} />
-          <span style={{ fontSize: '10px', fontWeight: 700, color: isActive ? '#4ade80' : '#666', letterSpacing: '0.06em' }}>
-            {isActive ? 'LIVE' : 'PAUSED'}
-          </span>
+            display: 'flex', alignItems: 'center', gap: '5px',
+            background: isActive ? 'rgba(74,222,128,0.15)' : 'rgba(255,255,255,0.08)',
+            border: isActive ? '1px solid rgba(74,222,128,0.3)' : '1px solid rgba(255,255,255,0.12)',
+            borderRadius: '20px', padding: '4px 10px',
+          }}>
+            <div style={{
+              width: '6px', height: '6px', borderRadius: '50%',
+              background: isActive ? '#4ade80' : '#555',
+              boxShadow: isActive ? '0 0 6px rgba(74,222,128,0.8)' : 'none',
+            }} />
+            <span style={{ fontSize: '10px', fontWeight: 700, color: isActive ? '#4ade80' : '#666', letterSpacing: '0.06em' }}>
+              {isActive ? 'LIVE' : 'PAUSED'}
+            </span>
+          </div>
         </div>
+
         {/* Initials avatar */}
         <div style={{
           position: 'absolute', bottom: '-24px', left: '20px',
@@ -207,7 +369,7 @@ function RestaurantCard({ restaurant, onAdmin, onCustomer }) {
           </span>
         </div>
 
-        {/* TWO ACTION BUTTONS */}
+        {/* Action buttons */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
           <button
             onClick={onCustomer}

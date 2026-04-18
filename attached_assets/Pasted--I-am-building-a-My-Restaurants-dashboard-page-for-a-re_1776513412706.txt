@@ -1,0 +1,75 @@
+```
+I am building a "My Restaurants" dashboard page for a restaurant management platform. I need to add a filter tab UI (similar to the attached image) with the following full functionality:
+
+---
+
+## 🎨 UI DESIGN — Filter Tab Component
+
+Create a pill-shaped toggle tab bar with two options:
+- **LIVE** (left tab)
+- **PAUSED** (right tab)
+
+Design it exactly like the reference image:
+- Dark/black background
+- The ACTIVE tab has a glowing white filled pill with black bold text + white glow/bloom shadow effect
+- The INACTIVE tab is dark/semi-transparent with dark text (no glow)
+- Smooth transition animation when switching between tabs
+- Place a small sparkle/star icon (✦) in the bottom-right corner of the tab bar (decorative)
+- Font: Bold, uppercase, sans-serif (e.g. "Syne" or "Space Grotesk" bold)
+
+---
+
+## 📋 FUNCTIONALITY — Restaurant List Filtering
+
+Below the filter tabs, display a list/grid of restaurants. Each restaurant card should show:
+- Restaurant name
+- Restaurant logo/image
+- Current status badge: 🟢 LIVE or ⏸ PAUSED
+- Subscription plan badge — styled as colored pill tags:
+  - **PRO** → Gold/yellow pill
+  - **PLUS** → Blue pill
+  - **MAX** → Purple/violet pill
+
+**Filter Logic:**
+- When **LIVE** tab is active → only show restaurants where `status === "live"`
+- When **PAUSED** tab is active → only show restaurants where `status === "paused"`
+- The active tab state should be stored (useState if React, or JS variable)
+- Default active tab: **LIVE**
+
+---
+
+## 🗃️ DATA
+
+Use this mock data array for the restaurants:
+
+```js
+const restaurants = [
+  { id: 1, name: "Burger House", status: "live", plan: "PRO", image: "/images/r1.png" },
+  { id: 2, name: "Pizza Palace", status: "live", plan: "MAX", image: "/images/r2.png" },
+  { id: 3, name: "Sushi Spot", status: "paused", plan: "PLUS", image: "/images/r3.png" },
+  { id: 4, name: "Taco Town", status: "paused", plan: "PRO", image: "/images/r4.png" },
+  { id: 5, name: "Noodle Nest", status: "live", plan: "PLUS", image: "/images/r5.png" },
+  { id: 6, name: "Grill Garden", status: "paused", plan: "MAX", image: "/images/r6.png" },
+];
+```
+
+---
+
+## ⚙️ TECH STACK
+
+- Use **React + Tailwind CSS** (or plain CSS if Tailwind not set up)
+- Component file: `MyRestaurants.jsx`
+- Keep it self-contained with no external dependencies beyond React
+
+---
+
+## ✅ EXPECTED OUTPUT
+
+1. `MyRestaurants.jsx` — full component with filter tabs + filtered restaurant cards
+2. Glow animation on the active tab using CSS box-shadow or Tailwind
+3. Smooth fade/transition when switching between LIVE and PAUSED lists
+4. Plan badge colors: PRO = gold, PLUS = blue, MAX = purple
+5. Responsive layout — 2 columns on mobile, 3 on desktop
+```
+
+---
