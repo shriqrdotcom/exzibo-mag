@@ -169,19 +169,33 @@ function DemoCard({ demo, index, onDelete }) {
         </div>
 
         {/* Actions */}
-        <div style={{ display: 'flex', gap: '10px' }}>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
           <button
             onClick={() => navigate(`/restaurant/${demo.slug}`)}
             style={{
               flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
               padding: '10px', background: '#E8321A', border: 'none', borderRadius: '10px',
-              color: '#fff', fontSize: '12px', fontWeight: 700, cursor: 'pointer',
-              transition: 'box-shadow 0.2s', letterSpacing: '0.04em',
+              color: '#fff', fontSize: '11px', fontWeight: 700, cursor: 'pointer',
+              transition: 'box-shadow 0.2s', letterSpacing: '0.04em', minWidth: '100px',
             }}
             onMouseEnter={e => e.currentTarget.style.boxShadow = '0 0 20px rgba(232,50,26,0.4)'}
             onMouseLeave={e => e.currentTarget.style.boxShadow = 'none'}
           >
-            <ExternalLink size={13} /> VIEW DEMO
+            <ExternalLink size={12} /> VIEW DEMO
+          </button>
+          <button
+            onClick={() => navigate(`/admin/${demo.id}`)}
+            style={{
+              flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+              padding: '10px', background: '#fff', border: '1px solid rgba(255,255,255,0.15)',
+              borderRadius: '10px', color: '#111', fontSize: '11px', fontWeight: 700,
+              cursor: 'pointer', transition: 'box-shadow 0.2s, background 0.2s',
+              letterSpacing: '0.04em', minWidth: '100px',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = '#f0f0f0'; e.currentTarget.style.boxShadow = '0 4px 16px rgba(255,255,255,0.15)' }}
+            onMouseLeave={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.boxShadow = 'none' }}
+          >
+            <ExternalLink size={12} /> DEMO ADMIN
           </button>
 
           {!confirmDelete ? (
