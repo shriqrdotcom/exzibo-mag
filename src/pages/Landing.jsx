@@ -181,6 +181,9 @@ export default function Landing() {
           <CTAButton onClick={() => setShowThemes(true)} icon={<Palette size={15} />} dashed>
             THEME'S
           </CTAButton>
+          <CTAButton onClick={() => navigate('/demo/list')} icon={<LayoutDashboard size={15} />} dashed>
+            DEMO DASHBOARD
+          </CTAButton>
           {isHomePage && (
             <CTAButton
               onClick={() => setShowDemoDropdown(true)}
