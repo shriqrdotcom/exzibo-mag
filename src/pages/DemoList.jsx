@@ -182,7 +182,7 @@ function DemoCard({ demo, index, onDelete }) {
             onMouseEnter={e => e.currentTarget.style.boxShadow = '0 0 24px rgba(232,50,26,0.5)'}
             onMouseLeave={e => e.currentTarget.style.boxShadow = 'none'}
           >
-            <LayoutDashboard size={13} /> OPEN DASHBOARD
+            <LayoutDashboard size={13} /> DEMO DASHBOARD
           </button>
 
           <div style={{ display: 'flex', gap: '8px' }}>
