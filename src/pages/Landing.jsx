@@ -181,7 +181,14 @@ export default function Landing() {
           <CTAButton onClick={() => setShowThemes(true)} icon={<Palette size={15} />} dashed>
             THEME'S
           </CTAButton>
-          <CTAButton onClick={() => navigate('/demo/list')} icon={<LayoutDashboard size={15} />} dashed>
+          <CTAButton onClick={() => {
+            const demos = JSON.parse(localStorage.getItem('exzibo_demo_restaurants') || '[]')
+            if (demos.length > 0) {
+              navigate(`/demo/dashboard/${demos[0].id}`)
+            } else {
+              navigate('/demo/list')
+            }
+          }} icon={<LayoutDashboard size={15} />} dashed>
             DEMO DASHBOARD
           </CTAButton>
           {isHomePage && (
