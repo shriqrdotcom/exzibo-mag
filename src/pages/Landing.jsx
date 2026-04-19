@@ -170,7 +170,7 @@ export default function Landing() {
 
         <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', justifyContent: 'center' }}>
           <CTAButton onClick={() => navigate('/dashboard')} icon={<ArrowRight size={15} />} primary>
-            DEMO DASHBOARD
+            OPEN DASHBOARD
           </CTAButton>
           <CTAButton onClick={() => navigate('/restaurants')} icon={<Store size={15} />}>
             MY RESTAURANTS
