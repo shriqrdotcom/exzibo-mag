@@ -191,15 +191,6 @@ export default function Landing() {
           }} icon={<LayoutDashboard size={15} />} dashed>
             DEMO DASHBOARD
           </CTAButton>
-          {isHomePage && (
-            <CTAButton
-              onClick={() => setShowDemoDropdown(true)}
-              icon={<ArrowRight size={15} />}
-              dashed
-            >
-              DEMO
-            </CTAButton>
-          )}
         </div>
       </main>
 
