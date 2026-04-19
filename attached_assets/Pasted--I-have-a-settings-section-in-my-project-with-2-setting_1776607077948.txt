@@ -1,0 +1,44 @@
+---
+
+I have a settings section in my project with **2 settings pages**:
+1. **Main Settings Page** (the primary/selected one that's currently active)
+2. **Demo Settings Page** (a secondary/preview settings page)
+
+I want to add a **Google Review Link** feature to **both settings pages**.
+
+---
+
+**WHAT TO BUILD:**
+
+Add a "Google Review" section to both settings pages that looks exactly like this:
+- A card/section with the **Google "G" logo** and the title **"Google Review"**
+- A green **"PASTE"** button in the top-right corner of the card
+- Below that, a row with a **chain link 🔗 icon**, the label **"Google Link"**, and a **text input field** with placeholder text `https://g.page/...`
+- The PASTE button should automatically paste the clipboard content into the input field when clicked
+
+---
+
+**HOW IT SHOULD WORK (full flow):**
+
+1. On the **Main Settings Page** (the active/selected one): Add this Google Review card. When the user enters or pastes a Google Review URL (e.g. `https://g.page/r/...` or `https://maps.app.goo.gl/...`) and saves it, that link must be **stored** (in the database or app state/localStorage — wherever other settings are saved).
+
+2. On the **Demo Settings Page**: Also add the exact same Google Review card with the same UI and functionality.
+
+3. On the **Main Menu / Home Page** (the public-facing website front page): The saved Google Review link should **appear as a visible button or widget** — for example a "⭐ Leave us a Google Review" button or banner — that opens the saved Google Review URL when clicked. If no link has been saved yet, this widget should be hidden.
+
+---
+
+**IMPLEMENTATION DETAILS:**
+
+- The Google Review link value should be **saved persistently** (database, localStorage, or wherever the app currently stores settings)
+- Both settings pages should **read from and write to the same stored value** so they stay in sync
+- The main menu/homepage should **dynamically read** the stored Google Review link and show/hide the review button accordingly
+- The UI of the settings card should match the screenshot style: white card, rounded corners, Google logo, green PASTE button, link icon + label + input field
+
+---
+
+**FILES TO MODIFY:**
+- Main Settings Page component/file
+- Demo Settings Page component/file
+- Main Menu / Homepage component/file
+- Any relevant backend route or data store (settings model/schema if applicable)

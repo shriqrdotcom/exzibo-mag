@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import Sidebar from '../components/Sidebar'
 import AdminHeader from '../components/AdminHeader'
-import { Lock, Shield, ChevronDown, Check, Share2, Globe, ClipboardPaste } from 'lucide-react'
+import { Lock, Shield, ChevronDown, Check, Share2, Globe, ClipboardPaste, Link } from 'lucide-react'
 import { FaFacebook, FaInstagram, FaTwitter, FaLinkedin, FaYoutube } from 'react-icons/fa'
 
 const DEFAULTS = {
@@ -11,6 +11,7 @@ const DEFAULTS = {
   language: 'English',
   notifications: { orders: true, system: true, updates: false },
   social: { facebook: '', instagram: '', twitter: '', website: '', linkedin: '', youtube: '' },
+  googleReview: '',
 }
 
 function getInitials(name) {
@@ -24,6 +25,7 @@ export default function Settings() {
   const [language, setLanguage] = useState(DEFAULTS.language)
   const [notifications, setNotifications] = useState(DEFAULTS.notifications)
   const [social, setSocial] = useState(DEFAULTS.social)
+  const [googleReview, setGoogleReview] = useState(DEFAULTS.googleReview)
   const [saved, setSaved] = useState(false)
   const [dirty, setDirty] = useState(false)
   const saveTimer = useRef(null)
@@ -38,6 +40,7 @@ export default function Settings() {
       if (s.language) setLanguage(s.language)
       if (s.notifications) setNotifications(s.notifications)
       if (s.social) setSocial(s.social)
+      if (s.googleReview !== undefined) setGoogleReview(s.googleReview)
     }
   }, [])
 
@@ -51,6 +54,7 @@ export default function Settings() {
       if (s.language) setLanguage(s.language)
       if (s.notifications) setNotifications(s.notifications)
       if (s.social) setSocial(s.social)
+      if (s.googleReview !== undefined) setGoogleReview(s.googleReview)
     } else {
       setProfile(DEFAULTS.profile)
       setTwoFactor(DEFAULTS.twoFactor)
@@ -58,12 +62,13 @@ export default function Settings() {
       setLanguage(DEFAULTS.language)
       setNotifications(DEFAULTS.notifications)
       setSocial(DEFAULTS.social)
+      setGoogleReview(DEFAULTS.googleReview)
     }
     setDirty(false)
   }
 
   const handleSave = () => {
-    localStorage.setItem('exzibo_settings', JSON.stringify({ profile, twoFactor, theme, language, notifications, social }))
+    localStorage.setItem('exzibo_settings', JSON.stringify({ profile, twoFactor, theme, language, notifications, social, googleReview }))
     setDirty(false)
     setSaved(true)
     clearTimeout(saveTimer.current)
@@ -277,6 +282,11 @@ export default function Settings() {
                 ))}
               </div>
             </Section>
+
+            <GoogleReviewCard
+              value={googleReview}
+              onChange={v => { setGoogleReview(v); setDirty(true) }}
+            />
 
             <Section title="Security" subtitle="Protect your account with enterprise-grade authentication protocols.">
               <ToggleRow
@@ -595,5 +605,78 @@ function Toggle({ value, onChange }) {
         boxShadow: '0 1px 4px rgba(0,0,0,0.4)',
       }} />
     </button>
+  )
+}
+
+function GoogleReviewCard({ value, onChange }) {
+  const [pasted, setPasted] = useState(false)
+
+  const handlePaste = async () => {
+    try {
+      const text = await navigator.clipboard.readText()
+      if (text) {
+        onChange(text)
+        setPasted(true)
+        setTimeout(() => setPasted(false), 1500)
+      }
+    } catch {}
+  }
+
+  return (
+    <div style={{ marginBottom: '32px' }}>
+      <div style={{
+        background: '#fff',
+        border: '1px solid rgba(255,255,255,0.08)',
+        borderRadius: '16px',
+        padding: '20px 22px',
+        boxShadow: '0 2px 12px rgba(0,0,0,0.12)',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <svg viewBox="0 0 24 24" width="28" height="28">
+              <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+              <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+              <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+              <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+            </svg>
+            <span style={{ fontSize: '16px', fontWeight: 700, color: '#0f172a' }}>Google Review</span>
+          </div>
+          <button
+            onClick={handlePaste}
+            style={{
+              padding: '8px 18px',
+              background: pasted ? '#16a34a' : '#16a34a',
+              border: 'none', borderRadius: '8px',
+              color: '#fff', fontSize: '12px', fontWeight: 700,
+              cursor: 'pointer', letterSpacing: '0.06em',
+              transition: 'opacity 0.2s',
+              opacity: pasted ? 0.85 : 1,
+            }}
+          >
+            {pasted ? '✓ PASTED' : 'PASTE'}
+          </button>
+        </div>
+        <div style={{ height: '1px', background: '#f1f5f9', marginBottom: '16px' }} />
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: '12px',
+          background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: '10px',
+          padding: '10px 14px',
+        }}>
+          <Link size={18} color="#64748b" style={{ flexShrink: 0 }} />
+          <span style={{ fontSize: '13px', fontWeight: 600, color: '#334155', whiteSpace: 'nowrap' }}>Google Link</span>
+          <input
+            type="url"
+            value={value}
+            onChange={e => onChange(e.target.value)}
+            placeholder="https://g.page/..."
+            style={{
+              flex: 1, border: 'none', background: 'transparent',
+              fontSize: '13px', color: '#0f172a', outline: 'none',
+              fontFamily: 'inherit',
+            }}
+          />
+        </div>
+      </div>
+    </div>
   )
 }
