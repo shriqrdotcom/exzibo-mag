@@ -162,7 +162,10 @@ export default function ProfileSlide({
 
   useEffect(() => {
     if (!restaurantId || restaurantId === 'default') { setRestaurantUID('0000000001'); return }
-    const all = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
+    const all = [
+      ...JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]'),
+      ...JSON.parse(localStorage.getItem('exzibo_demo_restaurants') || '[]'),
+    ]
     const r = all.find(r => r.id === restaurantId)
     setRestaurantUID(r?.uid || '')
   }, [restaurantId])
