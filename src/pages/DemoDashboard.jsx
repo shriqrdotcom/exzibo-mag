@@ -26,6 +26,8 @@ function DemoSidebar({ demoId }) {
 
   const navItems = [
     { icon: LayoutDashboard, label: 'Dashboard', path: `/demo/dashboard/${demoId}`, available: true },
+    { icon: Plus, label: 'Create Demo App', path: '/demo/create', available: true },
+    { icon: Zap, label: 'List of Demo', path: '/demo/list', available: true },
     { icon: UtensilsCrossed, label: 'Restaurant Editor', path: null, available: false },
     { icon: Users, label: 'Team Members', path: null, available: false },
     { icon: Settings, label: 'Settings', path: null, available: false },
