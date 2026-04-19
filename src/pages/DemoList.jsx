@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Plus, ExternalLink, Trash2, FlaskConical, LayoutDashboard } from 'lucide-react'
+import { ArrowLeft, Plus, ExternalLink, Trash2, FlaskConical, Zap } from 'lucide-react'
 
 export default function DemoList() {
   const navigate = useNavigate()
@@ -10,6 +10,21 @@ export default function DemoList() {
     const saved = JSON.parse(localStorage.getItem('exzibo_demo_restaurants') || '[]')
     setDemos(saved)
   }, [])
+
+  const handleMakeLive = (demo) => {
+    const mainRestaurants = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
+    const liveEntry = {
+      ...demo,
+      status: 'active',
+      isDemo: false,
+      createdAt: demo.createdAt || new Date().toISOString(),
+    }
+    localStorage.setItem('exzibo_restaurants', JSON.stringify([...mainRestaurants, liveEntry]))
+    const updated = demos.filter(d => d.id !== demo.id)
+    setDemos(updated)
+    localStorage.setItem('exzibo_demo_restaurants', JSON.stringify(updated))
+    navigate('/restaurants')
+  }
 
   const handleDelete = (id) => {
     const updated = demos.filter(d => d.id !== id)
@@ -98,6 +113,7 @@ export default function DemoList() {
                 demo={demo}
                 index={i}
                 onDelete={handleDelete}
+                onMakeLive={handleMakeLive}
               />
             ))}
           </div>
@@ -107,9 +123,10 @@ export default function DemoList() {
   )
 }
 
-function DemoCard({ demo, index, onDelete }) {
+function DemoCard({ demo, index, onDelete, onMakeLive }) {
   const navigate = useNavigate()
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [confirmLive, setConfirmLive] = useState(false)
 
   const coverImage = demo.images?.[0] || null
   const planColors = { PLUS: '#3B82F6', PRO: '#8B5CF6', MAX: '#E8321A' }
@@ -170,20 +187,48 @@ function DemoCard({ demo, index, onDelete }) {
 
         {/* Actions */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          {/* Primary — Open Dashboard */}
-          <button
-            onClick={() => navigate(`/demo/dashboard/${demo.id}`)}
-            style={{
-              width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '7px',
-              padding: '11px', background: '#E8321A', border: 'none', borderRadius: '10px',
-              color: '#fff', fontSize: '12px', fontWeight: 700, cursor: 'pointer',
-              transition: 'box-shadow 0.2s', letterSpacing: '0.06em',
-            }}
-            onMouseEnter={e => e.currentTarget.style.boxShadow = '0 0 24px rgba(232,50,26,0.5)'}
-            onMouseLeave={e => e.currentTarget.style.boxShadow = 'none'}
-          >
-            <LayoutDashboard size={13} /> DEMO DASHBOARD
-          </button>
+          {/* Primary — Make Live */}
+          {!confirmLive ? (
+            <button
+              onClick={() => setConfirmLive(true)}
+              style={{
+                width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '7px',
+                padding: '11px', background: 'transparent',
+                border: '1px solid rgba(34,197,94,0.4)', borderRadius: '10px',
+                color: '#22C55E', fontSize: '12px', fontWeight: 700, cursor: 'pointer',
+                transition: 'all 0.2s', letterSpacing: '0.06em',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(34,197,94,0.12)'; e.currentTarget.style.boxShadow = '0 0 20px rgba(34,197,94,0.2)' }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.boxShadow = 'none' }}
+            >
+              <Zap size={13} /> MAKE LIVE
+            </button>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <div style={{ fontSize: '11px', color: '#888', textAlign: 'center', padding: '4px 0' }}>
+                This demo will move to My Restaurants and be removed from demos.
+              </div>
+              <div style={{ display: 'flex', gap: '6px' }}>
+                <button
+                  onClick={() => onMakeLive(demo)}
+                  style={{
+                    flex: 1, padding: '9px 12px', background: 'rgba(34,197,94,0.15)',
+                    border: '1px solid rgba(34,197,94,0.4)', borderRadius: '10px',
+                    color: '#22C55E', fontSize: '11px', fontWeight: 700, cursor: 'pointer',
+                    letterSpacing: '0.04em',
+                  }}
+                >GO LIVE</button>
+                <button
+                  onClick={() => setConfirmLive(false)}
+                  style={{
+                    flex: 1, padding: '9px 12px', background: 'rgba(255,255,255,0.04)',
+                    border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px',
+                    color: '#666', fontSize: '11px', fontWeight: 700, cursor: 'pointer',
+                  }}
+                >CANCEL</button>
+              </div>
+            </div>
+          )}
 
           <div style={{ display: 'flex', gap: '8px' }}>
           <button
