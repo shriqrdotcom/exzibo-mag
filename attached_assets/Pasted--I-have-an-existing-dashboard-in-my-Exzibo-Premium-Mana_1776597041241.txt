@@ -1,0 +1,30 @@
+> I have an existing dashboard in my Exzibo Premium Management platform. When a user clicks **"Open Dashboard"** on a main restaurant, it opens a full Admin Console UI that shows:
+>
+> - A **top navbar** with a search bar labeled *"Paste Restaurant UID..."*, notification bell, and user avatar
+> - A **left sidebar** with navigation items: Dashboard, Restaurant Editor, Team Members, Settings, and a **"Go Live"** button at the bottom
+> - **3 stat cards** at the top: Active Operations, Total Revenue, Avg Ticket
+> - An **"Enterprise Partners"** table with columns: Restaurant UID, Status, Activation Date, Total Tables, Total Payment, Actions (Edit Menu button)
+> - A **Filter** and **Export** button above the table
+> - A **red floating "+" button** at the bottom right
+> - The entire UI uses a **dark theme** (black background, red accent color #E8380D, white text)
+>
+> **What I want you to build:**
+>
+> In my **Demo Section**, I already have two working buttons: **"Create Demo App"** and **"List of Demo"**. Do NOT touch or change these.
+>
+> When the user clicks the **"Demo"** button (or opens a demo site entry), open a **dashboard interface that looks and feels identical** to the existing "Open Dashboard" Admin Console UI shown above — same layout, same sidebar, same stat cards, same table structure — but scoped to the demo restaurant's data.
+>
+> **Requirements:**
+>
+> 1. **Copy the exact UI layout** from the existing Open Dashboard component/page and create a parallel version for Demo — reuse the same components if possible, do not rebuild from scratch
+> 2. The demo dashboard must pull and display the **correct UID and data for that specific demo site** (not a main restaurant's data)
+> 3. The sidebar links (Restaurant Editor, Team Members, Settings, Go Live) should work within the demo context — or show a *"Not available in Demo"* label if a feature is restricted
+> 4. The **stat cards** should show the demo site's real data if available, or display placeholder zeros if no data exists yet
+> 5. The **Enterprise Partners table** should list the demo restaurant entry with its correct UID, status, activation date, tables, and payment info
+> 6. Ensure **zero UI glitches** — no layout shifts, overlapping elements, broken sidebar, or white flashes on load
+> 7. The demo dashboard must be **fully responsive** and match the dark theme exactly (background #0a0a0a or equivalent, accent #E8380D)
+> 8. Do not break any existing functionality — the **"Create Demo App"** and **"List of Demo"** buttons must still work exactly as before
+>
+> Test the full flow: Click Demo → Dashboard opens → correct demo UID shows → table and stats load → no visual glitches.
+
+---

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Plus, ExternalLink, Trash2, FlaskConical } from 'lucide-react'
+import { ArrowLeft, Plus, ExternalLink, Trash2, FlaskConical, LayoutDashboard } from 'lucide-react'
 
 export default function DemoList() {
   const navigate = useNavigate()
@@ -169,17 +169,33 @@ function DemoCard({ demo, index, onDelete }) {
         </div>
 
         {/* Actions */}
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {/* Primary — Open Dashboard */}
+          <button
+            onClick={() => navigate(`/demo/dashboard/${demo.id}`)}
+            style={{
+              width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '7px',
+              padding: '11px', background: '#E8321A', border: 'none', borderRadius: '10px',
+              color: '#fff', fontSize: '12px', fontWeight: 700, cursor: 'pointer',
+              transition: 'box-shadow 0.2s', letterSpacing: '0.06em',
+            }}
+            onMouseEnter={e => e.currentTarget.style.boxShadow = '0 0 24px rgba(232,50,26,0.5)'}
+            onMouseLeave={e => e.currentTarget.style.boxShadow = 'none'}
+          >
+            <LayoutDashboard size={13} /> OPEN DASHBOARD
+          </button>
+
+          <div style={{ display: 'flex', gap: '8px' }}>
           <button
             onClick={() => navigate(`/restaurant/${demo.slug}`)}
             style={{
               flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
-              padding: '10px', background: '#E8321A', border: 'none', borderRadius: '10px',
-              color: '#fff', fontSize: '11px', fontWeight: 700, cursor: 'pointer',
-              transition: 'box-shadow 0.2s', letterSpacing: '0.04em', minWidth: '100px',
+              padding: '10px', background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px',
+              color: '#888', fontSize: '11px', fontWeight: 700, cursor: 'pointer',
+              transition: 'all 0.2s', letterSpacing: '0.04em',
             }}
-            onMouseEnter={e => e.currentTarget.style.boxShadow = '0 0 20px rgba(232,50,26,0.4)'}
-            onMouseLeave={e => e.currentTarget.style.boxShadow = 'none'}
+            onMouseEnter={e => { e.currentTarget.style.color = '#fff'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.25)' }}
+            onMouseLeave={e => { e.currentTarget.style.color = '#888'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)' }}
           >
             <ExternalLink size={12} /> VIEW DEMO
           </button>
@@ -187,13 +203,13 @@ function DemoCard({ demo, index, onDelete }) {
             onClick={() => navigate(`/admin/${demo.id}`)}
             style={{
               flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
-              padding: '10px', background: '#fff', border: '1px solid rgba(255,255,255,0.15)',
-              borderRadius: '10px', color: '#111', fontSize: '11px', fontWeight: 700,
-              cursor: 'pointer', transition: 'box-shadow 0.2s, background 0.2s',
-              letterSpacing: '0.04em', minWidth: '100px',
+              padding: '10px', background: 'transparent', border: '1px solid rgba(255,255,255,0.1)',
+              borderRadius: '10px', color: '#888', fontSize: '11px', fontWeight: 700,
+              cursor: 'pointer', transition: 'all 0.2s',
+              letterSpacing: '0.04em',
             }}
-            onMouseEnter={e => { e.currentTarget.style.background = '#f0f0f0'; e.currentTarget.style.boxShadow = '0 4px 16px rgba(255,255,255,0.15)' }}
-            onMouseLeave={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.boxShadow = 'none' }}
+            onMouseEnter={e => { e.currentTarget.style.color = '#fff'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.25)' }}
+            onMouseLeave={e => { e.currentTarget.style.color = '#888'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)' }}
           >
             <ExternalLink size={12} /> DEMO ADMIN
           </button>
@@ -229,7 +245,8 @@ function DemoCard({ demo, index, onDelete }) {
               >NO</button>
             </div>
           )}
-        </div>
+          </div>{/* end inner row */}
+        </div>{/* end actions column */}
       </div>
     </div>
   )
