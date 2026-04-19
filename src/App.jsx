@@ -40,6 +40,7 @@ export default function App() {
           <Route path="/r/:slug" element={<RestaurantWebsite />} />
           <Route path="/demo/create" element={<DemoCreateWebsite />} />
           <Route path="/demo/list" element={<DemoList />} />
+          <Route path="/demo/dashboard" element={<DemoDashboard />} />
           <Route path="/demo/dashboard/:id" element={<DemoDashboard />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

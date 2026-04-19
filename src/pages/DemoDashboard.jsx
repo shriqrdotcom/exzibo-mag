@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { useNavigate, useParams, useLocation } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import AdminHeader from '../components/AdminHeader'
 import {
   TrendingUp, Filter, Download,
@@ -20,12 +20,12 @@ function formatDate(iso) {
 }
 
 /* ─── Demo-scoped sidebar ─── */
-function DemoSidebar({ demoId }) {
+function DemoSidebar() {
   const navigate = useNavigate()
   const location = useLocation()
 
   const navItems = [
-    { icon: LayoutDashboard, label: 'Dashboard', path: `/demo/dashboard/${demoId}`, available: true },
+    { icon: LayoutDashboard, label: 'Dashboard', path: `/demo/dashboard`, available: true },
     { icon: Plus, label: 'Create Demo App', path: '/demo/create', available: true },
     { icon: Zap, label: 'List of Demo', path: '/demo/list', available: true },
     { icon: UtensilsCrossed, label: 'Restaurant Editor', path: null, available: false },
@@ -152,51 +152,44 @@ function DemoSidebar({ demoId }) {
 
 /* ─── Main page ─── */
 export default function DemoDashboard() {
-  const { id } = useParams()
   const navigate = useNavigate()
   const [currentPage, setCurrentPage] = useState(1)
-  const [demo, setDemo] = useState(null)
   const [rows, setRows] = useState([])
 
   useEffect(() => {
     const allDemos = JSON.parse(localStorage.getItem('exzibo_demo_restaurants') || '[]')
-    const found = id ? allDemos.find(d => d.id === id) : null
 
-    if (!found) {
-      navigate('/demo/list')
-      return
-    }
+    const newRows = allDemos.map(found => {
+      const orders = (() => {
+        try { return JSON.parse(localStorage.getItem(`exzibo_orders_${found.id}`) || '[]') } catch { return [] }
+      })()
+      const totalPayment = orders
+        .filter(o => o.status === 'completed' || o.status === 'confirmed')
+        .reduce((s, o) => s + (o.grandTotal || o.items?.reduce((a, i) => a + (i.price * (i.qty || 1)), 0) || 0), 0)
 
-    setDemo(found)
+      return {
+        id: found.id,
+        uid: found.uid || found.id,
+        slug: found.slug,
+        name: found.name ? found.name.toUpperCase() : 'DEMO SITE',
+        status: found.status === 'active' ? 'RUNNING' : found.status === 'paused' ? 'PAUSED' : 'PENDING',
+        date: found.createdAt ? formatDate(found.createdAt) : '—',
+        tables: parseInt(found.tables) || 0,
+        payment: totalPayment > 0 ? `₹${totalPayment.toLocaleString('en-IN')}` : '₹0.00',
+        avatar: found.name ? getAvatarFromName(found.name) : 'DM',
+        isDemo: true,
+      }
+    })
 
-    const orders = (() => {
-      try { return JSON.parse(localStorage.getItem(`exzibo_orders_${found.id}`) || '[]') } catch { return [] }
-    })()
-    const totalPayment = orders
-      .filter(o => o.status === 'completed' || o.status === 'confirmed')
-      .reduce((s, o) => s + (o.grandTotal || o.items?.reduce((a, i) => a + (i.price * (i.qty || 1)), 0) || 0), 0)
-
-    setRows([{
-      id: found.id,
-      uid: found.uid || found.id,
-      name: found.name ? found.name.toUpperCase() : 'DEMO SITE',
-      status: found.status === 'active' ? 'RUNNING' : found.status === 'paused' ? 'PAUSED' : 'PENDING',
-      date: found.createdAt ? formatDate(found.createdAt) : '—',
-      tables: parseInt(found.tables) || 0,
-      payment: totalPayment > 0 ? `₹${totalPayment.toLocaleString('en-IN')}` : '₹0.00',
-      avatar: found.name ? getAvatarFromName(found.name) : 'DM',
-      isDemo: true,
-    }])
-  }, [id])
+    setRows(newRows)
+  }, [])
 
   const activeOps = rows.filter(r => r.status === 'RUNNING').length
   const totalTables = rows.reduce((s, r) => s + r.tables, 0)
 
-  if (!demo && id) return null
-
   return (
     <div style={{ display: 'flex', height: '100vh', background: '#0A0A0A', overflow: 'hidden', color: '#fff', fontFamily: "'Inter', -apple-system, sans-serif" }}>
-      <DemoSidebar demoId={id} />
+      <DemoSidebar />
 
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <AdminHeader subtitle="Demo Dashboard" showSearch={false} />
@@ -316,7 +309,7 @@ export default function DemoDashboard() {
                       <td style={{ padding: '20px 28px', color: '#ccc', fontSize: '14px', fontWeight: 600 }}>{r.payment}</td>
                       <td style={{ padding: '20px 28px' }}>
                         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                          <ViewSiteBtn onClick={() => navigate(`/restaurant/${demo?.slug}`)} />
+                          <ViewSiteBtn onClick={() => navigate(`/restaurant/${r.slug}`)} />
                           <AdminBtn onClick={() => navigate(`/admin/${r.id}`)} />
                         </div>
                       </td>

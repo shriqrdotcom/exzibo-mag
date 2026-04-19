@@ -73,8 +73,6 @@ export default function Landing() {
   const [showThemes, setShowThemes] = useState(false)
   const [selectedTheme, setSelectedTheme] = useState(null)
   const [showProfile, setShowProfile] = useState(false)
-  const [showDemoDropdown, setShowDemoDropdown] = useState(false)
-  const isHomePage = location.pathname === '/'
 
   useEffect(() => {
     setTimeout(() => setLoaded(true), 100)
@@ -181,14 +179,7 @@ export default function Landing() {
           <CTAButton onClick={() => setShowThemes(true)} icon={<Palette size={15} />} dashed>
             THEME'S
           </CTAButton>
-          <CTAButton onClick={() => {
-            const demos = JSON.parse(localStorage.getItem('exzibo_demo_restaurants') || '[]')
-            if (demos.length > 0) {
-              navigate(`/demo/dashboard/${demos[0].id}`)
-            } else {
-              navigate('/demo/list')
-            }
-          }} icon={<LayoutDashboard size={15} />} dashed>
+          <CTAButton onClick={() => navigate('/demo/dashboard')} icon={<LayoutDashboard size={15} />} dashed>
             DEMO DASHBOARD
           </CTAButton>
         </div>
@@ -201,64 +192,6 @@ export default function Landing() {
         restaurantName="Exzibo Admin"
       />
 
-      {/* ── DEMO MODAL ── */}
-      {showDemoDropdown && (
-        <div
-          onClick={() => setShowDemoDropdown(false)}
-          style={{
-            position: 'fixed', inset: 0, zIndex: 300,
-            background: 'rgba(0,0,0,0.75)',
-            backdropFilter: 'blur(10px)',
-            WebkitBackdropFilter: 'blur(10px)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            animation: 'fadeInModal 0.2s ease',
-          }}
-        >
-          <div
-            onClick={e => e.stopPropagation()}
-            style={{
-              background: '#0e0e0e',
-              border: '1px solid rgba(255,255,255,0.08)',
-              borderRadius: '24px',
-              padding: '36px 40px',
-              display: 'flex', flexDirection: 'column', alignItems: 'center',
-              gap: '20px',
-              minWidth: '320px',
-              animation: 'scaleInModal 0.28s cubic-bezier(0.34,1.1,0.64,1)',
-              position: 'relative',
-            }}
-          >
-            <button
-              onClick={() => setShowDemoDropdown(false)}
-              style={{
-                position: 'absolute', top: '16px', right: '16px',
-                background: 'rgba(255,255,255,0.05)',
-                border: '1px solid rgba(255,255,255,0.08)',
-                borderRadius: '50%', width: '30px', height: '30px',
-                color: '#888', cursor: 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}
-            >
-              <X size={14} />
-            </button>
-            <div style={{ textAlign: 'center', marginBottom: '4px' }}>
-              <div style={{
-                fontSize: '11px', fontWeight: 700, letterSpacing: '0.15em',
-                color: '#E8321A', marginBottom: '6px',
-              }}>DEMO</div>
-              <div style={{ fontSize: '18px', fontWeight: 800, color: '#fff', letterSpacing: '0.04em' }}>
-                What would you like to do?
-              </div>
-            </div>
-            <CTAButton onClick={() => { setShowDemoDropdown(false); navigate('/demo/create') }} icon={<Wrench size={15} />} dashed>
-              CREATE DEMO APP
-            </CTAButton>
-            <CTAButton onClick={() => { setShowDemoDropdown(false); navigate('/demo/list') }} icon={<ArrowRight size={15} />} dashed>
-              LIST OF DEMO
-            </CTAButton>
-          </div>
-        </div>
-      )}
 
       {/* ── THEMES MODAL ── */}
       {showThemes && (
