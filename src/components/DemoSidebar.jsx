@@ -88,7 +88,7 @@ export default function DemoSidebar() {
       </nav>
 
       <button
-        onClick={() => navigate('/demo/list')}
+        onClick={() => navigate('/dashboard')}
         style={{
           display: 'flex',
           alignItems: 'center',
