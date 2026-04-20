@@ -4,7 +4,7 @@ import AdminHeader from '../components/AdminHeader'
 import {
   TrendingUp, Filter, Download,
   ChevronLeft, ChevronRight, Plus,
-  LayoutDashboard, UtensilsCrossed, Settings, Zap, Users, Lock,
+  LayoutDashboard, Zap,
 } from 'lucide-react'
 
 function getAvatarFromName(name) {
@@ -28,9 +28,6 @@ function DemoSidebar() {
     { icon: LayoutDashboard, label: 'Dashboard', path: `/demo/dashboard`, available: true },
     { icon: Plus, label: 'Create Demo App', path: '/demo/create', available: true },
     { icon: Zap, label: 'List of Demo', path: '/demo/list', available: true },
-    { icon: UtensilsCrossed, label: 'Restaurant Editor', path: null, available: false },
-    { icon: Users, label: 'Team Members', path: null, available: false },
-    { icon: Settings, label: 'Settings', path: null, available: false },
   ]
 
   return (
@@ -106,9 +103,6 @@ function DemoSidebar() {
             >
               <Icon size={18} />
               <span style={{ flex: 1 }}>{label}</span>
-              {!available && (
-                <Lock size={11} style={{ opacity: 0.5, flexShrink: 0 }} />
-              )}
             </button>
           )
         })}
