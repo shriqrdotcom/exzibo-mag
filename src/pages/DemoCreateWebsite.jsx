@@ -6,6 +6,7 @@ import {
   ChefHat, Users, Zap, Bell
 } from 'lucide-react'
 import PlanSelector from '../components/PlanSelector'
+import DemoSidebar from '../components/DemoSidebar'
 
 const THEMES = [
   {
@@ -169,9 +170,13 @@ export default function DemoCreateWebsite() {
   if (step === 'success') {
     return (
       <div style={{
-        minHeight: '100vh', background: '#0B0B0B',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontFamily: 'inherit', padding: '24px',
+        display: 'flex', height: '100vh', background: '#0A0A0A',
+        overflow: 'hidden', color: '#fff', fontFamily: 'inherit',
+      }}>
+        <DemoSidebar />
+      <div style={{
+        flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
+        overflowY: 'auto', padding: '24px', background: '#0B0B0B',
       }}>
         <div style={{
           textAlign: 'center', maxWidth: '420px', width: '100%',
@@ -242,11 +247,12 @@ export default function DemoCreateWebsite() {
           </div>
         </div>
       </div>
+      </div>
     )
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#0B0B0B', color: '#fff', fontFamily: 'inherit', position: 'relative' }}>
+    <div style={{ display: 'flex', height: '100vh', background: '#0A0A0A', overflow: 'hidden', color: '#fff', fontFamily: 'inherit', position: 'relative' }}>
       <style>{`
         .forge-input { width:100%;padding:13px 16px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:12px;color:#ccc;font-size:14px;outline:none;transition:border-color 0.2s,box-shadow 0.2s;box-sizing:border-box;font-family:inherit; }
         .forge-input::placeholder { color:#3a3a3a; }
@@ -262,36 +268,23 @@ export default function DemoCreateWebsite() {
         @keyframes spin { to { transform: rotate(360deg); } }
       `}</style>
 
+      <DemoSidebar />
+
+      <div style={{ flex: 1, overflowY: 'auto', background: '#0B0B0B' }}>
       <div style={{ animation: 'fadeScale 0.35s ease' }}>
-        {/* Header */}
+        {/* Page title */}
         <div style={{
           padding: '28px 40px', borderBottom: '1px solid rgba(255,255,255,0.05)',
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          maxWidth: '1120px', margin: '0 auto',
         }}>
-          <div>
-            <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.2em', color: '#FF3B30', textTransform: 'uppercase', marginBottom: '10px' }}>
-              Demo Mode
-            </div>
-            <h1 style={{ fontSize: 'clamp(30px, 4vw, 46px)', fontWeight: 900, lineHeight: 1.05, marginBottom: '8px' }}>
-              Create Your <span style={{ color: '#FF3B30', textShadow: '0 0 40px rgba(255,59,48,0.4)' }}>Demo App.</span>
-            </h1>
-            <p style={{ fontSize: '13px', color: '#555', maxWidth: '460px', lineHeight: 1.6 }}>
-              Fill in your restaurant details to generate a demo website.<br />
-              Demo apps are stored separately and won't appear in the main admin panel.
-            </p>
+          <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.2em', color: '#FF3B30', textTransform: 'uppercase', marginBottom: '10px' }}>
+            Demo Mode
           </div>
-          <button
-            onClick={() => navigate('/')}
-            style={{
-              display: 'flex', alignItems: 'center', gap: '6px',
-              background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
-              borderRadius: '10px', color: '#666', fontSize: '12px', fontWeight: 600,
-              letterSpacing: '0.08em', padding: '10px 16px', cursor: 'pointer',
-            }}
-          >
-            <X size={14} /> ESC
-          </button>
+          <h1 style={{ fontSize: 'clamp(24px, 3vw, 36px)', fontWeight: 900, lineHeight: 1.05, marginBottom: '8px' }}>
+            Create Your <span style={{ color: '#FF3B30', textShadow: '0 0 40px rgba(255,59,48,0.4)' }}>Demo App.</span>
+          </h1>
+          <p style={{ fontSize: '13px', color: '#555', maxWidth: '460px', lineHeight: 1.6 }}>
+            Fill in your restaurant details to generate a demo website.
+          </p>
         </div>
 
         <div style={{ maxWidth: '1120px', margin: '0 auto', padding: '0 40px 160px' }}>
@@ -331,7 +324,7 @@ export default function DemoCreateWebsite() {
 
         {/* Footer CTA */}
         <div style={{
-          position: 'fixed', bottom: 0, left: 0, right: 0, padding: '20px 40px',
+          position: 'fixed', bottom: 0, left: '270px', right: 0, padding: '20px 40px',
           background: 'linear-gradient(to top, #0B0B0B 70%, transparent)',
           display: 'flex', justifyContent: 'center', zIndex: 50,
         }}>
@@ -453,6 +446,7 @@ export default function DemoCreateWebsite() {
           </div>
         </div>
       )}
+      </div>
     </div>
   )
 }

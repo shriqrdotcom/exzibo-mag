@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Plus, ExternalLink, Trash2, FlaskConical, Zap } from 'lucide-react'
+import { Plus, ExternalLink, Trash2, FlaskConical, Zap } from 'lucide-react'
+import DemoSidebar from '../components/DemoSidebar'
 
 export default function DemoList() {
   const navigate = useNavigate()
@@ -34,8 +35,10 @@ export default function DemoList() {
 
   return (
     <div style={{
-      minHeight: '100vh',
-      background: 'radial-gradient(ellipse 70% 50% at 50% 0%, rgba(232,50,26,0.08) 0%, #0A0A0A 55%)',
+      display: 'flex',
+      height: '100vh',
+      background: '#0A0A0A',
+      overflow: 'hidden',
       color: '#fff',
       fontFamily: "'Inter', -apple-system, sans-serif",
     }}>
@@ -45,79 +48,48 @@ export default function DemoList() {
         .demo-card:hover .demo-card-actions { opacity: 1 !important; }
       `}</style>
 
-      {/* Nav */}
-      <nav style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '22px 48px', borderBottom: '1px solid rgba(255,255,255,0.05)',
+      <DemoSidebar />
+
+      <div style={{
+        flex: 1,
+        overflowY: 'auto',
+        background: 'radial-gradient(ellipse 70% 50% at 50% 0%, rgba(232,50,26,0.08) 0%, #0A0A0A 55%)',
       }}>
-        <button
-          onClick={() => navigate('/')}
-          style={{
-            display: 'flex', alignItems: 'center', gap: '8px',
-            background: 'none', border: 'none', color: '#888',
-            cursor: 'pointer', fontSize: '13px', fontWeight: 600, letterSpacing: '0.05em',
-            transition: 'color 0.2s',
-          }}
-          onMouseEnter={e => e.currentTarget.style.color = '#fff'}
-          onMouseLeave={e => e.currentTarget.style.color = '#888'}
-        >
-          <ArrowLeft size={15} /> BACK
-        </button>
-
-        <div style={{ fontSize: '18px', fontWeight: 900, letterSpacing: '0.05em' }}>
-          EXZI<span style={{ color: '#E8321A' }}>BO</span>
-        </div>
-
-        <button
-          onClick={() => navigate('/demo/create')}
-          style={{
-            display: 'flex', alignItems: 'center', gap: '8px',
-            padding: '10px 22px',
-            background: '#E8321A', border: 'none', borderRadius: '50px',
-            color: '#fff', fontSize: '12px', fontWeight: 700, letterSpacing: '0.1em',
-            cursor: 'pointer', boxShadow: '0 0 20px rgba(232,50,26,0.4)', transition: 'all 0.2s',
-          }}
-          onMouseEnter={e => e.currentTarget.style.boxShadow = '0 0 35px rgba(232,50,26,0.6)'}
-          onMouseLeave={e => e.currentTarget.style.boxShadow = '0 0 20px rgba(232,50,26,0.4)'}
-        >
-          <Plus size={14} /> CREATE DEMO APP
-        </button>
-      </nav>
-
-      <div style={{ padding: '60px 48px', maxWidth: '1100px', margin: '0 auto' }}>
-        {/* Header */}
-        <div style={{ marginBottom: '48px' }}>
-          <div style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.2em', color: '#E8321A', textTransform: 'uppercase', marginBottom: '14px' }}>
-            Demo Apps
+        <div style={{ padding: '48px', maxWidth: '1100px', margin: '0 auto' }}>
+          {/* Header */}
+          <div style={{ marginBottom: '48px' }}>
+            <div style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.2em', color: '#E8321A', textTransform: 'uppercase', marginBottom: '14px' }}>
+              Demo Apps
+            </div>
+            <h1 style={{ fontSize: 'clamp(32px, 4vw, 52px)', fontWeight: 900, lineHeight: 1.05, marginBottom: '14px' }}>
+              YOUR DEMO<br />
+              <span style={{ color: '#E8321A', textShadow: '0 0 40px rgba(232,50,26,0.35)' }}>RESTAURANT SITES</span>
+            </h1>
+            <p style={{ fontSize: '14px', color: '#555', maxWidth: '420px', lineHeight: 1.7 }}>
+              Demo websites are sandboxed and separate from your main restaurant portfolio. Only visible here.
+            </p>
           </div>
-          <h1 style={{ fontSize: 'clamp(32px, 4vw, 52px)', fontWeight: 900, lineHeight: 1.05, marginBottom: '14px' }}>
-            YOUR DEMO<br />
-            <span style={{ color: '#E8321A', textShadow: '0 0 40px rgba(232,50,26,0.35)' }}>RESTAURANT SITES</span>
-          </h1>
-          <p style={{ fontSize: '14px', color: '#555', maxWidth: '420px', lineHeight: 1.7 }}>
-            Demo websites are sandboxed and separate from your main restaurant portfolio. Only visible here.
-          </p>
-        </div>
 
-        {demos.length === 0 ? (
-          <EmptyState onAdd={() => navigate('/demo/create')} />
-        ) : (
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
-            gap: '20px',
-          }}>
-            {demos.map((demo, i) => (
-              <DemoCard
-                key={demo.id}
-                demo={demo}
-                index={i}
-                onDelete={handleDelete}
-                onMakeLive={handleMakeLive}
-              />
-            ))}
-          </div>
-        )}
+          {demos.length === 0 ? (
+            <EmptyState onAdd={() => navigate('/demo/create')} />
+          ) : (
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
+              gap: '20px',
+            }}>
+              {demos.map((demo, i) => (
+                <DemoCard
+                  key={demo.id}
+                  demo={demo}
+                  index={i}
+                  onDelete={handleDelete}
+                  onMakeLive={handleMakeLive}
+                />
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )
