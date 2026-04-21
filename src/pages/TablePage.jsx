@@ -259,7 +259,7 @@ export default function TablePage() {
               flexShrink: 0,
             }}>
               <div>
-                <div style={{ fontSize: '16px', fontWeight: 800, color: '#fff' }}>Manage Tables</div>
+                <div style={{ fontSize: '16px', fontWeight: 800, color: '#fff', letterSpacing: '0.04em' }}>ADD TABLE</div>
                 <div style={{ fontSize: '11px', color: '#555', textTransform: 'uppercase', letterSpacing: '0.07em', marginTop: '2px' }}>
                   {panelTarget.name}
                 </div>
@@ -284,51 +284,19 @@ export default function TablePage() {
             <div style={{ flex: 1, overflowY: 'auto', padding: '24px' }}>
               <div style={{ marginBottom: '28px' }}>
                 <div style={{
-                  fontSize: '11px', fontWeight: 700, color: '#555',
-                  letterSpacing: '0.1em', textTransform: 'uppercase',
-                  marginBottom: '14px',
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '18px 22px',
+                  background: 'rgba(255,255,255,0.03)',
+                  border: '1px solid rgba(255,255,255,0.07)',
+                  borderRadius: '12px',
                 }}>
-                  Previous Tables
+                  <span style={{ fontSize: '14px', fontWeight: 800, color: '#fff', letterSpacing: '0.04em' }}>
+                    PENDING
+                  </span>
+                  <span style={{ fontSize: '20px', fontWeight: 800, color: '#fff' }}>
+                    {tableNames.length}
+                  </span>
                 </div>
-
-                {tableNames.length === 0 ? (
-                  <div style={{
-                    padding: '20px',
-                    background: 'rgba(255,255,255,0.02)',
-                    border: '1px dashed rgba(255,255,255,0.07)',
-                    borderRadius: '12px',
-                    textAlign: 'center',
-                    fontSize: '13px', color: '#444', fontWeight: 500,
-                  }}>
-                    No tables created yet.
-                  </div>
-                ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    {tableNames.map((name, idx) => (
-                      <div
-                        key={idx}
-                        style={{
-                          display: 'flex', alignItems: 'center', gap: '12px',
-                          padding: '12px 16px',
-                          background: 'rgba(255,255,255,0.03)',
-                          border: '1px solid rgba(255,255,255,0.07)',
-                          borderRadius: '10px',
-                        }}
-                      >
-                        <div style={{
-                          width: '28px', height: '28px', borderRadius: '8px',
-                          background: 'rgba(232,50,26,0.12)',
-                          border: '1px solid rgba(232,50,26,0.2)',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          fontSize: '11px', fontWeight: 800, color: '#E8321A', flexShrink: 0,
-                        }}>
-                          {idx + 1}
-                        </div>
-                        <span style={{ fontSize: '13px', fontWeight: 600, color: '#ccc' }}>{name}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
               </div>
 
               <div style={{
@@ -339,11 +307,11 @@ export default function TablePage() {
 
               <div>
                 <div style={{
-                  fontSize: '11px', fontWeight: 700, color: '#555',
+                  fontSize: '11px', fontWeight: 700, color: '#fff',
                   letterSpacing: '0.1em', textTransform: 'uppercase',
                   marginBottom: '14px',
                 }}>
-                  Add New Table
+                  Add New Table Request
                 </div>
 
                 <input
