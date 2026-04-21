@@ -293,7 +293,7 @@ export default function TablePage() {
                   <span style={{ fontSize: '14px', fontWeight: 800, color: '#fff', letterSpacing: '0.04em' }}>
                     PENDING
                   </span>
-                  <span style={{ fontSize: '20px', fontWeight: 800, color: '#fff' }}>
+                  <span style={{ fontSize: '20px', fontWeight: 700, color: '#fffc00' }}>
                     {tableNames.length}
                   </span>
                 </div>
