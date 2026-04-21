@@ -17,11 +17,22 @@ function saveTableNames(restaurantId, names) {
   localStorage.setItem(`exzibo_table_names_${restaurantId}`, JSON.stringify(names))
 }
 
+function loadPendingCount(restaurantId) {
+  const raw = localStorage.getItem(`exzibo_table_pending_${restaurantId}`)
+  const n = parseInt(raw, 10)
+  return Number.isFinite(n) && n >= 0 ? n : 0
+}
+
+function savePendingCount(restaurantId, count) {
+  localStorage.setItem(`exzibo_table_pending_${restaurantId}`, String(count))
+}
+
 export default function TablePage() {
   const [restaurants, setRestaurants] = useState([])
   const [panelTarget, setPanelTarget] = useState(null)
   const [panelOpen, setPanelOpen] = useState(false)
   const [tableNames, setTableNames] = useState([])
+  const [pendingCount, setPendingCount] = useState(0)
   const [newTableName, setNewTableName] = useState('')
   const [toast, setToast] = useState(null)
   const [copiedId, setCopiedId] = useState(null)
@@ -38,6 +49,7 @@ export default function TablePage() {
   function openPanel(restaurant) {
     setPanelTarget(restaurant)
     setTableNames(loadTableNames(restaurant.id))
+    setPendingCount(loadPendingCount(restaurant.id))
     setNewTableName('')
     setPanelOpen(true)
     setTimeout(() => inputRef.current?.focus(), 300)
@@ -48,6 +60,7 @@ export default function TablePage() {
     setTimeout(() => {
       setPanelTarget(null)
       setTableNames([])
+      setPendingCount(0)
       setNewTableName('')
     }, 320)
   }
@@ -59,13 +72,15 @@ export default function TablePage() {
   }
 
   function handleCreate() {
-    const name = newTableName.trim()
-    if (!name) return
-    const updated = [...tableNames, name]
-    setTableNames(updated)
-    if (panelTarget) saveTableNames(panelTarget.id, updated)
+    const raw = newTableName.trim()
+    if (!raw) return
+    const n = parseInt(raw, 10)
+    if (!Number.isFinite(n) || n <= 0 || String(n) !== raw) return
+    const updated = pendingCount + n
+    setPendingCount(updated)
+    if (panelTarget) savePendingCount(panelTarget.id, updated)
     setNewTableName('')
-    showToast('✅ Table created successfully!')
+    showToast('✅ Table request added!')
     inputRef.current?.focus()
   }
 
@@ -294,7 +309,7 @@ export default function TablePage() {
                     PENDING
                   </span>
                   <span style={{ fontSize: '20px', fontWeight: 700, color: '#fffc00' }}>
-                    {tableNames.length}
+                    {pendingCount}
                   </span>
                 </div>
               </div>
@@ -318,9 +333,13 @@ export default function TablePage() {
                   ref={inputRef}
                   type="text"
                   value={newTableName}
-                  onChange={e => setNewTableName(e.target.value)}
+                  onChange={e => {
+                    const v = e.target.value
+                    if (v === '' || /^\d+$/.test(v)) setNewTableName(v)
+                  }}
                   onKeyDown={handleInputKey}
-                  placeholder="Enter table name..."
+                  inputMode="numeric"
+                  placeholder="Enter number of tables..."
                   style={{
                     width: '100%',
                     padding: '12px 14px',
