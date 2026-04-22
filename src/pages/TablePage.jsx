@@ -313,10 +313,17 @@ export default function TablePage() {
                     {restaurants.map((r, i) => {
                       const isLive = r.status === 'active'
                       const statusColor = isLive ? '#4ade80' : '#FFB800'
+                      const uid = r.uid || r.id
+                      const linkCount = loadLinkTableCount(uid)
+                      const pendingForRow = loadPendingCount(r.id)
                       const storedNames = loadTableNames(r.id)
-                      const tableCount = storedNames.length > 0
-                        ? storedNames.length
-                        : (r.tables !== undefined && r.tables !== null ? r.tables : 0)
+                      const tableCount = linkCount > 0
+                        ? linkCount
+                        : (pendingForRow > 0
+                          ? pendingForRow
+                          : (storedNames.length > 0
+                            ? storedNames.length
+                            : (r.tables !== undefined && r.tables !== null ? r.tables : 0)))
 
                       return (
                         <tr
