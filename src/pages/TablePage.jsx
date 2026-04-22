@@ -164,7 +164,7 @@ export default function TablePage() {
     const existing = loadLinkName(uid)
     const created = loadRoutesCreated(uid)
     const tableCount = loadLinkTableCount(uid)
-    const pending = loadPendingCount(uid)
+    const pending = loadPendingCount(restaurant.id)
     setLinksTarget(restaurant)
     setSavedLinkName(existing)
     setRoutesCreated(created)
