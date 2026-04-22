@@ -212,12 +212,6 @@ export default function TablePage() {
                           </td>
 
                           <td style={{ padding: '20px 28px' }}>
-                            <span style={{ fontSize: '12px', fontWeight: 800, color: statusColor, letterSpacing: '0.06em' }}>
-                              {isLive ? 'LIVE' : 'PAUSED'}
-                            </span>
-                          </td>
-
-                          <td style={{ padding: '20px 28px' }}>
                             <GetBtn
                               copied={copiedId === r.id}
                               onCopy={() => handleCopyLink(r)}
