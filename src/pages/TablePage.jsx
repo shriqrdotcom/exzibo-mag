@@ -94,6 +94,8 @@ export default function TablePage() {
   const [savedTableCount, setSavedTableCount] = useState(0)
   const [linkPendingCount, setLinkPendingCount] = useState(0)
   const [showConfirm, setShowConfirm] = useState(false)
+  const [showAddTables, setShowAddTables] = useState(false)
+  const [addTablesInput, setAddTablesInput] = useState('')
   const [copiedTableUrl, setCopiedTableUrl] = useState(null)
   const inputRef = useRef(null)
   const toastTimer = useRef(null)
@@ -190,8 +192,26 @@ export default function TablePage() {
       setLinkPendingCount(0)
       setRoutesCreated(false)
       setShowConfirm(false)
+      setShowAddTables(false)
+      setAddTablesInput('')
       setCopiedTableUrl(null)
     }, 320)
+  }
+
+  function handleAddMoreTables() {
+    if (!linksTarget) return
+    const n = parseInt(addTablesInput, 10)
+    if (!Number.isFinite(n) || n <= 0) {
+      showToast('⚠️ Enter a valid number')
+      return
+    }
+    const uid = linksTarget.uid || linksTarget.id
+    const newTotal = savedTableCount + n
+    saveLinkTableCount(uid, newTotal)
+    setSavedTableCount(newTotal)
+    setShowAddTables(false)
+    setAddTablesInput('')
+    showToast(`✅ ${n} tables added successfully. Total: ${newTotal} tables.`)
   }
 
   function handleRequestCreate() {
@@ -577,7 +597,7 @@ export default function TablePage() {
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 {linkStep === 3 && (
                   <button
-                    onClick={() => {}}
+                    onClick={() => { setAddTablesInput(''); setShowAddTables(true) }}
                     style={{
                       display: 'flex', alignItems: 'center', gap: '6px',
                       padding: '0 12px', height: '32px',
@@ -799,6 +819,117 @@ export default function TablePage() {
             </div>
           </div>
         </>
+      )}
+
+      {showAddTables && linksTarget && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 1100,
+          background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(6px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          padding: '24px',
+        }}>
+          <div style={{
+            width: '100%', maxWidth: '420px',
+            background: '#161616',
+            border: '1px solid rgba(255,255,255,0.1)',
+            borderRadius: '16px',
+            padding: '26px',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.7)',
+          }}>
+            <div style={{ fontSize: '15px', fontWeight: 800, color: '#fff', marginBottom: '4px' }}>
+              Add More Tables
+            </div>
+            <div style={{ fontSize: '11px', color: '#666', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '18px' }}>
+              {linksTarget.name}
+            </div>
+
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: '14px 16px',
+              background: 'rgba(255,255,255,0.04)',
+              border: '1px solid rgba(255,255,255,0.08)',
+              borderRadius: '10px',
+              marginBottom: '18px',
+            }}>
+              <span style={{ fontSize: '12px', color: '#888', fontWeight: 600, letterSpacing: '0.04em' }}>
+                CURRENT TABLES
+              </span>
+              <span style={{ fontSize: '20px', color: '#fffc00', fontWeight: 800 }}>
+                {savedTableCount}
+              </span>
+            </div>
+
+            <div style={{ fontSize: '11px', fontWeight: 700, color: '#aaa', letterSpacing: '0.06em', marginBottom: '8px' }}>
+              HOW MANY TABLES DO YOU WANT TO ADD?
+            </div>
+            <input
+              type="text"
+              inputMode="numeric"
+              autoFocus
+              value={addTablesInput}
+              onChange={e => {
+                const v = e.target.value
+                if (v === '' || /^\d+$/.test(v)) setAddTablesInput(v)
+              }}
+              onKeyDown={e => { if (e.key === 'Enter') handleAddMoreTables() }}
+              placeholder="e.g. 10"
+              style={{
+                width: '100%', padding: '12px 14px',
+                background: 'rgba(255,255,255,0.05)',
+                border: '1px solid rgba(255,255,255,0.1)',
+                borderRadius: '10px',
+                color: '#fff', fontSize: '14px', fontWeight: 500,
+                outline: 'none', boxSizing: 'border-box',
+                marginBottom: '10px',
+              }}
+            />
+
+            {addTablesInput && parseInt(addTablesInput, 10) > 0 && (
+              <div style={{
+                fontSize: '11px', color: '#888', fontFamily: 'monospace',
+                padding: '8px 10px',
+                background: 'rgba(255,255,255,0.02)',
+                border: '1px dashed rgba(255,255,255,0.07)',
+                borderRadius: '8px',
+                marginBottom: '18px',
+              }}>
+                New tables: {savedTableCount + 1} – {savedTableCount + parseInt(addTablesInput, 10)} · New total: {savedTableCount + parseInt(addTablesInput, 10)}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: '10px', marginTop: addTablesInput ? 0 : '8px' }}>
+              <button
+                onClick={() => { setShowAddTables(false); setAddTablesInput('') }}
+                style={{
+                  flex: 1, padding: '12px',
+                  background: 'rgba(255,255,255,0.06)',
+                  border: '1px solid rgba(255,255,255,0.12)',
+                  borderRadius: '10px',
+                  color: '#ccc', fontSize: '13px', fontWeight: 700,
+                  letterSpacing: '0.04em', cursor: 'pointer',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleAddMoreTables}
+                disabled={!addTablesInput || parseInt(addTablesInput, 10) <= 0}
+                style={{
+                  flex: 1, padding: '12px',
+                  background: (addTablesInput && parseInt(addTablesInput, 10) > 0) ? '#3FAE6E' : 'rgba(255,255,255,0.05)',
+                  border: 'none', borderRadius: '10px',
+                  color: (addTablesInput && parseInt(addTablesInput, 10) > 0) ? '#fff' : '#555',
+                  fontSize: '13px', fontWeight: 800,
+                  letterSpacing: '0.04em',
+                  cursor: (addTablesInput && parseInt(addTablesInput, 10) > 0) ? 'pointer' : 'default',
+                  boxShadow: (addTablesInput && parseInt(addTablesInput, 10) > 0) ? '0 0 20px rgba(63,174,110,0.4)' : 'none',
+                }}
+              >
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {showConfirm && linksTarget && (
