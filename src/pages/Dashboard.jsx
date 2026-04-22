@@ -2,7 +2,7 @@ import React, { useState, useEffect, useLayoutEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Sidebar from '../components/Sidebar'
 import AdminHeader from '../components/AdminHeader'
-import { TrendingUp, Filter, Download, ChevronLeft, ChevronRight, Plus } from 'lucide-react'
+import { TrendingUp, Filter, Download, ChevronLeft, ChevronRight, Plus, Trash2 } from 'lucide-react'
 import { useRole } from '../context/RoleContext'
 
 function getAvatarFromName(name) {
@@ -168,7 +168,10 @@ export default function Dashboard() {
                       <td style={{ padding: '20px 28px', color: '#ccc', fontSize: '14px', fontWeight: 600 }}>{r.tables}</td>
                       <td style={{ padding: '20px 28px', color: '#ccc', fontSize: '14px', fontWeight: 600 }}>{r.payment}</td>
                       <td style={{ padding: '20px 28px' }}>
-                        <EditMenuBtn onClick={() => navigate(`/menu-editor/${r.id}`)} active={r.status === 'RUNNING'} />
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <EditMenuBtn onClick={() => navigate(`/menu-editor/${r.id}`)} active={r.status === 'RUNNING'} />
+                          <DeleteBtn onClick={() => {}} />
+                        </div>
                       </td>
                     </tr>
                   )
@@ -318,6 +321,29 @@ function EditMenuBtn({ onClick, active }) {
       }}
     >
       EDIT MENU
+    </button>
+  )
+}
+
+function DeleteBtn({ onClick }) {
+  const [hov, setHov] = useState(false)
+  return (
+    <button onClick={onClick}
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
+      title="Delete"
+      style={{
+        width: '32px', height: '32px',
+        background: hov ? 'rgba(232,50,26,0.15)' : 'rgba(255,255,255,0.04)',
+        border: `1px solid ${hov ? 'rgba(232,50,26,0.5)' : 'rgba(255,255,255,0.1)'}`,
+        borderRadius: '9px',
+        color: hov ? '#E8321A' : '#888',
+        cursor: 'pointer',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        transition: 'all 0.2s',
+      }}
+    >
+      <Trash2 size={14} />
     </button>
   )
 }
