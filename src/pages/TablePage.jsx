@@ -608,7 +608,10 @@ export default function TablePage() {
                     </p>
                   </div>
                   <button
-                    onClick={() => setLinkStep(2)}
+                    onClick={() => {
+                      setLinkTableCountInput(String(linkPendingCount))
+                      setLinkStep(2)
+                    }}
                     style={{
                       width: '100%', padding: '13px',
                       background: '#E8321A', border: 'none', borderRadius: '10px',
