@@ -115,6 +115,8 @@ export default function CreateWebsite() {
     )
     const logoBase64 = form.logo?.file ? await fileToBase64(form.logo.file) : form.logo?.url || null
 
+    const tableNumbers = form.tableNumbers.length === 0 ? ['1'] : form.tableNumbers
+
     const existing = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
     const existingSlugs = existing.map(r => r.slug).filter(Boolean)
     const slug = generateSlug(form.restaurantName, existingSlugs)
@@ -127,8 +129,8 @@ export default function CreateWebsite() {
       logo: logoBase64,
       images: base64Images,
       owner: '',
-      tables: form.tableNumbers.length.toString(),
-      tableNumbers: form.tableNumbers,
+      tables: tableNumbers.length.toString(),
+      tableNumbers: tableNumbers,
       phone: form.phoneNumber,
       gst: form.gstDetails,
       description: form.description,
