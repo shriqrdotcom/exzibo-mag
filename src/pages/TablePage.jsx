@@ -44,6 +44,18 @@ function saveRoutesCreated(uid, val) {
   localStorage.setItem(`exzibo_link_routes_created_${uid}`, val ? 'true' : 'false')
 }
 
+function loadLinkTableCount(uid) {
+  const raw = localStorage.getItem(`exzibo_link_table_count_${uid}`)
+  const n = parseInt(raw, 10)
+  return Number.isFinite(n) && n > 0 ? n : 0
+}
+
+function saveLinkTableCount(uid, count) {
+  localStorage.setItem(`exzibo_link_table_count_${uid}`, String(count))
+}
+
+const LINK_BASE_URL = 'https://exzibo-mag.vercel.app'
+
 function sanitizeLinkName(value) {
   return value
     .toLowerCase()
@@ -78,6 +90,10 @@ export default function TablePage() {
   const [linkNameInput, setLinkNameInput] = useState('')
   const [savedLinkName, setSavedLinkName] = useState('')
   const [routesCreated, setRoutesCreated] = useState(false)
+  const [linkTableCountInput, setLinkTableCountInput] = useState('')
+  const [savedTableCount, setSavedTableCount] = useState(0)
+  const [linkPendingCount, setLinkPendingCount] = useState(0)
+  const [showConfirm, setShowConfirm] = useState(false)
   const [copiedTableUrl, setCopiedTableUrl] = useState(null)
   const inputRef = useRef(null)
   const toastTimer = useRef(null)
@@ -147,12 +163,17 @@ export default function TablePage() {
     const uid = restaurant.uid || restaurant.id
     const existing = loadLinkName(uid)
     const created = loadRoutesCreated(uid)
+    const tableCount = loadLinkTableCount(uid)
+    const pending = loadPendingCount(uid)
     setLinksTarget(restaurant)
     setSavedLinkName(existing)
     setRoutesCreated(created)
+    setSavedTableCount(tableCount)
+    setLinkPendingCount(pending)
     setLinkNameInput('')
+    setLinkTableCountInput('')
+    setShowConfirm(false)
     if (existing && created) setLinkStep(3)
-    else if (existing) setLinkStep(2)
     else setLinkStep(1)
     setLinksOpen(true)
   }
@@ -163,16 +184,28 @@ export default function TablePage() {
       setLinksTarget(null)
       setLinkStep(1)
       setLinkNameInput('')
+      setLinkTableCountInput('')
       setSavedLinkName('')
+      setSavedTableCount(0)
+      setLinkPendingCount(0)
       setRoutesCreated(false)
+      setShowConfirm(false)
       setCopiedTableUrl(null)
     }, 320)
   }
 
-  function handleSaveLinkName() {
+  function handleRequestCreate() {
     if (!linksTarget) return
     const cleaned = sanitizeLinkName(linkNameInput)
-    if (!cleaned) return
+    const count = parseInt(linkTableCountInput, 10)
+    if (!cleaned) {
+      showToast('⚠️ Enter a valid link name')
+      return
+    }
+    if (!Number.isFinite(count) || count <= 0) {
+      showToast('⚠️ Enter a valid table count')
+      return
+    }
     const uid = linksTarget.uid || linksTarget.id
     const taken = restaurants.some(r => {
       const otherUid = r.uid || r.id
@@ -183,19 +216,23 @@ export default function TablePage() {
       showToast('⚠️ This link name is already taken')
       return
     }
-    saveLinkName(uid, cleaned)
-    setSavedLinkName(cleaned)
-    setLinkStep(2)
-    showToast('✅ Link name saved permanently')
+    setShowConfirm(true)
   }
 
-  function handleConfirmRoutes() {
+  function handleConfirmCreate() {
     if (!linksTarget) return
     const uid = linksTarget.uid || linksTarget.id
+    const cleaned = sanitizeLinkName(linkNameInput)
+    const count = parseInt(linkTableCountInput, 10)
+    saveLinkName(uid, cleaned)
+    saveLinkTableCount(uid, count)
     saveRoutesCreated(uid, true)
+    setSavedLinkName(cleaned)
+    setSavedTableCount(count)
     setRoutesCreated(true)
+    setShowConfirm(false)
     setLinkStep(3)
-    showToast('✅ Routes created for all tables')
+    showToast('✅ Links created successfully')
   }
 
   function handleCopyTableUrl(url) {
@@ -206,7 +243,7 @@ export default function TablePage() {
   }
 
   function getTableUrl(linkName, tableNumber) {
-    return `${window.location.origin}/menu/${linkName}/table-${tableNumber}`
+    return `${LINK_BASE_URL}/menu/${linkName}/table-${tableNumber}`
   }
 
   return (
@@ -547,101 +584,31 @@ export default function TablePage() {
             <div style={{ flex: 1, overflowY: 'auto', padding: '24px' }}>
               {linkStep === 1 && (
                 <div>
-                  <div style={{ fontSize: '11px', fontWeight: 700, color: '#fff', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '10px' }}>
-                    Step 1 — Create Permanent Link Name
-                  </div>
-                  <p style={{ fontSize: '12px', color: '#777', lineHeight: 1.6, marginBottom: '18px' }}>
-                    This name is permanently bound to this restaurant's UID and cannot be changed later. Use lowercase letters, numbers, and hyphens.
-                  </p>
-                  <input
-                    type="text"
-                    autoFocus
-                    value={linkNameInput}
-                    onChange={e => setLinkNameInput(sanitizeLinkName(e.target.value))}
-                    onKeyDown={e => { if (e.key === 'Enter') handleSaveLinkName() }}
-                    placeholder="e.g. spice-garden"
-                    style={{
-                      width: '100%', padding: '12px 14px',
-                      background: 'rgba(255,255,255,0.05)',
-                      border: '1px solid rgba(255,255,255,0.1)',
-                      borderRadius: '10px',
-                      color: '#fff', fontSize: '14px', fontWeight: 500,
-                      outline: 'none', boxSizing: 'border-box', marginBottom: '12px',
-                    }}
-                  />
-                  <button
-                    onClick={handleSaveLinkName}
-                    disabled={!linkNameInput}
-                    style={{
-                      width: '100%', padding: '13px',
-                      background: linkNameInput ? '#E8321A' : 'rgba(255,255,255,0.05)',
-                      border: linkNameInput ? 'none' : '1px solid rgba(255,255,255,0.08)',
-                      borderRadius: '10px',
-                      color: linkNameInput ? '#fff' : '#555',
-                      fontSize: '13px', fontWeight: 800, letterSpacing: '0.06em',
-                      cursor: linkNameInput ? 'pointer' : 'default',
-                      boxShadow: linkNameInput ? '0 0 20px rgba(232,50,26,0.35)' : 'none',
-                    }}
-                  >
-                    Save Permanently
-                  </button>
-                </div>
-              )}
-
-              {linkStep === 2 && (
-                <div>
-                  <div style={{ fontSize: '11px', fontWeight: 700, color: '#fff', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '10px' }}>
-                    Step 2 — Confirm Table Routes
+                  <div style={{ fontSize: '11px', fontWeight: 700, color: '#fff', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '14px' }}>
+                    Step 1 — Pending Tables Overview
                   </div>
                   <div style={{
-                    display: 'flex', alignItems: 'center', gap: '8px',
-                    padding: '10px 14px', borderRadius: '10px',
-                    background: 'rgba(255,255,255,0.04)',
+                    padding: '22px',
+                    background: 'rgba(255,255,255,0.03)',
                     border: '1px solid rgba(255,255,255,0.08)',
-                    marginBottom: '16px',
+                    borderRadius: '14px',
+                    marginBottom: '18px',
                   }}>
-                    <Lock size={13} color="#888" />
-                    <span style={{ fontSize: '12px', color: '#aaa', fontFamily: 'monospace' }}>{savedLinkName}</span>
-                    <span style={{ fontSize: '10px', color: '#555', marginLeft: 'auto', textTransform: 'uppercase', letterSpacing: '0.08em' }}>locked</span>
-                  </div>
-
-                  <div style={{
-                    border: '1px solid rgba(255,255,255,0.07)',
-                    borderRadius: '12px', overflow: 'hidden', marginBottom: '16px',
-                  }}>
-                    <div style={{
-                      display: 'grid',
-                      gridTemplateColumns: '60px 1fr 90px',
-                      padding: '10px 14px',
-                      background: 'rgba(255,255,255,0.04)',
-                      fontSize: '10px', fontWeight: 700, color: '#777',
-                      letterSpacing: '0.08em', textTransform: 'uppercase',
-                    }}>
-                      <span>Table</span>
-                      <span>Route Path</span>
-                      <span style={{ textAlign: 'right' }}>Status</span>
+                    <div style={{ fontSize: '13px', fontWeight: 800, color: '#fff', letterSpacing: '0.04em', marginBottom: '14px' }}>
+                      PENDING TABLES
                     </div>
-                    {getRestaurantTables(linksTarget).map((t) => (
-                      <div key={t} style={{
-                        display: 'grid',
-                        gridTemplateColumns: '60px 1fr 90px',
-                        padding: '10px 14px',
-                        borderTop: '1px solid rgba(255,255,255,0.05)',
-                        fontSize: '12px', color: '#ccc', alignItems: 'center',
-                      }}>
-                        <span style={{ fontWeight: 700 }}>{t}</span>
-                        <span style={{ fontFamily: 'monospace', color: '#888', fontSize: '11px' }}>
-                          /menu/{savedLinkName}/table-{t}
-                        </span>
-                        <span style={{ textAlign: 'right', fontSize: '10px', fontWeight: 800, color: '#FFB800', letterSpacing: '0.06em' }}>
-                          PENDING
-                        </span>
-                      </div>
-                    ))}
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px', marginBottom: '12px' }}>
+                      <span style={{ fontSize: '40px', fontWeight: 800, color: '#fffc00', lineHeight: 1 }}>
+                        {linkPendingCount}
+                      </span>
+                      <span style={{ fontSize: '12px', color: '#777', fontWeight: 600 }}>tables pending</span>
+                    </div>
+                    <p style={{ fontSize: '12px', color: '#888', lineHeight: 1.6, margin: 0 }}>
+                      This restaurant has {linkPendingCount} table{linkPendingCount === 1 ? '' : 's'}. No links have been created yet.
+                    </p>
                   </div>
-
                   <button
-                    onClick={handleConfirmRoutes}
+                    onClick={() => setLinkStep(2)}
                     style={{
                       width: '100%', padding: '13px',
                       background: '#E8321A', border: 'none', borderRadius: '10px',
@@ -649,7 +616,87 @@ export default function TablePage() {
                       cursor: 'pointer', boxShadow: '0 0 20px rgba(232,50,26,0.35)',
                     }}
                   >
-                    Confirm & Create All Routes
+                    Continue to Create Link →
+                  </button>
+                </div>
+              )}
+
+              {linkStep === 2 && (
+                <div>
+                  <div style={{ fontSize: '11px', fontWeight: 700, color: '#fff', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '14px' }}>
+                    Step 2 — Create Link & Set Tables
+                  </div>
+
+                  <div style={{ marginBottom: '20px' }}>
+                    <div style={{ fontSize: '11px', fontWeight: 700, color: '#aaa', letterSpacing: '0.06em', marginBottom: '8px' }}>
+                      CREATE PERMANENT LINK NAME
+                    </div>
+                    <input
+                      type="text"
+                      autoFocus
+                      value={linkNameInput}
+                      onChange={e => setLinkNameInput(sanitizeLinkName(e.target.value))}
+                      placeholder="e.g. spice-garden"
+                      style={{
+                        width: '100%', padding: '12px 14px',
+                        background: 'rgba(255,255,255,0.05)',
+                        border: '1px solid rgba(255,255,255,0.1)',
+                        borderRadius: '10px',
+                        color: '#fff', fontSize: '14px', fontWeight: 500,
+                        outline: 'none', boxSizing: 'border-box', marginBottom: '8px',
+                      }}
+                    />
+                    <div style={{
+                      fontSize: '11px', color: '#666', fontFamily: 'monospace',
+                      padding: '8px 10px',
+                      background: 'rgba(255,255,255,0.02)',
+                      border: '1px dashed rgba(255,255,255,0.07)',
+                      borderRadius: '8px',
+                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                    }}>
+                      {LINK_BASE_URL}/menu/{linkNameInput || '[linkname]'}/table-1
+                    </div>
+                  </div>
+
+                  <div style={{ marginBottom: '20px' }}>
+                    <div style={{ fontSize: '11px', fontWeight: 700, color: '#aaa', letterSpacing: '0.06em', marginBottom: '8px' }}>
+                      ENTER TOTAL NUMBER OF TABLES
+                    </div>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={linkTableCountInput}
+                      onChange={e => {
+                        const v = e.target.value
+                        if (v === '' || /^\d+$/.test(v)) setLinkTableCountInput(v)
+                      }}
+                      placeholder="e.g. 100"
+                      style={{
+                        width: '100%', padding: '12px 14px',
+                        background: 'rgba(255,255,255,0.05)',
+                        border: '1px solid rgba(255,255,255,0.1)',
+                        borderRadius: '10px',
+                        color: '#fff', fontSize: '14px', fontWeight: 500,
+                        outline: 'none', boxSizing: 'border-box',
+                      }}
+                    />
+                  </div>
+
+                  <button
+                    onClick={handleRequestCreate}
+                    disabled={!linkNameInput || !linkTableCountInput}
+                    style={{
+                      width: '100%', padding: '13px',
+                      background: (linkNameInput && linkTableCountInput) ? '#E8321A' : 'rgba(255,255,255,0.05)',
+                      border: (linkNameInput && linkTableCountInput) ? 'none' : '1px solid rgba(255,255,255,0.08)',
+                      borderRadius: '10px',
+                      color: (linkNameInput && linkTableCountInput) ? '#fff' : '#555',
+                      fontSize: '13px', fontWeight: 800, letterSpacing: '0.06em',
+                      cursor: (linkNameInput && linkTableCountInput) ? 'pointer' : 'default',
+                      boxShadow: (linkNameInput && linkTableCountInput) ? '0 0 20px rgba(232,50,26,0.35)' : 'none',
+                    }}
+                  >
+                    Create Links
                   </button>
                 </div>
               )}
@@ -672,7 +719,7 @@ export default function TablePage() {
                   </div>
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    {getRestaurantTables(linksTarget).map((t) => {
+                    {Array.from({ length: savedTableCount }, (_, i) => String(i + 1)).map((t) => {
                       const url = getTableUrl(savedLinkName, t)
                       const isCopied = copiedTableUrl === url
                       return (
@@ -722,6 +769,64 @@ export default function TablePage() {
             </div>
           </div>
         </>
+      )}
+
+      {showConfirm && linksTarget && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 1100,
+          background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(6px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          padding: '24px',
+        }}>
+          <div style={{
+            width: '100%', maxWidth: '420px',
+            background: '#161616',
+            border: '1px solid rgba(255,255,255,0.1)',
+            borderRadius: '16px',
+            padding: '26px',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.7)',
+          }}>
+            <div style={{ fontSize: '15px', fontWeight: 800, color: '#fff', marginBottom: '10px' }}>
+              Confirm Permanent Creation
+            </div>
+            <p style={{ fontSize: '13px', color: '#aaa', lineHeight: 1.6, marginBottom: '20px' }}>
+              You are about to permanently create{' '}
+              <span style={{ color: '#fffc00', fontWeight: 700, fontFamily: 'monospace' }}>
+                {sanitizeLinkName(linkNameInput)}
+              </span>{' '}
+              with{' '}
+              <span style={{ color: '#fff', fontWeight: 800 }}>{linkTableCountInput}</span>{' '}
+              table links. This cannot be undone.
+            </p>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button
+                onClick={() => setShowConfirm(false)}
+                style={{
+                  flex: 1, padding: '12px',
+                  background: 'rgba(255,255,255,0.06)',
+                  border: '1px solid rgba(255,255,255,0.12)',
+                  borderRadius: '10px',
+                  color: '#ccc', fontSize: '13px', fontWeight: 700,
+                  letterSpacing: '0.04em', cursor: 'pointer',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmCreate}
+                style={{
+                  flex: 1, padding: '12px',
+                  background: '#E8321A', border: 'none', borderRadius: '10px',
+                  color: '#fff', fontSize: '13px', fontWeight: 800,
+                  letterSpacing: '0.04em', cursor: 'pointer',
+                  boxShadow: '0 0 20px rgba(232,50,26,0.4)',
+                }}
+              >
+                Confirm & Create
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {toast && (

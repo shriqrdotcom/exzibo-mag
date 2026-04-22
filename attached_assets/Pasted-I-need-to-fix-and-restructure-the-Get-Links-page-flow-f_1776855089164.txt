@@ -1,0 +1,74 @@
+I need to fix and restructure the **"Get Links"** page flow for each restaurant. Currently the page opens but the order and logic is wrong. Here is the exact correct flow I need — **do not skip any step, implement everything exactly as described:**
+
+---
+
+**CURRENT PROBLEM:**
+The page opens at Step 3 directly. The flow order is completely wrong. I need to restructure the entire flow from scratch while keeping the existing page/modal shell intact.
+
+---
+
+**CORRECT FLOW — 3 STEPS IN THIS EXACT ORDER:**
+
+---
+
+**STEP 1 — PENDING TABLES OVERVIEW (shown FIRST when page opens)**
+
+- The very first thing shown when the admin opens the "Get Links" page must be a **summary card** showing:
+  - Title: **"Pending Tables"**
+  - A count showing how many tables this restaurant currently has **without links generated** (pending count)
+  - Example display: `"This restaurant has 40 tables. No links have been created yet."`
+- Below this, show a **"Continue to Create Link →"** button that takes the admin to Step 2.
+- If links were already created before, skip Step 1 and Step 2, and go directly to Step 3 (the link list).
+
+---
+
+**STEP 2 — CREATE PERMANENT LINK NAME + SET TABLE COUNT**
+
+This step has **two parts in one screen:**
+
+**Part A — Permanent Link Name:**
+- Show a text input labeled: **"Create Permanent Link Name"**
+- Admin types a custom URL-safe name (e.g., `spice-garden`). Auto-convert spaces to hyphens, force lowercase on input.
+- Below the input, show a live preview of what the URL will look like:
+  `https://exzibo-mag.vercel.app/menu/[linkname]/table-1`
+- This name will be **permanently saved and locked** to this restaurant's UID in the database — it can never be edited after creation.
+
+**Part B — Total Table Count:**
+- Below the link name input, show a **number input** labeled: **"Enter Total Number of Tables"**
+- Example: Admin types `100`
+- Then a **"Create Links"** button at the bottom.
+
+**On clicking "Create Links":**
+- Validate that both the link name and table count are filled.
+- Show a **confirmation dialog/popup** that says:
+  > *"You are about to permanently create [linkname] with 100 table links. This cannot be undone. Confirm?"*
+- Two buttons: **Cancel** | **Confirm & Create**
+- On **Confirm**: Save the link name (locked to UID), generate all table links in the database, then navigate to Step 3.
+
+---
+
+**STEP 3 — TABLE LINKS LIST WITH COPY BUTTONS**
+
+- Show the **locked link name** at the top with a lock icon and "CREATED" badge (same as current UI).
+- Below it, show a **scrollable list of ALL tables** — one row per table.
+- Each row contains:
+  - **Table number badge** (e.g., red badge showing `1`, `2`, `3` ... `100`)
+  - **Full URL** (truncated if needed): `https://exzibo-mag.vercel.app/menu/[linkname]/table-[n]`
+  - **COPY button** — clicking it copies the full URL to clipboard and briefly shows "Copied!" feedback on that button
+- All 100 rows must be visible (use a scrollable container, do not paginate).
+
+---
+
+**DATABASE / LOGIC REQUIREMENTS:**
+
+- Store the permanent link name bound to `restaurantUID` — once saved, **no update or delete allowed** for the link name field.
+- Store all generated table links as records: `{ restaurantUID, linkName, tableNumber, fullURL }`
+- When the admin reopens the "Get Links" page for a restaurant that already has links created → **go directly to Step 3**, skip Steps 1 and 2 entirely.
+- **Do not touch or break any existing functionality** for other restaurants or any other part of the platform.
+- This must work correctly in both the **main admin dashboard** and the **demo dashboard**.
+
+---
+
+**UI CONSISTENCY:**
+- Keep the same dark theme, same fonts, same card/modal style as the current "Get Links" page already visible in the app.
+- The step indicator at the top (`STEP 1 OF 3`, `STEP 2 OF 3`, `STEP 3 OF 3`) should update correctly as the admin moves through the flow.
