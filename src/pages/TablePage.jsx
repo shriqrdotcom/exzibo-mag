@@ -155,7 +155,7 @@ export default function TablePage() {
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <thead>
                     <tr>
-                      {['RESTAURANT', 'UID', 'NO OF TABLE', 'ADD TABLE', 'STATUS', 'LINKS'].map(col => (
+                      {['RESTAURANT', 'UID', 'NO OF TABLE', 'ADD TABLE', 'LINKS'].map(col => (
                         <th key={col} style={{
                           padding: '14px 28px', textAlign: 'left',
                           fontSize: '11px', fontWeight: 600, letterSpacing: '0.08em',
