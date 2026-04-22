@@ -313,7 +313,7 @@ export default function TablePage() {
                     PENDING
                   </span>
                   <span style={{ fontSize: '20px', fontWeight: 700, color: '#fffc00' }}>
-                    {pendingCount}
+                    {Math.max(0, pendingCount - 1)}
                   </span>
                 </div>
               </div>
