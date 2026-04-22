@@ -574,18 +574,38 @@ export default function TablePage() {
                   {linksTarget.name} · Step {linkStep} of 3
                 </div>
               </div>
-              <button
-                onClick={closeLinks}
-                style={{
-                  width: '32px', height: '32px', borderRadius: '9px',
-                  background: 'rgba(255,255,255,0.06)',
-                  border: '1px solid rgba(255,255,255,0.08)',
-                  color: '#888', cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}
-              >
-                <X size={15} />
-              </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                {linkStep === 3 && (
+                  <button
+                    onClick={() => {}}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: '6px',
+                      padding: '0 12px', height: '32px',
+                      background: '#3FAE6E',
+                      border: '1px solid rgba(255,255,255,0.12)',
+                      borderRadius: '9px',
+                      color: '#fff', cursor: 'pointer',
+                      fontSize: '11px', fontWeight: 800, letterSpacing: '0.08em',
+                      boxShadow: '0 0 16px rgba(63,174,110,0.35)',
+                    }}
+                  >
+                    <Plus size={14} strokeWidth={3} />
+                    ADD
+                  </button>
+                )}
+                <button
+                  onClick={closeLinks}
+                  style={{
+                    width: '32px', height: '32px', borderRadius: '9px',
+                    background: 'rgba(255,255,255,0.06)',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    color: '#888', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}
+                >
+                  <X size={15} />
+                </button>
+              </div>
             </div>
 
             <div style={{ flex: 1, overflowY: 'auto', padding: '24px' }}>
