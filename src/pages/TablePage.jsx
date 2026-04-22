@@ -17,10 +17,11 @@ function saveTableNames(restaurantId, names) {
   localStorage.setItem(`exzibo_table_names_${restaurantId}`, JSON.stringify(names))
 }
 
-function loadPendingCount(restaurantId) {
+function loadPendingCount(restaurantId, fallback = 0) {
   const raw = localStorage.getItem(`exzibo_table_pending_${restaurantId}`)
+  if (raw === null) return fallback
   const n = parseInt(raw, 10)
-  return Number.isFinite(n) && n >= 0 ? n : 0
+  return Number.isFinite(n) && n >= 0 ? n : fallback
 }
 
 function savePendingCount(restaurantId, count) {
@@ -49,7 +50,10 @@ export default function TablePage() {
   function openPanel(restaurant) {
     setPanelTarget(restaurant)
     setTableNames(loadTableNames(restaurant.id))
-    setPendingCount(loadPendingCount(restaurant.id))
+    const autoCount = Array.isArray(restaurant.tableNumbers)
+      ? restaurant.tableNumbers.length
+      : (parseInt(restaurant.tables, 10) || 0)
+    setPendingCount(loadPendingCount(restaurant.id, autoCount))
     setNewTableName('')
     setPanelOpen(true)
     setTimeout(() => inputRef.current?.focus(), 300)
