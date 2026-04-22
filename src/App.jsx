@@ -16,6 +16,7 @@ import DemoCreateWebsite from './pages/DemoCreateWebsite'
 import DemoList from './pages/DemoList'
 import DemoDashboard from './pages/DemoDashboard'
 import TablePage from './pages/TablePage'
+import MenuLinkRoute from './pages/MenuLinkRoute'
 import { AnalyticsProvider } from './context/AnalyticsContext'
 import { RoleProvider } from './context/RoleContext'
 
@@ -44,6 +45,8 @@ export default function App() {
           <Route path="/demo/dashboard" element={<DemoDashboard />} />
           <Route path="/demo/dashboard/:id" element={<DemoDashboard />} />
           <Route path="/table" element={<TablePage />} />
+          <Route path="/menu/:linkName/:tableNumber" element={<MenuLinkRoute />} />
+          <Route path="/menu/:linkName" element={<MenuLinkRoute />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>

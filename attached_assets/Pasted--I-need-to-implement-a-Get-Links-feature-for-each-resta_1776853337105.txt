@@ -1,0 +1,48 @@
+---
+
+I need to implement a **"Get Links" feature** for each restaurant in the admin dashboard. Currently the "Get" button in the Links section is non-functional. Here is the complete flow I want to build:
+
+---
+
+**OVERVIEW:**
+When an admin clicks the **"Get"** button on any restaurant's Links section, it should open a **dedicated page/modal flow** for that restaurant with 3 sequential steps.
+
+---
+
+**STEP 1 — CREATE A PERMANENT LINK NAME**
+
+- Show a text input where the admin can type a **custom link name** for this restaurant (e.g., `spice-garden` or `the-punjab-house`).
+- This link name must be **permanently bound to this restaurant's UID** in the database once saved — it can never be changed afterward.
+- Once saved, this field should become **read-only/locked** and display the saved name with a lock icon.
+- The link name should be **URL-safe** (lowercase, no spaces — auto-convert spaces to hyphens on input).
+- If a link name already exists for this restaurant, skip the input and show the saved name as locked.
+- Store this mapping in the database as: `{ restaurantUID: "...", linkName: "spice-garden" }`
+
+---
+
+**STEP 2 — CONFIRM TABLE ROUTE CREATION (Next.js Dynamic Routing)**
+
+- After the link name is set, show a **table listing all pending/uncreated table routes** for this restaurant.
+- Each row in the table should show: Table Number | Route Path (e.g., `/menu/spice-garden/table-1`) | Status (Pending)
+- Show a **"Confirm & Create All Routes"** button at the bottom.
+- When the admin clicks **"Confirm"**, create all the **Next.js dynamic routes** for this restaurant — one route per table — where only the table number differs in the path.
+- Route format: `/menu/[linkName]/[tableNumber]` (e.g., `/menu/spice-garden/table-1`, `/menu/spice-garden/table-2`, etc.)
+- Mark these routes as **"Created"** in the database after confirmation.
+- **Do not break or modify any existing routes or functionality for other restaurants.**
+
+---
+
+**STEP 3 — DISPLAY ALL TABLE LINKS WITH COPY BUTTON**
+
+- After routes are confirmed/created, show a **list of all table links** for this restaurant.
+- Each row should display: Table Number | Full URL | **"Copy Link" button**
+- Clicking **"Copy Link"** copies that specific table's full URL to the clipboard.
+- This list should also be accessible anytime the admin returns to this restaurant's Links section (since the link name is already saved).
+
+---
+
+**IMPORTANT CONSTRAINTS:**
+- Do **not** modify any existing working functionality elsewhere in the platform.
+- Each restaurant has its own isolated UID — ensure all link names, routes, and table data are scoped per restaurant UID.
+- The link name, once saved, must be **immutable** — no edit button, no override.
+- This feature should work consistently in both the **main admin dashboard** and the **demo dashboard** if applicable.

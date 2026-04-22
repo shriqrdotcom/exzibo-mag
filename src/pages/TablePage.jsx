@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import Sidebar from '../components/Sidebar'
 import AdminHeader from '../components/AdminHeader'
-import { X, Check, Copy, ExternalLink, Plus } from 'lucide-react'
+import { X, Check, Copy, ExternalLink, Plus, Lock } from 'lucide-react'
 
 function getAvatar(name) {
   return (name || '?').split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase()
@@ -28,6 +28,41 @@ function savePendingCount(restaurantId, count) {
   localStorage.setItem(`exzibo_table_pending_${restaurantId}`, String(count))
 }
 
+function loadLinkName(uid) {
+  return localStorage.getItem(`exzibo_link_name_${uid}`) || ''
+}
+
+function saveLinkName(uid, name) {
+  localStorage.setItem(`exzibo_link_name_${uid}`, name)
+}
+
+function loadRoutesCreated(uid) {
+  return localStorage.getItem(`exzibo_link_routes_created_${uid}`) === 'true'
+}
+
+function saveRoutesCreated(uid, val) {
+  localStorage.setItem(`exzibo_link_routes_created_${uid}`, val ? 'true' : 'false')
+}
+
+function sanitizeLinkName(value) {
+  return value
+    .toLowerCase()
+    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9-]/g, '')
+    .replace(/-+/g, '-')
+}
+
+function getRestaurantTables(restaurant) {
+  if (Array.isArray(restaurant.tableNumbers) && restaurant.tableNumbers.length > 0) {
+    return restaurant.tableNumbers.map(String)
+  }
+  const n = parseInt(restaurant.tables, 10)
+  if (Number.isFinite(n) && n > 0) {
+    return Array.from({ length: n }, (_, i) => String(i + 1))
+  }
+  return ['1']
+}
+
 export default function TablePage() {
   const [restaurants, setRestaurants] = useState([])
   const [panelTarget, setPanelTarget] = useState(null)
@@ -37,6 +72,13 @@ export default function TablePage() {
   const [newTableName, setNewTableName] = useState('')
   const [toast, setToast] = useState(null)
   const [copiedId, setCopiedId] = useState(null)
+  const [linksTarget, setLinksTarget] = useState(null)
+  const [linksOpen, setLinksOpen] = useState(false)
+  const [linkStep, setLinkStep] = useState(1)
+  const [linkNameInput, setLinkNameInput] = useState('')
+  const [savedLinkName, setSavedLinkName] = useState('')
+  const [routesCreated, setRoutesCreated] = useState(false)
+  const [copiedTableUrl, setCopiedTableUrl] = useState(null)
   const inputRef = useRef(null)
   const toastTimer = useRef(null)
 
@@ -99,6 +141,72 @@ export default function TablePage() {
       setCopiedId(r.id)
       setTimeout(() => setCopiedId(null), 2000)
     })
+  }
+
+  function openLinks(restaurant) {
+    const uid = restaurant.uid || restaurant.id
+    const existing = loadLinkName(uid)
+    const created = loadRoutesCreated(uid)
+    setLinksTarget(restaurant)
+    setSavedLinkName(existing)
+    setRoutesCreated(created)
+    setLinkNameInput('')
+    if (existing && created) setLinkStep(3)
+    else if (existing) setLinkStep(2)
+    else setLinkStep(1)
+    setLinksOpen(true)
+  }
+
+  function closeLinks() {
+    setLinksOpen(false)
+    setTimeout(() => {
+      setLinksTarget(null)
+      setLinkStep(1)
+      setLinkNameInput('')
+      setSavedLinkName('')
+      setRoutesCreated(false)
+      setCopiedTableUrl(null)
+    }, 320)
+  }
+
+  function handleSaveLinkName() {
+    if (!linksTarget) return
+    const cleaned = sanitizeLinkName(linkNameInput)
+    if (!cleaned) return
+    const uid = linksTarget.uid || linksTarget.id
+    const taken = restaurants.some(r => {
+      const otherUid = r.uid || r.id
+      if (otherUid === uid) return false
+      return loadLinkName(otherUid) === cleaned
+    })
+    if (taken) {
+      showToast('⚠️ This link name is already taken')
+      return
+    }
+    saveLinkName(uid, cleaned)
+    setSavedLinkName(cleaned)
+    setLinkStep(2)
+    showToast('✅ Link name saved permanently')
+  }
+
+  function handleConfirmRoutes() {
+    if (!linksTarget) return
+    const uid = linksTarget.uid || linksTarget.id
+    saveRoutesCreated(uid, true)
+    setRoutesCreated(true)
+    setLinkStep(3)
+    showToast('✅ Routes created for all tables')
+  }
+
+  function handleCopyTableUrl(url) {
+    navigator.clipboard.writeText(url).then(() => {
+      setCopiedTableUrl(url)
+      setTimeout(() => setCopiedTableUrl(null), 1800)
+    })
+  }
+
+  function getTableUrl(linkName, tableNumber) {
+    return `${window.location.origin}/menu/${linkName}/table-${tableNumber}`
   }
 
   return (
@@ -214,7 +322,7 @@ export default function TablePage() {
                           <td style={{ padding: '20px 28px' }}>
                             <GetBtn
                               copied={copiedId === r.id}
-                              onCopy={() => handleCopyLink(r)}
+                              onCopy={() => openLinks(r)}
                               onOpen={() => window.open(getRestaurantUrl(r), '_blank')}
                             />
                           </td>
@@ -379,6 +487,238 @@ export default function TablePage() {
                   Create
                 </button>
               </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {linksTarget && (
+        <>
+          <div
+            onClick={closeLinks}
+            style={{
+              position: 'fixed', inset: 0,
+              background: 'rgba(0,0,0,0.6)',
+              zIndex: 1000,
+              backdropFilter: 'blur(4px)',
+              animation: linksOpen ? 'fadeOverlay 0.25s ease' : 'none',
+            }}
+          />
+          <div style={{
+            position: 'fixed',
+            top: 0, right: 0,
+            width: '460px',
+            height: '100vh',
+            background: '#161616',
+            border: '1px solid rgba(255,255,255,0.08)',
+            borderRight: 'none',
+            zIndex: 1001,
+            display: 'flex',
+            flexDirection: 'column',
+            boxShadow: '-12px 0 60px rgba(0,0,0,0.7)',
+            animation: `${linksOpen ? 'slideInRight' : 'slideOutRight'} 0.3s cubic-bezier(0.4,0,0.2,1) forwards`,
+          }}>
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: '22px 24px',
+              borderBottom: '1px solid rgba(255,255,255,0.07)',
+              flexShrink: 0,
+            }}>
+              <div>
+                <div style={{ fontSize: '16px', fontWeight: 800, color: '#fff', letterSpacing: '0.04em' }}>GET LINKS</div>
+                <div style={{ fontSize: '11px', color: '#555', textTransform: 'uppercase', letterSpacing: '0.07em', marginTop: '2px' }}>
+                  {linksTarget.name} · Step {linkStep} of 3
+                </div>
+              </div>
+              <button
+                onClick={closeLinks}
+                style={{
+                  width: '32px', height: '32px', borderRadius: '9px',
+                  background: 'rgba(255,255,255,0.06)',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  color: '#888', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}
+              >
+                <X size={15} />
+              </button>
+            </div>
+
+            <div style={{ flex: 1, overflowY: 'auto', padding: '24px' }}>
+              {linkStep === 1 && (
+                <div>
+                  <div style={{ fontSize: '11px', fontWeight: 700, color: '#fff', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '10px' }}>
+                    Step 1 — Create Permanent Link Name
+                  </div>
+                  <p style={{ fontSize: '12px', color: '#777', lineHeight: 1.6, marginBottom: '18px' }}>
+                    This name is permanently bound to this restaurant's UID and cannot be changed later. Use lowercase letters, numbers, and hyphens.
+                  </p>
+                  <input
+                    type="text"
+                    autoFocus
+                    value={linkNameInput}
+                    onChange={e => setLinkNameInput(sanitizeLinkName(e.target.value))}
+                    onKeyDown={e => { if (e.key === 'Enter') handleSaveLinkName() }}
+                    placeholder="e.g. spice-garden"
+                    style={{
+                      width: '100%', padding: '12px 14px',
+                      background: 'rgba(255,255,255,0.05)',
+                      border: '1px solid rgba(255,255,255,0.1)',
+                      borderRadius: '10px',
+                      color: '#fff', fontSize: '14px', fontWeight: 500,
+                      outline: 'none', boxSizing: 'border-box', marginBottom: '12px',
+                    }}
+                  />
+                  <button
+                    onClick={handleSaveLinkName}
+                    disabled={!linkNameInput}
+                    style={{
+                      width: '100%', padding: '13px',
+                      background: linkNameInput ? '#E8321A' : 'rgba(255,255,255,0.05)',
+                      border: linkNameInput ? 'none' : '1px solid rgba(255,255,255,0.08)',
+                      borderRadius: '10px',
+                      color: linkNameInput ? '#fff' : '#555',
+                      fontSize: '13px', fontWeight: 800, letterSpacing: '0.06em',
+                      cursor: linkNameInput ? 'pointer' : 'default',
+                      boxShadow: linkNameInput ? '0 0 20px rgba(232,50,26,0.35)' : 'none',
+                    }}
+                  >
+                    Save Permanently
+                  </button>
+                </div>
+              )}
+
+              {linkStep === 2 && (
+                <div>
+                  <div style={{ fontSize: '11px', fontWeight: 700, color: '#fff', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '10px' }}>
+                    Step 2 — Confirm Table Routes
+                  </div>
+                  <div style={{
+                    display: 'flex', alignItems: 'center', gap: '8px',
+                    padding: '10px 14px', borderRadius: '10px',
+                    background: 'rgba(255,255,255,0.04)',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    marginBottom: '16px',
+                  }}>
+                    <Lock size={13} color="#888" />
+                    <span style={{ fontSize: '12px', color: '#aaa', fontFamily: 'monospace' }}>{savedLinkName}</span>
+                    <span style={{ fontSize: '10px', color: '#555', marginLeft: 'auto', textTransform: 'uppercase', letterSpacing: '0.08em' }}>locked</span>
+                  </div>
+
+                  <div style={{
+                    border: '1px solid rgba(255,255,255,0.07)',
+                    borderRadius: '12px', overflow: 'hidden', marginBottom: '16px',
+                  }}>
+                    <div style={{
+                      display: 'grid',
+                      gridTemplateColumns: '60px 1fr 90px',
+                      padding: '10px 14px',
+                      background: 'rgba(255,255,255,0.04)',
+                      fontSize: '10px', fontWeight: 700, color: '#777',
+                      letterSpacing: '0.08em', textTransform: 'uppercase',
+                    }}>
+                      <span>Table</span>
+                      <span>Route Path</span>
+                      <span style={{ textAlign: 'right' }}>Status</span>
+                    </div>
+                    {getRestaurantTables(linksTarget).map((t) => (
+                      <div key={t} style={{
+                        display: 'grid',
+                        gridTemplateColumns: '60px 1fr 90px',
+                        padding: '10px 14px',
+                        borderTop: '1px solid rgba(255,255,255,0.05)',
+                        fontSize: '12px', color: '#ccc', alignItems: 'center',
+                      }}>
+                        <span style={{ fontWeight: 700 }}>{t}</span>
+                        <span style={{ fontFamily: 'monospace', color: '#888', fontSize: '11px' }}>
+                          /menu/{savedLinkName}/table-{t}
+                        </span>
+                        <span style={{ textAlign: 'right', fontSize: '10px', fontWeight: 800, color: '#FFB800', letterSpacing: '0.06em' }}>
+                          PENDING
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+
+                  <button
+                    onClick={handleConfirmRoutes}
+                    style={{
+                      width: '100%', padding: '13px',
+                      background: '#E8321A', border: 'none', borderRadius: '10px',
+                      color: '#fff', fontSize: '13px', fontWeight: 800, letterSpacing: '0.06em',
+                      cursor: 'pointer', boxShadow: '0 0 20px rgba(232,50,26,0.35)',
+                    }}
+                  >
+                    Confirm & Create All Routes
+                  </button>
+                </div>
+              )}
+
+              {linkStep === 3 && (
+                <div>
+                  <div style={{ fontSize: '11px', fontWeight: 700, color: '#fff', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '10px' }}>
+                    Step 3 — Table Links
+                  </div>
+                  <div style={{
+                    display: 'flex', alignItems: 'center', gap: '8px',
+                    padding: '10px 14px', borderRadius: '10px',
+                    background: 'rgba(255,255,255,0.04)',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    marginBottom: '16px',
+                  }}>
+                    <Lock size={13} color="#888" />
+                    <span style={{ fontSize: '12px', color: '#aaa', fontFamily: 'monospace' }}>{savedLinkName}</span>
+                    <span style={{ fontSize: '10px', color: '#4ade80', marginLeft: 'auto', textTransform: 'uppercase', letterSpacing: '0.08em' }}>created</span>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {getRestaurantTables(linksTarget).map((t) => {
+                      const url = getTableUrl(savedLinkName, t)
+                      const isCopied = copiedTableUrl === url
+                      return (
+                        <div key={t} style={{
+                          display: 'flex', alignItems: 'center', gap: '10px',
+                          padding: '12px 14px',
+                          background: 'rgba(255,255,255,0.03)',
+                          border: '1px solid rgba(255,255,255,0.07)',
+                          borderRadius: '10px',
+                        }}>
+                          <div style={{
+                            width: '32px', height: '32px', borderRadius: '8px',
+                            background: 'rgba(232,50,26,0.12)',
+                            border: '1px solid rgba(232,50,26,0.2)',
+                            color: '#E8321A', fontSize: '11px', fontWeight: 800,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            flexShrink: 0,
+                          }}>{t}</div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: '11px', color: '#888', fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {url}
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => handleCopyTableUrl(url)}
+                            style={{
+                              padding: '8px 12px',
+                              background: isCopied ? 'rgba(74,222,128,0.12)' : 'rgba(255,255,255,0.06)',
+                              border: `1px solid ${isCopied ? 'rgba(74,222,128,0.4)' : 'rgba(255,255,255,0.1)'}`,
+                              borderRadius: '8px',
+                              color: isCopied ? '#4ade80' : '#ccc',
+                              fontSize: '11px', fontWeight: 800, letterSpacing: '0.06em',
+                              cursor: 'pointer',
+                              display: 'flex', alignItems: 'center', gap: '5px',
+                              flexShrink: 0,
+                            }}
+                          >
+                            {isCopied ? <Check size={12} /> : <Copy size={12} />}
+                            {isCopied ? 'COPIED' : 'COPY'}
+                          </button>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </>
