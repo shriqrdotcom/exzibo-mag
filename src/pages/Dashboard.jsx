@@ -18,14 +18,15 @@ export default function Dashboard() {
   const { exitRoleView } = useRole()
   const [currentPage, setCurrentPage] = useState(1)
   const [restaurants, setRestaurants] = useState([])
+  const [deleteTarget, setDeleteTarget] = useState(null)
+  const [deleteStage, setDeleteStage] = useState('initial')
+  const [confirmUidInput, setConfirmUidInput] = useState('')
+  const [deleteError, setDeleteError] = useState('')
+  const [toast, setToast] = useState('')
 
-  useLayoutEffect(() => {
-    exitRoleView()
-  }, [])
-
-  useEffect(() => {
+  function loadRestaurantsFromStorage() {
     const saved = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
-    const mapped = saved.map(r => ({
+    return saved.map(r => ({
       id: r.id,
       uid: r.uid || r.id,
       name: r.name.toUpperCase(),
@@ -35,7 +36,52 @@ export default function Dashboard() {
       payment: '₹0.00',
       avatar: getAvatarFromName(r.name),
     }))
-    setRestaurants(mapped)
+  }
+
+  function openDeleteModal(r) {
+    setDeleteTarget(r)
+    setDeleteStage('initial')
+    setConfirmUidInput('')
+    setDeleteError('')
+  }
+
+  function closeDeleteModal() {
+    setDeleteTarget(null)
+    setDeleteStage('initial')
+    setConfirmUidInput('')
+    setDeleteError('')
+  }
+
+  function handleConfirmDelete() {
+    if (!deleteTarget) return
+    if (confirmUidInput.trim() !== String(deleteTarget.uid)) {
+      setDeleteError('UID does not match. Please try again.')
+      return
+    }
+    const saved = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
+    const filtered = saved.filter(r => r.id !== deleteTarget.id && (r.uid || r.id) !== deleteTarget.uid)
+    localStorage.setItem('exzibo_restaurants', JSON.stringify(filtered))
+    const id = deleteTarget.id
+    const uid = deleteTarget.uid
+    ;[
+      `exzibo_table_pending_${id}`,
+      `exzibo_table_names_${id}`,
+      `exzibo_link_name_${uid}`,
+      `exzibo_link_routes_created_${uid}`,
+      `exzibo_link_table_count_${uid}`,
+    ].forEach(k => localStorage.removeItem(k))
+    setRestaurants(loadRestaurantsFromStorage())
+    closeDeleteModal()
+    setToast('Restaurant deleted successfully')
+    setTimeout(() => setToast(''), 2400)
+  }
+
+  useLayoutEffect(() => {
+    exitRoleView()
+  }, [])
+
+  useEffect(() => {
+    setRestaurants(loadRestaurantsFromStorage())
   }, [])
 
   return (
@@ -170,7 +216,7 @@ export default function Dashboard() {
                       <td style={{ padding: '20px 28px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                           <EditMenuBtn onClick={() => navigate(`/menu-editor/${r.id}`)} active={r.status === 'RUNNING'} />
-                          <DeleteBtn onClick={() => {}} />
+                          <DeleteBtn onClick={() => openDeleteModal(r)} />
                         </div>
                       </td>
                     </tr>
@@ -227,6 +273,143 @@ export default function Dashboard() {
       >
         <Plus size={22} />
       </button>
+
+      {deleteTarget && (
+        <div
+          onClick={closeDeleteModal}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 2000,
+            background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: '24px',
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              width: '100%', maxWidth: '440px',
+              background: '#141414',
+              border: '1px solid rgba(232,50,26,0.3)',
+              borderRadius: '18px',
+              padding: '28px',
+              boxShadow: '0 20px 60px rgba(0,0,0,0.7), 0 0 40px rgba(232,50,26,0.15)',
+              position: 'relative',
+            }}
+          >
+            <button
+              onClick={closeDeleteModal}
+              style={{
+                position: 'absolute', top: '14px', right: '14px',
+                width: '30px', height: '30px', borderRadius: '8px',
+                background: 'rgba(255,255,255,0.06)',
+                border: '1px solid rgba(255,255,255,0.08)',
+                color: '#888', cursor: 'pointer',
+                fontSize: '14px', fontWeight: 700,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}
+            >✕</button>
+
+            <div style={{
+              fontSize: '15px', fontWeight: 800, color: '#E8321A',
+              letterSpacing: '0.06em', marginBottom: '18px', paddingRight: '40px',
+            }}>
+              DELETE RESTAURANT PERMANENTLY
+            </div>
+
+            <div style={{
+              padding: '14px 16px',
+              background: 'rgba(255,255,255,0.03)',
+              border: '1px solid rgba(255,255,255,0.08)',
+              borderRadius: '10px',
+              marginBottom: '20px',
+            }}>
+              <div style={{ display: 'flex', gap: '8px', marginBottom: '8px', fontSize: '12px' }}>
+                <span style={{ color: '#666', fontWeight: 700, letterSpacing: '0.04em', minWidth: '110px' }}>UID:</span>
+                <span style={{ color: '#fff', fontFamily: 'monospace', fontWeight: 700 }}>{deleteTarget.uid}</span>
+              </div>
+              <div style={{ display: 'flex', gap: '8px', fontSize: '12px' }}>
+                <span style={{ color: '#666', fontWeight: 700, letterSpacing: '0.04em', minWidth: '110px' }}>Restaurant Name:</span>
+                <span style={{ color: '#fff', fontWeight: 700 }}>{deleteTarget.name}</span>
+              </div>
+            </div>
+
+            {deleteStage === 'initial' && (
+              <button
+                onClick={() => { setDeleteStage('confirm'); setDeleteError('') }}
+                style={{
+                  width: '100%', padding: '13px',
+                  background: '#E8321A', border: 'none', borderRadius: '10px',
+                  color: '#fff', fontSize: '13px', fontWeight: 800,
+                  letterSpacing: '0.08em', cursor: 'pointer',
+                  boxShadow: '0 0 20px rgba(232,50,26,0.4)',
+                }}
+              >
+                DELETE
+              </button>
+            )}
+
+            {deleteStage === 'confirm' && (
+              <div>
+                <div style={{ fontSize: '11px', fontWeight: 700, color: '#aaa', letterSpacing: '0.06em', marginBottom: '8px' }}>
+                  ENTER UID TO CONFIRM
+                </div>
+                <input
+                  type="text"
+                  autoFocus
+                  value={confirmUidInput}
+                  onChange={e => { setConfirmUidInput(e.target.value); setDeleteError('') }}
+                  onKeyDown={e => { if (e.key === 'Enter') handleConfirmDelete() }}
+                  placeholder={String(deleteTarget.uid)}
+                  style={{
+                    width: '100%', padding: '12px 14px',
+                    background: 'rgba(255,255,255,0.05)',
+                    border: `1px solid ${deleteError ? 'rgba(232,50,26,0.5)' : 'rgba(255,255,255,0.1)'}`,
+                    borderRadius: '10px',
+                    color: '#fff', fontSize: '14px', fontFamily: 'monospace',
+                    outline: 'none', boxSizing: 'border-box',
+                    marginBottom: deleteError ? '8px' : '14px',
+                  }}
+                />
+                {deleteError && (
+                  <div style={{ fontSize: '12px', color: '#E8321A', fontWeight: 600, marginBottom: '14px' }}>
+                    {deleteError}
+                  </div>
+                )}
+                <button
+                  onClick={handleConfirmDelete}
+                  style={{
+                    width: '100%', padding: '13px',
+                    background: '#E8321A', border: 'none', borderRadius: '10px',
+                    color: '#fff', fontSize: '13px', fontWeight: 800,
+                    letterSpacing: '0.08em', cursor: 'pointer',
+                    boxShadow: '0 0 20px rgba(232,50,26,0.4)',
+                  }}
+                >
+                  CONFIRM
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {toast && (
+        <div style={{
+          position: 'fixed',
+          bottom: '32px', left: '50%',
+          transform: 'translateX(-50%)',
+          background: 'rgba(15,15,15,0.95)',
+          border: '1px solid rgba(74,222,128,0.3)',
+          borderRadius: '50px',
+          padding: '12px 22px',
+          fontSize: '13px', fontWeight: 700, color: '#4ade80',
+          zIndex: 2100,
+          boxShadow: '0 8px 32px rgba(0,0,0,0.6), 0 0 20px rgba(74,222,128,0.1)',
+          whiteSpace: 'nowrap', letterSpacing: '0.02em',
+        }}>
+          {toast}
+        </div>
+      )}
     </div>
   )
 }
