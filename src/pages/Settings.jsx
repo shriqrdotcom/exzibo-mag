@@ -29,32 +29,63 @@ export default function Settings() {
   const [saved, setSaved] = useState(false)
   const [dirty, setDirty] = useState(false)
   const saveTimer = useRef(null)
-  const [restaurantUidQuery, setRestaurantUidQuery] = useState('0000000001')
+  const [restaurantUidQuery, setRestaurantUidQuery] = useState('')
+  const [searchedUid, setSearchedUid] = useState('')
   const [paymentTab, setPaymentTab] = useState('all')
+  const [restaurants, setRestaurants] = useState([])
 
-  const restaurantInfo = {
-    uid: '0000000001',
-    status: 'ACTIVE',
-    ownerName: 'Michael Chen (Owner)',
-    contact1: '+1 555-010-1234',
-    contact2: '+1 555-010-5678',
-    email: 'm.chen@goldenwoks.com',
+  useEffect(() => {
+    const load = () => {
+      try {
+        const main = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
+        const demo = JSON.parse(localStorage.getItem('exzibo_demo_restaurants') || '[]')
+        setRestaurants([...main, ...demo])
+      } catch {
+        setRestaurants([])
+      }
+    }
+    load()
+    window.addEventListener('storage', load)
+    return () => window.removeEventListener('storage', load)
+  }, [])
+
+  function hashStr(s) {
+    let h = 0
+    for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0
+    return Math.abs(h)
   }
 
-  const paymentRows = [
-    { uid: '0000000001', name: 'Burger Hub',    amount: 250.00, status: 'RECEIVED', date: '12 May 2025' },
-    { uid: '0000000002', name: 'Pizza Point',   amount: 180.00, status: 'PENDING',  date: '12 May 2025' },
-    { uid: '0000000003', name: 'Sushi House',   amount: 300.00, status: 'RECEIVED', date: '12 May 2025' },
-    { uid: '0000000004', name: 'Taco Town',     amount: 120.00, status: 'PENDING',  date: '12 May 2025' },
-    { uid: '0000000005', name: 'Pasta Palace',  amount: 200.00, status: 'RECEIVED', date: '12 May 2025' },
-    { uid: '0000000006', name: 'Curry Corner',  amount: 150.00, status: 'PENDING',  date: '12 May 2025' },
-    { uid: '0000000007', name: 'Grill Master',  amount: 320.00, status: 'RECEIVED', date: '12 May 2025' },
-    { uid: '0000000008', name: 'Coffee Café',   amount:  90.00, status: 'PENDING',  date: '12 May 2025' },
-  ]
+  const paymentRows = restaurants.map(r => {
+    const seed = hashStr(String(r.id || r.uid || r.name || ''))
+    const amount = 50 + (seed % 451)
+    const status = seed % 2 === 0 ? 'RECEIVED' : 'PENDING'
+    const dateObj = r.createdAt ? new Date(r.createdAt) : new Date()
+    const date = dateObj.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+    return {
+      uid: r.uid || '—',
+      name: r.name || 'Untitled',
+      amount,
+      status,
+      date,
+      owner: r.owner || '',
+      phone: r.phone || '',
+      email: r.email || '',
+      active: r.status === 'active',
+    }
+  })
 
   const filteredPayments = paymentTab === 'all'
     ? paymentRows
     : paymentRows.filter(r => r.status.toLowerCase() === paymentTab)
+
+  const totalPayments = paymentRows.length
+  const totalReceived = paymentRows.filter(r => r.status === 'RECEIVED').reduce((s, r) => s + r.amount, 0)
+  const totalPending  = paymentRows.filter(r => r.status === 'PENDING').reduce((s, r) => s + r.amount, 0)
+  const fmtMoney = n => `$ ${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+
+  const matchedRestaurant = searchedUid
+    ? restaurants.find(r => String(r.uid || '').toLowerCase() === searchedUid.toLowerCase())
+    : null
 
   useEffect(() => {
     const stored = localStorage.getItem('exzibo_settings')
@@ -274,6 +305,7 @@ export default function Settings() {
                     type="text"
                     value={restaurantUidQuery}
                     onChange={e => setRestaurantUidQuery(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') setSearchedUid(restaurantUidQuery.trim()) }}
                     placeholder="Enter Restaurant UID"
                     style={{
                       flex: 1, minWidth: 0,
@@ -283,7 +315,7 @@ export default function Settings() {
                     }}
                   />
                 </div>
-                <button style={{
+                <button onClick={() => setSearchedUid(restaurantUidQuery.trim())} style={{
                   padding: '10px 22px',
                   background: '#E8321A', border: 'none',
                   borderRadius: '8px',
@@ -293,49 +325,81 @@ export default function Settings() {
                 }}>SEARCH</button>
               </div>
 
-              <div style={{
-                background: 'rgba(255,255,255,0.02)',
-                border: '1px solid rgba(255,255,255,0.06)',
-                borderRadius: '12px',
-                padding: '18px',
-              }}>
+              {!searchedUid && (
                 <div style={{
-                  display: 'flex', justifyContent: 'space-between', gap: '12px',
-                  paddingBottom: '14px',
-                  borderBottom: '1px solid rgba(255,255,255,0.05)',
-                  marginBottom: '14px',
-                  flexWrap: 'wrap',
+                  background: 'rgba(255,255,255,0.02)',
+                  border: '1px dashed rgba(255,255,255,0.08)',
+                  borderRadius: '12px',
+                  padding: '20px',
+                  textAlign: 'center',
+                  color: '#666', fontSize: '12px',
                 }}>
-                  <div>
-                    <div style={{ fontSize: '9px', fontWeight: 600, letterSpacing: '0.1em', color: '#555', textTransform: 'uppercase', marginBottom: '4px' }}>Restaurant UID</div>
-                    <div style={{ fontSize: '15px', fontWeight: 700, color: '#fff', letterSpacing: '0.04em' }}>{restaurantInfo.uid}</div>
-                  </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: '9px', fontWeight: 600, letterSpacing: '0.1em', color: '#555', textTransform: 'uppercase', marginBottom: '4px' }}>Status</div>
-                    <div style={{ fontSize: '15px', fontWeight: 800, color: '#4ade80', letterSpacing: '0.04em' }}>{restaurantInfo.status}</div>
-                  </div>
+                  {restaurants.length === 0
+                    ? 'No restaurants created yet. Create one from the Restaurant Editor.'
+                    : `Enter a UID and press SEARCH. ${restaurants.length} restaurant${restaurants.length === 1 ? '' : 's'} available.`}
                 </div>
+              )}
 
-                {[
-                  { icon: <User size={14} />, label: 'Owner Name', value: restaurantInfo.ownerName },
-                  { icon: <Phone size={14} />, label: 'Contact No 1', value: restaurantInfo.contact1 },
-                  { icon: <Phone size={14} />, label: 'Contact No 2', value: restaurantInfo.contact2 },
-                  { icon: <Mail size={14} />, label: 'Email ID', value: restaurantInfo.email },
-                ].map((row, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '8px 0' }}>
-                    <div style={{
-                      width: '28px', height: '28px', borderRadius: '8px',
-                      background: 'rgba(255,255,255,0.04)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      color: '#888', flexShrink: 0,
-                    }}>{row.icon}</div>
-                    <div style={{ minWidth: 0 }}>
-                      <div style={{ fontSize: '10px', color: '#666', marginBottom: '2px' }}>{row.label}</div>
-                      <div style={{ fontSize: '12px', fontWeight: 600, color: '#fff' }}>{row.value}</div>
+              {searchedUid && !matchedRestaurant && (
+                <div style={{
+                  background: 'rgba(232,50,26,0.06)',
+                  border: '1px solid rgba(232,50,26,0.2)',
+                  borderRadius: '12px',
+                  padding: '16px',
+                  color: '#E8321A', fontSize: '12px', fontWeight: 600,
+                }}>
+                  No restaurant found with UID "{searchedUid}".
+                </div>
+              )}
+
+              {matchedRestaurant && (
+                <div style={{
+                  background: 'rgba(255,255,255,0.02)',
+                  border: '1px solid rgba(255,255,255,0.06)',
+                  borderRadius: '12px',
+                  padding: '18px',
+                }}>
+                  <div style={{
+                    display: 'flex', justifyContent: 'space-between', gap: '12px',
+                    paddingBottom: '14px',
+                    borderBottom: '1px solid rgba(255,255,255,0.05)',
+                    marginBottom: '14px',
+                    flexWrap: 'wrap',
+                  }}>
+                    <div>
+                      <div style={{ fontSize: '9px', fontWeight: 600, letterSpacing: '0.1em', color: '#555', textTransform: 'uppercase', marginBottom: '4px' }}>Restaurant UID</div>
+                      <div style={{ fontSize: '15px', fontWeight: 700, color: '#fff', letterSpacing: '0.04em' }}>{matchedRestaurant.uid}</div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontSize: '9px', fontWeight: 600, letterSpacing: '0.1em', color: '#555', textTransform: 'uppercase', marginBottom: '4px' }}>Status</div>
+                      <div style={{
+                        fontSize: '15px', fontWeight: 800, letterSpacing: '0.04em',
+                        color: matchedRestaurant.status === 'active' ? '#4ade80' : '#f59e0b',
+                      }}>{(matchedRestaurant.status || 'inactive').toUpperCase()}</div>
                     </div>
                   </div>
-                ))}
-              </div>
+
+                  {[
+                    { icon: <User size={14} />,  label: 'Restaurant Name', value: matchedRestaurant.name || '—' },
+                    { icon: <User size={14} />,  label: 'Owner Name',      value: matchedRestaurant.owner || '—' },
+                    { icon: <Phone size={14} />, label: 'Contact No',      value: matchedRestaurant.phone || '—' },
+                    { icon: <Mail size={14} />,  label: 'Email ID',        value: matchedRestaurant.email || '—' },
+                  ].map((row, i) => (
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '8px 0' }}>
+                      <div style={{
+                        width: '28px', height: '28px', borderRadius: '8px',
+                        background: 'rgba(255,255,255,0.04)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        color: '#888', flexShrink: 0,
+                      }}>{row.icon}</div>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontSize: '10px', color: '#666', marginBottom: '2px' }}>{row.label}</div>
+                        <div style={{ fontSize: '12px', fontWeight: 600, color: '#fff' }}>{row.value}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </Section>
 
             <Section title="SECTION 2 — PAYMENT INFO" subtitle="View all pending and received payments.">
@@ -370,9 +434,9 @@ export default function Settings() {
                 marginBottom: '18px',
               }}>
                 {[
-                  { icon: <Layers size={16} />, label: 'Total Payments', value: '128', sub: 'All Time', color: '#3b82f6' },
-                  { icon: <DollarSign size={16} />, label: 'Total Received', value: '$ 24,680.00', sub: 'All Time', color: '#4ade80' },
-                  { icon: <Clock size={16} />, label: 'Total Pending', value: '$ 3,520.00', sub: 'All Time', color: '#f59e0b' },
+                  { icon: <Layers size={16} />, label: 'Total Payments', value: String(totalPayments), sub: 'All Time', color: '#3b82f6' },
+                  { icon: <DollarSign size={16} />, label: 'Total Received', value: fmtMoney(totalReceived), sub: 'All Time', color: '#4ade80' },
+                  { icon: <Clock size={16} />, label: 'Total Pending', value: fmtMoney(totalPending), sub: 'All Time', color: '#f59e0b' },
                 ].map((card, i) => (
                   <div key={i} style={{
                     background: 'rgba(255,255,255,0.02)',
