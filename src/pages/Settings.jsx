@@ -259,21 +259,6 @@ export default function Settings() {
               </div>
             )}
 
-            <Section title="Add Social Media Links" subtitle="Enter social media profile URLs." icon={<Share2 size={22} />}>
-              <div className="social-grid">
-                {socialFields.map(({ key, label, placeholder, icon }) => (
-                  <SocialField
-                    key={key}
-                    label={label}
-                    icon={icon}
-                    value={social[key]}
-                    placeholder={placeholder}
-                    onChange={v => { setSocial(p => ({ ...p, [key]: v })); setDirty(true) }}
-                  />
-                ))}
-              </div>
-            </Section>
-
             <GoogleReviewCard
               value={googleReview}
               onChange={v => { setGoogleReview(v); setDirty(true) }}
