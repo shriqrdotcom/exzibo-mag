@@ -259,41 +259,6 @@ export default function Settings() {
               </div>
             )}
 
-            <Section title="Profile" subtitle="Manage your administrative credentials.">
-              <div className="settings-profile-avatar-row">
-                <div style={{ position: 'relative', flexShrink: 0 }}>
-                  <div style={{
-                    width: '80px', height: '80px', borderRadius: '50%',
-                    background: 'linear-gradient(135deg, #E8321A, #8a1a1a)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: '26px', fontWeight: 800,
-                    border: '3px solid rgba(232,50,26,0.3)',
-                    transition: 'all 0.2s',
-                    letterSpacing: '0.02em',
-                  }}>{getInitials(profile.name)}</div>
-                  <button style={{
-                    position: 'absolute', bottom: 0, right: 0,
-                    width: '24px', height: '24px', borderRadius: '50%',
-                    background: '#E8321A', border: 'none',
-                    color: '#fff', fontSize: '12px', cursor: 'pointer',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  }}>✎</button>
-                </div>
-                <div>
-                  <div style={{ fontSize: '18px', fontWeight: 700, transition: 'all 0.15s' }}>{profile.name || 'Your Name'}</div>
-                  <div style={{ fontSize: '13px', color: '#666', marginTop: '2px', transition: 'all 0.15s' }}>
-                    {profile.role || 'Role'}{profile.company ? ` • ${profile.company}` : ''}
-                  </div>
-                </div>
-              </div>
-              <div className="settings-two-col">
-                <SettingsField label="FULL NAME" value={profile.name} onChange={v => { setProfile(p => ({ ...p, name: v })); setDirty(true) }} />
-                <SettingsField label="EMAIL ADDRESS" value={profile.email} onChange={v => { setProfile(p => ({ ...p, email: v })); setDirty(true) }} />
-                <SettingsField label="ROLE" value={profile.role} onChange={v => { setProfile(p => ({ ...p, role: v })); setDirty(true) }} />
-                <SettingsField label="COMPANY" value={profile.company} onChange={v => { setProfile(p => ({ ...p, company: v })); setDirty(true) }} />
-              </div>
-            </Section>
-
             <Section title="Add Social Media Links" subtitle="Enter social media profile URLs." icon={<Share2 size={22} />}>
               <div className="social-grid">
                 {socialFields.map(({ key, label, placeholder, icon }) => (
