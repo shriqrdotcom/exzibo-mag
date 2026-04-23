@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import Sidebar from '../components/Sidebar'
 import AdminHeader from '../components/AdminHeader'
-import { Lock, Shield, ChevronDown, Check, Share2, Globe, ClipboardPaste, Link, Search, User, Phone, Mail, Layers, DollarSign, Clock } from 'lucide-react'
+import { Lock, Shield, ChevronDown, Check, Share2, Globe, ClipboardPaste, Link, Search, User, Phone, Mail, Layers, DollarSign, Clock, Copy } from 'lucide-react'
 import { FaFacebook, FaInstagram, FaTwitter, FaLinkedin, FaYoutube } from 'react-icons/fa'
 
 const DEFAULTS = {
@@ -37,6 +37,20 @@ export default function Settings() {
   const [editForm, setEditForm] = useState({ owner: '', contact1: '', contact2: '', email: '' })
   const [editError, setEditError] = useState('')
   const [restaurantSaved, setRestaurantSaved] = useState(false)
+  const [copiedUid, setCopiedUid] = useState('')
+
+  const copyUid = async (uid) => {
+    try {
+      await navigator.clipboard.writeText(uid)
+    } catch {
+      const ta = document.createElement('textarea')
+      ta.value = uid; document.body.appendChild(ta); ta.select()
+      try { document.execCommand('copy') } catch {}
+      document.body.removeChild(ta)
+    }
+    setCopiedUid(uid)
+    setTimeout(() => setCopiedUid(c => (c === uid ? '' : c)), 1500)
+  }
 
   useEffect(() => {
     const load = () => {
@@ -638,7 +652,29 @@ export default function Settings() {
                   <tbody>
                     {filteredPayments.map((row, i) => (
                       <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-                        <td style={{ padding: '10px 12px', color: '#888', fontFamily: 'monospace' }}>{row.uid}</td>
+                        <td style={{ padding: '10px 12px', color: '#888', fontFamily: 'monospace' }}>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                            {row.uid}
+                            <button
+                              type="button"
+                              onClick={() => copyUid(row.uid)}
+                              title={copiedUid === row.uid ? 'Copied!' : 'Copy UID'}
+                              style={{
+                                width: '20px', height: '20px',
+                                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                                background: copiedUid === row.uid ? 'rgba(74,222,128,0.15)' : 'rgba(255,255,255,0.05)',
+                                border: `1px solid ${copiedUid === row.uid ? 'rgba(74,222,128,0.35)' : 'rgba(255,255,255,0.1)'}`,
+                                borderRadius: '4px',
+                                color: copiedUid === row.uid ? '#4ade80' : '#888',
+                                cursor: 'pointer',
+                                padding: 0,
+                                transition: 'all 0.15s',
+                              }}
+                            >
+                              {copiedUid === row.uid ? <Check size={11} /> : <Copy size={11} />}
+                            </button>
+                          </span>
+                        </td>
                         <td style={{ padding: '10px 12px', color: '#ddd', fontWeight: 600 }}>{row.name}</td>
                         <td style={{ padding: '10px 12px', color: '#ccc' }}>{row.amount.toFixed(2)}</td>
                         <td style={{ padding: '10px 12px' }}>
