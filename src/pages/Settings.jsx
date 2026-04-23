@@ -259,11 +259,6 @@ export default function Settings() {
               </div>
             )}
 
-            <GoogleReviewCard
-              value={googleReview}
-              onChange={v => { setGoogleReview(v); setDirty(true) }}
-            />
-
             <Section title="Security" subtitle="Protect your account with enterprise-grade authentication protocols.">
               <ToggleRow
                 icon={<Shield size={18} />}
