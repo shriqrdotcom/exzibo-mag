@@ -259,68 +259,6 @@ export default function Settings() {
               </div>
             )}
 
-            <Section title="Preferences" subtitle="Customize your administrative experience and regional settings.">
-              <div className="settings-pref-grid">
-                <div>
-                  <label style={{ display: 'block', fontSize: '10px', fontWeight: 600, letterSpacing: '0.1em', color: '#555', marginBottom: '8px', textTransform: 'uppercase' }}>Interface Theme</label>
-                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                    {['dark', 'deeper'].map(t => (
-                      <button key={t} onClick={() => { setTheme(t); setDirty(true) }} style={{
-                        padding: '10px 20px',
-                        borderRadius: '8px',
-                        background: theme === t ? '#E8321A' : 'rgba(255,255,255,0.04)',
-                        border: `1px solid ${theme === t ? '#E8321A' : 'rgba(255,255,255,0.08)'}`,
-                        color: theme === t ? '#fff' : '#666',
-                        fontSize: '12px', fontWeight: 600,
-                        cursor: 'pointer',
-                        textTransform: 'capitalize',
-                        transition: 'all 0.2s',
-                      }}>{t}</button>
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '10px', fontWeight: 600, letterSpacing: '0.1em', color: '#555', marginBottom: '8px', textTransform: 'uppercase' }}>Language</label>
-                  <div style={{ position: 'relative' }}>
-                    <select value={language} onChange={e => { setLanguage(e.target.value); setDirty(true) }} style={{
-                      width: '100%', padding: '10px 16px',
-                      background: 'rgba(255,255,255,0.04)',
-                      border: '1px solid rgba(255,255,255,0.08)',
-                      borderRadius: '8px',
-                      color: '#ccc', fontSize: '13px',
-                      appearance: 'none',
-                      cursor: 'pointer',
-                    }}>
-                      {['English', 'French', 'Spanish', 'Italian', 'Japanese'].map(l => <option key={l} value={l}>{l}</option>)}
-                    </select>
-                    <ChevronDown size={14} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', color: '#555', pointerEvents: 'none' }} />
-                  </div>
-                </div>
-              </div>
-
-              <div style={{ marginTop: '20px' }}>
-                <div style={{ fontSize: '13px', fontWeight: 600, marginBottom: '14px', color: '#888' }}>Notifications</div>
-                {[
-                  { key: 'orders', label: 'New Orders', desc: 'Get alerted for incoming order activity' },
-                  { key: 'system', label: 'System Alerts', desc: 'Infrastructure and uptime notifications' },
-                  { key: 'updates', label: 'Product Updates', desc: 'Feature releases and platform news' },
-                ].map(({ key, label, desc }) => (
-                  <div key={key} style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    padding: '14px 0',
-                    borderBottom: '1px solid rgba(255,255,255,0.04)',
-                    gap: '12px',
-                  }}>
-                    <div style={{ minWidth: 0 }}>
-                      <div style={{ fontSize: '13px', fontWeight: 600 }}>{label}</div>
-                      <div style={{ fontSize: '12px', color: '#555', marginTop: '2px' }}>{desc}</div>
-                    </div>
-                    <Toggle value={notifications[key]} onChange={v => { setNotifications(p => ({ ...p, [key]: v })); setDirty(true) }} />
-                  </div>
-                ))}
-              </div>
-            </Section>
-
             <Section title="SECTION 1 — RESTAURANT INFO" subtitle="Search by Restaurant UID to view details.">
               <div style={{ display: 'flex', gap: '10px', marginBottom: '18px', flexWrap: 'wrap' }}>
                 <div style={{
