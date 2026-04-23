@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import Sidebar from '../components/Sidebar'
 import AdminHeader from '../components/AdminHeader'
-import { Lock, Shield, ChevronDown, Check, Share2, Globe, ClipboardPaste, Link } from 'lucide-react'
+import { Lock, Shield, ChevronDown, Check, Share2, Globe, ClipboardPaste, Link, Search, User, Phone, Mail, Layers, DollarSign, Clock } from 'lucide-react'
 import { FaFacebook, FaInstagram, FaTwitter, FaLinkedin, FaYoutube } from 'react-icons/fa'
 
 const DEFAULTS = {
@@ -29,6 +29,32 @@ export default function Settings() {
   const [saved, setSaved] = useState(false)
   const [dirty, setDirty] = useState(false)
   const saveTimer = useRef(null)
+  const [restaurantUidQuery, setRestaurantUidQuery] = useState('0000000001')
+  const [paymentTab, setPaymentTab] = useState('all')
+
+  const restaurantInfo = {
+    uid: '0000000001',
+    status: 'ACTIVE',
+    ownerName: 'Michael Chen (Owner)',
+    contact1: '+1 555-010-1234',
+    contact2: '+1 555-010-5678',
+    email: 'm.chen@goldenwoks.com',
+  }
+
+  const paymentRows = [
+    { uid: '0000000001', name: 'Burger Hub',    amount: 250.00, status: 'RECEIVED', date: '12 May 2025' },
+    { uid: '0000000002', name: 'Pizza Point',   amount: 180.00, status: 'PENDING',  date: '12 May 2025' },
+    { uid: '0000000003', name: 'Sushi House',   amount: 300.00, status: 'RECEIVED', date: '12 May 2025' },
+    { uid: '0000000004', name: 'Taco Town',     amount: 120.00, status: 'PENDING',  date: '12 May 2025' },
+    { uid: '0000000005', name: 'Pasta Palace',  amount: 200.00, status: 'RECEIVED', date: '12 May 2025' },
+    { uid: '0000000006', name: 'Curry Corner',  amount: 150.00, status: 'PENDING',  date: '12 May 2025' },
+    { uid: '0000000007', name: 'Grill Master',  amount: 320.00, status: 'RECEIVED', date: '12 May 2025' },
+    { uid: '0000000008', name: 'Coffee Café',   amount:  90.00, status: 'PENDING',  date: '12 May 2025' },
+  ]
+
+  const filteredPayments = paymentTab === 'all'
+    ? paymentRows
+    : paymentRows.filter(r => r.status.toLowerCase() === paymentTab)
 
   useEffect(() => {
     const stored = localStorage.getItem('exzibo_settings')
@@ -391,6 +417,192 @@ export default function Settings() {
                     <Toggle value={notifications[key]} onChange={v => { setNotifications(p => ({ ...p, [key]: v })); setDirty(true) }} />
                   </div>
                 ))}
+              </div>
+            </Section>
+
+            <Section title="SECTION 1 — RESTAURANT INFO" subtitle="Search by Restaurant UID to view details.">
+              <div style={{ display: 'flex', gap: '10px', marginBottom: '18px', flexWrap: 'wrap' }}>
+                <div style={{
+                  flex: 1, minWidth: '180px',
+                  display: 'flex', alignItems: 'center', gap: '8px',
+                  padding: '0 12px',
+                  background: 'rgba(255,255,255,0.04)',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  borderRadius: '8px',
+                }}>
+                  <Search size={14} color="#555" />
+                  <input
+                    type="text"
+                    value={restaurantUidQuery}
+                    onChange={e => setRestaurantUidQuery(e.target.value)}
+                    placeholder="Enter Restaurant UID"
+                    style={{
+                      flex: 1, minWidth: 0,
+                      padding: '10px 0',
+                      background: 'transparent', border: 'none',
+                      color: '#ccc', fontSize: '12px', outline: 'none',
+                    }}
+                  />
+                </div>
+                <button style={{
+                  padding: '10px 22px',
+                  background: '#E8321A', border: 'none',
+                  borderRadius: '8px',
+                  color: '#fff', fontSize: '11px', fontWeight: 700,
+                  letterSpacing: '0.08em', cursor: 'pointer',
+                  boxShadow: '0 0 14px rgba(232,50,26,0.35)',
+                }}>SEARCH</button>
+              </div>
+
+              <div style={{
+                background: 'rgba(255,255,255,0.02)',
+                border: '1px solid rgba(255,255,255,0.06)',
+                borderRadius: '12px',
+                padding: '18px',
+              }}>
+                <div style={{
+                  display: 'flex', justifyContent: 'space-between', gap: '12px',
+                  paddingBottom: '14px',
+                  borderBottom: '1px solid rgba(255,255,255,0.05)',
+                  marginBottom: '14px',
+                  flexWrap: 'wrap',
+                }}>
+                  <div>
+                    <div style={{ fontSize: '9px', fontWeight: 600, letterSpacing: '0.1em', color: '#555', textTransform: 'uppercase', marginBottom: '4px' }}>Restaurant UID</div>
+                    <div style={{ fontSize: '15px', fontWeight: 700, color: '#fff', letterSpacing: '0.04em' }}>{restaurantInfo.uid}</div>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: '9px', fontWeight: 600, letterSpacing: '0.1em', color: '#555', textTransform: 'uppercase', marginBottom: '4px' }}>Status</div>
+                    <div style={{ fontSize: '15px', fontWeight: 800, color: '#4ade80', letterSpacing: '0.04em' }}>{restaurantInfo.status}</div>
+                  </div>
+                </div>
+
+                {[
+                  { icon: <User size={14} />, label: 'Owner Name', value: restaurantInfo.ownerName },
+                  { icon: <Phone size={14} />, label: 'Contact No 1', value: restaurantInfo.contact1 },
+                  { icon: <Phone size={14} />, label: 'Contact No 2', value: restaurantInfo.contact2 },
+                  { icon: <Mail size={14} />, label: 'Email ID', value: restaurantInfo.email },
+                ].map((row, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '8px 0' }}>
+                    <div style={{
+                      width: '28px', height: '28px', borderRadius: '8px',
+                      background: 'rgba(255,255,255,0.04)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      color: '#888', flexShrink: 0,
+                    }}>{row.icon}</div>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontSize: '10px', color: '#666', marginBottom: '2px' }}>{row.label}</div>
+                      <div style={{ fontSize: '12px', fontWeight: 600, color: '#fff' }}>{row.value}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Section>
+
+            <Section title="SECTION 2 — PAYMENT INFO" subtitle="View all pending and received payments.">
+              <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
+                {[
+                  { key: 'all', label: 'ALL PAYMENTS' },
+                  { key: 'pending', label: 'PENDING' },
+                  { key: 'received', label: 'RECEIVED' },
+                ].map(tab => {
+                  const active = paymentTab === tab.key
+                  return (
+                    <button key={tab.key} onClick={() => setPaymentTab(tab.key)} style={{
+                      flex: 1, minWidth: '110px',
+                      padding: '10px 14px',
+                      background: active ? '#E8321A' : 'rgba(255,255,255,0.04)',
+                      border: `1px solid ${active ? '#E8321A' : 'rgba(255,255,255,0.08)'}`,
+                      borderRadius: '8px',
+                      color: active ? '#fff' : '#777',
+                      fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em',
+                      cursor: 'pointer',
+                      boxShadow: active ? '0 0 12px rgba(232,50,26,0.3)' : 'none',
+                      transition: 'all 0.2s',
+                    }}>{tab.label}</button>
+                  )
+                })}
+              </div>
+
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+                gap: '10px',
+                marginBottom: '18px',
+              }}>
+                {[
+                  { icon: <Layers size={16} />, label: 'Total Payments', value: '128', sub: 'All Time', color: '#3b82f6' },
+                  { icon: <DollarSign size={16} />, label: 'Total Received', value: '$ 24,680.00', sub: 'All Time', color: '#4ade80' },
+                  { icon: <Clock size={16} />, label: 'Total Pending', value: '$ 3,520.00', sub: 'All Time', color: '#f59e0b' },
+                ].map((card, i) => (
+                  <div key={i} style={{
+                    background: 'rgba(255,255,255,0.02)',
+                    border: '1px solid rgba(255,255,255,0.06)',
+                    borderRadius: '10px',
+                    padding: '12px',
+                    display: 'flex', gap: '10px', alignItems: 'center',
+                  }}>
+                    <div style={{
+                      width: '34px', height: '34px', borderRadius: '8px',
+                      background: `${card.color}1f`,
+                      border: `1px solid ${card.color}33`,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      color: card.color, flexShrink: 0,
+                    }}>{card.icon}</div>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontSize: '10px', color: '#666' }}>{card.label}</div>
+                      <div style={{ fontSize: '14px', fontWeight: 700, color: '#fff', margin: '2px 0' }}>{card.value}</div>
+                      <div style={{ fontSize: '9px', color: '#555', letterSpacing: '0.06em' }}>{card.sub}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div style={{
+                background: 'rgba(255,255,255,0.02)',
+                border: '1px solid rgba(255,255,255,0.06)',
+                borderRadius: '10px',
+                overflowX: 'auto',
+              }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px', minWidth: '520px' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                      {['Restaurant UID', 'Restaurant Name', 'Amount', 'Status', 'Date'].map(h => (
+                        <th key={h} style={{
+                          textAlign: 'left',
+                          padding: '10px 12px',
+                          fontSize: '9px', fontWeight: 700,
+                          color: '#666', letterSpacing: '0.1em',
+                          textTransform: 'uppercase',
+                        }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredPayments.map((row, i) => (
+                      <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                        <td style={{ padding: '10px 12px', color: '#888', fontFamily: 'monospace' }}>{row.uid}</td>
+                        <td style={{ padding: '10px 12px', color: '#ddd', fontWeight: 600 }}>{row.name}</td>
+                        <td style={{ padding: '10px 12px', color: '#ccc' }}>{row.amount.toFixed(2)}</td>
+                        <td style={{ padding: '10px 12px' }}>
+                          <span style={{
+                            display: 'inline-block',
+                            padding: '3px 8px',
+                            borderRadius: '6px',
+                            fontSize: '9px', fontWeight: 700, letterSpacing: '0.08em',
+                            color: row.status === 'RECEIVED' ? '#4ade80' : '#f59e0b',
+                            background: row.status === 'RECEIVED' ? 'rgba(74,222,128,0.12)' : 'rgba(245,158,11,0.12)',
+                            border: `1px solid ${row.status === 'RECEIVED' ? 'rgba(74,222,128,0.25)' : 'rgba(245,158,11,0.25)'}`,
+                          }}>{row.status}</span>
+                        </td>
+                        <td style={{ padding: '10px 12px', color: '#888' }}>{row.date}</td>
+                      </tr>
+                    ))}
+                    {filteredPayments.length === 0 && (
+                      <tr><td colSpan={5} style={{ padding: '18px', textAlign: 'center', color: '#555', fontSize: '11px' }}>No payments found.</td></tr>
+                    )}
+                  </tbody>
+                </table>
               </div>
             </Section>
 

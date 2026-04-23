@@ -1,0 +1,31 @@
+> **Task: Add two new sections to the existing Settings page — "Restaurant Info" and "Payment Info" — without touching or breaking any existing settings sections or functionality.**
+>
+> **SECTION 1 — RESTAURANT INFO**
+> Add a section titled "SECTION 1 — RESTAURANT INFO" with subtitle: *"Search by Restaurant UID to view details."*
+> - Add a search input field with placeholder "Enter Restaurant UID" and a red "SEARCH" button beside it
+> - Below the search bar, show a result card (dark background) with:
+>   - Top row: "RESTAURANT UID" label with value (e.g. 0000000001) on the left, "STATUS" label with value "ACTIVE" (bold) on the right
+>   - Below that, four info rows each with an icon and two lines: label (small, muted) + value (white, bold):
+>     - Person icon → "Owner Name" / "Michael Chen (Owner)"
+>     - Phone icon → "Contact No 1" / "+1 555-010-1234"
+>     - Phone icon → "Contact No 2" / "+1 555-010-5678"
+>     - Email icon → "Email ID" / "m.chen@goldenwoks.com"
+> - Keep font sizes compact — slightly smaller than the rest of the settings page
+>
+> **SECTION 2 — PAYMENT INFO**
+> Add a section titled "SECTION 2 — PAYMENT INFO" with subtitle: *"View all pending and received payments."*
+> - Three tab buttons: "ALL PAYMENTS" (active, red filled), "PENDING", "RECEIVED"
+> - Three stat cards in a row:
+>   - 🔵 "Total Payments — 128 — All Time"
+>   - 🟢 "Total Received — $24,680.00 — All Time"
+>   - 🟠 "Total Pending — $3,520.00 — All Time"
+> - Below the stat cards, a compact payments table with columns: RESTAURANT UID, RESTAURANT NAME, AMOUNT, STATUS, DATE
+>   - Status badges: "RECEIVED" in green, "PENDING" in orange
+>   - Rows should be compact and slightly smaller font
+>
+> **IMPORTANT CONSTRAINTS:**
+> - Do NOT modify, delete, or restructure any existing settings sections
+> - Match the existing dark theme (black background, red accent, white text)
+> - Keep all elements slightly smaller/more compact than the reference image
+> - Append these two sections at the bottom of the Settings page
+> - Preserve all existing routes, state, and API connections
