@@ -38,6 +38,61 @@ export default function Settings() {
   const [editError, setEditError] = useState('')
   const [restaurantSaved, setRestaurantSaved] = useState(false)
   const [copiedUid, setCopiedUid] = useState('')
+  const [paymentData, setPaymentData] = useState({})
+  const [amountModalUid, setAmountModalUid] = useState(null)
+  const [amountInput, setAmountInput] = useState('')
+  const [selectedMonth, setSelectedMonth] = useState('')
+  const [monthInput, setMonthInput] = useState('')
+
+  const MONTHS = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC']
+
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('exzibo_payment_amounts') || '{}')
+      setPaymentData(saved)
+    } catch {
+      setPaymentData({})
+    }
+  }, [])
+
+  const persistPaymentData = (next) => {
+    setPaymentData(next)
+    try { localStorage.setItem('exzibo_payment_amounts', JSON.stringify(next)) } catch {}
+  }
+
+  const confirmAddAmount = () => {
+    const n = parseFloat(amountInput)
+    if (!isFinite(n) || n <= 0 || !amountModalUid) return
+    const prev = paymentData[amountModalUid] || { total: 0, months: [] }
+    const next = { ...paymentData, [amountModalUid]: { ...prev, total: (prev.total || 0) + n } }
+    persistPaymentData(next)
+    setAmountInput('')
+  }
+
+  const confirmAddMonth = () => {
+    const n = parseFloat(monthInput)
+    if (!isFinite(n) || n <= 0 || !selectedMonth || !amountModalUid) return
+    const prev = paymentData[amountModalUid] || { total: 0, months: [] }
+    const next = {
+      ...paymentData,
+      [amountModalUid]: { ...prev, months: [...(prev.months || []), { month: selectedMonth, amount: n }] },
+    }
+    persistPaymentData(next)
+    setMonthInput('')
+  }
+
+  const removeMonthEntry = (uid, idx) => {
+    const prev = paymentData[uid] || { total: 0, months: [] }
+    const nextMonths = (prev.months || []).filter((_, i) => i !== idx)
+    persistPaymentData({ ...paymentData, [uid]: { ...prev, months: nextMonths } })
+  }
+
+  const closeAmountModal = () => {
+    setAmountModalUid(null)
+    setAmountInput('')
+    setSelectedMonth('')
+    setMonthInput('')
+  }
 
   const copyUid = async (uid) => {
     try {
@@ -75,10 +130,11 @@ export default function Settings() {
 
   const paymentRows = restaurants.map(r => {
     const seed = hashStr(String(r.id || r.uid || r.name || ''))
-    const amount = 50 + (seed % 451)
     const status = seed % 2 === 0 ? 'RECEIVED' : 'PENDING'
     const dateObj = r.createdAt ? new Date(r.createdAt) : new Date()
     const date = dateObj.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+    const stored = paymentData[r.uid]
+    const amount = stored && typeof stored.total === 'number' ? stored.total : 0
     return {
       uid: r.uid || '—',
       name: r.name || 'Untitled',
@@ -91,6 +147,12 @@ export default function Settings() {
       active: r.status === 'active',
     }
   })
+
+  const fmtAmount = (n) => {
+    if (!n || n <= 0) return '00'
+    const rounded = Math.round(n)
+    return rounded.toLocaleString('en-US')
+  }
 
   const filteredPayments = paymentTab === 'all'
     ? paymentRows
@@ -676,7 +738,26 @@ export default function Settings() {
                           </span>
                         </td>
                         <td style={{ padding: '10px 12px', color: '#ddd', fontWeight: 600 }}>{row.name}</td>
-                        <td style={{ padding: '10px 12px', color: '#ccc' }}>{row.amount.toFixed(2)}</td>
+                        <td style={{ padding: '10px 12px', color: '#ccc' }}>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                            <span>{fmtAmount(row.amount)}</span>
+                            <button
+                              type="button"
+                              onClick={() => { setAmountModalUid(row.uid); setAmountInput(''); setSelectedMonth(''); setMonthInput('') }}
+                              style={{
+                                padding: '3px 10px',
+                                background: '#FF69B4',
+                                border: 'none',
+                                borderRadius: '999px',
+                                color: '#fff',
+                                fontSize: '9px', fontWeight: 800,
+                                letterSpacing: '0.08em',
+                                cursor: 'pointer',
+                                boxShadow: '0 0 8px rgba(255,105,180,0.35)',
+                              }}
+                            >ADD</button>
+                          </span>
+                        </td>
                         <td style={{ padding: '10px 12px' }}>
                           <span style={{
                             display: 'inline-block',
@@ -734,6 +815,172 @@ export default function Settings() {
           </main>
         </div>
       </div>
+
+      {amountModalUid && (() => {
+        const entry = paymentData[amountModalUid] || { total: 0, months: [] }
+        return (
+          <div
+            onClick={closeAmountModal}
+            style={{
+              position: 'fixed', inset: 0, zIndex: 1000,
+              background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              padding: '20px',
+            }}
+          >
+            <div
+              onClick={e => e.stopPropagation()}
+              style={{
+                background: '#141414',
+                border: '1px solid rgba(255,255,255,0.08)',
+                borderRadius: '16px',
+                width: '100%', maxWidth: '520px',
+                maxHeight: '90vh', overflowY: 'auto',
+                padding: '22px',
+                color: '#fff',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px' }}>
+                <div>
+                  <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.1em', color: '#FF69B4' }}>AMOUNT MANAGER</div>
+                  <div style={{ fontSize: '13px', color: '#888', marginTop: '2px', fontFamily: 'monospace' }}>UID: {amountModalUid}</div>
+                </div>
+                <button onClick={closeAmountModal} style={{
+                  width: '30px', height: '30px', borderRadius: '8px',
+                  background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)',
+                  color: '#ccc', cursor: 'pointer', fontSize: '14px', fontWeight: 700,
+                }}>✕</button>
+              </div>
+
+              <div style={{
+                background: 'rgba(255,105,180,0.08)',
+                border: '1px solid rgba(255,105,180,0.25)',
+                borderRadius: '12px',
+                padding: '16px', marginBottom: '16px',
+              }}>
+                <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', color: '#FF69B4', marginBottom: '6px' }}>TOTAL AMOUNT</div>
+                <div style={{ fontSize: '26px', fontWeight: 800, color: '#fff' }}>{fmtAmount(entry.total)} <span style={{ fontSize: '12px', color: '#888', fontWeight: 600 }}>INR</span></div>
+              </div>
+
+              <div style={{ marginBottom: '20px' }}>
+                <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', color: '#ccc', marginBottom: '8px' }}>ADD AMOUNT</div>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  <input
+                    type="number"
+                    value={amountInput}
+                    onChange={e => setAmountInput(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') confirmAddAmount() }}
+                    placeholder="e.g. 300"
+                    style={{
+                      flex: 1, minWidth: '140px',
+                      padding: '10px 12px',
+                      background: 'rgba(255,255,255,0.04)',
+                      border: '1px solid rgba(255,255,255,0.08)',
+                      borderRadius: '8px',
+                      color: '#fff', fontSize: '13px', outline: 'none',
+                    }}
+                  />
+                  <button onClick={confirmAddAmount} style={{
+                    padding: '10px 20px',
+                    background: '#FF69B4', border: 'none', borderRadius: '8px',
+                    color: '#fff', fontSize: '11px', fontWeight: 800, letterSpacing: '0.08em',
+                    cursor: 'pointer',
+                    boxShadow: '0 0 12px rgba(255,105,180,0.4)',
+                  }}>CONFIRM</button>
+                </div>
+              </div>
+
+              <div style={{
+                paddingTop: '16px',
+                borderTop: '1px solid rgba(255,255,255,0.06)',
+              }}>
+                <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', color: '#ccc', marginBottom: '10px' }}>MONTH-WISE</div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '6px', marginBottom: '12px' }}>
+                  {MONTHS.map(m => {
+                    const active = selectedMonth === m
+                    return (
+                      <button
+                        key={m}
+                        onClick={() => setSelectedMonth(active ? '' : m)}
+                        style={{
+                          padding: '8px 4px',
+                          background: active ? '#FF69B4' : 'rgba(255,255,255,0.04)',
+                          border: `1px solid ${active ? '#FF69B4' : 'rgba(255,255,255,0.08)'}`,
+                          borderRadius: '6px',
+                          color: active ? '#fff' : '#999',
+                          fontSize: '10px', fontWeight: 700, letterSpacing: '0.06em',
+                          cursor: 'pointer',
+                        }}
+                      >{m}</button>
+                    )
+                  })}
+                </div>
+
+                {selectedMonth && (
+                  <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', flexWrap: 'wrap' }}>
+                    <input
+                      type="number"
+                      value={monthInput}
+                      onChange={e => setMonthInput(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter') confirmAddMonth() }}
+                      placeholder={`Amount for ${selectedMonth}`}
+                      style={{
+                        flex: 1, minWidth: '140px',
+                        padding: '10px 12px',
+                        background: 'rgba(255,255,255,0.04)',
+                        border: '1px solid rgba(255,255,255,0.08)',
+                        borderRadius: '8px',
+                        color: '#fff', fontSize: '13px', outline: 'none',
+                      }}
+                    />
+                    <button onClick={confirmAddMonth} style={{
+                      padding: '10px 16px',
+                      background: '#FF69B4', border: 'none', borderRadius: '8px',
+                      color: '#fff', fontSize: '10px', fontWeight: 800, letterSpacing: '0.08em',
+                      cursor: 'pointer',
+                      boxShadow: '0 0 12px rgba(255,105,180,0.4)',
+                    }}>ADD MONTH</button>
+                  </div>
+                )}
+
+                {entry.months && entry.months.length > 0 && (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                    {entry.months.map((m, idx) => (
+                      <div key={idx} style={{
+                        display: 'inline-flex', alignItems: 'center', gap: '6px',
+                        padding: '5px 10px',
+                        background: 'rgba(74,222,128,0.08)',
+                        border: '1px solid rgba(74,222,128,0.2)',
+                        borderRadius: '999px',
+                        fontSize: '10px', fontWeight: 600,
+                        color: '#4ade80',
+                        letterSpacing: '0.04em',
+                      }}>
+                        <span>✅</span>
+                        <span style={{ color: '#FF69B4', fontWeight: 800 }}>{m.month}</span>
+                        <span style={{ color: '#fff' }}>— {fmtAmount(m.amount)} INR Added</span>
+                        <button
+                          onClick={() => removeMonthEntry(amountModalUid, idx)}
+                          title="Remove"
+                          style={{
+                            background: 'transparent', border: 'none',
+                            color: '#888', cursor: 'pointer',
+                            fontSize: '12px', fontWeight: 700, padding: 0, marginLeft: '2px',
+                          }}
+                        >✕</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {(!entry.months || entry.months.length === 0) && !selectedMonth && (
+                  <div style={{ fontSize: '11px', color: '#555' }}>Select a month above to log an amount.</div>
+                )}
+              </div>
+            </div>
+          </div>
+        )
+      })()}
     </>
   )
 }

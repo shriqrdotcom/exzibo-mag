@@ -1,0 +1,80 @@
+```
+I need you to modify the Amount & Status section of my Exzibo platform. Follow these instructions EXACTLY and do NOT touch any other existing functionality.
+
+---
+
+## SCOPE
+Only modify the Amount/Status table/list component. Do not change routing, auth, sidebar, or any other section.
+
+---
+
+## CHANGES REQUIRED
+
+### 1. Default Amount Display
+- Change the default amount display format from "214.00" style to just "00" (no decimals, no extra zeros).
+- This is only the DEFAULT/empty state display.
+
+---
+
+### 2. ADD Button (Pink)
+- After every amount value in the amount column, add a small [ADD] button.
+- Button color: #FF69B4 (hot pink / deep pink).
+- Button style: small, rounded pill shape, bold text, sits inline next to the amount value.
+
+---
+
+### 3. ADD Button Modal/Popup
+When the [ADD] button is clicked, open a modal/popup with the following layout:
+
+**TOP SECTION — TOTAL AMOUNT**
+- Label: "TOTAL AMOUNT"
+- Shows the running total (starts at 0, updates after each confirmation).
+
+**MIDDLE SECTION — ADD AMOUNT**
+- Label: "ADD AMOUNT"
+- Input field: user types a number (e.g. 300)
+- Button: [CONFIRM] — pink color (#FF69B4)
+
+**LOGIC:**
+- First open: Total Amount = 0
+- User types 300 → clicks CONFIRM → Total Amount becomes 300
+- User opens again, types 100 → clicks CONFIRM → Total Amount becomes 400 (cumulative addition)
+- The TOTAL AMOUNT field always shows the running cumulative sum.
+- Persist this total in local state (or localStorage so it survives refresh).
+
+---
+
+### 4. Month-wise Calculation Section
+Below the ADD AMOUNT section inside the modal, add a "Month-wise" section:
+
+- Show 12 buttons/tabs for each month: JAN, FEB, MAR, APR, MAY, JUN, JUL, AUG, SEP, OCT, NOV, DEC
+- When user clicks a month (e.g. JAN), an input appears where they can type an amount (e.g. 500).
+- A [ADD MONTH] confirm button appears.
+- When clicked, show a confirmation tag/chip below that reads:
+  ✅ JAN — 500 INR Added
+- Each month can have its own logged entry shown as a list of chips/tags below.
+- Style the chips in dark background with pink/green accent text matching the existing dark theme.
+
+---
+
+## STYLING RULES
+- Match the existing dark theme: dark background (#1a1a1a or similar), white/light text, green for RECEIVED badges, orange/amber for PENDING badges.
+- Pink (#FF69B4) only for the ADD button and CONFIRM buttons.
+- Modal should have a dark overlay background with a dark card popup.
+- Do NOT change any existing badge colors (green RECEIVED, orange PENDING).
+
+---
+
+## DO NOT TOUCH
+- Existing routing or navigation
+- Auth / login flow
+- Super Admin, Owner, Manager, Staff panels
+- Demo Dashboard or any demo-related pages
+- Any other section outside the Amount/Status component
+
+---
+
+Make all changes non-destructive. Only add new UI elements and logic to the Amount/Status section.
+```
+
+---
