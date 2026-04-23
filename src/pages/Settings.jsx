@@ -33,6 +33,10 @@ export default function Settings() {
   const [searchedUid, setSearchedUid] = useState('')
   const [paymentTab, setPaymentTab] = useState('all')
   const [restaurants, setRestaurants] = useState([])
+  const [editingRestaurant, setEditingRestaurant] = useState(false)
+  const [editForm, setEditForm] = useState({ owner: '', contact1: '', contact2: '', email: '' })
+  const [editError, setEditError] = useState('')
+  const [restaurantSaved, setRestaurantSaved] = useState(false)
 
   useEffect(() => {
     const load = () => {
@@ -86,6 +90,52 @@ export default function Settings() {
   const matchedRestaurant = searchedUid
     ? restaurants.find(r => String(r.uid || '').toLowerCase() === searchedUid.toLowerCase())
     : null
+
+  const openEditRestaurant = () => {
+    if (!matchedRestaurant) return
+    setEditForm({
+      owner: matchedRestaurant.owner || '',
+      contact1: matchedRestaurant.phone || matchedRestaurant.contact1 || '',
+      contact2: matchedRestaurant.contact2 || '',
+      email: matchedRestaurant.email || '',
+    })
+    setEditError('')
+    setEditingRestaurant(true)
+  }
+
+  const cancelEditRestaurant = () => {
+    setEditingRestaurant(false)
+    setEditError('')
+  }
+
+  const saveEditRestaurant = () => {
+    const owner = editForm.owner.trim()
+    const email = editForm.email.trim()
+    if (!owner) { setEditError('Name is required.'); return }
+    if (!email) { setEditError('Gmail ID is required.'); return }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { setEditError('Please enter a valid Gmail ID.'); return }
+
+    const updateList = (key) => {
+      try {
+        const list = JSON.parse(localStorage.getItem(key) || '[]')
+        const next = list.map(r => r.uid === matchedRestaurant.uid
+          ? { ...r, owner, phone: editForm.contact1.trim(), contact1: editForm.contact1.trim(), contact2: editForm.contact2.trim(), email }
+          : r
+        )
+        localStorage.setItem(key, JSON.stringify(next))
+      } catch {}
+    }
+    updateList('exzibo_restaurants')
+    updateList('exzibo_demo_restaurants')
+
+    const main = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
+    const demo = JSON.parse(localStorage.getItem('exzibo_demo_restaurants') || '[]')
+    setRestaurants([...main, ...demo])
+    setEditingRestaurant(false)
+    setEditError('')
+    setRestaurantSaved(true)
+    setTimeout(() => setRestaurantSaved(false), 2500)
+  }
 
   useEffect(() => {
     const stored = localStorage.getItem('exzibo_settings')
@@ -315,7 +365,7 @@ export default function Settings() {
                     }}
                   />
                 </div>
-                <button onClick={() => setSearchedUid(restaurantUidQuery.trim())} style={{
+                <button onClick={() => { setSearchedUid(restaurantUidQuery.trim()); setEditingRestaurant(false) }} style={{
                   padding: '10px 22px',
                   background: '#E8321A', border: 'none',
                   borderRadius: '8px',
@@ -392,6 +442,7 @@ export default function Settings() {
                     </div>
                     <button
                       type="button"
+                      onClick={openEditRestaurant}
                       style={{
                         flexShrink: 0,
                         padding: '7px 16px',
@@ -408,9 +459,10 @@ export default function Settings() {
                   </div>
 
                   {[
-                    { icon: <User size={14} />,  label: 'Owner Name',      value: matchedRestaurant.owner || '—' },
-                    { icon: <Phone size={14} />, label: 'Contact No',      value: matchedRestaurant.phone || '—' },
-                    { icon: <Mail size={14} />,  label: 'Email ID',        value: matchedRestaurant.email || '—' },
+                    { icon: <User size={14} />,  label: 'Owner Name',   value: matchedRestaurant.owner || '—' },
+                    { icon: <Phone size={14} />, label: 'Contact No 1', value: matchedRestaurant.contact1 || matchedRestaurant.phone || '—' },
+                    { icon: <Phone size={14} />, label: 'Contact No 2', value: matchedRestaurant.contact2 || '—' },
+                    { icon: <Mail size={14} />,  label: 'Gmail ID',     value: matchedRestaurant.email || '—' },
                   ].map((row, i) => (
                     <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '8px 0' }}>
                       <div style={{
@@ -425,6 +477,81 @@ export default function Settings() {
                       </div>
                     </div>
                   ))}
+
+                  {editingRestaurant && (
+                    <div style={{
+                      marginTop: '14px',
+                      paddingTop: '14px',
+                      borderTop: '1px solid rgba(255,255,255,0.06)',
+                    }}>
+                      <div style={{ fontSize: '11px', fontWeight: 700, color: '#E8321A', letterSpacing: '0.08em', marginBottom: '12px' }}>EDIT RESTAURANT INFO</div>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                        {[
+                          { key: 'owner',    label: 'Name',         type: 'text',  required: true },
+                          { key: 'email',    label: 'Gmail ID',     type: 'email', required: true },
+                          { key: 'contact1', label: 'Contact No 1', type: 'tel' },
+                          { key: 'contact2', label: 'Contact No 2', type: 'tel' },
+                        ].map(f => (
+                          <div key={f.key} style={{ minWidth: 0 }}>
+                            <label style={{ display: 'block', fontSize: '10px', fontWeight: 600, letterSpacing: '0.1em', color: '#666', marginBottom: '6px', textTransform: 'uppercase' }}>
+                              {f.label}{f.required && <span style={{ color: '#E8321A' }}> *</span>}
+                            </label>
+                            <input
+                              type={f.type}
+                              value={editForm[f.key]}
+                              onChange={e => setEditForm(s => ({ ...s, [f.key]: e.target.value }))}
+                              style={{
+                                width: '100%',
+                                padding: '10px 12px',
+                                background: 'rgba(255,255,255,0.04)',
+                                border: '1px solid rgba(255,255,255,0.08)',
+                                borderRadius: '8px',
+                                color: '#fff', fontSize: '12px',
+                                outline: 'none', boxSizing: 'border-box',
+                              }}
+                            />
+                          </div>
+                        ))}
+                      </div>
+
+                      {editError && (
+                        <div style={{ marginTop: '10px', fontSize: '11px', color: '#E8321A', fontWeight: 600 }}>{editError}</div>
+                      )}
+
+                      <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '14px', flexWrap: 'wrap' }}>
+                        <button onClick={cancelEditRestaurant} style={{
+                          padding: '9px 18px',
+                          background: 'transparent',
+                          border: '1px solid rgba(255,255,255,0.15)',
+                          borderRadius: '8px',
+                          color: '#ccc', fontSize: '11px', fontWeight: 700, letterSpacing: '0.06em',
+                          cursor: 'pointer',
+                        }}>CANCEL</button>
+                        <button onClick={saveEditRestaurant} style={{
+                          padding: '9px 22px',
+                          background: '#E8321A',
+                          border: 'none',
+                          borderRadius: '8px',
+                          color: '#fff', fontSize: '11px', fontWeight: 700, letterSpacing: '0.06em',
+                          cursor: 'pointer',
+                          boxShadow: '0 0 12px rgba(232,50,26,0.35)',
+                        }}>SAVE</button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {restaurantSaved && (
+                <div style={{
+                  marginTop: '12px',
+                  padding: '10px 14px',
+                  background: 'rgba(34,197,94,0.1)',
+                  border: '1px solid rgba(34,197,94,0.25)',
+                  borderRadius: '8px',
+                  color: '#4ade80', fontSize: '12px', fontWeight: 600,
+                }}>
+                  ✓ Restaurant info updated successfully
                 </div>
               )}
             </Section>

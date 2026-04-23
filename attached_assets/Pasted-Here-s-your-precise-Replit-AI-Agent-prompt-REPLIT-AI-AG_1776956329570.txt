@@ -1,0 +1,33 @@
+Here's your precise Replit AI Agent prompt:
+
+---
+
+**REPLIT AI AGENT PROMPT:**
+
+> **Task: Fix the Edit button in the Restaurant Info section on the Settings page. Currently the button exists but does nothing. Make it open an edit form/modal when clicked — without breaking any existing functionality.**
+>
+> **WHAT THE EDIT BUTTON SHOULD DO:**
+> When the user clicks the Edit button on the Restaurant Info card, open an editable form (inline below the card OR as a modal — whichever matches the existing UI pattern on this page) with the following fields:
+>
+> 1. **Name** — text input, pre-filled with the current Owner Name value
+> 2. **Contact No 1** — number/tel input, pre-filled with current Contact No 1 value
+> 3. **Contact No 2** — number/tel input, pre-filled with current Contact No 2 value
+> 4. **Gmail ID** — email input, pre-filled with current Email ID value
+>
+> **FORM BEHAVIOUR:**
+> - All four fields must be pre-populated with the existing saved data when the form opens
+> - Add a **"Save"** button (red, matching existing button style) that updates the values in the database and refreshes the displayed card with the new data
+> - Add a **"Cancel"** button that closes the form without saving any changes
+> - Show a success message/toast after saving (e.g. "Restaurant info updated successfully")
+> - Validate that Name and Gmail ID fields are not empty before saving
+>
+> **IMPORTANT CONSTRAINTS:**
+> - Do NOT remove or redesign the Edit button itself
+> - Do NOT touch any other section on the Settings page
+> - Do NOT break the Search by UID functionality or the Payment Info section
+> - Match the existing dark theme (black background, red accent, white text, same input field styling as the rest of the page)
+> - Connect the Save action to the existing database/Supabase table that stores this restaurant info — update the correct record by Restaurant UID
+
+---
+
+This is clean, scoped, and tells the agent exactly what to build and what not to touch. Want me to also include the specific Supabase table/column names if you share them?
