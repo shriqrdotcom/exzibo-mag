@@ -379,8 +379,35 @@ export default function Settings() {
                     </div>
                   </div>
 
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '8px 0' }}>
+                    <div style={{
+                      width: '28px', height: '28px', borderRadius: '8px',
+                      background: 'rgba(255,255,255,0.04)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      color: '#888', flexShrink: 0,
+                    }}><User size={14} /></div>
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <div style={{ fontSize: '10px', color: '#666', marginBottom: '2px' }}>Restaurant Name</div>
+                      <div style={{ fontSize: '12px', fontWeight: 600, color: '#fff' }}>{matchedRestaurant.name || '—'}</div>
+                    </div>
+                    <button
+                      type="button"
+                      style={{
+                        flexShrink: 0,
+                        padding: '7px 16px',
+                        background: '#2563eb',
+                        border: 'none',
+                        borderRadius: '6px',
+                        color: '#fff',
+                        fontSize: '11px', fontWeight: 700,
+                        letterSpacing: '0.06em',
+                        cursor: 'pointer',
+                        boxShadow: '0 0 10px rgba(37,99,235,0.35)',
+                      }}
+                    >EDIT</button>
+                  </div>
+
                   {[
-                    { icon: <User size={14} />,  label: 'Restaurant Name', value: matchedRestaurant.name || '—' },
                     { icon: <User size={14} />,  label: 'Owner Name',      value: matchedRestaurant.owner || '—' },
                     { icon: <Phone size={14} />, label: 'Contact No',      value: matchedRestaurant.phone || '—' },
                     { icon: <Mail size={14} />,  label: 'Email ID',        value: matchedRestaurant.email || '—' },
