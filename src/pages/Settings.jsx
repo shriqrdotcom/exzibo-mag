@@ -259,50 +259,6 @@ export default function Settings() {
               </div>
             )}
 
-            <Section title="Security" subtitle="Protect your account with enterprise-grade authentication protocols.">
-              <ToggleRow
-                icon={<Shield size={18} />}
-                title="Two-Factor Authentication"
-                desc="Add an extra layer of security to your management console."
-                value={twoFactor}
-                onChange={v => { setTwoFactor(v); setDirty(true) }}
-              />
-              <div style={{ height: '1px', background: 'rgba(255,255,255,0.05)', margin: '4px 0' }} />
-              <ActionRow
-                icon={<Lock size={18} />}
-                title="Password Management"
-                desc="Last changed 42 days ago. Strong entropy recommended."
-                action="UPDATE"
-              />
-              <div style={{ height: '1px', background: 'rgba(255,255,255,0.05)', margin: '4px 0' }} />
-
-              <div style={{ marginTop: '8px' }}>
-                <div style={{ fontSize: '14px', fontWeight: 700, marginBottom: '14px' }}>Active Sessions</div>
-                {[
-                  { device: 'MacBook Pro 16"', location: 'San Francisco, CA', sub: 'CURRENT SESSION • CHROME 124.0', status: 'ACTIVE', icon: '💻' },
-                  { device: 'iPhone 15 Pro', location: 'London, UK', sub: 'LAST ACTIVE 4 HOURS AGO • MOBILE APP', status: 'REVOKE', icon: '📱' },
-                ].map(session => (
-                  <div key={session.device} className="session-row">
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, minWidth: 0 }}>
-                      <span style={{ fontSize: '20px', flexShrink: 0 }}>{session.icon}</span>
-                      <div style={{ minWidth: 0 }}>
-                        <div style={{ fontSize: '13px', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{session.device} • {session.location}</div>
-                        <div style={{ fontSize: '10px', color: '#555', letterSpacing: '0.06em', marginTop: '2px' }}>{session.sub}</div>
-                      </div>
-                    </div>
-                    <button style={{
-                      padding: '6px 14px',
-                      background: 'transparent',
-                      border: 'none',
-                      color: session.status === 'ACTIVE' ? '#4ade80' : '#E8321A',
-                      fontSize: '11px', fontWeight: 700, letterSpacing: '0.06em',
-                      cursor: 'pointer', flexShrink: 0,
-                    }}>{session.status}</button>
-                  </div>
-                ))}
-              </div>
-            </Section>
-
             <Section title="Preferences" subtitle="Customize your administrative experience and regional settings.">
               <div className="settings-pref-grid">
                 <div>
