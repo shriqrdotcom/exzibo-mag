@@ -1,0 +1,106 @@
+Here's a detailed, precise prompt you can paste directly into the Replit AI Agent:
+
+---
+
+
+---
+
+```
+CONTEXT:
+I have an "Amount Manager" modal/section in my Exzibo restaurant SaaS platform. It currently shows:
+- A "TOTAL AMOUNT" display (shows 00 INR)
+- Month-wise buttons (JAN–DEC)
+- Year-wise input with "ADD YEAR" button
+- UID display
+
+This section is the main payment/subscription calculator for restaurant clients. I need a MAJOR upgrade to this section. Do NOT touch any other part of the codebase — only modify the Amount Manager modal/component.
+
+---
+
+FEATURE 1 — TOTAL AMOUNT SECTION (UI UPGRADE)
+- Make the "TOTAL AMOUNT" card significantly larger and more prominent
+- Font size of the amount should be much bigger (at least 3x current size)
+- Add a "HISTORY" button inside or below the Total Amount card
+- The History button should open a History Panel/Drawer that shows:
+  - A list of all past payments/subscriptions logged
+  - Each entry must show: Amount (INR), Start Date, End Date, Mode (Live or Custom), Status (Active / Expired)
+  - Sorted by date, newest first
+  - If no history, show "No payment history yet."
+
+---
+
+FEATURE 2 — SMART MONTH TRACKING (Core Logic)
+
+Replace the existing static month buttons (JAN–DEC) with a new flow:
+
+STEP 1 — AUTO-DETECT CURRENT DATE
+- When the modal opens, automatically detect today's full date (day, month, year) using JavaScript's Date() API
+- Display it clearly: e.g., "Today: 24 April 2026"
+
+STEP 2 — TWO MODE SELECTION BUTTONS
+Show exactly 2 large buttons:
+
+  A) "LIVE MONTH" button
+     - Uses the current real calendar month
+     - Automatically knows if that month has 28, 29, 30, or 31 days (use actual JS Date logic — not hardcoded)
+     - Subscription start = today's date
+     - Subscription end = exactly 30 days from today (rolling 30-day logic, not end of calendar month)
+     - Shows a countdown: "X days remaining"
+     - When the 30 days expire, status changes to "EXPIRED" and shows a renewal prompt
+
+  B) "CUSTOM MONTH" button
+     - User picks any start date using a date picker
+     - Same 30-day rolling logic applies from that chosen start date
+     - End date = Start date + 30 days
+     - Shows correct day count based on real calendar (e.g., if Feb is chosen, correctly counts 28 or 29 days)
+     - Shows countdown: "X days remaining"
+     - When expired, status = "EXPIRED"
+
+STEP 3 — AFTER MODE SELECTION
+- Show a subscription summary card:
+  - Mode: Live / Custom
+  - Start Date: [date]
+  - End Date: [date]  
+  - Days in this period: [number — calculated from real calendar]
+  - Days Remaining: [live countdown]
+  - Status: ACTIVE 🟢 or EXPIRED 🔴
+- Allow entering the INR amount for this subscription period
+- A "LOG PAYMENT" button saves this entry to the history
+
+---
+
+FEATURE 3 — HISTORY PANEL
+- Accessible via the "HISTORY" button on the Total Amount card
+- Shows all logged payment entries:
+  Each card shows:
+    - Amount: ₹[amount] INR
+    - Mode: Live / Custom
+    - Start: [date]
+    - End: [date]
+    - Status: Active / Expired
+    - Logged on: [timestamp]
+- Total Amount at top = sum of all logged amounts
+- Option to delete individual history entries
+
+---
+
+TECHNICAL REQUIREMENTS:
+- Use JavaScript Date() for ALL date logic — no hardcoding of month lengths
+- Leap year must be handled correctly for February
+- 30-day rolling subscription logic (start date + 30 days = end date)
+- Store history in localStorage so it persists across page refreshes
+- All date displays in format: DD MMM YYYY (e.g., 24 Apr 2026)
+- Keep the existing dark theme (dark background, pink accent color #FF2D78 or similar, white text)
+- Keep the UID display and close button exactly as-is
+- Do NOT modify any other component, page, or file outside the Amount Manager modal
+
+---
+
+PRESERVE EXISTING:
+- Modal open/close behavior
+- UID display (9460551830)
+- Overall dark color theme
+- All other platform features — zero changes outside this modal
+```
+
+---

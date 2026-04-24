@@ -43,8 +43,38 @@ export default function Settings() {
   const [selectedMonth, setSelectedMonth] = useState('')
   const [monthInput, setMonthInput] = useState('')
   const [yearInput, setYearInput] = useState('')
+  const [historyOpen, setHistoryOpen] = useState(false)
+  const [pendingMode, setPendingMode] = useState(null)
+  const [liveStart, setLiveStart] = useState(null)
+  const [customStartDate, setCustomStartDate] = useState('')
+  const [paymentAmountInput, setPaymentAmountInput] = useState('')
+  const [now, setNow] = useState(() => Date.now())
 
   const MONTHS = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC']
+  const MONTH_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+  const MONTH_LONG = ['January','February','March','April','May','June','July','August','September','October','November','December']
+
+  const fmtDateShort = (input) => {
+    if (!input) return ''
+    const d = new Date(input)
+    if (isNaN(d.getTime())) return ''
+    return `${String(d.getDate()).padStart(2,'0')} ${MONTH_SHORT[d.getMonth()]} ${d.getFullYear()}`
+  }
+  const fmtDateLong = (input) => {
+    if (!input) return ''
+    const d = new Date(input)
+    if (isNaN(d.getTime())) return ''
+    return `${d.getDate()} ${MONTH_LONG[d.getMonth()]} ${d.getFullYear()}`
+  }
+  const addDays = (input, n) => {
+    const d = new Date(input)
+    d.setDate(d.getDate() + n)
+    return d
+  }
+  const daysRemaining = (endIso, ref = Date.now()) => {
+    const ms = new Date(endIso).getTime() - ref
+    return Math.max(0, Math.ceil(ms / (1000 * 60 * 60 * 24)))
+  }
 
   const normalizeEntry = (raw) => {
     const src = raw || {}
@@ -64,12 +94,24 @@ export default function Settings() {
     const years = Array.isArray(src.years)
       ? src.years.map(y => String(y)).filter(Boolean)
       : []
-    return { months, years }
+    const history = Array.isArray(src.history)
+      ? src.history
+          .filter(h => h && isFinite(parseFloat(h.amount)) && h.startDate && h.endDate)
+          .map(h => ({
+            id: h.id || `${h.startDate}-${h.loggedAt || ''}-${Math.random().toString(36).slice(2,7)}`,
+            amount: parseFloat(h.amount),
+            mode: h.mode === 'custom' ? 'custom' : 'live',
+            startDate: h.startDate,
+            endDate: h.endDate,
+            loggedAt: h.loggedAt || new Date().toISOString(),
+          }))
+      : []
+    return { months, years, history }
   }
 
   const entryTotal = (entry) => {
-    const months = (entry && entry.months) || {}
-    return Object.values(months).reduce((s, v) => s + (parseFloat(v) || 0), 0)
+    const history = (entry && entry.history) || []
+    return history.reduce((s, h) => s + (parseFloat(h.amount) || 0), 0)
   }
 
   useEffect(() => {
@@ -129,12 +171,58 @@ export default function Settings() {
     persistPaymentData({ ...paymentData, [uid]: { ...prev, years: nextYears } })
   }
 
+  const logPayment = (computedDraft) => {
+    const n = parseFloat(paymentAmountInput)
+    if (!isFinite(n) || n <= 0 || !amountModalUid || !computedDraft) return
+    const prev = normalizeEntry(paymentData[amountModalUid])
+    const newEntry = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2,7)}`,
+      amount: n,
+      mode: computedDraft.mode,
+      startDate: new Date(computedDraft.startDate).toISOString(),
+      endDate: new Date(computedDraft.endDate).toISOString(),
+      loggedAt: new Date().toISOString(),
+    }
+    persistPaymentData({
+      ...paymentData,
+      [amountModalUid]: { ...prev, history: [...prev.history, newEntry] },
+    })
+    setPaymentAmountInput('')
+    setPendingMode(null)
+    setLiveStart(null)
+    setCustomStartDate('')
+  }
+
+  const deleteHistoryEntry = (uid, id) => {
+    const prev = normalizeEntry(paymentData[uid])
+    const nextHistory = prev.history.filter(h => h.id !== id)
+    persistPaymentData({ ...paymentData, [uid]: { ...prev, history: nextHistory } })
+  }
+
+  const cancelDraft = () => {
+    setPendingMode(null)
+    setLiveStart(null)
+    setCustomStartDate('')
+    setPaymentAmountInput('')
+  }
+
   const closeAmountModal = () => {
     setAmountModalUid(null)
     setSelectedMonth('')
     setMonthInput('')
     setYearInput('')
+    setHistoryOpen(false)
+    setPendingMode(null)
+    setLiveStart(null)
+    setCustomStartDate('')
+    setPaymentAmountInput('')
   }
+
+  useEffect(() => {
+    if (!amountModalUid) return
+    const id = setInterval(() => setNow(Date.now()), 60000)
+    return () => clearInterval(id)
+  }, [amountModalUid])
 
   const copyUid = async (uid) => {
     try {
@@ -784,7 +872,7 @@ export default function Settings() {
                             <span>{fmtAmount(row.amount)}</span>
                             <button
                               type="button"
-                              onClick={() => { setAmountModalUid(row.uid); setSelectedMonth(''); setMonthInput(''); setYearInput('') }}
+                              onClick={() => { setAmountModalUid(row.uid); setSelectedMonth(''); setMonthInput(''); setYearInput(''); setHistoryOpen(false); setPendingMode(null); setLiveStart(null); setCustomStartDate(''); setPaymentAmountInput(''); setNow(Date.now()) }}
                               style={{
                                 padding: '3px 10px',
                                 background: '#FF69B4',
@@ -860,9 +948,25 @@ export default function Settings() {
       {amountModalUid && (() => {
         const entry = normalizeEntry(paymentData[amountModalUid])
         const total = entryTotal(entry)
-        const monthEntries = MONTHS
-          .filter(m => entry.months[m] !== undefined)
-          .map(m => ({ month: m, amount: entry.months[m] }))
+        const today = new Date(now)
+
+        let computedDraft = null
+        if (pendingMode === 'live' && liveStart) {
+          const start = new Date(liveStart)
+          const end = addDays(start, 30)
+          computedDraft = { mode: 'live', startDate: start, endDate: end }
+        } else if (pendingMode === 'custom' && customStartDate) {
+          const start = new Date(`${customStartDate}T00:00:00`)
+          if (!isNaN(start.getTime())) {
+            const end = addDays(start, 30)
+            computedDraft = { mode: 'custom', startDate: start, endDate: end }
+          }
+        }
+
+        const sortedHistory = [...entry.history].sort(
+          (a, b) => new Date(b.loggedAt).getTime() - new Date(a.loggedAt).getTime()
+        )
+
         return (
           <div
             onClick={closeAmountModal}
@@ -879,7 +983,7 @@ export default function Settings() {
                 background: '#141414',
                 border: '1px solid rgba(255,255,255,0.08)',
                 borderRadius: '16px',
-                width: '100%', maxWidth: '520px',
+                width: '100%', maxWidth: '560px',
                 maxHeight: '90vh', overflowY: 'auto',
                 padding: '22px',
                 color: '#fff',
@@ -900,97 +1004,295 @@ export default function Settings() {
               <div style={{
                 background: 'rgba(255,105,180,0.08)',
                 border: '1px solid rgba(255,105,180,0.25)',
-                borderRadius: '12px',
-                padding: '16px', marginBottom: '16px',
+                borderRadius: '16px',
+                padding: '24px', marginBottom: '20px',
+                position: 'relative',
               }}>
-                <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', color: '#FF69B4', marginBottom: '6px' }}>TOTAL AMOUNT</div>
-                <div style={{ fontSize: '26px', fontWeight: 800, color: '#fff' }}>{fmtAmount(total)} <span style={{ fontSize: '12px', color: '#888', fontWeight: 600 }}>INR</span></div>
-              </div>
-
-              <div>
-                <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', color: '#ccc', marginBottom: '10px' }}>MONTH-WISE</div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '6px', marginBottom: '12px' }}>
-                  {MONTHS.map(m => {
-                    const active = selectedMonth === m
-                    return (
-                      <button
-                        key={m}
-                        onClick={() => setSelectedMonth(active ? '' : m)}
-                        style={{
-                          padding: '8px 4px',
-                          background: active ? '#FF69B4' : 'rgba(255,255,255,0.04)',
-                          border: `1px solid ${active ? '#FF69B4' : 'rgba(255,255,255,0.08)'}`,
-                          borderRadius: '6px',
-                          color: active ? '#fff' : '#999',
-                          fontSize: '10px', fontWeight: 700, letterSpacing: '0.06em',
-                          cursor: 'pointer',
-                        }}
-                      >{m}</button>
-                    )
-                  })}
+                <div style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.14em', color: '#FF69B4', marginBottom: '12px' }}>TOTAL AMOUNT</div>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px', marginBottom: '16px' }}>
+                  <div style={{ fontSize: '78px', fontWeight: 900, color: '#fff', lineHeight: 1, letterSpacing: '-0.02em' }}>{fmtAmount(total)}</div>
+                  <span style={{ fontSize: '16px', color: '#888', fontWeight: 700, letterSpacing: '0.08em' }}>INR</span>
                 </div>
-
-                {selectedMonth && (
-                  <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', flexWrap: 'wrap' }}>
-                    <input
-                      type="number"
-                      value={monthInput}
-                      onChange={e => setMonthInput(e.target.value)}
-                      onKeyDown={e => { if (e.key === 'Enter') confirmAddMonth() }}
-                      placeholder={`Amount for ${selectedMonth}`}
-                      style={{
-                        flex: 1, minWidth: '140px',
-                        padding: '10px 12px',
-                        background: 'rgba(255,255,255,0.04)',
-                        border: '1px solid rgba(255,255,255,0.08)',
-                        borderRadius: '8px',
-                        color: '#fff', fontSize: '13px', outline: 'none',
-                      }}
-                    />
-                    <button onClick={confirmAddMonth} style={{
-                      padding: '10px 16px',
-                      background: '#FF69B4', border: 'none', borderRadius: '8px',
-                      color: '#fff', fontSize: '10px', fontWeight: 800, letterSpacing: '0.08em',
-                      cursor: 'pointer',
-                      boxShadow: '0 0 12px rgba(255,105,180,0.4)',
-                    }}>ADD MONTH</button>
-                  </div>
-                )}
-
-                {monthEntries.length > 0 && (
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                    {monthEntries.map(m => (
-                      <div key={m.month} style={{
-                        display: 'inline-flex', alignItems: 'center', gap: '6px',
-                        padding: '5px 10px',
-                        background: 'rgba(74,222,128,0.08)',
-                        border: '1px solid rgba(74,222,128,0.2)',
-                        borderRadius: '999px',
-                        fontSize: '10px', fontWeight: 600,
-                        color: '#4ade80',
-                        letterSpacing: '0.04em',
-                      }}>
-                        <span>✅</span>
-                        <span style={{ color: '#FF69B4', fontWeight: 800 }}>{m.month}</span>
-                        <span style={{ color: '#fff' }}>— {fmtAmount(m.amount)} INR Added</span>
-                        <button
-                          onClick={() => removeMonthEntry(amountModalUid, m.month)}
-                          title="Remove"
-                          style={{
-                            background: 'transparent', border: 'none',
-                            color: '#888', cursor: 'pointer',
-                            fontSize: '12px', fontWeight: 700, padding: 0, marginLeft: '2px',
-                          }}
-                        >✕</button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {monthEntries.length === 0 && !selectedMonth && (
-                  <div style={{ fontSize: '11px', color: '#555' }}>Select a month above to log an amount.</div>
-                )}
+                <button
+                  onClick={() => setHistoryOpen(o => !o)}
+                  style={{
+                    padding: '8px 14px',
+                    background: historyOpen ? 'rgba(255,255,255,0.06)' : '#FF69B4',
+                    border: historyOpen ? '1px solid rgba(255,255,255,0.12)' : 'none',
+                    borderRadius: '8px',
+                    color: '#fff', fontSize: '11px', fontWeight: 800, letterSpacing: '0.1em',
+                    cursor: 'pointer',
+                    boxShadow: historyOpen ? 'none' : '0 0 14px rgba(255,105,180,0.45)',
+                  }}
+                >{historyOpen ? '✕ CLOSE HISTORY' : 'HISTORY'}</button>
               </div>
+
+              {historyOpen ? (
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                    <div style={{ fontSize: '11px', fontWeight: 800, letterSpacing: '0.14em', color: '#fff' }}>PAYMENT HISTORY</div>
+                    <div style={{ fontSize: '11px', color: '#888' }}>{sortedHistory.length} {sortedHistory.length === 1 ? 'entry' : 'entries'}</div>
+                  </div>
+
+                  {sortedHistory.length === 0 ? (
+                    <div style={{
+                      padding: '24px', textAlign: 'center',
+                      background: 'rgba(255,255,255,0.02)',
+                      border: '1px dashed rgba(255,255,255,0.08)',
+                      borderRadius: '12px',
+                      fontSize: '13px', color: '#666',
+                    }}>No payment history yet.</div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      {sortedHistory.map(h => {
+                        const expired = new Date(h.endDate).getTime() <= now
+                        const remaining = daysRemaining(h.endDate, now)
+                        return (
+                          <div key={h.id} style={{
+                            background: 'rgba(255,255,255,0.03)',
+                            border: '1px solid rgba(255,255,255,0.08)',
+                            borderRadius: '12px',
+                            padding: '14px',
+                            display: 'flex', flexDirection: 'column', gap: '8px',
+                          }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                              <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
+                                <span style={{ color: '#FF69B4', fontSize: '14px', fontWeight: 800 }}>₹{fmtAmount(h.amount)}</span>
+                                <span style={{ color: '#888', fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em' }}>INR</span>
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <span style={{
+                                  padding: '3px 8px', borderRadius: '999px',
+                                  fontSize: '9px', fontWeight: 800, letterSpacing: '0.1em',
+                                  background: h.mode === 'live' ? 'rgba(255,105,180,0.12)' : 'rgba(255,255,255,0.06)',
+                                  color: h.mode === 'live' ? '#FF69B4' : '#ccc',
+                                  border: `1px solid ${h.mode === 'live' ? 'rgba(255,105,180,0.3)' : 'rgba(255,255,255,0.1)'}`,
+                                }}>{h.mode === 'live' ? 'LIVE' : 'CUSTOM'}</span>
+                                <span style={{
+                                  padding: '3px 8px', borderRadius: '999px',
+                                  fontSize: '9px', fontWeight: 800, letterSpacing: '0.1em',
+                                  background: expired ? 'rgba(239,68,68,0.12)' : 'rgba(74,222,128,0.12)',
+                                  color: expired ? '#ef4444' : '#4ade80',
+                                  border: `1px solid ${expired ? 'rgba(239,68,68,0.3)' : 'rgba(74,222,128,0.3)'}`,
+                                }}>{expired ? '🔴 EXPIRED' : '🟢 ACTIVE'}</span>
+                                <button
+                                  onClick={() => deleteHistoryEntry(amountModalUid, h.id)}
+                                  title="Delete entry"
+                                  style={{
+                                    width: '24px', height: '24px', borderRadius: '6px',
+                                    background: 'rgba(239,68,68,0.08)',
+                                    border: '1px solid rgba(239,68,68,0.2)',
+                                    color: '#ef4444', cursor: 'pointer',
+                                    fontSize: '12px', fontWeight: 700,
+                                  }}
+                                >✕</button>
+                              </div>
+                            </div>
+                            <div style={{ fontSize: '11px', color: '#aaa', display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
+                              <span><span style={{ color: '#666' }}>Start:</span> {fmtDateShort(h.startDate)}</span>
+                              <span><span style={{ color: '#666' }}>End:</span> {fmtDateShort(h.endDate)}</span>
+                              {!expired && <span style={{ color: '#4ade80' }}>{remaining} {remaining === 1 ? 'day' : 'days'} remaining</span>}
+                            </div>
+                            <div style={{ fontSize: '10px', color: '#555' }}>Logged on {fmtDateShort(h.loggedAt)}</div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <>
+                  <div style={{
+                    padding: '10px 14px',
+                    background: 'rgba(255,255,255,0.03)',
+                    border: '1px solid rgba(255,255,255,0.06)',
+                    borderRadius: '10px',
+                    marginBottom: '14px',
+                    fontSize: '12px', color: '#bbb',
+                  }}>
+                    <span style={{ color: '#666', fontWeight: 700, letterSpacing: '0.08em', fontSize: '10px' }}>TODAY: </span>
+                    <span style={{ color: '#fff', fontWeight: 700 }}>{fmtDateLong(today)}</span>
+                  </div>
+
+                  {!computedDraft && (
+                    <>
+                      <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', color: '#ccc', marginBottom: '10px' }}>SELECT MODE</div>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: pendingMode === 'custom' ? '14px' : '10px' }}>
+                        <button
+                          onClick={() => { setPendingMode('live'); setLiveStart(new Date().toISOString()); setCustomStartDate(''); setPaymentAmountInput('') }}
+                          style={{
+                            padding: '18px 12px',
+                            background: pendingMode === 'live' ? '#FF69B4' : 'rgba(255,105,180,0.08)',
+                            border: `1px solid ${pendingMode === 'live' ? '#FF69B4' : 'rgba(255,105,180,0.3)'}`,
+                            borderRadius: '12px',
+                            color: '#fff', cursor: 'pointer',
+                            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px',
+                            boxShadow: pendingMode === 'live' ? '0 0 18px rgba(255,105,180,0.45)' : 'none',
+                          }}
+                        >
+                          <span style={{ fontSize: '20px' }}>⚡</span>
+                          <span style={{ fontSize: '13px', fontWeight: 800, letterSpacing: '0.08em' }}>LIVE MONTH</span>
+                          <span style={{ fontSize: '10px', color: pendingMode === 'live' ? 'rgba(255,255,255,0.85)' : '#888' }}>Starts today · 30 days</span>
+                        </button>
+                        <button
+                          onClick={() => { setPendingMode('custom'); setLiveStart(null); setPaymentAmountInput('') }}
+                          style={{
+                            padding: '18px 12px',
+                            background: pendingMode === 'custom' ? '#FF69B4' : 'rgba(255,255,255,0.04)',
+                            border: `1px solid ${pendingMode === 'custom' ? '#FF69B4' : 'rgba(255,255,255,0.1)'}`,
+                            borderRadius: '12px',
+                            color: '#fff', cursor: 'pointer',
+                            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px',
+                            boxShadow: pendingMode === 'custom' ? '0 0 18px rgba(255,105,180,0.45)' : 'none',
+                          }}
+                        >
+                          <span style={{ fontSize: '20px' }}>📅</span>
+                          <span style={{ fontSize: '13px', fontWeight: 800, letterSpacing: '0.08em' }}>CUSTOM MONTH</span>
+                          <span style={{ fontSize: '10px', color: pendingMode === 'custom' ? 'rgba(255,255,255,0.85)' : '#888' }}>Pick a start date</span>
+                        </button>
+                      </div>
+
+                      {pendingMode === 'custom' && (
+                        <div style={{ marginBottom: '10px' }}>
+                          <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.1em', color: '#888', marginBottom: '6px' }}>START DATE</div>
+                          <input
+                            type="date"
+                            value={customStartDate}
+                            onChange={e => setCustomStartDate(e.target.value)}
+                            style={{
+                              width: '100%',
+                              padding: '10px 12px',
+                              background: 'rgba(255,255,255,0.04)',
+                              border: '1px solid rgba(255,255,255,0.1)',
+                              borderRadius: '8px',
+                              color: '#fff', fontSize: '13px', outline: 'none',
+                              colorScheme: 'dark',
+                            }}
+                          />
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  {computedDraft && (() => {
+                    const startTs = computedDraft.startDate.getTime()
+                    const endTs = computedDraft.endDate.getTime()
+                    const periodDays = Math.round((endTs - startTs) / (1000 * 60 * 60 * 24))
+                    const expired = endTs <= now
+                    const remaining = daysRemaining(computedDraft.endDate, now)
+                    const totalSpan = endTs - startTs
+                    const elapsed = Math.min(Math.max(now - startTs, 0), totalSpan)
+                    const progressPct = totalSpan > 0 ? Math.round((elapsed / totalSpan) * 100) : 0
+                    return (
+                      <div style={{
+                        background: 'rgba(255,255,255,0.03)',
+                        border: '1px solid rgba(255,255,255,0.08)',
+                        borderRadius: '12px',
+                        padding: '16px',
+                        marginBottom: '12px',
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                          <div style={{ fontSize: '10px', fontWeight: 800, letterSpacing: '0.12em', color: '#FF69B4' }}>
+                            {computedDraft.mode === 'live' ? '⚡ LIVE SUBSCRIPTION' : '📅 CUSTOM SUBSCRIPTION'}
+                          </div>
+                          <span style={{
+                            padding: '3px 9px', borderRadius: '999px',
+                            fontSize: '9px', fontWeight: 800, letterSpacing: '0.1em',
+                            background: expired ? 'rgba(239,68,68,0.12)' : 'rgba(74,222,128,0.12)',
+                            color: expired ? '#ef4444' : '#4ade80',
+                            border: `1px solid ${expired ? 'rgba(239,68,68,0.3)' : 'rgba(74,222,128,0.3)'}`,
+                          }}>{expired ? '🔴 EXPIRED' : '🟢 ACTIVE'}</span>
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px 14px', marginBottom: '12px' }}>
+                          <div>
+                            <div style={{ fontSize: '9px', color: '#666', fontWeight: 700, letterSpacing: '0.1em', marginBottom: '2px' }}>START DATE</div>
+                            <div style={{ fontSize: '13px', color: '#fff', fontWeight: 600 }}>{fmtDateShort(computedDraft.startDate)}</div>
+                          </div>
+                          <div>
+                            <div style={{ fontSize: '9px', color: '#666', fontWeight: 700, letterSpacing: '0.1em', marginBottom: '2px' }}>END DATE</div>
+                            <div style={{ fontSize: '13px', color: '#fff', fontWeight: 600 }}>{fmtDateShort(computedDraft.endDate)}</div>
+                          </div>
+                          <div>
+                            <div style={{ fontSize: '9px', color: '#666', fontWeight: 700, letterSpacing: '0.1em', marginBottom: '2px' }}>DAYS IN PERIOD</div>
+                            <div style={{ fontSize: '13px', color: '#fff', fontWeight: 600 }}>{periodDays} days</div>
+                          </div>
+                          <div>
+                            <div style={{ fontSize: '9px', color: '#666', fontWeight: 700, letterSpacing: '0.1em', marginBottom: '2px' }}>DAYS REMAINING</div>
+                            <div style={{ fontSize: '13px', color: expired ? '#ef4444' : '#4ade80', fontWeight: 700 }}>{remaining} {remaining === 1 ? 'day' : 'days'}</div>
+                          </div>
+                        </div>
+
+                        <div style={{
+                          height: '6px', borderRadius: '999px',
+                          background: 'rgba(255,255,255,0.06)',
+                          overflow: 'hidden', marginBottom: expired ? '12px' : '0',
+                        }}>
+                          <div style={{
+                            width: `${progressPct}%`, height: '100%',
+                            background: expired ? '#ef4444' : '#FF69B4',
+                            transition: 'width 0.3s ease',
+                          }} />
+                        </div>
+
+                        {expired && (
+                          <div style={{
+                            padding: '8px 12px',
+                            background: 'rgba(239,68,68,0.08)',
+                            border: '1px solid rgba(239,68,68,0.2)',
+                            borderRadius: '8px',
+                            fontSize: '11px', color: '#fca5a5',
+                          }}>This subscription has expired. Pick a new start date or use Live Month to renew.</div>
+                        )}
+                      </div>
+                    )
+                  })()}
+
+                  {computedDraft && (
+                    <div style={{ marginBottom: '12px' }}>
+                      <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.1em', color: '#888', marginBottom: '6px' }}>SUBSCRIPTION AMOUNT (INR)</div>
+                      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                        <input
+                          type="number"
+                          value={paymentAmountInput}
+                          onChange={e => setPaymentAmountInput(e.target.value)}
+                          onKeyDown={e => { if (e.key === 'Enter') logPayment(computedDraft) }}
+                          placeholder="e.g. 500"
+                          style={{
+                            flex: 1, minWidth: '140px',
+                            padding: '10px 12px',
+                            background: 'rgba(255,255,255,0.04)',
+                            border: '1px solid rgba(255,255,255,0.1)',
+                            borderRadius: '8px',
+                            color: '#fff', fontSize: '13px', outline: 'none',
+                          }}
+                        />
+                        <button
+                          onClick={() => logPayment(computedDraft)}
+                          style={{
+                            padding: '10px 18px',
+                            background: '#FF69B4', border: 'none', borderRadius: '8px',
+                            color: '#fff', fontSize: '11px', fontWeight: 800, letterSpacing: '0.1em',
+                            cursor: 'pointer',
+                            boxShadow: '0 0 14px rgba(255,105,180,0.45)',
+                          }}
+                        >LOG PAYMENT</button>
+                        <button
+                          onClick={cancelDraft}
+                          style={{
+                            padding: '10px 14px',
+                            background: 'rgba(255,255,255,0.04)',
+                            border: '1px solid rgba(255,255,255,0.1)',
+                            borderRadius: '8px',
+                            color: '#ccc', fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em',
+                            cursor: 'pointer',
+                          }}
+                        >RESET</button>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
 
               <div style={{
                 marginTop: '20px',
