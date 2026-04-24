@@ -1197,15 +1197,32 @@ export default function Settings() {
                           <div style={{ fontSize: '10px', fontWeight: 800, letterSpacing: '0.12em', color: '#FF69B4' }}>
                             {computedDraft.mode === 'live' ? '⚡ LIVE SUBSCRIPTION' : '📅 CUSTOM SUBSCRIPTION'}
                           </div>
-                          {expired && (
-                            <span style={{
-                              padding: '3px 9px', borderRadius: '999px',
-                              fontSize: '9px', fontWeight: 800, letterSpacing: '0.1em',
-                              background: 'rgba(239,68,68,0.12)',
-                              color: '#ef4444',
-                              border: '1px solid rgba(239,68,68,0.3)',
-                            }}>🔴 EXPIRED</span>
-                          )}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            {expired && (
+                              <span style={{
+                                padding: '3px 9px', borderRadius: '999px',
+                                fontSize: '9px', fontWeight: 800, letterSpacing: '0.1em',
+                                background: 'rgba(239,68,68,0.12)',
+                                color: '#ef4444',
+                                border: '1px solid rgba(239,68,68,0.3)',
+                              }}>🔴 EXPIRED</span>
+                            )}
+                            <button
+                              type="button"
+                              style={{
+                                padding: '4px 12px',
+                                background: '#FF69B4',
+                                border: 'none',
+                                borderRadius: '6px',
+                                color: '#fff',
+                                fontSize: '10px',
+                                fontWeight: 800,
+                                letterSpacing: '0.12em',
+                                cursor: 'pointer',
+                                boxShadow: '0 0 10px rgba(255,105,180,0.4)',
+                              }}
+                            >BIND</button>
+                          </div>
                         </div>
 
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px 14px', marginBottom: '12px' }}>
