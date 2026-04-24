@@ -40,16 +40,46 @@ export default function Settings() {
   const [copiedUid, setCopiedUid] = useState('')
   const [paymentData, setPaymentData] = useState({})
   const [amountModalUid, setAmountModalUid] = useState(null)
-  const [amountInput, setAmountInput] = useState('')
   const [selectedMonth, setSelectedMonth] = useState('')
   const [monthInput, setMonthInput] = useState('')
+  const [yearInput, setYearInput] = useState('')
 
   const MONTHS = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC']
+
+  const normalizeEntry = (raw) => {
+    const src = raw || {}
+    let months = {}
+    if (Array.isArray(src.months)) {
+      for (const m of src.months) {
+        if (m && m.month && isFinite(parseFloat(m.amount))) {
+          months[m.month] = (months[m.month] || 0) + parseFloat(m.amount)
+        }
+      }
+    } else if (src.months && typeof src.months === 'object') {
+      for (const k of Object.keys(src.months)) {
+        const v = parseFloat(src.months[k])
+        if (isFinite(v)) months[k] = v
+      }
+    }
+    const years = Array.isArray(src.years)
+      ? src.years.map(y => String(y)).filter(Boolean)
+      : []
+    return { months, years }
+  }
+
+  const entryTotal = (entry) => {
+    const months = (entry && entry.months) || {}
+    return Object.values(months).reduce((s, v) => s + (parseFloat(v) || 0), 0)
+  }
 
   useEffect(() => {
     try {
       const saved = JSON.parse(localStorage.getItem('exzibo_payment_amounts') || '{}')
-      setPaymentData(saved)
+      const normalized = {}
+      for (const uid of Object.keys(saved)) {
+        normalized[uid] = normalizeEntry(saved[uid])
+      }
+      setPaymentData(normalized)
     } catch {
       setPaymentData({})
     }
@@ -60,38 +90,50 @@ export default function Settings() {
     try { localStorage.setItem('exzibo_payment_amounts', JSON.stringify(next)) } catch {}
   }
 
-  const confirmAddAmount = () => {
-    const n = parseFloat(amountInput)
-    if (!isFinite(n) || n <= 0 || !amountModalUid) return
-    const prev = paymentData[amountModalUid] || { total: 0, months: [] }
-    const next = { ...paymentData, [amountModalUid]: { ...prev, total: (prev.total || 0) + n } }
-    persistPaymentData(next)
-    setAmountInput('')
-  }
-
   const confirmAddMonth = () => {
     const n = parseFloat(monthInput)
     if (!isFinite(n) || n <= 0 || !selectedMonth || !amountModalUid) return
-    const prev = paymentData[amountModalUid] || { total: 0, months: [] }
+    const prev = normalizeEntry(paymentData[amountModalUid])
+    const nextMonths = { ...prev.months, [selectedMonth]: n }
     const next = {
       ...paymentData,
-      [amountModalUid]: { ...prev, months: [...(prev.months || []), { month: selectedMonth, amount: n }] },
+      [amountModalUid]: { ...prev, months: nextMonths },
     }
     persistPaymentData(next)
     setMonthInput('')
   }
 
-  const removeMonthEntry = (uid, idx) => {
-    const prev = paymentData[uid] || { total: 0, months: [] }
-    const nextMonths = (prev.months || []).filter((_, i) => i !== idx)
+  const removeMonthEntry = (uid, monthKey) => {
+    const prev = normalizeEntry(paymentData[uid])
+    const nextMonths = { ...prev.months }
+    delete nextMonths[monthKey]
     persistPaymentData({ ...paymentData, [uid]: { ...prev, months: nextMonths } })
+  }
+
+  const confirmAddYear = () => {
+    const y = String(yearInput).trim()
+    if (!/^\d{4}$/.test(y) || !amountModalUid) return
+    const prev = normalizeEntry(paymentData[amountModalUid])
+    if (prev.years.includes(y)) { setYearInput(''); return }
+    const next = {
+      ...paymentData,
+      [amountModalUid]: { ...prev, years: [...prev.years, y] },
+    }
+    persistPaymentData(next)
+    setYearInput('')
+  }
+
+  const removeYearEntry = (uid, year) => {
+    const prev = normalizeEntry(paymentData[uid])
+    const nextYears = prev.years.filter(y => y !== year)
+    persistPaymentData({ ...paymentData, [uid]: { ...prev, years: nextYears } })
   }
 
   const closeAmountModal = () => {
     setAmountModalUid(null)
-    setAmountInput('')
     setSelectedMonth('')
     setMonthInput('')
+    setYearInput('')
   }
 
   const copyUid = async (uid) => {
@@ -133,8 +175,7 @@ export default function Settings() {
     const status = seed % 2 === 0 ? 'RECEIVED' : 'PENDING'
     const dateObj = r.createdAt ? new Date(r.createdAt) : new Date()
     const date = dateObj.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
-    const stored = paymentData[r.uid]
-    const amount = stored && typeof stored.total === 'number' ? stored.total : 0
+    const amount = entryTotal(paymentData[r.uid])
     return {
       uid: r.uid || '—',
       name: r.name || 'Untitled',
@@ -743,7 +784,7 @@ export default function Settings() {
                             <span>{fmtAmount(row.amount)}</span>
                             <button
                               type="button"
-                              onClick={() => { setAmountModalUid(row.uid); setAmountInput(''); setSelectedMonth(''); setMonthInput('') }}
+                              onClick={() => { setAmountModalUid(row.uid); setSelectedMonth(''); setMonthInput(''); setYearInput('') }}
                               style={{
                                 padding: '3px 10px',
                                 background: '#FF69B4',
@@ -817,7 +858,11 @@ export default function Settings() {
       </div>
 
       {amountModalUid && (() => {
-        const entry = paymentData[amountModalUid] || { total: 0, months: [] }
+        const entry = normalizeEntry(paymentData[amountModalUid])
+        const total = entryTotal(entry)
+        const monthEntries = MONTHS
+          .filter(m => entry.months[m] !== undefined)
+          .map(m => ({ month: m, amount: entry.months[m] }))
         return (
           <div
             onClick={closeAmountModal}
@@ -859,41 +904,10 @@ export default function Settings() {
                 padding: '16px', marginBottom: '16px',
               }}>
                 <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', color: '#FF69B4', marginBottom: '6px' }}>TOTAL AMOUNT</div>
-                <div style={{ fontSize: '26px', fontWeight: 800, color: '#fff' }}>{fmtAmount(entry.total)} <span style={{ fontSize: '12px', color: '#888', fontWeight: 600 }}>INR</span></div>
+                <div style={{ fontSize: '26px', fontWeight: 800, color: '#fff' }}>{fmtAmount(total)} <span style={{ fontSize: '12px', color: '#888', fontWeight: 600 }}>INR</span></div>
               </div>
 
-              <div style={{ marginBottom: '20px' }}>
-                <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', color: '#ccc', marginBottom: '8px' }}>ADD AMOUNT</div>
-                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                  <input
-                    type="number"
-                    value={amountInput}
-                    onChange={e => setAmountInput(e.target.value)}
-                    onKeyDown={e => { if (e.key === 'Enter') confirmAddAmount() }}
-                    placeholder="e.g. 300"
-                    style={{
-                      flex: 1, minWidth: '140px',
-                      padding: '10px 12px',
-                      background: 'rgba(255,255,255,0.04)',
-                      border: '1px solid rgba(255,255,255,0.08)',
-                      borderRadius: '8px',
-                      color: '#fff', fontSize: '13px', outline: 'none',
-                    }}
-                  />
-                  <button onClick={confirmAddAmount} style={{
-                    padding: '10px 20px',
-                    background: '#FF69B4', border: 'none', borderRadius: '8px',
-                    color: '#fff', fontSize: '11px', fontWeight: 800, letterSpacing: '0.08em',
-                    cursor: 'pointer',
-                    boxShadow: '0 0 12px rgba(255,105,180,0.4)',
-                  }}>CONFIRM</button>
-                </div>
-              </div>
-
-              <div style={{
-                paddingTop: '16px',
-                borderTop: '1px solid rgba(255,255,255,0.06)',
-              }}>
+              <div>
                 <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', color: '#ccc', marginBottom: '10px' }}>MONTH-WISE</div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '6px', marginBottom: '12px' }}>
                   {MONTHS.map(m => {
@@ -943,10 +957,10 @@ export default function Settings() {
                   </div>
                 )}
 
-                {entry.months && entry.months.length > 0 && (
+                {monthEntries.length > 0 && (
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                    {entry.months.map((m, idx) => (
-                      <div key={idx} style={{
+                    {monthEntries.map(m => (
+                      <div key={m.month} style={{
                         display: 'inline-flex', alignItems: 'center', gap: '6px',
                         padding: '5px 10px',
                         background: 'rgba(74,222,128,0.08)',
@@ -960,7 +974,7 @@ export default function Settings() {
                         <span style={{ color: '#FF69B4', fontWeight: 800 }}>{m.month}</span>
                         <span style={{ color: '#fff' }}>— {fmtAmount(m.amount)} INR Added</span>
                         <button
-                          onClick={() => removeMonthEntry(amountModalUid, idx)}
+                          onClick={() => removeMonthEntry(amountModalUid, m.month)}
                           title="Remove"
                           style={{
                             background: 'transparent', border: 'none',
@@ -973,8 +987,71 @@ export default function Settings() {
                   </div>
                 )}
 
-                {(!entry.months || entry.months.length === 0) && !selectedMonth && (
+                {monthEntries.length === 0 && !selectedMonth && (
                   <div style={{ fontSize: '11px', color: '#555' }}>Select a month above to log an amount.</div>
+                )}
+              </div>
+
+              <div style={{
+                marginTop: '20px',
+                paddingTop: '16px',
+                borderTop: '1px solid rgba(255,255,255,0.06)',
+              }}>
+                <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', color: '#ccc', marginBottom: '10px' }}>YEAR-WISE</div>
+                <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', flexWrap: 'wrap' }}>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={yearInput}
+                    onChange={e => setYearInput(e.target.value.replace(/[^\d]/g, '').slice(0, 4))}
+                    onKeyDown={e => { if (e.key === 'Enter') confirmAddYear() }}
+                    placeholder="e.g. 2024"
+                    style={{
+                      flex: 1, minWidth: '140px',
+                      padding: '10px 12px',
+                      background: 'rgba(255,255,255,0.04)',
+                      border: '1px solid rgba(255,255,255,0.08)',
+                      borderRadius: '8px',
+                      color: '#fff', fontSize: '13px', outline: 'none',
+                    }}
+                  />
+                  <button onClick={confirmAddYear} style={{
+                    padding: '10px 16px',
+                    background: '#FF69B4', border: 'none', borderRadius: '8px',
+                    color: '#fff', fontSize: '10px', fontWeight: 800, letterSpacing: '0.08em',
+                    cursor: 'pointer',
+                    boxShadow: '0 0 12px rgba(255,105,180,0.4)',
+                  }}>ADD YEAR</button>
+                </div>
+
+                {entry.years.length > 0 ? (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                    {entry.years.map(y => (
+                      <div key={y} style={{
+                        display: 'inline-flex', alignItems: 'center', gap: '6px',
+                        padding: '5px 10px',
+                        background: 'rgba(255,105,180,0.08)',
+                        border: '1px solid rgba(255,105,180,0.25)',
+                        borderRadius: '999px',
+                        fontSize: '11px', fontWeight: 700,
+                        color: '#FF69B4',
+                        letterSpacing: '0.04em',
+                      }}>
+                        <span>{y}</span>
+                        <button
+                          onClick={() => removeYearEntry(amountModalUid, y)}
+                          title="Remove"
+                          style={{
+                            background: 'transparent', border: 'none',
+                            color: '#888', cursor: 'pointer',
+                            fontSize: '12px', fontWeight: 700, padding: 0, marginLeft: '2px',
+                          }}
+                        >×</button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div style={{ fontSize: '11px', color: '#555' }}>No years added yet.</div>
                 )}
               </div>
             </div>

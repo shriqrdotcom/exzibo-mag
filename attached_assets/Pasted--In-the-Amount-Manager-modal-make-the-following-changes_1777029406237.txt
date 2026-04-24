@@ -1,0 +1,41 @@
+> In the **Amount Manager modal**, make the following changes carefully. Do **NOT** touch any other component, page, or functionality outside this modal.
+>
+> ---
+>
+> **CHANGE 1 — Remove "Add Amount" Section**
+> Remove the entire "ADD AMOUNT" section — this includes the label "ADD AMOUNT", the input field (placeholder "e.g. 300"), and the "CONFIRM" button next to it. Do not remove or touch anything else.
+>
+> ---
+>
+> **CHANGE 2 — Fix Month-Wise Logic (Total Amount must update correctly)**
+> Currently the month-wise section is broken. Fix it with this exact logic:
+>
+> - Each month button (JAN, FEB, MAR ... DEC) should be **selectable** (highlighted in pink when active).
+> - Below the month buttons, there is an input field (e.g. "Amount for JAN") and an "ADD MONTH" button.
+> - When the user selects a month, types an amount in the input, and clicks **"ADD MONTH"** — that amount should be **saved for that specific month**.
+> - The **TOTAL AMOUNT** displayed at the top should always be the **sum of all months that have been assigned an amount**.
+> - Example: If JAN = 100 INR and FEB = 100 INR, Total Amount should show **200 INR**.
+> - If a month already has an amount and the user updates it, the old value should be **replaced**, not added again.
+> - Make sure this monthly data and the total amount are **saved to the database / Supabase** and **persisted** (not lost on modal close/reopen).
+> - The month input field placeholder should dynamically update to show the currently selected month (e.g. "Amount for FEB" when FEB is selected).
+>
+> ---
+>
+> **CHANGE 3 — Add a New "YEAR-WISE" Section below Month-Wise**
+> Below the Month-Wise section, add a brand new **YEAR-WISE** section with the same dark card styling as the rest of the modal. It should include:
+>
+> - A section label: **"YEAR-WISE"** (same style as "MONTH-WISE" label)
+> - A text input field with placeholder: **"e.g. 2024"**
+> - A pink **"ADD YEAR"** button next to the input
+> - When the user types a year and clicks "ADD YEAR", that year should be added to a list displayed below the input (as pill/badge chips or a simple list), showing each year that has been added
+> - Each year entry in the list should have a **remove/delete (×) button** to remove it
+> - The year data should also be **saved to the database / Supabase** for this user's UID
+>
+> ---
+>
+> **IMPORTANT RULES:**
+> - Do **NOT** change the modal header (AMOUNT MANAGER title, UID display, close button)
+> - Do **NOT** change the TOTAL AMOUNT card styling
+> - Do **NOT** modify any other page, route, or component
+> - Keep all existing Supabase table references intact — only extend them if needed for new fields (monthData, yearData)
+> - Match the existing dark background + pink accent color design exactly
