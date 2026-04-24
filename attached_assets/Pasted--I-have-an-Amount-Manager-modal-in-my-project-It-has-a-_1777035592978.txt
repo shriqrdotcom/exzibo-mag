@@ -1,0 +1,59 @@
+```
+I have an "Amount Manager" modal in my project. It has a "BIND" button 
+in the LIVE SUBSCRIPTION section. I need TWO fixes:
+
+---
+
+FIX 1 — MAKE "DAYS REMAINING" WORK CORRECTLY
+
+Currently "Days Remaining" always shows 30 days and does not count down.
+
+Fix it so that:
+- "Days Remaining" = END DATE minus TODAY'S DATE (calculated dynamically)
+- If today is 24 Apr 2026 and end date is 24 May 2026 → show 30 days
+- If today is 10 May 2026 and end date is 24 May 2026 → show 14 days
+- The value must update automatically based on the real current date
+- Show the number in GREEN color as it is now
+- Do NOT change any other part of the subscription display
+
+---
+
+FIX 2 — BIND BUTTON: ADD NEXT MONTH SUBSCRIPTION
+
+When the user clicks the "BIND" button, open a dropdown/panel 
+directly below the LIVE SUBSCRIPTION card (do not open a new modal).
+
+This panel should show:
+
+  Title: "BIND NEXT MONTH"
+
+  - A label: "Next Subscription Period"
+  - Auto-filled START DATE = current END DATE + 1 day (read-only display)
+  - Auto-filled END DATE = 30 days after new start date (read-only display)
+  - An input field: "Advance Amount (INR)" — user types the amount here
+  - A button: "CONFIRM NEXT MONTH PAYMENT"
+
+When user clicks "CONFIRM NEXT MONTH PAYMENT":
+  1. Save this second subscription record separately 
+     (do not overwrite the current live subscription)
+  2. Show a small green success badge on the BIND button 
+     (e.g. a green dot or checkmark) to indicate next month is already paid
+  3. The BIND panel closes after confirming
+  4. The current "LIVE SUBSCRIPTION" section remains unchanged — 
+     it still shows the active running plan
+  5. When the current plan expires (Days Remaining = 0), 
+     automatically switch the LIVE SUBSCRIPTION to the pre-paid next month plan
+
+---
+
+IMPORTANT RULES:
+- Do NOT break or modify the "LOG PAYMENT", "RESET", "HISTORY", 
+  or "YEAR-WISE" sections
+- Do NOT change the dark theme, pink accent colors, or existing layout
+- Keep all existing functionality working exactly as before
+- Only add the BIND panel behavior and fix Days Remaining calculation
+```
+
+---
+
+This prompt is clear, scoped, and tells the agent exactly what to build without touching anything existing. The key logic is: **BIND = pre-book next month**, and **Days Remaining = live countdown**, both handled separately.

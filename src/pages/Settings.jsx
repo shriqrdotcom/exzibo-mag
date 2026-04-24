@@ -48,6 +48,8 @@ export default function Settings() {
   const [liveStart, setLiveStart] = useState(null)
   const [customStartDate, setCustomStartDate] = useState('')
   const [paymentAmountInput, setPaymentAmountInput] = useState('')
+  const [bindOpen, setBindOpen] = useState(false)
+  const [bindAmountInput, setBindAmountInput] = useState('')
   const [now, setNow] = useState(() => Date.now())
 
   const MONTHS = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC']
@@ -71,9 +73,16 @@ export default function Settings() {
     d.setDate(d.getDate() + n)
     return d
   }
-  const daysRemaining = (endIso, ref = Date.now()) => {
-    const ms = new Date(endIso).getTime() - ref
-    return Math.max(0, Math.ceil(ms / (1000 * 60 * 60 * 24)))
+  const startOfDay = (input) => {
+    const d = new Date(input)
+    d.setHours(0, 0, 0, 0)
+    return d
+  }
+  const daysRemaining = (endInput, ref = Date.now()) => {
+    const end = startOfDay(endInput)
+    const today = startOfDay(ref)
+    const ms = end.getTime() - today.getTime()
+    return Math.max(0, Math.round(ms / (1000 * 60 * 60 * 24)))
   }
 
   const normalizeEntry = (raw) => {
@@ -106,12 +115,24 @@ export default function Settings() {
             loggedAt: h.loggedAt || new Date().toISOString(),
           }))
       : []
-    return { months, years, history }
+    let nextSub = null
+    if (src.nextSub && isFinite(parseFloat(src.nextSub.amount)) && src.nextSub.startDate && src.nextSub.endDate) {
+      nextSub = {
+        id: src.nextSub.id || `${src.nextSub.startDate}-${Math.random().toString(36).slice(2,7)}`,
+        amount: parseFloat(src.nextSub.amount),
+        startDate: src.nextSub.startDate,
+        endDate: src.nextSub.endDate,
+        loggedAt: src.nextSub.loggedAt || new Date().toISOString(),
+      }
+    }
+    return { months, years, history, nextSub }
   }
 
   const entryTotal = (entry) => {
     const history = (entry && entry.history) || []
-    return history.reduce((s, h) => s + (parseFloat(h.amount) || 0), 0)
+    const histSum = history.reduce((s, h) => s + (parseFloat(h.amount) || 0), 0)
+    const nextAmt = entry && entry.nextSub ? parseFloat(entry.nextSub.amount) || 0 : 0
+    return histSum + nextAmt
   }
 
   useEffect(() => {
@@ -204,6 +225,30 @@ export default function Settings() {
     setLiveStart(null)
     setCustomStartDate('')
     setPaymentAmountInput('')
+    setBindOpen(false)
+    setBindAmountInput('')
+  }
+
+  const confirmBindNext = (currentEndDate) => {
+    if (!amountModalUid || !currentEndDate) return
+    const n = parseFloat(bindAmountInput)
+    if (!isFinite(n) || n <= 0) return
+    const start = addDays(currentEndDate, 1)
+    const end = addDays(start, 30)
+    const prev = normalizeEntry(paymentData[amountModalUid])
+    const nextSub = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2,7)}`,
+      amount: n,
+      startDate: start.toISOString(),
+      endDate: end.toISOString(),
+      loggedAt: new Date().toISOString(),
+    }
+    persistPaymentData({
+      ...paymentData,
+      [amountModalUid]: { ...prev, nextSub },
+    })
+    setBindAmountInput('')
+    setBindOpen(false)
   }
 
   const closeAmountModal = () => {
@@ -216,6 +261,8 @@ export default function Settings() {
     setLiveStart(null)
     setCustomStartDate('')
     setPaymentAmountInput('')
+    setBindOpen(false)
+    setBindAmountInput('')
   }
 
   useEffect(() => {
@@ -872,7 +919,7 @@ export default function Settings() {
                             <span>{fmtAmount(row.amount)}</span>
                             <button
                               type="button"
-                              onClick={() => { setAmountModalUid(row.uid); setSelectedMonth(''); setMonthInput(''); setYearInput(''); setHistoryOpen(false); setPendingMode(null); setLiveStart(null); setCustomStartDate(''); setPaymentAmountInput(''); setNow(Date.now()) }}
+                              onClick={() => { setAmountModalUid(row.uid); setSelectedMonth(''); setMonthInput(''); setYearInput(''); setHistoryOpen(false); setPendingMode(null); setLiveStart(null); setCustomStartDate(''); setPaymentAmountInput(''); setBindOpen(false); setBindAmountInput(''); setNow(Date.now()) }}
                               style={{
                                 padding: '3px 10px',
                                 background: '#FF69B4',
@@ -950,18 +997,29 @@ export default function Settings() {
         const total = entryTotal(entry)
         const today = new Date(now)
 
-        let computedDraft = null
+        let originalDraft = null
         if (pendingMode === 'live' && liveStart) {
           const start = new Date(liveStart)
           const end = addDays(start, 30)
-          computedDraft = { mode: 'live', startDate: start, endDate: end }
+          originalDraft = { mode: 'live', startDate: start, endDate: end }
         } else if (pendingMode === 'custom' && customStartDate) {
           const start = new Date(`${customStartDate}T00:00:00`)
           if (!isNaN(start.getTime())) {
             const end = addDays(start, 30)
-            computedDraft = { mode: 'custom', startDate: start, endDate: end }
+            originalDraft = { mode: 'custom', startDate: start, endDate: end }
           }
         }
+
+        const originalExpired = originalDraft && new Date(originalDraft.endDate).getTime() <= now
+        const showAsNext = !!(originalDraft && originalExpired && entry.nextSub)
+        const computedDraft = showAsNext
+          ? {
+              mode: 'live',
+              startDate: new Date(entry.nextSub.startDate),
+              endDate: new Date(entry.nextSub.endDate),
+            }
+          : originalDraft
+        const hasNextBound = !!entry.nextSub && !showAsNext
 
         const sortedHistory = [...entry.history].sort(
           (a, b) => new Date(b.loggedAt).getTime() - new Date(a.loggedAt).getTime()
@@ -1209,19 +1267,37 @@ export default function Settings() {
                             )}
                             <button
                               type="button"
+                              onClick={() => setBindOpen(o => !o)}
                               style={{
+                                position: 'relative',
                                 padding: '4px 12px',
-                                background: '#FF69B4',
-                                border: 'none',
+                                background: bindOpen ? 'rgba(255,255,255,0.06)' : '#FF69B4',
+                                border: bindOpen ? '1px solid rgba(255,255,255,0.12)' : 'none',
                                 borderRadius: '6px',
                                 color: '#fff',
                                 fontSize: '10px',
                                 fontWeight: 800,
                                 letterSpacing: '0.12em',
                                 cursor: 'pointer',
-                                boxShadow: '0 0 10px rgba(255,105,180,0.4)',
+                                boxShadow: bindOpen ? 'none' : '0 0 10px rgba(255,105,180,0.4)',
                               }}
-                            >BIND</button>
+                            >
+                              {bindOpen ? '✕ CLOSE' : 'BIND'}
+                              {hasNextBound && !bindOpen && (
+                                <span
+                                  title="Next month already bound"
+                                  style={{
+                                    position: 'absolute',
+                                    top: '-4px', right: '-4px',
+                                    width: '10px', height: '10px',
+                                    borderRadius: '50%',
+                                    background: '#22c55e',
+                                    border: '2px solid #141414',
+                                    boxShadow: '0 0 6px rgba(34,197,94,0.7)',
+                                  }}
+                                />
+                              )}
+                            </button>
                           </div>
                         </div>
 
@@ -1265,6 +1341,80 @@ export default function Settings() {
                             fontSize: '11px', color: '#fca5a5',
                           }}>This subscription has expired. Pick a new start date or use Live Month to renew.</div>
                         )}
+                      </div>
+                    )
+                  })()}
+
+                  {bindOpen && computedDraft && (() => {
+                    const curEnd = new Date(computedDraft.endDate)
+                    const nextStart = addDays(curEnd, 1)
+                    const nextEnd = addDays(nextStart, 30)
+                    const fmt = (d) => d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+                    return (
+                      <div style={{
+                        background: 'rgba(255,105,180,0.05)',
+                        border: '1px solid rgba(255,105,180,0.25)',
+                        borderRadius: '12px',
+                        padding: '14px 16px',
+                        marginBottom: '12px',
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+                          <div style={{ fontSize: '10px', fontWeight: 800, letterSpacing: '0.14em', color: '#FF69B4' }}>🔗 BIND NEXT MONTH</div>
+                          {hasNextBound && (
+                            <span style={{
+                              padding: '3px 9px', borderRadius: '999px',
+                              fontSize: '9px', fontWeight: 800, letterSpacing: '0.1em',
+                              background: 'rgba(34,197,94,0.12)',
+                              color: '#22c55e',
+                              border: '1px solid rgba(34,197,94,0.3)',
+                            }}>✓ ALREADY BOUND</span>
+                          )}
+                        </div>
+
+                        <div style={{ fontSize: '10px', color: '#888', fontWeight: 700, letterSpacing: '0.1em', marginBottom: '8px' }}>
+                          NEXT SUBSCRIPTION PERIOD
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px 14px', marginBottom: '12px' }}>
+                          <div>
+                            <div style={{ fontSize: '9px', color: '#666', fontWeight: 700, letterSpacing: '0.1em', marginBottom: '2px' }}>START DATE</div>
+                            <div style={{ fontSize: '13px', color: '#fff', fontWeight: 700 }}>{fmt(nextStart)}</div>
+                          </div>
+                          <div>
+                            <div style={{ fontSize: '9px', color: '#666', fontWeight: 700, letterSpacing: '0.1em', marginBottom: '2px' }}>END DATE</div>
+                            <div style={{ fontSize: '13px', color: '#fff', fontWeight: 700 }}>{fmt(nextEnd)}</div>
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                          <input
+                            type="number"
+                            value={bindAmountInput}
+                            onChange={e => setBindAmountInput(e.target.value)}
+                            onKeyDown={e => { if (e.key === 'Enter') confirmBindNext(curEnd) }}
+                            placeholder="Advance Amount (INR)"
+                            style={{
+                              flex: 1, minWidth: '160px',
+                              padding: '10px 12px',
+                              background: 'rgba(255,255,255,0.04)',
+                              border: '1px solid rgba(255,255,255,0.1)',
+                              borderRadius: '8px',
+                              color: '#fff', fontSize: '13px', outline: 'none',
+                            }}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => confirmBindNext(curEnd)}
+                            style={{
+                              padding: '10px 16px',
+                              background: '#FF69B4', border: 'none', borderRadius: '8px',
+                              color: '#fff', fontSize: '10px', fontWeight: 800, letterSpacing: '0.1em',
+                              cursor: 'pointer',
+                              boxShadow: '0 0 14px rgba(255,105,180,0.45)',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >CONFIRM NEXT MONTH PAYMENT</button>
+                        </div>
                       </div>
                     )
                   })()}
