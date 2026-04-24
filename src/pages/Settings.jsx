@@ -1068,13 +1068,15 @@ export default function Settings() {
                                   color: h.mode === 'live' ? '#FF69B4' : '#ccc',
                                   border: `1px solid ${h.mode === 'live' ? 'rgba(255,105,180,0.3)' : 'rgba(255,255,255,0.1)'}`,
                                 }}>{h.mode === 'live' ? 'LIVE' : 'CUSTOM'}</span>
-                                <span style={{
-                                  padding: '3px 8px', borderRadius: '999px',
-                                  fontSize: '9px', fontWeight: 800, letterSpacing: '0.1em',
-                                  background: expired ? 'rgba(239,68,68,0.12)' : 'rgba(74,222,128,0.12)',
-                                  color: expired ? '#ef4444' : '#4ade80',
-                                  border: `1px solid ${expired ? 'rgba(239,68,68,0.3)' : 'rgba(74,222,128,0.3)'}`,
-                                }}>{expired ? '🔴 EXPIRED' : '🟢 ACTIVE'}</span>
+                                {expired && (
+                                  <span style={{
+                                    padding: '3px 8px', borderRadius: '999px',
+                                    fontSize: '9px', fontWeight: 800, letterSpacing: '0.1em',
+                                    background: 'rgba(239,68,68,0.12)',
+                                    color: '#ef4444',
+                                    border: '1px solid rgba(239,68,68,0.3)',
+                                  }}>🔴 EXPIRED</span>
+                                )}
                                 <button
                                   onClick={() => deleteHistoryEntry(amountModalUid, h.id)}
                                   title="Delete entry"
@@ -1195,13 +1197,15 @@ export default function Settings() {
                           <div style={{ fontSize: '10px', fontWeight: 800, letterSpacing: '0.12em', color: '#FF69B4' }}>
                             {computedDraft.mode === 'live' ? '⚡ LIVE SUBSCRIPTION' : '📅 CUSTOM SUBSCRIPTION'}
                           </div>
-                          <span style={{
-                            padding: '3px 9px', borderRadius: '999px',
-                            fontSize: '9px', fontWeight: 800, letterSpacing: '0.1em',
-                            background: expired ? 'rgba(239,68,68,0.12)' : 'rgba(74,222,128,0.12)',
-                            color: expired ? '#ef4444' : '#4ade80',
-                            border: `1px solid ${expired ? 'rgba(239,68,68,0.3)' : 'rgba(74,222,128,0.3)'}`,
-                          }}>{expired ? '🔴 EXPIRED' : '🟢 ACTIVE'}</span>
+                          {expired && (
+                            <span style={{
+                              padding: '3px 9px', borderRadius: '999px',
+                              fontSize: '9px', fontWeight: 800, letterSpacing: '0.1em',
+                              background: 'rgba(239,68,68,0.12)',
+                              color: '#ef4444',
+                              border: '1px solid rgba(239,68,68,0.3)',
+                            }}>🔴 EXPIRED</span>
+                          )}
                         </div>
 
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px 14px', marginBottom: '12px' }}>
