@@ -51,10 +51,10 @@ export default function DemoCreateWebsite() {
     logo: null,
     selectedPlan: 'STARTER',
     planLimits: {
-      totalTables: 0,
-      ownerPanelUsers: 0,
-      managerPanelUsers: 0,
-      employeeSectionUsers: 0,
+      STARTER:    { totalTables: 0, ownerPanelUsers: 0, managerPanelUsers: 0, employeeSectionUsers: 0 },
+      GROWTH:     { totalTables: 0, ownerPanelUsers: 0, managerPanelUsers: 0, employeeSectionUsers: 0 },
+      SCALE:      { totalTables: 0, ownerPanelUsers: 0, managerPanelUsers: 0, employeeSectionUsers: 0 },
+      CUSTOMISED: { totalTables: 0, ownerPanelUsers: 0, managerPanelUsers: 0, employeeSectionUsers: 0 },
     },
   })
 

@@ -28,14 +28,16 @@ export default function PlanSelector({
   limits,
   onLimitsChange,
 }) {
-  const safeLimits = { ...DEFAULT_LIMITS, ...(limits || {}) }
+  const getLimitsFor = (key) => ({ ...DEFAULT_LIMITS, ...((limits && limits[key]) || {}) })
+  const selectedLimits = getLimitsFor(selected)
+
   const [editOpen, setEditOpen] = useState(false)
-  const [draft, setDraft] = useState(safeLimits)
+  const [draft, setDraft] = useState(selectedLimits)
 
   useEffect(() => {
-    if (editOpen) setDraft(safeLimits)
+    if (editOpen) setDraft(selectedLimits)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editOpen])
+  }, [editOpen, selected])
 
   const updateField = (key, value) => {
     const num = value === '' ? '' : Math.max(0, parseInt(value, 10) || 0)
@@ -45,14 +47,20 @@ export default function PlanSelector({
   const updateLiveCustom = (key, value) => {
     if (!onLimitsChange) return
     const num = value === '' ? 0 : Math.max(0, parseInt(value, 10) || 0)
-    onLimitsChange({ ...safeLimits, [key]: num })
+    onLimitsChange({
+      ...(limits || {}),
+      CUSTOMISED: { ...getLimitsFor('CUSTOMISED'), [key]: num },
+    })
   }
 
   const saveModal = () => {
     const cleaned = Object.fromEntries(
       Object.entries(draft).map(([k, v]) => [k, v === '' ? 0 : v])
     )
-    onLimitsChange && onLimitsChange(cleaned)
+    onLimitsChange && onLimitsChange({
+      ...(limits || {}),
+      [selected]: cleaned,
+    })
     setEditOpen(false)
   }
 
@@ -103,6 +111,7 @@ export default function PlanSelector({
       }}>
         {PLANS.map(plan => {
           const isSelected = selected === plan.key
+          const cardLimits = getLimitsFor(plan.key)
           return (
             <div
               key={plan.key}
@@ -177,7 +186,7 @@ export default function PlanSelector({
                       <input
                         type="number"
                         min="0"
-                        value={safeLimits[f.key] ?? 0}
+                        value={cardLimits[f.key] ?? 0}
                         onChange={e => updateLiveCustom(f.key, e.target.value)}
                         style={{
                           width: '100%',
@@ -220,7 +229,7 @@ export default function PlanSelector({
                         fontSize: '12px', color: isSelected ? '#fff' : '#aaa',
                         fontWeight: 800, fontFamily: 'monospace',
                       }}>
-                        {safeLimits[f.key] ?? 0}
+                        {cardLimits[f.key] ?? 0}
                       </span>
                     </li>
                   ))}
