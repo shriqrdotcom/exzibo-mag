@@ -1,0 +1,54 @@
+**PROMPT TO COPY:**
+
+```
+Update the "Total Revenue" card with the following exact logic. Do NOT change any styling, colors, fonts, or layout of the card itself.
+
+---
+
+## 1. MONTHLY REVENUE LOGIC
+
+- On the 1st of every month, automatically reset the Total Revenue to ₹0.
+- Each month's revenue is calculated by summing all payment entries added during that calendar month.
+- The card displays the current month's total only, formatted as ₹X.XCr (or ₹X,XX,XXX — match existing format).
+
+---
+
+## 2. DATA STORAGE
+
+- Store each payment entry with: { amount, date (timestamp) }
+- Group entries by month+year (e.g., "April 2026", "March 2026", etc.)
+- Keep a rolling 12-month history. On January 1st of each new year, automatically delete all data from January of the previous year (i.e., data older than 12 months is purged).
+
+---
+
+## 3. HISTORY BUTTON
+
+- Add a "History" button on the Total Revenue card.
+- Button color: Green (background).
+- On click, open a modal or dropdown showing the last 12 months of revenue data.
+- Each row shows: Month Name + Year → Total Revenue (e.g., "March 2026 → ₹1.8Cr")
+- The history section background/theme is Green.
+- Do NOT show months with ₹0 or no data.
+- Data older than 12 months is automatically excluded.
+
+---
+
+## 4. AUTO-RESET MECHANISM
+
+- On app load, check today's date.
+- If it is the 1st of the current month AND the current month's revenue has not been reset yet, archive last month's total into history and reset current month to ₹0.
+- This should work even if the app was closed on the 1st — it must detect the date on next open and reset accordingly.
+
+---
+
+Do not modify any other section, card, or UI element outside of the Total Revenue card and its History modal.
+```
+
+---
+
+**Why this prompt works:**
+- Covers the **reset logic** (1st of month → ₹0)
+- Covers **12-month rolling history** with auto-deletion
+- Specifies the **green History button and modal**
+- Handles **offline/closed app** edge case (date check on load)
+- Keeps all other UI untouched
