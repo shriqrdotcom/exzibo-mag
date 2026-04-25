@@ -170,6 +170,12 @@ export default function Dashboard() {
   const currentMonthRevenue = revenueEntries
     .filter(e => monthKey(e.date) === currentMonthKey)
     .reduce((s, e) => s + (parseFloat(e.amount) || 0), 0)
+  const currentMonthOrderCount = revenueEntries
+    .filter(e => monthKey(e.date) === currentMonthKey)
+    .length
+  const currentMonthAbbr = new Date()
+    .toLocaleDateString('en-US', { month: 'short' })
+    .toUpperCase()
   const revenueHistory = (() => {
     const map = {}
     revenueEntries.forEach(e => {
@@ -229,7 +235,22 @@ export default function Dashboard() {
                 </span>
               </div>
             </div>
-            <KPICard label="AVG TICKET" value="₹7,050" />
+            <div style={{
+              background: '#111',
+              border: '1px solid rgba(255,255,255,0.06)',
+              borderRadius: '20px',
+              padding: '28px',
+            }}>
+              <div style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.1em', color: '#555', marginBottom: '16px', textTransform: 'uppercase' }}>
+                ORDER PER MONTH
+              </div>
+              <div style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.1em', color: '#555', marginBottom: '8px', textTransform: 'uppercase' }}>
+                {currentMonthAbbr}
+              </div>
+              <span style={{ fontSize: '42px', fontWeight: 800, lineHeight: 1, letterSpacing: '-0.02em' }}>
+                {currentMonthOrderCount.toLocaleString('en-IN')}
+              </span>
+            </div>
           </div>
 
           <div style={{
