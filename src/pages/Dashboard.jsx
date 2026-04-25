@@ -93,7 +93,7 @@ export default function Dashboard() {
           <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '16px', marginBottom: '32px' }}>
             <KPICard
               label="ACTIVE OPERATIONS"
-              value="1,284"
+              value={restaurants.filter(r => r.status === 'RUNNING' || r.status === 'PAUSED').length.toLocaleString('en-IN')}
               badge="+12.5%"
               badgeIcon={<TrendingUp size={11} />}
             />
