@@ -27,7 +27,13 @@ export default function CreateWebsite() {
     digitalServiceBell: false,
     uploadedImages: [],
     logo: null,
-    selectedPlan: 'PLUS',
+    selectedPlan: 'STARTER',
+    planLimits: {
+      totalTables: 0,
+      ownerPanelUsers: 0,
+      managerPanelUsers: 0,
+      employeeSectionUsers: 0,
+    },
   })
 
   const [errors, setErrors] = useState({})
@@ -144,6 +150,7 @@ export default function CreateWebsite() {
       digitalServiceBell: form.digitalServiceBell,
       status: 'active',
       plan: form.selectedPlan,
+      planLimits: form.planLimits,
       createdAt: new Date().toISOString(),
     }
     localStorage.setItem('exzibo_restaurants', JSON.stringify([...existing, newRestaurant]))
@@ -346,6 +353,8 @@ export default function CreateWebsite() {
             <PlanSelector
               selected={form.selectedPlan}
               onChange={val => set('selectedPlan', val)}
+              limits={form.planLimits}
+              onLimitsChange={val => set('planLimits', val)}
             />
           </div>
         </div>

@@ -49,7 +49,13 @@ export default function DemoCreateWebsite() {
     digitalServiceBell: false,
     uploadedImages: [],
     logo: null,
-    selectedPlan: 'PLUS',
+    selectedPlan: 'STARTER',
+    planLimits: {
+      totalTables: 0,
+      ownerPanelUsers: 0,
+      managerPanelUsers: 0,
+      employeeSectionUsers: 0,
+    },
   })
 
   const [errors, setErrors] = useState({})
@@ -318,7 +324,12 @@ export default function DemoCreateWebsite() {
               <div style={{ fontSize: '16px', fontWeight: 800, color: '#fff' }}>Choose Your Plan</div>
               <div style={{ fontSize: '12px', color: '#555', marginTop: '4px' }}>You can upgrade or change your plan at any time.</div>
             </div>
-            <PlanSelector selected={form.selectedPlan} onChange={val => set('selectedPlan', val)} />
+            <PlanSelector
+              selected={form.selectedPlan}
+              onChange={val => set('selectedPlan', val)}
+              limits={form.planLimits}
+              onLimitsChange={val => set('planLimits', val)}
+            />
           </div>
         </div>
 

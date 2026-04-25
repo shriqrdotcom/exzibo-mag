@@ -1,0 +1,103 @@
+```
+Completely replace the existing "Choose Your Plan" section with a new plan selection system. Follow every instruction below exactly.
+
+---
+
+## STEP 1 — REMOVE EVERYTHING EXISTING
+
+- Delete all 3 current plan cards: PLUS, PRO, MAX
+- Remove all their associated logic, features lists, and selection state
+- Keep the section container and heading "Choose Your Plan" unless instructed otherwise
+
+---
+
+## STEP 2 — ADD 4 NEW PLAN CARDS
+
+Replace with exactly these 4 plans in this order:
+
+### Card 1 — STARTER
+- Badge label: • STARTER
+- Static card, no editable fields
+- Admin selects it by clicking
+
+### Card 2 — GROWTH
+- Badge label: • GROWTH
+- Static card, no editable fields
+- Admin selects it by clicking
+
+### Card 3 — SCALE
+- Badge label: • SCALE
+- Static card, no editable fields
+- Admin selects it by clicking
+
+### Card 4 — CUSTOMISED
+- Badge label: • CUSTOMISED
+- When this card is clicked/selected, it becomes fully editable
+- All fields inside this card become manually changeable by admin
+- Details in Step 3 below
+
+---
+
+## STEP 3 — CUSTOMISED PLAN EDITABLE FIELDS
+
+When CUSTOMISED is selected, show the following editable input fields inside the card:
+
+1. TABLE NUMBER
+   - Label: "Total Tables"
+   - Input: number field, manually editable by admin
+
+2. OWNER PANEL USER LIMIT
+   - Label: "Owner Panel Users"
+   - Input: number field, manually editable by admin
+
+3. MANAGER PANEL USER LIMIT
+   - Label: "Manager Panel Users"
+   - Input: number field, manually editable by admin
+
+4. EMPLOYEE SECTION USER LIMIT
+   - Label: "Employee Section Users"
+   - Input: number field, manually editable by admin
+
+- All 4 fields are only visible and editable when CUSTOMISED card is selected
+- When any other plan is selected, these fields are hidden
+- Save all 4 values when admin saves/confirms the plan
+
+---
+
+## STEP 4 — EDIT BUTTON AT TOP OF SECTION
+
+- Add an "EDIT" button at the top-right corner of the entire plan section
+- This button is always visible regardless of which plan is selected
+- When clicked, it opens an edit modal or inline edit mode with these 4 fields (same as CUSTOMISED fields):
+
+  1. Table Number — "Total Tables" (number input)
+  2. Owner Panel User Limit — "Owner Panel Users" (number input)
+  3. Manager Panel User Limit — "Manager Panel Users" (number input)
+  4. Employee Section User Limit — "Employee Section Users" (number input)
+
+- This EDIT button allows admin to configure limits for ANY selected plan, not just CUSTOMISED
+- Include a SAVE button inside the edit modal/panel to confirm changes
+- Include a CANCEL or close (X) button to discard changes
+
+---
+
+## STEP 5 — PLAN SELECTION BEHAVIOR
+
+- Only one plan can be selected at a time
+- Selected plan card shows a highlighted border (blue or white glow — match existing selected style)
+- Show a checkmark (✓) on the selected card
+- Default selected plan on load: STARTER
+- Save the selected plan to the database when changed
+
+---
+
+## STYLING RULES
+
+- Match the existing dark theme exactly
+- Same card size, border radius, font style as current plan cards
+- Badge labels (• STARTER, • GROWTH, etc.) styled as small colored pill badges
+- EDIT button: small, top-right of section, outline style matching existing UI buttons
+- Editable input fields inside CUSTOMISED card: same dark input style as rest of the app
+- Do not add any pricing, descriptions, or feature lists unless already present
+
+---
