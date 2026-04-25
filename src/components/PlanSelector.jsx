@@ -159,7 +159,7 @@ export default function PlanSelector({
                 </span>
               </div>
 
-              {/* CUSTOMISED inline editable fields */}
+              {/* CUSTOMISED inline editable fields (only when selected) */}
               {plan.key === 'CUSTOMISED' && isSelected && (
                 <div
                   onClick={e => e.stopPropagation()}
@@ -198,6 +198,33 @@ export default function PlanSelector({
                     </div>
                   ))}
                 </div>
+              )}
+
+              {/* Read-only limits summary for non-CUSTOMISED plans */}
+              {plan.key !== 'CUSTOMISED' && (
+                <ul style={{
+                  listStyle: 'none', padding: 0, margin: '4px 0 0 0',
+                  display: 'flex', flexDirection: 'column', gap: '6px',
+                }}>
+                  {FIELDS.map(f => (
+                    <li key={f.key} style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      gap: '8px',
+                    }}>
+                      <span style={{
+                        fontSize: '11px', color: '#777', fontWeight: 500,
+                      }}>
+                        {f.label}
+                      </span>
+                      <span style={{
+                        fontSize: '12px', color: isSelected ? '#fff' : '#aaa',
+                        fontWeight: 800, fontFamily: 'monospace',
+                      }}>
+                        {safeLimits[f.key] ?? 0}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
               )}
             </div>
           )
