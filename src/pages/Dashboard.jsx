@@ -149,6 +149,17 @@ export default function Dashboard() {
   const [revenueEntries, setRevenueEntries] = useState([])
   const [revenueHistoryOpen, setRevenueHistoryOpen] = useState(false)
   const [editDraft, setEditDraft] = useState(null)
+  const [viewTarget, setViewTarget] = useState(null)
+
+  function openViewModal(r) {
+    const saved = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
+    const raw = saved.find(x => x.id === r.id) || {}
+    setViewTarget({
+      uid: r.uid,
+      state: r.place === '—' ? '' : r.place,
+      note: raw.note || '',
+    })
+  }
 
   function loadRestaurantsFromStorage() {
     const saved = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
@@ -493,18 +504,33 @@ export default function Dashboard() {
                         </div>
                       </td>
                       <td style={{ padding: '20px 28px' }}>
-                        <span style={{
-                          display: 'inline-block',
-                          padding: '5px 10px',
-                          background: 'rgba(255,255,255,0.05)',
-                          border: '1px solid rgba(255,255,255,0.1)',
-                          borderRadius: '8px',
-                          color: '#fff',
-                          fontSize: '12px',
-                          fontWeight: 800,
-                          letterSpacing: '0.08em',
-                          fontFamily: 'monospace',
-                        }}>{r.place}</span>
+                        <button
+                          type="button"
+                          onClick={() => openViewModal(r)}
+                          title="View details"
+                          style={{
+                            display: 'inline-block',
+                            padding: '5px 10px',
+                            background: 'rgba(255,255,255,0.05)',
+                            border: '1px solid rgba(255,255,255,0.1)',
+                            borderRadius: '8px',
+                            color: '#fff',
+                            fontSize: '12px',
+                            fontWeight: 800,
+                            letterSpacing: '0.08em',
+                            fontFamily: 'monospace',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s',
+                          }}
+                          onMouseEnter={e => {
+                            e.currentTarget.style.background = 'rgba(232,50,26,0.12)'
+                            e.currentTarget.style.borderColor = 'rgba(232,50,26,0.4)'
+                          }}
+                          onMouseLeave={e => {
+                            e.currentTarget.style.background = 'rgba(255,255,255,0.05)'
+                            e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'
+                          }}
+                        >{r.place}</button>
                       </td>
                       <td style={{ padding: '20px 28px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -682,6 +708,97 @@ export default function Dashboard() {
                 </button>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {viewTarget && (
+        <div
+          onClick={() => setViewTarget(null)}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 2000,
+            background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: '24px',
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              width: '100%', maxWidth: '380px',
+              background: '#141414',
+              border: '1px solid rgba(255,255,255,0.08)',
+              borderRadius: '18px',
+              padding: '24px',
+              boxShadow: '0 20px 60px rgba(0,0,0,0.7)',
+              position: 'relative',
+            }}
+          >
+            <button
+              onClick={() => setViewTarget(null)}
+              style={{
+                position: 'absolute', top: '14px', right: '14px',
+                width: '30px', height: '30px', borderRadius: '8px',
+                background: 'rgba(255,255,255,0.06)',
+                border: '1px solid rgba(255,255,255,0.08)',
+                color: '#888', cursor: 'pointer',
+                fontSize: '14px', fontWeight: 700,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}
+            >✕</button>
+
+            <div style={{
+              fontSize: '15px', fontWeight: 800,
+              letterSpacing: '0.06em', marginBottom: '4px', paddingRight: '40px',
+              color: '#fff', textTransform: 'uppercase',
+            }}>
+              CUSTOMER DETAILS
+            </div>
+            <div style={{
+              fontSize: '11px', fontWeight: 700, color: '#666',
+              letterSpacing: '0.08em', marginBottom: '20px', fontFamily: 'monospace',
+            }}>
+              UID {viewTarget.uid}
+            </div>
+
+            <FieldLabel>STATE</FieldLabel>
+            <div style={{
+              padding: '11px 12px',
+              background: 'rgba(255,255,255,0.04)',
+              border: '1px solid rgba(255,255,255,0.08)',
+              borderRadius: '10px',
+              color: '#fff',
+              fontSize: '14px',
+              fontFamily: 'monospace',
+              fontWeight: 800,
+              letterSpacing: '0.1em',
+              textTransform: 'uppercase',
+              marginBottom: '16px',
+            }}>
+              {viewTarget.state || <span style={{ color: '#555', fontWeight: 500, letterSpacing: 0 }}>Not set</span>}
+            </div>
+
+            <FieldLabel>NOTE</FieldLabel>
+            <div style={{
+              padding: '11px 12px',
+              background: 'rgba(255,255,255,0.04)',
+              border: '1px solid rgba(255,255,255,0.08)',
+              borderRadius: '10px',
+              color: '#fff',
+              fontSize: '13px',
+              minHeight: '42px',
+              wordBreak: 'break-word',
+              marginBottom: '8px',
+            }}>
+              {viewTarget.note || <span style={{ color: '#555' }}>No note added</span>}
+            </div>
+
+            <div style={{
+              fontSize: '11px', color: '#555', marginTop: '14px',
+              textAlign: 'center', fontStyle: 'italic',
+            }}>
+              Use the pencil icon to edit
+            </div>
           </div>
         </div>
       )}
