@@ -1,0 +1,54 @@
+```
+Update the "EDIT CUSTOMER" modal with the following exact changes. Do NOT change the modal size, background color, fonts, UID display, STATUS toggle, SAVE CHANGES button, or close (X) button.
+
+---
+
+## CHANGES TO MAKE:
+
+### 1. REMOVE — TIMELINE SECTION
+- Completely remove the TIMELINE section (both date picker fields and the "TIMELINE" label)
+- Remove all timeline-related logic, state, and database fields tied to this modal
+- Do not leave any empty space where it was — shift remaining fields up
+
+### 2. REMOVE — PLAN SECTION
+- Completely remove the PLAN section (the dropdown/input showing "SCALE" and the "PLAN" label)
+- Remove all plan-related logic from this modal only
+- Do not leave any empty space — shift remaining fields up
+
+### 3. KEEP — STATUS TOGGLE
+- Keep the STATUS section exactly as it is (RUNNING / PAUSED toggle with green dot)
+- No changes to this section
+
+### 4. RENAME — PLACE SECTION → STATE
+- Rename the label from "PLACE (2-LETTER CODE)" to "STATE"
+- Keep the same input field
+- Still accepts maximum 2 characters, auto-uppercase
+- Example values: WB, MH, DL, MP, KA
+
+### 5. ADD — NEW FIELD AFTER STATE SECTION
+- After the STATE input field, add a new text input field
+- Label: (no label needed, or just a placeholder)
+- Placeholder text: "Add note..." or leave blank
+- Maximum character limit: 20 characters
+- Show a live character counter below or inside the field: e.g., "12/20"
+- This is a free-text field, admin can type anything up to 20 characters
+- Save this field value to the database along with other customer data
+
+---
+
+## FINAL MODAL FIELD ORDER (top to bottom):
+
+1. Title: EDIT CUSTOMER
+2. UID (display only, not editable)
+3. STATUS (RUNNING / PAUSED toggle)
+4. STATE (2-letter code input, max 2 chars, uppercase)
+5. 20-character text input (with live counter)
+6. SAVE CHANGES button
+
+---
+
+## STYLING RULES:
+- Match existing dark modal theme exactly
+- Input fields same style as current PLACE input
+- Character counter (X/20) shown in small grey text inside or below the text input
+- No extra spacing, borders, or elements not listed above

@@ -199,14 +199,14 @@ export default function Dashboard() {
   }
 
   function openEditModal(r) {
+    const saved = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
+    const raw = saved.find(x => x.id === r.id) || {}
     setEditDraft({
       id: r.id,
       uid: r.uid,
       status: r.status,
-      startDate: toISODateInput(r.startDate),
-      endDate: toISODateInput(r.endDate),
-      plan: r.plan,
       place: r.place === '—' ? '' : r.place,
+      note: raw.note || '',
     })
   }
 
@@ -216,15 +216,12 @@ export default function Dashboard() {
 
   function saveEdit() {
     if (!editDraft) return
-    const start = editDraft.startDate ? new Date(editDraft.startDate).toISOString() : null
-    const end = editDraft.endDate ? new Date(editDraft.endDate).toISOString() : null
     const place = (editDraft.place || '').toUpperCase().replace(/[^A-Z]/g, '').slice(0, 2)
+    const note = (editDraft.note || '').slice(0, 20)
     persistRestaurantPatch(editDraft.id, {
       status: editDraft.status === 'PAUSED' ? 'paused' : 'active',
-      startDate: start,
-      endDate: end,
-      plan: normalizePlan(editDraft.plan),
       place: place || '—',
+      note,
     })
     setEditDraft(null)
   }
@@ -768,34 +765,7 @@ export default function Dashboard() {
               })}
             </div>
 
-            <FieldLabel>TIMELINE</FieldLabel>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '18px' }}>
-              <input
-                type="date"
-                value={editDraft.startDate}
-                onChange={e => setEditDraft(d => ({ ...d, startDate: e.target.value }))}
-                style={editInputStyle}
-              />
-              <input
-                type="date"
-                value={editDraft.endDate}
-                onChange={e => setEditDraft(d => ({ ...d, endDate: e.target.value }))}
-                style={editInputStyle}
-              />
-            </div>
-
-            <FieldLabel>PLAN</FieldLabel>
-            <select
-              value={editDraft.plan}
-              onChange={e => setEditDraft(d => ({ ...d, plan: e.target.value }))}
-              style={{ ...editInputStyle, marginBottom: '18px', appearance: 'none', cursor: 'pointer' }}
-            >
-              {PLAN_OPTIONS.map(p => (
-                <option key={p} value={p} style={{ background: '#141414', color: '#fff' }}>{p}</option>
-              ))}
-            </select>
-
-            <FieldLabel>PLACE (2-letter code)</FieldLabel>
+            <FieldLabel>STATE</FieldLabel>
             <input
               type="text"
               maxLength={2}
@@ -804,13 +774,35 @@ export default function Dashboard() {
               placeholder="e.g. WB"
               style={{
                 ...editInputStyle,
-                marginBottom: '24px',
+                marginBottom: '18px',
                 fontFamily: 'monospace',
                 fontWeight: 800,
                 letterSpacing: '0.1em',
                 textTransform: 'uppercase',
               }}
             />
+
+            <div style={{ position: 'relative', marginBottom: '24px' }}>
+              <input
+                type="text"
+                maxLength={20}
+                value={editDraft.note}
+                onChange={e => setEditDraft(d => ({ ...d, note: e.target.value.slice(0, 20) }))}
+                placeholder="Add note..."
+                style={{ ...editInputStyle, paddingRight: '52px' }}
+              />
+              <span style={{
+                position: 'absolute',
+                right: '12px',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                fontSize: '11px',
+                fontWeight: 600,
+                color: '#666',
+                fontFamily: 'monospace',
+                pointerEvents: 'none',
+              }}>{(editDraft.note || '').length}/20</span>
+            </div>
 
             <button
               onClick={saveEdit}
