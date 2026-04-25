@@ -2,7 +2,7 @@ import React, { useState, useEffect, useLayoutEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Sidebar from '../components/Sidebar'
 import AdminHeader from '../components/AdminHeader'
-import { TrendingUp, Filter, Download, ChevronLeft, ChevronRight, Plus, Trash2, Clock, X } from 'lucide-react'
+import { TrendingUp, Filter, Download, ChevronLeft, ChevronRight, Plus, Trash2, Clock, X, Pencil } from 'lucide-react'
 import { useRole } from '../context/RoleContext'
 
 function getAvatarFromName(name) {
@@ -11,6 +11,62 @@ function getAvatarFromName(name) {
 
 function formatDate(iso) {
   return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })
+}
+
+function toISODateInput(d) {
+  const dt = new Date(d)
+  if (isNaN(dt)) return ''
+  return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`
+}
+
+function formatDDMMYYYY(d) {
+  const dt = new Date(d)
+  if (isNaN(dt)) return '—'
+  return `${String(dt.getDate()).padStart(2, '0')}-${String(dt.getMonth() + 1).padStart(2, '0')}-${dt.getFullYear()}`
+}
+
+const PLAN_OPTIONS = ['STARTER', 'GROWTH', 'SCALE', 'CUSTOMISED']
+const PLAN_DOT_COLOR = {
+  STARTER: '#3B82F6',
+  GROWTH: '#22c55e',
+  SCALE: '#A855F7',
+  CUSTOMISED: '#F59E0B',
+}
+
+function normalizePlan(p) {
+  if (!p) return 'STARTER'
+  const up = String(p).toUpperCase()
+  if (PLAN_OPTIONS.includes(up)) return up
+  if (up === 'PLUS') return 'STARTER'
+  if (up === 'PRO') return 'GROWTH'
+  if (up === 'MAX') return 'SCALE'
+  return 'STARTER'
+}
+
+const editInputStyle = {
+  width: '100%',
+  padding: '11px 12px',
+  background: 'rgba(255,255,255,0.04)',
+  border: '1px solid rgba(255,255,255,0.1)',
+  borderRadius: '10px',
+  color: '#fff',
+  fontSize: '13px',
+  outline: 'none',
+  boxSizing: 'border-box',
+  fontFamily: 'inherit',
+}
+
+function FieldLabel({ children }) {
+  return (
+    <div style={{
+      fontSize: '10px',
+      fontWeight: 700,
+      color: '#888',
+      letterSpacing: '0.1em',
+      marginBottom: '8px',
+      textTransform: 'uppercase',
+    }}>{children}</div>
+  )
 }
 
 function monthKey(d) {
@@ -92,19 +148,85 @@ export default function Dashboard() {
   const [toast, setToast] = useState('')
   const [revenueEntries, setRevenueEntries] = useState([])
   const [revenueHistoryOpen, setRevenueHistoryOpen] = useState(false)
+  const [editDraft, setEditDraft] = useState(null)
 
   function loadRestaurantsFromStorage() {
     const saved = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
-    return saved.map(r => ({
+    let mutated = false
+    const today = new Date()
+    const monthFromNow = new Date()
+    monthFromNow.setDate(monthFromNow.getDate() + 30)
+    const enriched = saved.map(r => {
+      const patch = {}
+      if (!r.startDate) { patch.startDate = (r.createdAt || today.toISOString()); mutated = true }
+      if (!r.endDate) {
+        const start = new Date(r.startDate || patch.startDate || today.toISOString())
+        const end = new Date(start)
+        end.setDate(end.getDate() + 30)
+        patch.endDate = end.toISOString()
+        mutated = true
+      }
+      if (!r.place) { patch.place = '—'; mutated = true }
+      const normalizedPlan = normalizePlan(r.plan)
+      if (r.plan !== normalizedPlan) { patch.plan = normalizedPlan; mutated = true }
+      return { ...r, ...patch }
+    })
+    if (mutated) {
+      localStorage.setItem('exzibo_restaurants', JSON.stringify(enriched))
+    }
+    return enriched.map(r => ({
       id: r.id,
       uid: r.uid || r.id,
       name: r.name.toUpperCase(),
-      status: r.status === 'active' ? 'RUNNING' : r.status === 'paused' ? 'PAUSED' : 'PENDING',
-      date: formatDate(r.createdAt),
-      tables: parseInt(r.tables) || 0,
-      payment: '₹0.00',
+      status: r.status === 'paused' ? 'PAUSED' : 'RUNNING',
+      startDate: r.startDate,
+      endDate: r.endDate,
+      plan: normalizePlan(r.plan),
+      place: (r.place || '—').toUpperCase().slice(0, 2) || '—',
       avatar: getAvatarFromName(r.name),
     }))
+  }
+
+  function persistRestaurantPatch(id, patch) {
+    const saved = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
+    const updated = saved.map(r => r.id === id ? { ...r, ...patch } : r)
+    localStorage.setItem('exzibo_restaurants', JSON.stringify(updated))
+    setRestaurants(loadRestaurantsFromStorage())
+  }
+
+  function toggleRowStatus(r) {
+    persistRestaurantPatch(r.id, { status: r.status === 'RUNNING' ? 'paused' : 'active' })
+  }
+
+  function openEditModal(r) {
+    setEditDraft({
+      id: r.id,
+      uid: r.uid,
+      status: r.status,
+      startDate: toISODateInput(r.startDate),
+      endDate: toISODateInput(r.endDate),
+      plan: r.plan,
+      place: r.place === '—' ? '' : r.place,
+    })
+  }
+
+  function closeEditModal() {
+    setEditDraft(null)
+  }
+
+  function saveEdit() {
+    if (!editDraft) return
+    const start = editDraft.startDate ? new Date(editDraft.startDate).toISOString() : null
+    const end = editDraft.endDate ? new Date(editDraft.endDate).toISOString() : null
+    const place = (editDraft.place || '').toUpperCase().replace(/[^A-Z]/g, '').slice(0, 2)
+    persistRestaurantPatch(editDraft.id, {
+      status: editDraft.status === 'PAUSED' ? 'paused' : 'active',
+      startDate: start,
+      endDate: end,
+      plan: normalizePlan(editDraft.plan),
+      place: place || '—',
+    })
+    setEditDraft(null)
   }
 
   function openDeleteModal(r) {
@@ -265,7 +387,7 @@ export default function Dashboard() {
               justifyContent: 'space-between',
               padding: '24px 28px',
             }}>
-              <h2 style={{ fontSize: '18px', fontWeight: 700 }}>Enterprise Partners</h2>
+              <h2 style={{ fontSize: '18px', fontWeight: 700 }}>List of Active Users</h2>
               <div style={{ display: 'flex', gap: '10px' }}>
                 <IconBtn icon={<Filter size={14} />} label="FILTER" />
                 <IconBtn icon={<Download size={14} />} label="EXPORT" />
@@ -286,9 +408,9 @@ export default function Dashboard() {
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontSize: '26px', marginBottom: '20px',
                 }}>🍽️</div>
-                <div style={{ fontSize: '16px', fontWeight: 700, marginBottom: '8px' }}>No Restaurants Yet</div>
+                <div style={{ fontSize: '16px', fontWeight: 700, marginBottom: '8px' }}>No Active Users Yet</div>
                 <p style={{ fontSize: '13px', color: '#555', maxWidth: '280px', lineHeight: 1.6, marginBottom: '24px' }}>
-                  Add your first restaurant to see it appear here as an enterprise partner.
+                  Add your first customer to see them appear in the active users list.
                 </p>
                 <button
                   onClick={() => navigate('/create-website')}
@@ -302,7 +424,7 @@ export default function Dashboard() {
                     boxShadow: '0 0 20px rgba(232,50,26,0.4)',
                   }}
                 >
-                  <Plus size={13} /> ADD RESTAURANT
+                  <Plus size={13} /> ADD CUSTOMER
                 </button>
               </div>
             ) : (
@@ -310,7 +432,7 @@ export default function Dashboard() {
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-                  {['RESTAURANT UID', 'STATUS', 'ACTIVATION DATE', 'TOTAL TABLES', 'TOTAL PAYMENT', 'ACTIONS'].map(col => (
+                  {['UID', 'STATUS', 'TIMELINE', 'PLAN', 'PLACE', 'ACTIONS'].map(col => (
                     <th key={col} style={{
                       padding: '14px 28px',
                       textAlign: 'left',
@@ -325,8 +447,9 @@ export default function Dashboard() {
               </thead>
               <tbody>
                 {restaurants.map((r, i) => {
-                  const dotColor = r.status === 'RUNNING' ? '#E8321A' : r.status === 'PAUSED' ? '#FFB800' : '#555'
-                  const labelColor = r.status === 'RUNNING' ? '#E8321A' : r.status === 'PAUSED' ? '#FFB800' : '#666'
+                  const statusDot = r.status === 'RUNNING' ? '#22c55e' : '#9CA3AF'
+                  const statusLabelColor = r.status === 'RUNNING' ? '#22c55e' : '#aaa'
+                  const planDot = PLAN_DOT_COLOR[r.plan] || '#888'
                   return (
                     <tr key={r.uid + i} style={{
                       borderBottom: i < restaurants.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none',
@@ -336,38 +459,59 @@ export default function Dashboard() {
                     onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                     >
                       <td style={{ padding: '20px 28px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                          <div style={{
-                            width: '36px', height: '36px', borderRadius: '10px',
-                            background: r.isNew ? 'rgba(232,50,26,0.15)' : 'linear-gradient(135deg, #333, #222)',
-                            border: r.isNew ? '1px solid rgba(232,50,26,0.25)' : 'none',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            fontSize: '10px', fontWeight: 700,
-                            color: r.isNew ? '#E8321A' : '#888',
-                          }}>{r.avatar}</div>
-                          <div>
-                            <div style={{ fontSize: '13px', fontWeight: 700 }}>{r.uid}</div>
-                            <div style={{ fontSize: '11px', color: '#555', marginTop: '2px' }}>{r.name}</div>
-                          </div>
-                        </div>
+                        <div style={{ fontSize: '13px', fontWeight: 700, fontFamily: 'monospace', letterSpacing: '0.02em' }}>{r.uid}</div>
+                        <div style={{ fontSize: '11px', color: '#555', marginTop: '2px' }}>{r.name}</div>
                       </td>
                       <td style={{ padding: '20px 28px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
+                        <button
+                          type="button"
+                          onClick={() => toggleRowStatus(r)}
+                          title="Click to toggle status"
+                          style={{
+                            display: 'inline-flex', alignItems: 'center', gap: '7px',
+                            background: 'transparent', border: 'none', cursor: 'pointer', padding: 0,
+                          }}
+                        >
                           <span style={{
-                            width: '7px', height: '7px', borderRadius: '50%',
-                            background: dotColor,
-                            boxShadow: r.status !== 'PENDING' ? `0 0 8px ${dotColor}` : 'none',
+                            width: '8px', height: '8px', borderRadius: '50%',
+                            background: statusDot,
+                            boxShadow: `0 0 8px ${statusDot}`,
                             display: 'inline-block',
                           }} />
-                          <span style={{ fontSize: '12px', fontWeight: 600, color: labelColor }}>{r.status}</span>
+                          <span style={{ fontSize: '12px', fontWeight: 700, color: statusLabelColor, letterSpacing: '0.04em' }}>{r.status}</span>
+                        </button>
+                      </td>
+                      <td style={{ padding: '20px 28px', color: '#ccc', fontSize: '12px', fontWeight: 600, fontFamily: 'monospace', letterSpacing: '0.02em' }}>
+                        {formatDDMMYYYY(r.startDate)} <span style={{ color: '#555', margin: '0 4px' }}>TO</span> {formatDDMMYYYY(r.endDate)}
+                      </td>
+                      <td style={{ padding: '20px 28px' }}>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '7px' }}>
+                          <span style={{
+                            width: '8px', height: '8px', borderRadius: '50%',
+                            background: planDot,
+                            boxShadow: `0 0 8px ${planDot}`,
+                            display: 'inline-block',
+                          }} />
+                          <span style={{ fontSize: '12px', fontWeight: 700, color: '#ddd', letterSpacing: '0.06em' }}>{r.plan}</span>
                         </div>
                       </td>
-                      <td style={{ padding: '20px 28px', color: '#888', fontSize: '13px' }}>{r.date}</td>
-                      <td style={{ padding: '20px 28px', color: '#ccc', fontSize: '14px', fontWeight: 600 }}>{r.tables}</td>
-                      <td style={{ padding: '20px 28px', color: '#ccc', fontSize: '14px', fontWeight: 600 }}>{r.payment}</td>
+                      <td style={{ padding: '20px 28px' }}>
+                        <span style={{
+                          display: 'inline-block',
+                          padding: '5px 10px',
+                          background: 'rgba(255,255,255,0.05)',
+                          border: '1px solid rgba(255,255,255,0.1)',
+                          borderRadius: '8px',
+                          color: '#fff',
+                          fontSize: '12px',
+                          fontWeight: 800,
+                          letterSpacing: '0.08em',
+                          fontFamily: 'monospace',
+                        }}>{r.place}</span>
+                      </td>
                       <td style={{ padding: '20px 28px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <EditMenuBtn onClick={() => navigate(`/menu-editor/${r.id}`)} active={r.status === 'RUNNING'} />
+                          <EditRowBtn onClick={() => openEditModal(r)} />
                           <DeleteBtn onClick={() => openDeleteModal(r)} />
                         </div>
                       </td>
@@ -384,7 +528,7 @@ export default function Dashboard() {
               padding: '18px 28px',
               borderTop: '1px solid rgba(255,255,255,0.05)',
             }}>
-              <span style={{ fontSize: '12px', color: '#555' }}>Showing {restaurants.length} restaurants</span>
+              <span style={{ fontSize: '12px', color: '#555' }}>Showing {restaurants.length} {restaurants.length === 1 ? 'user' : 'users'}</span>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <PageBtn icon={<ChevronLeft size={14} />} onClick={() => setCurrentPage(p => Math.max(1, p - 1))} />
                 {[1, 2, 3].map(p => (
@@ -541,6 +685,145 @@ export default function Dashboard() {
                 </button>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {editDraft && (
+        <div
+          onClick={closeEditModal}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 2000,
+            background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: '24px',
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              width: '100%', maxWidth: '460px',
+              background: '#141414',
+              border: '1px solid rgba(255,255,255,0.08)',
+              borderRadius: '18px',
+              padding: '28px',
+              boxShadow: '0 20px 60px rgba(0,0,0,0.7)',
+              position: 'relative',
+            }}
+          >
+            <button
+              onClick={closeEditModal}
+              style={{
+                position: 'absolute', top: '14px', right: '14px',
+                width: '30px', height: '30px', borderRadius: '8px',
+                background: 'rgba(255,255,255,0.06)',
+                border: '1px solid rgba(255,255,255,0.08)',
+                color: '#888', cursor: 'pointer',
+                fontSize: '14px', fontWeight: 700,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}
+            >✕</button>
+
+            <div style={{
+              fontSize: '15px', fontWeight: 800,
+              letterSpacing: '0.06em', marginBottom: '6px', paddingRight: '40px',
+              color: '#fff', textTransform: 'uppercase',
+            }}>
+              EDIT CUSTOMER
+            </div>
+            <div style={{
+              fontSize: '11px', fontWeight: 700, color: '#666',
+              letterSpacing: '0.08em', marginBottom: '20px', fontFamily: 'monospace',
+            }}>
+              UID {editDraft.uid}
+            </div>
+
+            <FieldLabel>STATUS</FieldLabel>
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '18px' }}>
+              {['RUNNING', 'PAUSED'].map(s => {
+                const active = editDraft.status === s
+                const dot = s === 'RUNNING' ? '#22c55e' : '#9CA3AF'
+                return (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => setEditDraft(d => ({ ...d, status: s }))}
+                    style={{
+                      flex: 1,
+                      display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                      padding: '10px 12px',
+                      background: active ? 'rgba(255,255,255,0.07)' : 'rgba(255,255,255,0.02)',
+                      border: `1px solid ${active ? dot : 'rgba(255,255,255,0.1)'}`,
+                      borderRadius: '10px',
+                      color: active ? '#fff' : '#888',
+                      fontSize: '12px', fontWeight: 700, letterSpacing: '0.06em',
+                      cursor: 'pointer',
+                      boxShadow: active ? `0 0 14px ${dot}55` : 'none',
+                    }}
+                  >
+                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: dot, boxShadow: `0 0 8px ${dot}` }} />
+                    {s}
+                  </button>
+                )
+              })}
+            </div>
+
+            <FieldLabel>TIMELINE</FieldLabel>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '18px' }}>
+              <input
+                type="date"
+                value={editDraft.startDate}
+                onChange={e => setEditDraft(d => ({ ...d, startDate: e.target.value }))}
+                style={editInputStyle}
+              />
+              <input
+                type="date"
+                value={editDraft.endDate}
+                onChange={e => setEditDraft(d => ({ ...d, endDate: e.target.value }))}
+                style={editInputStyle}
+              />
+            </div>
+
+            <FieldLabel>PLAN</FieldLabel>
+            <select
+              value={editDraft.plan}
+              onChange={e => setEditDraft(d => ({ ...d, plan: e.target.value }))}
+              style={{ ...editInputStyle, marginBottom: '18px', appearance: 'none', cursor: 'pointer' }}
+            >
+              {PLAN_OPTIONS.map(p => (
+                <option key={p} value={p} style={{ background: '#141414', color: '#fff' }}>{p}</option>
+              ))}
+            </select>
+
+            <FieldLabel>PLACE (2-letter code)</FieldLabel>
+            <input
+              type="text"
+              maxLength={2}
+              value={editDraft.place}
+              onChange={e => setEditDraft(d => ({ ...d, place: e.target.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 2) }))}
+              placeholder="e.g. WB"
+              style={{
+                ...editInputStyle,
+                marginBottom: '24px',
+                fontFamily: 'monospace',
+                fontWeight: 800,
+                letterSpacing: '0.1em',
+                textTransform: 'uppercase',
+              }}
+            />
+
+            <button
+              onClick={saveEdit}
+              style={{
+                width: '100%', padding: '13px',
+                background: '#E8321A', border: 'none', borderRadius: '10px',
+                color: '#fff', fontSize: '13px', fontWeight: 800,
+                letterSpacing: '0.08em', cursor: 'pointer',
+                boxShadow: '0 0 20px rgba(232,50,26,0.4)',
+              }}
+            >
+              SAVE CHANGES
+            </button>
           </div>
         </div>
       )}
@@ -750,6 +1033,29 @@ function EditMenuBtn({ onClick, active }) {
       }}
     >
       EDIT MENU
+    </button>
+  )
+}
+
+function EditRowBtn({ onClick }) {
+  const [hov, setHov] = useState(false)
+  return (
+    <button onClick={onClick}
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
+      title="Edit"
+      style={{
+        width: '32px', height: '32px',
+        background: hov ? 'rgba(232,50,26,0.15)' : 'rgba(255,255,255,0.04)',
+        border: `1px solid ${hov ? 'rgba(232,50,26,0.5)' : 'rgba(255,255,255,0.1)'}`,
+        borderRadius: '9px',
+        color: hov ? '#E8321A' : '#888',
+        cursor: 'pointer',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        transition: 'all 0.2s',
+      }}
+    >
+      <Pencil size={14} />
     </button>
   )
 }

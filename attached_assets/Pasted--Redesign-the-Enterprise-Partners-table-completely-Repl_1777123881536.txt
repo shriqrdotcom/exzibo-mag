@@ -1,0 +1,77 @@
+```
+Redesign the "Enterprise Partners" table completely. Replace all existing columns and logic with the following exact specification. Do NOT change the card container, background color, FILTER button, EXPORT button, pagination, or overall page layout.
+
+Change the section name "LIST OF ACTIVE USERS"
+---
+
+## COLUMNS — REPLACE ALL EXISTING COLUMNS WITH THESE 5 ONLY:
+
+| Column Name | Details |
+|-------------|---------|
+| UID | 10-digit number, auto-generated, unique per customer |
+| STATUS | Dot badge — either • RUNNING (green dot) or • PAUSED (yellow or grey dot) |
+| TIMELINE | Date range format: DD-MM-YYYY TO DD-MM-YYYY (Start Date to End Date, manually set) |
+| PLAN | Dot badge — one of: • STARTER / • GROWTH / • SCALE / • CUSTOMISED |
+| PLACE | 2-letter state code, manually editable (e.g., WB, MH, DL, KA) |
+
+Remove all other columns: Restaurant UID (old format), Activation Date, Total Tables, Total Payment, Actions (Edit Menu + Delete button).
+
+---
+
+## COLUMN DETAILS:
+
+### 1. UID
+- Auto-generate a unique 10-digit numeric ID for each customer when they are created
+- Display it as plain text in the table (e.g., 6250459667)
+- Not editable after creation
+
+### 2. STATUS
+- Show a colored dot + text label
+- • RUNNING → green dot
+- • PAUSED → grey or yellow dot
+- Admin can toggle the status manually by clicking on it or via an edit action
+- No other status options allowed
+
+### 3. TIMELINE
+- Two date fields: Start Date and End Date
+- Display format in table: DD-MM-YYYY TO DD-MM-YYYY
+- Example: 25-04-2026 TO 25-05-2026
+- Both dates are manually set by admin when creating or editing a customer
+- Use a date picker when editing
+
+### 4. PLAN
+- Show a dot badge with one of exactly 4 options:
+  • STARTER
+  • GROWTH
+  • SCALE
+  • CUSTOMISED
+- Admin selects the plan from a dropdown when creating or editing
+- Display as colored dot + plan name in the table
+
+### 5. PLACE
+- Show a 2-letter state code (maximum 2 characters, uppercase)
+- Examples: WB (West Bengal), MH (Maharashtra), DL (Delhi), KA (Karnataka)
+- This field must be manually editable by admin at any time
+- When editing, show a plain text input with a 2-character max limit, auto-uppercase
+- Display the 2-letter code as plain text in the table
+
+---
+
+## EDIT / ADD FUNCTIONALITY:
+
+- Keep an "Add Customer" or equivalent button to create new entries
+- Each row must have an Edit option (pencil icon or button) to update: STATUS, TIMELINE, PLAN, PLACE
+- UID is never editable after creation
+- Keep the Delete (trash) icon per row to remove a customer
+
+---
+
+## STYLING RULES:
+
+- Match the existing dark theme exactly
+- Use the same font, row height, header style, and divider lines as current table
+- Dot badges should be small filled circles before the text label
+- PLACE column should look like a small pill or plain bold 2-letter tag
+- Do not add any extra columns, badges, or UI elements not listed above
+
+Remove the current fratchers and add the fratchers that explains.
