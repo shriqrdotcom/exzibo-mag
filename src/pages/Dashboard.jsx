@@ -94,8 +94,6 @@ export default function Dashboard() {
             <KPICard
               label="ACTIVE OPERATIONS"
               value={restaurants.filter(r => r.status === 'RUNNING' || r.status === 'PAUSED').length.toLocaleString('en-IN')}
-              badge="+12.5%"
-              badgeIcon={<TrendingUp size={11} />}
             />
             <KPICard label="TOTAL REVENUE" value="₹2.4Cr" />
             <KPICard label="AVG TICKET" value="₹7,050" />
