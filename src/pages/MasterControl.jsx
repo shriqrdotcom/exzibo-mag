@@ -6,6 +6,7 @@ import { LogIn, ShieldCheck, X, ArrowRight, AlertCircle } from 'lucide-react'
 
 const LAST_UID_KEY = 'exzibo_master_last_uid'
 const SUPER_ADMIN_KEY = 'exzibo_is_super_admin'
+const DEFAULT_SUPER_ADMIN_UID = '0000000001'
 
 function isSuperAdmin() {
   const stored = localStorage.getItem(SUPER_ADMIN_KEY)
@@ -16,11 +17,15 @@ function isSuperAdmin() {
   return stored === 'true'
 }
 
-function findRestaurantByUID(uid) {
-  const trimmed = (uid || '').trim()
+function resolveAdminTargetByUID(uid) {
+  const trimmed = String(uid || '').trim()
   if (!trimmed) return null
+  if (trimmed === DEFAULT_SUPER_ADMIN_UID) {
+    return { id: 'default' }
+  }
   const all = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
-  return all.find(r => String(r.uid) === trimmed) || null
+  const found = all.find(r => String(r.uid) === trimmed)
+  return found ? { id: String(found.id) } : null
 }
 
 export default function MasterControl() {
@@ -45,18 +50,18 @@ export default function MasterControl() {
   }, [navigate])
 
   function accessPanel(value, setErr) {
-    const trimmed = (value || '').trim()
+    const trimmed = String(value || '').trim()
     if (!trimmed) {
       setErr('Please enter a Restaurant UID')
       return
     }
-    const restaurant = findRestaurantByUID(trimmed)
-    if (!restaurant) {
+    const target = resolveAdminTargetByUID(trimmed)
+    if (!target) {
       setErr('Invalid UID')
       return
     }
     localStorage.setItem(LAST_UID_KEY, trimmed)
-    navigate(`/admin/${restaurant.id}?from=master`)
+    navigate(`/admin/${target.id}?from=master`)
   }
 
   if (!allowed) {
@@ -166,7 +171,7 @@ export default function MasterControl() {
                   value={inlineUid}
                   onChange={e => { setInlineUid(e.target.value); setInlineError('') }}
                   onKeyDown={e => e.key === 'Enter' && accessPanel(inlineUid, setInlineError)}
-                  placeholder="e.g. 8472019465"
+                  placeholder="e.g. 0000000001 or 8472019465"
                   style={{
                     flex: 1,
                     background: '#0A0A0A',
