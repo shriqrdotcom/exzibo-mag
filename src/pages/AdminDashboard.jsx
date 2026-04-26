@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useAnalytics, notifyAnalyticsUpdate } from '../context/AnalyticsContext'
 import { useRole } from '../context/RoleContext'
 import ProfileSlide from '../components/ProfileSlide'
@@ -121,6 +121,8 @@ function loadGlobalConfig() {
 export default function AdminDashboard() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const fromMaster = searchParams.get('from') === 'master'
   const isDefault = !id || id === 'default'
   const { hasPermission, activeRole } = useRole()
 
@@ -363,8 +365,9 @@ export default function AdminDashboard() {
     showToast('✅ Settings saved — applies to all restaurants!')
   }
 
-  const displayName = overrideName ||
-    (isDefault ? globalConfig.adminTitle : (restaurant?.name || 'Admin'))
+  const displayName = fromMaster
+    ? 'Master Control'
+    : (overrideName || (isDefault ? globalConfig.adminTitle : (restaurant?.name || 'Admin')))
 
   const initials = displayName
     .split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase()

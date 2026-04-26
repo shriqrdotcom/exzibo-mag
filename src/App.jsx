@@ -17,6 +17,7 @@ import DemoList from './pages/DemoList'
 import DemoDashboard from './pages/DemoDashboard'
 import TablePage from './pages/TablePage'
 import MenuLinkRoute from './pages/MenuLinkRoute'
+import MasterControl from './pages/MasterControl'
 import { AnalyticsProvider } from './context/AnalyticsContext'
 import { RoleProvider } from './context/RoleContext'
 
@@ -28,7 +29,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Landing />} />
           <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/master-control" element={<Dashboard />} />
+          <Route path="/master-control" element={<MasterControl />} />
           <Route path="/admin/:id" element={<AdminDashboard />} />
           <Route path="/admin/:id/team" element={<TeamMembers />} />
           <Route path="/super-admin" element={<SuperAdminDashboard />} />
