@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useLayoutEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import Sidebar from '../components/Sidebar'
 import AdminHeader from '../components/AdminHeader'
 import { TrendingUp, Filter, Download, ChevronLeft, ChevronRight, Plus, Trash2, Clock, X, Pencil } from 'lucide-react'
@@ -138,6 +138,8 @@ function syncRevenueLedger() {
 
 export default function Dashboard() {
   const navigate = useNavigate()
+  const location = useLocation()
+  const isMaster = location.pathname.startsWith('/master-control')
   const { exitRoleView } = useRole()
   const [currentPage, setCurrentPage] = useState(1)
   const [restaurants, setRestaurants] = useState([])
@@ -323,7 +325,7 @@ export default function Dashboard() {
     <div style={{ display: 'flex', height: '100vh', background: '#0A0A0A', overflow: 'hidden' }}>
       <Sidebar />
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        <AdminHeader />
+        <AdminHeader title={isMaster ? 'MASTER' : undefined} />
         <main style={{ flex: 1, overflowY: 'auto', padding: '32px' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '16px', marginBottom: '32px' }}>
             <KPICard

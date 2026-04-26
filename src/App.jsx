@@ -28,6 +28,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Landing />} />
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/master-control" element={<Dashboard />} />
           <Route path="/admin/:id" element={<AdminDashboard />} />
           <Route path="/admin/:id/team" element={<TeamMembers />} />
           <Route path="/super-admin" element={<SuperAdminDashboard />} />

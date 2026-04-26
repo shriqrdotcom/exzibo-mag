@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Bell, User, Search, ArrowRight } from 'lucide-react'
 
-export default function AdminHeader({ title, subtitle, showSearch = true }) {
+export default function AdminHeader({ title = 'Admin Console', subtitle, showSearch = true }) {
   const [searchVal, setSearchVal] = useState('')
   const [focused, setFocused] = useState(false)
   const navigate = useNavigate()
@@ -26,7 +26,7 @@ export default function AdminHeader({ title, subtitle, showSearch = true }) {
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
         <span style={{ color: '#E8321A', fontSize: '13px', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-          Admin Console
+          {title}
         </span>
         {subtitle && (
           <>
