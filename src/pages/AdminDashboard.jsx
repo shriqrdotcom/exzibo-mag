@@ -690,7 +690,7 @@ export default function AdminDashboard() {
           boxShadow: '0 4px 24px rgba(0,0,0,0.07), inset 0 1px 0 rgba(255,255,255,0.8)',
           border: '1px solid rgba(255,255,255,0.6)',
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, minWidth: 0 }}>
             <button
               onClick={() => isDefault ? navigate('/') : navigate('/restaurants')}
               style={{
@@ -698,7 +698,7 @@ export default function AdminDashboard() {
                 background: `${accentStart}18`,
                 border: `1px solid ${accentStart}30`,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                cursor: 'pointer', color: accentStart,
+                cursor: 'pointer', color: accentStart, flexShrink: 0,
               }}
             >
               <ArrowLeft size={16} />
@@ -714,6 +714,7 @@ export default function AdminDashboard() {
                 cursor: hasPermission('profile') ? 'pointer' : 'default',
                 transition: 'transform 0.15s, box-shadow 0.15s',
                 overflow: 'hidden',
+                flexShrink: 0,
               }}
               onMouseEnter={e => {
                 e.currentTarget.style.transform = 'scale(1.07)'
@@ -728,15 +729,33 @@ export default function AdminDashboard() {
                 ? <img src={logoUrl} alt="logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 : initials}
             </div>
-            <div>
-              <div style={{ fontSize: '17px', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.01em' }}>
-                {displayName}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: '8px',
+                minWidth: 0,
+              }}>
+                <span
+                  title={displayName}
+                  style={{
+                    fontSize: '17px', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.01em',
+                    minWidth: 0,
+                    flex: '0 1 auto',
+                    overflow: 'hidden',
+                    whiteSpace: 'nowrap',
+                    textOverflow: 'ellipsis',
+                    maxWidth: '100%',
+                  }}
+                >
+                  {displayName}
+                </span>
                 {isDefault && (
                   <span style={{
-                    marginLeft: '8px', fontSize: '9px', fontWeight: 700,
+                    fontSize: '9px', fontWeight: 700,
                     letterSpacing: '0.1em', color: accentStart,
                     background: `${accentStart}15`, borderRadius: '6px',
-                    padding: '2px 7px', verticalAlign: 'middle',
+                    padding: '2px 7px',
+                    flexShrink: 0,
+                    whiteSpace: 'nowrap',
                   }}>
                     TEMPLATE
                   </span>
