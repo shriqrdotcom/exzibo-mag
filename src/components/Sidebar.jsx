@@ -1,11 +1,10 @@
 import React from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { LayoutDashboard, UtensilsCrossed, Settings, Zap, Users, Table2, ShieldCheck } from 'lucide-react'
+import { LayoutDashboard, Settings, Zap, Users, Table2, ShieldCheck } from 'lucide-react'
 import PermissionGate from './PermissionGate'
 
 const navItems = [
   { icon: LayoutDashboard, label: 'Dashboard',       path: '/dashboard',     permission: 'dashboard' },
-  { icon: UtensilsCrossed, label: 'Restaurant Editor', path: '/menu-editor', permission: 'restaurantEditor' },
   { icon: Users,           label: 'Team Members',    path: '/team-members',  permission: 'teamManagement' },
   { icon: Table2,          label: 'Table',           path: '/table',         permission: 'dashboard' },
   { icon: ShieldCheck,     label: 'Master Control',  path: '/master-control', permission: 'dashboard' },

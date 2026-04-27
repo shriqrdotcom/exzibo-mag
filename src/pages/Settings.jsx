@@ -637,7 +637,7 @@ export default function Settings() {
                   color: '#666', fontSize: '12px',
                 }}>
                   {restaurants.length === 0
-                    ? 'No restaurants created yet. Create one from the Restaurant Editor.'
+                    ? 'No restaurants created yet.'
                     : `Enter a UID and press SEARCH. ${restaurants.length} restaurant${restaurants.length === 1 ? '' : 's'} available.`}
                 </div>
               )}
