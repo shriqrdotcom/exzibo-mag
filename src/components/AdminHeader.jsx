@@ -9,7 +9,7 @@ export default function AdminHeader({ title = 'Admin Console', subtitle, showSea
 
   const handleSearch = () => {
     const val = searchVal.trim()
-    if (val) navigate(`/menu-editor/${val}`)
+    if (val) navigate(`/admin/${val}`)
   }
 
   return (

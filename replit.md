@@ -19,7 +19,6 @@ A luxury dark-themed restaurant management web platform with a cinematic, premiu
 | `/admin/:id/team` | `TeamMembers.jsx` | Restaurant-specific team view with active/inactive toggles |
 | `/super-admin` | `SuperAdminDashboard.jsx` | Super admin staff management (add/edit/delete staff across all restaurants) |
 | `/team-members` | `TeamMembersAdmin.jsx` | Team members admin view with per-restaurant role management and role-based preview mode |
-| `/menu-editor` | `MenuEditor.jsx` | Real-time menu editor with categories, item CRUD, restaurant info |
 | `/settings` | `Settings.jsx` | Profile, security, preferences, session management |
 | `/create-website` | `CreateWebsite.jsx` | Deployment console for onboarding new restaurants |
 | `/restaurant/:slug` | `RestaurantWebsite.jsx` | Customer-facing restaurant website/menu |

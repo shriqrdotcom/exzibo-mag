@@ -2,7 +2,6 @@ import React from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import Landing from './pages/Landing'
 import Dashboard from './pages/Dashboard'
-import MenuEditor from './pages/MenuEditor'
 import Settings from './pages/Settings'
 import CreateWebsite from './pages/CreateWebsite'
 import Restaurants from './pages/Restaurants'
@@ -34,8 +33,6 @@ export default function App() {
           <Route path="/admin/:id/team" element={<TeamMembers />} />
           <Route path="/super-admin" element={<SuperAdminDashboard />} />
           <Route path="/team-members" element={<TeamMembersAdmin />} />
-          <Route path="/menu-editor" element={<MenuEditor />} />
-          <Route path="/menu-editor/:uid" element={<MenuEditor />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/create-website" element={<CreateWebsite />} />
           <Route path="/restaurants" element={<Restaurants />} />
