@@ -8,7 +8,7 @@ import {
   ClipboardList, BookOpen, Users, Settings, ArrowLeft, BarChart2,
   Palette, DollarSign, Type, Save, Check, CalendarDays, UtensilsCrossed,
   SlidersHorizontal, Plus, Pencil, Trash2, X, Search, ChevronDown,
-  Tag, Info, Share2, Globe, Eye, EyeOff,
+  Tag, Info, Share2, Globe, Eye, EyeOff, Send,
 } from 'lucide-react'
 import { FaFacebook, FaInstagram, FaLinkedinIn, FaYoutube } from 'react-icons/fa'
 import { FaXTwitter } from 'react-icons/fa6'
@@ -658,31 +658,60 @@ export default function AdminDashboard() {
               </div>
             </div>
           </div>
-          {activeNav === 'menu' && (
-            <div
-              onClick={() => {
-                setShowMenuSearch(v => !v)
-                if (!showMenuSearch) {
-                  setMenuSearch('')
-                  setTimeout(() => menuSearchRef.current?.focus(), 50)
-                } else {
-                  setMenuSearch('')
-                }
-              }}
-              style={{
-                width: '42px', height: '42px', borderRadius: '13px',
-                background: showMenuSearch ? `${accentStart}15` : 'rgba(255,255,255,0.8)',
-                boxShadow: showMenuSearch
-                  ? `0 0 0 1.5px ${accentStart}50, 4px 4px 10px rgba(0,0,0,0.08)`
-                  : '4px 4px 10px rgba(0,0,0,0.08), -2px -2px 8px rgba(255,255,255,0.9)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                cursor: 'pointer', border: `1px solid ${showMenuSearch ? accentStart + '40' : 'rgba(255,255,255,0.6)'}`,
-                transition: 'all 0.2s',
-              }}
-            >
-              <Search size={18} color={showMenuSearch ? accentStart : '#64748b'} />
-            </div>
-          )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {activeNav === 'menu' && (
+              <div
+                onClick={() => {
+                  setShowMenuSearch(v => !v)
+                  if (!showMenuSearch) {
+                    setMenuSearch('')
+                    setTimeout(() => menuSearchRef.current?.focus(), 50)
+                  } else {
+                    setMenuSearch('')
+                  }
+                }}
+                style={{
+                  width: '42px', height: '42px', borderRadius: '13px',
+                  background: showMenuSearch ? `${accentStart}15` : 'rgba(255,255,255,0.8)',
+                  boxShadow: showMenuSearch
+                    ? `0 0 0 1.5px ${accentStart}50, 4px 4px 10px rgba(0,0,0,0.08)`
+                    : '4px 4px 10px rgba(0,0,0,0.08), -2px -2px 8px rgba(255,255,255,0.9)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  cursor: 'pointer', border: `1px solid ${showMenuSearch ? accentStart + '40' : 'rgba(255,255,255,0.6)'}`,
+                  transition: 'all 0.2s',
+                }}
+              >
+                <Search size={18} color={showMenuSearch ? accentStart : '#64748b'} />
+              </div>
+            )}
+            {fromMaster && (
+              <button
+                type="button"
+                aria-label="Master action"
+                onClick={() => { /* placeholder — wire up later */ }}
+                style={{
+                  width: '52px', height: '32px', borderRadius: '10px',
+                  background: '#0A0A0A',
+                  border: 'none',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 12px rgba(10,10,10,0.25)',
+                  transition: 'transform 0.15s ease, box-shadow 0.15s ease',
+                  padding: 0,
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.transform = 'translateY(-1px)'
+                  e.currentTarget.style.boxShadow = '0 6px 16px rgba(10,10,10,0.35)'
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.transform = 'translateY(0)'
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(10,10,10,0.25)'
+                }}
+              >
+                <Send size={15} color="#fff" strokeWidth={2.2} style={{ transform: 'translateX(-1px)' }} />
+              </button>
+            )}
+          </div>
         </div>
 
         {/* ── CONTENT ── */}
