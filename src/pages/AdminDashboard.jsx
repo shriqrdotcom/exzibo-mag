@@ -8,7 +8,7 @@ import {
   ClipboardList, BookOpen, Users, Settings, ArrowLeft, BarChart2,
   Palette, DollarSign, Type, Save, Check, CalendarDays, UtensilsCrossed,
   SlidersHorizontal, Plus, Pencil, Trash2, X, Search, ChevronDown,
-  Tag, Info, Share2, Globe,
+  Tag, Info, Share2, Globe, Eye, EyeOff,
 } from 'lucide-react'
 import { FaFacebook, FaInstagram, FaLinkedinIn, FaYoutube } from 'react-icons/fa'
 import { FaXTwitter } from 'react-icons/fa6'
@@ -118,6 +118,67 @@ function loadGlobalConfig() {
   } catch { return { ...DEFAULT_GLOBAL_CONFIG } }
 }
 
+function MasterVisibilityToggle({ label, on, onToggle, accentStart, accentEnd }) {
+  return (
+    <div style={{
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: '12px',
+      padding: '14px 18px',
+      marginTop: '20px',
+      background: 'rgba(255,255,255,0.85)',
+      backdropFilter: 'blur(12px)',
+      WebkitBackdropFilter: 'blur(12px)',
+      borderRadius: '16px',
+      border: '1px solid rgba(255,255,255,0.7)',
+      boxShadow: '0 4px 18px rgba(0,0,0,0.06)',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div style={{
+          width: '32px', height: '32px', borderRadius: '10px',
+          background: on
+            ? `linear-gradient(135deg, ${accentStart}22, ${accentEnd}22)`
+            : 'rgba(148,163,184,0.18)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          color: on ? accentStart : '#94A3B8',
+        }}>
+          {on ? <Eye size={15} /> : <EyeOff size={15} />}
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <span style={{ fontSize: '13px', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.01em' }}>
+            {label}
+          </span>
+          <span style={{ fontSize: '11px', fontWeight: 600, color: '#94A3B8', letterSpacing: '0.04em' }}>
+            MASTER CONTROL VIEW ONLY
+          </span>
+        </div>
+      </div>
+      <button
+        onClick={onToggle}
+        aria-label={label}
+        style={{
+          width: '46px', height: '26px', borderRadius: '50px',
+          background: on ? `linear-gradient(135deg, ${accentStart}, ${accentEnd})` : '#e2e8f0',
+          border: 'none', cursor: 'pointer', position: 'relative',
+          transition: 'background 0.25s ease',
+          flexShrink: 0,
+        }}
+      >
+        <span style={{
+          position: 'absolute', top: '3px',
+          left: on ? '23px' : '3px',
+          width: '20px', height: '20px', borderRadius: '10px',
+          background: '#fff',
+          boxShadow: '0 1px 4px rgba(0,0,0,0.2)',
+          transition: 'left 0.25s ease',
+          display: 'block',
+        }} />
+      </button>
+    </div>
+  )
+}
+
 export default function AdminDashboard() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -138,6 +199,31 @@ export default function AdminDashboard() {
   const [bookingFilter, setBookingFilter] = useState('today')
   const [notification, setNotification] = useState(null)
   const [cancelTarget, setCancelTarget] = useState(null)
+
+  const MASTER_SHOW_ORDERS_KEY   = 'exzibo_master_show_live_orders'
+  const MASTER_SHOW_BOOKINGS_KEY = 'exzibo_master_show_table_confirmations'
+  const [masterShowOrders, setMasterShowOrders] = useState(() => {
+    const v = localStorage.getItem(MASTER_SHOW_ORDERS_KEY)
+    return v === null ? true : v === 'true'
+  })
+  const [masterShowBookings, setMasterShowBookings] = useState(() => {
+    const v = localStorage.getItem(MASTER_SHOW_BOOKINGS_KEY)
+    return v === null ? true : v === 'true'
+  })
+  function toggleMasterShowOrders() {
+    setMasterShowOrders(prev => {
+      const next = !prev
+      localStorage.setItem(MASTER_SHOW_ORDERS_KEY, String(next))
+      return next
+    })
+  }
+  function toggleMasterShowBookings() {
+    setMasterShowBookings(prev => {
+      const next = !prev
+      localStorage.setItem(MASTER_SHOW_BOOKINGS_KEY, String(next))
+      return next
+    })
+  }
 
   const orderSettingsBtnRef = useRef(null)
   const orderSettingsPanelRef = useRef(null)
@@ -626,6 +712,17 @@ export default function AdminDashboard() {
           />
         ) : activeNav === 'orders' ? (
           <>
+            {/* Master Control: Show Live Orders toggle */}
+            {fromMaster && (
+              <MasterVisibilityToggle
+                label="Show Live Orders"
+                on={masterShowOrders}
+                onToggle={toggleMasterShowOrders}
+                accentStart={accentStart}
+                accentEnd={accentEnd}
+              />
+            )}
+
             {/* Title bar - Orders */}
             <div style={{
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -718,30 +815,53 @@ export default function AdminDashboard() {
             )}
 
             {/* Order cards */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              {orders.length === 0 ? (
-                <div style={{
-                  textAlign: 'center', padding: '48px 24px',
-                  color: '#94A3B8', fontSize: '14px', fontWeight: 600,
-                }}>
-                  No orders yet. Orders placed from your restaurant page will appear here.
-                </div>
-              ) : orders.map((order, i) => (
-                <OrderCard
-                  key={order.id}
-                  order={order}
-                  index={i}
-                  accentStart={accentStart}
-                  currency={globalConfig.currency}
-                  onConfirm={() => confirmOrder(order.id)}
-                  onCancel={() => setCancelTarget(order.id)}
-                  orderSettings={orderSettings}
-                />
-              ))}
-            </div>
+            {fromMaster && !masterShowOrders ? (
+              <div style={{
+                textAlign: 'center', padding: '48px 24px',
+                color: '#94A3B8', fontSize: '13px', fontWeight: 600,
+                background: 'rgba(255,255,255,0.55)',
+                borderRadius: '18px',
+                border: '1px dashed rgba(148,163,184,0.4)',
+              }}>
+                Live orders are hidden in Master Control. They remain visible in Admin, Manager and Staff panels.
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                {orders.length === 0 ? (
+                  <div style={{
+                    textAlign: 'center', padding: '48px 24px',
+                    color: '#94A3B8', fontSize: '14px', fontWeight: 600,
+                  }}>
+                    No orders yet. Orders placed from your restaurant page will appear here.
+                  </div>
+                ) : orders.map((order, i) => (
+                  <OrderCard
+                    key={order.id}
+                    order={order}
+                    index={i}
+                    accentStart={accentStart}
+                    currency={globalConfig.currency}
+                    onConfirm={() => confirmOrder(order.id)}
+                    onCancel={() => setCancelTarget(order.id)}
+                    orderSettings={orderSettings}
+                  />
+                ))}
+              </div>
+            )}
           </>
         ) : activeNav === 'bookings' ? (
           <>
+            {/* Master Control: Show Table Confirmations toggle */}
+            {fromMaster && (
+              <MasterVisibilityToggle
+                label="Show Table Confirmations"
+                on={masterShowBookings}
+                onToggle={toggleMasterShowBookings}
+                accentStart={accentStart}
+                accentEnd={accentEnd}
+              />
+            )}
+
             {/* Title bar - Bookings */}
             <div style={{
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -874,28 +994,40 @@ export default function AdminDashboard() {
             </div>
 
             {/* Booking cards */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              {filteredBookings.length === 0
-                ? (
-                  <div style={{
-                    textAlign: 'center', padding: '48px 24px',
-                    color: '#94A3B8', fontSize: '14px', fontWeight: 600,
-                  }}>
-                    No {bookingFilter === 'today' ? "today's" : bookingFilter} bookings found.
-                  </div>
-                )
-                : filteredBookings.map((booking, i) => (
-                  <BookingCard
-                    key={booking.id}
-                    booking={booking}
-                    index={i}
-                    accentStart={accentStart}
-                    accentEnd={accentEnd}
-                    bookingSettings={bookingSettings}
-                  />
-                ))
-              }
-            </div>
+            {fromMaster && !masterShowBookings ? (
+              <div style={{
+                textAlign: 'center', padding: '48px 24px',
+                color: '#94A3B8', fontSize: '13px', fontWeight: 600,
+                background: 'rgba(255,255,255,0.55)',
+                borderRadius: '18px',
+                border: '1px dashed rgba(148,163,184,0.4)',
+              }}>
+                Table confirmations are hidden in Master Control. They remain visible in Admin, Manager and Staff panels.
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                {filteredBookings.length === 0
+                  ? (
+                    <div style={{
+                      textAlign: 'center', padding: '48px 24px',
+                      color: '#94A3B8', fontSize: '14px', fontWeight: 600,
+                    }}>
+                      No {bookingFilter === 'today' ? "today's" : bookingFilter} bookings found.
+                    </div>
+                  )
+                  : filteredBookings.map((booking, i) => (
+                    <BookingCard
+                      key={booking.id}
+                      booking={booking}
+                      index={i}
+                      accentStart={accentStart}
+                      accentEnd={accentEnd}
+                      bookingSettings={bookingSettings}
+                    />
+                  ))
+                }
+              </div>
+            )}
           </>
         ) : activeNav === 'customers' ? (
           <AnalyticsPanel accentStart={accentStart} accentEnd={accentEnd} restaurantId={isDefault ? 'demo' : id} />
