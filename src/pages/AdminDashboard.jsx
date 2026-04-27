@@ -8,7 +8,7 @@ import {
   ClipboardList, BookOpen, Users, Settings, ArrowLeft, BarChart2,
   Palette, DollarSign, Type, Save, Check, CalendarDays, UtensilsCrossed,
   SlidersHorizontal, Plus, Pencil, Trash2, X, Search, ChevronDown,
-  Tag, Info, Share2, Globe, Eye, EyeOff, Send,
+  Tag, Info, Share2, Globe, Eye, EyeOff, Send, Bell,
 } from 'lucide-react'
 import { FaFacebook, FaInstagram, FaLinkedinIn, FaYoutube } from 'react-icons/fa'
 import { FaXTwitter } from 'react-icons/fa6'
@@ -687,6 +687,37 @@ export default function AdminDashboard() {
               >
                 <Search size={18} color={showMenuSearch ? accentStart : '#64748b'} />
               </div>
+            )}
+            {!fromMaster && (
+              <button
+                type="button"
+                aria-label="Notifications"
+                onClick={() => { /* placeholder — wire up later */ }}
+                style={{
+                  position: 'relative',
+                  width: '42px', height: '42px', borderRadius: '13px',
+                  background: 'rgba(255,255,255,0.8)',
+                  border: '1px solid rgba(255,255,255,0.6)',
+                  boxShadow: '4px 4px 10px rgba(0,0,0,0.08), -2px -2px 8px rgba(255,255,255,0.9)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  cursor: 'pointer',
+                  color: '#64748b',
+                  transition: 'all 0.2s ease',
+                  padding: 0,
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.color = accentStart
+                  e.currentTarget.style.borderColor = `${accentStart}40`
+                  e.currentTarget.style.boxShadow = `0 0 0 1.5px ${accentStart}30, 4px 4px 10px rgba(0,0,0,0.08)`
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.color = '#64748b'
+                  e.currentTarget.style.borderColor = 'rgba(255,255,255,0.6)'
+                  e.currentTarget.style.boxShadow = '4px 4px 10px rgba(0,0,0,0.08), -2px -2px 8px rgba(255,255,255,0.9)'
+                }}
+              >
+                <Bell size={18} strokeWidth={2.1} />
+              </button>
             )}
             {fromMaster && (
               <button
