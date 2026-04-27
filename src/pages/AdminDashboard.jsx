@@ -200,6 +200,10 @@ export default function AdminDashboard() {
   const [notification, setNotification] = useState(null)
   const [cancelTarget, setCancelTarget] = useState(null)
 
+  const [masterMsgOpen, setMasterMsgOpen] = useState(false)
+  const [masterMsgTopic, setMasterMsgTopic] = useState('')
+  const [masterMsgBody, setMasterMsgBody]   = useState('')
+
   const MASTER_SHOW_ORDERS_KEY   = 'exzibo_master_show_live_orders'
   const MASTER_SHOW_BOOKINGS_KEY = 'exzibo_master_show_table_confirmations'
   const [masterShowOrders, setMasterShowOrders] = useState(() => {
@@ -687,8 +691,8 @@ export default function AdminDashboard() {
             {fromMaster && (
               <button
                 type="button"
-                aria-label="Master action"
-                onClick={() => { /* placeholder — wire up later */ }}
+                aria-label="Send message"
+                onClick={() => { setMasterMsgTopic(''); setMasterMsgBody(''); setMasterMsgOpen(true) }}
                 style={{
                   width: '52px', height: '32px', borderRadius: '10px',
                   background: '#0A0A0A',
@@ -1111,6 +1115,214 @@ export default function AdminDashboard() {
         onNameUpdate={name => setOverrideName(name)}
         onTeamClick={() => { setProfileOpen(false); navigate(`/admin/${id || 'default'}/team`) }}
       />
+
+      {fromMaster && masterMsgOpen && (
+        <MasterMessageModal
+          topic={masterMsgTopic}
+          body={masterMsgBody}
+          onTopicChange={setMasterMsgTopic}
+          onBodyChange={setMasterMsgBody}
+          onClose={() => setMasterMsgOpen(false)}
+          accentStart={accentStart}
+          accentEnd={accentEnd}
+        />
+      )}
+    </div>
+  )
+}
+
+function MasterMessageModal({ topic, body, onTopicChange, onBodyChange, onClose, accentStart, accentEnd }) {
+  React.useEffect(() => {
+    function onKey(e) { if (e.key === 'Escape') onClose() }
+    document.addEventListener('keydown', onKey)
+    const prevOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.removeEventListener('keydown', onKey)
+      document.body.style.overflow = prevOverflow
+    }
+  }, [onClose])
+
+  return (
+    <div
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Send message"
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 1000,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '20px',
+        background: 'rgba(10,10,12,0.55)',
+        backdropFilter: 'blur(10px)',
+        WebkitBackdropFilter: 'blur(10px)',
+        animation: 'masterModalBackdropIn 0.2s ease',
+      }}
+    >
+      <style>{`
+        @keyframes masterModalBackdropIn {
+          from { opacity: 0; }
+          to   { opacity: 1; }
+        }
+        @keyframes masterModalCardIn {
+          from { opacity: 0; transform: translateY(12px) scale(0.96); }
+          to   { opacity: 1; transform: translateY(0) scale(1); }
+        }
+      `}</style>
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          width: '100%',
+          maxWidth: '440px',
+          background: '#fff',
+          borderRadius: '22px',
+          boxShadow: '0 30px 80px rgba(0,0,0,0.35), 0 6px 20px rgba(0,0,0,0.12)',
+          padding: '24px 22px 22px',
+          position: 'relative',
+          fontFamily: "'Inter', 'Poppins', system-ui, sans-serif",
+          animation: 'masterModalCardIn 0.22s cubic-bezier(0.2, 0.8, 0.2, 1)',
+        }}
+      >
+        <button
+          type="button"
+          aria-label="Close"
+          onClick={onClose}
+          style={{
+            position: 'absolute',
+            top: '14px', right: '14px',
+            width: '32px', height: '32px', borderRadius: '10px',
+            background: 'rgba(15,23,42,0.05)',
+            border: 'none',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: 'pointer',
+            color: '#64748b',
+            transition: 'all 0.15s ease',
+          }}
+          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(15,23,42,0.10)'; e.currentTarget.style.color = '#0f172a' }}
+          onMouseLeave={e => { e.currentTarget.style.background = 'rgba(15,23,42,0.05)'; e.currentTarget.style.color = '#64748b' }}
+        >
+          <X size={16} />
+        </button>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
+          <div style={{
+            width: '34px', height: '34px', borderRadius: '11px',
+            background: '#0A0A0A',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: '0 4px 12px rgba(10,10,10,0.25)',
+          }}>
+            <Send size={15} color="#fff" strokeWidth={2.2} style={{ transform: 'translateX(-1px)' }} />
+          </div>
+          <div>
+            <div style={{ fontSize: '16px', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.01em' }}>
+              New Message
+            </div>
+            <div style={{ fontSize: '11px', fontWeight: 700, color: '#94A3B8', letterSpacing: '0.08em' }}>
+              MASTER CONTROL
+            </div>
+          </div>
+        </div>
+
+        <div style={{ marginTop: '20px' }}>
+          <label style={{
+            display: 'block',
+            fontSize: '11px', fontWeight: 800,
+            color: '#64748b', letterSpacing: '0.12em',
+            marginBottom: '8px',
+          }}>
+            TOPIC
+          </label>
+          <input
+            autoFocus
+            value={topic}
+            onChange={e => onTopicChange(e.target.value)}
+            placeholder="Enter a topic…"
+            style={{
+              width: '100%',
+              background: '#F8FAFC',
+              border: '1.5px solid #E2E8F0',
+              borderRadius: '12px',
+              padding: '12px 14px',
+              color: '#0f172a',
+              fontSize: '14px',
+              fontWeight: 600,
+              fontFamily: 'inherit',
+              outline: 'none',
+              boxSizing: 'border-box',
+              transition: 'border-color 0.15s ease, box-shadow 0.15s ease',
+            }}
+            onFocus={e => { e.currentTarget.style.borderColor = accentStart; e.currentTarget.style.boxShadow = `0 0 0 3px ${accentStart}22` }}
+            onBlur={e => { e.currentTarget.style.borderColor = '#E2E8F0'; e.currentTarget.style.boxShadow = 'none' }}
+          />
+        </div>
+
+        <div style={{ marginTop: '14px' }}>
+          <label style={{
+            display: 'block',
+            fontSize: '11px', fontWeight: 800,
+            color: '#64748b', letterSpacing: '0.12em',
+            marginBottom: '8px',
+          }}>
+            MESSAGE
+          </label>
+          <textarea
+            value={body}
+            onChange={e => onBodyChange(e.target.value)}
+            placeholder="Write your message…"
+            rows={5}
+            style={{
+              width: '100%',
+              background: '#F8FAFC',
+              border: '1.5px solid #E2E8F0',
+              borderRadius: '12px',
+              padding: '12px 14px',
+              color: '#0f172a',
+              fontSize: '14px',
+              fontWeight: 500,
+              lineHeight: 1.55,
+              fontFamily: 'inherit',
+              outline: 'none',
+              resize: 'vertical',
+              minHeight: '110px',
+              boxSizing: 'border-box',
+              transition: 'border-color 0.15s ease, box-shadow 0.15s ease',
+            }}
+            onFocus={e => { e.currentTarget.style.borderColor = accentStart; e.currentTarget.style.boxShadow = `0 0 0 3px ${accentStart}22` }}
+            onBlur={e => { e.currentTarget.style.borderColor = '#E2E8F0'; e.currentTarget.style.boxShadow = 'none' }}
+          />
+        </div>
+
+        <button
+          type="button"
+          onClick={() => { /* Send not wired yet */ }}
+          style={{
+            marginTop: '20px',
+            width: '100%',
+            padding: '13px 18px',
+            borderRadius: '14px',
+            border: 'none',
+            cursor: 'pointer',
+            color: '#fff',
+            fontSize: '13px',
+            fontWeight: 800,
+            letterSpacing: '0.08em',
+            textTransform: 'uppercase',
+            background: `linear-gradient(135deg, ${accentStart}, ${accentEnd})`,
+            boxShadow: `0 8px 22px ${accentStart}55`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+            transition: 'transform 0.15s ease, box-shadow 0.15s ease',
+          }}
+          onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = `0 12px 28px ${accentStart}66` }}
+          onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)';    e.currentTarget.style.boxShadow = `0 8px 22px ${accentStart}55` }}
+        >
+          <Send size={14} strokeWidth={2.4} style={{ transform: 'translateX(-1px)' }} />
+          Send
+        </button>
+      </div>
     </div>
   )
 }
