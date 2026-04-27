@@ -45,6 +45,17 @@ A luxury dark-themed restaurant management web platform with a cinematic, premiu
 - **UI**: Glassmorphism, rounded cards (18-24px radius), glow effects
 - **Animations**: Fade-in, pulse glow, hover transitions
 
+## Notification System
+
+Frontend-only notification system for sending messages from Master Control to Admin/Manager/Staff dashboards.
+
+- **Module**: `src/lib/notifications.js` — all storage + business logic.
+- **Send UI**: Black `Send` button in AdminDashboard header (only when `?from=master`). Opens modal with TOPIC + MESSAGE + role checkboxes (Admin/Manager/Staff).
+- **Popup**: Auto-shown on dashboard open for the next unconfirmed notification matching the user's role. Confirm marks it confirmed; X dismisses for the session only.
+- **Bell**: Header bell icon (only when NOT `?from=master`) with red unread badge. Opens dropdown listing confirmed notifications from the last 24 hours.
+- **Storage**: `exzibo_notifications`, `exzibo_notification_reads`, `exzibo_browser_id`, `exzibo_bell_last_opened`. 24-hour expiry pruned on access. Cross-tab sync via `storage` event + custom `exzibo-notifications-changed` event.
+- **User identity**: `${browserUuid}::${role}` so each role on the same browser has independent confirm state. `owner`/null role mapped to `admin` for receiving.
+
 ## Commands
 
 ```bash

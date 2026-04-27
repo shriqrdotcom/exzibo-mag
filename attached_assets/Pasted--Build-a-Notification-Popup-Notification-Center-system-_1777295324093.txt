@@ -1,0 +1,121 @@
+```
+Build a Notification Popup + Notification Center system for my existing 
+SaaS dashboard app. Follow every requirement exactly.
+
+---
+
+## FEATURE 1: ADMIN — SEND NOTIFICATION
+
+In the Admin Dashboard, create a "Send Notification" section with:
+- A text input for "Title" (maps to "THE TITLE OF TOPIC")
+- A textarea for "Message" (the message body)
+- A multi-checkbox to select recipients:
+  [ ] Admin Dashboard
+  [ ] Manager Dashboard
+  [ ] Staff Dashboard
+- A "Send Notification" button
+
+When submitted:
+- Save the notification to the database (Supabase or existing DB) with:
+  - id, title, message, target_roles (array), created_at, is_active: true
+- The notification must be visible to all selected roles immediately
+
+---
+
+## FEATURE 2: POPUP MODAL ON DASHBOARD OPEN
+
+When ANY user opens their dashboard (Admin / Manager / Staff), 
+check if there is an active notification that:
+1. Was sent to their role
+2. Was created within the last 24 hours
+3. Has NOT been confirmed by this specific user yet
+
+If such a notification exists, show a centered POPUP MODAL exactly 
+like this design:
+
+POPUP DESIGN (match exactly):
+- White card, rounded corners, soft drop shadow
+- Dark blurred background overlay behind the card
+- Top-left: Purple circle icon with a chat/message icon inside
+- Below icon (inline): small purple uppercase text "NEW NOTIFICATION"
+- Below that: Bold black large text = the notification TITLE
+- Horizontal divider line
+- Light purple/lavender background box containing:
+    - Bold purple text "Message:" label
+    - Below it: the message body text
+    - Bottom-right of this box: faint decorative restaurant/store icon 
+      (light purple outline, low opacity)
+- Bottom: Full-width deep purple button with bold white text "CONFIRM"
+- Top-right corner: gray circular X close button
+
+BEHAVIOR:
+- The popup appears ONCE per user per session when they open the dashboard
+- If the user clicks CONFIRM:
+    - Save to DB: user_id + notification_id = "confirmed"
+    - Dismiss the popup
+    - Move notification to their Notification Center (bell icon)
+- If the user clicks X (close):
+    - Dismiss popup for this session
+    - Do NOT mark as confirmed
+    - Show popup again next time they open dashboard 
+      (until they confirm or 24hrs pass)
+
+---
+
+## FEATURE 3: NOTIFICATION CENTER (BELL ICON)
+
+In Admin, Manager, and Staff dashboards:
+- Add a bell icon in the top navbar
+- Show a red badge count of unread notifications
+- On click, open a dropdown/sidebar panel showing all notifications 
+  that the user has confirmed, within the last 24 hours
+- Each item shows: Title, short message preview, time ago (e.g. "2 hours ago")
+- After 24 hours from created_at, the notification disappears automatically
+
+---
+
+## DATABASE SCHEMA (create these tables if not existing):
+
+Table: notifications
+- id (uuid, primary key)
+- title (text)
+- message (text)
+- target_roles (text array) — values: 'admin', 'manager', 'staff'
+- created_at (timestamp)
+- is_active (boolean, default true)
+
+Table: notification_reads
+- id (uuid)
+- notification_id (uuid, foreign key)
+- user_id (uuid, foreign key)
+- confirmed_at (timestamp)
+
+---
+
+## STYLING RULES (match the provided screenshot):
+
+- Primary purple: #4B0082 or #5B2D8E (deep purple)
+- Icon circle background: #4B0082
+- Message box background: #F0EEFA (light lavender)
+- "Message:" label: bold, purple
+- CONFIRM button: full width, #3D1F8C, white bold uppercase text, 
+  large border-radius (pill shape)
+- X button: gray circle, top-right of card
+- Card: white, border-radius 20px, padding 28px
+- Overlay: black 60% opacity blur background
+
+---
+
+## IMPORTANT RULES:
+1. Popup shows ONLY ONCE per dashboard open per user (session-based)
+2. It shows AGAIN on next open if not confirmed
+3. After CONFIRM → goes to notification bell section
+4. Notification expires after 24 hours (don't show after that)
+5. Admin can send to one, two, or all three roles at once
+6. This must work with my existing auth and role system
+7. Do not break any existing dashboard features
+
+Make this fully working end-to-end with no placeholder logic.
+```
+
+---

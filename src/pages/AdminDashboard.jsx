@@ -4,6 +4,18 @@ import { useAnalytics, notifyAnalyticsUpdate } from '../context/AnalyticsContext
 import { useRole } from '../context/RoleContext'
 import ProfileSlide from '../components/ProfileSlide'
 import {
+  NOTIFY_ROLES,
+  addNotification,
+  getNextPopupForRole,
+  confirmNotification,
+  markPopupShownThisSession,
+  getConfirmedForRole,
+  getUnreadCount,
+  markBellOpened,
+  effectiveRole,
+  timeAgo,
+} from '../lib/notifications'
+import {
   CheckCircle, XCircle,
   ClipboardList, BookOpen, Users, Settings, ArrowLeft, BarChart2,
   Palette, DollarSign, Type, Save, Check, CalendarDays, UtensilsCrossed,
@@ -203,6 +215,12 @@ export default function AdminDashboard() {
   const [masterMsgOpen, setMasterMsgOpen] = useState(false)
   const [masterMsgTopic, setMasterMsgTopic] = useState('')
   const [masterMsgBody, setMasterMsgBody]   = useState('')
+  const [masterMsgTargets, setMasterMsgTargets] = useState(['admin', 'manager', 'staff'])
+
+  const [activePopup, setActivePopup] = useState(null)
+  const [bellOpen, setBellOpen]       = useState(false)
+  const [bellItems, setBellItems]     = useState([])
+  const [unreadCount, setUnreadCount] = useState(0)
 
   const MASTER_SHOW_ORDERS_KEY   = 'exzibo_master_show_live_orders'
   const MASTER_SHOW_BOOKINGS_KEY = 'exzibo_master_show_table_confirmations'
@@ -401,6 +419,73 @@ export default function AdminDashboard() {
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [showOrderSettings, showBookingSettings])
+
+  // ── Notification system ─────────────────────────────────────────
+  function refreshBellState() {
+    if (fromMaster) return
+    setBellItems(getConfirmedForRole(activeRole))
+    setUnreadCount(getUnreadCount(activeRole))
+  }
+
+  function checkPopup() {
+    if (fromMaster) return
+    const next = getNextPopupForRole(activeRole)
+    if (next) setActivePopup(next)
+  }
+
+  useEffect(() => {
+    if (fromMaster) {
+      setActivePopup(null)
+      return
+    }
+    refreshBellState()
+    checkPopup()
+    function onChange() {
+      refreshBellState()
+      if (!activePopup) checkPopup()
+    }
+    window.addEventListener('exzibo-notifications-changed', onChange)
+    window.addEventListener('storage', onChange)
+    return () => {
+      window.removeEventListener('exzibo-notifications-changed', onChange)
+      window.removeEventListener('storage', onChange)
+    }
+  }, [fromMaster, activeRole])
+
+  function handleSendMasterMessage() {
+    const created = addNotification({
+      title: masterMsgTopic,
+      message: masterMsgBody,
+      target_roles: masterMsgTargets,
+    })
+    if (!created) return
+    setMasterMsgOpen(false)
+    setMasterMsgTopic('')
+    setMasterMsgBody('')
+    setMasterMsgTargets(['admin', 'manager', 'staff'])
+    showToast('✅ Notification sent')
+  }
+
+  function handlePopupConfirm() {
+    if (!activePopup) return
+    confirmNotification(activePopup.id, activeRole)
+    markPopupShownThisSession(activePopup.id)
+    setActivePopup(null)
+    refreshBellState()
+  }
+
+  function handlePopupClose() {
+    if (!activePopup) return
+    markPopupShownThisSession(activePopup.id)
+    setActivePopup(null)
+  }
+
+  function openBell() {
+    setBellOpen(true)
+    markBellOpened(activeRole)
+    setUnreadCount(0)
+  }
+  // ────────────────────────────────────────────────────────────────
 
   const activeCount = orders.filter(o => o.status === 'pending' || o.status === 'preparing').length
 
@@ -692,7 +777,7 @@ export default function AdminDashboard() {
               <button
                 type="button"
                 aria-label="Notifications"
-                onClick={() => { /* placeholder — wire up later */ }}
+                onClick={openBell}
                 style={{
                   position: 'relative',
                   width: '42px', height: '42px', borderRadius: '13px',
@@ -717,13 +802,31 @@ export default function AdminDashboard() {
                 }}
               >
                 <Bell size={18} strokeWidth={2.1} />
+                {unreadCount > 0 && (
+                  <span style={{
+                    position: 'absolute',
+                    top: '-4px', right: '-4px',
+                    minWidth: '18px', height: '18px',
+                    padding: '0 5px',
+                    borderRadius: '9px',
+                    background: '#EF4444',
+                    color: '#fff',
+                    fontSize: '10px', fontWeight: 800,
+                    lineHeight: '18px',
+                    textAlign: 'center',
+                    boxShadow: '0 2px 6px rgba(239,68,68,0.5), 0 0 0 2px #fff',
+                    pointerEvents: 'none',
+                  }}>
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
               </button>
             )}
             {fromMaster && (
               <button
                 type="button"
                 aria-label="Send message"
-                onClick={() => { setMasterMsgTopic(''); setMasterMsgBody(''); setMasterMsgOpen(true) }}
+                onClick={() => { setMasterMsgTopic(''); setMasterMsgBody(''); setMasterMsgTargets(['admin','manager','staff']); setMasterMsgOpen(true) }}
                 style={{
                   width: '52px', height: '32px', borderRadius: '10px',
                   background: '#0A0A0A',
@@ -1151,18 +1254,389 @@ export default function AdminDashboard() {
         <MasterMessageModal
           topic={masterMsgTopic}
           body={masterMsgBody}
+          targets={masterMsgTargets}
           onTopicChange={setMasterMsgTopic}
           onBodyChange={setMasterMsgBody}
+          onTargetsChange={setMasterMsgTargets}
+          onSend={handleSendMasterMessage}
           onClose={() => setMasterMsgOpen(false)}
           accentStart={accentStart}
           accentEnd={accentEnd}
+        />
+      )}
+
+      {!fromMaster && activePopup && (
+        <NotificationPopup
+          notification={activePopup}
+          onConfirm={handlePopupConfirm}
+          onClose={handlePopupClose}
+        />
+      )}
+
+      {!fromMaster && bellOpen && (
+        <NotificationCenter
+          items={bellItems}
+          onClose={() => setBellOpen(false)}
+          accentStart={accentStart}
+          accentEnd={accentEnd}
+          role={effectiveRole(activeRole)}
         />
       )}
     </div>
   )
 }
 
-function MasterMessageModal({ topic, body, onTopicChange, onBodyChange, onClose, accentStart, accentEnd }) {
+function NotificationPopup({ notification, onConfirm, onClose }) {
+  React.useEffect(() => {
+    function onKey(e) { if (e.key === 'Escape') onClose() }
+    document.addEventListener('keydown', onKey)
+    const prevOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.removeEventListener('keydown', onKey)
+      document.body.style.overflow = prevOverflow
+    }
+  }, [onClose])
+
+  const PURPLE_DEEP    = '#3D1F8C'
+  const PURPLE_PRIMARY = '#5B2D8E'
+  const LAVENDER_BG    = '#F0EEFA'
+
+  return (
+    <div
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label="New notification"
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 1100,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '20px',
+        background: 'rgba(15,15,20,0.6)',
+        backdropFilter: 'blur(10px)',
+        WebkitBackdropFilter: 'blur(10px)',
+        animation: 'notifPopupBackdropIn 0.2s ease',
+      }}
+    >
+      <style>{`
+        @keyframes notifPopupBackdropIn {
+          from { opacity: 0; }
+          to   { opacity: 1; }
+        }
+        @keyframes notifPopupCardIn {
+          from { opacity: 0; transform: translateY(14px) scale(0.95); }
+          to   { opacity: 1; transform: translateY(0) scale(1); }
+        }
+      `}</style>
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          width: '100%',
+          maxWidth: '440px',
+          background: '#fff',
+          borderRadius: '20px',
+          padding: '28px',
+          boxSizing: 'border-box',
+          position: 'relative',
+          boxShadow: '0 30px 80px rgba(0,0,0,0.4), 0 6px 20px rgba(0,0,0,0.12)',
+          fontFamily: "'Inter', 'Poppins', system-ui, sans-serif",
+          animation: 'notifPopupCardIn 0.25s cubic-bezier(0.2, 0.8, 0.2, 1)',
+        }}
+      >
+        <button
+          type="button"
+          aria-label="Close"
+          onClick={onClose}
+          style={{
+            position: 'absolute',
+            top: '14px', right: '14px',
+            width: '32px', height: '32px', borderRadius: '999px',
+            background: 'rgba(15,23,42,0.08)',
+            border: 'none',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: 'pointer',
+            color: '#64748b',
+            transition: 'all 0.15s ease',
+          }}
+          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(15,23,42,0.14)'; e.currentTarget.style.color = '#0f172a' }}
+          onMouseLeave={e => { e.currentTarget.style.background = 'rgba(15,23,42,0.08)'; e.currentTarget.style.color = '#64748b' }}
+        >
+          <X size={16} />
+        </button>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+          <div style={{
+            width: '52px', height: '52px', borderRadius: '999px',
+            background: PURPLE_PRIMARY,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: `0 8px 22px ${PURPLE_PRIMARY}55`,
+            flexShrink: 0,
+          }}>
+            <ChatBubbleIcon color="#fff" />
+          </div>
+          <div style={{ minWidth: 0 }}>
+            <div style={{
+              fontSize: '11px', fontWeight: 800,
+              color: PURPLE_PRIMARY, letterSpacing: '0.14em',
+              textTransform: 'uppercase',
+            }}>
+              New Notification
+            </div>
+            <div style={{
+              fontSize: '20px', fontWeight: 900,
+              color: '#0f172a',
+              letterSpacing: '-0.01em',
+              marginTop: '2px',
+              wordBreak: 'break-word',
+              textTransform: 'uppercase',
+            }}>
+              {notification.title}
+            </div>
+          </div>
+        </div>
+
+        <div style={{
+          height: '1px',
+          background: 'rgba(15,23,42,0.08)',
+          margin: '20px 0 18px',
+        }} />
+
+        <div style={{
+          position: 'relative',
+          background: LAVENDER_BG,
+          borderRadius: '14px',
+          padding: '18px 20px',
+          overflow: 'hidden',
+        }}>
+          <div style={{
+            fontSize: '13px', fontWeight: 800,
+            color: PURPLE_PRIMARY,
+            marginBottom: '8px',
+          }}>
+            Message:
+          </div>
+          <div style={{
+            fontSize: '14px',
+            color: '#1e293b',
+            lineHeight: 1.65,
+            whiteSpace: 'pre-wrap',
+            wordBreak: 'break-word',
+            position: 'relative',
+            zIndex: 1,
+          }}>
+            {notification.message}
+          </div>
+          <div style={{
+            position: 'absolute',
+            right: '-10px', bottom: '-14px',
+            opacity: 0.18,
+            color: PURPLE_PRIMARY,
+            pointerEvents: 'none',
+          }}>
+            <StorefrontIcon size={96} />
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={onConfirm}
+          style={{
+            marginTop: '20px',
+            width: '100%',
+            padding: '15px 18px',
+            borderRadius: '999px',
+            border: 'none',
+            cursor: 'pointer',
+            background: PURPLE_DEEP,
+            color: '#fff',
+            fontSize: '14px', fontWeight: 900,
+            letterSpacing: '0.12em',
+            textTransform: 'uppercase',
+            boxShadow: `0 10px 28px ${PURPLE_DEEP}66`,
+            transition: 'transform 0.15s ease, box-shadow 0.15s ease',
+          }}
+          onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = `0 14px 32px ${PURPLE_DEEP}80` }}
+          onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)';    e.currentTarget.style.boxShadow = `0 10px 28px ${PURPLE_DEEP}66` }}
+        >
+          Confirm
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function ChatBubbleIcon({ color = '#fff', size = 22 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+    </svg>
+  )
+}
+
+function StorefrontIcon({ size = 96 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 64 64" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M8 22 L12 12 H52 L56 22" />
+      <path d="M10 22 V54 H54 V22" />
+      <path d="M26 54 V36 H38 V54" />
+      <circle cx="18" cy="30" r="2" />
+      <circle cx="46" cy="30" r="2" />
+      <path d="M14 22 V28 a4 4 0 0 0 8 0 V22" />
+      <path d="M22 22 V28 a4 4 0 0 0 8 0 V22" />
+      <path d="M30 22 V28 a4 4 0 0 0 8 0 V22" />
+      <path d="M38 22 V28 a4 4 0 0 0 8 0 V22" />
+      <path d="M46 22 V28 a4 4 0 0 0 4 4" />
+    </svg>
+  )
+}
+
+function NotificationCenter({ items, onClose, accentStart, accentEnd, role }) {
+  React.useEffect(() => {
+    function onKey(e) { if (e.key === 'Escape') onClose() }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [onClose])
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 1050,
+        background: 'rgba(15,15,20,0.45)',
+        backdropFilter: 'blur(6px)',
+        WebkitBackdropFilter: 'blur(6px)',
+        display: 'flex',
+        alignItems: 'flex-start',
+        justifyContent: 'center',
+        padding: '80px 16px 24px',
+        animation: 'notifPopupBackdropIn 0.2s ease',
+      }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          width: '100%',
+          maxWidth: '420px',
+          maxHeight: '70vh',
+          background: '#fff',
+          borderRadius: '20px',
+          boxShadow: '0 30px 80px rgba(0,0,0,0.35), 0 6px 20px rgba(0,0,0,0.12)',
+          overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column',
+          fontFamily: "'Inter', 'Poppins', system-ui, sans-serif",
+          animation: 'notifPopupCardIn 0.22s cubic-bezier(0.2, 0.8, 0.2, 1)',
+        }}
+      >
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '18px 20px',
+          borderBottom: '1px solid rgba(15,23,42,0.06)',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{
+              width: '34px', height: '34px', borderRadius: '11px',
+              background: `linear-gradient(135deg, ${accentStart}, ${accentEnd})`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              boxShadow: `0 4px 12px ${accentStart}55`,
+              color: '#fff',
+            }}>
+              <Bell size={16} strokeWidth={2.2} />
+            </div>
+            <div>
+              <div style={{ fontSize: '15px', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.01em' }}>
+                Notifications
+              </div>
+              <div style={{ fontSize: '11px', fontWeight: 700, color: '#94A3B8', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                {role} · last 24 hours
+              </div>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            style={{
+              width: '32px', height: '32px', borderRadius: '10px',
+              background: 'rgba(15,23,42,0.05)',
+              border: 'none',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer',
+              color: '#64748b',
+              transition: 'all 0.15s ease',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(15,23,42,0.10)'; e.currentTarget.style.color = '#0f172a' }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'rgba(15,23,42,0.05)'; e.currentTarget.style.color = '#64748b' }}
+          >
+            <X size={16} />
+          </button>
+        </div>
+
+        <div style={{ overflowY: 'auto', padding: items.length === 0 ? '0' : '8px 0' }}>
+          {items.length === 0 ? (
+            <div style={{
+              padding: '40px 24px',
+              textAlign: 'center',
+              color: '#94A3B8',
+              fontSize: '13px',
+              fontWeight: 600,
+            }}>
+              No notifications yet.<br />
+              <span style={{ fontSize: '12px', fontWeight: 500, color: '#cbd5e1' }}>
+                Confirmed alerts from the last 24 hours will appear here.
+              </span>
+            </div>
+          ) : items.map(item => (
+            <div key={item.id} style={{
+              padding: '14px 20px',
+              borderTop: '1px solid rgba(15,23,42,0.04)',
+            }}>
+              <div style={{
+                display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: '10px',
+                marginBottom: '4px',
+              }}>
+                <div style={{ fontSize: '14px', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.01em', wordBreak: 'break-word' }}>
+                  {item.title}
+                </div>
+                <div style={{ fontSize: '11px', fontWeight: 700, color: '#94A3B8', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                  {timeAgo(item.created_at)}
+                </div>
+              </div>
+              <div style={{
+                fontSize: '13px', color: '#475569', lineHeight: 1.55,
+                display: '-webkit-box',
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: 'vertical',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+              }}>
+                {item.message}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function MasterMessageModal({ topic, body, targets = [], onTopicChange, onBodyChange, onTargetsChange, onSend, onClose, accentStart, accentEnd }) {
+  const ROLE_OPTIONS = [
+    { key: 'admin',   label: 'Admin' },
+    { key: 'manager', label: 'Manager' },
+    { key: 'staff',   label: 'Staff' },
+  ]
+  const toggleRole = (role) => {
+    if (!onTargetsChange) return
+    onTargetsChange(targets.includes(role) ? targets.filter(r => r !== role) : [...targets, role])
+  }
+  const canSend = topic.trim().length > 0 && body.trim().length > 0 && targets.length > 0
   React.useEffect(() => {
     function onKey(e) { if (e.key === 'Escape') onClose() }
     document.addEventListener('keydown', onKey)
@@ -1327,28 +1801,78 @@ function MasterMessageModal({ topic, body, onTopicChange, onBodyChange, onClose,
           />
         </div>
 
+        <div style={{ marginTop: '14px' }}>
+          <label style={{
+            display: 'block',
+            fontSize: '11px', fontWeight: 800,
+            color: '#64748b', letterSpacing: '0.12em',
+            marginBottom: '8px',
+          }}>
+            SEND TO
+          </label>
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            {ROLE_OPTIONS.map(opt => {
+              const checked = targets.includes(opt.key)
+              return (
+                <label
+                  key={opt.key}
+                  style={{
+                    flex: '1 1 0',
+                    minWidth: '90px',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                    padding: '10px 12px',
+                    borderRadius: '12px',
+                    border: `1.5px solid ${checked ? accentStart : '#E2E8F0'}`,
+                    background: checked ? `${accentStart}10` : '#F8FAFC',
+                    color: checked ? accentStart : '#475569',
+                    fontSize: '13px', fontWeight: 700,
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                    userSelect: 'none',
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={() => toggleRole(opt.key)}
+                    style={{
+                      width: '15px', height: '15px',
+                      accentColor: accentStart,
+                      cursor: 'pointer',
+                      margin: 0,
+                    }}
+                  />
+                  {opt.label}
+                </label>
+              )
+            })}
+          </div>
+        </div>
+
         <button
           type="button"
-          onClick={() => { /* Send not wired yet */ }}
+          onClick={() => { if (canSend && onSend) onSend() }}
+          disabled={!canSend}
           style={{
             marginTop: '20px',
             width: '100%',
             padding: '13px 18px',
             borderRadius: '14px',
             border: 'none',
-            cursor: 'pointer',
+            cursor: canSend ? 'pointer' : 'not-allowed',
             color: '#fff',
             fontSize: '13px',
             fontWeight: 800,
             letterSpacing: '0.08em',
             textTransform: 'uppercase',
-            background: `linear-gradient(135deg, ${accentStart}, ${accentEnd})`,
-            boxShadow: `0 8px 22px ${accentStart}55`,
+            background: canSend ? `linear-gradient(135deg, ${accentStart}, ${accentEnd})` : '#CBD5E1',
+            boxShadow: canSend ? `0 8px 22px ${accentStart}55` : 'none',
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
             transition: 'transform 0.15s ease, box-shadow 0.15s ease',
+            opacity: canSend ? 1 : 0.85,
           }}
-          onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = `0 12px 28px ${accentStart}66` }}
-          onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)';    e.currentTarget.style.boxShadow = `0 8px 22px ${accentStart}55` }}
+          onMouseEnter={e => { if (!canSend) return; e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = `0 12px 28px ${accentStart}66` }}
+          onMouseLeave={e => { if (!canSend) return; e.currentTarget.style.transform = 'translateY(0)';    e.currentTarget.style.boxShadow = `0 8px 22px ${accentStart}55` }}
         >
           <Send size={14} strokeWidth={2.4} style={{ transform: 'translateX(-1px)' }} />
           Send
