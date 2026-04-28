@@ -758,8 +758,12 @@ function MemberRow({ member, isLast, onRemove, onChangeRole }) {
   const { activateRole } = useRole()
 
   function handleView() {
-    activateRole(member.role)
-    navigate('/dashboard')
+    if (member.role === 'owner') {
+      activateRole(null)
+    } else {
+      activateRole(member.role)
+    }
+    navigate('/admin/default')
   }
 
   return (

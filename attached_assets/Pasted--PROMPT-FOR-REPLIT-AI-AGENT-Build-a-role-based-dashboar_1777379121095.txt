@@ -1,0 +1,140 @@
+👇
+
+
+---
+
+🚀 PROMPT FOR REPLIT AI AGENT
+
+Build a role-based dashboard navigation system for a team management panel.
+
+🎯 Goal:
+
+When clicking the "VIEW" button next to a team member, the system should open a specific dashboard based on that user's role.
+
+
+---
+
+🧠 LOGIC STRUCTURE
+
+Each team member has:
+
+email
+
+role (owner, manager, staff)
+
+status
+
+
+When user clicks VIEW button, detect the role and redirect accordingly.
+
+
+---
+
+⚙️ IMPLEMENTATION DETAILS
+
+1. Store Role in Button (IMPORTANT)
+
+Each "VIEW" button must carry the role dynamically.
+
+Example:
+
+<button class="view-btn" data-role="owner">VIEW</button>
+<button class="view-btn" data-role="manager">VIEW</button>
+<button class="view-btn" data-role="staff">VIEW</button>
+
+
+---
+
+2. Add Click Event Listener (Frontend JS)
+
+document.querySelectorAll('.view-btn').forEach(button => {
+  button.addEventListener('click', function () {
+    const role = this.getAttribute('data-role');
+
+    if (role === 'owner') {
+      window.location.href = '/dashboard/owner';
+    } 
+    else if (role === 'manager') {
+      window.location.href = '/dashboard/manager';
+    } 
+    else if (role === 'staff') {
+      window.location.href = '/dashboard/staff';
+    } 
+    else {
+      alert('Invalid role');
+    }
+  });
+});
+
+
+---
+
+3. Backend Route Handling (Node.js / Express Example)
+
+app.get('/dashboard/:role', (req, res) => {
+  const role = req.params.role;
+
+  if (role === 'owner') {
+    res.render('owner-dashboard');
+  } 
+  else if (role === 'manager') {
+    res.render('manager-dashboard');
+  } 
+  else if (role === 'staff') {
+    res.render('staff-dashboard');
+  } 
+  else {
+    res.status(404).send('Dashboard not found');
+  }
+});
+
+
+---
+
+🔐 SECURITY (VERY IMPORTANT ⚠️)
+
+Do NOT rely only on frontend role detection.
+
+Add backend validation:
+
+Check logged-in user role from database
+
+Only allow access to correct dashboard
+
+
+Example:
+
+if (user.role !== role) {
+  return res.status(403).send('Access Denied');
+}
+
+
+---
+
+🎯 OPTIONAL (BETTER UX)
+
+Instead of redirect:
+
+Open dashboard in modal
+
+OR load dynamically using AJAX
+
+
+
+---
+
+💡 FINAL RESULT
+
+Clicking OWNER → opens Owner Dashboard
+
+Clicking MANAGER → opens Manager Dashboard
+
+Clicking STAFF → opens Staff Dashboard
+
+Fully separated control panels
+
+Secure + scalable
+
+
+
+---
