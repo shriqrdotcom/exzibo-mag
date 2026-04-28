@@ -1311,10 +1311,6 @@ export default function Settings() {
                             <div style={{ fontSize: '13px', color: '#fff', fontWeight: 600 }}>{fmtDateShort(computedDraft.endDate)}</div>
                           </div>
                           <div>
-                            <div style={{ fontSize: '9px', color: '#666', fontWeight: 700, letterSpacing: '0.1em', marginBottom: '2px' }}>DAYS IN PERIOD</div>
-                            <div style={{ fontSize: '13px', color: '#fff', fontWeight: 600 }}>{periodDays} days</div>
-                          </div>
-                          <div>
                             <div style={{ fontSize: '9px', color: '#666', fontWeight: 700, letterSpacing: '0.1em', marginBottom: '2px' }}>DAYS REMAINING</div>
                             <div style={{ fontSize: '13px', color: expired ? '#ef4444' : '#4ade80', fontWeight: 700 }}>{remaining} {remaining === 1 ? 'day' : 'days'}</div>
                           </div>
