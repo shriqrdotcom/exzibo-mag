@@ -1,0 +1,44 @@
+Copy and paste this exactly:
+
+---
+
+> **Context:**
+> I have a **Per-Restaurant Teams** section in my app. It displays a table with columns: Restaurant UID, Owner, Manager, Staff, Status, and Actions.
+>
+> In each row, there are currently **3 eye-shaped icon buttons (👁 view icons)**:
+> - One eye icon placed **next to the Owner column** (beside the crown 👑 icon and "+ ADD GMAIL" text)
+> - One eye icon placed **next to the Manager column** (beside the shield 🛡 icon and "+ ADD GMAIL" text)
+> - One eye icon placed **next to the Staff column** (beside the scissors ✂ icon and "+ ADD GMAIL" text)
+>
+> **What I need:**
+> Completely **remove all 3 eye/view icon buttons** from every row in this table.
+>
+> **Step by step instructions:**
+>
+> **Step 1 — Find the Component**
+> - Locate the component or file that renders the **Per-Restaurant Teams** table/list
+> - It may be named something like `TeamTable`, `RestaurantTeams`, `PerRestaurantTeams`, `TeamMembers`, or similar
+>
+> **Step 2 — Find the Eye Icons**
+> - Inside that component, find the 3 eye icon buttons
+> - They are likely rendered using an icon like `<EyeIcon>`, `<FiEye>`, `<AiOutlineEye>`, `<IoEyeOutline>`, or an `<img>` / `<button>` with eye SVG
+> - There will be one for Owner, one for Manager, one for Staff — find all 3
+>
+> **Step 3 — Remove Them**
+> - Delete the eye icon buttons and their wrapping elements (the `<button>` or `<div>` tag that contains only the eye icon)
+> - Do NOT remove the role icons (crown, shield, scissors), the "+ ADD GMAIL" text/button, or any other element
+> - Do NOT remove any onClick logic that belongs to other buttons — only remove what is exclusively tied to the eye icon
+>
+> **Step 4 — Verify Nothing Else Breaks**
+> - After removal, the row should still show: Restaurant UID, role icons, "+ ADD GMAIL", Status (LIVE/OFFLINE), and "MANAGE TEAM" button
+> - Make sure the layout/spacing of the row looks clean after the eye icons are removed
+> - If removing the eye button leaves an awkward gap, adjust the flex/spacing of that cell so Owner, Manager, and Staff columns look clean
+>
+> **What NOT to touch:**
+> - The crown 👑, shield 🛡, scissors ✂ role icons — keep them
+> - The "+ ADD GMAIL" links — keep them
+> - The STATUS column (LIVE / OFFLINE) — keep it
+> - The "MANAGE TEAM" button — keep it
+> - Any data fetching or state logic — do not touch
+
+---

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useLayoutEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Users, Crown, Shield, UtensilsCrossed, Plus, X, Trash2,
-  ChevronDown, CheckCircle2, XCircle, Loader2, Check, Eye, LayoutDashboard, Search
+  ChevronDown, CheckCircle2, XCircle, Loader2, Check, LayoutDashboard, Search
 } from 'lucide-react'
 import Sidebar from '../components/Sidebar'
 import AdminHeader from '../components/AdminHeader'
@@ -404,28 +404,6 @@ export default function TeamMembersAdmin() {
                                         + ADD GMAIL
                                       </button>
                                     </div>
-                                    <button
-                                      title={`Preview as ${col.label}`}
-                                      onClick={() => previewRole(col.key)}
-                                      style={{
-                                        width: '26px', height: '26px', borderRadius: '7px',
-                                        background: `${col.accent}15`,
-                                        border: `1px solid ${col.accent}30`,
-                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                        cursor: 'pointer', flexShrink: 0,
-                                        transition: 'all 0.2s',
-                                      }}
-                                      onMouseEnter={e => {
-                                        e.currentTarget.style.background = `${col.accent}30`
-                                        e.currentTarget.style.borderColor = `${col.accent}60`
-                                      }}
-                                      onMouseLeave={e => {
-                                        e.currentTarget.style.background = `${col.accent}15`
-                                        e.currentTarget.style.borderColor = `${col.accent}30`
-                                      }}
-                                    >
-                                      <Eye size={12} color={col.accent} />
-                                    </button>
                                   </div>
                                 </td>
                               )
