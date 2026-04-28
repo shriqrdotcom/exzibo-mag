@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import Sidebar from '../components/Sidebar'
 import AdminHeader from '../components/AdminHeader'
-import { Lock, Shield, ChevronDown, Check, Share2, Globe, ClipboardPaste, Link, Search, User, Phone, Mail, Layers, DollarSign, Clock, Copy } from 'lucide-react'
+import { Lock, Shield, ChevronDown, Check, Share2, Globe, ClipboardPaste, Link, Search, User, Phone, Mail, Layers, DollarSign, Clock, Copy, Calendar, X } from 'lucide-react'
 import { FaFacebook, FaInstagram, FaTwitter, FaLinkedin, FaYoutube } from 'react-icons/fa'
 
 const DEFAULTS = {
@@ -51,6 +51,20 @@ export default function Settings() {
   const [bindOpen, setBindOpen] = useState(false)
   const [bindAmountInput, setBindAmountInput] = useState('')
   const [now, setNow] = useState(() => Date.now())
+  const [selectedDate, setSelectedDate] = useState(null)
+  const [datePickerOpen, setDatePickerOpen] = useState(false)
+  const datePickerRef = useRef(null)
+
+  useEffect(() => {
+    if (!datePickerOpen) return
+    const onClickOutside = (e) => {
+      if (datePickerRef.current && !datePickerRef.current.contains(e.target)) {
+        setDatePickerOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', onClickOutside)
+    return () => document.removeEventListener('mousedown', onClickOutside)
+  }, [datePickerOpen])
 
   const MONTHS = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC']
   const MONTH_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
@@ -67,6 +81,20 @@ export default function Settings() {
     const d = new Date(input)
     if (isNaN(d.getTime())) return ''
     return `${d.getDate()} ${MONTH_LONG[d.getMonth()]} ${d.getFullYear()}`
+  }
+  const fmtDateFull = (input) => {
+    if (!input) return ''
+    const d = new Date(input)
+    if (isNaN(d.getTime())) return ''
+    return `${String(d.getDate()).padStart(2,'0')} ${MONTH_LONG[d.getMonth()].toUpperCase()} ${d.getFullYear()}`
+  }
+  const toDateInputValue = (input) => {
+    const d = new Date(input)
+    if (isNaN(d.getTime())) return ''
+    const y = d.getFullYear()
+    const m = String(d.getMonth() + 1).padStart(2, '0')
+    const day = String(d.getDate()).padStart(2, '0')
+    return `${y}-${m}-${day}`
   }
   const addDays = (input, n) => {
     const d = new Date(input)
@@ -1162,16 +1190,132 @@ export default function Settings() {
                 </div>
               ) : (
                 <>
-                  <div style={{
+                  <div ref={datePickerRef} style={{
                     padding: '10px 14px',
                     background: 'rgba(255,255,255,0.03)',
                     border: '1px solid rgba(255,255,255,0.06)',
                     borderRadius: '10px',
                     marginBottom: '14px',
                     fontSize: '12px', color: '#bbb',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: '12px',
+                    position: 'relative',
                   }}>
-                    <span style={{ color: '#666', fontWeight: 700, letterSpacing: '0.08em', fontSize: '10px' }}>TODAY: </span>
-                    <span style={{ color: '#fff', fontWeight: 700 }}>{fmtDateLong(today)}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                      <span style={{ color: '#666', fontWeight: 700, letterSpacing: '0.08em', fontSize: '10px' }}>TODAY:</span>
+                      <span style={{ color: '#fff', fontWeight: 700, letterSpacing: '0.04em' }}>{fmtDateFull(selectedDate || today)}</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      {selectedDate && (
+                        <button
+                          type="button"
+                          onClick={() => { setSelectedDate(null); setDatePickerOpen(false) }}
+                          title="Reset to today"
+                          aria-label="Reset to today"
+                          style={{
+                            width: '24px', height: '24px', borderRadius: '6px',
+                            background: 'rgba(239,68,68,0.08)',
+                            border: '1px solid rgba(239,68,68,0.25)',
+                            color: '#ef4444', cursor: 'pointer',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            transition: 'all 0.15s ease',
+                          }}
+                        >
+                          <X size={12} strokeWidth={2.6} />
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => setDatePickerOpen(o => !o)}
+                        title="Pick a date"
+                        aria-label="Open calendar"
+                        style={{
+                          width: '28px', height: '28px', borderRadius: '8px',
+                          background: datePickerOpen ? '#FF69B4' : 'rgba(255,105,180,0.12)',
+                          border: `1px solid ${datePickerOpen ? '#FF69B4' : 'rgba(255,105,180,0.35)'}`,
+                          color: datePickerOpen ? '#fff' : '#FF69B4',
+                          cursor: 'pointer',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          boxShadow: datePickerOpen ? '0 0 12px rgba(255,105,180,0.45)' : 'none',
+                          transition: 'all 0.15s ease',
+                        }}
+                      >
+                        <Calendar size={14} strokeWidth={2.4} />
+                      </button>
+                    </div>
+                    {datePickerOpen && (
+                      <div style={{
+                        position: 'absolute',
+                        top: 'calc(100% + 6px)',
+                        right: 0,
+                        zIndex: 50,
+                        background: '#0a0a0a',
+                        border: '1px solid rgba(255,255,255,0.12)',
+                        borderRadius: '12px',
+                        padding: '12px',
+                        boxShadow: '0 18px 40px rgba(0,0,0,0.65)',
+                        minWidth: '220px',
+                        animation: 'fadeIn 0.18s ease-out',
+                      }}>
+                        <div style={{ fontSize: '9px', fontWeight: 800, letterSpacing: '0.14em', color: '#FF69B4', marginBottom: '8px' }}>SELECT DATE</div>
+                        <input
+                          type="date"
+                          value={toDateInputValue(selectedDate || today)}
+                          onChange={(e) => {
+                            const v = e.target.value
+                            if (!v) return
+                            const d = new Date(`${v}T00:00:00`)
+                            if (!isNaN(d.getTime())) setSelectedDate(d)
+                          }}
+                          autoFocus
+                          style={{
+                            width: '100%',
+                            padding: '8px 10px',
+                            background: 'rgba(255,255,255,0.04)',
+                            border: '1px solid rgba(255,255,255,0.12)',
+                            borderRadius: '8px',
+                            color: '#fff',
+                            fontSize: '13px',
+                            fontWeight: 600,
+                            colorScheme: 'dark',
+                            outline: 'none',
+                          }}
+                        />
+                        <div style={{ display: 'flex', gap: '6px', marginTop: '10px' }}>
+                          <button
+                            type="button"
+                            onClick={() => { setSelectedDate(null); setDatePickerOpen(false) }}
+                            style={{
+                              flex: 1,
+                              padding: '7px',
+                              background: 'rgba(255,255,255,0.04)',
+                              border: '1px solid rgba(255,255,255,0.12)',
+                              borderRadius: '7px',
+                              color: '#bbb',
+                              fontSize: '10px', fontWeight: 800, letterSpacing: '0.1em',
+                              cursor: 'pointer',
+                            }}
+                          >RESET</button>
+                          <button
+                            type="button"
+                            onClick={() => setDatePickerOpen(false)}
+                            style={{
+                              flex: 1,
+                              padding: '7px',
+                              background: '#FF69B4',
+                              border: '1px solid #FF69B4',
+                              borderRadius: '7px',
+                              color: '#fff',
+                              fontSize: '10px', fontWeight: 800, letterSpacing: '0.1em',
+                              cursor: 'pointer',
+                              boxShadow: '0 0 12px rgba(255,105,180,0.4)',
+                            }}
+                          >DONE</button>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {!computedDraft && (
