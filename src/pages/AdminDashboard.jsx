@@ -919,21 +919,23 @@ export default function AdminDashboard() {
                 Orders
               </h1>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <button
-                  ref={orderSettingsBtnRef}
-                  onClick={() => setShowOrderSettings(p => !p)}
-                  style={{
-                    width: '36px', height: '36px', borderRadius: '11px',
-                    background: showOrderSettings ? `${accentStart}18` : 'rgba(255,255,255,0.8)',
-                    border: `1.5px solid ${showOrderSettings ? accentStart : 'rgba(226,232,240,0.8)'}`,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    cursor: 'pointer', color: showOrderSettings ? accentStart : '#64748b',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
-                    transition: 'all 0.2s ease',
-                  }}
-                >
-                  <SlidersHorizontal size={15} />
-                </button>
+                {activeRole !== 'manager' && activeRole !== 'staff' && (
+                  <button
+                    ref={orderSettingsBtnRef}
+                    onClick={() => setShowOrderSettings(p => !p)}
+                    style={{
+                      width: '36px', height: '36px', borderRadius: '11px',
+                      background: showOrderSettings ? `${accentStart}18` : 'rgba(255,255,255,0.8)',
+                      border: `1.5px solid ${showOrderSettings ? accentStart : 'rgba(226,232,240,0.8)'}`,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      cursor: 'pointer', color: showOrderSettings ? accentStart : '#64748b',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+                      transition: 'all 0.2s ease',
+                    }}
+                  >
+                    <SlidersHorizontal size={15} />
+                  </button>
+                )}
                 <div style={{
                   padding: '6px 16px',
                   background: `linear-gradient(135deg, ${accentStart}, ${accentEnd})`,
@@ -1058,21 +1060,23 @@ export default function AdminDashboard() {
                 Bookings
               </h1>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <button
-                  ref={bookingSettingsBtnRef}
-                  onClick={() => setShowBookingSettings(p => !p)}
-                  style={{
-                    width: '36px', height: '36px', borderRadius: '11px',
-                    background: showBookingSettings ? `${accentStart}18` : 'rgba(255,255,255,0.8)',
-                    border: `1.5px solid ${showBookingSettings ? accentStart : 'rgba(226,232,240,0.8)'}`,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    cursor: 'pointer', color: showBookingSettings ? accentStart : '#64748b',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
-                    transition: 'all 0.2s ease',
-                  }}
-                >
-                  <SlidersHorizontal size={15} />
-                </button>
+                {activeRole !== 'manager' && activeRole !== 'staff' && (
+                  <button
+                    ref={bookingSettingsBtnRef}
+                    onClick={() => setShowBookingSettings(p => !p)}
+                    style={{
+                      width: '36px', height: '36px', borderRadius: '11px',
+                      background: showBookingSettings ? `${accentStart}18` : 'rgba(255,255,255,0.8)',
+                      border: `1.5px solid ${showBookingSettings ? accentStart : 'rgba(226,232,240,0.8)'}`,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      cursor: 'pointer', color: showBookingSettings ? accentStart : '#64748b',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+                      transition: 'all 0.2s ease',
+                    }}
+                  >
+                    <SlidersHorizontal size={15} />
+                  </button>
+                )}
                 <div style={{
                   padding: '6px 16px',
                   background: `linear-gradient(135deg, ${accentStart}, ${accentEnd})`,

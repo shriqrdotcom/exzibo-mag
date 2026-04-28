@@ -1,0 +1,66 @@
+You have **2 settings/filter icon buttons**:
+- One for **"Order Received Section"**
+- One for **"Order Section"**
+
+Right now, these buttons are rendering on **all panels** — Master Control, Admin, Manager, and Staff. But you only want them visible on **Master Control** and **Admin**. They must be **completely hidden** on **Manager** and **Staff** panels.
+
+---
+
+## 🔍 Root Cause (Why This Happens)
+
+These buttons are most likely placed in a **shared/common component** (like a shared header, toolbar, or layout wrapper) that all four panels use. Since it's shared, every panel inherits those buttons. The fix is to **conditionally render** them based on the current user's role.
+
+---
+
+## ✅ The Fix (Logic)
+
+You need to wrap those two buttons in a **role check condition**, so they only render when the role is `"master_control"` or `"admin"`. Something like:
+
+```js
+if (role === 'admin' || role === 'master_control') {
+  // show the buttons
+}
+```
+
+On Manager and Staff panels — the buttons simply don't render at all.
+
+---
+
+## 📋 Replit AI Agent Prompt
+
+Copy and paste this **exactly**:
+
+---
+
+> **Context:**
+> I have a restaurant management app with 4 user role panels: **Master Control**, **Admin**, **Manager**, and **Staff**.
+>
+> There are **2 settings/filter icon buttons** currently visible across all panels:
+> - One button opens settings for the **"Order Received Section"**
+> - One button opens settings for the **"Order Section"**
+>
+> **Problem:**
+> These two buttons are showing up on ALL panels including Manager and Staff, which is wrong.
+>
+> **What I need:**
+> - Show BOTH buttons **only** on **Master Control** and **Admin** panels
+> - **Completely hide / do not render** both buttons on **Manager** and **Staff** panels
+> - Do NOT delete the buttons or their functionality — just conditionally render them based on role
+>
+> **How to fix:**
+> 1. Find where these two settings icon buttons are defined in the codebase (check shared layout, toolbar, header, or dashboard components)
+> 2. Identify how the current user role is stored — check if it's in a context, Redux store, props, or a variable like `userRole`, `role`, `currentRole`, etc.
+> 3. Wrap both buttons inside a conditional render check like:
+> ```jsx
+> {(role === 'admin' || role === 'master_control') && (
+>   <SettingsButton ... />
+> )}
+> ```
+> 4. Apply this same condition to **both** buttons separately
+> 5. Make sure the condition uses whatever exact role key/value strings are already used in this project — check existing role checks in the code for the correct naming
+> 6. Test that on Manager and Staff panels, neither button appears at all
+> 7. Test that on Master Control and Admin panels, both buttons appear as before
+>
+> Do not change anything else. Do not remove the buttons' logic or functionality. Only add the conditional rendering guard.
+
+---
