@@ -1392,7 +1392,7 @@ function NotificationPopup({ notification, onConfirm, onClose }) {
           <img
             src={notificationIconImg}
             alt=""
-            style={{ width: '52px', height: '52px', flexShrink: 0, display: 'block' }}
+            style={{ width: '52px', height: '52px', flexShrink: 0, display: 'block', borderRadius: '999px', objectFit: 'cover' }}
           />
           <div style={{ minWidth: 0 }}>
             <div style={{
