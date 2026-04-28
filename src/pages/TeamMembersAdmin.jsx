@@ -2,7 +2,7 @@ import React, { useState, useEffect, useLayoutEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Users, Crown, Shield, UtensilsCrossed, Plus, X, Trash2,
-  ChevronDown, CheckCircle2, XCircle, Loader2, Check, Eye, LayoutDashboard, Search
+  ChevronDown, CheckCircle2, XCircle, Loader2, Check, LayoutDashboard, Search
 } from 'lucide-react'
 import Sidebar from '../components/Sidebar'
 import AdminHeader from '../components/AdminHeader'
@@ -754,6 +754,13 @@ function RestaurantTeamPanel({ restaurant, team, onAdd, onRemove, onChangeRole }
 function MemberRow({ member, isLast, onRemove, onChangeRole }) {
   const roleConfig = ROLE_COLUMNS.find(r => r.key === member.role) || ROLE_COLUMNS[2]
   const isActive = member.status === 'active'
+  const navigate = useNavigate()
+  const { activateRole } = useRole()
+
+  function handleView() {
+    activateRole(member.role)
+    navigate('/dashboard')
+  }
 
   return (
     <tr style={{
@@ -804,24 +811,21 @@ function MemberRow({ member, isLast, onRemove, onChangeRole }) {
           </div>
           <button
             title={`View ${roleConfig.label} page`}
+            onClick={handleView}
             style={{
-              width: '24px', height: '24px', borderRadius: '7px',
-              background: `${roleConfig.accent}15`,
-              border: `1px solid ${roleConfig.accent}30`,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              cursor: 'pointer', flexShrink: 0, padding: 0,
-              transition: 'all 0.2s',
-            }}
-            onMouseEnter={e => {
-              e.currentTarget.style.background = `${roleConfig.accent}30`
-              e.currentTarget.style.borderColor = `${roleConfig.accent}60`
-            }}
-            onMouseLeave={e => {
-              e.currentTarget.style.background = `${roleConfig.accent}15`
-              e.currentTarget.style.borderColor = `${roleConfig.accent}30`
+              padding: '4px 10px',
+              background: '#fff',
+              border: 'none',
+              borderRadius: '4px',
+              color: '#000',
+              fontSize: '10px',
+              fontWeight: 800,
+              letterSpacing: '0.06em',
+              cursor: 'pointer',
+              flexShrink: 0,
             }}
           >
-            <Eye size={12} color={roleConfig.accent} />
+            VIEW
           </button>
         </div>
       </td>
