@@ -107,14 +107,25 @@ export default function TeamMembersAdmin() {
   const [uidQuery, setUidQuery] = useState('')
   const [activeUidFilter, setActiveUidFilter] = useState('')
 
+  function matchesUid(r, q) {
+    const needle = q.trim().toLowerCase()
+    if (!needle) return true
+    const ruid = String(r.uid || '').trim().toLowerCase()
+    const rid  = String(r.id  || '').trim().toLowerCase()
+    return ruid.includes(needle) || rid.includes(needle)
+  }
+
   function runUidSearch() {
     const q = uidQuery.trim()
     setActiveUidFilter(q)
     if (!q) return
-    const match = restaurants.find(r => String(r.uid || '').toLowerCase() === q.toLowerCase())
-    if (match) {
-      setExpandedId(match.id)
-      showToast(`Showing ${match.name || match.uid}`)
+    const matches = restaurants.filter(r => matchesUid(r, q))
+    if (matches.length > 0) {
+      setExpandedId(matches[0].id)
+      const m = matches[0]
+      showToast(matches.length === 1
+        ? `Showing ${m.name || m.uid || m.id}`
+        : `Found ${matches.length} matching restaurants`)
     } else {
       showToast('No restaurant found with that UID', 'error')
     }
@@ -126,7 +137,7 @@ export default function TeamMembersAdmin() {
   }
 
   const filteredRestaurants = activeUidFilter
-    ? restaurants.filter(r => String(r.uid || '').toLowerCase().includes(activeUidFilter.toLowerCase()))
+    ? restaurants.filter(r => matchesUid(r, activeUidFilter))
     : restaurants
 
   useLayoutEffect(() => {

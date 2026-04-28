@@ -1,0 +1,68 @@
+Your **Search UID** feature in the **Team Members section** is broken. When you type a restaurant UID and search, it's either:
+- Showing **all records** regardless of what you type
+- Not filtering at all
+- Or the search has **no logic connected** to the actual data fetching/filtering
+
+The core issue is: **the search input exists visually but has no working backend/filter logic tied to it.**
+
+---
+
+## 📋 Replit AI Agent Prompt
+
+Copy and paste this exactly:
+
+---
+
+> **Context:**
+> I have a restaurant SaaS platform. Inside the **Team Members section**, there is a **Search by UID** feature (with a 🔎 search bar/input). This search is supposed to let me type a **Restaurant UID** and show only the team members belonging to that specific restaurant.
+>
+> **Current Problem:**
+> The search UID input is completely non-functional. When I type any UID and search, it either shows all team members, shows nothing, or does not filter at all. The search has no working logic.
+>
+> **What I need you to do — step by step:**
+>
+> **Step 1 — Find the Search Input**
+> - Locate the Search UID input field inside the Team Members section/component
+> - Find where its value is stored (state variable, e.g. `searchUID`, `uidInput`, etc.)
+> - Find what happens when the user types or clicks search (onChange, onSubmit, onClick handler)
+>
+> **Step 2 — Find the Team Members Data Source**
+> - Check where team members data is coming from — is it fetched from Supabase, an API call, Firebase, or a local state?
+> - Find the exact table name, collection, or endpoint that holds team member records
+> - Check what column/field stores the Restaurant UID in that data (e.g. `restaurant_uid`, `uid`, `restaurant_id`)
+>
+> **Step 3 — Fix the Filter Logic**
+> - If data is fetched from **Supabase**, the query should filter like this:
+> ```js
+> const { data, error } = await supabase
+>   .from('team_members') // use actual table name
+>   .select('*')
+>   .eq('restaurant_uid', searchUID) // use actual column name
+> ```
+> - If data is already loaded in state (client-side), filter the array like this:
+> ```js
+> const filtered = allTeamMembers.filter(
+>   member => member.restaurant_uid === searchUID
+> )
+> ```
+> - If using an API call, pass the UID as a query parameter and filter on the backend
+>
+> **Step 4 — Connect Input to Filter**
+> - Make sure the search input's value is bound to a state variable
+> - When the user clicks the Search button OR presses Enter, trigger the filter/fetch using the current input value
+> - Display the filtered results in the team members list/table
+> - If **no match is found**, show a clear message like: `"No team members found for this UID"`
+> - If the **search input is cleared/empty**, show all team members again (or show empty state — whichever is the current default behavior)
+>
+> **Step 5 — Edge Cases to Handle**
+> - If the UID typed does not exist in the database → show "No results found"
+> - If the search field is empty and user clicks search → do nothing or reset the list
+> - Trim whitespace from the input before searching (use `.trim()`)
+> - The search should be **case-insensitive** if UIDs can have mixed case
+>
+> **Important:**
+> - Do NOT redesign the UI — only fix the logic
+> - Use the exact field names, table names, and state variables already present in the codebase
+> - Do not break any other functionality in the Team Members section
+
+---
