@@ -1176,11 +1176,11 @@ export default function Settings() {
 
                   {!computedDraft && (
                     <>
-                      <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', color: '#ccc', marginBottom: '10px' }}>SELECT MODE</div>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: pendingMode === 'custom' ? '14px' : '10px' }}>
+                      <div style={{ marginBottom: '10px' }}>
                         <button
                           onClick={() => { setPendingMode('live'); setLiveStart(new Date().toISOString()); setCustomStartDate(''); setPaymentAmountInput('') }}
                           style={{
+                            width: '100%',
                             padding: '18px 12px',
                             background: pendingMode === 'live' ? '#FF69B4' : 'rgba(255,105,180,0.08)',
                             border: `1px solid ${pendingMode === 'live' ? '#FF69B4' : 'rgba(255,105,180,0.3)'}`,
@@ -1194,43 +1194,7 @@ export default function Settings() {
                           <span style={{ fontSize: '13px', fontWeight: 800, letterSpacing: '0.08em' }}>LIVE MONTH</span>
                           <span style={{ fontSize: '10px', color: pendingMode === 'live' ? 'rgba(255,255,255,0.85)' : '#888' }}>Starts today · 30 days</span>
                         </button>
-                        <button
-                          onClick={() => { setPendingMode('custom'); setLiveStart(null); setPaymentAmountInput('') }}
-                          style={{
-                            padding: '18px 12px',
-                            background: pendingMode === 'custom' ? '#FF69B4' : 'rgba(255,255,255,0.04)',
-                            border: `1px solid ${pendingMode === 'custom' ? '#FF69B4' : 'rgba(255,255,255,0.1)'}`,
-                            borderRadius: '12px',
-                            color: '#fff', cursor: 'pointer',
-                            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px',
-                            boxShadow: pendingMode === 'custom' ? '0 0 18px rgba(255,105,180,0.45)' : 'none',
-                          }}
-                        >
-                          <span style={{ fontSize: '20px' }}>📅</span>
-                          <span style={{ fontSize: '13px', fontWeight: 800, letterSpacing: '0.08em' }}>CUSTOM MONTH</span>
-                          <span style={{ fontSize: '10px', color: pendingMode === 'custom' ? 'rgba(255,255,255,0.85)' : '#888' }}>Pick a start date</span>
-                        </button>
                       </div>
-
-                      {pendingMode === 'custom' && (
-                        <div style={{ marginBottom: '10px' }}>
-                          <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.1em', color: '#888', marginBottom: '6px' }}>START DATE</div>
-                          <input
-                            type="date"
-                            value={customStartDate}
-                            onChange={e => setCustomStartDate(e.target.value)}
-                            style={{
-                              width: '100%',
-                              padding: '10px 12px',
-                              background: 'rgba(255,255,255,0.04)',
-                              border: '1px solid rgba(255,255,255,0.1)',
-                              borderRadius: '8px',
-                              color: '#fff', fontSize: '13px', outline: 'none',
-                              colorScheme: 'dark',
-                            }}
-                          />
-                        </div>
-                      )}
                     </>
                   )}
 
