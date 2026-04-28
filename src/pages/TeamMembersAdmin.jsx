@@ -2,7 +2,7 @@ import React, { useState, useEffect, useLayoutEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Users, Crown, Shield, UtensilsCrossed, Plus, X, Trash2,
-  ChevronDown, CheckCircle2, XCircle, Loader2, Check, Eye, LayoutDashboard
+  ChevronDown, CheckCircle2, XCircle, Loader2, Check, Eye, LayoutDashboard, Search
 } from 'lucide-react'
 import Sidebar from '../components/Sidebar'
 import AdminHeader from '../components/AdminHeader'
@@ -104,6 +104,30 @@ export default function TeamMembersAdmin() {
   const [expandedId, setExpandedId] = useState(null)
   const [modal, setModal] = useState(null)
   const [toast, setToast] = useState(null)
+  const [uidQuery, setUidQuery] = useState('')
+  const [activeUidFilter, setActiveUidFilter] = useState('')
+
+  function runUidSearch() {
+    const q = uidQuery.trim()
+    setActiveUidFilter(q)
+    if (!q) return
+    const match = restaurants.find(r => String(r.uid || '').toLowerCase() === q.toLowerCase())
+    if (match) {
+      setExpandedId(match.id)
+      showToast(`Showing ${match.name || match.uid}`)
+    } else {
+      showToast('No restaurant found with that UID', 'error')
+    }
+  }
+
+  function clearUidSearch() {
+    setUidQuery('')
+    setActiveUidFilter('')
+  }
+
+  const filteredRestaurants = activeUidFilter
+    ? restaurants.filter(r => String(r.uid || '').toLowerCase().includes(activeUidFilter.toLowerCase()))
+    : restaurants
 
   useLayoutEffect(() => {
     exitRoleView()
@@ -164,12 +188,96 @@ export default function TeamMembersAdmin() {
         <AdminHeader />
         <main style={{ flex: 1, overflowY: 'auto', padding: '32px' }}>
 
-          <div style={{ marginBottom: '28px' }}>
-            <div style={{ fontSize: '22px', fontWeight: 800, color: '#fff', letterSpacing: '-0.02em', marginBottom: '4px' }}>
-              TEAM MEMBERS
+          <div style={{
+            marginBottom: '28px',
+            display: 'flex',
+            alignItems: 'flex-start',
+            justifyContent: 'space-between',
+            gap: '24px',
+            flexWrap: 'wrap',
+          }}>
+            <div>
+              <div style={{ fontSize: '22px', fontWeight: 800, color: '#fff', letterSpacing: '-0.02em', marginBottom: '4px' }}>
+                TEAM MEMBERS
+              </div>
+              <div style={{ fontSize: '13px', color: '#555', fontWeight: 500 }}>
+                Manage staff roles and permissions across all restaurants
+              </div>
             </div>
-            <div style={{ fontSize: '13px', color: '#555', fontWeight: 500 }}>
-              Manage staff roles and permissions across all restaurants
+
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              background: '#111',
+              border: '1px solid rgba(255,255,255,0.08)',
+              borderRadius: '12px',
+              padding: '6px 6px 6px 14px',
+              minWidth: '320px',
+            }}>
+              <Search size={15} color="#666" />
+              <input
+                type="text"
+                value={uidQuery}
+                onChange={e => setUidQuery(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') runUidSearch() }}
+                placeholder="Paste Restaurant UID…"
+                style={{
+                  flex: 1,
+                  background: 'transparent',
+                  border: 'none',
+                  outline: 'none',
+                  color: '#fff',
+                  fontSize: '13px',
+                  fontWeight: 500,
+                  padding: '8px 4px',
+                  letterSpacing: '0.02em',
+                }}
+              />
+              {activeUidFilter && (
+                <button
+                  type="button"
+                  onClick={clearUidSearch}
+                  aria-label="Clear search"
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    color: '#666',
+                    cursor: 'pointer',
+                    padding: '4px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <X size={14} />
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={runUidSearch}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  background: '#E8321A',
+                  border: 'none',
+                  color: '#fff',
+                  fontSize: '12px',
+                  fontWeight: 700,
+                  letterSpacing: '0.08em',
+                  textTransform: 'uppercase',
+                  padding: '8px 14px',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  transition: 'background 0.15s ease, transform 0.15s ease',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.background = '#FF3D22'; e.currentTarget.style.transform = 'translateY(-1px)' }}
+                onMouseLeave={e => { e.currentTarget.style.background = '#E8321A'; e.currentTarget.style.transform = 'translateY(0)' }}
+              >
+                <Search size={13} />
+                Search
+              </button>
             </div>
           </div>
 
@@ -201,20 +309,22 @@ export default function TeamMembersAdmin() {
                   </tr>
                 </thead>
                 <tbody>
-                  {restaurants.length === 0 ? (
+                  {filteredRestaurants.length === 0 ? (
                     <tr>
                       <td colSpan={6} style={{ padding: '60px 28px', textAlign: 'center' }}>
                         <Users size={38} color="#333" style={{ marginBottom: '12px', display: 'block', margin: '0 auto 12px' }} />
-                        <div style={{ fontSize: '14px', color: '#444', fontWeight: 600 }}>No restaurants found</div>
+                        <div style={{ fontSize: '14px', color: '#444', fontWeight: 600 }}>
+                          {activeUidFilter ? 'No restaurant matches that UID' : 'No restaurants found'}
+                        </div>
                         <div style={{ fontSize: '12px', color: '#333', marginTop: '4px' }}>
-                          Add restaurants from the Dashboard first
+                          {activeUidFilter ? 'Try a different UID or clear the search' : 'Add restaurants from the Dashboard first'}
                         </div>
                       </td>
                     </tr>
                   ) : (
-                    restaurants.map((r, idx) => {
+                    filteredRestaurants.map((r, idx) => {
                       const team = teams[r.id] || []
-                      const isLast = idx === restaurants.length - 1
+                      const isLast = idx === filteredRestaurants.length - 1
                       const isExpanded = expandedId === r.id
                       const isLive = r.status === 'active' || r.status === 'RUNNING'
                       return (
