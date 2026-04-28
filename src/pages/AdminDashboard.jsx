@@ -1443,17 +1443,18 @@ function NotificationPopup({ notification, onConfirm, onClose }) {
             wordBreak: 'break-word',
             position: 'relative',
             zIndex: 1,
+            paddingRight: '92px',
           }}>
             {notification.message}
           </div>
           <div style={{
             position: 'absolute',
-            right: '-10px', bottom: '-14px',
+            right: '-6px', bottom: '-10px',
             opacity: 0.18,
             color: PURPLE_PRIMARY,
             pointerEvents: 'none',
           }}>
-            <StorefrontIcon size={96} />
+            <StorefrontIcon size={104} />
           </div>
         </div>
 
@@ -1495,17 +1496,42 @@ function ChatBubbleIcon({ color = '#fff', size = 22 }) {
 
 function StorefrontIcon({ size = 96 }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 64 64" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M8 22 L12 12 H52 L56 22" />
-      <path d="M10 22 V54 H54 V22" />
-      <path d="M26 54 V36 H38 V54" />
-      <circle cx="18" cy="30" r="2" />
-      <circle cx="46" cy="30" r="2" />
-      <path d="M14 22 V28 a4 4 0 0 0 8 0 V22" />
-      <path d="M22 22 V28 a4 4 0 0 0 8 0 V22" />
-      <path d="M30 22 V28 a4 4 0 0 0 8 0 V22" />
-      <path d="M38 22 V28 a4 4 0 0 0 8 0 V22" />
-      <path d="M46 22 V28 a4 4 0 0 0 4 4" />
+    <svg width={size} height={size} viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      {/* Fork & spoon emblem on top */}
+      <circle cx="58" cy="11" r="8" />
+      <path d="M54 6 v10" />
+      <path d="M52 6 v3 M56 6 v3" />
+      <path d="M62 6 v10" />
+      <ellipse cx="62" cy="8" rx="1.6" ry="2.4" />
+
+      {/* Awning */}
+      <path d="M22 30 H82 V42" />
+      <path d="M22 30 V42" />
+      <path d="M22 42 q3 5 6 0 q3 5 6 0 q3 5 6 0 q3 5 6 0 q3 5 6 0 q3 5 6 0 q3 5 6 0 q3 5 6 0 q3 5 6 0 q3 5 6 0" />
+      {/* Awning vertical stripes */}
+      <path d="M30 30 L34 42" />
+      <path d="M40 30 L44 42" />
+      <path d="M50 30 L54 42" />
+      <path d="M60 30 L64 42" />
+      <path d="M70 30 L74 42" />
+
+      {/* Building walls */}
+      <path d="M26 50 V90 H78 V50" />
+      <path d="M26 50 H78" />
+
+      {/* Arched door */}
+      <path d="M44 90 V66 a8 8 0 0 1 16 0 V90" />
+      {/* Door handle */}
+      <circle cx="56" cy="78" r="1.4" />
+
+      {/* Window on the right */}
+      <rect x="66" y="62" width="8" height="8" rx="1" />
+
+      {/* Potted plant on the left */}
+      <path d="M10 90 L13 80 H21 L24 90 Z" />
+      <path d="M17 80 q-4 -10 0 -18" />
+      <path d="M14 76 q-3 -2 -3 -8 q4 1 5 6" />
+      <path d="M20 76 q3 -2 3 -8 q-4 1 -5 6" />
     </svg>
   )
 }
