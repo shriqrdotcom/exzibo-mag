@@ -3,6 +3,7 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useAnalytics, notifyAnalyticsUpdate } from '../context/AnalyticsContext'
 import { useRole } from '../context/RoleContext'
 import ProfileSlide from '../components/ProfileSlide'
+import notificationIconImg from '@assets/image_1777373928129.png'
 import {
   NOTIFY_ROLES,
   addNotification,
@@ -1388,15 +1389,11 @@ function NotificationPopup({ notification, onConfirm, onClose }) {
         </button>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-          <div style={{
-            width: '52px', height: '52px', borderRadius: '999px',
-            background: PURPLE_PRIMARY,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: `0 8px 22px ${PURPLE_PRIMARY}55`,
-            flexShrink: 0,
-          }}>
-            <ChatBubbleIcon color="#fff" />
-          </div>
+          <img
+            src={notificationIconImg}
+            alt=""
+            style={{ width: '52px', height: '52px', flexShrink: 0, display: 'block' }}
+          />
           <div style={{ minWidth: 0 }}>
             <div style={{
               fontSize: '11px', fontWeight: 800,
