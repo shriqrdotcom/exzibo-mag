@@ -1,0 +1,250 @@
+This isn’t a small bug — it’s a core logic failure in how your system identifies and loads role-specific data.
+
+:
+
+Owner → nothing specific loads 
+
+Manager → same issue
+
+Staff → same issue
+Only lode default data
+
+
+👉 That means your system is missing dynamic binding between button → role → restaurant → data
+
+
+---
+
+🧠 ROOT PROBLEM (in simple terms)
+
+Your system is NOT doing this:
+
+CLICK → identify ROLE → identify RESTAURANT → fetch correct DATA → open correct PANEL
+
+Instead, it's doing something like:
+
+CLICK → open generic/empty view
+
+
+---
+
+✅ CORRECT LOGIC FLOW (this is what you NEED)
+
+Every “VIEW” button must carry 3 things:
+
+1. Role (owner / manager / staff)
+
+
+2. Restaurant ID
+
+
+3. User ID (optional but better)
+
+
+
+
+---
+
+🔁 FLOW WHEN BUTTON IS CLICKED
+
+User clicks VIEW (Owner)
+
+→ System reads:
+   role = "owner"
+   restaurant_id = "REST123"
+
+→ Backend/API call:
+   GET /panel?role=owner&restaurant_id=REST123
+
+→ Backend:
+   - verifies role
+   - fetches restaurant data
+   - fetches users with role=owner
+
+→ UI:
+   Opens OWNER PANEL with correct data
+
+
+---
+
+⚠️ WHY YOUR CURRENT SYSTEM FAILS
+
+Most likely reasons:
+
+❌ 1. Buttons don’t pass data
+
+Your buttons probably look like:
+
+<button>VIEW</button>
+
+Instead of:
+
+<button data-role="owner" data-id="REST123">VIEW</button>
+
+
+---
+
+❌ 2. No event handler logic
+
+Click is not connected to any function:
+
+onClick → nothing happens / wrong function
+
+
+---
+
+❌ 3. No database filtering
+
+Even if it opens something, it’s not filtering:
+
+WHERE role = 'owner' AND restaurant_id = ?
+
+
+---
+
+❌ 4. Panels are not role-based
+
+You might have:
+
+One generic panel
+Instead of:
+
+Owner panel
+
+Manager panel
+
+Staff panel
+
+
+
+---
+
+✅ FIX STRUCTURE (IMPORTANT)
+
+1. BUTTON STRUCTURE
+
+Each button must carry info:
+
+VIEW OWNER → role=owner, restaurant_id=R1
+VIEW MANAGER → role=manager, restaurant_id=R1
+VIEW STAFF → role=staff, restaurant_id=R1
+
+
+---
+
+2. CLICK HANDLER
+
+onClick(button):
+    role = button.role
+    restaurant_id = button.restaurant_id
+    
+    openPanel(role, restaurant_id)
+
+
+---
+
+3. PANEL LOADER FUNCTION
+
+function openPanel(role, restaurant_id):
+    data = fetch(`/api/getPanel?role=${role}&restaurant_id=${restaurant_id}`)
+    
+    if role == "owner":
+        openOwnerDashboard(data)
+    elif role == "manager":
+        openManagerDashboard(data)
+    elif role == "staff":
+        openStaffDashboard(data)
+
+
+---
+
+4. DATABASE QUERY
+
+SELECT * FROM users 
+WHERE role = 'owner' 
+AND restaurant_id = 'R1'
+
+
+---
+
+🔥 NOW YOUR REPLIT AI AGENT PROMPT
+
+Copy this EXACTLY 👇
+
+
+---
+
+I am facing a critical logic issue in my system (Exzibo control panels).
+
+Problem:
+When I click on "VIEW" buttons for Owner, Manager, or Staff, the system does NOT open the specific restaurant's role-based dashboard. It either opens nothing or a generic empty view.
+
+I want you to FIX this with proper logic and implementation.
+
+Requirements:
+
+1. Each "VIEW" button must pass dynamic data:
+   
+   - role (owner / manager / staff)
+   - restaurant_id (unique ID of the restaurant)
+
+2. Update button structure like:
+   Example:
+   <button data-role="owner" data-restaurant="REST123">View Owner</button>
+
+3. Add a click event handler:
+   
+   - Capture role and restaurant_id from button
+   - Call a function openPanel(role, restaurant_id)
+
+4. Create openPanel() function:
+   
+   - Send API request:
+     /api/getPanel?role={role}&restaurant_id={restaurant_id}
+   - Based on role:
+     - If owner → open Owner Dashboard
+     - If manager → open Manager Dashboard
+     - If staff → open Staff Dashboard
+
+5. Backend logic:
+   
+   - Validate role and restaurant_id
+   - Fetch correct data using:
+     SELECT * FROM users WHERE role=? AND restaurant_id=?
+   - Return structured JSON data
+
+6. UI Behavior:
+   
+   - Open panel in center modal OR new dashboard view
+   - Background should blur (optional but preferred)
+   - Show correct data ONLY for selected role + restaurant
+
+7. Add error handling:
+   
+   - If no data found → show "No data available"
+   - If API fails → show error message
+
+Goal:
+Make each VIEW button open the correct role-based panel for the specific restaurant dynamically. No static or generic views.
+
+Fix both frontend and backend logic properly.
+---
+
+🚀 FINAL REALITY CHECK
+
+If you fix this properly:
+
+Your system becomes professional
+
+Roles become clear and scalable
+
+No confusion in operations
+
+
+If you don’t:
+
+Everything becomes messy VERY fast
+
+
+
+---

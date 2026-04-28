@@ -717,6 +717,7 @@ function RestaurantTeamPanel({ restaurant, team, onAdd, onRemove, onChangeRole }
                 <MemberRow
                   key={member.id}
                   member={member}
+                  restaurant={restaurant}
                   isLast={idx === team.length - 1}
                   onRemove={() => setConfirmRemove(member)}
                   onChangeRole={role => onChangeRole(member.id, role)}
@@ -751,7 +752,7 @@ function RestaurantTeamPanel({ restaurant, team, onAdd, onRemove, onChangeRole }
   )
 }
 
-function MemberRow({ member, isLast, onRemove, onChangeRole }) {
+function MemberRow({ member, restaurant, isLast, onRemove, onChangeRole }) {
   const roleConfig = ROLE_COLUMNS.find(r => r.key === member.role) || ROLE_COLUMNS[2]
   const isActive = member.status === 'active'
   const navigate = useNavigate()
@@ -763,7 +764,8 @@ function MemberRow({ member, isLast, onRemove, onChangeRole }) {
     } else {
       activateRole(member.role)
     }
-    navigate('/admin/default')
+    const restaurantId = restaurant?.id || restaurant?.uid || 'default'
+    navigate(`/admin/${restaurantId}`)
   }
 
   return (
