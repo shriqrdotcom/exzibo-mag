@@ -679,6 +679,7 @@ function DefaultRolesSection() {
 
 function RestaurantTeamPanel({ restaurant, team, onAdd, onRemove, onChangeRole }) {
   const [confirmRemove, setConfirmRemove] = useState(null)
+  const [showInterface, setShowInterface] = useState(false)
 
   return (
     <div style={{ padding: '20px 24px', animation: 'slideDown 0.2s ease' }}>
@@ -736,6 +737,54 @@ function RestaurantTeamPanel({ restaurant, team, onAdd, onRemove, onChangeRole }
           />
         </div>
       </div>
+
+      <div style={{ marginTop: '18px', display: 'flex', justifyContent: 'flex-start' }}>
+        <button
+          onClick={() => setShowInterface(v => !v)}
+          style={{
+            padding: '12px 32px',
+            background: '#000',
+            border: '1px solid rgba(255,255,255,0.08)',
+            borderRadius: '16px',
+            color: '#fff',
+            fontSize: '13px',
+            fontWeight: 800,
+            letterSpacing: '0.12em',
+            cursor: 'pointer',
+            boxShadow: '0 4px 14px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.04)',
+            transition: 'all 0.2s',
+          }}
+          onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 6px 18px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.06)' }}
+          onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 14px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.04)' }}
+        >
+          VIEW
+        </button>
+      </div>
+
+      {showInterface && (
+        <div style={{
+          marginTop: '14px',
+          background: '#111',
+          border: '1px solid rgba(255,255,255,0.06)',
+          borderRadius: '16px',
+          overflow: 'hidden',
+          animation: 'slideDown 0.2s ease',
+        }}>
+          <div style={{
+            padding: '16px 20px',
+            borderBottom: '1px solid rgba(255,255,255,0.06)',
+            display: 'flex', alignItems: 'center', gap: '10px',
+          }}>
+            <LayoutDashboard size={15} color="#E8321A" />
+            <span style={{ fontSize: '13px', fontWeight: 800, color: '#ccc', letterSpacing: '0.12em' }}>
+              INTERFACE
+            </span>
+          </div>
+          <div style={{ padding: '24px 20px', color: '#666', fontSize: '13px', fontWeight: 500 }}>
+            Interface Settings — configure how this restaurant's team views their dashboard.
+          </div>
+        </div>
+      )}
 
       {confirmRemove && (
         <ConfirmDialog
