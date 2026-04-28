@@ -1177,11 +1177,11 @@ export default function Settings() {
                               </div>
                             </div>
                             <div style={{ fontSize: '11px', color: '#aaa', display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
-                              <span><span style={{ color: '#666' }}>Start:</span> {fmtDateShort(h.startDate)}</span>
-                              <span><span style={{ color: '#666' }}>End:</span> {fmtDateShort(h.endDate)}</span>
+                              <span><span style={{ color: '#666' }}>Start:</span> {fmtDateFull(h.startDate)}</span>
+                              <span><span style={{ color: '#666' }}>End:</span> {fmtDateFull(h.endDate)}</span>
                               {!expired && <span style={{ color: '#4ade80' }}>{remaining} {remaining === 1 ? 'day' : 'days'} remaining</span>}
                             </div>
-                            <div style={{ fontSize: '10px', color: '#555' }}>Logged on {fmtDateShort(h.loggedAt)}</div>
+                            <div style={{ fontSize: '10px', color: '#555' }}>Logged on {fmtDateFull(h.loggedAt)}</div>
                           </div>
                         )
                       })}
@@ -1412,11 +1412,11 @@ export default function Settings() {
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px 14px', marginBottom: '12px' }}>
                           <div>
                             <div style={{ fontSize: '9px', color: '#666', fontWeight: 700, letterSpacing: '0.1em', marginBottom: '2px' }}>START DATE</div>
-                            <div style={{ fontSize: '13px', color: '#fff', fontWeight: 600 }}>{fmtDateShort(computedDraft.startDate)}</div>
+                            <div style={{ fontSize: '13px', color: '#fff', fontWeight: 700, letterSpacing: '0.04em' }}>{fmtDateFull(computedDraft.startDate)}</div>
                           </div>
                           <div>
                             <div style={{ fontSize: '9px', color: '#666', fontWeight: 700, letterSpacing: '0.1em', marginBottom: '2px' }}>END DATE</div>
-                            <div style={{ fontSize: '13px', color: '#fff', fontWeight: 600 }}>{fmtDateShort(computedDraft.endDate)}</div>
+                            <div style={{ fontSize: '13px', color: '#fff', fontWeight: 700, letterSpacing: '0.04em' }}>{fmtDateFull(computedDraft.endDate)}</div>
                           </div>
                           <div>
                             <div style={{ fontSize: '9px', color: '#666', fontWeight: 700, letterSpacing: '0.1em', marginBottom: '2px' }}>DAYS REMAINING</div>
