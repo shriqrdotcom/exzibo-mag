@@ -2,7 +2,7 @@ import React, { useState, useEffect, useLayoutEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Users, Crown, Shield, UtensilsCrossed, Plus, X, Trash2,
-  ChevronDown, CheckCircle2, XCircle, Loader2, Check, LayoutDashboard, Search
+  ChevronDown, CheckCircle2, XCircle, Loader2, Check, Eye, LayoutDashboard, Search
 } from 'lucide-react'
 import Sidebar from '../components/Sidebar'
 import AdminHeader from '../components/AdminHeader'
@@ -778,28 +778,51 @@ function MemberRow({ member, isLast, onRemove, onChangeRole }) {
         </div>
       </td>
       <td style={{ padding: '12px 20px' }}>
-        <div style={{ position: 'relative', display: 'inline-block' }}>
-          <select
-            value={member.role}
-            onChange={e => onChangeRole(e.target.value)}
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ position: 'relative', display: 'inline-block' }}>
+            <select
+              value={member.role}
+              onChange={e => onChangeRole(e.target.value)}
+              style={{
+                appearance: 'none', background: `${roleConfig.accent}15`,
+                border: `1px solid ${roleConfig.accent}30`,
+                borderRadius: '8px', padding: '5px 26px 5px 10px',
+                color: roleConfig.accent, fontSize: '11px', fontWeight: 700,
+                letterSpacing: '0.06em', cursor: 'pointer', outline: 'none',
+              }}
+            >
+              {ROLE_COLUMNS.map(r => (
+                <option key={r.key} value={r.key} style={{ background: '#111', color: '#ccc' }}>
+                  {r.label}
+                </option>
+              ))}
+            </select>
+            <ChevronDown size={11} color={roleConfig.accent} style={{
+              position: 'absolute', right: '8px', top: '50%',
+              transform: 'translateY(-50%)', pointerEvents: 'none',
+            }} />
+          </div>
+          <button
+            title={`View ${roleConfig.label} page`}
             style={{
-              appearance: 'none', background: `${roleConfig.accent}15`,
+              width: '24px', height: '24px', borderRadius: '7px',
+              background: `${roleConfig.accent}15`,
               border: `1px solid ${roleConfig.accent}30`,
-              borderRadius: '8px', padding: '5px 26px 5px 10px',
-              color: roleConfig.accent, fontSize: '11px', fontWeight: 700,
-              letterSpacing: '0.06em', cursor: 'pointer', outline: 'none',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer', flexShrink: 0, padding: 0,
+              transition: 'all 0.2s',
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.background = `${roleConfig.accent}30`
+              e.currentTarget.style.borderColor = `${roleConfig.accent}60`
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.background = `${roleConfig.accent}15`
+              e.currentTarget.style.borderColor = `${roleConfig.accent}30`
             }}
           >
-            {ROLE_COLUMNS.map(r => (
-              <option key={r.key} value={r.key} style={{ background: '#111', color: '#ccc' }}>
-                {r.label}
-              </option>
-            ))}
-          </select>
-          <ChevronDown size={11} color={roleConfig.accent} style={{
-            position: 'absolute', right: '8px', top: '50%',
-            transform: 'translateY(-50%)', pointerEvents: 'none',
-          }} />
+            <Eye size={12} color={roleConfig.accent} />
+          </button>
         </div>
       </td>
       <td style={{ padding: '12px 20px' }}>
