@@ -1316,18 +1316,6 @@ export default function Settings() {
                           </div>
                         </div>
 
-                        <div style={{
-                          height: '6px', borderRadius: '999px',
-                          background: 'rgba(255,255,255,0.06)',
-                          overflow: 'hidden', marginBottom: expired ? '12px' : '0',
-                        }}>
-                          <div style={{
-                            width: `${progressPct}%`, height: '100%',
-                            background: expired ? '#ef4444' : '#FF69B4',
-                            transition: 'width 0.3s ease',
-                          }} />
-                        </div>
-
                         {expired && (
                           <div style={{
                             padding: '8px 12px',
