@@ -153,7 +153,30 @@ export default function Settings() {
         loggedAt: src.nextSub.loggedAt || new Date().toISOString(),
       }
     }
-    return { months, years, history, nextSub }
+    let currentSub = null
+    if (src.currentSub && src.currentSub.startDate && src.currentSub.endDate) {
+      currentSub = {
+        startDate: src.currentSub.startDate,
+        endDate: src.currentSub.endDate,
+        savedAt: src.currentSub.savedAt || new Date().toISOString(),
+      }
+    }
+    return { months, years, history, nextSub, currentSub }
+  }
+
+  const saveCurrentSub = (uid, startInput) => {
+    if (!uid) return
+    const start = startOfDay(startInput)
+    if (isNaN(start.getTime())) return
+    const end = addDays(start, 30)
+    const prev = normalizeEntry(paymentData[uid])
+    const currentSub = {
+      startDate: start.toISOString(),
+      endDate: end.toISOString(),
+      savedAt: new Date().toISOString(),
+    }
+    persistPaymentData({ ...paymentData, [uid]: { ...prev, currentSub } })
+    return currentSub
   }
 
   const entryTotal = (entry) => {
@@ -947,7 +970,26 @@ export default function Settings() {
                             <span>{fmtAmount(row.amount)}</span>
                             <button
                               type="button"
-                              onClick={() => { setAmountModalUid(row.uid); setSelectedMonth(''); setMonthInput(''); setYearInput(''); setHistoryOpen(false); setPendingMode('live'); setLiveStart(new Date().toISOString()); setCustomStartDate(''); setPaymentAmountInput(''); setBindOpen(false); setBindAmountInput(''); setSelectedDate(null); setDatePickerOpen(false); setNow(Date.now()) }}
+                              onClick={() => {
+                                const existing = normalizeEntry(paymentData[row.uid])
+                                const initStart = existing.currentSub
+                                  ? existing.currentSub.startDate
+                                  : new Date().toISOString()
+                                setAmountModalUid(row.uid)
+                                setSelectedMonth('')
+                                setMonthInput('')
+                                setYearInput('')
+                                setHistoryOpen(false)
+                                setPendingMode('live')
+                                setLiveStart(initStart)
+                                setCustomStartDate('')
+                                setPaymentAmountInput('')
+                                setBindOpen(false)
+                                setBindAmountInput('')
+                                setSelectedDate(null)
+                                setDatePickerOpen(false)
+                                setNow(Date.now())
+                              }}
                               style={{
                                 padding: '3px 10px',
                                 background: '#FF69B4',
@@ -1025,18 +1067,29 @@ export default function Settings() {
         const total = entryTotal(entry)
         const today = new Date(now)
 
-        let originalDraft = null
-        if (pendingMode === 'live' && liveStart) {
-          const start = new Date(liveStart)
-          const end = addDays(start, 30)
-          originalDraft = { mode: 'live', startDate: start, endDate: end }
+        const savedSub = entry.currentSub
+        const savedStart = savedSub ? new Date(savedSub.startDate) : null
+
+        let baseStart = null
+        if (selectedDate) {
+          baseStart = startOfDay(selectedDate)
+        } else if (savedStart && !isNaN(savedStart.getTime())) {
+          baseStart = startOfDay(savedStart)
+        } else if (pendingMode === 'live' && liveStart) {
+          baseStart = startOfDay(new Date(liveStart))
         } else if (pendingMode === 'custom' && customStartDate) {
-          const start = new Date(`${customStartDate}T00:00:00`)
-          if (!isNaN(start.getTime())) {
-            const end = addDays(start, 30)
-            originalDraft = { mode: 'custom', startDate: start, endDate: end }
-          }
+          const c = new Date(`${customStartDate}T00:00:00`)
+          if (!isNaN(c.getTime())) baseStart = startOfDay(c)
         }
+
+        const draftMode = pendingMode === 'custom' ? 'custom' : 'live'
+        let originalDraft = null
+        if (baseStart && !isNaN(baseStart.getTime())) {
+          originalDraft = { mode: draftMode, startDate: baseStart, endDate: addDays(baseStart, 30) }
+        }
+
+        const isDirty = !!selectedDate && (!savedStart || startOfDay(selectedDate).getTime() !== startOfDay(savedStart).getTime())
+        const hasUnsavedDraft = !!baseStart && !savedSub
 
         const originalExpired = originalDraft && new Date(originalDraft.endDate).getTime() <= now
         const showAsNext = !!(originalDraft && originalExpired && entry.nextSub)
@@ -1048,6 +1101,16 @@ export default function Settings() {
             }
           : originalDraft
         const hasNextBound = !!entry.nextSub && !showAsNext
+
+        const handleSaveSub = () => {
+          if (!baseStart) return
+          saveCurrentSub(amountModalUid, baseStart)
+          setSelectedDate(null)
+          setPendingMode('live')
+          setLiveStart(baseStart.toISOString())
+          setCustomStartDate('')
+          setDatePickerOpen(false)
+        }
 
         const sortedHistory = [...entry.history].sort(
           (a, b) => new Date(b.loggedAt).getTime() - new Date(a.loggedAt).getTime()
@@ -1317,6 +1380,42 @@ export default function Settings() {
                       </div>
                     )}
                   </div>
+
+                  <button
+                    type="button"
+                    onClick={handleSaveSub}
+                    disabled={!baseStart}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      marginBottom: '14px',
+                      background: '#fff',
+                      border: '1px solid #fff',
+                      borderRadius: '10px',
+                      color: '#000',
+                      fontSize: '12px',
+                      fontWeight: 900,
+                      letterSpacing: '0.14em',
+                      cursor: baseStart ? 'pointer' : 'not-allowed',
+                      opacity: baseStart ? 1 : 0.5,
+                      boxShadow: isDirty || hasUnsavedDraft ? '0 0 14px rgba(255,255,255,0.25)' : 'none',
+                      transition: 'all 0.15s ease',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                    }}
+                  >
+                    <span>SAVE</span>
+                    {(isDirty || hasUnsavedDraft) && (
+                      <span style={{
+                        fontSize: '8px',
+                        fontWeight: 800,
+                        letterSpacing: '0.1em',
+                        background: '#FF69B4',
+                        color: '#fff',
+                        padding: '2px 6px',
+                        borderRadius: '999px',
+                      }}>UNSAVED</span>
+                    )}
+                  </button>
 
                   {!computedDraft && (
                     <>
