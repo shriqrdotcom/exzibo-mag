@@ -87,6 +87,12 @@ export default function Settings() {
     if (isNaN(d.getTime())) return ''
     return `${String(d.getDate()).padStart(2,'0')} ${MONTH_LONG[d.getMonth()].toUpperCase()} ${d.getFullYear()}`
   }
+  const fmtDateSlash = (input) => {
+    if (!input) return ''
+    const d = new Date(input)
+    if (isNaN(d.getTime())) return ''
+    return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`
+  }
   const toDateInputValue = (input) => {
     const d = new Date(input)
     if (isNaN(d.getTime())) return ''
@@ -139,10 +145,12 @@ export default function Settings() {
             if (typeof y === 'object') {
               const yr = String(y.year || '').trim()
               if (!/^\d{4}$/.test(yr)) return null
-              let endDate = y.endDate || ''
-              if (!endDate && y.date) {
+              let endDate = ''
+              if (y.date) {
                 const d = new Date(y.date)
-                if (!isNaN(d.getTime())) endDate = addDays(d, 364).toISOString()
+                if (!isNaN(d.getTime())) endDate = addDays(d, 365).toISOString()
+              } else if (y.endDate) {
+                endDate = y.endDate
               }
               return {
                 id: y.id || `${yr}-${Math.random().toString(36).slice(2,7)}`,
@@ -252,7 +260,6 @@ export default function Settings() {
   }
 
   const [yearFormOpen, setYearFormOpen] = useState(false)
-  const [yearFormYear, setYearFormYear] = useState('')
   const [yearFormDate, setYearFormDate] = useState('')
   const [yearFormAmount, setYearFormAmount] = useState('')
   const [yearFormError, setYearFormError] = useState('')
@@ -260,7 +267,6 @@ export default function Settings() {
 
   const resetYearForm = () => {
     setYearFormOpen(false)
-    setYearFormYear('')
     setYearFormDate('')
     setYearFormAmount('')
     setYearFormError('')
@@ -269,7 +275,6 @@ export default function Settings() {
 
   const openAddYearForm = () => {
     setEditingYearId(null)
-    setYearFormYear('')
     setYearFormDate(toDateInputValue(new Date()))
     setYearFormAmount('')
     setYearFormError('')
@@ -278,7 +283,6 @@ export default function Settings() {
 
   const openEditYearForm = (entryYear) => {
     setEditingYearId(entryYear.id)
-    setYearFormYear(entryYear.year)
     setYearFormDate(entryYear.date ? toDateInputValue(entryYear.date) : '')
     setYearFormAmount(entryYear.amount > 0 ? String(entryYear.amount) : '')
     setYearFormError('')
@@ -287,19 +291,18 @@ export default function Settings() {
 
   const confirmYearEntry = () => {
     if (!amountModalUid) return
-    const yr = String(yearFormYear).trim()
     const amt = parseFloat(yearFormAmount)
-    if (!/^\d{4}$/.test(yr)) { setYearFormError('Enter a valid 4-digit year.'); return }
-    if (!yearFormDate) { setYearFormError('Pick a payment date.'); return }
+    if (!yearFormDate) { setYearFormError('Pick a start date.'); return }
     const dateObj = new Date(`${yearFormDate}T00:00:00`)
     if (isNaN(dateObj.getTime())) { setYearFormError('Invalid date.'); return }
     if (!isFinite(amt) || amt <= 0) { setYearFormError('Enter a valid amount.'); return }
 
+    const yr = String(dateObj.getFullYear())
     const prev = normalizeEntry(paymentData[amountModalUid])
     const dup = prev.years.some(y => y.year === yr && y.id !== editingYearId)
-    if (dup) { setYearFormError('Year already exists'); return }
+    if (dup) { setYearFormError(`A plan for ${yr} already exists.`); return }
 
-    const endObj = addDays(dateObj, 364)
+    const endObj = addDays(dateObj, 365)
 
     let nextYears
     if (editingYearId) {
@@ -1777,25 +1780,7 @@ export default function Settings() {
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
                       <div>
-                        <div style={{ fontSize: '9px', color: '#888', fontWeight: 700, letterSpacing: '0.1em', marginBottom: '5px' }}>YEAR</div>
-                        <input
-                          type="text"
-                          inputMode="numeric"
-                          value={yearFormYear}
-                          onChange={e => { setYearFormYear(e.target.value.replace(/[^\d]/g, '').slice(0, 4)); setYearFormError('') }}
-                          placeholder="e.g. 2026"
-                          style={{
-                            width: '100%',
-                            padding: '10px 12px',
-                            background: 'rgba(255,255,255,0.04)',
-                            border: '1px solid rgba(255,255,255,0.1)',
-                            borderRadius: '8px',
-                            color: '#fff', fontSize: '13px', outline: 'none',
-                          }}
-                        />
-                      </div>
-                      <div>
-                        <div style={{ fontSize: '9px', color: '#888', fontWeight: 700, letterSpacing: '0.1em', marginBottom: '5px' }}>DATE</div>
+                        <div style={{ fontSize: '9px', color: '#888', fontWeight: 700, letterSpacing: '0.1em', marginBottom: '5px' }}>START DATE</div>
                         <input
                           type="date"
                           value={yearFormDate}
@@ -1808,6 +1793,25 @@ export default function Settings() {
                             borderRadius: '8px',
                             color: '#fff', fontSize: '13px', outline: 'none',
                             colorScheme: 'dark',
+                          }}
+                        />
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '9px', color: '#888', fontWeight: 700, letterSpacing: '0.1em', marginBottom: '5px' }}>END DATE (AUTO)</div>
+                        <input
+                          type="text"
+                          readOnly
+                          disabled
+                          value={yearFormDate ? fmtDateSlash(addDays(new Date(`${yearFormDate}T00:00:00`), 365)) : ''}
+                          placeholder="DD/MM/YYYY"
+                          style={{
+                            width: '100%',
+                            padding: '10px 12px',
+                            background: 'rgba(255,255,255,0.02)',
+                            border: '1px dashed rgba(255,255,255,0.1)',
+                            borderRadius: '8px',
+                            color: '#888', fontSize: '13px', outline: 'none',
+                            cursor: 'not-allowed',
                           }}
                         />
                       </div>
@@ -1878,9 +1882,26 @@ export default function Settings() {
                     {[...entry.years]
                       .sort((a, b) => parseInt(b.year, 10) - parseInt(a.year, 10))
                       .map(y => {
-                        const yEnd = y.endDate || (y.date ? addDays(new Date(y.date), 364).toISOString() : '')
-                        const yRemaining = yEnd ? daysRemaining(yEnd, now) : null
-                        const expired = yEnd ? (startOfDay(now).getTime() > startOfDay(yEnd).getTime()) : false
+                        const yEnd = y.endDate || (y.date ? addDays(new Date(y.date), 365).toISOString() : '')
+                        let yRemaining = null
+                        let expired = false
+                        if (yEnd) {
+                          const endTs = startOfDay(yEnd).getTime()
+                          const todayTs = startOfDay(now).getTime()
+                          yRemaining = Math.max(0, Math.ceil((endTs - todayTs) / (1000 * 60 * 60 * 24)))
+                          expired = yRemaining <= 0
+                        }
+                        const badgeBg = expired
+                          ? 'rgba(239,68,68,0.12)'
+                          : yRemaining <= 30
+                            ? 'rgba(245,158,11,0.12)'
+                            : 'rgba(34,197,94,0.12)'
+                        const badgeBorder = expired
+                          ? 'rgba(239,68,68,0.4)'
+                          : yRemaining <= 30
+                            ? 'rgba(245,158,11,0.4)'
+                            : 'rgba(34,197,94,0.4)'
+                        const badgeColor = expired ? '#ef4444' : yRemaining <= 30 ? '#f59e0b' : '#22c55e'
                         return (
                       <div key={y.id} style={{
                         background: 'rgba(255,255,255,0.03)',
@@ -1959,15 +1980,15 @@ export default function Settings() {
                             </div>
                           </div>
                           <div style={{
-                            background: expired ? 'rgba(239,68,68,0.08)' : 'rgba(255,105,180,0.08)',
-                            border: `1px solid ${expired ? 'rgba(239,68,68,0.3)' : 'rgba(255,105,180,0.25)'}`,
+                            background: badgeBg,
+                            border: `1px solid ${badgeBorder}`,
                             borderRadius: '8px',
                             padding: '8px 10px',
                           }}>
-                            <div style={{ fontSize: '9px', color: expired ? '#ef4444' : '#FF69B4', fontWeight: 800, letterSpacing: '0.1em' }}>
-                              {expired ? 'STATUS' : 'DAYS REMAINING'}
+                            <div style={{ fontSize: '9px', color: badgeColor, fontWeight: 800, letterSpacing: '0.1em' }}>
+                              {expired ? 'STATUS' : 'REMAINING DAYS'}
                             </div>
-                            <div style={{ fontSize: '13px', color: '#fff', fontWeight: 800, letterSpacing: '0.04em', marginTop: '4px' }}>
+                            <div style={{ fontSize: '13px', color: badgeColor, fontWeight: 800, letterSpacing: '0.04em', marginTop: '4px' }}>
                               {yEnd
                                 ? (expired ? 'EXPIRED' : `${yRemaining} DAYS REMAINING`)
                                 : <span style={{ fontStyle: 'italic', color: '#555', fontWeight: 400 }}>—</span>}
