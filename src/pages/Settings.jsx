@@ -1889,19 +1889,19 @@ export default function Settings() {
                           const endTs = startOfDay(yEnd).getTime()
                           const todayTs = startOfDay(now).getTime()
                           yRemaining = Math.max(0, Math.ceil((endTs - todayTs) / (1000 * 60 * 60 * 24)))
-                          expired = yRemaining <= 0
+                          expired = yRemaining === 0
                         }
-                        const badgeBg = expired
-                          ? 'rgba(239,68,68,0.12)'
-                          : yRemaining <= 30
-                            ? 'rgba(245,158,11,0.12)'
-                            : 'rgba(34,197,94,0.12)'
-                        const badgeBorder = expired
-                          ? 'rgba(239,68,68,0.4)'
-                          : yRemaining <= 30
-                            ? 'rgba(245,158,11,0.4)'
-                            : 'rgba(34,197,94,0.4)'
-                        const badgeColor = expired ? '#ef4444' : yRemaining <= 30 ? '#f59e0b' : '#22c55e'
+                        const pillBg = expired
+                          ? 'rgba(239,68,68,0.15)'
+                          : yRemaining <= 60
+                            ? 'rgba(245,158,11,0.15)'
+                            : 'rgba(34,197,94,0.15)'
+                        const pillBorder = expired
+                          ? 'rgba(239,68,68,0.5)'
+                          : yRemaining <= 60
+                            ? 'rgba(245,158,11,0.5)'
+                            : 'rgba(34,197,94,0.5)'
+                        const pillColor = expired ? '#ef4444' : yRemaining <= 60 ? '#f59e0b' : '#22c55e'
                         return (
                       <div key={y.id} style={{
                         background: 'rgba(255,255,255,0.03)',
@@ -1980,19 +1980,32 @@ export default function Settings() {
                             </div>
                           </div>
                           <div style={{
-                            background: badgeBg,
-                            border: `1px solid ${badgeBorder}`,
+                            background: 'rgba(255,255,255,0.02)',
+                            border: '1px solid rgba(255,255,255,0.06)',
                             borderRadius: '8px',
                             padding: '8px 10px',
+                            display: 'flex', flexDirection: 'column', gap: '6px',
                           }}>
-                            <div style={{ fontSize: '9px', color: badgeColor, fontWeight: 800, letterSpacing: '0.1em' }}>
-                              {expired ? 'STATUS' : 'REMAINING DAYS'}
+                            <div style={{ fontSize: '9px', color: '#FF3B9A', fontWeight: 800, letterSpacing: '0.1em' }}>
+                              REMAINING DAYS
                             </div>
-                            <div style={{ fontSize: '13px', color: badgeColor, fontWeight: 800, letterSpacing: '0.04em', marginTop: '4px' }}>
-                              {yEnd
-                                ? (expired ? 'EXPIRED' : `${yRemaining} DAYS REMAINING`)
-                                : <span style={{ fontStyle: 'italic', color: '#555', fontWeight: 400 }}>—</span>}
-                            </div>
+                            {yEnd ? (
+                              <span style={{
+                                alignSelf: 'flex-start',
+                                display: 'inline-block',
+                                padding: '4px 10px',
+                                borderRadius: '999px',
+                                background: pillBg,
+                                border: `1px solid ${pillBorder}`,
+                                color: pillColor,
+                                fontSize: '11px', fontWeight: 900, letterSpacing: '0.08em',
+                                textTransform: 'uppercase',
+                              }}>
+                                {expired ? 'EXPIRED' : `${yRemaining} DAYS`}
+                              </span>
+                            ) : (
+                              <span style={{ fontStyle: 'italic', color: '#555', fontSize: '12px' }}>—</span>
+                            )}
                           </div>
                         </div>
                       </div>
