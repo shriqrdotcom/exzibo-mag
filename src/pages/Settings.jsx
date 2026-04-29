@@ -139,10 +139,16 @@ export default function Settings() {
             if (typeof y === 'object') {
               const yr = String(y.year || '').trim()
               if (!/^\d{4}$/.test(yr)) return null
+              let endDate = y.endDate || ''
+              if (!endDate && y.date) {
+                const d = new Date(y.date)
+                if (!isNaN(d.getTime())) endDate = addDays(d, 364).toISOString()
+              }
               return {
                 id: y.id || `${yr}-${Math.random().toString(36).slice(2,7)}`,
                 year: yr,
                 date: y.date || '',
+                endDate,
                 amount: isFinite(parseFloat(y.amount)) ? parseFloat(y.amount) : 0,
               }
             }
@@ -293,10 +299,12 @@ export default function Settings() {
     const dup = prev.years.some(y => y.year === yr && y.id !== editingYearId)
     if (dup) { setYearFormError('Year already exists'); return }
 
+    const endObj = addDays(dateObj, 364)
+
     let nextYears
     if (editingYearId) {
       nextYears = prev.years.map(y => y.id === editingYearId
-        ? { ...y, year: yr, date: dateObj.toISOString(), amount: amt }
+        ? { ...y, year: yr, date: dateObj.toISOString(), endDate: endObj.toISOString(), amount: amt }
         : y
       )
     } else {
@@ -304,6 +312,7 @@ export default function Settings() {
         id: `${yr}-${Date.now()}-${Math.random().toString(36).slice(2,7)}`,
         year: yr,
         date: dateObj.toISOString(),
+        endDate: endObj.toISOString(),
         amount: amt,
       }
       nextYears = [...prev.years, newEntry]
@@ -1868,63 +1877,106 @@ export default function Settings() {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     {[...entry.years]
                       .sort((a, b) => parseInt(b.year, 10) - parseInt(a.year, 10))
-                      .map(y => (
+                      .map(y => {
+                        const yEnd = y.endDate || (y.date ? addDays(new Date(y.date), 364).toISOString() : '')
+                        const yRemaining = yEnd ? daysRemaining(yEnd, now) : null
+                        const expired = yEnd ? (startOfDay(now).getTime() > startOfDay(yEnd).getTime()) : false
+                        return (
                       <div key={y.id} style={{
                         background: 'rgba(255,255,255,0.03)',
                         border: '1px solid rgba(255,255,255,0.08)',
                         borderRadius: '12px',
-                        padding: '12px 14px',
-                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                        gap: '12px',
-                        flexWrap: 'wrap',
+                        padding: '14px 16px',
+                        display: 'flex', flexDirection: 'column', gap: '12px',
                       }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap', flex: 1 }}>
-                          <div style={{
-                            fontSize: '20px', fontWeight: 900, color: '#fff',
-                            letterSpacing: '0.02em',
-                            minWidth: '60px',
-                          }}>{y.year}</div>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                            <div style={{ fontSize: '11px', color: '#888' }}>
-                              {y.date ? fmtDateLong(y.date) : <span style={{ fontStyle: 'italic', color: '#555' }}>No date</span>}
-                            </div>
-                            <div style={{ fontSize: '13px', color: '#FF69B4', fontWeight: 800 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                            <div style={{
+                              fontSize: '22px', fontWeight: 900, color: '#fff',
+                              letterSpacing: '0.02em',
+                              minWidth: '60px',
+                            }}>{y.year}</div>
+                            <div style={{ fontSize: '14px', color: '#FF69B4', fontWeight: 800 }}>
                               ₹{(parseFloat(y.amount) || 0).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} INR
                             </div>
                           </div>
+                          <div style={{ display: 'flex', gap: '6px' }}>
+                            <button
+                              type="button"
+                              onClick={() => openEditYearForm(y)}
+                              title="Edit"
+                              style={{
+                                padding: '6px 12px',
+                                background: 'rgba(255,255,255,0.05)',
+                                border: '1px solid rgba(255,255,255,0.12)',
+                                borderRadius: '7px',
+                                color: '#bbb',
+                                fontSize: '10px', fontWeight: 800, letterSpacing: '0.08em',
+                                cursor: 'pointer',
+                              }}
+                            >EDIT</button>
+                            <button
+                              type="button"
+                              onClick={() => removeYearEntry(amountModalUid, y.id)}
+                              title="Delete"
+                              style={{
+                                padding: '6px 12px',
+                                background: 'rgba(239,68,68,0.1)',
+                                border: '1px solid rgba(239,68,68,0.3)',
+                                borderRadius: '7px',
+                                color: '#ef4444',
+                                fontSize: '10px', fontWeight: 800, letterSpacing: '0.08em',
+                                cursor: 'pointer',
+                              }}
+                            >DELETE</button>
+                          </div>
                         </div>
-                        <div style={{ display: 'flex', gap: '6px' }}>
-                          <button
-                            type="button"
-                            onClick={() => openEditYearForm(y)}
-                            title="Edit"
-                            style={{
-                              padding: '6px 12px',
-                              background: 'rgba(255,255,255,0.05)',
-                              border: '1px solid rgba(255,255,255,0.12)',
-                              borderRadius: '7px',
-                              color: '#bbb',
-                              fontSize: '10px', fontWeight: 800, letterSpacing: '0.08em',
-                              cursor: 'pointer',
-                            }}
-                          >EDIT</button>
-                          <button
-                            type="button"
-                            onClick={() => removeYearEntry(amountModalUid, y.id)}
-                            title="Delete"
-                            style={{
-                              padding: '6px 12px',
-                              background: 'rgba(239,68,68,0.1)',
-                              border: '1px solid rgba(239,68,68,0.3)',
-                              borderRadius: '7px',
-                              color: '#ef4444',
-                              fontSize: '10px', fontWeight: 800, letterSpacing: '0.08em',
-                              cursor: 'pointer',
-                            }}
-                          >DELETE</button>
+                        <div style={{
+                          display: 'grid',
+                          gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+                          gap: '10px',
+                        }}>
+                          <div style={{
+                            background: 'rgba(255,255,255,0.02)',
+                            border: '1px solid rgba(255,255,255,0.06)',
+                            borderRadius: '8px',
+                            padding: '8px 10px',
+                          }}>
+                            <div style={{ fontSize: '9px', color: '#666', fontWeight: 800, letterSpacing: '0.1em' }}>START DATE</div>
+                            <div style={{ fontSize: '12px', color: '#fff', fontWeight: 700, letterSpacing: '0.04em', marginTop: '4px' }}>
+                              {y.date ? fmtDateFull(y.date) : <span style={{ fontStyle: 'italic', color: '#555', fontWeight: 400 }}>—</span>}
+                            </div>
+                          </div>
+                          <div style={{
+                            background: 'rgba(255,255,255,0.02)',
+                            border: '1px solid rgba(255,255,255,0.06)',
+                            borderRadius: '8px',
+                            padding: '8px 10px',
+                          }}>
+                            <div style={{ fontSize: '9px', color: '#666', fontWeight: 800, letterSpacing: '0.1em' }}>END DATE</div>
+                            <div style={{ fontSize: '12px', color: '#fff', fontWeight: 700, letterSpacing: '0.04em', marginTop: '4px' }}>
+                              {yEnd ? fmtDateFull(yEnd) : <span style={{ fontStyle: 'italic', color: '#555', fontWeight: 400 }}>—</span>}
+                            </div>
+                          </div>
+                          <div style={{
+                            background: expired ? 'rgba(239,68,68,0.08)' : 'rgba(255,105,180,0.08)',
+                            border: `1px solid ${expired ? 'rgba(239,68,68,0.3)' : 'rgba(255,105,180,0.25)'}`,
+                            borderRadius: '8px',
+                            padding: '8px 10px',
+                          }}>
+                            <div style={{ fontSize: '9px', color: expired ? '#ef4444' : '#FF69B4', fontWeight: 800, letterSpacing: '0.1em' }}>
+                              {expired ? 'STATUS' : 'DAYS REMAINING'}
+                            </div>
+                            <div style={{ fontSize: '13px', color: '#fff', fontWeight: 800, letterSpacing: '0.04em', marginTop: '4px' }}>
+                              {yEnd
+                                ? (expired ? 'EXPIRED' : `${yRemaining} DAYS REMAINING`)
+                                : <span style={{ fontStyle: 'italic', color: '#555', fontWeight: 400 }}>—</span>}
+                            </div>
+                          </div>
                         </div>
                       </div>
-                    ))}
+                        )
+                    })}
                   </div>
                 ) : (
                   !yearFormOpen && (
