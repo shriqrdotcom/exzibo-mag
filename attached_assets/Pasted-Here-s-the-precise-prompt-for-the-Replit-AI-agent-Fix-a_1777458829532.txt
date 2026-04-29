@@ -1,0 +1,50 @@
+Here's the precise prompt for the Replit AI agent:
+
+
+
+---
+
+Fix and rebuild the **YEAR-WISE** section in the Amount Manager completely. This section is for logging **annual payments** made by customers. Here is the full logic:
+
+---
+
+**WHAT THIS SECTION DOES:**
+When a customer pays annually (yearly subscription), the admin logs that payment here with a year, date, and price. It acts as a yearly payment record book.
+
+---
+
+**FIELDS REQUIRED — When user clicks "ADD YEAR":**
+Open a small form or inline input group with these 3 fields:
+
+1. **YEAR** — Number input (e.g. 2024, 2025, 2026)
+2. **DATE** — Date picker 📅 (the exact date the customer paid)
+3. **TOTAL PRICE (INR)** — Number input (the amount they paid for the year)
+
+Then a **CONFIRM** button (pink, same theme) to save the entry.
+
+---
+
+**AFTER SAVING, DISPLAY EACH ENTRY AS A CARD showing:**
+- Year (bold, large — e.g. "2026")
+- Payment Date (e.g. "29 April 2026")
+- Amount Paid (e.g. "₹12,000 INR")
+- A **DELETE** button (small, red) to remove that entry
+- An **EDIT** button (small, grey) to modify the entry
+
+---
+
+**LOGIC & RULES:**
+- No duplicate years allowed — show an error "Year already exists" if same year is added twice
+- Entries must be sorted by year (latest year on top)
+- All entries must persist in the database tied to UID: 8274320462 — survive page refresh
+- The TOTAL AMOUNT card at the top of Amount Manager must automatically update — it should show the **sum of all year-wise payments logged**
+- When an entry is deleted, TOTAL AMOUNT must decrease accordingly
+- When an entry is edited and price changed, TOTAL AMOUNT must recalculate
+
+---
+
+**UI RULES:**
+- Match existing dark theme (dark background, pink accent buttons, white text)
+- Each saved year card should have a subtle border or card background to separate entries visually
+- "No years added yet." text shows only when list is empty
+- Do NOT break any existing functionality — HISTORY, LOG PAYMENT, RESET, date logic, Days Remaining countdown — all must still work

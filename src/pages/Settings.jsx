@@ -42,7 +42,6 @@ export default function Settings() {
   const [amountModalUid, setAmountModalUid] = useState(null)
   const [selectedMonth, setSelectedMonth] = useState('')
   const [monthInput, setMonthInput] = useState('')
-  const [yearInput, setYearInput] = useState('')
   const [historyOpen, setHistoryOpen] = useState(false)
   const [pendingMode, setPendingMode] = useState(null)
   const [liveStart, setLiveStart] = useState(null)
@@ -129,7 +128,27 @@ export default function Settings() {
       }
     }
     const years = Array.isArray(src.years)
-      ? src.years.map(y => String(y)).filter(Boolean)
+      ? src.years
+          .map(y => {
+            if (y == null) return null
+            if (typeof y === 'string' || typeof y === 'number') {
+              const yr = String(y).trim()
+              if (!/^\d{4}$/.test(yr)) return null
+              return { id: `${yr}-legacy-${Math.random().toString(36).slice(2,7)}`, year: yr, date: '', amount: 0 }
+            }
+            if (typeof y === 'object') {
+              const yr = String(y.year || '').trim()
+              if (!/^\d{4}$/.test(yr)) return null
+              return {
+                id: y.id || `${yr}-${Math.random().toString(36).slice(2,7)}`,
+                year: yr,
+                date: y.date || '',
+                amount: isFinite(parseFloat(y.amount)) ? parseFloat(y.amount) : 0,
+              }
+            }
+            return null
+          })
+          .filter(Boolean)
       : []
     const history = Array.isArray(src.history)
       ? src.history
@@ -183,7 +202,9 @@ export default function Settings() {
     const history = (entry && entry.history) || []
     const histSum = history.reduce((s, h) => s + (parseFloat(h.amount) || 0), 0)
     const nextAmt = entry && entry.nextSub ? parseFloat(entry.nextSub.amount) || 0 : 0
-    return histSum + nextAmt
+    const years = (entry && entry.years) || []
+    const yearSum = years.reduce((s, y) => s + (parseFloat(y.amount) || 0), 0)
+    return histSum + nextAmt + yearSum
   }
 
   useEffect(() => {
@@ -224,23 +245,78 @@ export default function Settings() {
     persistPaymentData({ ...paymentData, [uid]: { ...prev, months: nextMonths } })
   }
 
-  const confirmAddYear = () => {
-    const y = String(yearInput).trim()
-    if (!/^\d{4}$/.test(y) || !amountModalUid) return
-    const prev = normalizeEntry(paymentData[amountModalUid])
-    if (prev.years.includes(y)) { setYearInput(''); return }
-    const next = {
-      ...paymentData,
-      [amountModalUid]: { ...prev, years: [...prev.years, y] },
-    }
-    persistPaymentData(next)
-    setYearInput('')
+  const [yearFormOpen, setYearFormOpen] = useState(false)
+  const [yearFormYear, setYearFormYear] = useState('')
+  const [yearFormDate, setYearFormDate] = useState('')
+  const [yearFormAmount, setYearFormAmount] = useState('')
+  const [yearFormError, setYearFormError] = useState('')
+  const [editingYearId, setEditingYearId] = useState(null)
+
+  const resetYearForm = () => {
+    setYearFormOpen(false)
+    setYearFormYear('')
+    setYearFormDate('')
+    setYearFormAmount('')
+    setYearFormError('')
+    setEditingYearId(null)
   }
 
-  const removeYearEntry = (uid, year) => {
+  const openAddYearForm = () => {
+    setEditingYearId(null)
+    setYearFormYear('')
+    setYearFormDate(toDateInputValue(new Date()))
+    setYearFormAmount('')
+    setYearFormError('')
+    setYearFormOpen(true)
+  }
+
+  const openEditYearForm = (entryYear) => {
+    setEditingYearId(entryYear.id)
+    setYearFormYear(entryYear.year)
+    setYearFormDate(entryYear.date ? toDateInputValue(entryYear.date) : '')
+    setYearFormAmount(entryYear.amount > 0 ? String(entryYear.amount) : '')
+    setYearFormError('')
+    setYearFormOpen(true)
+  }
+
+  const confirmYearEntry = () => {
+    if (!amountModalUid) return
+    const yr = String(yearFormYear).trim()
+    const amt = parseFloat(yearFormAmount)
+    if (!/^\d{4}$/.test(yr)) { setYearFormError('Enter a valid 4-digit year.'); return }
+    if (!yearFormDate) { setYearFormError('Pick a payment date.'); return }
+    const dateObj = new Date(`${yearFormDate}T00:00:00`)
+    if (isNaN(dateObj.getTime())) { setYearFormError('Invalid date.'); return }
+    if (!isFinite(amt) || amt <= 0) { setYearFormError('Enter a valid amount.'); return }
+
+    const prev = normalizeEntry(paymentData[amountModalUid])
+    const dup = prev.years.some(y => y.year === yr && y.id !== editingYearId)
+    if (dup) { setYearFormError('Year already exists'); return }
+
+    let nextYears
+    if (editingYearId) {
+      nextYears = prev.years.map(y => y.id === editingYearId
+        ? { ...y, year: yr, date: dateObj.toISOString(), amount: amt }
+        : y
+      )
+    } else {
+      const newEntry = {
+        id: `${yr}-${Date.now()}-${Math.random().toString(36).slice(2,7)}`,
+        year: yr,
+        date: dateObj.toISOString(),
+        amount: amt,
+      }
+      nextYears = [...prev.years, newEntry]
+    }
+    persistPaymentData({ ...paymentData, [amountModalUid]: { ...prev, years: nextYears } })
+    resetYearForm()
+  }
+
+  const removeYearEntry = (uid, id) => {
     const prev = normalizeEntry(paymentData[uid])
-    const nextYears = prev.years.filter(y => y !== year)
+    const nextYears = prev.years.filter(y => y.id !== id)
     persistPaymentData({ ...paymentData, [uid]: { ...prev, years: nextYears } })
+    if (editingYearId === id) resetYearForm()
   }
 
   const logPayment = (computedDraft) => {
@@ -306,7 +382,6 @@ export default function Settings() {
     setAmountModalUid(null)
     setSelectedMonth('')
     setMonthInput('')
-    setYearInput('')
     setHistoryOpen(false)
     setPendingMode(null)
     setLiveStart(null)
@@ -314,6 +389,9 @@ export default function Settings() {
     setPaymentAmountInput('')
     setBindOpen(false)
     setBindAmountInput('')
+    resetYearForm()
+    setSelectedDate(null)
+    setDatePickerOpen(false)
   }
 
   useEffect(() => {
@@ -978,7 +1056,6 @@ export default function Settings() {
                                 setAmountModalUid(row.uid)
                                 setSelectedMonth('')
                                 setMonthInput('')
-                                setYearInput('')
                                 setHistoryOpen(false)
                                 setPendingMode('live')
                                 setLiveStart(initStart)
@@ -1661,61 +1738,198 @@ export default function Settings() {
                 paddingTop: '16px',
                 borderTop: '1px solid rgba(255,255,255,0.06)',
               }}>
-                <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', color: '#ccc', marginBottom: '10px' }}>YEAR-WISE</div>
-                <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', flexWrap: 'wrap' }}>
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    value={yearInput}
-                    onChange={e => setYearInput(e.target.value.replace(/[^\d]/g, '').slice(0, 4))}
-                    onKeyDown={e => { if (e.key === 'Enter') confirmAddYear() }}
-                    placeholder="e.g. 2024"
-                    style={{
-                      flex: 1, minWidth: '140px',
-                      padding: '10px 12px',
-                      background: 'rgba(255,255,255,0.04)',
-                      border: '1px solid rgba(255,255,255,0.08)',
-                      borderRadius: '8px',
-                      color: '#fff', fontSize: '13px', outline: 'none',
-                    }}
-                  />
-                  <button onClick={confirmAddYear} style={{
-                    padding: '10px 16px',
-                    background: '#FF69B4', border: 'none', borderRadius: '8px',
-                    color: '#fff', fontSize: '10px', fontWeight: 800, letterSpacing: '0.08em',
-                    cursor: 'pointer',
-                    boxShadow: '0 0 12px rgba(255,105,180,0.4)',
-                  }}>ADD YEAR</button>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+                  <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', color: '#ccc' }}>YEAR-WISE</div>
+                  {!yearFormOpen && (
+                    <button
+                      type="button"
+                      onClick={openAddYearForm}
+                      style={{
+                        padding: '8px 16px',
+                        background: '#FF69B4', border: 'none', borderRadius: '8px',
+                        color: '#fff', fontSize: '10px', fontWeight: 800, letterSpacing: '0.08em',
+                        cursor: 'pointer',
+                        boxShadow: '0 0 12px rgba(255,105,180,0.4)',
+                      }}
+                    >ADD YEAR</button>
+                  )}
                 </div>
 
-                {entry.years.length > 0 ? (
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                    {entry.years.map(y => (
-                      <div key={y} style={{
-                        display: 'inline-flex', alignItems: 'center', gap: '6px',
-                        padding: '5px 10px',
-                        background: 'rgba(255,105,180,0.08)',
-                        border: '1px solid rgba(255,105,180,0.25)',
-                        borderRadius: '999px',
-                        fontSize: '11px', fontWeight: 700,
-                        color: '#FF69B4',
-                        letterSpacing: '0.04em',
-                      }}>
-                        <span>{y}</span>
-                        <button
-                          onClick={() => removeYearEntry(amountModalUid, y)}
-                          title="Remove"
+                {yearFormOpen && (
+                  <div style={{
+                    background: 'rgba(255,255,255,0.03)',
+                    border: '1px solid rgba(255,105,180,0.25)',
+                    borderRadius: '12px',
+                    padding: '14px',
+                    marginBottom: '12px',
+                  }}>
+                    <div style={{ fontSize: '10px', fontWeight: 800, letterSpacing: '0.14em', color: '#FF69B4', marginBottom: '12px' }}>
+                      {editingYearId ? 'EDIT YEAR ENTRY' : 'NEW YEAR ENTRY'}
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
+                      <div>
+                        <div style={{ fontSize: '9px', color: '#888', fontWeight: 700, letterSpacing: '0.1em', marginBottom: '5px' }}>YEAR</div>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          value={yearFormYear}
+                          onChange={e => { setYearFormYear(e.target.value.replace(/[^\d]/g, '').slice(0, 4)); setYearFormError('') }}
+                          placeholder="e.g. 2026"
                           style={{
-                            background: 'transparent', border: 'none',
-                            color: '#888', cursor: 'pointer',
-                            fontSize: '12px', fontWeight: 700, padding: 0, marginLeft: '2px',
+                            width: '100%',
+                            padding: '10px 12px',
+                            background: 'rgba(255,255,255,0.04)',
+                            border: '1px solid rgba(255,255,255,0.1)',
+                            borderRadius: '8px',
+                            color: '#fff', fontSize: '13px', outline: 'none',
                           }}
-                        >×</button>
+                        />
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '9px', color: '#888', fontWeight: 700, letterSpacing: '0.1em', marginBottom: '5px' }}>DATE</div>
+                        <input
+                          type="date"
+                          value={yearFormDate}
+                          onChange={e => { setYearFormDate(e.target.value); setYearFormError('') }}
+                          style={{
+                            width: '100%',
+                            padding: '10px 12px',
+                            background: 'rgba(255,255,255,0.04)',
+                            border: '1px solid rgba(255,255,255,0.1)',
+                            borderRadius: '8px',
+                            color: '#fff', fontSize: '13px', outline: 'none',
+                            colorScheme: 'dark',
+                          }}
+                        />
+                      </div>
+                    </div>
+                    <div style={{ marginBottom: '10px' }}>
+                      <div style={{ fontSize: '9px', color: '#888', fontWeight: 700, letterSpacing: '0.1em', marginBottom: '5px' }}>TOTAL PRICE (INR)</div>
+                      <input
+                        type="text"
+                        inputMode="decimal"
+                        value={yearFormAmount}
+                        onChange={e => { setYearFormAmount(e.target.value.replace(/[^\d.]/g, '')); setYearFormError('') }}
+                        placeholder="e.g. 12000"
+                        style={{
+                          width: '100%',
+                          padding: '10px 12px',
+                          background: 'rgba(255,255,255,0.04)',
+                          border: '1px solid rgba(255,255,255,0.1)',
+                          borderRadius: '8px',
+                          color: '#fff', fontSize: '13px', outline: 'none',
+                        }}
+                      />
+                    </div>
+                    {yearFormError && (
+                      <div style={{
+                        fontSize: '11px', color: '#ef4444', fontWeight: 600,
+                        marginBottom: '10px',
+                        padding: '6px 10px',
+                        background: 'rgba(239,68,68,0.08)',
+                        border: '1px solid rgba(239,68,68,0.25)',
+                        borderRadius: '7px',
+                      }}>{yearFormError}</div>
+                    )}
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button
+                        type="button"
+                        onClick={confirmYearEntry}
+                        style={{
+                          flex: 1,
+                          padding: '10px',
+                          background: '#FF69B4',
+                          border: 'none',
+                          borderRadius: '8px',
+                          color: '#fff',
+                          fontSize: '11px', fontWeight: 800, letterSpacing: '0.1em',
+                          cursor: 'pointer',
+                          boxShadow: '0 0 12px rgba(255,105,180,0.4)',
+                        }}
+                      >CONFIRM</button>
+                      <button
+                        type="button"
+                        onClick={resetYearForm}
+                        style={{
+                          padding: '10px 16px',
+                          background: 'rgba(255,255,255,0.04)',
+                          border: '1px solid rgba(255,255,255,0.12)',
+                          borderRadius: '8px',
+                          color: '#bbb',
+                          fontSize: '11px', fontWeight: 800, letterSpacing: '0.1em',
+                          cursor: 'pointer',
+                        }}
+                      >CANCEL</button>
+                    </div>
+                  </div>
+                )}
+
+                {entry.years.length > 0 ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {[...entry.years]
+                      .sort((a, b) => parseInt(b.year, 10) - parseInt(a.year, 10))
+                      .map(y => (
+                      <div key={y.id} style={{
+                        background: 'rgba(255,255,255,0.03)',
+                        border: '1px solid rgba(255,255,255,0.08)',
+                        borderRadius: '12px',
+                        padding: '12px 14px',
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        gap: '12px',
+                        flexWrap: 'wrap',
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap', flex: 1 }}>
+                          <div style={{
+                            fontSize: '20px', fontWeight: 900, color: '#fff',
+                            letterSpacing: '0.02em',
+                            minWidth: '60px',
+                          }}>{y.year}</div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                            <div style={{ fontSize: '11px', color: '#888' }}>
+                              {y.date ? fmtDateLong(y.date) : <span style={{ fontStyle: 'italic', color: '#555' }}>No date</span>}
+                            </div>
+                            <div style={{ fontSize: '13px', color: '#FF69B4', fontWeight: 800 }}>
+                              ₹{(parseFloat(y.amount) || 0).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} INR
+                            </div>
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', gap: '6px' }}>
+                          <button
+                            type="button"
+                            onClick={() => openEditYearForm(y)}
+                            title="Edit"
+                            style={{
+                              padding: '6px 12px',
+                              background: 'rgba(255,255,255,0.05)',
+                              border: '1px solid rgba(255,255,255,0.12)',
+                              borderRadius: '7px',
+                              color: '#bbb',
+                              fontSize: '10px', fontWeight: 800, letterSpacing: '0.08em',
+                              cursor: 'pointer',
+                            }}
+                          >EDIT</button>
+                          <button
+                            type="button"
+                            onClick={() => removeYearEntry(amountModalUid, y.id)}
+                            title="Delete"
+                            style={{
+                              padding: '6px 12px',
+                              background: 'rgba(239,68,68,0.1)',
+                              border: '1px solid rgba(239,68,68,0.3)',
+                              borderRadius: '7px',
+                              color: '#ef4444',
+                              fontSize: '10px', fontWeight: 800, letterSpacing: '0.08em',
+                              cursor: 'pointer',
+                            }}
+                          >DELETE</button>
+                        </div>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <div style={{ fontSize: '11px', color: '#555' }}>No years added yet.</div>
+                  !yearFormOpen && (
+                    <div style={{ fontSize: '11px', color: '#555' }}>No years added yet.</div>
+                  )
                 )}
               </div>
             </div>
