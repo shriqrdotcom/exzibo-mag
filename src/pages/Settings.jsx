@@ -1549,7 +1549,7 @@ export default function Settings() {
                       }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
                           <div style={{ fontSize: '10px', fontWeight: 800, letterSpacing: '0.12em', color: '#FF69B4' }}>
-                            {computedDraft.mode === 'live' ? '⚡ LIVE SUBSCRIPTION' : '📅 CUSTOM SUBSCRIPTION'}
+                            {computedDraft.mode === 'live' ? '⚡ MONTHLY SUBSCRIPTION' : '📅 CUSTOM SUBSCRIPTION'}
                           </div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                             {expired && (
