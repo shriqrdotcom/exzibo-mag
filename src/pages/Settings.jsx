@@ -947,7 +947,7 @@ export default function Settings() {
                             <span>{fmtAmount(row.amount)}</span>
                             <button
                               type="button"
-                              onClick={() => { setAmountModalUid(row.uid); setSelectedMonth(''); setMonthInput(''); setYearInput(''); setHistoryOpen(false); setPendingMode(null); setLiveStart(null); setCustomStartDate(''); setPaymentAmountInput(''); setBindOpen(false); setBindAmountInput(''); setNow(Date.now()) }}
+                              onClick={() => { setAmountModalUid(row.uid); setSelectedMonth(''); setMonthInput(''); setYearInput(''); setHistoryOpen(false); setPendingMode('live'); setLiveStart(new Date().toISOString()); setCustomStartDate(''); setPaymentAmountInput(''); setBindOpen(false); setBindAmountInput(''); setSelectedDate(null); setDatePickerOpen(false); setNow(Date.now()) }}
                               style={{
                                 padding: '3px 10px',
                                 background: '#FF69B4',
