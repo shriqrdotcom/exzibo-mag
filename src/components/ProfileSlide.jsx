@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import {
   X, Power, MapPin, Phone, Store, Users, Image,
   Loader2, AlertCircle, CheckCircle2, Check, XCircle, Mail, Clock, UserPlus,
@@ -863,13 +864,12 @@ export default function ProfileSlide({
       `}</style>
 
       {/* Profile modal — consolidated entry to existing handlers */}
-      {isProfileModalOpen && (
+      {isProfileModalOpen && createPortal(
         <div
           onClick={() => setIsProfileModalOpen(false)}
           style={{
-            position: 'fixed', inset: 0, zIndex: 1900,
-            background: 'rgba(0,0,0,0.5)',
-            backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)',
+            position: 'fixed', inset: 0, zIndex: 9998,
+            background: 'rgba(0,0,0,0.55)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             padding: '20px',
             animation: 'profileBackdropIn 0.2s ease-out',
@@ -881,43 +881,61 @@ export default function ProfileSlide({
               from { opacity: 0; transform: scale(0.95); }
               to   { opacity: 1; transform: scale(1); }
             }
-            .profile-modal-row:hover { background: rgba(0,0,0,0.04) !important; }
+            .profile-modal-row:hover { background: rgba(0,0,0,0.035) !important; }
           `}</style>
           <div
             onClick={e => e.stopPropagation()}
             style={{
-              background: '#fff', borderRadius: '20px', padding: '24px',
-              maxWidth: '380px', width: '100%', maxHeight: '85vh', overflowY: 'auto',
+              background: '#fff', borderRadius: '24px', padding: '32px',
+              maxWidth: '520px', width: '100%', maxHeight: '88vh', overflowY: 'auto',
               boxShadow: '0 32px 80px rgba(0,0,0,0.35), 0 8px 24px rgba(0,0,0,0.15)',
               animation: 'profileModalIn 0.22s cubic-bezier(0.34,1.1,0.64,1)',
               position: 'relative',
             }}
           >
             {/* Header */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px' }}>
-              <div style={{ fontWeight: 800, fontSize: '20px', color: '#111', letterSpacing: '0.01em' }}>
-                Profile
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '24px', gap: '12px' }}>
+              <div>
+                <h2 style={{
+                  margin: '0 0 8px',
+                  fontWeight: 800, fontSize: '30px',
+                  color: '#0E1B2A', letterSpacing: '-0.02em', lineHeight: 1.1,
+                }}>
+                  Profile
+                </h2>
+                <p style={{
+                  margin: 0,
+                  fontSize: '14px', lineHeight: 1.5,
+                  color: '#6b7380', maxWidth: '320px',
+                }}>
+                  Manage your restaurant information and account settings.
+                </p>
               </div>
               <button
                 onClick={() => setIsProfileModalOpen(false)}
                 style={{
-                  background: 'rgba(0,0,0,0.07)', border: 'none', borderRadius: '50%',
-                  width: '32px', height: '32px', display: 'flex', alignItems: 'center',
-                  justifyContent: 'center', cursor: 'pointer', color: '#555',
+                  background: '#F2F2F2', border: 'none', borderRadius: '50%',
+                  width: '40px', height: '40px', minWidth: '40px',
+                  display: 'flex', alignItems: 'center',
+                  justifyContent: 'center', cursor: 'pointer', color: '#444',
+                  transition: 'background 0.15s',
                 }}
+                onMouseEnter={e => e.currentTarget.style.background = '#E5E5E5'}
+                onMouseLeave={e => e.currentTarget.style.background = '#F2F2F2'}
                 aria-label="Close"
               >
-                <X size={16} />
+                <X size={18} />
               </button>
             </div>
 
             {/* Rows */}
-            <div style={{ background: '#F0F0F5', borderRadius: '16px', padding: '6px 8px' }}>
+            <div>
               {[
                 {
                   key: 'logo',
-                  icon: <PiPencilCircle size={24} strokeWidth={1.2} />,
-                  label: 'LOGO',
+                  icon: <PiPencilCircle size={26} strokeWidth={1.2} />,
+                  label: 'Logo',
+                  desc: 'Update your restaurant logo',
                   onClick: () => {
                     setIsProfileModalOpen(false)
                     setUploadError('')
@@ -926,8 +944,9 @@ export default function ProfileSlide({
                 },
                 {
                   key: 'name',
-                  icon: <Store size={22} strokeWidth={1.4} />,
-                  label: 'RESTAURANT NAME',
+                  icon: <Store size={24} strokeWidth={1.6} />,
+                  label: 'Restaurant Name',
+                  desc: 'Edit your restaurant name',
                   onClick: () => {
                     setIsProfileModalOpen(false)
                     setNameError('')
@@ -936,8 +955,9 @@ export default function ProfileSlide({
                 },
                 {
                   key: 'hours',
-                  icon: <Clock size={22} strokeWidth={1.4} />,
-                  label: 'OPENING HOURS',
+                  icon: <Clock size={24} strokeWidth={1.6} />,
+                  label: 'Opening Hours',
+                  desc: 'Set your restaurant operating hours',
                   onClick: () => {
                     setIsProfileModalOpen(false)
                     openHoursModal()
@@ -945,8 +965,9 @@ export default function ProfileSlide({
                 },
                 {
                   key: 'location',
-                  icon: <MapPin size={22} strokeWidth={1.4} />,
-                  label: 'LOCATION',
+                  icon: <MapPin size={24} strokeWidth={1.6} />,
+                  label: 'Location',
+                  desc: 'Manage your restaurant address',
                   onClick: () => {
                     setIsProfileModalOpen(false)
                     setAddressError('')
@@ -956,8 +977,9 @@ export default function ProfileSlide({
                 },
                 {
                   key: 'contact',
-                  icon: <Phone size={22} strokeWidth={1.4} />,
-                  label: 'CONTACT INFO',
+                  icon: <Phone size={24} strokeWidth={1.6} />,
+                  label: 'Contact Info',
+                  desc: 'Update phone number and other contact details',
                   onClick: () => {
                     setIsProfileModalOpen(false)
                     setContactPhoneError('')
@@ -968,26 +990,49 @@ export default function ProfileSlide({
                     setEditingContact(true)
                   },
                 },
-              ].map(row => (
+              ].map((row, idx, arr) => (
                 <div
                   key={row.key}
                   className="profile-modal-row"
                   onClick={row.onClick}
                   style={{
-                    display: 'flex', alignItems: 'center', gap: '14px',
-                    padding: '13px 10px', borderRadius: '12px',
+                    display: 'flex', alignItems: 'center', gap: '16px',
+                    padding: '16px 8px',
+                    borderBottom: idx < arr.length - 1 ? '1px solid #EFEFF2' : 'none',
                     background: 'transparent', cursor: 'pointer',
                     transition: 'background 0.15s',
+                    borderRadius: '8px',
                   }}
                 >
-                  <span style={iconWrap}>{row.icon}</span>
-                  <span style={{ ...rowLabel, flex: 1 }}>{row.label}</span>
-                  <ChevronRight size={16} color="#bbb" strokeWidth={2.5} />
+                  <span style={{
+                    width: '52px', height: '52px',
+                    background: '#F2F2F4', borderRadius: '14px',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: '#222', flexShrink: 0,
+                  }}>
+                    {row.icon}
+                  </span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{
+                      fontSize: '17px', fontWeight: 800,
+                      color: '#0E1B2A', letterSpacing: '-0.01em',
+                      marginBottom: '3px',
+                    }}>
+                      {row.label}
+                    </div>
+                    <div style={{
+                      fontSize: '13.5px', color: '#7a8493', lineHeight: 1.4,
+                    }}>
+                      {row.desc}
+                    </div>
+                  </div>
+                  <ChevronRight size={20} color="#bbb" strokeWidth={2.2} />
                 </div>
               ))}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Logo compression modal */}
