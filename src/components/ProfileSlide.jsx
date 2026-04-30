@@ -1020,6 +1020,116 @@ export default function ProfileSlide({
           onCancel={() => setHoursModalOpen(false)}
         />
       )}
+
+      {/* RESTAURANT NAME modal */}
+      {editingName && (
+        <EditFieldModal
+          title="Restaurant Name"
+          icon={<Store size={22} strokeWidth={1.4} />}
+          onClose={() => { setEditingName(false); setNameError(''); setNameInput(restaurantName || '') }}
+        >
+          <input ref={nameInputRef} value={nameInput}
+            onChange={e => { setNameInput(e.target.value); setNameError('') }}
+            onKeyDown={e => { if (e.key === 'Enter') handleSaveName(); if (e.key === 'Escape') { setEditingName(false); setNameError('') } }}
+            placeholder="Enter restaurant name…"
+            style={inputStyle(nameError)}
+            onFocus={e => e.target.style.borderColor = LIME}
+            onBlur={e => e.target.style.borderColor = nameError ? '#FECACA' : '#E0E0E8'}
+          />
+          {nameError && <InlineError>{nameError}</InlineError>}
+          <ActionButtons
+            onSave={handleSaveName}
+            onCancel={() => { setEditingName(false); setNameError(''); setNameInput(restaurantName || '') }}
+            saving={nameSaving}
+          />
+        </EditFieldModal>
+      )}
+
+      {/* CONTACT INFO modal */}
+      {editingContact && (
+        <EditFieldModal
+          title="Contact Info"
+          icon={<Phone size={22} strokeWidth={1.4} />}
+          onClose={() => {
+            setEditingContact(false); setContactPhoneError(''); setContactEmailError('')
+            const { phone, email } = loadContact(restaurantId); setContactPhone(phone); setContactEmail(email)
+          }}
+        >
+          <FieldLabel icon={<Phone size={11} />} label="Contact Number" />
+          <input ref={phoneInputRef} type="tel" inputMode="numeric" value={contactPhone}
+            onChange={e => handlePhoneInput(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Escape') setEditingContact(false) }}
+            placeholder="10-digit number" maxLength={10}
+            style={inputStyle(contactPhoneError)}
+            onFocus={e => e.target.style.borderColor = contactPhoneError ? '#FECACA' : LIME}
+            onBlur={e => e.target.style.borderColor = contactPhoneError ? '#FECACA' : '#E0E0E8'}
+          />
+          {contactPhoneError && <InlineError>{contactPhoneError}</InlineError>}
+          <FieldLabel icon={<Mail size={11} />} label="Email Address" />
+          <input type="email" value={contactEmail}
+            onChange={e => { setContactEmail(e.target.value); setContactEmailError('') }}
+            onKeyDown={e => { if (e.key === 'Escape') setEditingContact(false) }}
+            placeholder="example@gmail.com"
+            style={inputStyle(contactEmailError)}
+            onFocus={e => e.target.style.borderColor = contactEmailError ? '#FECACA' : LIME}
+            onBlur={e => e.target.style.borderColor = contactEmailError ? '#FECACA' : '#E0E0E8'}
+          />
+          {contactEmailError && <InlineError>{contactEmailError}</InlineError>}
+          <ActionButtons
+            onSave={handleSaveContact}
+            onCancel={() => {
+              setEditingContact(false); setContactPhoneError(''); setContactEmailError('')
+              const { phone, email } = loadContact(restaurantId); setContactPhone(phone); setContactEmail(email)
+            }}
+            saving={contactSaving}
+          />
+        </EditFieldModal>
+      )}
+
+      {/* LOCATION modal */}
+      {editingLocation && (
+        <EditFieldModal
+          title="Location"
+          icon={<MapPin size={22} strokeWidth={1.4} />}
+          onClose={() => { setEditingLocation(false); setAddressError(''); setAddressInput(loadLocationAddress(restaurantId)) }}
+        >
+          {savedAddress && (
+            <div style={{
+              background: '#F0FDF4', border: '1px solid #A7F3D0', borderRadius: '10px',
+              padding: '8px 12px', marginBottom: '12px',
+              display: 'flex', alignItems: 'flex-start', gap: '7px',
+            }}>
+              <MapPin size={13} color="#10B981" style={{ marginTop: '2px', flexShrink: 0 }} />
+              <span style={{ fontSize: '12px', color: '#065F46', fontWeight: 600, lineHeight: 1.5 }}>{savedAddress}</span>
+            </div>
+          )}
+          <FieldLabel icon={<MapPin size={11} />} label="Restaurant Address" />
+          <textarea
+            ref={addressRef}
+            value={addressInput}
+            onChange={e => { setAddressInput(e.target.value); setAddressError('') }}
+            placeholder="Enter your full restaurant address…"
+            rows={3}
+            style={{
+              width: '100%', boxSizing: 'border-box',
+              padding: '10px 12px', borderRadius: '10px',
+              border: `1.5px solid ${addressError ? '#FECACA' : '#E0E0E8'}`,
+              fontSize: '13px', fontWeight: 500, color: '#111',
+              outline: 'none', background: '#F7F7FA',
+              resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.5,
+              transition: 'border-color 0.15s', marginBottom: addressError ? '6px' : '10px',
+            }}
+            onFocus={e => e.target.style.borderColor = addressError ? '#FECACA' : LIME}
+            onBlur={e => e.target.style.borderColor = addressError ? '#FECACA' : '#E0E0E8'}
+          />
+          {addressError && <InlineError>{addressError}</InlineError>}
+          <ActionButtons
+            onSave={handleSaveLocation}
+            onCancel={() => { setEditingLocation(false); setAddressError(''); setAddressInput(loadLocationAddress(restaurantId)) }}
+            saving={locationSaving}
+          />
+        </EditFieldModal>
+      )}
     </>
   )
 }
@@ -1073,6 +1183,63 @@ function FieldLabel({ icon, label }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '11px', fontWeight: 700, color: '#888', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: '6px' }}>
       {icon} {label}
+    </div>
+  )
+}
+
+function EditFieldModal({ title, icon, onClose, children }) {
+  React.useEffect(() => {
+    function onKey(e) { if (e.key === 'Escape') onClose() }
+    document.addEventListener('keydown', onKey)
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.removeEventListener('keydown', onKey); document.body.style.overflow = prev }
+  }, [onClose])
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 2000,
+        background: 'rgba(0,0,0,0.5)',
+        backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: '20px',
+        animation: 'profileModalOverlayIn 0.2s ease',
+      }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          background: '#fff', borderRadius: '20px', padding: '22px',
+          maxWidth: '380px', width: '100%', maxHeight: '85vh', overflowY: 'auto',
+          boxShadow: '0 32px 80px rgba(0,0,0,0.35), 0 8px 24px rgba(0,0,0,0.15)',
+          animation: 'profileModalIn 0.22s cubic-bezier(0.34,1.1,0.64,1)',
+          position: 'relative',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span style={{ width: 36, height: 36, borderRadius: 12, background: '#F0F0F5', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#444' }}>
+              {icon}
+            </span>
+            <div style={{ fontWeight: 800, fontSize: '17px', color: '#111', letterSpacing: '0.01em' }}>
+              {title}
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            style={{
+              background: 'rgba(0,0,0,0.07)', border: 'none', borderRadius: '50%',
+              width: '32px', height: '32px', display: 'flex', alignItems: 'center',
+              justifyContent: 'center', cursor: 'pointer', color: '#555',
+            }}
+            aria-label="Close"
+          >
+            <X size={16} />
+          </button>
+        </div>
+        {children}
+      </div>
     </div>
   )
 }
