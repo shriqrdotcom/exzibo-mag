@@ -1,0 +1,86 @@
+I need to add a "Remaining Days" menu item to my existing sidebar navigation section, and when clicked, it should open a centered modal overlay with a blurred background.
+
+---
+
+### SIDEBAR CHANGE:
+In the existing sidebar navigation, add a new menu item labeled "Remaining Days" (with a relevant icon like a calendar or clock). It should follow the same style as other existing sidebar items. Clicking it opens a modal.
+
+---
+
+### MODAL DESIGN — "Remaining Days" Popup:
+
+**Overlay:** Full-screen backdrop with `backdrop-filter: blur(8px)` and a semi-transparent dark overlay (`rgba(0,0,0,0.6)`). Clicking outside the modal closes it.
+
+**Modal Container:**
+- Background: White or very light gray (`#f9f9f9`)
+- Border: 1px solid `#e0e0e0`
+- Border-radius: 16px
+- Max-width: 420px, centered on screen
+- Box-shadow: deep shadow for depth
+- Padding: 32px
+- Color scheme: Black text on white/light gray background, with gray accents
+
+---
+
+### MODAL CONTENT (top to bottom):
+
+**1. Modal Title:**
+- Text: "Remaining Days"
+- Font: Bold, ~22px
+- Color: #111 (near black)
+- Add a subtle close (✕) button in the top-right corner
+
+---
+
+**2. Subscription Plan Badge:**
+- Label above: "Subscription Plan" in small gray uppercase text
+- Display the current plan name as a pill/badge — one of: `Starter`, `Growth`, `Scale`, or `Customised`
+- The plan name is READ-ONLY and non-editable. It is dynamically passed as a prop or variable (e.g. `planName = "Growth"`)
+- Badge style: dark background (#1a1a1a), white text, rounded-full, centered
+
+---
+
+**3. Date Row:**
+Left side:
+- Small gray label: "Starting Date"
+- Bold value: `22-04-2026`
+
+Right side:
+- Small gray label: "Ending Date"  
+- Bold value: `03-05-2026`
+
+Display these side-by-side with a vertical divider or just spacing between them. Style in dark/gray tones.
+
+---
+
+**4. Days Left Highlight Box:**
+- A distinct highlighted card/box inside the modal
+- Background: #111 (dark black)
+- Text color: white
+- Two lines:
+  - Line 1 (smaller, gray): "How Many Days Left"
+  - Line 2 (large, bold, white): "24 Days"
+- Rounded corners, centered text, generous padding
+
+---
+
+**5. Renew Now Button:**
+- Full-width button at the bottom
+- Background: Black (#000)
+- Text: "Renew Now" in white, bold
+- Border-radius: 8px
+- Hover effect: slight gray (`#222`) background shift
+- On click: for now just console.log("Renew clicked") or link to /renew
+
+---
+
+### BEHAVIOR:
+- Modal opens when "Remaining Days" sidebar item is clicked
+- Modal closes when ✕ button is clicked OR user clicks outside the modal
+- The plan name, start date, end date, and days left should be easy to update via variables/props at the top of the component (not hardcoded deep inside JSX)
+- Use React state (`useState`) to control modal open/close
+
+---
+
+### TECH STACK:
+Use whatever framework this project already uses (React / Next.js / plain HTML). Match the existing code style. Do not install new dependencies unless necessary.

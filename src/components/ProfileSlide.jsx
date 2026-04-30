@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react'
 import {
   X, Power, MapPin, Phone, Store, Users, Image,
   Loader2, AlertCircle, CheckCircle2, Check, XCircle, Mail, Clock, UserPlus,
-  User, ChevronRight,
+  User, ChevronRight, Calendar,
 } from 'lucide-react'
 import { PiPencilCircle } from 'react-icons/pi'
 import AddMembersModal from './AddMembersModal'
@@ -122,6 +122,14 @@ export default function ProfileSlide({
 
   const [showAddMembers, setShowAddMembers] = useState(false)
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false)
+  const [showRemainingDays, setShowRemainingDays] = useState(false)
+
+  const subscriptionInfo = {
+    planName: 'Growth',
+    startDate: '22-04-2026',
+    endDate: '03-05-2026',
+    daysLeft: 24,
+  }
 
   const [editingName, setEditingName] = useState(false)
   const [nameInput, setNameInput] = useState(restaurantName || '')
@@ -610,6 +618,25 @@ export default function ProfileSlide({
               </svg>
             </div>
 
+            {/* REMAINING DAYS */}
+            <div
+              onClick={() => setShowRemainingDays(true)}
+              style={{
+                ...rowStyle,
+                cursor: 'pointer',
+                borderRadius: '12px',
+                transition: 'background 0.15s',
+              }}
+              onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,0,0,0.04)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+            >
+              <span style={iconWrap}><Calendar size={22} strokeWidth={1.4} /></span>
+              <span style={{ ...rowLabel, flex: 1 }}>REMAINING DAYS</span>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#bbb" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="9 18 15 12 9 6" />
+              </svg>
+            </div>
+
           </div>
 
           <AddMembersModal
@@ -617,6 +644,143 @@ export default function ProfileSlide({
             onClose={() => setShowAddMembers(false)}
             restaurantId={restaurantId}
           />
+
+          {showRemainingDays && (
+            <div
+              onClick={() => setShowRemainingDays(false)}
+              style={{
+                position: 'fixed', inset: 0, zIndex: 9999,
+                background: 'rgba(0,0,0,0.6)',
+                backdropFilter: 'blur(8px)',
+                WebkitBackdropFilter: 'blur(8px)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                padding: '16px',
+              }}
+            >
+              <div
+                onClick={e => e.stopPropagation()}
+                style={{
+                  background: '#f9f9f9',
+                  border: '1px solid #e0e0e0',
+                  borderRadius: '16px',
+                  width: '100%', maxWidth: '420px',
+                  padding: '32px',
+                  boxShadow: '0 20px 60px rgba(0,0,0,0.35)',
+                  position: 'relative',
+                  color: '#111',
+                  fontFamily: 'inherit',
+                }}
+              >
+                <button
+                  onClick={() => setShowRemainingDays(false)}
+                  aria-label="Close"
+                  style={{
+                    position: 'absolute', top: '14px', right: '14px',
+                    width: '32px', height: '32px', borderRadius: '50%',
+                    background: 'transparent', border: 'none',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    cursor: 'pointer', color: '#666',
+                  }}
+                >
+                  <X size={18} />
+                </button>
+
+                <h2 style={{
+                  margin: '0 0 22px',
+                  fontSize: '22px', fontWeight: 700,
+                  color: '#111', letterSpacing: '-0.01em',
+                }}>
+                  Remaining Days
+                </h2>
+
+                <div style={{ marginBottom: '22px' }}>
+                  <div style={{
+                    fontSize: '11px', fontWeight: 600,
+                    letterSpacing: '0.12em', textTransform: 'uppercase',
+                    color: '#888', marginBottom: '10px',
+                  }}>
+                    Subscription Plan
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'center' }}>
+                    <span style={{
+                      background: '#1a1a1a', color: '#fff',
+                      padding: '8px 22px', borderRadius: '999px',
+                      fontSize: '13px', fontWeight: 600,
+                      letterSpacing: '0.04em',
+                    }}>
+                      {subscriptionInfo.planName}
+                    </span>
+                  </div>
+                </div>
+
+                <div style={{
+                  display: 'flex', alignItems: 'stretch',
+                  gap: '12px', marginBottom: '22px',
+                }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{
+                      fontSize: '11px', fontWeight: 600,
+                      letterSpacing: '0.08em', textTransform: 'uppercase',
+                      color: '#888', marginBottom: '6px',
+                    }}>
+                      Starting Date
+                    </div>
+                    <div style={{ fontSize: '15px', fontWeight: 700, color: '#222' }}>
+                      {subscriptionInfo.startDate}
+                    </div>
+                  </div>
+                  <div style={{ width: '1px', background: '#e0e0e0' }} />
+                  <div style={{ flex: 1, textAlign: 'right' }}>
+                    <div style={{
+                      fontSize: '11px', fontWeight: 600,
+                      letterSpacing: '0.08em', textTransform: 'uppercase',
+                      color: '#888', marginBottom: '6px',
+                    }}>
+                      Ending Date
+                    </div>
+                    <div style={{ fontSize: '15px', fontWeight: 700, color: '#222' }}>
+                      {subscriptionInfo.endDate}
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{
+                  background: '#111', color: '#fff',
+                  borderRadius: '14px', padding: '22px',
+                  textAlign: 'center', marginBottom: '22px',
+                }}>
+                  <div style={{
+                    fontSize: '12px', color: '#aaa',
+                    letterSpacing: '0.06em', marginBottom: '8px',
+                  }}>
+                    How Many Days Left
+                  </div>
+                  <div style={{
+                    fontSize: '32px', fontWeight: 800,
+                    color: '#fff', letterSpacing: '-0.01em',
+                  }}>
+                    {subscriptionInfo.daysLeft} Days
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => console.log('Renew clicked')}
+                  onMouseEnter={e => e.currentTarget.style.background = '#222'}
+                  onMouseLeave={e => e.currentTarget.style.background = '#000'}
+                  style={{
+                    width: '100%', padding: '14px',
+                    background: '#000', color: '#fff',
+                    border: 'none', borderRadius: '8px',
+                    fontSize: '14px', fontWeight: 700,
+                    letterSpacing: '0.04em', cursor: 'pointer',
+                    transition: 'background 0.15s',
+                  }}
+                >
+                  Renew Now
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Image Gallery */}
           <input
