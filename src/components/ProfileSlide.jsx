@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import {
   X, Power, MapPin, Phone, Store, Users, Image,
   Loader2, AlertCircle, CheckCircle2, Check, XCircle, Mail, Clock, UserPlus,
-  User, ChevronRight, Calendar,
+  User, UserX, ChevronRight, Calendar,
 } from 'lucide-react'
 import { PiPencilCircle } from 'react-icons/pi'
 import AddMembersModal from './AddMembersModal'
@@ -933,7 +933,7 @@ export default function ProfileSlide({
               {[
                 {
                   key: 'logo',
-                  icon: <PiPencilCircle size={26} strokeWidth={1.2} />,
+                  icon: <UserX size={24} strokeWidth={1.8} />,
                   label: 'Logo',
                   desc: 'Update your restaurant logo',
                   onClick: () => {
