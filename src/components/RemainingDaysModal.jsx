@@ -1,4 +1,5 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { X, Star, Calendar, Hourglass, ArrowRight } from 'lucide-react'
 
 const GREEN = '#2E7D32'
@@ -15,14 +16,17 @@ export default function RemainingDaysModal({
   isActive = true,
   onRenew,
 }) {
-  if (!open) return null
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => { setMounted(true) }, [])
+
+  if (!open || !mounted || typeof document === 'undefined') return null
 
   const handleRenew = () => {
     if (onRenew) onRenew()
     else console.log('Renew clicked')
   }
 
-  return (
+  return createPortal(
     <div
       onClick={onClose}
       style={{
@@ -201,7 +205,8 @@ export default function RemainingDaysModal({
           <ArrowRight size={18} />
         </button>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
 
