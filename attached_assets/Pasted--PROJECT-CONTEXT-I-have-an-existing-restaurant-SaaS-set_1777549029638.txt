@@ -1,0 +1,96 @@
+---
+
+**PROJECT CONTEXT:**
+I have an existing restaurant SaaS settings/profile screen (similar to the attached screenshot). It is a mobile-style UI panel with a list of settings options. The app already has working buttons including:
+- Edit Logo
+- Edit Restaurant Name
+- Opening Hours
+- Contact Info
+- Location
+- Team Members
+- Add Members
+- Image Gallery
+- Description Text Carousel
+- Logout
+
+**⚠️ CRITICAL RULE: Do NOT touch, modify, break, or refactor any existing button logic, handlers, state, or functionality. All existing features must remain exactly as they are.**
+
+---
+
+**WHAT I WANT YOU TO BUILD:**
+
+Create a new **"PROFILE"** button/section in the settings panel. When clicked, it opens a **modal overlay** in the center of the screen with a **blurred background**, displaying a consolidated profile editor with the following 5 sub-sections grouped inside it:
+
+1. **Logo** – (reuse the existing Edit Logo trigger/component inside the modal)
+2. **Restaurant Name** – (reuse the existing Edit Restaurant Name trigger/component inside the modal)
+3. **Opening Hours** – (reuse the existing Opening Hours trigger/component inside the modal)
+4. **Location** – (reuse the existing Location trigger/component inside the modal)
+5. **Contact Info** – (reuse the existing Contact Info trigger/component inside the modal)
+
+---
+
+**EXACT BEHAVIOR REQUIREMENTS:**
+
+**Trigger:**
+- Add a new list item labeled **"PROFILE"** with an appropriate icon (e.g., a person/ID card icon) in the same style as the existing menu items
+- Place it at the **top of the settings list**, above "Edit Logo"
+
+**On Click:**
+- A **full-screen overlay** appears with `backdrop-filter: blur(10px)` and a semi-transparent dark background (`rgba(0,0,0,0.5)` or similar)
+- A **centered modal card** slides or fades in smoothly (CSS transition or animation)
+- The modal has a visible **close button (✕)** in the top-right corner
+- Clicking the close button OR clicking outside the modal dismisses it
+
+**Inside the Modal:**
+- Title at the top: **"Profile"** in bold
+- List the 5 sections as **tappable rows** (same style as the original settings list), each with their icon and label:
+  - Logo
+  - Restaurant Name
+  - Opening Hours
+  - Location
+  - Contact Info
+- When each row is tapped inside the modal, it should **trigger the exact same function/handler** that the original button triggers — no duplicate logic, just reuse the existing handlers
+- The modal itself should be **scrollable** if content overflows on small screens
+
+---
+
+**DESIGN REQUIREMENTS:**
+
+- Match the existing UI style exactly:
+  - Light grey background (`#F0F0F5` or similar)
+  - White cards with subtle border-radius and soft shadows
+  - Bold uppercase labels
+  - Icon + label row format
+  - Chevron (`>`) on rows that navigate deeper
+- The modal card should have:
+  - `border-radius: 20px`
+  - White or light background
+  - Padding: `24px`
+  - Max-width: `380px`, centered both horizontally and vertically
+  - Smooth entry animation (fade + slight scale up: `transform: scale(0.95) → scale(1)`)
+
+---
+
+**TECHNICAL APPROACH:**
+
+- Add a new state variable: `isProfileModalOpen` (boolean, default `false`)
+- The PROFILE button sets it to `true`
+- The close button and overlay backdrop click sets it to `false`
+- Render the modal conditionally based on `isProfileModalOpen`
+- The modal sits at a high `z-index` (e.g., `z-index: 1000`) above all content
+- The backdrop uses `position: fixed`, `inset: 0`, `backdrop-filter: blur(10px)`
+
+---
+
+**DO NOT:**
+- Do not move or delete any existing buttons from the main list
+- Do not change any existing function, handler, API call, or state logic
+- Do not duplicate handler logic — import/call the same existing functions inside the modal rows
+- Do not change the overall page layout or scroll behavior
+
+---
+
+**SUMMARY IN ONE LINE:**
+Add a "PROFILE" button that opens a centered blurred-background modal grouping Logo, Name, Opening Hours, Location, and Contact Info — all wired to their existing handlers — without touching anything else.
+
+---

@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react'
 import {
   X, Power, MapPin, Phone, Store, Users, Image,
   Loader2, AlertCircle, CheckCircle2, Check, XCircle, Mail, Clock, UserPlus,
+  User, ChevronRight,
 } from 'lucide-react'
 import { PiPencilCircle } from 'react-icons/pi'
 import AddMembersModal from './AddMembersModal'
@@ -120,6 +121,7 @@ export default function ProfileSlide({
   const [gallerySuccess, setGallerySuccess] = useState(false)
 
   const [showAddMembers, setShowAddMembers] = useState(false)
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false)
 
   const [editingName, setEditingName] = useState(false)
   const [nameInput, setNameInput] = useState(restaurantName || '')
@@ -549,6 +551,25 @@ export default function ProfileSlide({
 
           <div style={{ background: '#E9E9EF', borderRadius: '18px', padding: '8px 10px', marginBottom: '14px' }}>
 
+            {/* PROFILE — opens consolidated modal */}
+            <div
+              onClick={() => setIsProfileModalOpen(true)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '14px',
+                padding: '13px 10px', borderRadius: '12px',
+                background: 'transparent', cursor: 'pointer',
+                marginBottom: '2px', transition: 'background 0.15s',
+              }}
+              onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,0,0,0.04)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+            >
+              <span style={iconWrap}><User size={22} strokeWidth={1.4} /></span>
+              <span style={{ ...rowLabel, flex: 1 }}>PROFILE</span>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#bbb" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="9 18 15 12 9 6" />
+              </svg>
+            </div>
+
             {/* EDIT LOGO */}
             <div onClick={() => { setUploadError(''); fileInputRef.current?.click() }} style={rowStyle}>
               <span style={iconWrap}>
@@ -955,6 +976,134 @@ export default function ProfileSlide({
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         .drum-hide-scrollbar::-webkit-scrollbar { display: none; }
       `}</style>
+
+      {/* Profile modal — consolidated entry to existing handlers */}
+      {isProfileModalOpen && (
+        <div
+          onClick={() => setIsProfileModalOpen(false)}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 1900,
+            background: 'rgba(0,0,0,0.5)',
+            backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: '20px',
+            animation: 'profileBackdropIn 0.2s ease-out',
+          }}
+        >
+          <style>{`
+            @keyframes profileBackdropIn { from { opacity: 0; } to { opacity: 1; } }
+            @keyframes profileModalIn {
+              from { opacity: 0; transform: scale(0.95); }
+              to   { opacity: 1; transform: scale(1); }
+            }
+            .profile-modal-row:hover { background: rgba(0,0,0,0.04) !important; }
+          `}</style>
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              background: '#fff', borderRadius: '20px', padding: '24px',
+              maxWidth: '380px', width: '100%', maxHeight: '85vh', overflowY: 'auto',
+              boxShadow: '0 32px 80px rgba(0,0,0,0.35), 0 8px 24px rgba(0,0,0,0.15)',
+              animation: 'profileModalIn 0.22s cubic-bezier(0.34,1.1,0.64,1)',
+              position: 'relative',
+            }}
+          >
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px' }}>
+              <div style={{ fontWeight: 800, fontSize: '20px', color: '#111', letterSpacing: '0.01em' }}>
+                Profile
+              </div>
+              <button
+                onClick={() => setIsProfileModalOpen(false)}
+                style={{
+                  background: 'rgba(0,0,0,0.07)', border: 'none', borderRadius: '50%',
+                  width: '32px', height: '32px', display: 'flex', alignItems: 'center',
+                  justifyContent: 'center', cursor: 'pointer', color: '#555',
+                }}
+                aria-label="Close"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Rows */}
+            <div style={{ background: '#F0F0F5', borderRadius: '16px', padding: '6px 8px' }}>
+              {[
+                {
+                  key: 'logo',
+                  icon: <PiPencilCircle size={24} strokeWidth={1.2} />,
+                  label: 'LOGO',
+                  onClick: () => {
+                    setIsProfileModalOpen(false)
+                    setUploadError('')
+                    fileInputRef.current?.click()
+                  },
+                },
+                {
+                  key: 'name',
+                  icon: <Store size={22} strokeWidth={1.4} />,
+                  label: 'RESTAURANT NAME',
+                  onClick: () => {
+                    setIsProfileModalOpen(false)
+                    setNameError('')
+                    setEditingName(true)
+                  },
+                },
+                {
+                  key: 'hours',
+                  icon: <Clock size={22} strokeWidth={1.4} />,
+                  label: 'OPENING HOURS',
+                  onClick: () => {
+                    setIsProfileModalOpen(false)
+                    openHoursModal()
+                  },
+                },
+                {
+                  key: 'location',
+                  icon: <MapPin size={22} strokeWidth={1.4} />,
+                  label: 'LOCATION',
+                  onClick: () => {
+                    setIsProfileModalOpen(false)
+                    setAddressError('')
+                    setAddressInput(loadLocationAddress(restaurantId))
+                    setEditingLocation(true)
+                  },
+                },
+                {
+                  key: 'contact',
+                  icon: <Phone size={22} strokeWidth={1.4} />,
+                  label: 'CONTACT INFO',
+                  onClick: () => {
+                    setIsProfileModalOpen(false)
+                    setContactPhoneError('')
+                    setContactEmailError('')
+                    const { phone, email } = loadContact(restaurantId)
+                    setContactPhone(phone)
+                    setContactEmail(email)
+                    setEditingContact(true)
+                  },
+                },
+              ].map(row => (
+                <div
+                  key={row.key}
+                  className="profile-modal-row"
+                  onClick={row.onClick}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '14px',
+                    padding: '13px 10px', borderRadius: '12px',
+                    background: 'transparent', cursor: 'pointer',
+                    transition: 'background 0.15s',
+                  }}
+                >
+                  <span style={iconWrap}>{row.icon}</span>
+                  <span style={{ ...rowLabel, flex: 1 }}>{row.label}</span>
+                  <ChevronRight size={16} color="#bbb" strokeWidth={2.5} />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Logo compression modal */}
       {logoCompressModal && (
