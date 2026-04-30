@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react'
 import {
-  X, Share2, Power, MapPin, Phone, Store, Users, Image,
+  X, Power, MapPin, Phone, Store, Users, Image,
   Loader2, AlertCircle, CheckCircle2, Check, XCircle, Mail, Clock, UserPlus,
 } from 'lucide-react'
 import { PiPencilCircle } from 'react-icons/pi'
@@ -534,9 +534,6 @@ export default function ProfileSlide({
                 </div>
               )}
             </div>
-            <button style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#999', padding: '4px', display: 'flex', alignItems: 'center' }}>
-              <Share2 size={18} strokeWidth={1.6} />
-            </button>
           </div>
         </div>{/* end sticky header */}
 
