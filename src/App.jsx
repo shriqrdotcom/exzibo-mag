@@ -11,9 +11,6 @@ import AdminDashboard from './pages/AdminDashboard'
 import TeamMembers from './pages/TeamMembers'
 import SuperAdminDashboard from './pages/SuperAdminDashboard'
 import TeamMembersAdmin from './pages/TeamMembersAdmin'
-import DemoCreateWebsite from './pages/DemoCreateWebsite'
-import DemoList from './pages/DemoList'
-import DemoDashboard from './pages/DemoDashboard'
 import TablePage from './pages/TablePage'
 import MenuLinkRoute from './pages/MenuLinkRoute'
 import MasterControl from './pages/MasterControl'
@@ -39,10 +36,6 @@ export default function App() {
           <Route path="/restaurant/:slug" element={<RestaurantWebsite />} />
           <Route path="/restaurant/:slug/food/:itemName" element={<FoodDetail />} />
           <Route path="/r/:slug" element={<RestaurantWebsite />} />
-          <Route path="/demo/create" element={<DemoCreateWebsite />} />
-          <Route path="/demo/list" element={<DemoList />} />
-          <Route path="/demo/dashboard" element={<DemoDashboard />} />
-          <Route path="/demo/dashboard/:id" element={<DemoDashboard />} />
           <Route path="/table" element={<TablePage />} />
           <Route path="/menu/:linkName/:tableNumber" element={<MenuLinkRoute />} />
           <Route path="/menu/:linkName" element={<MenuLinkRoute />} />

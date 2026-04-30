@@ -265,10 +265,7 @@ export default function AdminDashboard() {
   const [logoUrl, setLogoUrl] = useState(() => {
     if (!id || id === 'default') return localStorage.getItem('exzibo_logo_default') || ''
     try {
-      const all = [
-        ...JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]'),
-        ...JSON.parse(localStorage.getItem('exzibo_demo_restaurants') || '[]'),
-      ]
+      const all = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
       return all.find(r => r.id === id)?.logo || ''
     } catch { return '' }
   })
@@ -320,10 +317,7 @@ export default function AdminDashboard() {
       setBookings(loadBookings('demo'))
       return
     }
-    const all = [
-      ...JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]'),
-      ...JSON.parse(localStorage.getItem('exzibo_demo_restaurants') || '[]'),
-    ]
+    const all = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
     const found = all.find(r => r.id === id)
     if (!found) { navigate('/restaurants'); return }
     setRestaurant(found)
@@ -2380,10 +2374,7 @@ function SettingsPanel({ draft, setDraft, accentStart, accentEnd, onSave, saved,
     try {
       // Load social links (non-demo only)
       if (restaurantId !== 'demo') {
-        const all = [
-          ...JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]'),
-          ...JSON.parse(localStorage.getItem('exzibo_demo_restaurants') || '[]'),
-        ]
+        const all = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
         const found = all.find(r => r.id === restaurantId)
         if (found?.socialLinks) setSocialLinks(prev => ({ ...prev, ...found.socialLinks }))
         if (found?.googleReview) setGoogleReview(found.googleReview)
@@ -2802,15 +2793,12 @@ function SettingsPanel({ draft, setDraft, accentStart, accentEnd, onSave, saved,
             try {
               localStorage.setItem(aboutKey, JSON.stringify({ description: aboutText, image: aboutImage }))
             } catch {}
-            // Save social links to restaurant record (main or demo)
+            // Save social links to restaurant record
             if (restaurantId && restaurantId !== 'demo') {
               try {
                 const mainList = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
                 if (mainList.find(r => r.id === restaurantId)) {
                   localStorage.setItem('exzibo_restaurants', JSON.stringify(mainList.map(r => r.id === restaurantId ? { ...r, socialLinks, googleReview } : r)))
-                } else {
-                  const demoList = JSON.parse(localStorage.getItem('exzibo_demo_restaurants') || '[]')
-                  localStorage.setItem('exzibo_demo_restaurants', JSON.stringify(demoList.map(r => r.id === restaurantId ? { ...r, socialLinks, googleReview } : r)))
                 }
               } catch {}
             }

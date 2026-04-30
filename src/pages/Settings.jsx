@@ -429,8 +429,7 @@ export default function Settings() {
     const load = () => {
       try {
         const main = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
-        const demo = JSON.parse(localStorage.getItem('exzibo_demo_restaurants') || '[]')
-        setRestaurants([...main, ...demo])
+        setRestaurants(main)
       } catch {
         setRestaurants([])
       }
@@ -519,11 +518,9 @@ export default function Settings() {
       } catch {}
     }
     updateList('exzibo_restaurants')
-    updateList('exzibo_demo_restaurants')
 
     const main = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
-    const demo = JSON.parse(localStorage.getItem('exzibo_demo_restaurants') || '[]')
-    setRestaurants([...main, ...demo])
+    setRestaurants(main)
     setEditingRestaurant(false)
     setEditError('')
     setRestaurantSaved(true)
