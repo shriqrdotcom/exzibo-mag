@@ -933,7 +933,7 @@ export default function ProfileSlide({
               {[
                 {
                   key: 'logo',
-                  icon: <UserX size={24} strokeWidth={1.8} />,
+                  icon: <User size={24} strokeWidth={1.8} />,
                   label: 'Logo',
                   desc: 'Update your restaurant logo',
                   onClick: () => {
