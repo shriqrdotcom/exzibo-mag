@@ -510,12 +510,12 @@ export default function ProfileSlide({
             display: 'flex', alignItems: 'center', gap: '14px',
             boxShadow: '0 1px 6px rgba(0,0,0,0.06)',
           }}>
-            <div onClick={() => fileInputRef.current?.click()} title="Click to change logo" style={{
+            <div style={{
               width: '52px', height: '52px', borderRadius: '50%',
               background: 'linear-gradient(135deg, #7C3AED 0%, #5B21B6 100%)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               color: '#fff', fontWeight: 800, fontSize: '20px', letterSpacing: '0.03em',
-              flexShrink: 0, cursor: 'pointer', overflow: 'hidden', position: 'relative',
+              flexShrink: 0, overflow: 'hidden', position: 'relative',
             }}>
               {previewUrl
                 ? <img src={previewUrl} alt="logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
