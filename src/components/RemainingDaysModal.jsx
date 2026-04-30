@@ -41,12 +41,14 @@ export default function RemainingDaysModal({
         style={{
           background: '#fff',
           borderRadius: '24px',
-          width: '100%', maxWidth: '480px',
-          padding: '32px',
+          width: '100%', maxWidth: '560px',
+          maxHeight: '92vh', overflowY: 'auto',
+          padding: '28px 32px',
           boxShadow: '0 25px 70px rgba(0,0,0,0.35)',
           position: 'relative',
           color: '#111',
           fontFamily: 'inherit',
+          boxSizing: 'border-box',
         }}
       >
         {/* Close button */}
@@ -69,8 +71,8 @@ export default function RemainingDaysModal({
 
         {/* Title */}
         <h2 style={{
-          margin: '0 0 10px',
-          fontSize: '28px', fontWeight: 800,
+          margin: '0 0 8px',
+          fontSize: '26px', fontWeight: 800,
           color: '#0E1B2A', letterSpacing: '-0.02em',
           lineHeight: 1.1,
         }}>
@@ -79,10 +81,10 @@ export default function RemainingDaysModal({
 
         {/* Subtitle */}
         <p style={{
-          margin: '0 0 24px',
-          fontSize: '14px', lineHeight: 1.5,
+          margin: '0 0 18px',
+          fontSize: '13.5px', lineHeight: 1.5,
           color: '#5b6675',
-          maxWidth: '380px',
+          maxWidth: '420px',
         }}>
           <span style={{ fontWeight: 700, color: '#3a4150' }}>Stay</span>{' '}
           active and uninterrupted. Renew your plan to keep your restaurant running smoothly.
@@ -93,8 +95,8 @@ export default function RemainingDaysModal({
           background: GREEN_TINT,
           border: `1px solid ${GREEN_LIGHT}`,
           borderRadius: '16px',
-          padding: '18px 20px',
-          marginBottom: '14px',
+          padding: '14px 18px',
+          marginBottom: '12px',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           gap: '12px',
         }}>
@@ -132,14 +134,14 @@ export default function RemainingDaysModal({
           background: '#fff',
           border: '1px solid #ECECEC',
           borderRadius: '16px',
-          padding: '16px 18px',
-          marginBottom: '14px',
+          padding: '14px 16px',
+          marginBottom: '12px',
           display: 'flex', alignItems: 'stretch',
-          gap: '12px',
+          gap: '10px',
         }}>
-          <DateBlock label="Starting Date" value={startDate} align="left" />
+          <DateBlock label="Starting Date" value={startDate} />
           <div style={{ width: '1px', background: '#ECECEC' }} />
-          <DateBlock label="Ending Date" value={endDate} align="left" />
+          <DateBlock label="Ending Date" value={endDate} />
         </div>
 
         {/* Days left card */}
@@ -147,36 +149,36 @@ export default function RemainingDaysModal({
           background: GREEN_TINT,
           border: `1px solid ${GREEN_LIGHT}`,
           borderRadius: '16px',
-          padding: '20px',
-          marginBottom: '20px',
-          display: 'flex', alignItems: 'center', gap: '16px',
+          padding: '18px',
+          marginBottom: '18px',
+          display: 'flex', alignItems: 'center', gap: '14px',
         }}>
           <div style={{
-            width: '64px', height: '64px', borderRadius: '50%',
+            width: '58px', height: '58px', borderRadius: '50%',
             background: '#fff',
             border: `1.5px solid ${GREEN_LIGHT}`,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             color: GREEN, flexShrink: 0,
           }}>
-            <Hourglass size={28} strokeWidth={1.6} />
+            <Hourglass size={26} strokeWidth={1.6} />
           </div>
           <div style={{ minWidth: 0, flex: 1 }}>
             <div style={{
               fontSize: '11px', fontWeight: 700,
               letterSpacing: '0.12em', textTransform: 'uppercase',
-              color: GREEN, marginBottom: '4px',
+              color: GREEN, marginBottom: '2px',
             }}>
               How Many Days Left
             </div>
             <div style={{
-              fontSize: '32px', fontWeight: 800,
-              color: GREEN, lineHeight: 1.05, marginBottom: '6px',
+              fontSize: '28px', fontWeight: 800,
+              color: GREEN, lineHeight: 1.05, marginBottom: '4px',
               letterSpacing: '-0.01em',
             }}>
               {daysLeft} Days
             </div>
             <div style={{
-              fontSize: '13px', lineHeight: 1.45,
+              fontSize: '12.5px', lineHeight: 1.4,
               color: '#5b6675',
             }}>
               Renew before your plan expires to avoid any service interruption.
@@ -212,26 +214,28 @@ export default function RemainingDaysModal({
 
 function DateBlock({ label, value }) {
   return (
-    <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
+    <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
       <div style={{
-        width: '40px', height: '40px', borderRadius: '50%',
+        width: '36px', height: '36px', borderRadius: '50%',
         background: GREEN_LIGHT, color: GREEN,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         flexShrink: 0,
       }}>
-        <Calendar size={18} strokeWidth={1.8} />
+        <Calendar size={16} strokeWidth={1.8} />
       </div>
       <div style={{ minWidth: 0 }}>
         <div style={{
           fontSize: '10px', fontWeight: 700,
-          letterSpacing: '0.12em', textTransform: 'uppercase',
-          color: '#7a8493', marginBottom: '3px',
+          letterSpacing: '0.1em', textTransform: 'uppercase',
+          color: '#7a8493', marginBottom: '2px',
+          whiteSpace: 'nowrap',
         }}>
           {label}
         </div>
         <div style={{
-          fontSize: '15px', fontWeight: 800,
+          fontSize: '14px', fontWeight: 800,
           color: '#0E1B2A',
+          whiteSpace: 'nowrap',
         }}>
           {value}
         </div>
