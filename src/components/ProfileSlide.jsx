@@ -886,27 +886,28 @@ export default function ProfileSlide({
           <div
             onClick={e => e.stopPropagation()}
             style={{
-              background: '#fff', borderRadius: '24px', padding: '32px',
-              maxWidth: '520px', width: '100%', maxHeight: '88vh', overflowY: 'auto',
+              background: '#fff', borderRadius: '24px', padding: '26px 28px',
+              maxWidth: '560px', width: '100%', maxHeight: '92vh', overflowY: 'auto',
               boxShadow: '0 32px 80px rgba(0,0,0,0.35), 0 8px 24px rgba(0,0,0,0.15)',
               animation: 'profileModalIn 0.22s cubic-bezier(0.34,1.1,0.64,1)',
               position: 'relative',
+              boxSizing: 'border-box',
             }}
           >
             {/* Header */}
-            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '24px', gap: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '18px', gap: '12px' }}>
               <div>
                 <h2 style={{
-                  margin: '0 0 8px',
-                  fontWeight: 800, fontSize: '30px',
+                  margin: '0 0 6px',
+                  fontWeight: 800, fontSize: '26px',
                   color: '#0E1B2A', letterSpacing: '-0.02em', lineHeight: 1.1,
                 }}>
                   Profile
                 </h2>
                 <p style={{
                   margin: 0,
-                  fontSize: '14px', lineHeight: 1.5,
-                  color: '#6b7380', maxWidth: '320px',
+                  fontSize: '13.5px', lineHeight: 1.5,
+                  color: '#6b7380', maxWidth: '360px',
                 }}>
                   Manage your restaurant information and account settings.
                 </p>
@@ -996,8 +997,8 @@ export default function ProfileSlide({
                   className="profile-modal-row"
                   onClick={row.onClick}
                   style={{
-                    display: 'flex', alignItems: 'center', gap: '16px',
-                    padding: '16px 8px',
+                    display: 'flex', alignItems: 'center', gap: '14px',
+                    padding: '12px 8px',
                     borderBottom: idx < arr.length - 1 ? '1px solid #EFEFF2' : 'none',
                     background: 'transparent', cursor: 'pointer',
                     transition: 'background 0.15s',
@@ -1005,8 +1006,8 @@ export default function ProfileSlide({
                   }}
                 >
                   <span style={{
-                    width: '52px', height: '52px',
-                    background: '#F2F2F4', borderRadius: '14px',
+                    width: '46px', height: '46px',
+                    background: '#F2F2F4', borderRadius: '12px',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     color: '#222', flexShrink: 0,
                   }}>
@@ -1014,19 +1015,19 @@ export default function ProfileSlide({
                   </span>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{
-                      fontSize: '17px', fontWeight: 800,
+                      fontSize: '16px', fontWeight: 800,
                       color: '#0E1B2A', letterSpacing: '-0.01em',
-                      marginBottom: '3px',
+                      marginBottom: '2px',
                     }}>
                       {row.label}
                     </div>
                     <div style={{
-                      fontSize: '13.5px', color: '#7a8493', lineHeight: 1.4,
+                      fontSize: '12.5px', color: '#7a8493', lineHeight: 1.4,
                     }}>
                       {row.desc}
                     </div>
                   </div>
-                  <ChevronRight size={20} color="#bbb" strokeWidth={2.2} />
+                  <ChevronRight size={18} color="#bbb" strokeWidth={2.2} />
                 </div>
               ))}
             </div>
