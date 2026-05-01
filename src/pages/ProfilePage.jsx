@@ -72,46 +72,43 @@ export default function ProfilePage() {
           position: 'sticky',
           top: 0,
           zIndex: 10,
-          background: 'rgba(242,242,247,0.92)',
-          backdropFilter: 'blur(12px)',
-          WebkitBackdropFilter: 'blur(12px)',
-          paddingTop: '48px',
-          paddingBottom: '10px',
+          background: '#F2F2F7',
+          padding: '16px 20px 14px',
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'center',
+          gap: '14px',
           flexShrink: 0,
-          borderBottom: '1px solid rgba(0,0,0,0.08)',
+          borderBottom: '1px solid rgba(0,0,0,0.07)',
         }}>
-          {/* Back arrow — absolute left */}
+          {/* Back arrow in gray circle */}
           <button
             onClick={() => navigate(-1)}
             style={{
-              position: 'absolute',
-              left: '16px',
-              background: 'none',
+              width: '38px',
+              height: '38px',
+              borderRadius: '50%',
+              background: '#E5E5EA',
               border: 'none',
-              padding: '4px',
               display: 'flex',
               alignItems: 'center',
+              justifyContent: 'center',
               cursor: 'pointer',
-              color: '#6B46C1',
-              gap: '2px',
+              flexShrink: 0,
             }}
             aria-label="Go back"
           >
-            <svg width="10" height="17" viewBox="0 0 10 17" fill="none">
-              <polyline points="9 1 1 8.5 9 16" stroke="#6B46C1" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+            <svg width="11" height="18" viewBox="0 0 11 18" fill="none">
+              <polyline points="9 1 1 9 9 17" stroke="#333" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
-            <span style={{ fontSize: '17px', fontWeight: 400, color: '#6B46C1', lineHeight: 1 }}>Back</span>
           </button>
 
-          {/* Centered title */}
+          {/* Title — left-aligned next to the arrow */}
           <span style={{
-            fontWeight: 600,
-            fontSize: '17px',
-            color: '#000',
-            letterSpacing: '-0.01em',
+            fontWeight: 800,
+            fontSize: '22px',
+            color: '#111',
+            letterSpacing: '-0.02em',
+            lineHeight: 1,
           }}>
             Profile
           </span>
