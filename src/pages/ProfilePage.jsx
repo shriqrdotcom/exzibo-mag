@@ -41,9 +41,7 @@ export default function ProfilePage() {
   }, [restaurantId])
 
   function handleTeamClick() {
-    if (id && id !== 'default') {
-      navigate(`/admin/${id}/team`)
-    }
+    navigate(`/admin/${id || 'default'}/team`)
   }
 
   return (
@@ -123,7 +121,7 @@ export default function ProfilePage() {
             onLogoUpdate={url => setLogoUrl(url)}
             restaurantName={restaurantName}
             onNameUpdate={name => setRestaurantName(name)}
-            onTeamClick={id && id !== 'default' ? handleTeamClick : undefined}
+            onTeamClick={handleTeamClick}
           />
         </div>
       </div>
