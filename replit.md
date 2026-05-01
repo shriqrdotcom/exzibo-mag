@@ -1,63 +1,37 @@
-# CRIMSONLUXE
+# CRIMSONLUXE — Luxury Restaurant Management SaaS
 
-A luxury dark-themed restaurant management web platform with a cinematic, premium aesthetic.
+## Overview
+A high-fidelity frontend prototype for a luxury dark-themed restaurant management SaaS platform. Features a cinematic, premium aesthetic (obsidian black and crimson red) and provides interfaces for Super Admins, Restaurant Owners (Admins), and customers.
 
-## Architecture
+## Tech Stack
+- **Framework**: React 19 + Vite
+- **Routing**: React Router DOM v7
+- **Icons**: Lucide React, React Icons
+- **Styling**: Plain CSS (glassmorphism, dark theme, crimson accents)
+- **Other**: Leaflet (maps), react-image-crop
 
-- **Frontend**: React + Vite (single-page app, no backend)
-- **Routing**: React Router DOM
-- **Icons**: Lucide React
-- **Port**: 5000 (dev server)
+## Project Structure
+- `src/pages/` — Main view components (Landing, AdminDashboard, SuperAdminDashboard, RestaurantWebsite, etc.)
+- `src/components/` — Reusable UI elements (Sidebar, AdminHeader, PermissionGate, modals)
+- `src/context/` — React Context providers (RoleContext for RBAC, AnalyticsContext)
+- `src/lib/` — Utilities (local notification system via localStorage)
+- `public/` — Static assets (menu images, icons)
+- `attached_assets/` — Design references and screenshots
 
-## Pages
+## Data & Auth
+- **No backend** — all data is persisted via localStorage or hardcoded in contexts
+- **No external auth** — roles managed via RoleContext (Super Admin, Admin, Manager, Staff, Customer)
+- **No external integrations** — fully self-contained frontend
 
-| Route | File | Description |
-|-------|------|-------------|
-| `/` | `Landing.jsx` | Landing page — cinematic hero with CTA buttons |
-| `/dashboard` | `Dashboard.jsx` | Super admin dashboard with KPI cards and enterprise partners table |
-| `/admin/:id` | `AdminDashboard.jsx` | **DEFAULT ADMIN PANEL** — per-restaurant admin with Orders, Bookings, Menu, Analytics tabs (mobile-first, light theme, bottom nav bar) |
-| `/admin/:id/team` | `TeamMembers.jsx` | Restaurant-specific team view with active/inactive toggles |
-| `/super-admin` | `SuperAdminDashboard.jsx` | Super admin staff management (add/edit/delete staff across all restaurants) |
-| `/team-members` | `TeamMembersAdmin.jsx` | Team members admin view with per-restaurant role management and role-based preview mode |
-| `/settings` | `Settings.jsx` | Profile, security, preferences, session management |
-| `/create-website` | `CreateWebsite.jsx` | Deployment console for onboarding new restaurants |
-| `/restaurant/:slug` | `RestaurantWebsite.jsx` | Customer-facing restaurant website/menu |
-| `/restaurant/:slug/food/:itemName` | `FoodDetail.jsx` | Premium dark-theme food detail page |
+## Running
+- Dev server: `npm run dev` (port 5000, host 0.0.0.0)
+- Build: `npm run build`
+- Vite config: `allowedHosts: true` for Replit proxy compatibility
 
-## Key Terminology
-
-- **"Default Admin Panel"** → `src/pages/AdminDashboard.jsx` at route `/admin/:id`. Mobile-first light-theme UI with bottom navigation bar (Orders, Bookings, Menu, Analytics, Settings tabs). This is the per-restaurant admin interface seen by restaurant owners/managers.
-- **"Super Admin Dashboard"** → `src/pages/SuperAdminDashboard.jsx` at `/super-admin`. Manages all staff across all restaurants.
-- **"Dashboard"** → `src/pages/Dashboard.jsx` at `/dashboard`. Top-level admin view with KPI cards.
-
-## Role-Based Access
-
-- **RoleContext** (`src/context/RoleContext.jsx`) — manages preview role state (owner/manager/staff)
-- **PermissionGate** (`src/components/PermissionGate.jsx`) — conditionally renders nav items by role
-- **RoleBanner** (`src/components/RoleBanner.jsx`) — shown in AdminHeader when previewing a role
-
-## Design System
-
-- **Background**: `#0A0A0A` (obsidian black)
-- **Primary Accent**: `#E8321A` (crimson red)
-- **Typography**: Inter (bold headings, clean body)
-- **UI**: Glassmorphism, rounded cards (18-24px radius), glow effects
-- **Animations**: Fade-in, pulse glow, hover transitions
-
-## Notification System
-
-Frontend-only notification system for sending messages from Master Control to Admin/Manager/Staff dashboards.
-
-- **Module**: `src/lib/notifications.js` — all storage + business logic.
-- **Send UI**: Black `Send` button in AdminDashboard header (only when `?from=master`). Opens modal with TOPIC + MESSAGE + role checkboxes (Admin/Manager/Staff).
-- **Popup**: Auto-shown on dashboard open for the next unconfirmed notification matching the user's role. Confirm marks it confirmed; X dismisses for the session only.
-- **Bell**: Header bell icon (only when NOT `?from=master`) with red unread badge. Opens dropdown listing confirmed notifications from the last 24 hours.
-- **Storage**: `exzibo_notifications`, `exzibo_notification_reads`, `exzibo_browser_id`, `exzibo_bell_last_opened`. 24-hour expiry pruned on access. Cross-tab sync via `storage` event + custom `exzibo-notifications-changed` event.
-- **User identity**: `${browserUuid}::${role}` so each role on the same browser has independent confirm state. `owner`/null role mapped to `admin` for receiving.
-
-## Commands
-
-```bash
-npm run dev    # Start dev server on port 5000
-npm run build  # Production build
-```
+## Routes
+- `/` — Landing page
+- `/dashboard` — Super Admin dashboard
+- `/super-admin` — Super Admin panel
+- `/admin/:id` — Restaurant Admin panel (orders, bookings, menu, analytics)
+- `/master-control` — Master control panel
+- `/restaurant/:slug` — Customer-facing restaurant website
