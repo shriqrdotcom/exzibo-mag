@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { ArrowRight, Store, Wrench, Bell, User, Search, Palette, X, ExternalLink, LayoutDashboard } from 'lucide-react'
-import ProfileSlide from '../components/ProfileSlide'
 
 const THEMES = [
   {
@@ -72,7 +71,6 @@ export default function Landing() {
   const [loaded, setLoaded] = useState(false)
   const [showThemes, setShowThemes] = useState(false)
   const [selectedTheme, setSelectedTheme] = useState(null)
-  const [showProfile, setShowProfile] = useState(false)
 
   useEffect(() => {
     setTimeout(() => setLoaded(true), 100)
@@ -109,7 +107,7 @@ export default function Landing() {
           </div>
           <button style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer' }}><Bell size={18} /></button>
           <button
-            onClick={() => setShowProfile(true)}
+            onClick={() => navigate('/profile')}
             style={{
               background: 'rgba(255,255,255,0.06)',
               border: '1px solid rgba(255,255,255,0.08)',
@@ -182,12 +180,6 @@ export default function Landing() {
         </div>
       </main>
 
-      <ProfileSlide
-        open={showProfile}
-        onClose={() => setShowProfile(false)}
-        restaurantId="default"
-        restaurantName="Exzibo Admin"
-      />
 
 
       {/* ── THEMES MODAL ── */}

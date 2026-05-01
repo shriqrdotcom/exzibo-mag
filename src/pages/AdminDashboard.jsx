@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useAnalytics, notifyAnalyticsUpdate } from '../context/AnalyticsContext'
 import { useRole } from '../context/RoleContext'
-import ProfileSlide from '../components/ProfileSlide'
 import notificationIconImg from '@assets/image_1777373928129.png'
 import {
   NOTIFY_ROLES,
@@ -260,7 +259,6 @@ export default function AdminDashboard() {
   const [showMenuSearch, setShowMenuSearch] = useState(false)
   const [menuSearch, setMenuSearch] = useState('')
   const menuSearchRef = useRef(null)
-  const [profileOpen, setProfileOpen] = useState(false)
   const [overrideName, setOverrideName] = useState('')
   const [logoUrl, setLogoUrl] = useState(() => {
     if (!id || id === 'default') return localStorage.getItem('exzibo_logo_default') || ''
@@ -699,7 +697,7 @@ export default function AdminDashboard() {
               <ArrowLeft size={16} />
             </button>
             <div
-              onClick={() => hasPermission('profile') && setProfileOpen(true)}
+              onClick={() => hasPermission('profile') && navigate(`/admin/${id || 'default'}/profile`)}
               style={{
                 width: '44px', height: '44px', borderRadius: '14px',
                 background: `linear-gradient(135deg, ${accentStart}, ${accentEnd})`,
@@ -1257,16 +1255,6 @@ export default function AdminDashboard() {
         })}
       </div>
 
-      <ProfileSlide
-        open={profileOpen}
-        onClose={() => setProfileOpen(false)}
-        restaurantId={isDefault ? 'default' : id}
-        logoUrl={logoUrl}
-        onLogoUpdate={url => setLogoUrl(url)}
-        restaurantName={displayName}
-        onNameUpdate={name => setOverrideName(name)}
-        onTeamClick={() => { setProfileOpen(false); navigate(`/admin/${id || 'default'}/team`) }}
-      />
 
       {fromMaster && masterMsgOpen && (
         <MasterMessageModal

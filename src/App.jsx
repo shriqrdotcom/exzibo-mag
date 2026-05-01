@@ -14,6 +14,7 @@ import TeamMembersAdmin from './pages/TeamMembersAdmin'
 import TablePage from './pages/TablePage'
 import MenuLinkRoute from './pages/MenuLinkRoute'
 import MasterControl from './pages/MasterControl'
+import ProfilePage from './pages/ProfilePage'
 import { AnalyticsProvider } from './context/AnalyticsContext'
 import { RoleProvider } from './context/RoleContext'
 
@@ -28,6 +29,8 @@ export default function App() {
           <Route path="/master-control" element={<MasterControl />} />
           <Route path="/admin/:id" element={<AdminDashboard />} />
           <Route path="/admin/:id/team" element={<TeamMembers />} />
+          <Route path="/admin/:id/profile" element={<ProfilePage />} />
+          <Route path="/profile" element={<ProfilePage />} />
           <Route path="/super-admin" element={<SuperAdminDashboard />} />
           <Route path="/team-members" element={<TeamMembersAdmin />} />
           <Route path="/settings" element={<Settings />} />

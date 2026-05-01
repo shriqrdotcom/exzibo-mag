@@ -99,6 +99,7 @@ export default function ProfileSlide({
   restaurantId, logoUrl, onLogoUpdate,
   restaurantName, onNameUpdate,
   onTeamClick,
+  asPage = false,
 }) {
   const fileInputRef = useRef(null)
   const carouselInputRef = useRef(null)
@@ -304,6 +305,7 @@ export default function ProfileSlide({
   }, [restaurantId])
 
   useEffect(() => {
+    if (asPage) return
     if (open) {
       document.body.style.overflow = 'hidden'
     } else {
@@ -314,7 +316,7 @@ export default function ProfileSlide({
       setEditingLocation(false); setAddressError(''); setLocationSuccess(false)
     }
     return () => { document.body.style.overflow = '' }
-  }, [open])
+  }, [open, asPage])
 
   useEffect(() => { if (editingName) setTimeout(() => nameInputRef.current?.focus(), 60) }, [editingName])
   useEffect(() => { if (editingContact) setTimeout(() => phoneInputRef.current?.focus(), 60) }, [editingContact])
@@ -469,16 +471,21 @@ export default function ProfileSlide({
         onChange={e => { const f = e.target.files?.[0]; if (f) handleLogoUpload(f); e.target.value = '' }}
       />
 
-      <div onClick={onClose} style={{
-        position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000,
-        opacity: open ? 1 : 0, pointerEvents: open ? 'all' : 'none',
-        transition: 'opacity 0.3s ease',
-        backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
-      }} />
+      {!asPage && (
+        <div onClick={onClose} style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000,
+          opacity: open ? 1 : 0, pointerEvents: open ? 'all' : 'none',
+          transition: 'opacity 0.3s ease',
+        }} />
+      )}
 
       <div
-        onClick={e => e.stopPropagation()}
-        style={{
+        onClick={asPage ? undefined : e => e.stopPropagation()}
+        style={asPage ? {
+          background: '#EFEFF4',
+          display: 'flex', flexDirection: 'column',
+          flex: 1,
+        } : {
           position: 'fixed',
           top: '50%', left: '50%',
           width: '380px', maxWidth: '92vw',
@@ -497,22 +504,24 @@ export default function ProfileSlide({
       >
         {/* Sticky header */}
         <div style={{
-          padding: '20px 16px 14px',
+          padding: asPage ? '16px 16px 14px' : '20px 16px 14px',
           background: '#EFEFF4',
-          borderRadius: '28px 28px 0 0',
+          borderRadius: asPage ? 0 : '28px 28px 0 0',
           flexShrink: 0,
           zIndex: 2,
         }}>
-          {/* Close */}
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '8px' }}>
-            <button onClick={onClose} style={{
-              background: 'rgba(0,0,0,0.07)', border: 'none', borderRadius: '50%',
-              width: '32px', height: '32px', display: 'flex', alignItems: 'center',
-              justifyContent: 'center', cursor: 'pointer', color: '#555',
-            }}>
-              <X size={16} />
-            </button>
-          </div>
+          {/* Close — modal mode only */}
+          {!asPage && (
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '8px' }}>
+              <button onClick={onClose} style={{
+                background: 'rgba(0,0,0,0.07)', border: 'none', borderRadius: '50%',
+                width: '32px', height: '32px', display: 'flex', alignItems: 'center',
+                justifyContent: 'center', cursor: 'pointer', color: '#555',
+              }}>
+                <X size={16} />
+              </button>
+            </div>
+          )}
 
           {/* Profile card */}
           <div style={{
@@ -550,7 +559,7 @@ export default function ProfileSlide({
         </div>{/* end sticky header */}
 
         {/* Scrollable body */}
-        <div style={{ overflowY: 'auto', flex: 1, padding: '0 16px 32px' }}>
+        <div style={asPage ? { overflowY: 'auto', padding: '0 16px 48px' } : { overflowY: 'auto', flex: 1, padding: '0 16px 32px' }}>
 
           {/* Status banners */}
           {uploadError && <StatusMsg type="error"><AlertCircle size={14} />{uploadError}</StatusMsg>}
