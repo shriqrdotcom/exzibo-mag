@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { useRole } from '../context/RoleContext'
 import {
   X, Power, MapPin, Phone, Store, Users, Image,
   Loader2, AlertCircle, CheckCircle2, Check, XCircle, Mail, Clock, UserPlus,
@@ -126,6 +127,8 @@ export default function ProfileSlide({
   const [showAddMembers, setShowAddMembers] = useState(false)
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false)
   const [showRemainingDays, setShowRemainingDays] = useState(false)
+  const { activeRole } = useRole()
+  const isAdmin = !activeRole || activeRole === 'owner' || activeRole === 'admin'
 
   const subscriptionInfo = {
     planName: 'Growth',
@@ -658,25 +661,29 @@ export default function ProfileSlide({
             {/* Divider */}
             {asPage && <div style={{ height: '1px', background: '#E5E5EA', marginLeft: '52px' }} />}
 
-            {/* ADD MEMBERS */}
-            <div
-              onClick={() => setShowAddMembers(true)}
-              style={{
-                ...rowStyle,
-                cursor: 'pointer',
-                borderRadius: asPage ? 0 : '12px',
-                transition: 'background 0.15s',
-              }}
-              onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,0,0,0.04)'}
-              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-            >
-              <span style={iconWrap}><UserPlus size={20} strokeWidth={1.5} /></span>
-              <span style={{ ...rowLabel, flex: 1 }}>ADD MEMBERS</span>
-              <ChevronRight size={16} color="#C7C7CC" strokeWidth={2.5} />
-            </div>
+            {!isAdmin && (
+              <>
+                {/* ADD MEMBERS */}
+                <div
+                  onClick={() => setShowAddMembers(true)}
+                  style={{
+                    ...rowStyle,
+                    cursor: 'pointer',
+                    borderRadius: asPage ? 0 : '12px',
+                    transition: 'background 0.15s',
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,0,0,0.04)'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                >
+                  <span style={iconWrap}><UserPlus size={20} strokeWidth={1.5} /></span>
+                  <span style={{ ...rowLabel, flex: 1 }}>ADD MEMBERS</span>
+                  <ChevronRight size={16} color="#C7C7CC" strokeWidth={2.5} />
+                </div>
 
-            {/* Divider */}
-            {asPage && <div style={{ height: '1px', background: '#E5E5EA', marginLeft: '52px' }} />}
+                {/* Divider */}
+                {asPage && <div style={{ height: '1px', background: '#E5E5EA', marginLeft: '52px' }} />}
+              </>
+            )}
 
             {/* REMAINING DAYS */}
             <div
