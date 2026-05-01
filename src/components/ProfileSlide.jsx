@@ -878,9 +878,10 @@ export default function ProfileSlide({
           onClick={() => setIsProfileModalOpen(false)}
           style={{
             position: 'fixed', inset: 0, zIndex: 9998,
-            background: 'rgba(0,0,0,0.55)',
+            background: 'rgba(0,0,0,0.4)',
+            backdropFilter: 'blur(6px)',
+            WebkitBackdropFilter: 'blur(6px)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            padding: '20px',
             animation: 'profileBackdropIn 0.2s ease-out',
           }}
         >
@@ -895,8 +896,8 @@ export default function ProfileSlide({
           <div
             onClick={e => e.stopPropagation()}
             style={{
-              background: '#fff', borderRadius: '24px', padding: '26px 28px',
-              maxWidth: '560px', width: '100%', maxHeight: '92vh', overflowY: 'auto',
+              background: '#fff', borderRadius: '20px', padding: '24px',
+              maxWidth: '420px', width: '90%', maxHeight: '92vh', overflowY: 'auto',
               boxShadow: '0 32px 80px rgba(0,0,0,0.35), 0 8px 24px rgba(0,0,0,0.15)',
               animation: 'profileModalIn 0.22s cubic-bezier(0.34,1.1,0.64,1)',
               position: 'relative',
