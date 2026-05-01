@@ -21,9 +21,12 @@ import {
   Palette, DollarSign, Type, Save, Check, CalendarDays, UtensilsCrossed,
   SlidersHorizontal, Plus, Pencil, Trash2, X, Search, ChevronDown,
   Tag, Info, Share2, Globe, Eye, EyeOff, Send, Bell,
+  Image as ImageIcon, AlertCircle, CheckCircle2,
 } from 'lucide-react'
 import { FaFacebook, FaInstagram, FaLinkedinIn, FaYoutube } from 'react-icons/fa'
 import { FaXTwitter } from 'react-icons/fa6'
+
+const MAX_GALLERY = 10
 
 const GLOBAL_CONFIG_KEY = 'exzibo_admin_global_config'
 
@@ -2337,6 +2340,67 @@ function SettingsPanel({ draft, setDraft, accentStart, accentEnd, onSave, saved,
   const [aboutText, setAboutText] = useState('')
   const [aboutImage, setAboutImage] = useState('')
   const fileInputRef = useRef(null)
+
+  const carouselInputRef = useRef(null)
+  const [carouselImages, setCarouselImages] = useState([])
+  const [carouselIdx, setCarouselIdx] = useState(0)
+  const [galleryError, setGalleryError] = useState('')
+  const [galleryCompressing, setGalleryCompressing] = useState(false)
+  const [gallerySuccess, setGallerySuccess] = useState(false)
+  const [descText, setDescText] = useState('')
+  const [badgeText, setBadgeText] = useState('')
+
+  useEffect(() => {
+    const key = `exzibo_carousel_${restaurantId || 'default'}`
+    try {
+      const stored = JSON.parse(localStorage.getItem(key) || '[]')
+      setCarouselImages(Array.isArray(stored) ? stored : [])
+    } catch { setCarouselImages([]) }
+    setCarouselIdx(0)
+    setDescText(localStorage.getItem(`exzibo_carousel_desc_${restaurantId || 'default'}`) || '')
+    setBadgeText(localStorage.getItem(`exzibo_carousel_badge_${restaurantId || 'default'}`) || '')
+  }, [restaurantId])
+
+  async function handleCarouselFiles(files) {
+    setGalleryError(''); setGallerySuccess(false)
+    const allowed = ['image/jpeg', 'image/png', 'image/webp']
+    const valid = Array.from(files).filter(f => allowed.includes(f.type))
+    if (!valid.length) { setGalleryError('Only JPG, PNG, or WEBP images are supported.'); return }
+    const currentCount = carouselImages.length
+    if (currentCount >= MAX_GALLERY) { setGalleryError(`Maximum ${MAX_GALLERY} images allowed.`); return }
+    const canAdd = MAX_GALLERY - currentCount
+    const toProcess = valid.slice(0, canAdd)
+    setGalleryCompressing(true)
+    try {
+      const results = await Promise.all(toProcess.map(async f => {
+        const src = await fileToBase64(f)
+        if (f.size / 1024 > 200) { const compressed = await compressToLimit(src, 200); return compressed || src }
+        return src
+      }))
+      const good = results.filter(Boolean)
+      if (!good.length) { setGalleryError('Failed to process images.'); return }
+      setCarouselImages(prev => {
+        const updated = [...prev, ...good]
+        localStorage.setItem(`exzibo_carousel_${restaurantId || 'default'}`, JSON.stringify(updated))
+        window.dispatchEvent(new CustomEvent('exzibo-carousel-changed', { detail: { restaurantId, images: updated } }))
+        return updated
+      })
+      setCarouselIdx(0)
+      if (valid.length > canAdd) {
+        setGalleryError(`Only ${canAdd} image${canAdd !== 1 ? 's' : ''} added — gallery is full.`)
+      } else { setGallerySuccess(true); setTimeout(() => setGallerySuccess(false), 2500) }
+    } catch { setGalleryError('Failed to process images.') }
+    finally { setGalleryCompressing(false) }
+  }
+
+  function removeCarouselImage(idx) {
+    setCarouselImages(prev => {
+      const updated = prev.filter((_, i) => i !== idx)
+      localStorage.setItem(`exzibo_carousel_${restaurantId || 'default'}`, JSON.stringify(updated))
+      return updated
+    })
+    setCarouselIdx(0)
+  }
   const [showCouponModal, setShowCouponModal] = useState(false)
   const couponEnabledKey = `exzibo_coupon_enabled_${restaurantId || 'default'}`
   const [couponEnabled, setCouponEnabled] = useState(() => {
@@ -2469,6 +2533,50 @@ function SettingsPanel({ draft, setDraft, accentStart, accentEnd, onSave, saved,
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+
+        {/* Image Gallery */}
+        <input ref={carouselInputRef} type="file" accept="image/jpeg,image/png,image/webp" multiple style={{ display: 'none' }} onChange={e => { if (e.target.files?.length) handleCarouselFiles(e.target.files); e.target.value = '' }} />
+        <div style={cardStyle}>
+          <div style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#94a3b8', marginBottom: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span>Image Gallery ({carouselImages.length}/{MAX_GALLERY})</span>
+            {galleryCompressing && <span style={{ fontSize: '10px', color: '#94a3b8', fontWeight: 500 }}>Compressing…</span>}
+          </div>
+          {galleryError && <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: '8px', padding: '7px 10px', marginBottom: '8px', color: '#EF4444', fontSize: '11px', fontWeight: 600 }}><AlertCircle size={12} /> {galleryError}</div>}
+          {gallerySuccess && <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#F0FDF4', border: '1px solid #A7F3D0', borderRadius: '8px', padding: '7px 10px', marginBottom: '8px', color: '#10B981', fontSize: '11px', fontWeight: 600 }}><CheckCircle2 size={12} /> Images saved!</div>}
+          {carouselImages.length === 0 ? (
+            <div onClick={() => carouselInputRef.current?.click()} style={{ background: '#f8fafc', borderRadius: '12px', height: '120px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', position: 'relative', gap: '6px', border: '2px dashed #e2e8f0' }}>
+              <ImageIcon size={26} color="#cbd5e1" strokeWidth={1.2} />
+              <span style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 500 }}>Tap to add photos</span>
+              <button onClick={e => { e.stopPropagation(); carouselInputRef.current?.click() }} style={{ position: 'absolute', bottom: '8px', right: '8px', width: '26px', height: '26px', borderRadius: '8px', background: '#fff', border: '1.5px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '16px', color: '#555', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', zIndex: 2 }}>+</button>
+            </div>
+          ) : (
+            <div style={{ background: '#f1f5f9', borderRadius: '12px', height: '120px', position: 'relative', overflow: 'hidden' }}>
+              <img src={carouselImages[carouselIdx]} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '12px', display: 'block' }} />
+              {carouselImages.length > 1 && (
+                <>
+                  <button onClick={() => setCarouselIdx(i => (i - 1 + carouselImages.length) % carouselImages.length)} style={{ position: 'absolute', left: '6px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(0,0,0,0.4)', border: 'none', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#fff', fontSize: '14px' }}>‹</button>
+                  <button onClick={() => setCarouselIdx(i => (i + 1) % carouselImages.length)} style={{ position: 'absolute', right: '36px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(0,0,0,0.4)', border: 'none', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#fff', fontSize: '14px' }}>›</button>
+                </>
+              )}
+              <button onClick={e => { e.stopPropagation(); carouselInputRef.current?.click() }} style={{ position: 'absolute', bottom: '8px', right: '8px', width: '26px', height: '26px', borderRadius: '8px', background: 'rgba(255,255,255,0.9)', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '16px', color: '#555', boxShadow: '0 1px 4px rgba(0,0,0,0.15)', zIndex: 2 }}>+</button>
+              <button onClick={e => { e.stopPropagation(); removeCarouselImage(carouselIdx) }} style={{ position: 'absolute', top: '6px', right: '6px', width: '22px', height: '22px', borderRadius: '50%', background: 'rgba(0,0,0,0.5)', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#fff', zIndex: 2 }}><X size={11} /></button>
+            </div>
+          )}
+        </div>
+
+        {/* Description Text Carousel */}
+        <div style={cardStyle}>
+          <div style={{ fontSize: '14px', fontWeight: 900, letterSpacing: '0.05em', textTransform: 'uppercase', color: '#0f172a', marginBottom: '12px' }}>
+            Description Text&nbsp;&nbsp;Carousel
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+              <span style={{ position: 'absolute', left: '10px', fontSize: '12px', pointerEvents: 'none', zIndex: 1 }}>🔥</span>
+              <input type="text" value={badgeText} onChange={e => { const val = e.target.value; setBadgeText(val); localStorage.setItem(`exzibo_carousel_badge_${restaurantId || 'default'}`, val); window.dispatchEvent(new CustomEvent('exzibo-carousel-badge-changed', { detail: { restaurantId, badge: val } })) }} placeholder="ENTER BADGE TEXT…" style={{ width: '100%', boxSizing: 'border-box', background: '#E8321A', border: 'none', borderRadius: '10px', padding: '7px 12px 7px 30px', fontSize: '11px', fontWeight: 700, color: '#fff', letterSpacing: '0.1em', textTransform: 'uppercase', outline: 'none', caretColor: '#fff', fontFamily: 'inherit' }} onFocus={e => e.target.style.background = '#c42a14'} onBlur={e => e.target.style.background = '#E8321A'} />
+            </div>
+            <textarea value={descText} onChange={e => { setDescText(e.target.value); localStorage.setItem(`exzibo_carousel_desc_${restaurantId || 'default'}`, e.target.value); window.dispatchEvent(new CustomEvent('exzibo-carousel-desc-changed', { detail: { restaurantId, text: e.target.value } })) }} placeholder="WRITE HERE" rows={4} style={{ width: '100%', boxSizing: 'border-box', background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: '10px', padding: '12px 14px', fontSize: '13px', fontWeight: 600, color: '#0f172a', resize: 'none', fontFamily: 'inherit', outline: 'none', lineHeight: 1.6 }} />
+          </div>
+        </div>
 
         {/* 1. Add Coupon Code */}
         <div style={cardStyle}>
@@ -3426,6 +3534,15 @@ const DEFAULT_CAT_FILTERS = {
     { id: 'beer', emoji: '🍺', label: 'Beer', image: null, assignedItems: [] },
     { id: 'soft', emoji: '🧃', label: 'Soft', image: null, assignedItems: [] },
   ],
+}
+
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = e => resolve(e.target.result)
+    reader.onerror = reject
+    reader.readAsDataURL(file)
+  })
 }
 
 // Single yield to keep the UI alive without adding loop overhead.
