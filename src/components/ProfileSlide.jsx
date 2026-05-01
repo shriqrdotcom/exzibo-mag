@@ -896,8 +896,8 @@ export default function ProfileSlide({
           <div
             onClick={e => e.stopPropagation()}
             style={{
-              background: '#fff', borderRadius: '20px', padding: '28px',
-              width: 'min(420px, min(90vw, 90vh))',
+              background: '#fff', borderRadius: '20px', padding: '20px',
+              width: 'min(360px, min(90vw, 86vh))',
               aspectRatio: '1 / 1',
               overflow: 'hidden',
               display: 'flex', flexDirection: 'column',
@@ -908,19 +908,19 @@ export default function ProfileSlide({
             }}
           >
             {/* Header */}
-            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '18px', gap: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '12px', gap: '10px' }}>
               <div>
                 <h2 style={{
-                  margin: '0 0 6px',
-                  fontWeight: 800, fontSize: '26px',
+                  margin: '0 0 3px',
+                  fontWeight: 800, fontSize: '20px',
                   color: '#0E1B2A', letterSpacing: '-0.02em', lineHeight: 1.1,
                 }}>
                   Profile
                 </h2>
                 <p style={{
                   margin: 0,
-                  fontSize: '13.5px', lineHeight: 1.5,
-                  color: '#6b7380', maxWidth: '360px',
+                  fontSize: '11.5px', lineHeight: 1.4,
+                  color: '#6b7380', maxWidth: '260px',
                 }}>
                   Manage your restaurant information and account settings.
                 </p>
@@ -929,7 +929,7 @@ export default function ProfileSlide({
                 onClick={() => setIsProfileModalOpen(false)}
                 style={{
                   background: '#F2F2F2', border: 'none', borderRadius: '50%',
-                  width: '40px', height: '40px', minWidth: '40px',
+                  width: '32px', height: '32px', minWidth: '32px',
                   display: 'flex', alignItems: 'center',
                   justifyContent: 'center', cursor: 'pointer', color: '#444',
                   transition: 'background 0.15s',
@@ -938,7 +938,7 @@ export default function ProfileSlide({
                 onMouseLeave={e => e.currentTarget.style.background = '#F2F2F2'}
                 aria-label="Close"
               >
-                <X size={18} />
+                <X size={14} />
               </button>
             </div>
 
@@ -947,7 +947,7 @@ export default function ProfileSlide({
               {[
                 {
                   key: 'logo',
-                  icon: <User size={24} strokeWidth={1.8} />,
+                  icon: <User size={20} strokeWidth={1.8} />,
                   label: 'Logo',
                   desc: 'Update your restaurant logo',
                   onClick: () => {
@@ -958,7 +958,7 @@ export default function ProfileSlide({
                 },
                 {
                   key: 'name',
-                  icon: <Store size={24} strokeWidth={1.6} />,
+                  icon: <Store size={20} strokeWidth={1.6} />,
                   label: 'Restaurant Name',
                   desc: 'Edit your restaurant name',
                   onClick: () => {
@@ -969,7 +969,7 @@ export default function ProfileSlide({
                 },
                 {
                   key: 'hours',
-                  icon: <Clock size={24} strokeWidth={1.6} />,
+                  icon: <Clock size={20} strokeWidth={1.6} />,
                   label: 'Opening Hours',
                   desc: 'Set your restaurant operating hours',
                   onClick: () => {
@@ -979,7 +979,7 @@ export default function ProfileSlide({
                 },
                 {
                   key: 'location',
-                  icon: <MapPin size={24} strokeWidth={1.6} />,
+                  icon: <MapPin size={20} strokeWidth={1.6} />,
                   label: 'Location',
                   desc: 'Manage your restaurant address',
                   onClick: () => {
@@ -991,7 +991,7 @@ export default function ProfileSlide({
                 },
                 {
                   key: 'contact',
-                  icon: <Phone size={24} strokeWidth={1.6} />,
+                  icon: <Phone size={20} strokeWidth={1.6} />,
                   label: 'Contact Info',
                   desc: 'Update phone number and other contact details',
                   onClick: () => {
@@ -1010,8 +1010,8 @@ export default function ProfileSlide({
                   className="profile-modal-row"
                   onClick={row.onClick}
                   style={{
-                    display: 'flex', alignItems: 'center', gap: '14px',
-                    padding: '12px 8px',
+                    display: 'flex', alignItems: 'center', gap: '10px',
+                    padding: '7px 4px',
                     borderBottom: idx < arr.length - 1 ? '1px solid #EFEFF2' : 'none',
                     background: 'transparent', cursor: 'pointer',
                     transition: 'background 0.15s',
@@ -1019,8 +1019,8 @@ export default function ProfileSlide({
                   }}
                 >
                   <span style={{
-                    width: '46px', height: '46px',
-                    background: '#F2F2F4', borderRadius: '12px',
+                    width: '36px', height: '36px',
+                    background: '#F2F2F4', borderRadius: '10px',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     color: '#222', flexShrink: 0,
                   }}>
@@ -1028,19 +1028,19 @@ export default function ProfileSlide({
                   </span>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{
-                      fontSize: '16px', fontWeight: 800,
+                      fontSize: '13px', fontWeight: 800,
                       color: '#0E1B2A', letterSpacing: '-0.01em',
-                      marginBottom: '2px',
+                      marginBottom: '1px',
                     }}>
                       {row.label}
                     </div>
                     <div style={{
-                      fontSize: '12.5px', color: '#7a8493', lineHeight: 1.4,
+                      fontSize: '11px', color: '#7a8493', lineHeight: 1.3,
                     }}>
                       {row.desc}
                     </div>
                   </div>
-                  <ChevronRight size={18} color="#bbb" strokeWidth={2.2} />
+                  <ChevronRight size={14} color="#bbb" strokeWidth={2.2} />
                 </div>
               ))}
             </div>
