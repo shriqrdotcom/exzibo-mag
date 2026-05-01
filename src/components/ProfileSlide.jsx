@@ -128,7 +128,8 @@ export default function ProfileSlide({
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false)
   const [showRemainingDays, setShowRemainingDays] = useState(false)
   const { activeRole } = useRole()
-  const isAdmin = !activeRole || activeRole === 'owner' || activeRole === 'admin'
+  const isAdmin = activeRole === 'admin'
+  const isMasterControl = !activeRole
 
   const subscriptionInfo = {
     planName: 'Growth',
@@ -661,7 +662,7 @@ export default function ProfileSlide({
             {/* Divider */}
             {asPage && <div style={{ height: '1px', background: '#E5E5EA', marginLeft: '52px' }} />}
 
-            {!isAdmin && (
+            {(isMasterControl || !isAdmin) && (
               <>
                 {/* ADD MEMBERS */}
                 <div
