@@ -896,8 +896,11 @@ export default function ProfileSlide({
           <div
             onClick={e => e.stopPropagation()}
             style={{
-              background: '#fff', borderRadius: '20px', padding: '24px',
-              maxWidth: '420px', width: '90%', maxHeight: '92vh', overflowY: 'auto',
+              background: '#fff', borderRadius: '20px', padding: '28px',
+              width: 'min(420px, min(90vw, 90vh))',
+              aspectRatio: '1 / 1',
+              overflow: 'hidden',
+              display: 'flex', flexDirection: 'column',
               boxShadow: '0 32px 80px rgba(0,0,0,0.35), 0 8px 24px rgba(0,0,0,0.15)',
               animation: 'profileModalIn 0.22s cubic-bezier(0.34,1.1,0.64,1)',
               position: 'relative',
@@ -940,7 +943,7 @@ export default function ProfileSlide({
             </div>
 
             {/* Rows */}
-            <div>
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-evenly' }}>
               {[
                 {
                   key: 'logo',
