@@ -102,7 +102,7 @@ export default function ProfilePage() {
 
           {/* Title — left-aligned next to the arrow */}
           <span style={{
-            fontWeight: 800,
+            fontWeight: 'bold',
             fontSize: '22px',
             color: '#111',
             letterSpacing: '-0.02em',
