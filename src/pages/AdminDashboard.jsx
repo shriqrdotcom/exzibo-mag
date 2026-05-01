@@ -700,7 +700,7 @@ export default function AdminDashboard() {
               <ArrowLeft size={16} />
             </button>
             <div
-              onClick={() => hasPermission('profile') && navigate(`/admin/${id || 'default'}/profile`)}
+              onClick={() => hasPermission('profile') && navigate(`/admin/${id || 'default'}/profile${fromMaster ? '?from=master' : ''}`)}
               style={{
                 width: '44px', height: '44px', borderRadius: '14px',
                 background: `linear-gradient(135deg, ${accentStart}, ${accentEnd})`,

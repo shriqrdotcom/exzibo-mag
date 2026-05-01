@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import ProfileSlide from '../components/ProfileSlide'
 
 const MOBILE_FONT = "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif"
@@ -30,7 +30,9 @@ function loadLogoUrl(restaurantId) {
 export default function ProfilePage() {
   const navigate = useNavigate()
   const { id } = useParams()
+  const [searchParams] = useSearchParams()
   const restaurantId = id || 'default'
+  const isMasterView = searchParams.get('from') === 'master'
 
   const [restaurantName, setRestaurantName] = useState(() => loadRestaurantName(restaurantId))
   const [logoUrl, setLogoUrl] = useState(() => loadLogoUrl(restaurantId))
@@ -122,6 +124,7 @@ export default function ProfilePage() {
             restaurantName={restaurantName}
             onNameUpdate={name => setRestaurantName(name)}
             onTeamClick={handleTeamClick}
+            isMasterView={isMasterView}
           />
         </div>
       </div>

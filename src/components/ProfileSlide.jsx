@@ -101,6 +101,7 @@ export default function ProfileSlide({
   restaurantName, onNameUpdate,
   onTeamClick,
   asPage = false,
+  isMasterView = false,
 }) {
   const fileInputRef = useRef(null)
   const carouselInputRef = useRef(null)
@@ -128,8 +129,6 @@ export default function ProfileSlide({
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false)
   const [showRemainingDays, setShowRemainingDays] = useState(false)
   const { activeRole } = useRole()
-  const isAdmin = activeRole === 'admin'
-  const isMasterControl = !activeRole
 
   const subscriptionInfo = {
     planName: 'Growth',
@@ -662,7 +661,7 @@ export default function ProfileSlide({
             {/* Divider */}
             {asPage && <div style={{ height: '1px', background: '#E5E5EA', marginLeft: '52px' }} />}
 
-            {(isMasterControl || !isAdmin) && (
+            {isMasterView && (
               <>
                 {/* ADD MEMBERS */}
                 <div
