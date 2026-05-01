@@ -1,0 +1,24 @@
+---
+
+> **Task:** Convert the existing "Profile" page into a **mobile-first design** that looks and feels like a native smartphone app screen.
+>
+> **Reference:** The current page has a Profile section with:
+> - A back arrow (`←`) and "Profile" title at the top
+> - A white card showing user avatar (purple circle with initials "EX"), name "Exzibo Admin", and UID below it
+> - A vertical list of menu items: **PROFILE**, **TEAM MEMBERS**, **ADD MEMBERS**, **REMAINING DAYS** — each with an icon on the left and a right-arrow (`>`) chevron on the right
+> - Light gray (`#F2F2F7`) background
+>
+> **What to change — Mobile Version Requirements:**
+>
+> 1. **Constrain the layout** to a max-width of `390px` (iPhone 14 size), centered on screen, with a phone-like container if viewed on desktop.
+> 2. **Top bar:** Make it a fixed/sticky mobile header — back arrow on the left, "Profile" text centered, same line. Add slight padding top for status bar simulation (`padding-top: 48px`).
+> 3. **Avatar card:** Make the avatar bigger (56–64px circle), name in `18px` bold, UID in `13px` muted gray. Card should have `16px` border-radius, full width with `16px` horizontal margin.
+> 4. **Menu list items:** Each row should be `56px` tall minimum, with `16px` horizontal padding. Icon on left (`20px`), label in `14–15px` uppercase bold tracking, right chevron (`›`) on the far right in gray. Thin `1px` divider line between items (not on last one).
+> 5. **Typography & spacing:** Use system-safe mobile fonts (`-apple-system, SF Pro, Segoe UI`). Generous padding, touch-friendly tap targets (min 48px height).
+> 6. **No horizontal scrolling.** Everything must fit within the mobile width.
+> 7. **Keep the existing color scheme:** Purple (`#6B46C1`) for avatar, white cards, `#F2F2F7` background, dark text, muted gray for subtext and icons.
+> 8. **Do NOT redesign the logic** — just adapt the layout and sizing to feel like a real iOS/Android app screen.
+
+---
+
+This gives the agent exact dimensions, colors, component behavior, and the "why" behind each change — so it won't guess or overdesign. Paste it as-is.

@@ -482,7 +482,7 @@ export default function ProfileSlide({
       <div
         onClick={asPage ? undefined : e => e.stopPropagation()}
         style={asPage ? {
-          background: '#EFEFF4',
+          background: 'transparent',
           display: 'flex', flexDirection: 'column',
           flex: 1,
         } : {
@@ -502,16 +502,15 @@ export default function ProfileSlide({
           transition: 'opacity 0.3s ease, transform 0.3s cubic-bezier(0.34,1.1,0.64,1)',
         }}
       >
-        {/* Sticky header */}
-        <div style={{
-          padding: asPage ? '16px 16px 14px' : '20px 16px 14px',
-          background: '#EFEFF4',
-          borderRadius: asPage ? 0 : '28px 28px 0 0',
-          flexShrink: 0,
-          zIndex: 2,
-        }}>
-          {/* Close — modal mode only */}
-          {!asPage && (
+        {/* Sticky header — modal mode only; asPage uses ProfilePage's own header */}
+        {!asPage && (
+          <div style={{
+            padding: '20px 16px 14px',
+            background: '#EFEFF4',
+            borderRadius: '28px 28px 0 0',
+            flexShrink: 0,
+            zIndex: 2,
+          }}>
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '8px' }}>
               <button onClick={onClose} style={{
                 background: 'rgba(0,0,0,0.07)', border: 'none', borderRadius: '50%',
@@ -521,45 +520,85 @@ export default function ProfileSlide({
                 <X size={16} />
               </button>
             </div>
-          )}
 
-          {/* Profile card */}
-          <div style={{
-            background: '#fff', borderRadius: '18px', padding: '16px 18px',
-            display: 'flex', alignItems: 'center', gap: '14px',
-            boxShadow: '0 1px 6px rgba(0,0,0,0.06)',
-          }}>
+            {/* Profile card — modal mode */}
             <div style={{
-              width: '52px', height: '52px', borderRadius: '50%',
-              background: 'linear-gradient(135deg, #7C3AED 0%, #5B21B6 100%)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: '#fff', fontWeight: 800, fontSize: '20px', letterSpacing: '0.03em',
-              flexShrink: 0, overflow: 'hidden', position: 'relative',
+              background: '#fff', borderRadius: '18px', padding: '16px 18px',
+              display: 'flex', alignItems: 'center', gap: '14px',
+              boxShadow: '0 1px 6px rgba(0,0,0,0.06)',
             }}>
-              {previewUrl
-                ? <img src={previewUrl} alt="logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                : (restaurantName ? restaurantName.slice(0, 2).toUpperCase() : 'EA')}
-              {uploading && (
-                <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Loader2 size={18} color="#fff" style={{ animation: 'spin 1s linear infinite' }} />
-                </div>
-              )}
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontWeight: 800, fontSize: '16px', color: '#111', letterSpacing: '0.01em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {restaurantName || 'Exzibo'}
+              <div style={{
+                width: '52px', height: '52px', borderRadius: '50%',
+                background: 'linear-gradient(135deg, #7C3AED 0%, #5B21B6 100%)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: '#fff', fontWeight: 800, fontSize: '20px', letterSpacing: '0.03em',
+                flexShrink: 0, overflow: 'hidden', position: 'relative',
+              }}>
+                {previewUrl
+                  ? <img src={previewUrl} alt="logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  : (restaurantName ? restaurantName.slice(0, 2).toUpperCase() : 'EA')}
+                {uploading && (
+                  <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Loader2 size={18} color="#fff" style={{ animation: 'spin 1s linear infinite' }} />
+                  </div>
+                )}
               </div>
-              {restaurantUID && (
-                <div style={{ fontWeight: 500, fontSize: '12px', color: '#888', marginTop: '2px', fontFamily: 'monospace', letterSpacing: '0.05em' }}>
-                  UID: {restaurantUID}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 800, fontSize: '16px', color: '#111', letterSpacing: '0.01em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {restaurantName || 'Exzibo'}
                 </div>
-              )}
+                {restaurantUID && (
+                  <div style={{ fontWeight: 500, fontSize: '12px', color: '#888', marginTop: '2px', fontFamily: 'monospace', letterSpacing: '0.05em' }}>
+                    UID: {restaurantUID}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
-        </div>{/* end sticky header */}
+        )}
 
         {/* Scrollable body */}
-        <div style={asPage ? { overflowY: 'auto', padding: '0 16px 48px' } : { overflowY: 'auto', flex: 1, padding: '0 16px 32px' }}>
+        <div style={asPage ? { padding: '16px 16px 48px' } : { overflowY: 'auto', flex: 1, padding: '0 16px 32px' }}>
+
+          {/* asPage: Avatar card at top of scrollable area */}
+          {asPage && (
+            <div style={{
+              background: '#fff', borderRadius: '16px', padding: '16px 18px',
+              display: 'flex', alignItems: 'center', gap: '14px',
+              boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+              marginBottom: '24px',
+            }}>
+              <div
+                onClick={() => fileInputRef.current?.click()}
+                style={{
+                  width: '60px', height: '60px', borderRadius: '50%',
+                  background: 'linear-gradient(135deg, #7C3AED 0%, #5B21B6 100%)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  color: '#fff', fontWeight: 800, fontSize: '22px', letterSpacing: '0.03em',
+                  flexShrink: 0, overflow: 'hidden', position: 'relative', cursor: 'pointer',
+                }}
+              >
+                {previewUrl
+                  ? <img src={previewUrl} alt="logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  : (restaurantName ? restaurantName.slice(0, 2).toUpperCase() : 'EA')}
+                {uploading && (
+                  <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Loader2 size={20} color="#fff" style={{ animation: 'spin 1s linear infinite' }} />
+                  </div>
+                )}
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 700, fontSize: '18px', color: '#111', letterSpacing: '-0.01em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {restaurantName || 'Exzibo Admin'}
+                </div>
+                {restaurantUID && (
+                  <div style={{ fontWeight: 400, fontSize: '13px', color: '#8E8E93', marginTop: '3px', fontFamily: 'monospace', letterSpacing: '0.04em' }}>
+                    UID: {restaurantUID}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Status banners */}
           {uploadError && <StatusMsg type="error"><AlertCircle size={14} />{uploadError}</StatusMsg>}
@@ -568,26 +607,36 @@ export default function ProfileSlide({
           {contactSuccess && <StatusMsg type="success"><CheckCircle2 size={14} />Contact info updated successfully!</StatusMsg>}
           {locationSuccess && <StatusMsg type="success"><CheckCircle2 size={14} />Location updated successfully!</StatusMsg>}
 
-          <div style={{ background: '#E9E9EF', borderRadius: '18px', padding: '8px 10px', marginBottom: '14px' }}>
+          <div style={{
+            background: '#fff',
+            borderRadius: asPage ? '16px' : '18px',
+            padding: asPage ? '0' : '8px 10px',
+            marginBottom: '14px',
+            overflow: 'hidden',
+            boxShadow: asPage ? '0 1px 4px rgba(0,0,0,0.06)' : 'none',
+          }}>
 
             {/* PROFILE — opens consolidated modal */}
             <div
               onClick={() => setIsProfileModalOpen(true)}
               style={{
-                display: 'flex', alignItems: 'center', gap: '14px',
-                padding: '13px 10px', borderRadius: '12px',
-                background: 'transparent', cursor: 'pointer',
-                marginBottom: '2px', transition: 'background 0.15s',
+                ...rowStyle,
+                transition: 'background 0.15s',
+                borderRadius: asPage ? 0 : '12px',
+                padding: asPage ? '0 16px' : '13px 10px',
+                minHeight: asPage ? '56px' : 'unset',
+                marginBottom: asPage ? 0 : '2px',
               }}
               onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,0,0,0.04)'}
               onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
             >
-              <span style={iconWrap}><User size={22} strokeWidth={1.4} /></span>
+              <span style={iconWrap}><User size={20} strokeWidth={1.5} /></span>
               <span style={{ ...rowLabel, flex: 1 }}>PROFILE</span>
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#bbb" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="9 18 15 12 9 6" />
-              </svg>
+              <ChevronRight size={16} color="#C7C7CC" strokeWidth={2.5} />
             </div>
+
+            {/* Divider */}
+            {asPage && <div style={{ height: '1px', background: '#E5E5EA', marginLeft: '52px' }} />}
 
             {/* TEAM MEMBERS */}
             <div
@@ -595,20 +644,19 @@ export default function ProfileSlide({
               style={{
                 ...rowStyle,
                 cursor: onTeamClick ? 'pointer' : 'default',
-                borderRadius: '12px',
+                borderRadius: asPage ? 0 : '12px',
                 transition: 'background 0.15s',
               }}
-              onMouseEnter={e => { if (onTeamClick) e.currentTarget.style.background = 'rgba(99,102,241,0.09)' }}
+              onMouseEnter={e => { if (onTeamClick) e.currentTarget.style.background = 'rgba(0,0,0,0.04)' }}
               onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
             >
-              <span style={iconWrap}><Users size={22} strokeWidth={1.4} /></span>
+              <span style={iconWrap}><Users size={20} strokeWidth={1.5} /></span>
               <span style={{ ...rowLabel, flex: 1 }}>TEAM MEMBERS</span>
-              {onTeamClick && (
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#bbb" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="9 18 15 12 9 6" />
-                </svg>
-              )}
+              {onTeamClick && <ChevronRight size={16} color="#C7C7CC" strokeWidth={2.5} />}
             </div>
+
+            {/* Divider */}
+            {asPage && <div style={{ height: '1px', background: '#E5E5EA', marginLeft: '52px' }} />}
 
             {/* ADD MEMBERS */}
             <div
@@ -616,18 +664,19 @@ export default function ProfileSlide({
               style={{
                 ...rowStyle,
                 cursor: 'pointer',
-                borderRadius: '12px',
+                borderRadius: asPage ? 0 : '12px',
                 transition: 'background 0.15s',
               }}
-              onMouseEnter={e => e.currentTarget.style.background = 'rgba(232,56,13,0.07)'}
+              onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,0,0,0.04)'}
               onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
             >
-              <span style={iconWrap}><UserPlus size={22} strokeWidth={1.4} /></span>
+              <span style={iconWrap}><UserPlus size={20} strokeWidth={1.5} /></span>
               <span style={{ ...rowLabel, flex: 1 }}>ADD MEMBERS</span>
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#bbb" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="9 18 15 12 9 6" />
-              </svg>
+              <ChevronRight size={16} color="#C7C7CC" strokeWidth={2.5} />
             </div>
+
+            {/* Divider */}
+            {asPage && <div style={{ height: '1px', background: '#E5E5EA', marginLeft: '52px' }} />}
 
             {/* REMAINING DAYS */}
             <div
@@ -635,17 +684,15 @@ export default function ProfileSlide({
               style={{
                 ...rowStyle,
                 cursor: 'pointer',
-                borderRadius: '12px',
+                borderRadius: asPage ? 0 : '12px',
                 transition: 'background 0.15s',
               }}
               onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,0,0,0.04)'}
               onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
             >
-              <span style={iconWrap}><Calendar size={22} strokeWidth={1.4} /></span>
+              <span style={iconWrap}><Calendar size={20} strokeWidth={1.5} /></span>
               <span style={{ ...rowLabel, flex: 1 }}>REMAINING DAYS</span>
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#bbb" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="9 18 15 12 9 6" />
-              </svg>
+              <ChevronRight size={16} color="#C7C7CC" strokeWidth={2.5} />
             </div>
 
           </div>
@@ -667,10 +714,21 @@ export default function ProfileSlide({
           />
 
           {/* Logout */}
-          <div style={{ background: '#fff', borderRadius: '18px', padding: '4px 10px', boxShadow: '0 1px 6px rgba(0,0,0,0.06)' }}>
-            <button style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '14px 10px', width: '100%', background: 'transparent', border: 'none', cursor: 'pointer' }}>
-              <Power size={20} strokeWidth={1.4} color="#555" />
-              <span style={{ fontWeight: 600, fontSize: '15px', color: '#222', letterSpacing: '0.01em' }}>Logout</span>
+          <div style={{
+            background: '#fff',
+            borderRadius: asPage ? '16px' : '18px',
+            padding: asPage ? '0' : '4px 10px',
+            boxShadow: asPage ? '0 1px 4px rgba(0,0,0,0.06)' : '0 1px 6px rgba(0,0,0,0.06)',
+            overflow: 'hidden',
+          }}>
+            <button style={{
+              display: 'flex', alignItems: 'center', gap: '14px',
+              padding: asPage ? '0 16px' : '14px 10px',
+              minHeight: asPage ? '56px' : 'auto',
+              width: '100%', background: 'transparent', border: 'none', cursor: 'pointer',
+            }}>
+              <Power size={20} strokeWidth={1.4} color="#FF3B30" />
+              <span style={{ fontWeight: 600, fontSize: asPage ? '15px' : '15px', color: asPage ? '#FF3B30' : '#222', letterSpacing: '0.01em' }}>Logout</span>
             </button>
           </div>
 
@@ -1185,13 +1243,12 @@ function inputStyle(hasError) {
 
 const rowStyle = {
   display: 'flex', alignItems: 'center', gap: '14px',
-  padding: '13px 10px', borderRadius: '12px',
+  padding: '0 16px', minHeight: '56px', borderRadius: '0',
   background: 'transparent', cursor: 'pointer',
-  marginBottom: '2px',
 }
 
-const iconWrap = { color: '#333', display: 'flex', alignItems: 'center' }
-const rowLabel = { fontWeight: 700, fontSize: '13px', letterSpacing: '0.08em', textTransform: 'uppercase', color: '#222' }
+const iconWrap = { color: '#555', display: 'flex', alignItems: 'center', width: '22px', flexShrink: 0 }
+const rowLabel = { fontWeight: 700, fontSize: '14px', letterSpacing: '0.06em', textTransform: 'uppercase', color: '#111' }
 
 const ITEM_H = 44
 

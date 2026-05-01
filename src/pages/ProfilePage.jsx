@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft } from 'lucide-react'
 import ProfileSlide from '../components/ProfileSlide'
+
+const MOBILE_FONT = "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif"
 
 function loadRestaurantName(restaurantId) {
   if (!restaurantId || restaurantId === 'default') {
@@ -46,51 +47,89 @@ export default function ProfilePage() {
   }
 
   return (
+    /* Desktop backdrop — neutral gray so the phone frame pops */
     <div style={{
-      position: 'fixed', inset: 0,
-      background: '#EFEFF4',
-      display: 'flex', flexDirection: 'column',
-      overflowY: 'auto',
-      zIndex: 0,
+      minHeight: '100dvh',
+      background: '#E5E5EA',
+      display: 'flex',
+      justifyContent: 'center',
+      fontFamily: MOBILE_FONT,
     }}>
-      {/* Full-screen header with back button */}
+      {/* Phone-sized container */}
       <div style={{
-        position: 'sticky', top: 0, zIndex: 10,
-        background: '#EFEFF4',
-        borderBottom: '1px solid rgba(0,0,0,0.06)',
-        display: 'flex', alignItems: 'center', gap: '12px',
-        padding: '14px 16px',
-        flexShrink: 0,
+        width: '100%',
+        maxWidth: '390px',
+        minHeight: '100dvh',
+        background: '#F2F2F7',
+        display: 'flex',
+        flexDirection: 'column',
+        position: 'relative',
+        overflowX: 'hidden',
       }}>
-        <button
-          onClick={() => navigate(-1)}
-          style={{
-            background: 'rgba(0,0,0,0.07)', border: 'none', borderRadius: '50%',
-            width: '36px', height: '36px', display: 'flex', alignItems: 'center',
-            justifyContent: 'center', cursor: 'pointer', color: '#333', flexShrink: 0,
-          }}
-          aria-label="Go back"
-        >
-          <ArrowLeft size={18} />
-        </button>
-        <span style={{
-          fontWeight: 800, fontSize: '18px', color: '#111',
-          letterSpacing: '-0.01em',
-        }}>
-          Profile
-        </span>
-      </div>
 
-      {/* Profile content rendered as a page (no modal chrome) */}
-      <ProfileSlide
-        asPage
-        restaurantId={restaurantId}
-        logoUrl={logoUrl}
-        onLogoUpdate={url => setLogoUrl(url)}
-        restaurantName={restaurantName}
-        onNameUpdate={name => setRestaurantName(name)}
-        onTeamClick={id && id !== 'default' ? handleTeamClick : undefined}
-      />
+        {/* ── Sticky mobile header ── */}
+        <div style={{
+          position: 'sticky',
+          top: 0,
+          zIndex: 10,
+          background: 'rgba(242,242,247,0.92)',
+          backdropFilter: 'blur(12px)',
+          WebkitBackdropFilter: 'blur(12px)',
+          paddingTop: '48px',
+          paddingBottom: '10px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexShrink: 0,
+          borderBottom: '1px solid rgba(0,0,0,0.08)',
+        }}>
+          {/* Back arrow — absolute left */}
+          <button
+            onClick={() => navigate(-1)}
+            style={{
+              position: 'absolute',
+              left: '16px',
+              background: 'none',
+              border: 'none',
+              padding: '4px',
+              display: 'flex',
+              alignItems: 'center',
+              cursor: 'pointer',
+              color: '#6B46C1',
+              gap: '2px',
+            }}
+            aria-label="Go back"
+          >
+            <svg width="10" height="17" viewBox="0 0 10 17" fill="none">
+              <polyline points="9 1 1 8.5 9 16" stroke="#6B46C1" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            <span style={{ fontSize: '17px', fontWeight: 400, color: '#6B46C1', lineHeight: 1 }}>Back</span>
+          </button>
+
+          {/* Centered title */}
+          <span style={{
+            fontWeight: 600,
+            fontSize: '17px',
+            color: '#000',
+            letterSpacing: '-0.01em',
+          }}>
+            Profile
+          </span>
+        </div>
+
+        {/* ── Scrollable content ── */}
+        <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
+          <ProfileSlide
+            asPage
+            restaurantId={restaurantId}
+            logoUrl={logoUrl}
+            onLogoUpdate={url => setLogoUrl(url)}
+            restaurantName={restaurantName}
+            onNameUpdate={name => setRestaurantName(name)}
+            onTeamClick={id && id !== 'default' ? handleTeamClick : undefined}
+          />
+        </div>
+      </div>
     </div>
   )
 }
