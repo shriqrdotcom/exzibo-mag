@@ -585,7 +585,7 @@ export default function ProfileSlide({
         icon: <Clock size={22} strokeWidth={1.5} />,
         title: 'OPENING HOURS',
         sub: 'MANAGE YOUR SCHEDULE',
-        onClick: openHoursModal,
+        onClick: () => hoursModalOpen ? setHoursModalOpen(false) : openHoursModal(),
       },
       {
         icon: <MapPin size={22} strokeWidth={1.5} />,
@@ -1103,9 +1103,9 @@ export default function ProfileSlide({
                 <React.Fragment key={row.title}>
                   <div
                     onClick={row.onClick}
-                    style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '15px 18px', cursor: 'pointer', background: 'transparent', transition: 'background 0.15s' }}
+                    style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '15px 18px', cursor: 'pointer', background: row.title === 'OPENING HOURS' && hoursModalOpen ? 'rgba(0,0,0,0.03)' : 'transparent', transition: 'background 0.15s' }}
                     onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,0,0,0.03)'}
-                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                    onMouseLeave={e => e.currentTarget.style.background = row.title === 'OPENING HOURS' && hoursModalOpen ? 'rgba(0,0,0,0.03)' : 'transparent'}
                   >
                     <div style={{ width: '44px', height: '44px', borderRadius: '14px', background: ICON_ROW_BG, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#555', flexShrink: 0 }}>
                       {row.icon}
@@ -1114,8 +1114,44 @@ export default function ProfileSlide({
                       <div style={{ fontWeight: 800, fontSize: '13px', color: '#111', letterSpacing: '0.04em' }}>{row.title}</div>
                       <div style={{ fontSize: '11px', color: '#999', marginTop: '2px', letterSpacing: '0.03em' }}>{row.sub}</div>
                     </div>
-                    <ChevronRight size={16} color="#C7C7CC" strokeWidth={2.5} />
+                    <ChevronRight size={16} color={row.title === 'OPENING HOURS' && hoursModalOpen ? '#3B6BE8' : '#C7C7CC'} strokeWidth={2.5} style={{ transform: row.title === 'OPENING HOURS' && hoursModalOpen ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s' }} />
                   </div>
+                  {row.title === 'OPENING HOURS' && hoursModalOpen && (
+                    <div style={{
+                      background: '#f8fafc',
+                      borderTop: '1px solid #F0F0F5',
+                      padding: '20px 18px',
+                      animation: 'hoursInlineIn 0.2s cubic-bezier(0.2, 0.8, 0.2, 1)',
+                    }}>
+                      <style>{`
+                        @keyframes hoursInlineIn {
+                          from { opacity: 0; transform: translateY(-6px); }
+                          to   { opacity: 1; transform: translateY(0); }
+                        }
+                      `}</style>
+                      <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', marginBottom: '16px' }}>
+                        <TimePicker
+                          label="Opening Time"
+                          h={tempOpenH} m={tempOpenM} ampm={tempOpenAmPm}
+                          onChange={(h, m, ap) => { setTempOpenH(h); setTempOpenM(m); setTempOpenAmPm(ap) }}
+                        />
+                        <div style={{ width: '1px', background: '#EBEBF0', alignSelf: 'stretch', marginTop: '32px' }} />
+                        <TimePicker
+                          label="Closing Time"
+                          h={tempCloseH} m={tempCloseM} ampm={tempCloseAmPm}
+                          onChange={(h, m, ap) => { setTempCloseH(h); setTempCloseM(m); setTempCloseAmPm(ap) }}
+                        />
+                      </div>
+                      <div style={{ display: 'flex', gap: '10px' }}>
+                        <button onClick={handleSaveHours} style={{ flex: 1, padding: '12px 0', borderRadius: '12px', background: '#1a1a1a', border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: '13px', letterSpacing: '0.06em', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '7px' }}>
+                          <Check size={14} /> SAVE
+                        </button>
+                        <button onClick={() => setHoursModalOpen(false)} style={{ padding: '12px 18px', borderRadius: '12px', background: '#F0F0F5', border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: '13px', letterSpacing: '0.06em', color: '#666' }}>
+                          CANCEL
+                        </button>
+                      </div>
+                    </div>
+                  )}
                   {idx < arr.length - 1 && <div style={{ height: '1px', background: '#F0F0F5', marginLeft: '76px' }} />}
                 </React.Fragment>
               ))}
@@ -1217,17 +1253,6 @@ export default function ProfileSlide({
               </div>
             </div>
           </div>
-        )}
-
-        {hoursModalOpen && (
-          <OpeningHoursModal
-            openH={tempOpenH} openM={tempOpenM} openAmPm={tempOpenAmPm}
-            closeH={tempCloseH} closeM={tempCloseM} closeAmPm={tempCloseAmPm}
-            onChangeOpen={(h, m, ap) => { setTempOpenH(h); setTempOpenM(m); setTempOpenAmPm(ap) }}
-            onChangeClose={(h, m, ap) => { setTempCloseH(h); setTempCloseM(m); setTempCloseAmPm(ap) }}
-            onSave={handleSaveHours}
-            onCancel={() => setHoursModalOpen(false)}
-          />
         )}
 
         {editingName && (
@@ -1783,17 +1808,6 @@ export default function ProfileSlide({
             </div>
           </div>
         </div>
-      )}
-
-      {hoursModalOpen && (
-        <OpeningHoursModal
-          openH={tempOpenH} openM={tempOpenM} openAmPm={tempOpenAmPm}
-          closeH={tempCloseH} closeM={tempCloseM} closeAmPm={tempCloseAmPm}
-          onChangeOpen={(h, m, ap) => { setTempOpenH(h); setTempOpenM(m); setTempOpenAmPm(ap) }}
-          onChangeClose={(h, m, ap) => { setTempCloseH(h); setTempCloseM(m); setTempCloseAmPm(ap) }}
-          onSave={handleSaveHours}
-          onCancel={() => setHoursModalOpen(false)}
-        />
       )}
 
       {/* RESTAURANT NAME modal */}
