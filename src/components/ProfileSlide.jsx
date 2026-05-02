@@ -591,7 +591,10 @@ export default function ProfileSlide({
         icon: <MapPin size={22} strokeWidth={1.5} />,
         title: 'ADD LOCATION',
         sub: 'UPDATE YOUR ADDRESS',
-        onClick: () => { setAddressError(''); setAddressInput(loadLocationAddress(restaurantId)); setEditingLocation(true) },
+        onClick: () => {
+          if (editingLocation) { setEditingLocation(false); setAddressError('') }
+          else { setAddressError(''); setAddressInput(loadLocationAddress(restaurantId)); setEditingLocation(true) }
+        },
       },
       {
         icon: <Phone size={22} strokeWidth={1.5} />,
@@ -1117,36 +1120,54 @@ export default function ProfileSlide({
                     <ChevronRight size={16} color={row.title === 'OPENING HOURS' && hoursModalOpen ? '#3B6BE8' : '#C7C7CC'} strokeWidth={2.5} style={{ transform: row.title === 'OPENING HOURS' && hoursModalOpen ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s' }} />
                   </div>
                   {row.title === 'OPENING HOURS' && hoursModalOpen && (
-                    <div style={{
-                      background: '#f8fafc',
-                      borderTop: '1px solid #F0F0F5',
-                      padding: '20px 18px',
-                      animation: 'hoursInlineIn 0.2s cubic-bezier(0.2, 0.8, 0.2, 1)',
-                    }}>
+                    <div style={{ background: '#f8fafc', borderTop: '1px solid #F0F0F5', padding: '20px 18px', animation: 'hoursInlineIn 0.2s cubic-bezier(0.2, 0.8, 0.2, 1)' }}>
                       <style>{`
-                        @keyframes hoursInlineIn {
-                          from { opacity: 0; transform: translateY(-6px); }
-                          to   { opacity: 1; transform: translateY(0); }
-                        }
+                        @keyframes hoursInlineIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
+                        @keyframes locInlineIn  { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
                       `}</style>
                       <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', marginBottom: '16px' }}>
-                        <TimePicker
-                          label="Opening Time"
-                          h={tempOpenH} m={tempOpenM} ampm={tempOpenAmPm}
-                          onChange={(h, m, ap) => { setTempOpenH(h); setTempOpenM(m); setTempOpenAmPm(ap) }}
-                        />
+                        <TimePicker label="Opening Time" h={tempOpenH} m={tempOpenM} ampm={tempOpenAmPm} onChange={(h, m, ap) => { setTempOpenH(h); setTempOpenM(m); setTempOpenAmPm(ap) }} />
                         <div style={{ width: '1px', background: '#EBEBF0', alignSelf: 'stretch', marginTop: '32px' }} />
-                        <TimePicker
-                          label="Closing Time"
-                          h={tempCloseH} m={tempCloseM} ampm={tempCloseAmPm}
-                          onChange={(h, m, ap) => { setTempCloseH(h); setTempCloseM(m); setTempCloseAmPm(ap) }}
-                        />
+                        <TimePicker label="Closing Time" h={tempCloseH} m={tempCloseM} ampm={tempCloseAmPm} onChange={(h, m, ap) => { setTempCloseH(h); setTempCloseM(m); setTempCloseAmPm(ap) }} />
                       </div>
                       <div style={{ display: 'flex', gap: '10px' }}>
                         <button onClick={handleSaveHours} style={{ flex: 1, padding: '12px 0', borderRadius: '12px', background: '#1a1a1a', border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: '13px', letterSpacing: '0.06em', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '7px' }}>
                           <Check size={14} /> SAVE
                         </button>
                         <button onClick={() => setHoursModalOpen(false)} style={{ padding: '12px 18px', borderRadius: '12px', background: '#F0F0F5', border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: '13px', letterSpacing: '0.06em', color: '#666' }}>
+                          CANCEL
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                  {row.title === 'ADD LOCATION' && editingLocation && (
+                    <div style={{ background: '#f8fafc', borderTop: '1px solid #F0F0F5', padding: '20px 18px', animation: 'locInlineIn 0.2s cubic-bezier(0.2, 0.8, 0.2, 1)' }}>
+                      {savedAddress && (
+                        <div style={{ background: '#F0FDF4', border: '1px solid #A7F3D0', borderRadius: '10px', padding: '8px 12px', marginBottom: '12px', display: 'flex', alignItems: 'flex-start', gap: '7px' }}>
+                          <MapPin size={13} color="#10B981" style={{ marginTop: '2px', flexShrink: 0 }} />
+                          <span style={{ fontSize: '12px', color: '#065F46', fontWeight: 600, lineHeight: 1.5 }}>{savedAddress}</span>
+                        </div>
+                      )}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '6px' }}>
+                        <MapPin size={11} color="#999" />
+                        <span style={{ fontSize: '10px', fontWeight: 700, color: '#999', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Restaurant Address</span>
+                      </div>
+                      <textarea
+                        ref={addressRef}
+                        value={addressInput}
+                        onChange={e => { setAddressInput(e.target.value); setAddressError('') }}
+                        placeholder="Enter your full restaurant address…"
+                        rows={3}
+                        style={{ width: '100%', boxSizing: 'border-box', padding: '10px 12px', borderRadius: '10px', border: `1.5px solid ${addressError ? '#FECACA' : '#E0E0E8'}`, fontSize: '13px', fontWeight: 500, color: '#111', outline: 'none', background: '#F7F7FA', resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.5, transition: 'border-color 0.15s', marginBottom: addressError ? '6px' : '10px' }}
+                        onFocus={e => e.target.style.borderColor = addressError ? '#FECACA' : LIME}
+                        onBlur={e => e.target.style.borderColor = addressError ? '#FECACA' : '#E0E0E8'}
+                      />
+                      {addressError && <div style={{ fontSize: '12px', color: '#EF4444', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '5px' }}><AlertCircle size={12} />{addressError}</div>}
+                      <div style={{ display: 'flex', gap: '10px' }}>
+                        <button onClick={handleSaveLocation} disabled={locationSaving} style={{ flex: 1, padding: '12px 0', borderRadius: '12px', background: LIME, border: 'none', cursor: locationSaving ? 'not-allowed' : 'pointer', fontWeight: 700, fontSize: '13px', letterSpacing: '0.06em', color: '#111', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '7px' }}>
+                          {locationSaving ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <Check size={14} />} SAVE
+                        </button>
+                        <button onClick={() => { setEditingLocation(false); setAddressError(''); setAddressInput(loadLocationAddress(restaurantId)) }} style={{ padding: '12px 18px', borderRadius: '12px', background: '#F0F0F5', border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: '13px', letterSpacing: '0.06em', color: '#666' }}>
                           CANCEL
                         </button>
                       </div>
@@ -1275,20 +1296,6 @@ export default function ProfileSlide({
           </EditFieldModal>
         )}
 
-        {editingLocation && (
-          <EditFieldModal title="Location" icon={<MapPin size={22} strokeWidth={1.4} />} onClose={() => { setEditingLocation(false); setAddressError(''); setAddressInput(loadLocationAddress(restaurantId)) }}>
-            {savedAddress && (
-              <div style={{ background: '#F0FDF4', border: '1px solid #A7F3D0', borderRadius: '10px', padding: '8px 12px', marginBottom: '12px', display: 'flex', alignItems: 'flex-start', gap: '7px' }}>
-                <MapPin size={13} color="#10B981" style={{ marginTop: '2px', flexShrink: 0 }} />
-                <span style={{ fontSize: '12px', color: '#065F46', fontWeight: 600, lineHeight: 1.5 }}>{savedAddress}</span>
-              </div>
-            )}
-            <FieldLabel icon={<MapPin size={11} />} label="Restaurant Address" />
-            <textarea ref={addressRef} value={addressInput} onChange={e => { setAddressInput(e.target.value); setAddressError('') }} placeholder="Enter your full restaurant address…" rows={3} style={{ width: '100%', boxSizing: 'border-box', padding: '10px 12px', borderRadius: '10px', border: `1.5px solid ${addressError ? '#FECACA' : '#E0E0E8'}`, fontSize: '14px', fontWeight: 600, color: '#111', outline: 'none', background: '#F7F7FA', marginBottom: addressError ? '6px' : '10px', resize: 'vertical', fontFamily: 'inherit' }} onFocus={e => e.target.style.borderColor = addressError ? '#FECACA' : LIME} onBlur={e => e.target.style.borderColor = addressError ? '#FECACA' : '#E0E0E8'} />
-            {addressError && <InlineError>{addressError}</InlineError>}
-            <ActionButtons onSave={handleSaveLocation} onCancel={() => { setEditingLocation(false); setAddressError(''); setAddressInput(loadLocationAddress(restaurantId)) }} saving={locationSaving} />
-          </EditFieldModal>
-        )}
 
         <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
       </>
@@ -1876,49 +1883,6 @@ export default function ProfileSlide({
       )}
 
       {/* LOCATION modal */}
-      {editingLocation && (
-        <EditFieldModal
-          title="Location"
-          icon={<MapPin size={22} strokeWidth={1.4} />}
-          onClose={() => { setEditingLocation(false); setAddressError(''); setAddressInput(loadLocationAddress(restaurantId)) }}
-        >
-          {savedAddress && (
-            <div style={{
-              background: '#F0FDF4', border: '1px solid #A7F3D0', borderRadius: '10px',
-              padding: '8px 12px', marginBottom: '12px',
-              display: 'flex', alignItems: 'flex-start', gap: '7px',
-            }}>
-              <MapPin size={13} color="#10B981" style={{ marginTop: '2px', flexShrink: 0 }} />
-              <span style={{ fontSize: '12px', color: '#065F46', fontWeight: 600, lineHeight: 1.5 }}>{savedAddress}</span>
-            </div>
-          )}
-          <FieldLabel icon={<MapPin size={11} />} label="Restaurant Address" />
-          <textarea
-            ref={addressRef}
-            value={addressInput}
-            onChange={e => { setAddressInput(e.target.value); setAddressError('') }}
-            placeholder="Enter your full restaurant address…"
-            rows={3}
-            style={{
-              width: '100%', boxSizing: 'border-box',
-              padding: '10px 12px', borderRadius: '10px',
-              border: `1.5px solid ${addressError ? '#FECACA' : '#E0E0E8'}`,
-              fontSize: '13px', fontWeight: 500, color: '#111',
-              outline: 'none', background: '#F7F7FA',
-              resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.5,
-              transition: 'border-color 0.15s', marginBottom: addressError ? '6px' : '10px',
-            }}
-            onFocus={e => e.target.style.borderColor = addressError ? '#FECACA' : LIME}
-            onBlur={e => e.target.style.borderColor = addressError ? '#FECACA' : '#E0E0E8'}
-          />
-          {addressError && <InlineError>{addressError}</InlineError>}
-          <ActionButtons
-            onSave={handleSaveLocation}
-            onCancel={() => { setEditingLocation(false); setAddressError(''); setAddressInput(loadLocationAddress(restaurantId)) }}
-            saving={locationSaving}
-          />
-        </EditFieldModal>
-      )}
 
     </>
   )
