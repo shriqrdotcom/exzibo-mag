@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useAnalytics, notifyAnalyticsUpdate } from '../context/AnalyticsContext'
 import { useRole } from '../context/RoleContext'
-import { getRestaurants, getOrders, getBookings, updateOrderStatus, updateBookingStatus, getMenuCategories, getMenuItems, insertMenuItem, updateMenuItem, deleteMenuItem, upsertMenuCategory, deleteMenuCategory, upsertMenuItems } from '../lib/db'
+import { getRestaurants, getOrders, getBookings, updateOrderStatus, updateBookingStatus, getMenuCategories, getMenuItems, insertMenuItem, updateMenuItem, deleteMenuItem, upsertMenuCategory, deleteMenuCategory, upsertMenuItems, uploadMenuImage } from '../lib/db'
 import notificationIconImg from '@assets/image_1777373928129.png'
 import {
   NOTIFY_ROLES,
@@ -3949,23 +3949,31 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
         updatedTabs[i] = { ...tab, dbId: saved.id, key: tab.dbId ? tab.key : saved.id }
       }
       setCategoryTabs(updatedTabs)
-      const allItems = updatedTabs.flatMap(tab =>
-        (menuToSave[tab.key] || []).map(item => {
-          const row = {
-            restaurant_id: restaurantId,
-            category_id: tab.dbId,
-            name: item.name,
-            description: item.desc || '',
-            price: item.price || 0,
-            image: item.img || null,
-            veg: item.veg !== false,
-            available: item.available !== false,
-            tags: item.tags || [],
-            add_ons: item.addOns || [],
-          }
-          if (item.dbId) row.id = item.dbId
-          return row
-        })
+      // Resolve any base64 images to Storage URLs before bulk upsert
+      const allItems = await Promise.all(
+        updatedTabs.flatMap(tab =>
+          (menuToSave[tab.key] || []).map(async item => {
+            let imgUrl = item.img || null
+            if (imgUrl && imgUrl.startsWith('data:')) {
+              try { imgUrl = await uploadMenuImage(imgUrl, restaurantId) }
+              catch (e) { console.warn('[saveAll] Image upload failed:', e.message); imgUrl = null }
+            }
+            const row = {
+              restaurant_id: restaurantId,
+              category_id: tab.dbId,
+              name: item.name,
+              description: item.desc || '',
+              price: item.price || 0,
+              image: imgUrl,
+              veg: item.veg !== false,
+              available: item.available !== false,
+              tags: item.tags || [],
+              add_ons: item.addOns || [],
+            }
+            if (item.dbId) row.id = item.dbId
+            return row
+          })
+        )
       )
       if (allItems.length > 0) await upsertMenuItems(restaurantId, allItems)
     } catch (e) {
@@ -4065,9 +4073,26 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
     setEditDraft(d => ({ ...d, addOns: (d.addOns || []).filter((_, i) => i !== idx) }))
   }
 
+  // Resolves a raw img value (base64 data URL or existing URL) to a
+  // Supabase Storage public URL. Falls back to null if upload fails.
+  async function resolveMenuImage(img) {
+    if (!img) return null
+    if (!img.startsWith('data:')) return img   // already a URL
+    try {
+      return await uploadMenuImage(img, restaurantId)
+    } catch (e) {
+      console.warn('[menu] Image upload to storage failed:', e.message)
+      return null
+    }
+  }
+
   async function saveEdit() {
     if (!editDraft || editingId === null) return
-    const updatedItem = { ...editDraft, price: parseFloat(editDraft.price) || 0 }
+
+    // Resolve image to storage URL before saving
+    const resolvedImg = await resolveMenuImage(editDraft.img)
+    const updatedItem = { ...editDraft, img: resolvedImg, price: parseFloat(editDraft.price) || 0 }
+
     const updated = {
       ...menu,
       [activeCategory]: (menu[activeCategory] || []).map(i =>
@@ -4091,7 +4116,7 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
           name: updatedItem.name,
           description: updatedItem.desc || '',
           price: updatedItem.price,
-          image: updatedItem.img || null,
+          image: resolvedImg,
           veg: updatedItem.veg !== false,
           available: updatedItem.available !== false,
           tags: updatedItem.tags || [],
@@ -4103,7 +4128,19 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
 
   async function addItem() {
     if (!addDraft.name.trim()) return
-    const item = { id: Date.now(), img: addDraft.img || null, name: addDraft.name.trim(), desc: addDraft.desc.trim(), price: parseFloat(addDraft.price) || 0, tags: addDraft.tags, veg: addDraft.veg || false }
+
+    // Resolve image to storage URL before inserting
+    const resolvedImg = await resolveMenuImage(addDraft.img)
+
+    const item = {
+      id: Date.now(),
+      img: resolvedImg,
+      name: addDraft.name.trim(),
+      desc: addDraft.desc.trim(),
+      price: parseFloat(addDraft.price) || 0,
+      tags: addDraft.tags,
+      veg: addDraft.veg || false,
+    }
     const currentTab = categoryTabs.find(t => t.key === activeCategory)
     const categoryId = currentTab?.dbId || null
     try {
@@ -4111,7 +4148,7 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
         name: item.name,
         description: item.desc,
         price: item.price,
-        image: item.img,
+        image: resolvedImg,
         veg: item.veg,
         tags: item.tags,
         available: true,

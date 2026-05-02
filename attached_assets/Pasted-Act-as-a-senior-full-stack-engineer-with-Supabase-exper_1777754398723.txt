@@ -1,0 +1,175 @@
+Act as a senior full-stack engineer with Supabase expertise.
+
+GOAL
+
+Implement a robust, bug-free image upload system for food/menu items using Supabase Storage.
+
+The system must:
+
+- Upload image to Supabase Storage
+- Store public URL in database
+- Work in preview + production
+- Sync across all dashboards (website, admin, manager, staff)
+
+---
+
+STEP 1: CREATE STORAGE BUCKET
+
+Ensure a bucket exists:
+
+- Name: "menu-images"
+- Public: ✅ TRUE
+
+If not, create it.
+
+---
+
+STEP 2: VALIDATE INPUT (MANDATORY)
+
+Before upload:
+
+if (!file) throw new Error("No file selected");
+
+const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
+if (!allowedTypes.includes(file.type)) {
+  throw new Error("Invalid file type");
+}
+
+if (file.size > 2 * 1024 * 1024) {
+  throw new Error("File too large (max 2MB)");
+}
+
+---
+
+STEP 3: GET AUTH USER
+
+const { data: { user } } = await supabase.auth.getUser();
+
+if (!user) {
+  throw new Error("User not authenticated");
+}
+
+---
+
+STEP 4: GENERATE SAFE FILE PATH
+
+const fileExt = file.name.split('.').pop();
+const fileName = `${Date.now()}.${fileExt}`;
+const filePath = `${user.id}/${restaurantId}/${fileName}`;
+
+---
+
+STEP 5: UPLOAD TO SUPABASE STORAGE
+
+const { error: uploadError } = await supabase.storage
+  .from('menu-images')
+  .upload(filePath, file, {
+    cacheControl: '3600',
+    upsert: false
+  });
+
+if (uploadError) {
+  throw uploadError;
+}
+
+---
+
+STEP 6: GET PUBLIC URL
+
+const { data } = supabase.storage
+  .from('menu-images')
+  .getPublicUrl(filePath);
+
+const imageUrl = data.publicUrl;
+
+---
+
+STEP 7: SAVE TO DATABASE
+
+Insert into "menu_items":
+
+const { error: dbError } = await supabase
+  .from('menu_items')
+  .insert({
+    name: itemName,
+    price: price,
+    restaurant_id: restaurantId,
+    image_url: imageUrl
+  });
+
+if (dbError) {
+  throw dbError;
+}
+
+---
+
+STEP 8: ENSURE DB SCHEMA
+
+Make sure table has:
+
+ALTER TABLE menu_items
+ADD COLUMN IF NOT EXISTS image_url TEXT;
+
+---
+
+STEP 9: DISPLAY IMAGE EVERYWHERE
+
+Use:
+
+<img src={item.image_url} alt={item.name} />
+
+Works in:
+
+- public website
+- admin panel
+- manager dashboard
+- staff UI
+
+---
+
+STEP 10: HANDLE FAILURES SAFELY
+
+Wrap everything:
+
+try {
+  await uploadAndSave();
+} catch (err) {
+  console.error("Image upload failed:", err.message);
+  alert(err.message);
+}
+
+---
+
+STEP 11: IMPORTANT RULES
+
+- DO NOT store images in database
+- DO NOT use base64
+- DO NOT use local blob URLs
+- ALWAYS store Supabase public URL
+- ALWAYS link image to "restaurant_id"
+
+---
+
+STEP 12: CONSISTENCY CHECK
+
+After upload:
+
+- Image must appear immediately in UI
+- Same image visible across all panels
+- Works for new users and new restaurants
+
+---
+
+FINAL RESULT
+
+When user adds a food item with image:
+
+1. Image uploads to Supabase Storage
+2. URL saved in DB
+3. Image appears everywhere instantly
+4. No mismatch between preview and production
+
+---
+
+Do NOT implement partial solution.
+Implement full upload → storage → DB → display pipeline correctly.

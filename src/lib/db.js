@@ -86,6 +86,28 @@ export async function deleteMenuCategory(id) {
   if (error) throw error
 }
 
+// ── Menu Image Upload ─────────────────────────────────────────
+
+export async function uploadMenuImage(dataUrl, restaurantId) {
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) throw new Error('Not authenticated')
+
+  const res  = await fetch(dataUrl)
+  const blob = await res.blob()
+  const ext  = blob.type.split('/')[1] || 'jpg'
+  const filePath = `${user.id}/${restaurantId}/${Date.now()}.${ext}`
+
+  const { error: uploadError } = await supabase.storage
+    .from('menu-images')
+    .upload(filePath, blob, { cacheControl: '3600', upsert: false })
+  if (uploadError) throw uploadError
+
+  const { data: { publicUrl } } = supabase.storage
+    .from('menu-images')
+    .getPublicUrl(filePath)
+  return publicUrl
+}
+
 // ── Menu Items ───────────────────────────────────────────────
 
 export async function getMenuItems(restaurantId) {
