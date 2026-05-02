@@ -600,7 +600,7 @@ export default function ProfileSlide({
               ].map(s => (
                 <div key={s.label} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '7px' }}>
                   <div style={{ background: STAT_PILL, borderRadius: '24px', padding: '4px 22px', minWidth: '62px', textAlign: 'center' }}>
-                    <span style={{ fontWeight: 800, fontSize: '22px', color: STAT_NUM, lineHeight: 1.3 }}>{s.value}</span>
+                    <span style={{ fontWeight: 800, fontSize: '22px', color: '#ffffff', lineHeight: 1.3 }}>{s.value}</span>
                   </div>
                   <span style={{ fontSize: '11px', fontWeight: 600, color: '#888', letterSpacing: '0.07em' }}>{s.label}</span>
                 </div>

@@ -50,7 +50,7 @@ export default function ProfilePage() {
     /* Desktop backdrop — neutral gray so the phone frame pops */
     <div style={{
       minHeight: '100dvh',
-      background: '#D8E6FA',
+      background: '#ffffff',
       display: 'flex',
       justifyContent: 'center',
       fontFamily: MOBILE_FONT,
@@ -60,7 +60,7 @@ export default function ProfilePage() {
         width: '100%',
         maxWidth: '390px',
         minHeight: '100dvh',
-        background: '#EAF1FD',
+        background: '#ffffff',
         display: 'flex',
         flexDirection: 'column',
         position: 'relative',
