@@ -1,0 +1,112 @@
+Act as a senior Supabase backend engineer.
+
+ISSUE
+
+Restaurant creation is failing with error:
+
+"Could not find the 'additional_info' column of 'restaurants' in the schema cache"
+
+This means the frontend/backend code is trying to insert a column that does NOT exist in the Supabase database schema.
+
+---
+
+GOAL
+
+Fix restaurant creation so it works 100% reliably.
+
+---
+
+STEP 1: FIX DATABASE SCHEMA
+
+Check current "restaurants" table.
+
+If "additional_info" is REQUIRED → add it:
+
+ALTER TABLE restaurants
+ADD COLUMN additional_info TEXT;
+
+---
+
+STEP 2: VERIFY ALL REQUIRED COLUMNS
+
+Ensure "restaurants" table has:
+
+id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+user_id UUID,
+name TEXT,
+description TEXT,
+additional_info TEXT,
+created_at TIMESTAMP DEFAULT NOW()
+
+---
+
+STEP 3: FIX INSERT QUERY (CRITICAL)
+
+Ensure insert only uses EXISTING columns:
+
+const { data, error } = await supabase
+  .from('restaurants')
+  .insert({
+    name: restaurantName,
+    description: description || "",
+    additional_info: additionalInfo || "",
+    user_id: user.id
+  })
+  .select()
+  .single();
+
+---
+
+STEP 4: HANDLE OPTIONAL FIELD
+
+If frontend does NOT provide additional_info:
+
+additional_info: additionalInfo ?? ""
+
+---
+
+STEP 5: SCHEMA CACHE REFRESH (IMPORTANT)
+
+Supabase sometimes caches schema.
+
+After adding column:
+
+- Go to Supabase → Settings → Database
+- Click "Reload schema" OR restart project
+
+---
+
+STEP 6: REMOVE UNKNOWN FIELDS (FAILSAFE)
+
+Before insert, ensure NO extra fields:
+
+const payload = {
+  name,
+  description,
+  user_id: user.id
+};
+
+DO NOT send fields that are not in DB.
+
+---
+
+STEP 7: ADD ERROR LOGGING
+
+if (error) {
+  console.error("Restaurant creation error:", error);
+}
+
+---
+
+FINAL RESULT
+
+- Restaurant creates successfully
+- No schema mismatch errors
+- Insert query matches database exactly
+- Works in preview + production
+
+---
+
+IMPORTANT:
+Database schema and code must ALWAYS match.
+Do NOT invent fields in frontend without adding them to DB.
