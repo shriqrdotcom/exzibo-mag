@@ -36,6 +36,7 @@ export default function ProfilePage() {
 
   const [restaurantName, setRestaurantName] = useState(() => loadRestaurantName(restaurantId))
   const [logoUrl, setLogoUrl] = useState(() => loadLogoUrl(restaurantId))
+  const [menuOpen, setMenuOpen] = useState(false)
 
   useEffect(() => {
     setRestaurantName(loadRestaurantName(restaurantId))
@@ -44,6 +45,14 @@ export default function ProfilePage() {
 
   function handleTeamClick() {
     navigate(`/admin/${id || 'default'}/team`)
+  }
+
+  function handlePrivacyPolicy() {
+    setMenuOpen(false)
+  }
+
+  function handleHelp() {
+    setMenuOpen(false)
   }
 
   return (
@@ -115,15 +124,72 @@ export default function ProfilePage() {
           </div>
 
           {/* 3-dot menu */}
-          <button style={{
-            background: 'transparent', border: 'none', cursor: 'pointer',
-            display: 'flex', flexDirection: 'column', gap: '4px',
-            padding: '4px', alignItems: 'center', justifyContent: 'center',
-          }}>
-            {[0,1,2].map(i => (
-              <div key={i} style={{ width: '4px', height: '4px', borderRadius: '50%', background: '#444' }} />
-            ))}
-          </button>
+          <div style={{ position: 'relative' }}>
+            <button
+              onClick={() => setMenuOpen(prev => !prev)}
+              style={{
+                background: 'transparent', border: 'none', cursor: 'pointer',
+                display: 'flex', flexDirection: 'column', gap: '4px',
+                padding: '4px', alignItems: 'center', justifyContent: 'center',
+              }}
+            >
+              {[0,1,2].map(i => (
+                <div key={i} style={{ width: '4px', height: '4px', borderRadius: '50%', background: '#444' }} />
+              ))}
+            </button>
+
+            {/* Dropdown card */}
+            {menuOpen && (
+              <>
+                {/* Backdrop to close on outside tap */}
+                <div
+                  onClick={() => setMenuOpen(false)}
+                  style={{ position: 'fixed', inset: 0, zIndex: 99 }}
+                />
+                <div style={{
+                  position: 'absolute',
+                  top: 'calc(100% + 8px)',
+                  right: 0,
+                  zIndex: 100,
+                  background: '#fff',
+                  borderRadius: '16px',
+                  boxShadow: '0 8px 32px rgba(0,0,0,0.14)',
+                  minWidth: '190px',
+                  overflow: 'hidden',
+                }}>
+                  <button
+                    onClick={handlePrivacyPolicy}
+                    style={{
+                      width: '100%', padding: '16px 20px',
+                      background: 'transparent', border: 'none', cursor: 'pointer',
+                      textAlign: 'left', fontWeight: 800, fontSize: '13px',
+                      color: '#111', letterSpacing: '0.05em',
+                      fontFamily: MOBILE_FONT,
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,0,0,0.03)'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                  >
+                    PRIVACY POLICY
+                  </button>
+                  <div style={{ height: '1px', background: '#F0F0F5', margin: '0 16px' }} />
+                  <button
+                    onClick={handleHelp}
+                    style={{
+                      width: '100%', padding: '16px 20px',
+                      background: 'transparent', border: 'none', cursor: 'pointer',
+                      textAlign: 'left', fontWeight: 800, fontSize: '13px',
+                      color: '#111', letterSpacing: '0.05em',
+                      fontFamily: MOBILE_FONT,
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,0,0,0.03)'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                  >
+                    HELP
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
         </div>
 
         {/* ── Scrollable content ── */}
