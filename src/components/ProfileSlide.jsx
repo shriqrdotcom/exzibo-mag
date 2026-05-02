@@ -191,6 +191,20 @@ export default function ProfileSlide({
     setFacebookModalOpen(false)
   }
 
+  const [instagramModalOpen, setInstagramModalOpen] = useState(false)
+  const [instagramUrlInput, setInstagramUrlInput] = useState('')
+
+  useEffect(() => {
+    const key = `exzibo_social_instagram_${restaurantId || 'default'}`
+    setInstagramUrlInput(localStorage.getItem(key) || '')
+  }, [restaurantId])
+
+  function handleInstagramSave() {
+    const key = `exzibo_social_instagram_${restaurantId || 'default'}`
+    localStorage.setItem(key, instagramUrlInput)
+    setInstagramModalOpen(false)
+  }
+
   useEffect(() => { setPreviewUrl(logoUrl || '') }, [logoUrl])
   useEffect(() => { setNameInput(restaurantName || '') }, [restaurantName])
 
@@ -623,24 +637,39 @@ export default function ProfileSlide({
 
             {/* Social Links */}
             <div style={{ display: 'flex', justifyContent: 'space-around' }}>
-              {socialBtns.map(s => (
-                <button key={s.key}
-                  onClick={s.key === 'facebook' ? () => setFacebookModalOpen(o => !o) : undefined}
-                  style={{
-                    width: '54px', height: '54px', borderRadius: '14px',
-                    background: s.key === 'facebook' && facebookModalOpen ? '#e8f0fe' : '#fff',
-                    border: s.key === 'facebook' && facebookModalOpen ? '2px solid #1877F2' : 'none',
-                    cursor: 'pointer',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    color: '#444', boxShadow: '0 2px 8px rgba(0,0,0,0.09)',
-                    transition: 'transform 0.15s, box-shadow 0.15s, background 0.15s',
-                  }}
-                  onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.08)'; e.currentTarget.style.boxShadow = '0 4px 14px rgba(0,0,0,0.14)' }}
-                  onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.09)' }}
-                >
-                  {s.icon}
-                </button>
-              ))}
+              {socialBtns.map(s => {
+                const isActive =
+                  (s.key === 'facebook' && facebookModalOpen) ||
+                  (s.key === 'instagram' && instagramModalOpen)
+                const activeBorder =
+                  s.key === 'facebook' ? '#1877F2' :
+                  s.key === 'instagram' ? '#E1306C' : 'transparent'
+                const activeBg =
+                  s.key === 'facebook' ? '#e8f0fe' :
+                  s.key === 'instagram' ? '#fce4ec' : '#fff'
+                const handleClick =
+                  s.key === 'facebook' ? () => { setFacebookModalOpen(o => !o); setInstagramModalOpen(false) } :
+                  s.key === 'instagram' ? () => { setInstagramModalOpen(o => !o); setFacebookModalOpen(false) } :
+                  undefined
+                return (
+                  <button key={s.key}
+                    onClick={handleClick}
+                    style={{
+                      width: '54px', height: '54px', borderRadius: '14px',
+                      background: isActive ? activeBg : '#fff',
+                      border: isActive ? `2px solid ${activeBorder}` : 'none',
+                      cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      color: '#444', boxShadow: '0 2px 8px rgba(0,0,0,0.09)',
+                      transition: 'transform 0.15s, box-shadow 0.15s, background 0.15s',
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.08)'; e.currentTarget.style.boxShadow = '0 4px 14px rgba(0,0,0,0.14)' }}
+                    onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.09)' }}
+                  >
+                    {s.icon}
+                  </button>
+                )
+              })}
             </div>
 
             {/* Facebook inline panel */}
@@ -702,6 +731,77 @@ export default function ProfileSlide({
                     value={facebookUrlInput}
                     onChange={e => setFacebookUrlInput(e.target.value)}
                     onKeyDown={e => { if (e.key === 'Enter') handleFacebookSave() }}
+                    placeholder="https://g.page/..."
+                    autoFocus
+                    style={{
+                      flex: 1, border: 'none', background: 'transparent',
+                      fontSize: '13px', color: '#0f172a', outline: 'none',
+                      fontFamily: 'inherit', minWidth: 0,
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Instagram inline panel */}
+            {instagramModalOpen && (
+              <div style={{
+                margin: '14px 0 0',
+                background: '#fff',
+                borderRadius: '18px',
+                padding: '18px 16px 16px',
+                boxShadow: '0 4px 24px rgba(0,0,0,0.12)',
+                animation: 'igPanelIn 0.2s cubic-bezier(0.2, 0.8, 0.2, 1)',
+              }}>
+                <style>{`
+                  @keyframes igPanelIn {
+                    from { opacity: 0; transform: translateY(-8px); }
+                    to   { opacity: 1; transform: translateY(0); }
+                  }
+                `}</style>
+                {/* Header row */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{
+                      width: '44px', height: '44px', borderRadius: '10px',
+                      background: 'radial-gradient(circle at 30% 107%, #fdf497 0%, #fdf497 5%, #fd5949 45%, #d6249f 60%, #285AEB 90%)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      flexShrink: 0,
+                    }}>
+                      <FaInstagram size={26} color="#fff" />
+                    </div>
+                    <span style={{ fontWeight: 700, fontSize: '17px', color: '#0f172a' }}>Instagram</span>
+                  </div>
+                  <button
+                    onClick={handleInstagramSave}
+                    style={{
+                      padding: '8px 20px',
+                      background: '#bbf7d0',
+                      border: 'none', borderRadius: '10px',
+                      color: '#166534', fontSize: '13px', fontWeight: 800,
+                      letterSpacing: '0.05em', cursor: 'pointer',
+                    }}
+                  >
+                    SAVE
+                  </button>
+                </div>
+                {/* URL input pill */}
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: '10px',
+                  background: '#f1f5f9',
+                  border: '1.5px solid #e2e8f0',
+                  borderRadius: '50px',
+                  padding: '10px 16px',
+                }}>
+                  <Link2 size={16} color="#94a3b8" strokeWidth={2} style={{ flexShrink: 0 }} />
+                  <span style={{ fontWeight: 700, fontSize: '13px', color: '#334155', whiteSpace: 'nowrap' }}>
+                    Instagram.com
+                  </span>
+                  <input
+                    type="url"
+                    value={instagramUrlInput}
+                    onChange={e => setInstagramUrlInput(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') handleInstagramSave() }}
                     placeholder="https://g.page/..."
                     autoFocus
                     style={{
