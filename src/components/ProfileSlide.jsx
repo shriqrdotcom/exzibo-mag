@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import { PiPencilCircle } from 'react-icons/pi'
 import { FaFacebook, FaInstagram, FaLinkedinIn, FaYoutube } from 'react-icons/fa'
+import { FaXTwitter } from 'react-icons/fa6'
 import AddMembersModal from './AddMembersModal'
 import RemainingDaysModal from './RemainingDaysModal'
 
@@ -231,6 +232,20 @@ export default function ProfileSlide({
     const key = `exzibo_social_youtube_${restaurantId || 'default'}`
     localStorage.setItem(key, youtubeUrlInput)
     setYoutubeModalOpen(false)
+  }
+
+  const [twitterModalOpen, setTwitterModalOpen] = useState(false)
+  const [twitterUrlInput, setTwitterUrlInput] = useState('')
+
+  useEffect(() => {
+    const key = `exzibo_social_twitter_${restaurantId || 'default'}`
+    setTwitterUrlInput(localStorage.getItem(key) || '')
+  }, [restaurantId])
+
+  function handleTwitterSave() {
+    const key = `exzibo_social_twitter_${restaurantId || 'default'}`
+    localStorage.setItem(key, twitterUrlInput)
+    setTwitterModalOpen(false)
   }
 
   useEffect(() => { setPreviewUrl(logoUrl || '') }, [logoUrl])
@@ -600,7 +615,7 @@ export default function ProfileSlide({
       { icon: <FaInstagram size={20} />, key: 'instagram' },
       { icon: <FaLinkedinIn size={20} />, key: 'linkedin' },
       { icon: <FaYoutube size={20} />, key: 'youtube' },
-      { icon: <Link2 size={20} />, key: 'website' },
+      { icon: <FaXTwitter size={20} />, key: 'twitter' },
     ]
 
     return (
@@ -670,22 +685,26 @@ export default function ProfileSlide({
                   (s.key === 'facebook' && facebookModalOpen) ||
                   (s.key === 'instagram' && instagramModalOpen) ||
                   (s.key === 'linkedin' && linkedinModalOpen) ||
-                  (s.key === 'youtube' && youtubeModalOpen)
+                  (s.key === 'youtube' && youtubeModalOpen) ||
+                  (s.key === 'twitter' && twitterModalOpen)
                 const activeBorder =
                   s.key === 'facebook' ? '#1877F2' :
                   s.key === 'instagram' ? '#E1306C' :
                   s.key === 'linkedin' ? '#0A66C2' :
-                  s.key === 'youtube' ? '#FF0000' : 'transparent'
+                  s.key === 'youtube' ? '#FF0000' :
+                  s.key === 'twitter' ? '#000000' : 'transparent'
                 const activeBg =
                   s.key === 'facebook' ? '#e8f0fe' :
                   s.key === 'instagram' ? '#fce4ec' :
                   s.key === 'linkedin' ? '#e8f0fe' :
-                  s.key === 'youtube' ? '#fff0f0' : '#fff'
+                  s.key === 'youtube' ? '#fff0f0' :
+                  s.key === 'twitter' ? '#f0f0f0' : '#fff'
                 const handleClick =
-                  s.key === 'facebook' ? () => { setFacebookModalOpen(o => !o); setInstagramModalOpen(false); setLinkedinModalOpen(false); setYoutubeModalOpen(false) } :
-                  s.key === 'instagram' ? () => { setInstagramModalOpen(o => !o); setFacebookModalOpen(false); setLinkedinModalOpen(false); setYoutubeModalOpen(false) } :
-                  s.key === 'linkedin' ? () => { setLinkedinModalOpen(o => !o); setFacebookModalOpen(false); setInstagramModalOpen(false); setYoutubeModalOpen(false) } :
-                  s.key === 'youtube' ? () => { setYoutubeModalOpen(o => !o); setFacebookModalOpen(false); setInstagramModalOpen(false); setLinkedinModalOpen(false) } :
+                  s.key === 'facebook' ? () => { setFacebookModalOpen(o => !o); setInstagramModalOpen(false); setLinkedinModalOpen(false); setYoutubeModalOpen(false); setTwitterModalOpen(false) } :
+                  s.key === 'instagram' ? () => { setInstagramModalOpen(o => !o); setFacebookModalOpen(false); setLinkedinModalOpen(false); setYoutubeModalOpen(false); setTwitterModalOpen(false) } :
+                  s.key === 'linkedin' ? () => { setLinkedinModalOpen(o => !o); setFacebookModalOpen(false); setInstagramModalOpen(false); setYoutubeModalOpen(false); setTwitterModalOpen(false) } :
+                  s.key === 'youtube' ? () => { setYoutubeModalOpen(o => !o); setFacebookModalOpen(false); setInstagramModalOpen(false); setLinkedinModalOpen(false); setTwitterModalOpen(false) } :
+                  s.key === 'twitter' ? () => { setTwitterModalOpen(o => !o); setFacebookModalOpen(false); setInstagramModalOpen(false); setLinkedinModalOpen(false); setYoutubeModalOpen(false) } :
                   undefined
                 return (
                   <button key={s.key}
@@ -981,6 +1000,75 @@ export default function ProfileSlide({
                     onChange={e => setYoutubeUrlInput(e.target.value)}
                     onKeyDown={e => { if (e.key === 'Enter') handleYoutubeSave() }}
                     placeholder="https://youtube.com/@..."
+                    autoFocus
+                    style={{
+                      flex: 1, border: 'none', background: 'transparent',
+                      fontSize: '13px', color: '#0f172a', outline: 'none',
+                      fontFamily: 'inherit', minWidth: 0,
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* X (Twitter) inline panel */}
+            {twitterModalOpen && (
+              <div style={{
+                margin: '14px 0 0',
+                background: '#fff',
+                borderRadius: '18px',
+                padding: '18px 16px 16px',
+                boxShadow: '0 4px 24px rgba(0,0,0,0.12)',
+                animation: 'xPanelIn 0.2s cubic-bezier(0.2, 0.8, 0.2, 1)',
+              }}>
+                <style>{`
+                  @keyframes xPanelIn {
+                    from { opacity: 0; transform: translateY(-8px); }
+                    to   { opacity: 1; transform: translateY(0); }
+                  }
+                `}</style>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{
+                      width: '44px', height: '44px', borderRadius: '10px',
+                      background: '#000000',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      flexShrink: 0,
+                    }}>
+                      <FaXTwitter size={24} color="#fff" />
+                    </div>
+                    <span style={{ fontWeight: 700, fontSize: '17px', color: '#0f172a' }}>X</span>
+                  </div>
+                  <button
+                    onClick={handleTwitterSave}
+                    style={{
+                      padding: '8px 20px',
+                      background: '#bbf7d0',
+                      border: 'none', borderRadius: '10px',
+                      color: '#166534', fontSize: '13px', fontWeight: 800,
+                      letterSpacing: '0.05em', cursor: 'pointer',
+                    }}
+                  >
+                    SAVE
+                  </button>
+                </div>
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: '10px',
+                  background: '#f1f5f9',
+                  border: '1.5px solid #e2e8f0',
+                  borderRadius: '50px',
+                  padding: '10px 16px',
+                }}>
+                  <Link2 size={16} color="#94a3b8" strokeWidth={2} style={{ flexShrink: 0 }} />
+                  <span style={{ fontWeight: 700, fontSize: '13px', color: '#334155', whiteSpace: 'nowrap' }}>
+                    X.com
+                  </span>
+                  <input
+                    type="url"
+                    value={twitterUrlInput}
+                    onChange={e => setTwitterUrlInput(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') handleTwitterSave() }}
+                    placeholder="https://x.com/..."
                     autoFocus
                     style={{
                       flex: 1, border: 'none', background: 'transparent',
