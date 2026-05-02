@@ -554,10 +554,10 @@ export default function ProfileSlide({
           onChange={e => { const f = e.target.files?.[0]; if (f) handleLogoUpload(f); e.target.value = '' }}
         />
 
-        <div style={{ flex: 1, background: PROFILE_BG, display: 'flex', flexDirection: 'column', paddingBottom: '32px' }}>
+        <div style={{ flex: 1, background: '#fff', display: 'flex', flexDirection: 'column', paddingBottom: '32px' }}>
 
           {/* Profile Card */}
-          <div style={{ padding: '12px 20px 20px' }}>
+          <div style={{ padding: '12px 20px 20px', background: PROFILE_BG }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '22px' }}>
               <div
                 onClick={() => fileInputRef.current?.click()}
