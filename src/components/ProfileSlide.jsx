@@ -1251,10 +1251,10 @@ export default function ProfileSlide({
                           <span style={{ fontWeight: 700, fontSize: '15px', color: '#0f172a' }}>Google Review</span>
                         </div>
                         <button
-                          onClick={handleGoogleReviewPaste}
-                          style={{ padding: '8px 18px', background: '#16a34a', border: 'none', borderRadius: '10px', color: '#fff', fontSize: '13px', fontWeight: 800, letterSpacing: '0.05em', cursor: 'pointer' }}
+                          onClick={handleGoogleReviewSave}
+                          style={{ padding: '8px 18px', background: '#16a34a', border: 'none', borderRadius: '10px', color: '#fff', fontSize: '13px', fontWeight: 400, letterSpacing: '0.05em', cursor: 'pointer' }}
                         >
-                          PASTE
+                          SAVE
                         </button>
                       </div>
                       {/* URL input pill */}
