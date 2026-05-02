@@ -1,0 +1,168 @@
+Act as a senior full-stack + Supabase debugging engineer.
+
+CRITICAL ISSUE
+
+Restaurant creation is FAILING completely when clicking "Generate Website".
+
+User fills all details → clicks button → gets:
+"Restaurant creation failed"
+
+This is a BLOCKING CORE FEATURE. Fix it end-to-end.
+
+---
+
+GOAL
+
+Make restaurant creation:
+
+- Always succeed when valid data is provided
+- Work for NEW users (new UID)
+- Work in both preview and production
+- Return created restaurant instantly
+
+---
+
+STEP 1: ADD FULL DEBUG LOGGING (MANDATORY)
+
+Before fixing anything, log EVERYTHING:
+
+console.log("User:", user);
+console.log("User ID:", user?.id);
+console.log("Form Data:", formData);
+
+After insert:
+
+console.log("Insert Response:", data);
+console.log("Insert Error:", error);
+
+---
+
+STEP 2: VERIFY AUTH (MOST COMMON FAILURE)
+
+Ensure user is logged in BEFORE insert:
+
+const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+if (!user) {
+  throw new Error("User not authenticated");
+}
+
+🚨 If "user.id" is NULL → insert will fail (RLS will block)
+
+---
+
+STEP 3: FIX INSERT QUERY
+
+Use ONLY valid DB columns:
+
+const { data, error } = await supabase
+  .from('restaurants')
+  .insert({
+    name: formData.name,
+    description: formData.description || "",
+    user_id: user.id
+  })
+  .select()
+  .single();
+
+🚨 DO NOT send:
+
+- undefined fields
+- non-existing columns (like additional_info if not present)
+
+---
+
+STEP 4: CHECK RLS POLICIES (CRITICAL)
+
+In Supabase SQL Editor:
+
+CREATE POLICY "Allow insert for authenticated users"
+ON restaurants
+FOR INSERT
+WITH CHECK (auth.uid() = user_id);
+
+🚨 If this is missing → insert will FAIL silently
+
+---
+
+STEP 5: HANDLE ERROR PROPERLY
+
+Replace generic error:
+
+if (error) {
+  console.error("Restaurant creation failed:", error.message);
+  alert(error.message);
+  return;
+}
+
+---
+
+STEP 6: ENSURE NOT NULL CONSTRAINTS
+
+Check table:
+
+If any column is REQUIRED:
+
+name TEXT NOT NULL
+
+Then frontend MUST send it.
+
+---
+
+STEP 7: CHECK DUPLICATE / UNIQUE CONSTRAINT
+
+If you added something like:
+
+slug UNIQUE
+
+Then duplicate insert will fail.
+
+Log error to confirm.
+
+---
+
+STEP 8: FIX BUTTON FLOW
+
+Ensure button actually calls async function:
+
+const handleCreateRestaurant = async () => {
+  setLoading(true);
+  await createRestaurant();
+  setLoading(false);
+};
+
+---
+
+STEP 9: ENVIRONMENT CONSISTENCY
+
+Ensure:
+
+- Same Supabase project in preview & production
+- Same anon key
+- Same DB schema
+
+---
+
+STEP 10: FINAL VALIDATION
+
+After fix:
+
+- Create restaurant with new user → SUCCESS
+- No error message
+- Restaurant appears in "My Restaurants"
+- Data exists in Supabase table
+
+---
+
+FINAL INSTRUCTION
+
+Do NOT guess.
+Find the exact failing point using logs.
+Fix root cause:
+
+- Auth issue
+- RLS issue
+- Schema mismatch
+- Bad insert query
+
+This must be 100% reliable before moving forward.

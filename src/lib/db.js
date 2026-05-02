@@ -15,13 +15,20 @@ export async function getRestaurants() {
 }
 
 export async function createRestaurant(payload) {
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) throw new Error('Not authenticated — please log in and try again')
+  console.log('[createRestaurant] user.id:', user.id)
+  console.log('[createRestaurant] payload keys:', Object.keys(payload))
   const { data, error } = await supabase
     .from('restaurants')
     .insert({ ...payload, owner_id: user.id })
     .select()
     .single()
-  if (error) throw error
+  if (error) {
+    console.error('[createRestaurant] Supabase error:', error)
+    throw error
+  }
+  console.log('[createRestaurant] created id:', data.id)
   return data
 }
 

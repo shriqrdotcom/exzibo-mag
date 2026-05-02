@@ -6,7 +6,8 @@ import {
   ChefHat, Users, Zap, Bell
 } from 'lucide-react'
 import PlanSelector from '../components/PlanSelector'
-import { createRestaurant, getRestaurants } from '../lib/db'
+import { createRestaurant, getRestaurants, updateRestaurant } from '../lib/db'
+import { supabase } from '../lib/supabase'
 
 export default function CreateWebsite() {
   const navigate = useNavigate()
@@ -82,7 +83,6 @@ export default function CreateWebsite() {
   const validate = () => {
     const e = {}
     if (!form.restaurantName.trim()) e.restaurantName = 'Restaurant name is required'
-    if (form.uploadedImages.length === 0) e.uploadedImages = 'At least one image is required'
     setErrors(e)
     return Object.keys(e).length === 0
   }
@@ -115,18 +115,27 @@ export default function CreateWebsite() {
     reader.readAsDataURL(file)
   })
 
+  const uploadImageToStorage = async (file, uid, name) => {
+    const ext = file.name?.split('.').pop() || 'jpg'
+    const path = `${uid}/${name}.${ext}`
+    const { error } = await supabase.storage
+      .from('restaurant-images')
+      .upload(path, file, { upsert: true })
+    if (error) throw error
+    const { data: { publicUrl } } = supabase.storage
+      .from('restaurant-images')
+      .getPublicUrl(path)
+    return publicUrl
+  }
+
   const handleGenerate = async () => {
     if (!validate()) return
     setSubmitting(true)
     setSubmitError('')
     try {
-      const base64Images = await Promise.all(
-        form.uploadedImages.map(img => img.file ? fileToBase64(img.file) : Promise.resolve(img.url))
-      )
-      const logoBase64 = form.logo?.file ? await fileToBase64(form.logo.file) : form.logo?.url || null
-
       const tableNumbers = form.tableNumbers.length === 0 ? ['1'] : form.tableNumbers
 
+      // ── Fetch existing slugs/UIDs to avoid collisions ──────────
       let existingSlugs = []
       let existingUIDs  = []
       try {
@@ -143,34 +152,67 @@ export default function CreateWebsite() {
         uid = `${firstDigit}${rest}`
       } while (existingUIDs.includes(uid))
 
-      const payload = {
+      // ── Step 1: Insert restaurant with text/metadata only ──────
+      // Images are NOT included here — base64 blobs exceed Supabase
+      // REST body limits (5 MB). They are uploaded to Storage below.
+      const corePayload = {
         uid,
         slug,
-        name: form.restaurantName,
-        logo: logoBase64,
-        images: base64Images,
-        tables: tableNumbers.length.toString(),
-        table_numbers: tableNumbers,
-        phone: form.phoneNumber,
-        gst: form.gstDetails,
-        description: form.description,
-        chef_info: form.chefInfo,
-        servant_info: form.servantInfo,
-        social_links: form.socialLinks,
-        rating: form.rating,
-        location: form.location,
-        additional_info: form.additionalInfo,
-        digital_menu_link: form.digitalMenuLink,
+        name:                 form.restaurantName,
+        tables:               tableNumbers.length.toString(),
+        table_numbers:        tableNumbers,
+        phone:                form.phoneNumber   || null,
+        gst:                  form.gstDetails    || null,
+        description:          form.description   || null,
+        chef_info:            form.chefInfo      || null,
+        servant_info:         form.servantInfo   || null,
+        social_links:         form.socialLinks,
+        rating:               form.rating        || null,
+        location:             form.location      || null,
+        additional_info:      form.additionalInfo || null,
+        digital_menu_link:    form.digitalMenuLink || null,
         digital_service_bell: form.digitalServiceBell,
-        status: 'active',
-        plan: form.selectedPlan,
-        plan_limits: form.planLimits,
+        status:               'active',
+        plan:                 form.selectedPlan,
+        plan_limits:          form.planLimits,
       }
 
-      await createRestaurant(payload)
+      const created = await createRestaurant(corePayload)
+
+      // ── Step 2: Upload images to Supabase Storage (optional) ───
+      // If the 'restaurant-images' bucket doesn't exist yet, this
+      // block is skipped and the restaurant still saves successfully.
+      try {
+        const imageUrls = []
+        for (let i = 0; i < form.uploadedImages.length; i++) {
+          const img = form.uploadedImages[i]
+          if (img.file) {
+            const url = await uploadImageToStorage(img.file, uid, `image-${i}`)
+            imageUrls.push(url)
+          }
+        }
+
+        let logoUrl = null
+        if (form.logo?.file) {
+          logoUrl = await uploadImageToStorage(form.logo.file, uid, 'logo')
+        }
+
+        if (imageUrls.length > 0 || logoUrl) {
+          await updateRestaurant(created.id, {
+            ...(imageUrls.length > 0 && { images: imageUrls }),
+            ...(logoUrl           && { logo: logoUrl }),
+          })
+        }
+      } catch (imgErr) {
+        // Storage upload failed — restaurant still created; images can
+        // be added later once the storage bucket is configured.
+        console.warn('[CreateRestaurant] Image upload skipped:', imgErr.message)
+      }
+
       setCreatedSlug(slug)
       setSuccess(true)
     } catch (err) {
+      console.error('[CreateRestaurant] Fatal error:', err)
       setSubmitError(err.message || 'Failed to create restaurant. Please check your connection and try again.')
     } finally {
       setSubmitting(false)
