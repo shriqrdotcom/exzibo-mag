@@ -20,11 +20,9 @@ import {
   ClipboardList, BookOpen, Users, Settings, ArrowLeft, BarChart2,
   Palette, DollarSign, Type, Save, Check, CalendarDays, UtensilsCrossed,
   SlidersHorizontal, Plus, Pencil, Trash2, X, Search, ChevronDown,
-  Tag, Info, Share2, Globe, Eye, EyeOff, Send, Bell,
+  Tag, Info, Eye, EyeOff, Send, Bell,
   Image as ImageIcon, AlertCircle, CheckCircle2,
 } from 'lucide-react'
-import { FaFacebook, FaInstagram, FaLinkedinIn, FaYoutube } from 'react-icons/fa'
-import { FaXTwitter } from 'react-icons/fa6'
 
 const MAX_GALLERY = 10
 
@@ -2406,12 +2404,8 @@ function SettingsPanel({ draft, setDraft, accentStart, accentEnd, onSave, saved,
   const [couponEnabled, setCouponEnabled] = useState(() => {
     try { const v = localStorage.getItem(couponEnabledKey); return v === null ? true : v === 'true' } catch { return true }
   })
-  const [socialLinks, setSocialLinks] = useState({
-    facebook: '', instagram: '', twitter: '', website: '', linkedin: '', youtube: '',
-  })
   const [googleReview, setGoogleReview] = useState('')
   const [googleReviewPasted, setGoogleReviewPasted] = useState(false)
-  const [pastedKey, setPastedKey] = useState(null)
   const couponStorageKey = `exzibo_coupons_${restaurantId || 'default'}`
   const aboutKey = `exzibo_about_${restaurantId || 'demo'}`
 
@@ -2424,11 +2418,10 @@ function SettingsPanel({ draft, setDraft, accentStart, accentEnd, onSave, saved,
       if (stored.image) setAboutImage(stored.image)
     } catch {}
     try {
-      // Load social links (non-demo only)
+      // Load google review (non-demo only)
       if (restaurantId !== 'demo') {
         const all = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
         const found = all.find(r => r.id === restaurantId)
-        if (found?.socialLinks) setSocialLinks(prev => ({ ...prev, ...found.socialLinks }))
         if (found?.googleReview) setGoogleReview(found.googleReview)
       }
     } catch {}
@@ -2494,14 +2487,6 @@ function SettingsPanel({ draft, setDraft, accentStart, accentEnd, onSave, saved,
     outline: 'none', fontFamily: 'inherit',
   }
 
-  const socialPlatforms = [
-    { key: 'facebook',  label: 'Facebook',  placeholder: 'https://facebook.com/exzibo',  icon: <FaFacebook size={18} />,    bg: '#1877F2', color: '#fff' },
-    { key: 'instagram', label: 'Instagram', placeholder: 'https://instagram.com/exzibo', icon: <FaInstagram size={18} />,   bg: 'radial-gradient(circle at 30% 110%, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)', color: '#fff' },
-    { key: 'twitter',   label: 'X',         placeholder: 'https://twitter.com/exzibo',   icon: <FaXTwitter size={18} />,    bg: '#000', color: '#fff' },
-    { key: 'website',   label: 'Website',   placeholder: 'https://twitter.com/exzibo',   icon: <Globe size={16} />,         bg: '#0EA5E9', color: '#fff' },
-    { key: 'linkedin',  label: 'LinkedIn',  placeholder: 'https://linkedin.com/exzibo',  icon: <FaLinkedinIn size={18} />,  bg: '#0A66C2', color: '#fff' },
-    { key: 'youtube',   label: 'YouTube',   placeholder: 'https://youtube.com/exzibo',   icon: <FaYoutube size={18} />,     bg: '#FF0000', color: '#fff' },
-  ]
 
   return (
     <div style={{ animation: 'settingsPanelIn 0.3s ease', paddingTop: '24px' }}>
@@ -2715,113 +2700,6 @@ function SettingsPanel({ draft, setDraft, accentStart, accentEnd, onSave, saved,
           </div>
         </div>
 
-        {/* 3. Add Social Media Links */}
-        <style>{`
-          .social-links-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: clamp(6px, 2vw, 10px);
-          }
-          .social-link-item {
-            display: flex;
-            align-items: center;
-            gap: clamp(4px, 1.5vw, 7px);
-            min-width: 0;
-          }
-          .social-link-icon {
-            width: clamp(28px, 7vw, 40px);
-            height: clamp(28px, 7vw, 40px);
-            border-radius: clamp(8px, 2vw, 12px);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-          }
-          .social-link-icon svg {
-            width: clamp(13px, 3.5vw, 18px);
-            height: clamp(13px, 3.5vw, 18px);
-          }
-          .social-link-input {
-            flex: 1;
-            min-width: 0;
-            padding: clamp(5px, 1.5vw, 8px) clamp(7px, 2.5vw, 13px);
-            background: #f1f5f9;
-            border: none;
-            border-radius: 999px;
-            font-size: clamp(9px, 2vw, 11px);
-            color: #0f172a;
-            outline: none;
-            font-family: inherit;
-          }
-          .social-link-input::placeholder {
-            color: #94a3b8;
-          }
-          .social-paste-btn {
-            flex-shrink: 0;
-            padding: clamp(5px, 1.5vw, 8px) clamp(7px, 2.5vw, 13px);
-            background: #1a237e;
-            border: none;
-            border-radius: 999px;
-            color: #fff;
-            font-size: clamp(8px, 1.8vw, 10px);
-            font-weight: 800;
-            letter-spacing: 0.06em;
-            cursor: pointer;
-            white-space: nowrap;
-            transition: background 0.2s;
-          }
-          .social-paste-btn:hover {
-            background: #283593;
-          }
-          .social-paste-btn.pasted {
-            background: #16a34a;
-          }
-        `}</style>
-        <div style={cardStyle}>
-          <div style={cardHeaderStyle}>
-            <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: '#EFF6FF', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#3B82F6', flexShrink: 0 }}>
-              <Share2 size={20} />
-            </div>
-            <div>
-              <div style={{ fontSize: '16px', fontWeight: 800, color: '#0f172a' }}>Add Social Media Links</div>
-              <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '2px' }}>Enter social media profile URLs</div>
-            </div>
-          </div>
-          <div className="social-links-grid">
-            {socialPlatforms.map(p => (
-              <div key={p.key} className="social-link-item">
-                <div className="social-link-icon" style={{ background: p.bg, color: p.color }}>
-                  {p.icon}
-                </div>
-                <input
-                  type="url"
-                  className="social-link-input"
-                  value={socialLinks[p.key]}
-                  onChange={e => setSocialLinks(s => ({ ...s, [p.key]: e.target.value }))}
-                  placeholder={p.placeholder}
-                />
-                <button
-                  className={`social-paste-btn${pastedKey === p.key ? ' pasted' : ''}`}
-                  title={`Paste ${p.label} URL`}
-                  onClick={async () => {
-                    try {
-                      const text = await navigator.clipboard.readText()
-                      if (text) {
-                        setSocialLinks(s => ({ ...s, [p.key]: text }))
-                        setPastedKey(p.key)
-                        setTimeout(() => setPastedKey(null), 1500)
-                      }
-                    } catch {
-                      setPastedKey(null)
-                    }
-                  }}
-                >
-                  {pastedKey === p.key ? '✓' : 'PASTE'}
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
 
         {/* Google Review Card */}
         <div style={cardStyle}>
@@ -2894,7 +2772,7 @@ function SettingsPanel({ draft, setDraft, accentStart, accentEnd, onSave, saved,
               try {
                 const mainList = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
                 if (mainList.find(r => r.id === restaurantId)) {
-                  localStorage.setItem('exzibo_restaurants', JSON.stringify(mainList.map(r => r.id === restaurantId ? { ...r, socialLinks, googleReview } : r)))
+                  localStorage.setItem('exzibo_restaurants', JSON.stringify(mainList.map(r => r.id === restaurantId ? { ...r, googleReview } : r)))
                 }
               } catch {}
             }
