@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Search, X, Users } from 'lucide-react'
+import { ArrowLeft, Users } from 'lucide-react'
 
 const ACCENT_START = '#6366F1'
 const ACCENT_END   = '#8B5CF6'
@@ -65,19 +65,10 @@ export default function TeamMembers() {
   const navigate = useNavigate()
 
   const [members, setMembers] = useState([])
-  const [search, setSearch]   = useState('')
 
   useEffect(() => { setMembers(loadMembers(id)) }, [id])
 
-  const filtered = search.trim()
-    ? members.filter(m =>
-        m.name.toLowerCase().includes(search.toLowerCase()) ||
-        (m.role || '').toLowerCase().includes(search.toLowerCase()) ||
-        (m.department || '').toLowerCase().includes(search.toLowerCase())
-      )
-    : members
-
-  const groups = groupMembers(filtered)
+  const groups = groupMembers(members)
 
   return (
     <div style={{
@@ -134,32 +125,8 @@ export default function TeamMembers() {
       {/* Content */}
       <div style={{ padding: '20px 16px', maxWidth: '520px', margin: '0 auto' }}>
 
-        {/* Search */}
-        <div style={{
-          background: '#fff', borderRadius: '14px', padding: '0 14px',
-          display: 'flex', alignItems: 'center', gap: '10px',
-          boxShadow: '0 2px 10px rgba(0,0,0,0.06)',
-          border: '1.5px solid #E9E9EF', marginBottom: '20px',
-        }}>
-          <Search size={16} color="#aaa" />
-          <input
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="Search by name, role or department…"
-            style={{
-              flex: 1, padding: '12px 0', border: 'none', outline: 'none',
-              fontSize: '14px', color: '#111', background: 'transparent', fontWeight: 500,
-            }}
-          />
-          {search && (
-            <button onClick={() => setSearch('')} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', padding: '2px' }}>
-              <X size={15} color="#bbb" />
-            </button>
-          )}
-        </div>
-
         {/* Grouped list */}
-        {filtered.length === 0 ? (
+        {members.length === 0 ? (
           <div style={{
             textAlign: 'center', padding: '44px 20px',
             background: '#fff', borderRadius: '18px',
@@ -167,10 +134,10 @@ export default function TeamMembers() {
           }}>
             <Users size={40} color="#D1D5DB" style={{ marginBottom: '12px' }} />
             <div style={{ fontWeight: 700, fontSize: '15px', color: '#9CA3AF', marginBottom: '4px' }}>
-              {search ? 'No members match your search' : 'No team members yet'}
+              No team members yet
             </div>
             <div style={{ fontSize: '13px', color: '#C4C4C4' }}>
-              {search ? 'Try a different search term' : 'Contact your Super Admin to add staff'}
+              Contact your Super Admin to add staff
             </div>
           </div>
         ) : (
