@@ -5,7 +5,7 @@ import { Mail, Lock, Eye, EyeOff, Loader2, AlertCircle } from 'lucide-react'
 
 export default function Auth() {
   const navigate          = useNavigate()
-  const { signIn, signUp } = useAuth()
+  const { signIn, signUp, signInWithGoogle } = useAuth()
 
   const [mode, setMode]         = useState('login')
   const [email, setEmail]       = useState('')
@@ -202,6 +202,46 @@ export default function Auth() {
             }
           </button>
         </form>
+
+        {/* Divider */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: '20px 0' }}>
+          <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.08)' }} />
+          <span style={{ fontSize: '11px', color: '#444', fontWeight: 600, letterSpacing: '0.06em' }}>OR</span>
+          <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.08)' }} />
+        </div>
+
+        {/* Google Sign In */}
+        <button
+          type="button"
+          onClick={async () => {
+            setError('')
+            setLoading(true)
+            const { error } = await signInWithGoogle()
+            if (error) { setError(error.message); setLoading(false) }
+          }}
+          disabled={loading}
+          style={{
+            width: '100%', padding: '13px',
+            background: 'rgba(255,255,255,0.05)',
+            border: '1px solid rgba(255,255,255,0.12)',
+            borderRadius: '12px',
+            color: '#fff', fontSize: '14px', fontWeight: 600,
+            cursor: loading ? 'not-allowed' : 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
+            transition: 'all 0.2s',
+            opacity: loading ? 0.6 : 1,
+          }}
+          onMouseEnter={e => { if (!loading) { e.currentTarget.style.background = 'rgba(255,255,255,0.09)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.22)' } }}
+          onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)' }}
+        >
+          <svg width="18" height="18" viewBox="0 0 48 48" fill="none">
+            <path d="M47.532 24.552c0-1.636-.148-3.2-.422-4.704H24.48v8.898h12.954c-.558 3.006-2.25 5.556-4.794 7.272v6.042h7.764c4.542-4.182 7.128-10.344 7.128-17.508z" fill="#4285F4"/>
+            <path d="M24.48 48c6.492 0 11.934-2.148 15.912-5.832l-7.764-6.042c-2.154 1.44-4.908 2.292-8.148 2.292-6.264 0-11.574-4.23-13.476-9.918H2.958v6.234C6.918 42.954 15.108 48 24.48 48z" fill="#34A853"/>
+            <path d="M11.004 28.5A14.42 14.42 0 0 1 10.26 24c0-1.566.27-3.084.744-4.5v-6.234H2.958A23.964 23.964 0 0 0 .48 24c0 3.864.924 7.524 2.478 10.734L11.004 28.5z" fill="#FBBC05"/>
+            <path d="M24.48 9.582c3.528 0 6.696 1.212 9.192 3.594l6.888-6.888C36.408 2.394 30.972 0 24.48 0 15.108 0 6.918 5.046 2.958 13.266l8.046 6.234C12.906 13.812 18.216 9.582 24.48 9.582z" fill="#EA4335"/>
+          </svg>
+          Continue with Google
+        </button>
 
         {/* Toggle mode */}
         <div style={{ marginTop: '20px', textAlign: 'center', fontSize: '13px', color: '#555' }}>
