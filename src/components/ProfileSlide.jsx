@@ -1282,46 +1282,6 @@ export default function ProfileSlide({
             </div>
           )}
 
-          {/* TEAM Tab */}
-          {activeTab === 'TEAM' && (
-            <div style={{ background: '#fff', borderRadius: '16px', margin: '0 16px', overflow: 'hidden', boxShadow: '0 1px 8px rgba(0,0,0,0.07)' }}>
-              <div
-                onClick={onTeamClick}
-                style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '15px 18px', cursor: onTeamClick ? 'pointer' : 'default', background: 'transparent', transition: 'background 0.15s' }}
-                onMouseEnter={e => { if (onTeamClick) e.currentTarget.style.background = 'rgba(0,0,0,0.03)' }}
-                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-              >
-                <div style={{ width: '44px', height: '44px', borderRadius: '14px', background: ICON_ROW_BG, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#555', flexShrink: 0 }}>
-                  <Users size={22} strokeWidth={1.5} />
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 800, fontSize: '13px', color: '#111', letterSpacing: '0.04em' }}>TEAM MEMBERS</div>
-                  <div style={{ fontSize: '11px', color: '#999', marginTop: '2px', letterSpacing: '0.03em' }}>MANAGE YOUR TEAM</div>
-                </div>
-                {onTeamClick && <ChevronRight size={16} color="#C7C7CC" strokeWidth={2.5} />}
-              </div>
-              {isMasterView && (
-                <>
-                  <div style={{ height: '1px', background: '#F0F0F5', marginLeft: '76px' }} />
-                  <div
-                    onClick={() => setShowAddMembers(true)}
-                    style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '15px 18px', cursor: 'pointer', background: 'transparent', transition: 'background 0.15s' }}
-                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,0,0,0.03)'}
-                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                  >
-                    <div style={{ width: '44px', height: '44px', borderRadius: '14px', background: ICON_ROW_BG, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#555', flexShrink: 0 }}>
-                      <UserPlus size={22} strokeWidth={1.5} />
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: 800, fontSize: '13px', color: '#111', letterSpacing: '0.04em' }}>ADD MEMBERS</div>
-                      <div style={{ fontSize: '11px', color: '#999', marginTop: '2px', letterSpacing: '0.03em' }}>INVITE NEW TEAM MEMBERS</div>
-                    </div>
-                    <ChevronRight size={16} color="#C7C7CC" strokeWidth={2.5} />
-                  </div>
-                </>
-              )}
-            </div>
-          )}
 
           {/* REMAINING DAY Tab */}
           {activeTab === 'REMAINING DAY' && (
@@ -1563,26 +1523,6 @@ export default function ProfileSlide({
               <span style={iconWrap}><User size={20} strokeWidth={1.5} /></span>
               <span style={{ ...rowLabel, flex: 1 }}>PROFILE</span>
               <ChevronRight size={16} color="#C7C7CC" strokeWidth={2.5} />
-            </div>
-
-            {/* Divider */}
-            {asPage && <div style={{ height: '1px', background: '#E5E5EA', marginLeft: '52px' }} />}
-
-            {/* TEAM MEMBERS */}
-            <div
-              onClick={onTeamClick}
-              style={{
-                ...rowStyle,
-                cursor: onTeamClick ? 'pointer' : 'default',
-                borderRadius: asPage ? 0 : '12px',
-                transition: 'background 0.15s',
-              }}
-              onMouseEnter={e => { if (onTeamClick) e.currentTarget.style.background = 'rgba(0,0,0,0.04)' }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
-            >
-              <span style={iconWrap}><Users size={20} strokeWidth={1.5} /></span>
-              <span style={{ ...rowLabel, flex: 1 }}>TEAM MEMBERS</span>
-              {onTeamClick && <ChevronRight size={16} color="#C7C7CC" strokeWidth={2.5} />}
             </div>
 
             {/* Divider */}
