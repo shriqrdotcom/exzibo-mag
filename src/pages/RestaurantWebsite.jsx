@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { notifyAnalyticsUpdate } from '../context/AnalyticsContext'
+import { getRestaurantBySlug, getMenuCategories, getMenuItems } from '../lib/db'
 import {
   Star, MapPin, Bell, ShoppingCart, Home,
   UtensilsCrossed, ClipboardList, CalendarDays,
@@ -672,8 +673,9 @@ export default function RestaurantWebsite() {
       setCustomerOrders(demoOrders)
       return
     }
-    const restaurants = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
-    const found = restaurants.find(r => r.slug === slug || r.id === slug)
+    // ── Try localStorage first (legacy / offline mode) ────────
+    const localRestaurants = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
+    const found = localRestaurants.find(r => r.slug === slug || r.id === slug)
     if (found) {
       const tabs = loadMenuTabs(found.id)
       setMenuTabs(tabs)
@@ -682,11 +684,86 @@ export default function RestaurantWebsite() {
       setDynamicCategories(loadFiltersFromStorage(found.id))
       try { const fe = localStorage.getItem(`exzibo_filters_enabled_${found.id}`); if (fe) setFiltersEnabled(JSON.parse(fe)) } catch {}
       setActiveMenuTab(tabs[0]?.id || 'starters')
-      const foundOrders = loadAndFilterCustomerOrders(found.id)
-      setCustomerOrders(foundOrders)
-    } else {
-      setNotFound(true)
+      setCustomerOrders(loadAndFilterCustomerOrders(found.id))
+      return
     }
+
+    // ── Fallback: fetch from Supabase ─────────────────────────
+    // Restaurants created via the Supabase flow are NOT in localStorage.
+    let cancelled = false
+    async function fetchFromSupabase() {
+      try {
+        const dbRow = await getRestaurantBySlug(slug)
+        if (cancelled) return
+        if (!dbRow) { setNotFound(true); return }
+
+        const r = {
+          id:              dbRow.id,
+          slug:            dbRow.slug,
+          uid:             dbRow.uid,
+          name:            dbRow.name,
+          description:     dbRow.description     || '',
+          location:        dbRow.location        || '',
+          phone:           dbRow.phone           || '',
+          rating:          dbRow.rating          || '',
+          tables:          dbRow.tables          || '',
+          images:          dbRow.images          || [],
+          logo:            dbRow.logo            || '',
+          social_links:    dbRow.social_links    || {},
+          socialLinks:     dbRow.social_links    || {},
+          chef_info:       dbRow.chef_info       || '',
+          chefInfo:        dbRow.chef_info       || '',
+          servant_info:    dbRow.servant_info    || '',
+          servantInfo:     dbRow.servant_info    || '',
+          additional_info: dbRow.additional_info || '',
+          plan:            dbRow.plan,
+          status:          dbRow.status,
+        }
+        setRestaurant(r)
+        setCustomerOrders(loadAndFilterCustomerOrders(r.id))
+
+        // Load menu from Supabase
+        const [cats, items] = await Promise.all([
+          getMenuCategories(r.id),
+          getMenuItems(r.id),
+        ])
+        if (cancelled) return
+
+        if (cats && cats.length > 0) {
+          const tabs = cats.map(c => ({ id: c.id, label: c.name.toUpperCase() }))
+          setMenuTabs(tabs)
+          setActiveMenuTab(tabs[0]?.id)
+          const menuObj = Object.fromEntries(tabs.map(t => [t.id, []]))
+          if (items) {
+            items.forEach(it => {
+              const key = it.category_id
+              if (key && menuObj[key] !== undefined) {
+                menuObj[key].push(normalizeItem({
+                  id: it.id, dbId: it.id,
+                  name: it.name,
+                  description: it.description || '',
+                  desc: it.description || '',
+                  price: parseFloat(it.price) || 0,
+                  img: it.image || null,
+                  veg: it.veg !== false,
+                  available: it.available !== false,
+                  tags: it.tags || [],
+                  addOns: it.add_ons || [],
+                }))
+              }
+            })
+          }
+          setMenuData(menuObj)
+        }
+      } catch (e) {
+        if (!cancelled) {
+          console.error('[RestaurantWebsite] Supabase fetch error:', e)
+          setNotFound(true)
+        }
+      }
+    }
+    fetchFromSupabase()
+    return () => { cancelled = true }
   }, [slug])
 
   // Load & live-sync about data (description + image) from admin panel

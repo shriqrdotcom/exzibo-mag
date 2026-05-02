@@ -134,8 +134,8 @@ ALTER TABLE bookings        ENABLE ROW LEVEL SECURITY;
 ALTER TABLE team_members    ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_settings   ENABLE ROW LEVEL SECURITY;
 
--- Restaurants: owners only
-CREATE POLICY "owners_select_restaurants" ON restaurants FOR SELECT USING (auth.uid() = owner_id);
+-- Restaurants: public can read (for the customer page); owners manage their own
+CREATE POLICY "public_read_restaurants"   ON restaurants FOR SELECT USING (true);
 CREATE POLICY "owners_insert_restaurants" ON restaurants FOR INSERT WITH CHECK (auth.uid() = owner_id);
 CREATE POLICY "owners_update_restaurants" ON restaurants FOR UPDATE USING (auth.uid() = owner_id);
 CREATE POLICY "owners_delete_restaurants" ON restaurants FOR DELETE USING (auth.uid() = owner_id);

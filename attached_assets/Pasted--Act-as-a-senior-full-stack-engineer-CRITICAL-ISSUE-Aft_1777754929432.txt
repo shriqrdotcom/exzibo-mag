@@ -1,0 +1,149 @@
+,Act as a senior full-stack engineer.
+
+CRITICAL ISSUE
+
+After creating a restaurant, opening its public URL shows:
+
+404 - Restaurant not found
+"No restaurant matches this URL"
+
+This is a core routing + database bug.
+
+---
+
+GOAL
+
+Fix restaurant URL system so:
+
+- Every created restaurant has a working public URL
+- URL correctly loads restaurant data from database
+- No 404 after creation
+
+---
+
+STEP 1: ENSURE SLUG IS CREATED (MANDATORY)
+
+When creating restaurant, generate a slug:
+
+const slug = restaurantName
+  .toLowerCase()
+  .replace(/[^a-z0-9]+/g, "-")
+  .replace(/(^-|-$)/g, "");
+
+---
+
+STEP 2: SAVE SLUG IN DATABASE
+
+Fix insert query:
+
+const { data, error } = await supabase
+  .from('restaurants')
+  .insert({
+    name: formData.name,
+    description: formData.description || "",
+    user_id: user.id,
+    slug: slug
+  })
+  .select()
+  .single();
+
+---
+
+STEP 3: DATABASE FIX
+
+Ensure column exists:
+
+ALTER TABLE restaurants
+ADD COLUMN IF NOT EXISTS slug TEXT UNIQUE;
+
+---
+
+STEP 4: FIX ROUTE PARAM
+
+Ensure route reads slug correctly:
+
+Example:
+"/restaurant/[slug]"
+
+const { slug } = router.query;
+
+---
+
+STEP 5: FETCH RESTAURANT BY SLUG (NOT ID)
+
+const { data, error } = await supabase
+  .from('restaurants')
+  .select('*')
+  .eq('slug', slug)
+  .single();
+
+🚨 DO NOT use:
+
+- id if URL uses slug
+- wrong param name
+
+---
+
+STEP 6: HANDLE NULL CASE PROPERLY
+
+if (!data) {
+  console.error("Restaurant not found for slug:", slug);
+}
+
+---
+
+STEP 7: FIX REDIRECT AFTER CREATION
+
+After creating restaurant:
+
+router.push(`/restaurant/${data.slug}`);
+
+🚨 Do NOT use:
+
+- undefined slug
+- hardcoded URL
+
+---
+
+STEP 8: DEBUG LOGGING (IMPORTANT)
+
+console.log("Slug from URL:", slug);
+console.log("Fetched restaurant:", data);
+
+---
+
+STEP 9: CHECK REAL DATABASE
+
+Go to Supabase → restaurants table:
+
+Verify:
+
+- slug exists
+- slug matches URL exactly
+
+---
+
+STEP 10: COMMON FAILURE CASES TO FIX
+
+Fix ALL of these:
+
+❌ slug not saved
+❌ slug is null
+❌ slug mismatch (uppercase/lowercase)
+❌ route uses id but query uses slug
+❌ wrong Supabase project in production
+
+---
+
+FINAL RESULT
+
+- Create restaurant → slug generated
+- URL: /restaurant/my-restaurant-name
+- Page loads correctly (no 404)
+- Works in preview + production
+
+---
+
+IMPORTANT:
+The URL system must ALWAYS match database query logic.
+If URL uses slug → DB must store slug → query must use slug.
