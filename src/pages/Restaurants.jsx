@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, Plus, Utensils, Store, MapPin, Star, ExternalLink, Settings, Globe } from 'lucide-react'
 import PlanBadge from '../components/PlanBadge'
+import { getRestaurants } from '../lib/db'
 
 export default function Restaurants() {
   const navigate = useNavigate()
@@ -9,8 +10,12 @@ export default function Restaurants() {
   const [activeFilter, setActiveFilter] = useState('live')
 
   useEffect(() => {
-    const saved = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
-    setRestaurants(saved)
+    getRestaurants()
+      .then(rows => setRestaurants(rows))
+      .catch(() => {
+        const saved = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
+        setRestaurants(saved)
+      })
   }, [])
 
   const filtered = restaurants.filter(r =>

@@ -1,0 +1,222 @@
+import { supabase } from './supabase'
+
+// ── Restaurants ──────────────────────────────────────────────
+
+export async function getRestaurants() {
+  const { data, error } = await supabase
+    .from('restaurants')
+    .select('*')
+    .order('created_at', { ascending: false })
+  if (error) throw error
+  return data
+}
+
+export async function createRestaurant(payload) {
+  const { data: { user } } = await supabase.auth.getUser()
+  const { data, error } = await supabase
+    .from('restaurants')
+    .insert({ ...payload, owner_id: user.id })
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
+export async function updateRestaurant(id, patch) {
+  const { data, error } = await supabase
+    .from('restaurants')
+    .update(patch)
+    .eq('id', id)
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
+export async function deleteRestaurant(id) {
+  const { error } = await supabase.from('restaurants').delete().eq('id', id)
+  if (error) throw error
+}
+
+export async function getRestaurantBySlug(slug) {
+  const { data, error } = await supabase
+    .from('restaurants')
+    .select('*')
+    .eq('slug', slug)
+    .single()
+  if (error) return null
+  return data
+}
+
+// ── Menu Items ───────────────────────────────────────────────
+
+export async function getMenuItems(restaurantId) {
+  const { data, error } = await supabase
+    .from('menu_items')
+    .select('*')
+    .eq('restaurant_id', restaurantId)
+    .order('category')
+  if (error) throw error
+  return data
+}
+
+export async function upsertMenuItems(restaurantId, items) {
+  const { data, error } = await supabase
+    .from('menu_items')
+    .upsert(items.map(item => ({ ...item, restaurant_id: restaurantId })))
+    .select()
+  if (error) throw error
+  return data
+}
+
+export async function deleteMenuItem(id) {
+  const { error } = await supabase.from('menu_items').delete().eq('id', id)
+  if (error) throw error
+}
+
+// ── Menu Tabs ────────────────────────────────────────────────
+
+export async function getMenuTabs(restaurantId) {
+  const { data, error } = await supabase
+    .from('menu_tabs')
+    .select('*')
+    .eq('restaurant_id', restaurantId)
+    .order('position')
+  if (error) throw error
+  return data
+}
+
+export async function upsertMenuTabs(restaurantId, tabs) {
+  const { data, error } = await supabase
+    .from('menu_tabs')
+    .upsert(tabs.map((t, i) => ({ ...t, restaurant_id: restaurantId, position: i })))
+    .select()
+  if (error) throw error
+  return data
+}
+
+// ── Orders ───────────────────────────────────────────────────
+
+export async function getOrders(restaurantId) {
+  const { data, error } = await supabase
+    .from('orders')
+    .select('*')
+    .eq('restaurant_id', restaurantId)
+    .order('created_at', { ascending: false })
+  if (error) throw error
+  return data
+}
+
+export async function createOrder(restaurantId, order) {
+  const { data, error } = await supabase
+    .from('orders')
+    .insert({ ...order, restaurant_id: restaurantId })
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
+export async function updateOrderStatus(orderId, status) {
+  const { data, error } = await supabase
+    .from('orders')
+    .update({ status })
+    .eq('id', orderId)
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
+// ── Bookings ─────────────────────────────────────────────────
+
+export async function getBookings(restaurantId) {
+  const { data, error } = await supabase
+    .from('bookings')
+    .select('*')
+    .eq('restaurant_id', restaurantId)
+    .order('created_at', { ascending: false })
+  if (error) throw error
+  return data
+}
+
+export async function createBooking(restaurantId, booking) {
+  const { data, error } = await supabase
+    .from('bookings')
+    .insert({ ...booking, restaurant_id: restaurantId })
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
+export async function updateBookingStatus(bookingId, status) {
+  const { data, error } = await supabase
+    .from('bookings')
+    .update({ status })
+    .eq('id', bookingId)
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
+// ── Team Members ─────────────────────────────────────────────
+
+export async function getTeamMembers(restaurantId) {
+  const { data, error } = await supabase
+    .from('team_members')
+    .select('*')
+    .eq('restaurant_id', restaurantId)
+    .order('created_at')
+  if (error) throw error
+  return data
+}
+
+export async function createTeamMember(payload) {
+  const { data: { user } } = await supabase.auth.getUser()
+  const { data, error } = await supabase
+    .from('team_members')
+    .insert({ ...payload, owner_id: user.id })
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
+export async function updateTeamMember(id, patch) {
+  const { data, error } = await supabase
+    .from('team_members')
+    .update(patch)
+    .eq('id', id)
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
+export async function deleteTeamMember(id) {
+  const { error } = await supabase.from('team_members').delete().eq('id', id)
+  if (error) throw error
+}
+
+// ── User Settings ─────────────────────────────────────────────
+
+export async function getUserSettings() {
+  const { data: { user } } = await supabase.auth.getUser()
+  const { data, error } = await supabase
+    .from('user_settings')
+    .select('*')
+    .eq('user_id', user.id)
+    .single()
+  if (error && error.code !== 'PGRST116') throw error
+  return data?.global_config ?? {}
+}
+
+export async function saveUserSettings(config) {
+  const { data: { user } } = await supabase.auth.getUser()
+  const { error } = await supabase
+    .from('user_settings')
+    .upsert({ user_id: user.id, global_config: config })
+  if (error) throw error
+}

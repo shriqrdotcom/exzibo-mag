@@ -1,27 +1,34 @@
-# CRIMSONLUXE — Luxury Restaurant Management SaaS
+# Exzibo — Restaurant Management SaaS
 
 ## Overview
-A high-fidelity frontend prototype for a luxury dark-themed restaurant management SaaS platform. Features a cinematic, premium aesthetic (obsidian black and crimson red) and provides interfaces for Super Admins, Restaurant Owners (Admins), and customers.
+A full-stack restaurant management SaaS platform. Features a cinematic dark theme (obsidian black + crimson red) with interfaces for Super Admins, Restaurant Owners, and customers. Backed by Supabase for auth, database, and real-time data.
 
 ## Tech Stack
 - **Framework**: React 19 + Vite
 - **Routing**: React Router DOM v7
+- **Backend**: Supabase (PostgreSQL + Auth)
 - **Icons**: Lucide React, React Icons
-- **Styling**: Plain CSS (glassmorphism, dark theme, crimson accents)
+- **Styling**: Plain CSS / inline styles (glassmorphism, dark theme, crimson accents)
 - **Other**: Leaflet (maps), react-image-crop
 
 ## Project Structure
-- `src/pages/` — Main view components (Landing, AdminDashboard, SuperAdminDashboard, RestaurantWebsite, etc.)
+- `src/pages/` — Main view components (Landing, Auth, AdminDashboard, SuperAdminDashboard, RestaurantWebsite, etc.)
 - `src/components/` — Reusable UI elements (Sidebar, AdminHeader, PermissionGate, modals)
-- `src/context/` — React Context providers (RoleContext for RBAC, AnalyticsContext)
-- `src/lib/` — Utilities (local notification system via localStorage)
+- `src/context/` — React Context providers (AuthContext for Supabase auth, RoleContext for RBAC, AnalyticsContext)
+- `src/lib/` — Utilities: `supabase.js` (client), `db.js` (service layer), `notifications.js`
+- `supabase/schema.sql` — Full database schema to run in Supabase SQL Editor
 - `public/` — Static assets (menu images, icons)
 - `attached_assets/` — Design references and screenshots
 
-## Data & Auth
-- **No backend** — all data is persisted via localStorage or hardcoded in contexts
-- **No external auth** — roles managed via RoleContext (Super Admin, Admin, Manager, Staff, Customer)
-- **No external integrations** — fully self-contained frontend
+## Auth & Data
+- **Auth**: Supabase Auth (email/password). Protected routes redirect to `/auth` if unauthenticated.
+- **Database**: Supabase PostgreSQL with Row Level Security. Tables: `restaurants`, `menu_items`, `menu_tabs`, `orders`, `bookings`, `team_members`, `user_settings`.
+- **Service layer**: `src/lib/db.js` — typed functions for all Supabase CRUD operations.
+- **Legacy**: Some pages still use localStorage as a fallback during the Supabase migration.
+
+## Environment Variables (Secrets)
+- `VITE_SUPABASE_URL` — Supabase project URL
+- `VITE_SUPABASE_ANON_KEY` — Supabase anonymous/public key
 
 ## Running
 - Dev server: `npm run dev` (port 5000, host 0.0.0.0)
@@ -29,9 +36,25 @@ A high-fidelity frontend prototype for a luxury dark-themed restaurant managemen
 - Vite config: `allowedHosts: true` for Replit proxy compatibility
 
 ## Routes
+### Public
 - `/` — Landing page
-- `/dashboard` — Super Admin dashboard
-- `/super-admin` — Super Admin panel
-- `/admin/:id` — Restaurant Admin panel (orders, bookings, menu, analytics)
-- `/master-control` — Master control panel
+- `/auth` — Login / Sign up
 - `/restaurant/:slug` — Customer-facing restaurant website
+- `/r/:slug` — Short URL alias for restaurant website
+- `/menu/:linkName` — Digital menu (QR-code ready)
+- `/table` — Table-specific ordering
+
+### Protected (requires login)
+- `/dashboard` — Admin dashboard (restaurant list, revenue)
+- `/super-admin` — Super Admin staff management
+- `/admin/:id` — Restaurant Admin panel (orders, bookings, menu, analytics)
+- `/admin/:id/team` — Team members list
+- `/admin/:id/profile` — Restaurant profile
+- `/master-control` — Master control panel
+- `/team-members` — Team members admin
+- `/settings` — App settings
+- `/create-website` — Restaurant website builder
+- `/restaurants` — Restaurant listing
+
+## Database Setup
+Run `supabase/schema.sql` in your Supabase project's SQL Editor to create all tables and RLS policies.

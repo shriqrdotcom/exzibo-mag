@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useAnalytics, notifyAnalyticsUpdate } from '../context/AnalyticsContext'
 import { useRole } from '../context/RoleContext'
+import { getRestaurants, getOrders, getBookings, updateOrderStatus, updateBookingStatus } from '../lib/db'
 import notificationIconImg from '@assets/image_1777373928129.png'
 import {
   NOTIFY_ROLES,
@@ -311,17 +312,46 @@ export default function AdminDashboard() {
   }
 
   useEffect(() => {
-    if (isDefault) {
-      setOrders(cleanAndPersistOrders('demo'))
-      setBookings(loadBookings('demo'))
-      return
+    async function init() {
+      if (isDefault) {
+        setOrders(cleanAndPersistOrders('demo'))
+        setBookings(loadBookings('demo'))
+        return
+      }
+      // Try Supabase first, fall back to localStorage
+      let found = null
+      try {
+        const rows = await getRestaurants()
+        found = rows.find(r => r.id === id)
+      } catch { /* noop */ }
+      if (!found) {
+        const all = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
+        found = all.find(r => r.id === id)
+      }
+      if (!found) { navigate('/restaurants'); return }
+      setRestaurant(found)
+      // Load orders
+      let orderRows = []
+      try {
+        orderRows = await getOrders(id)
+        if (orderRows.length > 0) {
+          const key = `exzibo_orders_${id}`
+          localStorage.setItem(key, JSON.stringify(orderRows))
+        }
+      } catch { /* noop */ }
+      setOrders(cleanAndPersistOrders(id))
+      // Load bookings
+      let bookingRows = []
+      try {
+        bookingRows = await getBookings(id)
+        if (bookingRows.length > 0) {
+          const key = `exzibo_bookings_${id}`
+          localStorage.setItem(key, JSON.stringify(bookingRows))
+        }
+      } catch { /* noop */ }
+      setBookings(loadBookings(id))
     }
-    const all = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
-    const found = all.find(r => r.id === id)
-    if (!found) { navigate('/restaurants'); return }
-    setRestaurant(found)
-    setOrders(cleanAndPersistOrders(found.id))
-    setBookings(loadBookings(found.id))
+    init()
   }, [id])
 
   useEffect(() => {
@@ -497,6 +527,12 @@ export default function AdminDashboard() {
     const key = `exzibo_orders_${restaurantId}`
     localStorage.setItem(key, JSON.stringify(updatedOrders))
     notifyAnalyticsUpdate()
+    // write-through to Supabase in background
+    if (!isDefault) {
+      updatedOrders.forEach(o => {
+        updateOrderStatus(o.id, o.status).catch(() => {})
+      })
+    }
   }
 
   function confirmOrder(orderId) {

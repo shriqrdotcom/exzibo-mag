@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useLayoutEffect } from 'react'
+import React, { useState, useEffect, useLayoutEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Sidebar from '../components/Sidebar'
 import AdminHeader from '../components/AdminHeader'
 import { TrendingUp, Filter, Download, ChevronLeft, ChevronRight, Plus, Trash2, Clock, X, Pencil } from 'lucide-react'
 import { useRole } from '../context/RoleContext'
+import { getRestaurants, updateRestaurant, deleteRestaurant } from '../lib/db'
 
 function getAvatarFromName(name) {
   return name.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase()
@@ -136,6 +137,23 @@ function syncRevenueLedger() {
   return entries
 }
 
+function mapRow(r) {
+  const startDate = r.start_date || r.createdAt || new Date().toISOString()
+  const endDate   = r.end_date   || (() => { const d = new Date(startDate); d.setDate(d.getDate() + 30); return d.toISOString() })()
+  return {
+    id:        r.id,
+    uid:       r.uid || r.id,
+    name:      (r.name || '').toUpperCase(),
+    status:    r.status === 'paused' ? 'PAUSED' : 'RUNNING',
+    startDate,
+    endDate,
+    plan:      normalizePlan(r.plan),
+    place:     (r.place || '—').toUpperCase().slice(0, 2) || '—',
+    note:      r.note || '',
+    avatar:    getAvatarFromName(r.name || '?'),
+  }
+}
+
 export default function Dashboard() {
   const navigate = useNavigate()
   const { exitRoleView } = useRole()
@@ -151,58 +169,28 @@ export default function Dashboard() {
   const [editDraft, setEditDraft] = useState(null)
   const [viewTarget, setViewTarget] = useState(null)
 
-  function openViewModal(r) {
-    const saved = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
-    const raw = saved.find(x => x.id === r.id) || {}
-    setViewTarget({
-      uid: r.uid,
-      state: r.place === '—' ? '' : r.place,
-      note: raw.note || '',
-    })
-  }
-
-  function loadRestaurantsFromStorage() {
-    const saved = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
-    let mutated = false
-    const today = new Date()
-    const monthFromNow = new Date()
-    monthFromNow.setDate(monthFromNow.getDate() + 30)
-    const enriched = saved.map(r => {
-      const patch = {}
-      if (!r.startDate) { patch.startDate = (r.createdAt || today.toISOString()); mutated = true }
-      if (!r.endDate) {
-        const start = new Date(r.startDate || patch.startDate || today.toISOString())
-        const end = new Date(start)
-        end.setDate(end.getDate() + 30)
-        patch.endDate = end.toISOString()
-        mutated = true
-      }
-      if (!r.place) { patch.place = '—'; mutated = true }
-      const normalizedPlan = normalizePlan(r.plan)
-      if (r.plan !== normalizedPlan) { patch.plan = normalizedPlan; mutated = true }
-      return { ...r, ...patch }
-    })
-    if (mutated) {
-      localStorage.setItem('exzibo_restaurants', JSON.stringify(enriched))
+  const fetchRestaurants = useCallback(async () => {
+    try {
+      const rows = await getRestaurants()
+      setRestaurants(rows.map(mapRow))
+    } catch {
+      const saved = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
+      setRestaurants(saved.map(mapRow))
     }
-    return enriched.map(r => ({
-      id: r.id,
-      uid: r.uid || r.id,
-      name: r.name.toUpperCase(),
-      status: r.status === 'paused' ? 'PAUSED' : 'RUNNING',
-      startDate: r.startDate,
-      endDate: r.endDate,
-      plan: normalizePlan(r.plan),
-      place: (r.place || '—').toUpperCase().slice(0, 2) || '—',
-      avatar: getAvatarFromName(r.name),
-    }))
+  }, [])
+
+  function openViewModal(r) {
+    setViewTarget({ uid: r.uid, state: r.place === '—' ? '' : r.place, note: r.note || '' })
   }
 
-  function persistRestaurantPatch(id, patch) {
-    const saved = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
-    const updated = saved.map(r => r.id === id ? { ...r, ...patch } : r)
-    localStorage.setItem('exzibo_restaurants', JSON.stringify(updated))
-    setRestaurants(loadRestaurantsFromStorage())
+  async function persistRestaurantPatch(id, patch) {
+    try {
+      await updateRestaurant(id, patch)
+    } catch {
+      const saved = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
+      localStorage.setItem('exzibo_restaurants', JSON.stringify(saved.map(r => r.id === id ? { ...r, ...patch } : r)))
+    }
+    fetchRestaurants()
   }
 
   function toggleRowStatus(r) {
@@ -210,14 +198,12 @@ export default function Dashboard() {
   }
 
   function openEditModal(r) {
-    const saved = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
-    const raw = saved.find(x => x.id === r.id) || {}
     setEditDraft({
       id: r.id,
       uid: r.uid,
       status: r.status,
       place: r.place === '—' ? '' : r.place,
-      note: raw.note || '',
+      note: r.note || '',
     })
   }
 
@@ -228,10 +214,10 @@ export default function Dashboard() {
   function saveEdit() {
     if (!editDraft) return
     const place = (editDraft.place || '').toUpperCase().replace(/[^A-Z]/g, '').slice(0, 2)
-    const note = (editDraft.note || '').slice(0, 20)
+    const note  = (editDraft.note || '').slice(0, 20)
     persistRestaurantPatch(editDraft.id, {
       status: editDraft.status === 'PAUSED' ? 'paused' : 'active',
-      place: place || '—',
+      place:  place || '—',
       note,
     })
     setEditDraft(null)
@@ -251,25 +237,21 @@ export default function Dashboard() {
     setDeleteError('')
   }
 
-  function handleConfirmDelete() {
+  async function handleConfirmDelete() {
     if (!deleteTarget) return
     if (confirmUidInput.trim() !== String(deleteTarget.uid)) {
       setDeleteError('UID does not match. Please try again.')
       return
     }
-    const saved = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
-    const filtered = saved.filter(r => r.id !== deleteTarget.id && (r.uid || r.id) !== deleteTarget.uid)
-    localStorage.setItem('exzibo_restaurants', JSON.stringify(filtered))
-    const id = deleteTarget.id
-    const uid = deleteTarget.uid
-    ;[
-      `exzibo_table_pending_${id}`,
-      `exzibo_table_names_${id}`,
-      `exzibo_link_name_${uid}`,
-      `exzibo_link_routes_created_${uid}`,
-      `exzibo_link_table_count_${uid}`,
-    ].forEach(k => localStorage.removeItem(k))
-    setRestaurants(loadRestaurantsFromStorage())
+    try {
+      await deleteRestaurant(deleteTarget.id)
+    } catch {
+      const saved = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
+      localStorage.setItem('exzibo_restaurants', JSON.stringify(
+        saved.filter(r => r.id !== deleteTarget.id && (r.uid || r.id) !== deleteTarget.uid)
+      ))
+    }
+    fetchRestaurants()
     closeDeleteModal()
     setToast('Restaurant deleted successfully')
     setTimeout(() => setToast(''), 2400)
@@ -280,7 +262,7 @@ export default function Dashboard() {
   }, [])
 
   useEffect(() => {
-    setRestaurants(loadRestaurantsFromStorage())
+    fetchRestaurants()
     setRevenueEntries(syncRevenueLedger())
     const onFocus = () => setRevenueEntries(syncRevenueLedger())
     const onStorage = (e) => {
@@ -294,7 +276,7 @@ export default function Dashboard() {
       window.removeEventListener('focus', onFocus)
       window.removeEventListener('storage', onStorage)
     }
-  }, [])
+  }, [fetchRestaurants])
 
   const currentMonthKey = monthKey(new Date())
   const currentMonthRevenue = revenueEntries

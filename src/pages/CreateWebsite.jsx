@@ -6,6 +6,7 @@ import {
   ChefHat, Users, Zap, Bell
 } from 'lucide-react'
 import PlanSelector from '../components/PlanSelector'
+import { createRestaurant, getRestaurants } from '../lib/db'
 
 export default function CreateWebsite() {
   const navigate = useNavigate()
@@ -116,47 +117,77 @@ export default function CreateWebsite() {
   const handleGenerate = async () => {
     if (!validate()) return
     setSubmitting(true)
-    const base64Images = await Promise.all(
-      form.uploadedImages.map(img => img.file ? fileToBase64(img.file) : Promise.resolve(img.url))
-    )
-    const logoBase64 = form.logo?.file ? await fileToBase64(form.logo.file) : form.logo?.url || null
+    try {
+      const base64Images = await Promise.all(
+        form.uploadedImages.map(img => img.file ? fileToBase64(img.file) : Promise.resolve(img.url))
+      )
+      const logoBase64 = form.logo?.file ? await fileToBase64(form.logo.file) : form.logo?.url || null
 
-    const tableNumbers = form.tableNumbers.length === 0 ? ['1'] : form.tableNumbers
+      const tableNumbers = form.tableNumbers.length === 0 ? ['1'] : form.tableNumbers
 
-    const existing = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
-    const existingSlugs = existing.map(r => r.slug).filter(Boolean)
-    const slug = generateSlug(form.restaurantName, existingSlugs)
-    const uid = generateUID(existing)
-    const newRestaurant = {
-      id: Date.now().toString(),
-      uid,
-      slug,
-      name: form.restaurantName,
-      logo: logoBase64,
-      images: base64Images,
-      owner: '',
-      tables: tableNumbers.length.toString(),
-      tableNumbers: tableNumbers,
-      phone: form.phoneNumber,
-      gst: form.gstDetails,
-      description: form.description,
-      chefInfo: form.chefInfo,
-      servantInfo: form.servantInfo,
-      socialLinks: form.socialLinks,
-      rating: form.rating,
-      location: form.location,
-      additionalInfo: form.additionalInfo,
-      digitalMenuLink: form.digitalMenuLink,
-      digitalServiceBell: form.digitalServiceBell,
-      status: 'active',
-      plan: form.selectedPlan,
-      planLimits: form.planLimits,
-      createdAt: new Date().toISOString(),
+      let existingSlugs = []
+      let existingUIDs = []
+      try {
+        const rows = await getRestaurants()
+        existingSlugs = rows.map(r => r.slug).filter(Boolean)
+        existingUIDs  = rows.map(r => r.uid).filter(Boolean)
+      } catch {
+        const saved = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
+        existingSlugs = saved.map(r => r.slug).filter(Boolean)
+        existingUIDs  = saved.map(r => r.uid).filter(Boolean)
+      }
+
+      const slug = generateSlug(form.restaurantName, existingSlugs)
+      let uid
+      do {
+        const firstDigit = [6, 7, 8, 9][Math.floor(Math.random() * 4)]
+        const rest = Math.floor(Math.random() * 1_000_000_000).toString().padStart(9, '0')
+        uid = `${firstDigit}${rest}`
+      } while (existingUIDs.includes(uid))
+
+      const payload = {
+        uid,
+        slug,
+        name: form.restaurantName,
+        logo: logoBase64,
+        images: base64Images,
+        tables: tableNumbers.length.toString(),
+        table_numbers: tableNumbers,
+        phone: form.phoneNumber,
+        gst: form.gstDetails,
+        description: form.description,
+        chef_info: form.chefInfo,
+        servant_info: form.servantInfo,
+        social_links: form.socialLinks,
+        rating: form.rating,
+        location: form.location,
+        additional_info: form.additionalInfo,
+        digital_menu_link: form.digitalMenuLink,
+        digital_service_bell: form.digitalServiceBell,
+        status: 'active',
+        plan: form.selectedPlan,
+        plan_limits: form.planLimits,
+      }
+
+      try {
+        await createRestaurant(payload)
+      } catch {
+        const existing = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
+        const legacyRecord = {
+          id: Date.now().toString(), uid, slug, name: form.restaurantName, logo: logoBase64,
+          images: base64Images, tables: tableNumbers.length.toString(), tableNumbers,
+          phone: form.phoneNumber, gst: form.gstDetails, description: form.description,
+          status: 'active', plan: form.selectedPlan, planLimits: form.planLimits,
+          createdAt: new Date().toISOString(),
+        }
+        localStorage.setItem('exzibo_restaurants', JSON.stringify([...existing, legacyRecord]))
+      }
+
+      setCreatedSlug(slug)
+      setSuccess(true)
+    } finally {
+      setSubmitting(false)
     }
-    localStorage.setItem('exzibo_restaurants', JSON.stringify([...existing, newRestaurant]))
-    setSubmitting(false)
-    setCreatedSlug(slug)
-    setSuccess(true)
   }
 
   if (success) {

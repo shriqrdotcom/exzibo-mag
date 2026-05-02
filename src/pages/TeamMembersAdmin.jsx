@@ -7,14 +7,24 @@ import {
 import Sidebar from '../components/Sidebar'
 import AdminHeader from '../components/AdminHeader'
 import { useRole } from '../context/RoleContext'
+import { getRestaurants, getTeamMembers, createTeamMember, deleteTeamMember, updateTeamMember } from '../lib/db'
 
 const TEAM_KEY = id => `exzibo_team_admin_${id}`
 
-function loadTeam(restaurantId) {
+function loadTeamFallback(restaurantId) {
   try {
     const raw = localStorage.getItem(TEAM_KEY(restaurantId))
     return raw ? JSON.parse(raw) : []
   } catch { return [] }
+}
+
+async function loadTeam(restaurantId) {
+  try {
+    const rows = await getTeamMembers(restaurantId)
+    return rows
+  } catch {
+    return loadTeamFallback(restaurantId)
+  }
 }
 
 function saveTeam(restaurantId, members) {
@@ -150,11 +160,21 @@ export default function TeamMembersAdmin() {
   }
 
   useEffect(() => {
-    const saved = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
-    setRestaurants(saved)
-    const t = {}
-    saved.forEach(r => { t[r.id] = loadTeam(r.id) })
-    setTeams(t)
+    async function init() {
+      let rests = []
+      try {
+        rests = await getRestaurants()
+      } catch {
+        rests = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
+      }
+      setRestaurants(rests)
+      const t = {}
+      await Promise.all(rests.map(async r => {
+        t[r.id] = await loadTeam(r.id)
+      }))
+      setTeams(t)
+    }
+    init()
   }, [])
 
   const showToast = useCallback((message, type = 'success') => {

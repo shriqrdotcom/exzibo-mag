@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Users } from 'lucide-react'
+import { getTeamMembers } from '../lib/db'
 
 const ACCENT_START = '#6366F1'
 const ACCENT_END   = '#8B5CF6'
@@ -37,16 +38,19 @@ const DEMO_MEMBERS = [
 
 function storageKey(id) { return `exzibo_team_${id || 'default'}` }
 
-function loadMembers(id) {
+async function loadMembers(id) {
+  try {
+    const rows = await getTeamMembers(id)
+    if (rows && rows.length > 0) return rows
+  } catch { /* noop */ }
   try {
     const raw = localStorage.getItem(storageKey(id))
     if (raw) {
       const parsed = JSON.parse(raw)
       if (parsed.length > 0) return parsed
     }
-    localStorage.setItem(storageKey(id), JSON.stringify(DEMO_MEMBERS))
-    return DEMO_MEMBERS
-  } catch { return DEMO_MEMBERS }
+  } catch { /* noop */ }
+  return DEMO_MEMBERS
 }
 
 function groupMembers(members) {
@@ -66,7 +70,7 @@ export default function TeamMembers() {
 
   const [members, setMembers] = useState([])
 
-  useEffect(() => { setMembers(loadMembers(id)) }, [id])
+  useEffect(() => { loadMembers(id).then(setMembers) }, [id])
 
   const groups = groupMembers(members)
 
