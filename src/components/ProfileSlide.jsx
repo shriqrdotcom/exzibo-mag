@@ -606,7 +606,10 @@ export default function ProfileSlide({
         icon: <Clock size={22} strokeWidth={1.5} />,
         title: 'OPENING HOURS',
         sub: 'MANAGE YOUR SCHEDULE',
-        onClick: () => hoursModalOpen ? setHoursModalOpen(false) : openHoursModal(),
+        onClick: () => {
+          if (hoursModalOpen) { setHoursModalOpen(false) }
+          else { setEditingLocation(false); setAddressError(''); setEditingContact(false); setContactPhoneError(''); setContactEmailError(''); setGoogleReviewOpen(false); openHoursModal() }
+        },
       },
       {
         icon: <MapPin size={22} strokeWidth={1.5} />,
@@ -614,7 +617,7 @@ export default function ProfileSlide({
         sub: 'UPDATE YOUR ADDRESS',
         onClick: () => {
           if (editingLocation) { setEditingLocation(false); setAddressError('') }
-          else { setAddressError(''); setAddressInput(loadLocationAddress(restaurantId)); setEditingLocation(true) }
+          else { setHoursModalOpen(false); setEditingContact(false); setContactPhoneError(''); setContactEmailError(''); setGoogleReviewOpen(false); setAddressError(''); setAddressInput(loadLocationAddress(restaurantId)); setEditingLocation(true) }
         },
       },
       {
@@ -623,7 +626,7 @@ export default function ProfileSlide({
         sub: 'ADD YOUR CONTACT INFORMATION',
         onClick: () => {
           if (editingContact) { setEditingContact(false); setContactPhoneError(''); setContactEmailError('') }
-          else { setContactPhoneError(''); setContactEmailError(''); const c = loadContact(restaurantId); setContactPhone(c.phone); setContactEmail(c.email); setEditingContact(true) }
+          else { setHoursModalOpen(false); setEditingLocation(false); setAddressError(''); setGoogleReviewOpen(false); setContactPhoneError(''); setContactEmailError(''); const c = loadContact(restaurantId); setContactPhone(c.phone); setContactEmail(c.email); setEditingContact(true) }
         },
       },
       {
@@ -631,8 +634,8 @@ export default function ProfileSlide({
         title: 'GOOGLE REVIEWS LINK',
         sub: 'GOOGLE REVIEW PROFILE',
         onClick: () => {
-          if (googleReviewOpen) setGoogleReviewOpen(false)
-          else { setGoogleReviewInput(localStorage.getItem(`exzibo_google_review_${restaurantId || 'default'}`) || ''); setGoogleReviewOpen(true) }
+          if (googleReviewOpen) { setGoogleReviewOpen(false) }
+          else { setHoursModalOpen(false); setEditingLocation(false); setAddressError(''); setEditingContact(false); setContactPhoneError(''); setContactEmailError(''); setGoogleReviewInput(localStorage.getItem(`exzibo_google_review_${restaurantId || 'default'}`) || ''); setGoogleReviewOpen(true) }
         },
       },
     ]
