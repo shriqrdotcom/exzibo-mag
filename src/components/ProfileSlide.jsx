@@ -557,7 +557,7 @@ export default function ProfileSlide({
         <div style={{ flex: 1, background: '#fff', display: 'flex', flexDirection: 'column', paddingBottom: '32px' }}>
 
           {/* Profile Card */}
-          <div style={{ padding: '12px 20px 20px', background: PROFILE_BG }}>
+          <div style={{ padding: '12px 20px 20px', background: '#fff' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '22px' }}>
               <div
                 onClick={() => fileInputRef.current?.click()}
