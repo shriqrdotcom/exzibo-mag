@@ -177,6 +177,20 @@ export default function ProfileSlide({
   const [activeTab, setActiveTab] = useState('PROFILE')
   const [stats, setStats] = useState({ members: 0, todayOrders: 0, tables: 0 })
 
+  const [facebookModalOpen, setFacebookModalOpen] = useState(false)
+  const [facebookUrlInput, setFacebookUrlInput] = useState('')
+
+  useEffect(() => {
+    const key = `exzibo_social_facebook_${restaurantId || 'default'}`
+    setFacebookUrlInput(localStorage.getItem(key) || '')
+  }, [restaurantId])
+
+  function handleFacebookSave() {
+    const key = `exzibo_social_facebook_${restaurantId || 'default'}`
+    localStorage.setItem(key, facebookUrlInput)
+    setFacebookModalOpen(false)
+  }
+
   useEffect(() => { setPreviewUrl(logoUrl || '') }, [logoUrl])
   useEffect(() => { setNameInput(restaurantName || '') }, [restaurantName])
 
@@ -610,15 +624,17 @@ export default function ProfileSlide({
             {/* Social Links */}
             <div style={{ display: 'flex', justifyContent: 'space-around' }}>
               {socialBtns.map(s => (
-                <button key={s.key} style={{
-                  width: '54px', height: '54px', borderRadius: '14px',
-                  background: '#fff', border: 'none', cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  color: '#444', boxShadow: '0 2px 8px rgba(0,0,0,0.09)',
-                  transition: 'transform 0.15s, box-shadow 0.15s',
-                }}
-                onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.08)'; e.currentTarget.style.boxShadow = '0 4px 14px rgba(0,0,0,0.14)' }}
-                onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.09)' }}
+                <button key={s.key}
+                  onClick={s.key === 'facebook' ? () => setFacebookModalOpen(true) : undefined}
+                  style={{
+                    width: '54px', height: '54px', borderRadius: '14px',
+                    background: '#fff', border: 'none', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: '#444', boxShadow: '0 2px 8px rgba(0,0,0,0.09)',
+                    transition: 'transform 0.15s, box-shadow 0.15s',
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.08)'; e.currentTarget.style.boxShadow = '0 4px 14px rgba(0,0,0,0.14)' }}
+                  onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.09)' }}
                 >
                   {s.icon}
                 </button>
@@ -1449,6 +1465,97 @@ export default function ProfileSlide({
             saving={locationSaving}
           />
         </EditFieldModal>
+      )}
+
+      {facebookModalOpen && createPortal(
+        <div
+          onClick={() => setFacebookModalOpen(false)}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 9999,
+            background: 'rgba(0,0,0,0.55)',
+            backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: '20px',
+          }}
+        >
+          <style>{`
+            @keyframes fbModalIn {
+              from { opacity: 0; transform: translate(-50%, -50%) scale(0.94); }
+              to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+            }
+          `}</style>
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              position: 'fixed',
+              top: '50%', left: '50%',
+              transform: 'translate(-50%, -50%)',
+              background: '#fff',
+              borderRadius: '20px',
+              padding: '22px 20px 20px',
+              width: '100%', maxWidth: '400px',
+              boxShadow: '0 24px 60px rgba(0,0,0,0.25)',
+              animation: 'fbModalIn 0.22s cubic-bezier(0.2, 0.8, 0.2, 1)',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{
+                  width: '48px', height: '48px', borderRadius: '12px',
+                  background: '#1877F2',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  flexShrink: 0,
+                }}>
+                  <FaFacebook size={28} color="#fff" />
+                </div>
+                <span style={{ fontWeight: 700, fontSize: '18px', color: '#0f172a' }}>Facebook</span>
+              </div>
+              <button
+                onClick={handleFacebookSave}
+                style={{
+                  padding: '9px 22px',
+                  background: '#bbf7d0',
+                  border: 'none', borderRadius: '10px',
+                  color: '#166534', fontSize: '13px', fontWeight: 800,
+                  letterSpacing: '0.06em', cursor: 'pointer',
+                  transition: 'opacity 0.15s',
+                }}
+                onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
+                onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+              >
+                SAVE
+              </button>
+            </div>
+
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: '10px',
+              background: '#f8fafc',
+              border: '1.5px solid #e2e8f0',
+              borderRadius: '50px',
+              padding: '10px 18px',
+            }}>
+              <Link2 size={17} color="#94a3b8" strokeWidth={2} style={{ flexShrink: 0 }} />
+              <span style={{ fontWeight: 700, fontSize: '13px', color: '#334155', whiteSpace: 'nowrap' }}>
+                Facebook.com
+              </span>
+              <input
+                type="url"
+                value={facebookUrlInput}
+                onChange={e => setFacebookUrlInput(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') handleFacebookSave() }}
+                placeholder="https://g.page/..."
+                autoFocus
+                style={{
+                  flex: 1, border: 'none', background: 'transparent',
+                  fontSize: '13px', color: '#0f172a', outline: 'none',
+                  fontFamily: 'inherit', minWidth: 0,
+                }}
+              />
+            </div>
+          </div>
+        </div>,
+        document.body
       )}
     </>
   )
