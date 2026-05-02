@@ -2,27 +2,37 @@ import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Search, X, Users } from 'lucide-react'
 
-const ROLE_STYLE = {
-  OWNER:   { dot: '#3B82F6', color: '#1D4ED8' },
-  MANAGER: { dot: '#7C3AED', color: '#5B21B6' },
-  STAFF:   { dot: '#10B981', color: '#065F46' },
-}
-
-const ROLE_MAP = {
-  Admin: 'STAFF', Waiter: 'STAFF', Chef: 'STAFF',
-  Cleaner: 'STAFF', Security: 'STAFF', Cashier: 'STAFF', Delivery: 'STAFF',
-  Manager: 'MANAGER', 'Assistant Manager': 'MANAGER', 'Floor Manager': 'MANAGER',
-  Owner: 'OWNER', 'Co-Owner': 'OWNER', Director: 'OWNER',
-  STAFF: 'STAFF', MANAGER: 'MANAGER', OWNER: 'OWNER',
-}
-
-function normalizeRole(role) { return ROLE_MAP[role] || 'STAFF' }
+const ACCENT_START = '#6366F1'
+const ACCENT_END   = '#8B5CF6'
 
 const DEMO_MEMBERS = [
-  { id: 'demo1', name: 'Trish Sharma', role: 'STAFF',   avatar: 'https://i.pravatar.cc/150?img=1', active: true },
-  { id: 'demo2', name: 'Avinav Kumar', role: 'STAFF',   avatar: 'https://i.pravatar.cc/150?img=2', active: true },
-  { id: 'demo3', name: 'Rahul Mehta',  role: 'STAFF',   avatar: 'https://i.pravatar.cc/150?img=3', active: true },
-  { id: 'demo4', name: 'Priya Singh',  role: 'MANAGER', avatar: 'https://i.pravatar.cc/150?img=5', active: false },
+  {
+    id: 'demo1',
+    name: 'Donna Hicks',
+    role: 'Admin',
+    group: 'Admin',
+    department: 'Finance & Admin',
+    avatar: 'https://i.pravatar.cc/150?img=47',
+    active: true,
+  },
+  {
+    id: 'demo2',
+    name: 'Kathleen Harper',
+    role: 'Admin',
+    group: 'Admin',
+    department: 'Management',
+    avatar: 'https://i.pravatar.cc/150?img=44',
+    active: true,
+  },
+  {
+    id: 'demo3',
+    name: 'Mary Long',
+    role: 'Employee',
+    group: 'Employee',
+    department: 'Marketing',
+    avatar: 'https://i.pravatar.cc/150?img=32',
+    active: true,
+  },
 ]
 
 function storageKey(id) { return `exzibo_team_${id || 'default'}` }
@@ -30,10 +40,24 @@ function storageKey(id) { return `exzibo_team_${id || 'default'}` }
 function loadMembers(id) {
   try {
     const raw = localStorage.getItem(storageKey(id))
-    if (raw) return JSON.parse(raw)
+    if (raw) {
+      const parsed = JSON.parse(raw)
+      if (parsed.length > 0) return parsed
+    }
     localStorage.setItem(storageKey(id), JSON.stringify(DEMO_MEMBERS))
     return DEMO_MEMBERS
   } catch { return DEMO_MEMBERS }
+}
+
+function groupMembers(members) {
+  const order = []
+  const map = {}
+  members.forEach(m => {
+    const key = m.group || m.role || 'Other'
+    if (!map[key]) { map[key] = []; order.push(key) }
+    map[key].push(m)
+  })
+  return order.map(k => ({ label: k, members: map[k] }))
 }
 
 export default function TeamMembers() {
@@ -41,34 +65,33 @@ export default function TeamMembers() {
   const navigate = useNavigate()
 
   const [members, setMembers] = useState([])
-  const [search, setSearch] = useState('')
+  const [search, setSearch]   = useState('')
 
   useEffect(() => { setMembers(loadMembers(id)) }, [id])
 
-  function toggleActive(memberId) {
-    const updated = members.map(m => m.id === memberId ? { ...m, active: !m.active } : m)
-    setMembers(updated)
-    localStorage.setItem(storageKey(id), JSON.stringify(updated))
-  }
+  const filtered = search.trim()
+    ? members.filter(m =>
+        m.name.toLowerCase().includes(search.toLowerCase()) ||
+        (m.role || '').toLowerCase().includes(search.toLowerCase()) ||
+        (m.department || '').toLowerCase().includes(search.toLowerCase())
+      )
+    : members
 
-  const filtered = members.filter(m =>
-    m.name.toLowerCase().includes(search.toLowerCase()) ||
-    m.role.toLowerCase().includes(search.toLowerCase())
-  )
-
-  const accentStart = '#6366F1'
-  const accentEnd = '#8B5CF6'
+  const groups = groupMembers(filtered)
 
   return (
     <div style={{
-      minHeight: '100vh', background: '#F2F2F7',
+      minHeight: '100vh',
+      background: '#F2F2F7',
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
     }}>
 
       {/* Gradient header */}
       <div style={{
-        background: `linear-gradient(135deg, ${accentStart} 0%, ${accentEnd} 100%)`,
-        padding: '0 0 28px', position: 'relative', overflow: 'hidden',
+        background: `linear-gradient(135deg, ${ACCENT_START} 0%, ${ACCENT_END} 100%)`,
+        padding: '0 0 28px',
+        position: 'relative',
+        overflow: 'hidden',
       }}>
         <div style={{ position: 'absolute', top: '-40px', right: '-40px', width: '180px', height: '180px', borderRadius: '50%', background: 'rgba(255,255,255,0.08)' }} />
         <div style={{ position: 'absolute', bottom: '-20px', left: '60px', width: '100px', height: '100px', borderRadius: '50%', background: 'rgba(255,255,255,0.06)' }} />
@@ -76,7 +99,7 @@ export default function TeamMembers() {
         {/* Top bar */}
         <div style={{ display: 'flex', alignItems: 'center', padding: '16px 20px 0' }}>
           <button
-            onClick={() => navigate(`/admin/${id || 'default'}`)}
+            onClick={() => navigate(-1)}
             style={{
               width: '40px', height: '40px', borderRadius: '12px',
               background: 'rgba(255,255,255,0.2)', border: '1px solid rgba(255,255,255,0.3)',
@@ -100,10 +123,11 @@ export default function TeamMembers() {
             </div>
             <div>
               <div style={{ fontWeight: 800, fontSize: '22px', color: '#fff', letterSpacing: '-0.02em' }}>Team Members</div>
-              <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.78)', fontWeight: 500 }}>Manage your restaurant staff</div>
+              <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.78)', fontWeight: 500 }}>
+                {members.length} member{members.length !== 1 ? 's' : ''} on your team
+              </div>
             </div>
           </div>
-
         </div>
       </div>
 
@@ -114,13 +138,14 @@ export default function TeamMembers() {
         <div style={{
           background: '#fff', borderRadius: '14px', padding: '0 14px',
           display: 'flex', alignItems: 'center', gap: '10px',
-          border: '1.5px solid #E9E9EF', marginBottom: '16px',
+          boxShadow: '0 2px 10px rgba(0,0,0,0.06)',
+          border: '1.5px solid #E9E9EF', marginBottom: '20px',
         }}>
           <Search size={16} color="#aaa" />
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder="Search by name or role…"
+            placeholder="Search by name, role or department…"
             style={{
               flex: 1, padding: '12px 0', border: 'none', outline: 'none',
               fontSize: '14px', color: '#111', background: 'transparent', fontWeight: 500,
@@ -133,11 +158,12 @@ export default function TeamMembers() {
           )}
         </div>
 
-        {/* Member list */}
+        {/* Grouped list */}
         {filtered.length === 0 ? (
           <div style={{
             textAlign: 'center', padding: '44px 20px',
-            background: '#fff', borderRadius: '18px', border: '1px solid #F0F0F5',
+            background: '#fff', borderRadius: '18px',
+            boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
           }}>
             <Users size={40} color="#D1D5DB" style={{ marginBottom: '12px' }} />
             <div style={{ fontWeight: 700, fontSize: '15px', color: '#9CA3AF', marginBottom: '4px' }}>
@@ -148,27 +174,50 @@ export default function TeamMembers() {
             </div>
           </div>
         ) : (
-          <div style={{ background: '#fff', borderRadius: '18px', border: '1px solid #F0F0F5', overflow: 'hidden' }}>
-            {filtered.map((member, idx) => (
-              <MemberRow
-                key={member.id}
-                member={member}
-                isLast={idx === filtered.length - 1}
-                onToggle={() => toggleActive(member.id)}
-              />
-            ))}
-          </div>
+          groups.map(group => (
+            <div key={group.label} style={{ marginBottom: '8px' }}>
+              {/* Section header */}
+              <div style={{
+                fontSize: '12px', fontWeight: 600,
+                color: '#9CA3AF', letterSpacing: '0.02em',
+                marginBottom: '8px', paddingLeft: '4px',
+              }}>
+                {group.label}
+              </div>
+
+              {/* Member cards */}
+              <div style={{
+                background: '#fff',
+                borderRadius: '16px',
+                boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
+                overflow: 'hidden',
+              }}>
+                {group.members.map((member, idx) => (
+                  <MemberRow
+                    key={member.id}
+                    member={member}
+                    isLast={idx === group.members.length - 1}
+                  />
+                ))}
+              </div>
+            </div>
+          ))
         )}
       </div>
     </div>
   )
 }
 
-function MemberRow({ member, isLast, onToggle }) {
-  const displayRole = normalizeRole(member.role)
-  const rs = ROLE_STYLE[displayRole] || { dot: '#6B7280', color: '#374151' }
+function MemberRow({ member, isLast }) {
   const [imgError, setImgError] = useState(false)
-  const [hovered, setHovered] = useState(false)
+  const [hovered, setHovered]   = useState(false)
+
+  const initials = member.name
+    .split(' ')
+    .slice(0, 2)
+    .map(w => w[0])
+    .join('')
+    .toUpperCase()
 
   return (
     <div
@@ -176,86 +225,58 @@ function MemberRow({ member, isLast, onToggle }) {
       onMouseLeave={() => setHovered(false)}
       style={{
         display: 'flex', alignItems: 'center', gap: '14px',
-        padding: '13px 16px',
-        background: hovered ? '#F7F7FA' : '#fff',
-        borderBottom: isLast ? 'none' : '1px solid #F0F0F5',
+        padding: '14px 16px',
+        background: hovered ? '#FAFAFA' : '#fff',
+        borderBottom: isLast ? 'none' : '1px solid #F5F5F7',
         transition: 'background 0.15s',
       }}
     >
-      {/* Avatar with active indicator ring */}
+      {/* Avatar with online dot */}
       <div style={{ position: 'relative', flexShrink: 0 }}>
         <div style={{
-          width: '46px', height: '46px', borderRadius: '50%',
-          background: 'linear-gradient(135deg, #6366F1, #8B5CF6)',
+          width: '48px', height: '48px', borderRadius: '50%',
+          background: `linear-gradient(135deg, ${ACCENT_START}, ${ACCENT_END})`,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           overflow: 'hidden',
-          opacity: member.active === false ? 0.45 : 1,
-          transition: 'opacity 0.2s',
         }}>
           {member.avatar && !imgError
-            ? <img src={member.avatar} alt={member.name}
+            ? <img
+                src={member.avatar}
+                alt={member.name}
                 onError={() => setImgError(true)}
-                style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            : <span style={{ fontWeight: 800, fontSize: '17px', color: '#fff' }}>
-                {member.name.slice(0, 1).toUpperCase()}
-              </span>}
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              />
+            : <span style={{ fontWeight: 800, fontSize: '17px', color: '#fff' }}>{initials}</span>
+          }
         </div>
-        {/* Active dot */}
+        {/* Green online dot */}
         <span style={{
           position: 'absolute', bottom: '1px', right: '1px',
-          width: '11px', height: '11px', borderRadius: '50%',
-          background: member.active === false ? '#D1D5DB' : '#22C55E',
+          width: '12px', height: '12px', borderRadius: '50%',
+          background: '#22C55E',
           border: '2px solid #fff',
-          transition: 'background 0.2s',
+          boxShadow: '0 0 0 1px rgba(34,197,94,0.3)',
         }} />
       </div>
 
-      {/* Name + role */}
+      {/* Info */}
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{
-          fontWeight: 700, fontSize: '14px',
-          color: member.active === false ? '#9CA3AF' : '#111',
+          fontWeight: 700, fontSize: '14px', color: '#111',
           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-          marginBottom: '3px', transition: 'color 0.2s',
+          marginBottom: '2px',
         }}>
           {member.name}
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-          <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: rs.dot, display: 'inline-block', flexShrink: 0 }} />
-          <span style={{ fontSize: '12px', color: rs.color, fontWeight: 600 }}>{displayRole}</span>
+        <div style={{ fontSize: '12px', color: '#555', fontWeight: 500, marginBottom: '2px' }}>
+          {member.role}
         </div>
+        {member.department && (
+          <div style={{ fontSize: '11px', color: '#AEAEB2', fontWeight: 500 }}>
+            {member.department}
+          </div>
+        )}
       </div>
-
-      {/* Active / Inactive toggle */}
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', flexShrink: 0 }}>
-        <Toggle active={member.active !== false} onToggle={onToggle} />
-        <span style={{ fontSize: '10px', fontWeight: 600, color: member.active === false ? '#9CA3AF' : '#22C55E', letterSpacing: '0.03em' }}>
-          {member.active === false ? 'Inactive' : 'Active'}
-        </span>
-      </div>
-    </div>
-  )
-}
-
-function Toggle({ active, onToggle }) {
-  return (
-    <div
-      onClick={onToggle}
-      style={{
-        width: '40px', height: '22px', borderRadius: '11px',
-        background: active ? '#22C55E' : '#D1D5DB',
-        position: 'relative', cursor: 'pointer',
-        transition: 'background 0.22s',
-      }}
-    >
-      <div style={{
-        position: 'absolute', top: '3px',
-        left: active ? '21px' : '3px',
-        width: '16px', height: '16px', borderRadius: '50%',
-        background: '#fff',
-        boxShadow: '0 1px 4px rgba(0,0,0,0.2)',
-        transition: 'left 0.22s',
-      }} />
     </div>
   )
 }
