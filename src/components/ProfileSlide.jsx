@@ -1271,14 +1271,6 @@ export default function ProfileSlide({
                           style={{ flex: 1, border: 'none', background: 'transparent', fontSize: '13px', color: '#0f172a', outline: 'none', fontFamily: 'inherit', minWidth: 0 }}
                         />
                       </div>
-                      <div style={{ display: 'flex', gap: '10px' }}>
-                        <button onClick={handleGoogleReviewSave} style={{ flex: 1, padding: '12px 0', borderRadius: '12px', background: LIME, border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: '13px', letterSpacing: '0.06em', color: '#111', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '7px' }}>
-                          <Check size={14} /> SAVE
-                        </button>
-                        <button onClick={() => setGoogleReviewOpen(false)} style={{ padding: '12px 18px', borderRadius: '12px', background: '#F0F0F5', border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: '13px', letterSpacing: '0.06em', color: '#666' }}>
-                          CANCEL
-                        </button>
-                      </div>
                     </div>
                   )}
                   {idx < arr.length - 1 && <div style={{ height: '1px', background: '#F0F0F5', marginLeft: '76px' }} />}
