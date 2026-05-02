@@ -1,0 +1,53 @@
+I am attaching a screenshot of a mobile UI screen. Your job is to **replicate this screen pixel-perfectly** as a React component. Do NOT add your own creativity, do NOT change colors, do NOT redesign anything. Follow every detail exactly as shown in the image.
+
+**STRICT RULES — READ BEFORE WRITING ANY CODE:**
+
+1. **Do not invent or change anything.** If it's not visible in the image, don't add it.
+2. **Do not use any component library** (no MUI, no Ant Design, no Chakra). Use plain CSS or Tailwind only.
+3. **Match every color exactly.** The background is a very light blue-gray (`#EAF0FB`). The active tab button is a solid royal blue (`#3B5BDB`). Cards/icon boxes are white with light gray borders and soft border-radius.
+4. **Match every font style exactly.** All text is bold, uppercase, sans-serif (use `font-family: 'Arial', sans-serif; font-weight: 700; text-transform: uppercase`).
+
+---
+
+**LAYOUT — TOP TO BOTTOM, REPLICATE EXACTLY:**
+
+**Header:**
+- Back arrow (`←`) on the left, text `PROFILE` in bold center, three-dot menu (`⋮`) on the right.
+
+**Profile Section:**
+- A large square image placeholder (light blue rounded square) on the left.
+- On the right: Restaurant name in bold (`RESTAURANT NAME`), below it `UID: 0000000001` in small gray text.
+
+**Stats Row (3 equal boxes):**
+- Three pill-shaped rounded boxes side by side.
+- Box 1: large number `8` on top, `MEMBERS` below in small caps.
+- Box 2: large number `100` on top, `TUDAYS ORDER` below.
+- Box 3: large number `40` on top, `TABLES` below.
+- All boxes have a light blue-gray background, soft border-radius, white text for numbers.
+
+**Social Icons Row:**
+- 5 square icon buttons in a row, equal size, white background, rounded corners, thin gray border.
+- Icons (left to right): Facebook `f`, Instagram camera, LinkedIn `in`, YouTube play button, Link/chain icon.
+- Use simple SVG or Unicode icons — do NOT use any icon library.
+
+**Tab Switcher:**
+- A pill-shaped tab bar with 3 tabs: `PROFILE` | `TEAM` | `REHMANING DAY`
+- `PROFILE` tab is active: solid blue background (`#3B5BDB`), white bold text, rounded left side.
+- `TEAM` and `REHMANING DAY` are inactive: gray background, gray bold text.
+- The entire tab bar has a rounded pill shape with gray background.
+
+**Menu List (below tabs):**
+- 4 list items, each with: rounded gray icon box on left + bold title + small subtitle + right chevron (`>`).
+- Item 1: Clock icon — `OPENING HOURS` / `MANAGE YOUR SCHEDULE`
+- Item 2: Location pin icon — `ADD LOCATION` / `UPDATE YOUR ADDRESS`
+- Item 3: Phone icon — `EDIT CONTACT` / `ADD YOUR CONTACT INFORMATION`
+- Item 4: Star icon — `GOOGLE REVIEWS LINK` / `GOGGLE REVIEW PROFILE`
+- Each item is separated by a thin light gray divider line.
+
+**Background:** The top section (above the tab bar) has a light blue-gray background (`#EAF0FB`). Below the tab bar is plain white.
+
+---
+
+**OUTPUT:** A single `App.jsx` file with all styles written as a `<style>` tag or inline CSS. No external dependencies except React. The component must look identical to the screenshot on a 390px wide mobile screen.
+
+---

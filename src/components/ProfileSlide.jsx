@@ -556,13 +556,17 @@ export default function ProfileSlide({
 
         <div style={{ flex: 1, background: '#fff', display: 'flex', flexDirection: 'column', paddingBottom: '32px' }}>
 
+          {/* Blue hero band */}
+          <div style={{ background: PROFILE_BG, height: '68px', flexShrink: 0 }} />
+
           {/* Profile Card */}
-          <div style={{ padding: '12px 20px 20px', background: '#fff' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '22px' }}>
+          <div style={{ padding: '0 20px 20px', background: '#fff' }}>
+            {/* Profile row — image straddles the blue/white boundary */}
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px', marginBottom: '22px', marginTop: '-48px', position: 'relative', zIndex: 1 }}>
               <div
                 onClick={() => fileInputRef.current?.click()}
                 style={{
-                  width: '84px', height: '84px', borderRadius: '20px',
+                  width: '100px', height: '100px', borderRadius: '22px',
                   background: STAT_PILL, overflow: 'hidden', flexShrink: 0,
                   cursor: 'pointer', position: 'relative',
                 }}
@@ -576,7 +580,8 @@ export default function ProfileSlide({
                   </div>
                 )}
               </div>
-              <div>
+              {/* Name/UID anchored in the white zone */}
+              <div style={{ paddingTop: '52px' }}>
                 <div style={{ fontWeight: 800, fontSize: '16px', color: '#111', letterSpacing: '0.01em', lineHeight: 1.2 }}>
                   {restaurantName || 'RESTAURANT NAME'}
                 </div>
