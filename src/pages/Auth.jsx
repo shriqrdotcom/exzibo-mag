@@ -1,8 +1,7 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { Mail, Lock, Eye, EyeOff, Loader2, AlertCircle, ExternalLink } from 'lucide-react'
-import { IS_PREVIEW } from '../lib/env'
+import { Mail, Lock, Eye, EyeOff, Loader2, AlertCircle } from 'lucide-react'
 
 export default function Auth() {
   const navigate          = useNavigate()
@@ -62,44 +61,6 @@ export default function Auth() {
         EXZI<span style={{ color: '#E8321A' }}>BO</span>
       </div>
 
-      {/* Preview Mode Banner */}
-      {IS_PREVIEW && (
-        <div style={{
-          width: '100%',
-          maxWidth: '400px',
-          marginBottom: '16px',
-          padding: '14px 16px',
-          borderRadius: '14px',
-          background: 'rgba(232,50,26,0.08)',
-          border: '1px solid rgba(232,50,26,0.25)',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '8px',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <AlertCircle size={15} color="#E8321A" />
-            <span style={{ fontSize: '13px', fontWeight: 700, color: '#E8321A', letterSpacing: '0.02em' }}>
-              Preview Mode
-            </span>
-          </div>
-          <p style={{ fontSize: '12px', color: '#aaa', margin: 0, lineHeight: 1.5 }}>
-            Authentication is disabled in this preview environment. To sign in, please use the live version.
-          </p>
-          <a
-            href="https://exzibo.online/auth"
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              display: 'inline-flex', alignItems: 'center', gap: '5px',
-              fontSize: '12px', fontWeight: 700, color: '#E8321A',
-              textDecoration: 'none', marginTop: '2px',
-            }}
-          >
-            Open exzibo.online <ExternalLink size={11} />
-          </a>
-        </div>
-      )}
-
       {/* Card */}
       <div style={{
         width: '100%',
@@ -109,10 +70,6 @@ export default function Auth() {
         borderRadius: '24px',
         padding: '36px 32px',
         backdropFilter: 'blur(20px)',
-        opacity: IS_PREVIEW ? 0.6 : 1,
-        pointerEvents: IS_PREVIEW ? 'none' : 'auto',
-        userSelect: IS_PREVIEW ? 'none' : 'auto',
-        position: 'relative',
       }}>
 
         {/* Heading */}
