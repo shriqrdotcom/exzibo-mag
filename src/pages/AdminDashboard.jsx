@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useAnalytics, notifyAnalyticsUpdate } from '../context/AnalyticsContext'
 import { useRole } from '../context/RoleContext'
-import { getRestaurants, getOrders, getBookings, updateOrderStatus, updateBookingStatus, getMenuCategories, getMenuItems, insertMenuItem, updateMenuItem, deleteMenuItem, upsertMenuCategory, deleteMenuCategory, upsertMenuItems, uploadMenuImage } from '../lib/db'
+import { getRestaurants, getOrders, getBookings, updateOrderStatus, updateBookingStatus, getMenuCategories, getMenuItems, insertMenuItem, updateMenuItem, deleteMenuItem, upsertMenuCategory, deleteMenuCategory, upsertMenuItems, uploadMenuImage, updateRestaurant, uploadToStorage, uploadDataUrlToStorage } from '../lib/db'
 import notificationIconImg from '@assets/image_1777373928129.png'
 import {
   NOTIFY_ROLES,
@@ -2405,20 +2405,26 @@ function SettingsPanel({ draft, setDraft, accentStart, accentEnd, onSave, saved,
     const canAdd = MAX_GALLERY - currentCount
     const toProcess = valid.slice(0, canAdd)
     setGalleryCompressing(true)
+    const isRealRestaurant = restaurantId && restaurantId !== 'demo'
     try {
       const results = await Promise.all(toProcess.map(async f => {
+        if (isRealRestaurant) {
+          try { return await uploadToStorage(f, 'restaurant-images', `${restaurantId}/carousel`) }
+          catch (e) { console.warn('[carousel] Storage upload failed, using base64:', e.message) }
+        }
         const src = await fileToBase64(f)
         if (f.size / 1024 > 200) { const compressed = await compressToLimit(src, 200); return compressed || src }
         return src
       }))
       const good = results.filter(Boolean)
       if (!good.length) { setGalleryError('Failed to process images.'); return }
-      setCarouselImages(prev => {
-        const updated = [...prev, ...good]
-        localStorage.setItem(`exzibo_carousel_${restaurantId || 'default'}`, JSON.stringify(updated))
-        window.dispatchEvent(new CustomEvent('exzibo-carousel-changed', { detail: { restaurantId, images: updated } }))
-        return updated
-      })
+      const newImages = [...carouselImages, ...good]
+      setCarouselImages(newImages)
+      localStorage.setItem(`exzibo_carousel_${restaurantId || 'default'}`, JSON.stringify(newImages))
+      window.dispatchEvent(new CustomEvent('exzibo-carousel-changed', { detail: { restaurantId, images: newImages } }))
+      if (isRealRestaurant) {
+        updateRestaurant(restaurantId, { images: newImages }).catch(e => console.warn('[carousel] DB update failed:', e.message))
+      }
       setCarouselIdx(0)
       if (valid.length > canAdd) {
         setGalleryError(`Only ${canAdd} image${canAdd !== 1 ? 's' : ''} added — gallery is full.`)
@@ -2431,6 +2437,9 @@ function SettingsPanel({ draft, setDraft, accentStart, accentEnd, onSave, saved,
     setCarouselImages(prev => {
       const updated = prev.filter((_, i) => i !== idx)
       localStorage.setItem(`exzibo_carousel_${restaurantId || 'default'}`, JSON.stringify(updated))
+      if (restaurantId && restaurantId !== 'demo') {
+        updateRestaurant(restaurantId, { images: updated }).catch(() => {})
+      }
       return updated
     })
     setCarouselIdx(0)
@@ -2798,10 +2807,18 @@ function SettingsPanel({ draft, setDraft, accentStart, accentEnd, onSave, saved,
 
         {/* Save Button */}
         <button
-          onClick={() => {
-            // Save about text + image
+          onClick={async () => {
+            // Upload about image to Supabase Storage if it is still a data URL
+            let imageToSave = aboutImage || ''
+            if (imageToSave && imageToSave.startsWith('data:') && restaurantId && restaurantId !== 'demo') {
+              try {
+                imageToSave = await uploadDataUrlToStorage(imageToSave, 'restaurant-images', `${restaurantId}/about`)
+                setAboutImage(imageToSave)
+              } catch (e) { console.warn('[about] Image upload to storage failed:', e.message) }
+            }
+            // Save about text + image URL
             try {
-              localStorage.setItem(aboutKey, JSON.stringify({ description: aboutText, image: aboutImage }))
+              localStorage.setItem(aboutKey, JSON.stringify({ description: aboutText, image: imageToSave }))
             } catch {}
             // Save social links to restaurant record
             if (restaurantId && restaurantId !== 'demo') {
@@ -3844,7 +3861,7 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
   const sectionDropdownRef = useRef(null)
 
   useEffect(() => {
-    if (!restaurantId) return
+    if (!restaurantId || restaurantId === 'demo') return
     let cancelled = false
     async function load() {
       try {

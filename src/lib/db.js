@@ -86,6 +86,40 @@ export async function deleteMenuCategory(id) {
   if (error) throw error
 }
 
+// ── Storage Utilities ─────────────────────────────────────────
+
+// Upload a File object to any Supabase Storage bucket.
+// Returns the public URL.
+export async function uploadToStorage(file, bucket, pathPrefix) {
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) throw new Error('Not authenticated')
+  const ext = (file.name?.split('.').pop() || file.type?.split('/')[1] || 'jpg').toLowerCase()
+  const filePath = `${pathPrefix}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+  const { error: uploadError } = await supabase.storage
+    .from(bucket)
+    .upload(filePath, file, { cacheControl: '3600', upsert: false })
+  if (uploadError) throw uploadError
+  const { data: { publicUrl } } = supabase.storage.from(bucket).getPublicUrl(filePath)
+  return publicUrl
+}
+
+// Upload a base64 data URL to any Supabase Storage bucket.
+// Returns the public URL.
+export async function uploadDataUrlToStorage(dataUrl, bucket, pathPrefix) {
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) throw new Error('Not authenticated')
+  const res  = await fetch(dataUrl)
+  const blob = await res.blob()
+  const ext  = blob.type.split('/')[1] || 'jpg'
+  const filePath = `${pathPrefix}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+  const { error: uploadError } = await supabase.storage
+    .from(bucket)
+    .upload(filePath, blob, { cacheControl: '3600', upsert: false })
+  if (uploadError) throw uploadError
+  const { data: { publicUrl } } = supabase.storage.from(bucket).getPublicUrl(filePath)
+  return publicUrl
+}
+
 // ── Menu Image Upload ─────────────────────────────────────────
 
 export async function uploadMenuImage(dataUrl, restaurantId) {

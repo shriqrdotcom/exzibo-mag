@@ -11,6 +11,7 @@ import { FaFacebook, FaInstagram, FaLinkedinIn, FaYoutube } from 'react-icons/fa
 import { FaXTwitter } from 'react-icons/fa6'
 import AddMembersModal from './AddMembersModal'
 import RemainingDaysModal from './RemainingDaysModal'
+import { updateRestaurant, uploadDataUrlToStorage } from '../lib/db'
 
 const LIME = '#A8E63D'
 
@@ -496,18 +497,31 @@ export default function ProfileSlide({
     setLogoCompressModal(false)
   }
 
-  function saveLogo(base64) {
+  async function saveLogo(base64) {
     setUploading(true)
+    setUploadError('')
     try {
-      setPreviewUrl(base64)
+      setPreviewUrl(base64) // Show preview immediately
+      let logoUrl = base64
+      // Upload to Supabase Storage for real (non-demo) restaurants
+      if (restaurantId && restaurantId !== 'default' && restaurantId !== 'demo') {
+        try {
+          logoUrl = await uploadDataUrlToStorage(base64, 'restaurant-images', `${restaurantId}/logo`)
+          await updateRestaurant(restaurantId, { logo: logoUrl })
+        } catch (e) {
+          console.warn('[logo] Storage upload failed, using base64 fallback:', e.message)
+          logoUrl = base64
+        }
+      }
+      setPreviewUrl(logoUrl)
       if (!restaurantId || restaurantId === 'default') {
-        localStorage.setItem('exzibo_logo_default', base64)
+        localStorage.setItem('exzibo_logo_default', logoUrl)
       } else {
         const all = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
-        localStorage.setItem('exzibo_restaurants', JSON.stringify(all.map(r => r.id === restaurantId ? { ...r, logo: base64 } : r)))
+        localStorage.setItem('exzibo_restaurants', JSON.stringify(all.map(r => r.id === restaurantId ? { ...r, logo: logoUrl } : r)))
       }
-      window.dispatchEvent(new CustomEvent('exzibo-logo-changed', { detail: { restaurantId, logo: base64 } }))
-      onLogoUpdate && onLogoUpdate(base64)
+      window.dispatchEvent(new CustomEvent('exzibo-logo-changed', { detail: { restaurantId, logo: logoUrl } }))
+      onLogoUpdate && onLogoUpdate(logoUrl)
       setUploadSuccess(true); setTimeout(() => setUploadSuccess(false), 2500)
     } catch { setUploadError('Failed to save logo. Please try again.') }
     finally { setUploading(false) }

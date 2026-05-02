@@ -56,5 +56,30 @@ A full-stack restaurant management SaaS platform. Features a cinematic dark them
 - `/create-website` — Restaurant website builder
 - `/restaurants` — Restaurant listing
 
+## Image Storage Architecture
+All images are stored exclusively in Supabase Storage — no base64 blobs in localStorage or the database.
+
+| Image type | Bucket | Path pattern |
+|---|---|---|
+| Restaurant logo | `restaurant-images` | `{restaurantId}/logo/{ts}-{rand}.{ext}` |
+| About section image | `restaurant-images` | `{restaurantId}/about/{ts}-{rand}.{ext}` |
+| Carousel / hero images | `restaurant-images` | `{restaurantId}/carousel/{ts}-{rand}.{ext}` |
+| Menu item images | `menu-images` | `{userId}/{restaurantId}/{ts}.{ext}` |
+
+Storage utility functions live in `src/lib/db.js`:
+- `uploadToStorage(file, bucket, pathPrefix)` — uploads a File object
+- `uploadDataUrlToStorage(dataUrl, bucket, pathPrefix)` — uploads a base64 data URL
+
+Upload sites:
+- **Logo**: `ProfileSlide.jsx` `saveLogo()` — uploads then calls `updateRestaurant({logo: url})`
+- **Carousel**: `AdminDashboard.jsx` `SettingsPanel.handleCarouselFiles()` — uploads then calls `updateRestaurant({images: urls})`
+- **About image**: `AdminDashboard.jsx` `SettingsPanel` save button — uploads before writing localStorage
+- **Menu items**: `AdminDashboard.jsx` `MenuPanel` `resolveMenuImage()` — called before DB write
+
+Demo restaurants (restaurantId === 'demo') use base64/localStorage as fallback (no auth session available).
+
 ## Database Setup
-Run `supabase/schema.sql` in your Supabase project's SQL Editor to create all tables and RLS policies.
+1. Run `supabase/schema.sql` in your Supabase project's SQL Editor to create all tables and RLS policies.
+2. Run `supabase/storage_setup.sql` to create the `restaurant-images` and `menu-images` storage buckets and their access policies.
+3. Optionally run `supabase/migration_public_restaurant_read.sql` to add the public SELECT policy on the `restaurants` table (required for the public `/restaurant/:slug` page).
+4. Optionally run `supabase/migration_restaurants.sql` to add extended columns to the `restaurants` table.

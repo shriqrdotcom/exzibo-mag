@@ -1,0 +1,74 @@
+Act as a senior full-stack engineer.
+
+Goal:
+Fix the image upload system so that ALL images are stored ONLY in Supabase Storage.
+Images must NOT be stored locally, in base64, or in the database.
+
+Current Problem:
+- When I upload images (e.g., food items, restaurant images), they are being saved incorrectly (locally or improperly).
+- This causes inconsistency and images are not accessible across the system.
+
+Required Solution:
+
+1. Supabase Storage Integration
+- Use Supabase Storage bucket (e.g., "images" or "menu-images").
+- Upload all images using Supabase Storage API.
+- Use the Supabase client properly (no direct fetch hacks).
+
+2. Upload Flow
+- When a user selects an image:
+  a. Generate a unique filename (use timestamp + random string).
+  b. Upload the file to Supabase Storage bucket.
+  c. Get the public URL of the uploaded image.
+  d. Store ONLY the public URL in the database (not the file).
+
+3. Strict Rules
+- DO NOT store images in:
+  - local filesystem
+  - base64 in database
+  - temporary server folders (except memory during upload)
+- ONLY store the public URL returned by Supabase.
+
+4. Database Structure
+- Ensure image fields (e.g., menu_items.image_url, restaurants.image_url) store URL strings only.
+- No blobs, no base64.
+
+5. UI / Frontend Fix
+- Update all image upload forms:
+  - Use file input
+  - Call upload function
+  - Save returned URL in DB
+- Display images using the stored URL.
+
+6. Real-time Consistency
+- After upload:
+  - Image should immediately appear in:
+    - menu website
+    - admin panel
+    - dashboard
+    - preview mode
+
+7. Error Handling
+- If upload fails:
+  - Show proper error message
+  - Do NOT save anything in database
+
+8. Security
+- Use Supabase policies correctly:
+  - Public read access for images
+  - Authenticated users can upload
+
+9. Code Quality
+- Write clean, reusable upload function:
+  - uploadImage(file): returns public URL
+- Do not duplicate logic across files.
+
+10. Important Constraint
+- Do NOT break existing database schema or working features.
+- Only refactor image handling logic.
+
+Expected Output:
+- Fully working image upload system using Supabase Storage
+- Images load correctly everywhere
+- No local storage usage
+- Clean and maintainable code
