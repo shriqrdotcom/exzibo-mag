@@ -1,0 +1,113 @@
+TASK: Implement the provided PROFILE UI exactly as shown in the reference image into the existing Profile Section of both "MASTER CONTROL" and "ADMIN CONTROL" in the menu editing system.
+
+IMPORTANT RULES:
+- DO NOT change design, layout, spacing, colors, or structure.
+- DO NOT improve, redesign, or add extra features.
+- STRICTLY replicate the UI as it appears in the image.
+- Maintain consistency across both MASTER CONTROL and ADMIN CONTROL.
+- Ensure both sections use separate state/data (no shared mutation bug).
+
+-------------------------------------
+
+SECTION STRUCTURE:
+
+1. HEADER AREA:
+- Top left: Back arrow icon
+- Title: "PROFILE"
+- Top right: 3-dot menu icon
+
+2. PROFILE CARD:
+- Large rounded square image (restaurant logo placeholder)
+- Right side content:
+  - "RESTAURANT NAME" (bold text)
+  - "UID: 0000000001" (light text)
+
+3. STATS ROW (3 ITEMS HORIZONTALLY):
+- Item 1:
+  - Number: 8
+  - Label: MEMBERS
+- Item 2:
+  - Number: 100
+  - Label: TODAYS ORDER
+- Item 3:
+  - Number: 40
+  - Label: TABLES
+
+- Style:
+  - Rounded pill background for numbers
+  - Equal spacing
+  - Center aligned
+
+4. SOCIAL LINKS ROW:
+- 5 icon buttons:
+  - Facebook
+  - Instagram
+  - LinkedIn
+  - YouTube
+  - Link icon
+- All icons inside rounded square buttons
+- Equal spacing and alignment
+
+5. TAB SWITCHER:
+- 3 tabs:
+  - PROFILE (ACTIVE - blue highlight)
+  - TEAM (inactive)
+  - REMAINING DAY (inactive)
+- Rounded container background
+- Smooth toggle UI (no redesign)
+
+6. SETTINGS LIST (VERTICAL MENU):
+Each item contains:
+- Left icon
+- Title
+- Subtitle
+- Right arrow icon
+
+Items (in order):
+1. OPENING HOURS
+   - Subtitle: MANAGE YOUR SCHEDULE
+
+2. ADD LOCATION
+   - Subtitle: UPDATE YOUR ADDRESS
+
+3. EDIT CONTACT
+   - Subtitle: ADD YOUR CONTACT INFORMATION
+
+4. GOOGLE REVIEWS LINK
+   - Subtitle: GOOGLE REVIEW PROFILE
+
+- Keep spacing, padding, and typography EXACTLY like image
+- Each item is a clickable row
+
+-------------------------------------
+
+FUNCTIONAL REQUIREMENTS:
+
+- Tabs must switch content (basic state toggle is enough)
+- Buttons should be clickable (no backend logic required yet)
+- Keep component reusable for both MASTER and ADMIN panels
+- FIX EXISTING ISSUE:
+  Ensure MASTER CONTROL and ADMIN CONTROL do NOT share the same state or database binding unintentionally.
+
+-------------------------------------
+
+STYLING RULES:
+
+- Use same color palette as image (light grey + soft blue highlight)
+- Maintain rounded UI (cards, buttons, containers)
+- Use soft shadows and minimal borders
+- Do NOT introduce new colors or gradients
+
+-------------------------------------
+
+OUTPUT:
+
+- Clean component structure
+- Modular code (ProfileHeader, StatsRow, SocialLinks, Tabs, SettingsList)
+- Fully responsive for mobile screen
+- Pixel-perfect match with provided image
+
+-------------------------------------
+
+FINAL NOTE:
+This is a STRICT UI replication task. Do not add creativity. Do not optimize design. Just match the image exactly.

@@ -50,7 +50,7 @@ export default function ProfilePage() {
     /* Desktop backdrop — neutral gray so the phone frame pops */
     <div style={{
       minHeight: '100dvh',
-      background: '#E5E5EA',
+      background: '#D8E6FA',
       display: 'flex',
       justifyContent: 'center',
       fontFamily: MOBILE_FONT,
@@ -60,7 +60,7 @@ export default function ProfilePage() {
         width: '100%',
         maxWidth: '390px',
         minHeight: '100dvh',
-        background: '#F2F2F7',
+        background: '#EAF1FD',
         display: 'flex',
         flexDirection: 'column',
         position: 'relative',
@@ -72,46 +72,58 @@ export default function ProfilePage() {
           position: 'sticky',
           top: 0,
           zIndex: 10,
-          background: '#F2F2F7',
+          background: '#EAF1FD',
           padding: '16px 20px 14px',
           display: 'flex',
           alignItems: 'center',
-          gap: '14px',
+          justifyContent: 'space-between',
           flexShrink: 0,
-          borderBottom: '1px solid rgba(0,0,0,0.07)',
         }}>
-          {/* Back arrow in gray circle */}
-          <button
-            onClick={() => navigate(-1)}
-            style={{
-              width: '38px',
-              height: '38px',
-              borderRadius: '50%',
-              background: '#E5E5EA',
-              border: 'none',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: 'pointer',
-              flexShrink: 0,
-            }}
-            aria-label="Go back"
-          >
-            <svg width="11" height="18" viewBox="0 0 11 18" fill="none">
-              <polyline points="9 1 1 9 9 17" stroke="#333" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            {/* Back arrow */}
+            <button
+              onClick={() => navigate(-1)}
+              style={{
+                width: '36px',
+                height: '36px',
+                borderRadius: '50%',
+                background: 'rgba(0,0,0,0.06)',
+                border: 'none',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                flexShrink: 0,
+              }}
+              aria-label="Go back"
+            >
+              <svg width="10" height="16" viewBox="0 0 10 16" fill="none">
+                <polyline points="8 1 1 8 8 15" stroke="#333" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
 
-          {/* Title — left-aligned next to the arrow */}
-          <span style={{
-            fontWeight: 'bold',
-            fontSize: '22px',
-            color: '#111',
-            letterSpacing: '-0.02em',
-            lineHeight: 1,
+            {/* Title */}
+            <span style={{
+              fontWeight: 800,
+              fontSize: '20px',
+              color: '#111',
+              letterSpacing: '-0.01em',
+              lineHeight: 1,
+            }}>
+              PROFILE
+            </span>
+          </div>
+
+          {/* 3-dot menu */}
+          <button style={{
+            background: 'transparent', border: 'none', cursor: 'pointer',
+            display: 'flex', flexDirection: 'column', gap: '4px',
+            padding: '4px', alignItems: 'center', justifyContent: 'center',
           }}>
-            Profile
-          </span>
+            {[0,1,2].map(i => (
+              <div key={i} style={{ width: '4px', height: '4px', borderRadius: '50%', background: '#444' }} />
+            ))}
+          </button>
         </div>
 
         {/* ── Scrollable content ── */}

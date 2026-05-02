@@ -4,9 +4,10 @@ import { useRole } from '../context/RoleContext'
 import {
   X, Power, MapPin, Phone, Store, Users, Image,
   Loader2, AlertCircle, CheckCircle2, Check, XCircle, Mail, Clock, UserPlus,
-  User, UserX, ChevronRight, Calendar,
+  User, UserX, ChevronRight, Calendar, Star, Link2,
 } from 'lucide-react'
 import { PiPencilCircle } from 'react-icons/pi'
+import { FaFacebook, FaInstagram, FaLinkedinIn, FaYoutube } from 'react-icons/fa'
 import AddMembersModal from './AddMembersModal'
 import RemainingDaysModal from './RemainingDaysModal'
 
@@ -173,6 +174,9 @@ export default function ProfileSlide({
   const [badgeText, setBadgeText] = useState('')
   const [restaurantUID, setRestaurantUID] = useState('')
 
+  const [activeTab, setActiveTab] = useState('PROFILE')
+  const [stats, setStats] = useState({ members: 0, todayOrders: 0, tables: 0 })
+
   useEffect(() => { setPreviewUrl(logoUrl || '') }, [logoUrl])
   useEffect(() => { setNameInput(restaurantName || '') }, [restaurantName])
 
@@ -181,6 +185,37 @@ export default function ProfileSlide({
     const all = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
     const r = all.find(r => r.id === restaurantId)
     setRestaurantUID(r?.uid || '')
+  }, [restaurantId])
+
+  useEffect(() => {
+    const storageBase = (!restaurantId || restaurantId === 'default') ? 'default' : restaurantId
+    const managers = parseInt(localStorage.getItem(`exzibo_invite_managers_${storageBase}`) || '0', 10)
+    const staff = parseInt(localStorage.getItem(`exzibo_invite_staff_${storageBase}`) || '0', 10)
+    const members = managers + staff
+
+    let uid = '0000000001'
+    if (restaurantId && restaurantId !== 'default') {
+      try {
+        const all = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
+        uid = all.find(r => r.id === restaurantId)?.uid || ''
+      } catch {}
+    }
+    const tables = uid ? parseInt(localStorage.getItem(`exzibo_link_table_count_${uid}`) || '0', 10) : 0
+
+    let todayOrders = 0
+    try {
+      const raw = localStorage.getItem(`exzibo_orders_${restaurantId || 'default'}`)
+      if (raw) {
+        const orders = JSON.parse(raw)
+        const today = new Date().toDateString()
+        todayOrders = Array.isArray(orders) ? orders.filter(o => {
+          const d = o.timestamp || o.time || o.date || o.createdAt
+          return d ? new Date(d).toDateString() === today : false
+        }).length : 0
+      }
+    } catch {}
+
+    setStats({ members, todayOrders, tables })
   }, [restaurantId])
 
   useEffect(() => {
@@ -465,6 +500,314 @@ export default function ProfileSlide({
       setLocationSuccess(true); setEditingLocation(false); setTimeout(() => setLocationSuccess(false), 2500)
     } catch { setAddressError('Failed to save. Please try again.') }
     finally { setLocationSaving(false) }
+  }
+
+  if (asPage) {
+    const PROFILE_BG = '#EAF1FD'
+    const STAT_PILL = '#C8D9F8'
+    const STAT_NUM = '#3B6BE8'
+    const TAB_ACTIVE = '#3B6BE8'
+    const TAB_BG = '#DDE2EC'
+    const ICON_ROW_BG = '#F2F4F8'
+    const settingsRows = [
+      {
+        icon: <Clock size={22} strokeWidth={1.5} />,
+        title: 'OPENING HOURS',
+        sub: 'MANAGE YOUR SCHEDULE',
+        onClick: openHoursModal,
+      },
+      {
+        icon: <MapPin size={22} strokeWidth={1.5} />,
+        title: 'ADD LOCATION',
+        sub: 'UPDATE YOUR ADDRESS',
+        onClick: () => { setAddressError(''); setAddressInput(loadLocationAddress(restaurantId)); setEditingLocation(true) },
+      },
+      {
+        icon: <Phone size={22} strokeWidth={1.5} />,
+        title: 'EDIT CONTACT',
+        sub: 'ADD YOUR CONTACT INFORMATION',
+        onClick: () => {
+          setContactPhoneError(''); setContactEmailError('')
+          const c = loadContact(restaurantId); setContactPhone(c.phone); setContactEmail(c.email)
+          setEditingContact(true)
+        },
+      },
+      {
+        icon: <Star size={22} strokeWidth={1.5} />,
+        title: 'GOOGLE REVIEWS LINK',
+        sub: 'GOOGLE REVIEW PROFILE',
+        onClick: () => {},
+      },
+    ]
+    const socialBtns = [
+      { icon: <FaFacebook size={20} />, key: 'facebook' },
+      { icon: <FaInstagram size={20} />, key: 'instagram' },
+      { icon: <FaLinkedinIn size={20} />, key: 'linkedin' },
+      { icon: <FaYoutube size={20} />, key: 'youtube' },
+      { icon: <Link2 size={20} />, key: 'website' },
+    ]
+
+    return (
+      <>
+        <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp"
+          style={{ display: 'none' }}
+          onChange={e => { const f = e.target.files?.[0]; if (f) handleLogoUpload(f); e.target.value = '' }}
+        />
+
+        <div style={{ flex: 1, background: PROFILE_BG, display: 'flex', flexDirection: 'column', paddingBottom: '32px' }}>
+
+          {/* Profile Card */}
+          <div style={{ padding: '12px 20px 20px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '22px' }}>
+              <div
+                onClick={() => fileInputRef.current?.click()}
+                style={{
+                  width: '84px', height: '84px', borderRadius: '20px',
+                  background: STAT_PILL, overflow: 'hidden', flexShrink: 0,
+                  cursor: 'pointer', position: 'relative',
+                }}
+              >
+                {previewUrl
+                  ? <img src={previewUrl} alt="logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  : null}
+                {uploading && (
+                  <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Loader2 size={20} color="#fff" style={{ animation: 'spin 1s linear infinite' }} />
+                  </div>
+                )}
+              </div>
+              <div>
+                <div style={{ fontWeight: 800, fontSize: '16px', color: '#111', letterSpacing: '0.01em', lineHeight: 1.2 }}>
+                  {restaurantName || 'RESTAURANT NAME'}
+                </div>
+                <div style={{ fontSize: '13px', color: '#888', marginTop: '4px', fontFamily: 'monospace', letterSpacing: '0.04em' }}>
+                  UID: {restaurantUID || '0000000001'}
+                </div>
+              </div>
+            </div>
+
+            {/* Stats Row */}
+            <div style={{ display: 'flex', justifyContent: 'space-around', marginBottom: '22px' }}>
+              {[
+                { value: stats.members, label: 'MEMBERS' },
+                { value: stats.todayOrders, label: 'TODAYS ORDER' },
+                { value: stats.tables, label: 'TABLES' },
+              ].map(s => (
+                <div key={s.label} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '7px' }}>
+                  <div style={{ background: STAT_PILL, borderRadius: '24px', padding: '4px 22px', minWidth: '62px', textAlign: 'center' }}>
+                    <span style={{ fontWeight: 800, fontSize: '22px', color: STAT_NUM, lineHeight: 1.3 }}>{s.value}</span>
+                  </div>
+                  <span style={{ fontSize: '11px', fontWeight: 600, color: '#888', letterSpacing: '0.07em' }}>{s.label}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Social Links */}
+            <div style={{ display: 'flex', justifyContent: 'space-around' }}>
+              {socialBtns.map(s => (
+                <button key={s.key} style={{
+                  width: '54px', height: '54px', borderRadius: '14px',
+                  background: '#fff', border: 'none', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  color: '#444', boxShadow: '0 2px 8px rgba(0,0,0,0.09)',
+                  transition: 'transform 0.15s, box-shadow 0.15s',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.08)'; e.currentTarget.style.boxShadow = '0 4px 14px rgba(0,0,0,0.14)' }}
+                onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.09)' }}
+                >
+                  {s.icon}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Tab Switcher */}
+          <div style={{ display: 'flex', background: TAB_BG, borderRadius: '14px', margin: '0 16px 16px', padding: '4px' }}>
+            {['PROFILE', 'TEAM', 'REMAINING DAY'].map(tab => (
+              <button key={tab} onClick={() => setActiveTab(tab)} style={{
+                flex: 1, padding: '9px 4px', borderRadius: '10px', border: 'none',
+                background: activeTab === tab ? TAB_ACTIVE : 'transparent',
+                color: activeTab === tab ? '#fff' : '#666',
+                fontWeight: 700, fontSize: '11px', letterSpacing: '0.04em',
+                cursor: 'pointer', transition: 'background 0.2s, color 0.2s',
+              }}>
+                {tab}
+              </button>
+            ))}
+          </div>
+
+          {/* PROFILE Tab */}
+          {activeTab === 'PROFILE' && (
+            <div style={{ background: '#fff', borderRadius: '16px', margin: '0 16px', overflow: 'hidden', boxShadow: '0 1px 8px rgba(0,0,0,0.07)' }}>
+              {settingsRows.map((row, idx, arr) => (
+                <React.Fragment key={row.title}>
+                  <div
+                    onClick={row.onClick}
+                    style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '15px 18px', cursor: 'pointer', background: 'transparent', transition: 'background 0.15s' }}
+                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,0,0,0.03)'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                  >
+                    <div style={{ width: '44px', height: '44px', borderRadius: '14px', background: ICON_ROW_BG, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#555', flexShrink: 0 }}>
+                      {row.icon}
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 800, fontSize: '13px', color: '#111', letterSpacing: '0.04em' }}>{row.title}</div>
+                      <div style={{ fontSize: '11px', color: '#999', marginTop: '2px', letterSpacing: '0.03em' }}>{row.sub}</div>
+                    </div>
+                    <ChevronRight size={16} color="#C7C7CC" strokeWidth={2.5} />
+                  </div>
+                  {idx < arr.length - 1 && <div style={{ height: '1px', background: '#F0F0F5', marginLeft: '76px' }} />}
+                </React.Fragment>
+              ))}
+            </div>
+          )}
+
+          {/* TEAM Tab */}
+          {activeTab === 'TEAM' && (
+            <div style={{ background: '#fff', borderRadius: '16px', margin: '0 16px', overflow: 'hidden', boxShadow: '0 1px 8px rgba(0,0,0,0.07)' }}>
+              <div
+                onClick={onTeamClick}
+                style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '15px 18px', cursor: onTeamClick ? 'pointer' : 'default', background: 'transparent', transition: 'background 0.15s' }}
+                onMouseEnter={e => { if (onTeamClick) e.currentTarget.style.background = 'rgba(0,0,0,0.03)' }}
+                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+              >
+                <div style={{ width: '44px', height: '44px', borderRadius: '14px', background: ICON_ROW_BG, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#555', flexShrink: 0 }}>
+                  <Users size={22} strokeWidth={1.5} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 800, fontSize: '13px', color: '#111', letterSpacing: '0.04em' }}>TEAM MEMBERS</div>
+                  <div style={{ fontSize: '11px', color: '#999', marginTop: '2px', letterSpacing: '0.03em' }}>MANAGE YOUR TEAM</div>
+                </div>
+                {onTeamClick && <ChevronRight size={16} color="#C7C7CC" strokeWidth={2.5} />}
+              </div>
+              {isMasterView && (
+                <>
+                  <div style={{ height: '1px', background: '#F0F0F5', marginLeft: '76px' }} />
+                  <div
+                    onClick={() => setShowAddMembers(true)}
+                    style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '15px 18px', cursor: 'pointer', background: 'transparent', transition: 'background 0.15s' }}
+                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,0,0,0.03)'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                  >
+                    <div style={{ width: '44px', height: '44px', borderRadius: '14px', background: ICON_ROW_BG, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#555', flexShrink: 0 }}>
+                      <UserPlus size={22} strokeWidth={1.5} />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 800, fontSize: '13px', color: '#111', letterSpacing: '0.04em' }}>ADD MEMBERS</div>
+                      <div style={{ fontSize: '11px', color: '#999', marginTop: '2px', letterSpacing: '0.03em' }}>INVITE NEW TEAM MEMBERS</div>
+                    </div>
+                    <ChevronRight size={16} color="#C7C7CC" strokeWidth={2.5} />
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* REMAINING DAY Tab */}
+          {activeTab === 'REMAINING DAY' && (
+            <div style={{ background: '#fff', borderRadius: '16px', margin: '0 16px', overflow: 'hidden', boxShadow: '0 1px 8px rgba(0,0,0,0.07)' }}>
+              <div
+                onClick={() => setShowRemainingDays(true)}
+                style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '15px 18px', cursor: 'pointer', background: 'transparent', transition: 'background 0.15s' }}
+                onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,0,0,0.03)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+              >
+                <div style={{ width: '44px', height: '44px', borderRadius: '14px', background: ICON_ROW_BG, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#555', flexShrink: 0 }}>
+                  <Calendar size={22} strokeWidth={1.5} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 800, fontSize: '13px', color: '#111', letterSpacing: '0.04em' }}>SUBSCRIPTION STATUS</div>
+                  <div style={{ fontSize: '11px', color: '#999', marginTop: '2px', letterSpacing: '0.03em' }}>VIEW REMAINING DAYS</div>
+                </div>
+                <ChevronRight size={16} color="#C7C7CC" strokeWidth={2.5} />
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Status toasts */}
+        {(uploadError || uploadSuccess || nameSuccess || contactSuccess || locationSuccess) && (
+          <div style={{ position: 'fixed', top: '80px', left: '50%', transform: 'translateX(-50%)', zIndex: 3000, width: 'min(360px, 90vw)', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            {uploadError && <StatusMsg type="error"><AlertCircle size={14} />{uploadError}</StatusMsg>}
+            {uploadSuccess && <StatusMsg type="success"><CheckCircle2 size={14} />Logo updated successfully!</StatusMsg>}
+            {nameSuccess && <StatusMsg type="success"><CheckCircle2 size={14} />Name updated!</StatusMsg>}
+            {contactSuccess && <StatusMsg type="success"><CheckCircle2 size={14} />Contact info updated!</StatusMsg>}
+            {locationSuccess && <StatusMsg type="success"><CheckCircle2 size={14} />Location updated!</StatusMsg>}
+          </div>
+        )}
+
+        <AddMembersModal open={showAddMembers} onClose={() => setShowAddMembers(false)} restaurantId={restaurantId} />
+        <RemainingDaysModal
+          open={showRemainingDays} onClose={() => setShowRemainingDays(false)}
+          planName={subscriptionInfo.planName} startDate={subscriptionInfo.startDate}
+          endDate={subscriptionInfo.endDate} daysLeft={subscriptionInfo.daysLeft} isActive={true}
+        />
+
+        {logoCompressModal && (
+          <div style={{ position: 'fixed', inset: 0, zIndex: 2000, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+            <div style={{ background: '#fff', borderRadius: '22px', padding: '26px 24px', maxWidth: '340px', width: '100%', boxShadow: '0 24px 60px rgba(0,0,0,0.4)' }}>
+              {logoPendingPreview && <img src={logoPendingPreview} alt="preview" style={{ width: '80px', height: '80px', borderRadius: '12px', objectFit: 'cover', display: 'block', margin: '0 auto 16px', border: '2px solid #F0F0F8' }} />}
+              <div style={{ fontWeight: 800, fontSize: '16px', color: '#111', textAlign: 'center', marginBottom: '6px' }}>Image Too Large</div>
+              <div style={{ fontSize: '13px', color: '#666', textAlign: 'center', lineHeight: 1.5, marginBottom: '20px' }}>This image exceeds the 200 KB limit. Click Confirm to automatically compress it.</div>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button onClick={handleLogoCompressCancel} disabled={logoCompressing} style={{ flex: 1, padding: '12px', borderRadius: '12px', background: '#F0F0F5', border: 'none', color: '#555', fontSize: '13px', fontWeight: 700, cursor: logoCompressing ? 'not-allowed' : 'pointer' }}>Cancel</button>
+                <button onClick={handleLogoCompressConfirm} disabled={logoCompressing} style={{ flex: 2, padding: '12px', borderRadius: '12px', background: logoCompressing ? '#94a3b8' : LIME, border: 'none', color: '#111', fontSize: '13px', fontWeight: 800, cursor: logoCompressing ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                  {logoCompressing ? <><Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> Compressing…</> : 'Confirm'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {hoursModalOpen && (
+          <OpeningHoursModal
+            openH={tempOpenH} openM={tempOpenM} openAmPm={tempOpenAmPm}
+            closeH={tempCloseH} closeM={tempCloseM} closeAmPm={tempCloseAmPm}
+            onChangeOpen={(h, m, ap) => { setTempOpenH(h); setTempOpenM(m); setTempOpenAmPm(ap) }}
+            onChangeClose={(h, m, ap) => { setTempCloseH(h); setTempCloseM(m); setTempCloseAmPm(ap) }}
+            onSave={handleSaveHours}
+            onCancel={() => setHoursModalOpen(false)}
+          />
+        )}
+
+        {editingName && (
+          <EditFieldModal title="Restaurant Name" icon={<Store size={22} strokeWidth={1.4} />} onClose={() => { setEditingName(false); setNameError(''); setNameInput(restaurantName || '') }}>
+            <input ref={nameInputRef} value={nameInput} onChange={e => { setNameInput(e.target.value); setNameError('') }} onKeyDown={e => { if (e.key === 'Enter') handleSaveName(); if (e.key === 'Escape') { setEditingName(false); setNameError('') } }} placeholder="Enter restaurant name…" style={inputStyle(nameError)} onFocus={e => e.target.style.borderColor = LIME} onBlur={e => e.target.style.borderColor = nameError ? '#FECACA' : '#E0E0E8'} />
+            {nameError && <InlineError>{nameError}</InlineError>}
+            <ActionButtons onSave={handleSaveName} onCancel={() => { setEditingName(false); setNameError(''); setNameInput(restaurantName || '') }} saving={nameSaving} />
+          </EditFieldModal>
+        )}
+
+        {editingContact && (
+          <EditFieldModal title="Contact Info" icon={<Phone size={22} strokeWidth={1.4} />} onClose={() => { setEditingContact(false); setContactPhoneError(''); setContactEmailError(''); const { phone, email } = loadContact(restaurantId); setContactPhone(phone); setContactEmail(email) }}>
+            <FieldLabel icon={<Phone size={11} />} label="Contact Number" />
+            <input ref={phoneInputRef} type="tel" inputMode="numeric" value={contactPhone} onChange={e => handlePhoneInput(e.target.value)} onKeyDown={e => { if (e.key === 'Escape') setEditingContact(false) }} placeholder="10-digit number" maxLength={10} style={inputStyle(contactPhoneError)} onFocus={e => e.target.style.borderColor = contactPhoneError ? '#FECACA' : LIME} onBlur={e => e.target.style.borderColor = contactPhoneError ? '#FECACA' : '#E0E0E8'} />
+            {contactPhoneError && <InlineError>{contactPhoneError}</InlineError>}
+            <FieldLabel icon={<Mail size={11} />} label="Email Address" />
+            <input type="email" value={contactEmail} onChange={e => { setContactEmail(e.target.value); setContactEmailError('') }} onKeyDown={e => { if (e.key === 'Escape') setEditingContact(false) }} placeholder="example@gmail.com" style={inputStyle(contactEmailError)} onFocus={e => e.target.style.borderColor = contactEmailError ? '#FECACA' : LIME} onBlur={e => e.target.style.borderColor = contactEmailError ? '#FECACA' : '#E0E0E8'} />
+            {contactEmailError && <InlineError>{contactEmailError}</InlineError>}
+            <ActionButtons onSave={handleSaveContact} onCancel={() => { setEditingContact(false); setContactPhoneError(''); setContactEmailError(''); const { phone, email } = loadContact(restaurantId); setContactPhone(phone); setContactEmail(email) }} saving={contactSaving} />
+          </EditFieldModal>
+        )}
+
+        {editingLocation && (
+          <EditFieldModal title="Location" icon={<MapPin size={22} strokeWidth={1.4} />} onClose={() => { setEditingLocation(false); setAddressError(''); setAddressInput(loadLocationAddress(restaurantId)) }}>
+            {savedAddress && (
+              <div style={{ background: '#F0FDF4', border: '1px solid #A7F3D0', borderRadius: '10px', padding: '8px 12px', marginBottom: '12px', display: 'flex', alignItems: 'flex-start', gap: '7px' }}>
+                <MapPin size={13} color="#10B981" style={{ marginTop: '2px', flexShrink: 0 }} />
+                <span style={{ fontSize: '12px', color: '#065F46', fontWeight: 600, lineHeight: 1.5 }}>{savedAddress}</span>
+              </div>
+            )}
+            <FieldLabel icon={<MapPin size={11} />} label="Restaurant Address" />
+            <textarea ref={addressRef} value={addressInput} onChange={e => { setAddressInput(e.target.value); setAddressError('') }} placeholder="Enter your full restaurant address…" rows={3} style={{ width: '100%', boxSizing: 'border-box', padding: '10px 12px', borderRadius: '10px', border: `1.5px solid ${addressError ? '#FECACA' : '#E0E0E8'}`, fontSize: '14px', fontWeight: 600, color: '#111', outline: 'none', background: '#F7F7FA', marginBottom: addressError ? '6px' : '10px', resize: 'vertical', fontFamily: 'inherit' }} onFocus={e => e.target.style.borderColor = addressError ? '#FECACA' : LIME} onBlur={e => e.target.style.borderColor = addressError ? '#FECACA' : '#E0E0E8'} />
+            {addressError && <InlineError>{addressError}</InlineError>}
+            <ActionButtons onSave={handleSaveLocation} onCancel={() => { setEditingLocation(false); setAddressError(''); setAddressInput(loadLocationAddress(restaurantId)) }} saving={locationSaving} />
+          </EditFieldModal>
+        )}
+
+        <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+      </>
+    )
   }
 
   return (
