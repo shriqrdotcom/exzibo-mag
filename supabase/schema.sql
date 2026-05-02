@@ -23,26 +23,29 @@ CREATE TABLE IF NOT EXISTS restaurants (
   UNIQUE(owner_id, uid)
 );
 
+-- Menu categories (sections like Starters, Mains, Drinks)
+CREATE TABLE IF NOT EXISTS menu_categories (
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  restaurant_id UUID REFERENCES restaurants(id) ON DELETE CASCADE NOT NULL,
+  name          TEXT NOT NULL,
+  emoji         TEXT DEFAULT '🍽️',
+  position      INTEGER DEFAULT 0,
+  created_at    TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- Menu items
 CREATE TABLE IF NOT EXISTS menu_items (
   id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   restaurant_id UUID REFERENCES restaurants(id) ON DELETE CASCADE NOT NULL,
+  category_id   UUID REFERENCES menu_categories(id) ON DELETE SET NULL,
   name          TEXT NOT NULL,
   description   TEXT,
   price         DECIMAL(10,2) DEFAULT 0,
-  category      TEXT,
   image         TEXT,
   available     BOOLEAN DEFAULT true,
   veg           BOOLEAN DEFAULT true,
-  created_at    TIMESTAMPTZ DEFAULT NOW()
-);
-
--- Menu tabs / categories
-CREATE TABLE IF NOT EXISTS menu_tabs (
-  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  restaurant_id UUID REFERENCES restaurants(id) ON DELETE CASCADE NOT NULL,
-  name          TEXT NOT NULL,
-  position      INTEGER DEFAULT 0,
+  tags          JSONB DEFAULT '[]',
+  add_ons       JSONB DEFAULT '[]',
   created_at    TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -106,13 +109,13 @@ CREATE TABLE IF NOT EXISTS user_settings (
 -- Row Level Security
 -- ============================================================
 
-ALTER TABLE restaurants   ENABLE ROW LEVEL SECURITY;
-ALTER TABLE menu_items    ENABLE ROW LEVEL SECURITY;
-ALTER TABLE menu_tabs     ENABLE ROW LEVEL SECURITY;
-ALTER TABLE orders        ENABLE ROW LEVEL SECURITY;
-ALTER TABLE bookings      ENABLE ROW LEVEL SECURITY;
-ALTER TABLE team_members  ENABLE ROW LEVEL SECURITY;
-ALTER TABLE user_settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE restaurants     ENABLE ROW LEVEL SECURITY;
+ALTER TABLE menu_categories ENABLE ROW LEVEL SECURITY;
+ALTER TABLE menu_items      ENABLE ROW LEVEL SECURITY;
+ALTER TABLE orders          ENABLE ROW LEVEL SECURITY;
+ALTER TABLE bookings        ENABLE ROW LEVEL SECURITY;
+ALTER TABLE team_members    ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_settings   ENABLE ROW LEVEL SECURITY;
 
 -- Restaurants: owners only
 CREATE POLICY "owners_select_restaurants" ON restaurants FOR SELECT USING (auth.uid() = owner_id);
@@ -120,15 +123,15 @@ CREATE POLICY "owners_insert_restaurants" ON restaurants FOR INSERT WITH CHECK (
 CREATE POLICY "owners_update_restaurants" ON restaurants FOR UPDATE USING (auth.uid() = owner_id);
 CREATE POLICY "owners_delete_restaurants" ON restaurants FOR DELETE USING (auth.uid() = owner_id);
 
+-- Menu categories: owners manage, public can read
+CREATE POLICY "owners_manage_menu_categories" ON menu_categories FOR ALL
+  USING (EXISTS (SELECT 1 FROM restaurants WHERE restaurants.id = menu_categories.restaurant_id AND restaurants.owner_id = auth.uid()));
+CREATE POLICY "public_read_menu_categories" ON menu_categories FOR SELECT USING (true);
+
 -- Menu items: owners manage, public can read
 CREATE POLICY "owners_manage_menu_items" ON menu_items FOR ALL
   USING (EXISTS (SELECT 1 FROM restaurants WHERE restaurants.id = menu_items.restaurant_id AND restaurants.owner_id = auth.uid()));
 CREATE POLICY "public_read_menu_items" ON menu_items FOR SELECT USING (true);
-
--- Menu tabs: owners manage, public can read
-CREATE POLICY "owners_manage_menu_tabs" ON menu_tabs FOR ALL
-  USING (EXISTS (SELECT 1 FROM restaurants WHERE restaurants.id = menu_tabs.restaurant_id AND restaurants.owner_id = auth.uid()));
-CREATE POLICY "public_read_menu_tabs" ON menu_tabs FOR SELECT USING (true);
 
 -- Orders: owners manage, customers can insert
 CREATE POLICY "owners_manage_orders" ON orders FOR ALL

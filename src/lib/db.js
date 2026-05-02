@@ -48,6 +48,34 @@ export async function getRestaurantBySlug(slug) {
   return data
 }
 
+// ── Menu Categories ───────────────────────────────────────────
+
+export async function getMenuCategories(restaurantId) {
+  const { data, error } = await supabase
+    .from('menu_categories')
+    .select('*')
+    .eq('restaurant_id', restaurantId)
+    .order('position')
+  if (error) throw error
+  return data
+}
+
+export async function upsertMenuCategory(restaurantId, category) {
+  const payload = { ...category, restaurant_id: restaurantId }
+  const { data, error } = await supabase
+    .from('menu_categories')
+    .upsert(payload, { onConflict: 'id' })
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
+export async function deleteMenuCategory(id) {
+  const { error } = await supabase.from('menu_categories').delete().eq('id', id)
+  if (error) throw error
+}
+
 // ── Menu Items ───────────────────────────────────────────────
 
 export async function getMenuItems(restaurantId) {
@@ -55,7 +83,28 @@ export async function getMenuItems(restaurantId) {
     .from('menu_items')
     .select('*')
     .eq('restaurant_id', restaurantId)
-    .order('category')
+    .order('created_at')
+  if (error) throw error
+  return data
+}
+
+export async function insertMenuItem(restaurantId, item) {
+  const { data, error } = await supabase
+    .from('menu_items')
+    .insert({ ...item, restaurant_id: restaurantId })
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
+export async function updateMenuItem(id, patch) {
+  const { data, error } = await supabase
+    .from('menu_items')
+    .update(patch)
+    .eq('id', id)
+    .select()
+    .single()
   if (error) throw error
   return data
 }
@@ -63,7 +112,10 @@ export async function getMenuItems(restaurantId) {
 export async function upsertMenuItems(restaurantId, items) {
   const { data, error } = await supabase
     .from('menu_items')
-    .upsert(items.map(item => ({ ...item, restaurant_id: restaurantId })))
+    .upsert(
+      items.map(item => ({ ...item, restaurant_id: restaurantId })),
+      { onConflict: 'id' }
+    )
     .select()
   if (error) throw error
   return data
@@ -72,27 +124,6 @@ export async function upsertMenuItems(restaurantId, items) {
 export async function deleteMenuItem(id) {
   const { error } = await supabase.from('menu_items').delete().eq('id', id)
   if (error) throw error
-}
-
-// ── Menu Tabs ────────────────────────────────────────────────
-
-export async function getMenuTabs(restaurantId) {
-  const { data, error } = await supabase
-    .from('menu_tabs')
-    .select('*')
-    .eq('restaurant_id', restaurantId)
-    .order('position')
-  if (error) throw error
-  return data
-}
-
-export async function upsertMenuTabs(restaurantId, tabs) {
-  const { data, error } = await supabase
-    .from('menu_tabs')
-    .upsert(tabs.map((t, i) => ({ ...t, restaurant_id: restaurantId, position: i })))
-    .select()
-  if (error) throw error
-  return data
 }
 
 // ── Orders ───────────────────────────────────────────────────

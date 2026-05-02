@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useAnalytics, notifyAnalyticsUpdate } from '../context/AnalyticsContext'
 import { useRole } from '../context/RoleContext'
-import { getRestaurants, getOrders, getBookings, updateOrderStatus, updateBookingStatus } from '../lib/db'
+import { getRestaurants, getOrders, getBookings, updateOrderStatus, updateBookingStatus, getMenuCategories, getMenuItems, insertMenuItem, updateMenuItem, deleteMenuItem, upsertMenuCategory, deleteMenuCategory, upsertMenuItems } from '../lib/db'
 import notificationIconImg from '@assets/image_1777373928129.png'
 import {
   NOTIFY_ROLES,
@@ -3843,6 +3843,57 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
   const editIconImageRef = useRef(null)
   const sectionDropdownRef = useRef(null)
 
+  useEffect(() => {
+    if (!restaurantId) return
+    let cancelled = false
+    async function load() {
+      try {
+        const [cats, items] = await Promise.all([
+          getMenuCategories(restaurantId),
+          getMenuItems(restaurantId),
+        ])
+        if (cancelled) return
+        if (cats && cats.length > 0) {
+          const tabs = cats.map(c => ({
+            key: c.id,
+            label: c.name,
+            emoji: c.emoji || '🍽️',
+            dbId: c.id,
+          }))
+          setCategoryTabs(tabs)
+          setActiveCategory(tabs[0]?.key)
+          setActiveCatFilter(Object.fromEntries(tabs.map(t => [t.key, 'all'])))
+          const menuObj = {}
+          tabs.forEach(t => { menuObj[t.key] = [] })
+          if (items) {
+            items.forEach(it => {
+              const key = it.category_id
+              if (key && menuObj[key] !== undefined) {
+                menuObj[key].push({
+                  id: it.id,
+                  dbId: it.id,
+                  name: it.name,
+                  desc: it.description || '',
+                  price: parseFloat(it.price) || 0,
+                  img: it.image || null,
+                  veg: it.veg !== false,
+                  available: it.available !== false,
+                  tags: it.tags || [],
+                  addOns: it.add_ons || [],
+                })
+              }
+            })
+          }
+          setMenu(menuObj)
+        }
+      } catch (e) {
+        console.error('Menu load error:', e)
+      }
+    }
+    load()
+    return () => { cancelled = true }
+  }, [restaurantId])
+
   function saveMenu(updated) {
     setMenu(updated)
     setSavedAll(false)
@@ -3861,7 +3912,7 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
     setHasDraftChanges(true)
   }
 
-  function handleSaveAll() {
+  async function handleSaveAll() {
     let menuToSave = menu
     if (editingId !== null && editDraft !== null) {
       menuToSave = {
@@ -3887,12 +3938,57 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
     setHasDraftChanges(false)
     clearTimeout(saveAllTimer.current)
     saveAllTimer.current = setTimeout(() => setSavedAll(false), 2500)
+    // Sync to Supabase in background
+    try {
+      const updatedTabs = [...categoryTabs]
+      for (let i = 0; i < updatedTabs.length; i++) {
+        const tab = updatedTabs[i]
+        const payload = { name: tab.label, emoji: tab.emoji || '🍽️', position: i }
+        if (tab.dbId) payload.id = tab.dbId
+        const saved = await upsertMenuCategory(restaurantId, payload)
+        updatedTabs[i] = { ...tab, dbId: saved.id, key: tab.dbId ? tab.key : saved.id }
+      }
+      setCategoryTabs(updatedTabs)
+      const allItems = updatedTabs.flatMap(tab =>
+        (menuToSave[tab.key] || []).map(item => {
+          const row = {
+            restaurant_id: restaurantId,
+            category_id: tab.dbId,
+            name: item.name,
+            description: item.desc || '',
+            price: item.price || 0,
+            image: item.img || null,
+            veg: item.veg !== false,
+            available: item.available !== false,
+            tags: item.tags || [],
+            add_ons: item.addOns || [],
+          }
+          if (item.dbId) row.id = item.dbId
+          return row
+        })
+      )
+      if (allItems.length > 0) await upsertMenuItems(restaurantId, allItems)
+    } catch (e) {
+      console.error('Supabase sync error:', e)
+    }
   }
 
-  function addSection() {
+  async function addSection() {
     if (!newSectionDraft.label.trim()) return
-    const key = newSectionDraft.label.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_') + '_' + Date.now()
-    const newTab = { key, label: newSectionDraft.label.trim(), emoji: newSectionDraft.emoji || '🍽️' }
+    const fallbackKey = newSectionDraft.label.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_') + '_' + Date.now()
+    let dbId = null
+    try {
+      const cat = await upsertMenuCategory(restaurantId, {
+        name: newSectionDraft.label.trim(),
+        emoji: newSectionDraft.emoji || '🍽️',
+        position: categoryTabs.length,
+      })
+      dbId = cat.id
+    } catch (e) {
+      console.error('Failed to save category to Supabase:', e)
+    }
+    const key = dbId || fallbackKey
+    const newTab = { key, label: newSectionDraft.label.trim(), emoji: newSectionDraft.emoji || '🍽️', dbId }
     const updatedTabs = [...categoryTabs, newTab]
     const updatedMenu = { ...menu, [key]: [] }
     const updatedFilters = { ...catFilters, [key]: [{ id: 'all', emoji: '🍽️', label: 'All', image: null, assignedItems: [] }] }
@@ -3905,11 +4001,12 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
     setActiveCategory(key)
     setNewSectionDraft({ label: '', emoji: '🍽️' })
     setShowNewSectionModal(false)
-    showToast('✅ Section created! Save changes to publish.')
+    showToast('✅ Section created!')
   }
 
-  function deleteSection(key) {
+  async function deleteSection(key) {
     if (categoryTabs.length <= 1) { showToast('⚠️ Cannot delete the only section!'); return }
+    const tab = categoryTabs.find(t => t.key === key)
     const updatedTabs = categoryTabs.filter(t => t.key !== key)
     const { [key]: _m, ...updatedMenu } = menu
     const { [key]: _f, ...updatedFilters } = catFilters
@@ -3920,12 +4017,21 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
     setFiltersEnabled(updatedEnabled)
     setActiveCategory(updatedTabs[0].key)
     setShowSectionDropdown(false)
-    showToast('🗑️ Section deleted! Save changes to publish.')
+    const dbId = tab?.dbId
+    if (dbId) {
+      try { await deleteMenuCategory(dbId) } catch (e) { console.error('Failed to delete category from Supabase:', e) }
+    }
+    showToast('🗑️ Section deleted!')
   }
 
-  function deleteItem(id) {
+  async function deleteItem(id) {
+    const item = (menu[activeCategory] || []).find(i => i.id === id)
     const updated = { ...menu, [activeCategory]: menu[activeCategory].filter(i => i.id !== id) }
     saveMenu(updated)
+    const dbId = item?.dbId
+    if (dbId) {
+      try { await deleteMenuItem(String(dbId)) } catch (e) { console.error('Failed to delete item from Supabase:', e) }
+    }
   }
 
   function toggleAvailability(id) {
@@ -3959,12 +4065,13 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
     setEditDraft(d => ({ ...d, addOns: (d.addOns || []).filter((_, i) => i !== idx) }))
   }
 
-  function saveEdit() {
+  async function saveEdit() {
     if (!editDraft || editingId === null) return
+    const updatedItem = { ...editDraft, price: parseFloat(editDraft.price) || 0 }
     const updated = {
       ...menu,
       [activeCategory]: (menu[activeCategory] || []).map(i =>
-        i.id === editingId ? { ...editDraft, price: parseFloat(editDraft.price) || 0 } : i
+        i.id === editingId ? updatedItem : i
       ),
     }
     setMenu(updated)
@@ -3977,12 +4084,45 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
     showToast('✅ Item saved successfully ✓')
     clearTimeout(saveAllTimer.current)
     saveAllTimer.current = setTimeout(() => setSavedAll(false), 2500)
+    const dbId = updatedItem.dbId
+    if (dbId) {
+      try {
+        await updateMenuItem(String(dbId), {
+          name: updatedItem.name,
+          description: updatedItem.desc || '',
+          price: updatedItem.price,
+          image: updatedItem.img || null,
+          veg: updatedItem.veg !== false,
+          available: updatedItem.available !== false,
+          tags: updatedItem.tags || [],
+          add_ons: updatedItem.addOns || [],
+        })
+      } catch (e) { console.error('Failed to update item in Supabase:', e) }
+    }
   }
 
-  function addItem() {
+  async function addItem() {
     if (!addDraft.name.trim()) return
     const item = { id: Date.now(), img: addDraft.img || null, name: addDraft.name.trim(), desc: addDraft.desc.trim(), price: parseFloat(addDraft.price) || 0, tags: addDraft.tags, veg: addDraft.veg || false }
-    const updated = { ...menu, [activeCategory]: [...menu[activeCategory], item] }
+    const currentTab = categoryTabs.find(t => t.key === activeCategory)
+    const categoryId = currentTab?.dbId || null
+    try {
+      const saved = await insertMenuItem(restaurantId, {
+        name: item.name,
+        description: item.desc,
+        price: item.price,
+        image: item.img,
+        veg: item.veg,
+        tags: item.tags,
+        available: true,
+        category_id: categoryId,
+      })
+      item.dbId = saved.id
+      item.id = saved.id
+    } catch (e) {
+      console.error('Failed to save item to Supabase:', e)
+    }
+    const updated = { ...menu, [activeCategory]: [...(menu[activeCategory] || []), item] }
     saveMenu(updated)
     setAddDraft(BLANK_ITEM)
     setShowAdd(false)
