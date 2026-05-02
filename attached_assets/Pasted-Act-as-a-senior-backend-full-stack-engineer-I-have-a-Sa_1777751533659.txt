@@ -1,0 +1,174 @@
+Act as a senior backend + full-stack engineer.
+
+I have a SaaS restaurant builder app using Supabase + frontend dashboard.
+
+PROBLEM SUMMARY
+
+1. When I create a restaurant → it is successfully created.
+2. It shows in preview mode.
+3. BUT it does NOT appear in "My Restaurants" section in the real app.
+4. Menu updates are NOT syncing across:
+   - public website
+   - admin panel
+   - manager dashboard
+   - staff section
+
+So the system is partially working (preview/local), but NOT working with real persisted backend data.
+
+---
+
+ROOT CAUSES TO CHECK & FIX
+
+1. AUTH CONTEXT MISMATCH
+
+- Ensure restaurant is created with the correct "user_id"
+- Use Supabase auth user:
+  const { data: { user } } = await supabase.auth.getUser();
+- When inserting restaurant:
+  user_id: user.id
+
+---
+
+2. "MY RESTAURANTS" QUERY BUG
+
+Fix query to fetch only logged-in user’s restaurants:
+
+const { data, error } = await supabase
+  .from('restaurants')
+  .select('*')
+  .eq('user_id', user.id);
+
+- Ensure:
+  - No hardcoded IDs
+  - No missing ".eq("user_id", user.id)"
+  - Query runs AFTER auth is loaded
+
+---
+
+3. ROW LEVEL SECURITY (CRITICAL)
+
+Check Supabase RLS policies:
+
+Restaurants table:
+
+CREATE POLICY "Users can see their restaurants"
+ON restaurants
+FOR SELECT
+USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert their restaurants"
+ON restaurants
+FOR INSERT
+WITH CHECK (auth.uid() = user_id);
+
+If this is wrong → data will exist but NOT be visible.
+
+---
+
+4. PREVIEW MODE USING DIFFERENT DATA SOURCE
+
+Fix preview mode:
+
+- DO NOT use local/mock data
+- Always fetch from Supabase
+- Ensure preview uses same "restaurant_id"
+
+---
+
+5. GLOBAL STATE / CACHE ISSUE
+
+If using Zustand / Redux / React Query:
+
+- After creating restaurant:
+  - Refetch restaurant list
+    OR
+  - Optimistically update store
+
+Example:
+
+await createRestaurant(data);
+await refetchRestaurants();
+
+---
+
+6. MENU SYNC ISSUE (CRITICAL BUG)
+
+Menu not updating across app means:
+
+Check:
+
+- Are menu items linked to correct "restaurant_id"?
+
+restaurant_id: selectedRestaurant.id
+
+Fetch correctly:
+
+.from('menu_items')
+.select('*')
+.eq('restaurant_id', restaurantId);
+
+---
+
+7. MULTI-PANEL DATA FLOW FIX
+
+Ensure ALL dashboards use same backend:
+
+- admin panel → fetch by restaurant_id
+- manager → fetch by restaurant_id
+- staff → fetch by restaurant_id
+- public website → fetch by restaurant_id
+
+NO local state duplication.
+
+---
+
+8. REAL APP vs PREVIEW ISSUE
+
+Fix environment mismatch:
+
+- Check:
+  - Same Supabase URL?
+  - Same anon key?
+  - Same project?
+
+Add console logs:
+
+console.log("SUPABASE URL:", process.env.NEXT_PUBLIC_SUPABASE_URL);
+
+---
+
+9. DEBUG LOGGING (MANDATORY)
+
+Add logs:
+
+console.log("User ID:", user?.id);
+console.log("Created Restaurant:", restaurant);
+console.log("Fetched Restaurants:", data);
+
+---
+
+FINAL TASKS
+
+1. Fix restaurant creation → must include user_id
+2. Fix "My Restaurants" query → filter by user_id
+3. Fix RLS policies
+4. Fix menu linkage via restaurant_id
+5. Remove preview-only mock data
+6. Ensure all panels fetch from DB
+7. Sync environment variables
+
+---
+
+EXPECTED RESULT
+
+- Restaurant appears instantly in "My Restaurants"
+- Menu updates reflect everywhere:
+  - website
+  - admin
+  - manager
+  - staff
+- Preview mode = Real data (no mismatch)
+
+---
+
+Do NOT give partial fix. Fix full data flow end-to-end.

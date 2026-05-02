@@ -41,6 +41,7 @@ export default function CreateWebsite() {
   const [submitting, setSubmitting] = useState(false)
   const [success, setSuccess] = useState(false)
   const [createdSlug, setCreatedSlug] = useState('')
+  const [submitError, setSubmitError] = useState('')
   const [logoDragging, setLogoDragging] = useState(false)
   const [imgDragging, setImgDragging] = useState(false)
 
@@ -117,6 +118,7 @@ export default function CreateWebsite() {
   const handleGenerate = async () => {
     if (!validate()) return
     setSubmitting(true)
+    setSubmitError('')
     try {
       const base64Images = await Promise.all(
         form.uploadedImages.map(img => img.file ? fileToBase64(img.file) : Promise.resolve(img.url))
@@ -126,16 +128,12 @@ export default function CreateWebsite() {
       const tableNumbers = form.tableNumbers.length === 0 ? ['1'] : form.tableNumbers
 
       let existingSlugs = []
-      let existingUIDs = []
+      let existingUIDs  = []
       try {
         const rows = await getRestaurants()
         existingSlugs = rows.map(r => r.slug).filter(Boolean)
         existingUIDs  = rows.map(r => r.uid).filter(Boolean)
-      } catch {
-        const saved = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
-        existingSlugs = saved.map(r => r.slug).filter(Boolean)
-        existingUIDs  = saved.map(r => r.uid).filter(Boolean)
-      }
+      } catch { /* first restaurant — no existing rows */ }
 
       const slug = generateSlug(form.restaurantName, existingSlugs)
       let uid
@@ -169,22 +167,11 @@ export default function CreateWebsite() {
         plan_limits: form.planLimits,
       }
 
-      try {
-        await createRestaurant(payload)
-      } catch {
-        const existing = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
-        const legacyRecord = {
-          id: Date.now().toString(), uid, slug, name: form.restaurantName, logo: logoBase64,
-          images: base64Images, tables: tableNumbers.length.toString(), tableNumbers,
-          phone: form.phoneNumber, gst: form.gstDetails, description: form.description,
-          status: 'active', plan: form.selectedPlan, planLimits: form.planLimits,
-          createdAt: new Date().toISOString(),
-        }
-        localStorage.setItem('exzibo_restaurants', JSON.stringify([...existing, legacyRecord]))
-      }
-
+      await createRestaurant(payload)
       setCreatedSlug(slug)
       setSuccess(true)
+    } catch (err) {
+      setSubmitError(err.message || 'Failed to create restaurant. Please check your connection and try again.')
     } finally {
       setSubmitting(false)
     }
@@ -390,6 +377,30 @@ export default function CreateWebsite() {
           </div>
         </div>
 
+        {submitError && (
+          <div style={{
+            maxWidth: '1120px', margin: '0 auto 24px', padding: '0 40px',
+          }}>
+            <div style={{
+              display: 'flex', alignItems: 'flex-start', gap: '10px',
+              padding: '14px 18px', borderRadius: '14px',
+              background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)',
+            }}>
+              <span style={{ fontSize: '16px', lineHeight: 1 }}>⚠️</span>
+              <div>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: '#EF4444', marginBottom: '4px' }}>
+                  Restaurant creation failed
+                </div>
+                <div style={{ fontSize: '12px', color: '#999', lineHeight: 1.5 }}>
+                  {submitError}
+                </div>
+                <div style={{ fontSize: '11px', color: '#666', marginTop: '6px' }}>
+                  Make sure you have run the database migration in Supabase (see <code style={{ color: '#E8321A' }}>supabase/migration_restaurants.sql</code>).
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
         <FooterCTA onGenerate={handleGenerate} submitting={submitting} />
       </div>
     </div>

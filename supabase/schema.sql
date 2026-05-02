@@ -1,25 +1,42 @@
 -- ============================================================
--- Exzibo — Supabase Schema
--- Run this in your Supabase SQL Editor (supabase.com → SQL Editor)
+-- Exzibo — Supabase Schema (full, up to date)
+-- Run this in your Supabase SQL Editor for a fresh project.
+-- For existing projects run supabase/migration_restaurants.sql
 -- ============================================================
 
 -- Restaurants
 CREATE TABLE IF NOT EXISTS restaurants (
-  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  owner_id     UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
-  name         TEXT NOT NULL,
-  slug         TEXT NOT NULL,
-  uid          TEXT NOT NULL,
-  logo         TEXT,
-  status       TEXT DEFAULT 'active',
-  plan         TEXT DEFAULT 'STARTER',
-  place        TEXT,
-  note         TEXT,
-  start_date   TIMESTAMPTZ DEFAULT NOW(),
-  end_date     TIMESTAMPTZ,
-  accent_color TEXT DEFAULT '#6366F1',
-  currency     TEXT DEFAULT 'INR',
-  created_at   TIMESTAMPTZ DEFAULT NOW(),
+  id                    UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  owner_id              UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  name                  TEXT NOT NULL,
+  slug                  TEXT NOT NULL,
+  uid                   TEXT NOT NULL,
+  logo                  TEXT,
+  status                TEXT DEFAULT 'active',
+  plan                  TEXT DEFAULT 'STARTER',
+  place                 TEXT,
+  note                  TEXT,
+  start_date            TIMESTAMPTZ DEFAULT NOW(),
+  end_date              TIMESTAMPTZ,
+  accent_color          TEXT DEFAULT '#6366F1',
+  currency              TEXT DEFAULT 'INR',
+  -- Extended fields
+  images                JSONB DEFAULT '[]',
+  tables                TEXT,
+  table_numbers         JSONB DEFAULT '[]',
+  phone                 TEXT,
+  gst                   TEXT,
+  description           TEXT,
+  chef_info             TEXT,
+  servant_info          TEXT,
+  social_links          JSONB DEFAULT '{}',
+  rating                TEXT,
+  location              TEXT,
+  additional_info       TEXT,
+  digital_menu_link     TEXT,
+  digital_service_bell  BOOLEAN DEFAULT false,
+  plan_limits           JSONB DEFAULT '{}',
+  created_at            TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE(owner_id, uid)
 );
 
@@ -51,17 +68,17 @@ CREATE TABLE IF NOT EXISTS menu_items (
 
 -- Orders
 CREATE TABLE IF NOT EXISTS orders (
-  id              TEXT PRIMARY KEY,
-  restaurant_id   UUID REFERENCES restaurants(id) ON DELETE CASCADE NOT NULL,
-  table_number    TEXT,
-  customer_name   TEXT,
-  customer_phone  TEXT,
+  id                TEXT PRIMARY KEY,
+  restaurant_id     UUID REFERENCES restaurants(id) ON DELETE CASCADE NOT NULL,
+  table_number      TEXT,
+  customer_name     TEXT,
+  customer_phone    TEXT,
   customer_location TEXT,
-  items           JSONB DEFAULT '[]',
-  status          TEXT DEFAULT 'pending',
-  total           DECIMAL(10,2) DEFAULT 0,
-  notes           TEXT,
-  created_at      TIMESTAMPTZ DEFAULT NOW()
+  items             JSONB DEFAULT '[]',
+  status            TEXT DEFAULT 'pending',
+  total             DECIMAL(10,2) DEFAULT 0,
+  notes             TEXT,
+  created_at        TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- Bookings

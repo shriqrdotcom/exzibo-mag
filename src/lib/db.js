@@ -3,12 +3,15 @@ import { supabase } from './supabase'
 // ── Restaurants ──────────────────────────────────────────────
 
 export async function getRestaurants() {
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) throw new Error('Not authenticated')
   const { data, error } = await supabase
     .from('restaurants')
     .select('*')
+    .eq('owner_id', user.id)
     .order('created_at', { ascending: false })
   if (error) throw error
-  return data
+  return data ?? []
 }
 
 export async function createRestaurant(payload) {

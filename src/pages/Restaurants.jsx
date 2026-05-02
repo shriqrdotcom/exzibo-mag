@@ -8,14 +8,15 @@ export default function Restaurants() {
   const navigate = useNavigate()
   const [restaurants, setRestaurants] = useState([])
   const [activeFilter, setActiveFilter] = useState('live')
+  const [loadError, setLoadError] = useState('')
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    setLoading(true)
     getRestaurants()
-      .then(rows => setRestaurants(rows))
-      .catch(() => {
-        const saved = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
-        setRestaurants(saved)
-      })
+      .then(rows => { setRestaurants(rows); setLoadError('') })
+      .catch(err => setLoadError(err.message || 'Failed to load restaurants'))
+      .finally(() => setLoading(false))
   }, [])
 
   const filtered = restaurants.filter(r =>
@@ -102,9 +103,36 @@ export default function Restaurants() {
           </p>
         </div>
 
-        {!hasAny ? (
+        {loading && (
+          <div style={{ textAlign: 'center', padding: '80px 0', color: '#444', fontSize: '14px' }}>
+            Loading your restaurants…
+          </div>
+        )}
+
+        {!loading && loadError && (
+          <div style={{
+            display: 'flex', alignItems: 'flex-start', gap: '12px',
+            padding: '16px 20px', borderRadius: '14px', marginBottom: '32px',
+            background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)',
+          }}>
+            <span style={{ fontSize: '18px', lineHeight: 1 }}>⚠️</span>
+            <div>
+              <div style={{ fontSize: '13px', fontWeight: 700, color: '#EF4444', marginBottom: '4px' }}>
+                Could not load restaurants
+              </div>
+              <div style={{ fontSize: '12px', color: '#888', lineHeight: 1.5 }}>{loadError}</div>
+              {loadError.includes('column') && (
+                <div style={{ fontSize: '11px', color: '#666', marginTop: '6px' }}>
+                  Run <code style={{ color: '#E8321A' }}>supabase/migration_restaurants.sql</code> in your Supabase SQL Editor to add missing columns.
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {!loading && !loadError && !hasAny ? (
           <EmptyState onAdd={() => navigate('/create-website')} />
-        ) : (
+        ) : !loading && !loadError && (
           <>
             {/* ── Filter Tab Bar ── */}
             <div style={{ marginBottom: '36px', display: 'flex', alignItems: 'center', gap: '20px' }}>
