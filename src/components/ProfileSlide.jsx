@@ -601,9 +601,8 @@ export default function ProfileSlide({
         title: 'EDIT CONTACT',
         sub: 'ADD YOUR CONTACT INFORMATION',
         onClick: () => {
-          setContactPhoneError(''); setContactEmailError('')
-          const c = loadContact(restaurantId); setContactPhone(c.phone); setContactEmail(c.email)
-          setEditingContact(true)
+          if (editingContact) { setEditingContact(false); setContactPhoneError(''); setContactEmailError('') }
+          else { setContactPhoneError(''); setContactEmailError(''); const c = loadContact(restaurantId); setContactPhone(c.phone); setContactEmail(c.email); setEditingContact(true) }
         },
       },
       {
@@ -1173,6 +1172,50 @@ export default function ProfileSlide({
                       </div>
                     </div>
                   )}
+                  {row.title === 'EDIT CONTACT' && editingContact && (
+                    <div style={{ background: '#f8fafc', borderTop: '1px solid #F0F0F5', padding: '20px 18px', animation: 'locInlineIn 0.2s cubic-bezier(0.2, 0.8, 0.2, 1)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '6px' }}>
+                        <Phone size={11} color="#999" />
+                        <span style={{ fontSize: '10px', fontWeight: 700, color: '#999', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Contact Number</span>
+                      </div>
+                      <input
+                        ref={phoneInputRef}
+                        type="tel" inputMode="numeric"
+                        value={contactPhone}
+                        onChange={e => handlePhoneInput(e.target.value)}
+                        onKeyDown={e => { if (e.key === 'Escape') setEditingContact(false) }}
+                        placeholder="10-digit number"
+                        maxLength={10}
+                        style={{ width: '100%', boxSizing: 'border-box', padding: '10px 12px', borderRadius: '10px', border: `1.5px solid ${contactPhoneError ? '#FECACA' : '#E0E0E8'}`, fontSize: '13px', fontWeight: 500, color: '#111', outline: 'none', background: '#F7F7FA', fontFamily: 'inherit', transition: 'border-color 0.15s', marginBottom: contactPhoneError ? '6px' : '10px' }}
+                        onFocus={e => e.target.style.borderColor = contactPhoneError ? '#FECACA' : LIME}
+                        onBlur={e => e.target.style.borderColor = contactPhoneError ? '#FECACA' : '#E0E0E8'}
+                      />
+                      {contactPhoneError && <div style={{ fontSize: '12px', color: '#EF4444', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '5px' }}><AlertCircle size={12} />{contactPhoneError}</div>}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '6px' }}>
+                        <Mail size={11} color="#999" />
+                        <span style={{ fontSize: '10px', fontWeight: 700, color: '#999', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Email Address</span>
+                      </div>
+                      <input
+                        type="email"
+                        value={contactEmail}
+                        onChange={e => { setContactEmail(e.target.value); setContactEmailError('') }}
+                        onKeyDown={e => { if (e.key === 'Escape') setEditingContact(false) }}
+                        placeholder="example@gmail.com"
+                        style={{ width: '100%', boxSizing: 'border-box', padding: '10px 12px', borderRadius: '10px', border: `1.5px solid ${contactEmailError ? '#FECACA' : '#E0E0E8'}`, fontSize: '13px', fontWeight: 500, color: '#111', outline: 'none', background: '#F7F7FA', fontFamily: 'inherit', transition: 'border-color 0.15s', marginBottom: contactEmailError ? '6px' : '10px' }}
+                        onFocus={e => e.target.style.borderColor = contactEmailError ? '#FECACA' : LIME}
+                        onBlur={e => e.target.style.borderColor = contactEmailError ? '#FECACA' : '#E0E0E8'}
+                      />
+                      {contactEmailError && <div style={{ fontSize: '12px', color: '#EF4444', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '5px' }}><AlertCircle size={12} />{contactEmailError}</div>}
+                      <div style={{ display: 'flex', gap: '10px' }}>
+                        <button onClick={handleSaveContact} disabled={contactSaving} style={{ flex: 1, padding: '12px 0', borderRadius: '12px', background: LIME, border: 'none', cursor: contactSaving ? 'not-allowed' : 'pointer', fontWeight: 700, fontSize: '13px', letterSpacing: '0.06em', color: '#111', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '7px' }}>
+                          {contactSaving ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <Check size={14} />} SAVE
+                        </button>
+                        <button onClick={() => { setEditingContact(false); setContactPhoneError(''); setContactEmailError(''); const { phone, email } = loadContact(restaurantId); setContactPhone(phone); setContactEmail(email) }} style={{ padding: '12px 18px', borderRadius: '12px', background: '#F0F0F5', border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: '13px', letterSpacing: '0.06em', color: '#666' }}>
+                          CANCEL
+                        </button>
+                      </div>
+                    </div>
+                  )}
                   {idx < arr.length - 1 && <div style={{ height: '1px', background: '#F0F0F5', marginLeft: '76px' }} />}
                 </React.Fragment>
               ))}
@@ -1284,17 +1327,6 @@ export default function ProfileSlide({
           </EditFieldModal>
         )}
 
-        {editingContact && (
-          <EditFieldModal title="Contact Info" icon={<Phone size={22} strokeWidth={1.4} />} onClose={() => { setEditingContact(false); setContactPhoneError(''); setContactEmailError(''); const { phone, email } = loadContact(restaurantId); setContactPhone(phone); setContactEmail(email) }}>
-            <FieldLabel icon={<Phone size={11} />} label="Contact Number" />
-            <input ref={phoneInputRef} type="tel" inputMode="numeric" value={contactPhone} onChange={e => handlePhoneInput(e.target.value)} onKeyDown={e => { if (e.key === 'Escape') setEditingContact(false) }} placeholder="10-digit number" maxLength={10} style={inputStyle(contactPhoneError)} onFocus={e => e.target.style.borderColor = contactPhoneError ? '#FECACA' : LIME} onBlur={e => e.target.style.borderColor = contactPhoneError ? '#FECACA' : '#E0E0E8'} />
-            {contactPhoneError && <InlineError>{contactPhoneError}</InlineError>}
-            <FieldLabel icon={<Mail size={11} />} label="Email Address" />
-            <input type="email" value={contactEmail} onChange={e => { setContactEmail(e.target.value); setContactEmailError('') }} onKeyDown={e => { if (e.key === 'Escape') setEditingContact(false) }} placeholder="example@gmail.com" style={inputStyle(contactEmailError)} onFocus={e => e.target.style.borderColor = contactEmailError ? '#FECACA' : LIME} onBlur={e => e.target.style.borderColor = contactEmailError ? '#FECACA' : '#E0E0E8'} />
-            {contactEmailError && <InlineError>{contactEmailError}</InlineError>}
-            <ActionButtons onSave={handleSaveContact} onCancel={() => { setEditingContact(false); setContactPhoneError(''); setContactEmailError(''); const { phone, email } = loadContact(restaurantId); setContactPhone(phone); setContactEmail(email) }} saving={contactSaving} />
-          </EditFieldModal>
-        )}
 
 
         <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
@@ -1842,45 +1874,6 @@ export default function ProfileSlide({
       )}
 
       {/* CONTACT INFO modal */}
-      {editingContact && (
-        <EditFieldModal
-          title="Contact Info"
-          icon={<Phone size={22} strokeWidth={1.4} />}
-          onClose={() => {
-            setEditingContact(false); setContactPhoneError(''); setContactEmailError('')
-            const { phone, email } = loadContact(restaurantId); setContactPhone(phone); setContactEmail(email)
-          }}
-        >
-          <FieldLabel icon={<Phone size={11} />} label="Contact Number" />
-          <input ref={phoneInputRef} type="tel" inputMode="numeric" value={contactPhone}
-            onChange={e => handlePhoneInput(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Escape') setEditingContact(false) }}
-            placeholder="10-digit number" maxLength={10}
-            style={inputStyle(contactPhoneError)}
-            onFocus={e => e.target.style.borderColor = contactPhoneError ? '#FECACA' : LIME}
-            onBlur={e => e.target.style.borderColor = contactPhoneError ? '#FECACA' : '#E0E0E8'}
-          />
-          {contactPhoneError && <InlineError>{contactPhoneError}</InlineError>}
-          <FieldLabel icon={<Mail size={11} />} label="Email Address" />
-          <input type="email" value={contactEmail}
-            onChange={e => { setContactEmail(e.target.value); setContactEmailError('') }}
-            onKeyDown={e => { if (e.key === 'Escape') setEditingContact(false) }}
-            placeholder="example@gmail.com"
-            style={inputStyle(contactEmailError)}
-            onFocus={e => e.target.style.borderColor = contactEmailError ? '#FECACA' : LIME}
-            onBlur={e => e.target.style.borderColor = contactEmailError ? '#FECACA' : '#E0E0E8'}
-          />
-          {contactEmailError && <InlineError>{contactEmailError}</InlineError>}
-          <ActionButtons
-            onSave={handleSaveContact}
-            onCancel={() => {
-              setEditingContact(false); setContactPhoneError(''); setContactEmailError('')
-              const { phone, email } = loadContact(restaurantId); setContactPhone(phone); setContactEmail(email)
-            }}
-            saving={contactSaving}
-          />
-        </EditFieldModal>
-      )}
 
       {/* LOCATION modal */}
 
