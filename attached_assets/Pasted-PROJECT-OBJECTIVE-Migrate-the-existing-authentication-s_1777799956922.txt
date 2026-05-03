@@ -1,0 +1,131 @@
+PROJECT OBJECTIVE:
+Migrate the existing authentication system to a strict "LOGIN-FIRST (AUTH GATE)" architecture using Google OAuth (Supabase), without breaking existing features or UID-based system.
+
+CURRENT ISSUE:
+
+- Authentication is triggered when clicking dashboard buttons.
+- Users can see UI before authentication.
+- Causes inconsistent state, session bugs, and UI glitches.
+
+REQUIRED NEW LOGIC (MANDATORY):
+
+1. ENTRY GATE (CRITICAL CHANGE):
+
+- When user opens the app URL:
+  → DO NOT render dashboard or any UI
+  → FIRST check authentication session
+
+IF session == NULL:
+→ Immediately redirect to "/auth"
+→ Show ONLY Google Login screen
+
+IF session EXISTS:
+→ Redirect to "/dashboard"
+
+NO EXCEPTIONS.
+
+2. REMOVE OLD LOGIC:
+
+- Completely remove:
+  - Login triggers from buttons
+  - Auth checks inside components/pages
+  - Any delayed or conditional login popups
+- Authentication must exist ONLY at app entry level
+
+3. GLOBAL AUTH SYSTEM:
+
+- Create a centralized Auth Provider (Context / Store)
+
+- On app start:
+  
+  - Call: supabase.auth.getSession()
+  - Subscribe: supabase.auth.onAuthStateChange()
+
+- Maintain:
+  user
+  session
+  loading state
+
+4. LOADING CONTROL (IMPORTANT):
+
+- While checking session:
+  → Show a full-screen loader
+  → DO NOT render app prematurely
+
+This prevents flicker/glitches.
+
+5. PROTECTED ROUTING SYSTEM:
+
+- Wrap ALL routes inside a ProtectedRoute / AuthGuard
+
+Logic:
+IF loading → show loader
+IF no session → redirect("/auth")
+IF session → allow access
+
+Apply to:
+
+- /dashboard
+- /admin
+- /manager
+- /employee
+- /master-control
+
+6. LOGIN PAGE (/auth):
+
+- Clean standalone page
+- Button: "Continue with Google"
+- Use Supabase Google OAuth
+
+After success:
+→ Redirect to "/dashboard"
+
+7. SESSION PERSISTENCE:
+
+- Ensure session persists across:
+  - Page refresh
+  - App reopen
+  - Multiple devices
+
+Use Supabase built-in session handling properly.
+
+8. SECURITY RULES:
+
+- NO UI should be visible before login
+- NO dashboard preload
+- NO partial rendering
+- NO button-triggered authentication
+
+9. DO NOT BREAK:
+
+- Existing UID system
+- Database structure
+- Role system (Admin / Manager / Employee / Master Control)
+
+Only refactor authentication flow.
+
+10. FINAL EXPECTED BEHAVIOR:
+
+USER FLOW:
+
+- Open link →
+  IF not logged in → instantly see Google login page
+  IF logged in → directly enter dashboard
+
+- No clicks required to trigger login
+
+- No glitches
+
+- No UI flash
+
+- Clean transition
+
+TECH REQUIREMENT:
+
+- Keep code modular
+- Avoid duplicate listeners
+- Prevent memory leaks
+- Ensure stable state management
+
+END GOAL:
+A secure, production-grade authentication system where login is REQUIRED before accessing anything in the app.
