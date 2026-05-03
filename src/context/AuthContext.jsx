@@ -75,20 +75,23 @@ export function AuthProvider({ children }) {
       }
     }
 
-    // Check any pre-existing session on mount (handles page refresh)
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      validateAndSetUser(session)
-    })
-
-    // Listen for auth state changes:
-    //   SIGNED_IN       — new OAuth login or session restore
-    //   TOKEN_REFRESHED — re-validate on every token refresh (catches removed users)
-    //   SIGNED_OUT      — clear state
+    // Single source of truth for session state.
+    // INITIAL_SESSION — fires on mount with the existing session (or null).
+    //                   Supabase guarantees this fires AFTER it has finished
+    //                   processing any OAuth tokens in the URL hash, so there
+    //                   is no race condition between getSession() and SIGNED_IN.
+    // SIGNED_IN       — new OAuth login
+    // TOKEN_REFRESHED — re-validate on every token refresh (catches removed users)
+    // SIGNED_OUT      — clear state
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+      if (
+        event === 'INITIAL_SESSION' ||
+        event === 'SIGNED_IN' ||
+        event === 'TOKEN_REFRESHED'
+      ) {
         validateAndSetUser(session)
       } else if (event === 'SIGNED_OUT') {
-        if (mounted) { setUser(null); setAccessDenied(false); setLoading(false) }
+        if (mounted) { setUser(null); setAccessDenied(false); setIsSuperAdmin(false); setLoading(false) }
       }
     })
 
