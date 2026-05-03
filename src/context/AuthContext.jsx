@@ -51,6 +51,13 @@ export function AuthProvider({ children }) {
             setAccessDenied(false)
             setLoading(false)
           }
+          // Auto-link this user's auth.uid() to any team_members row that
+          // matches their email address. This fires once per login and is what
+          // lets a newly-invited Gmail account immediately see the restaurant
+          // they were added to — no manual UID copying required.
+          supabase.rpc('link_team_member_on_login').catch(e =>
+            console.warn('[auth] link_team_member_on_login failed:', e.message)
+          )
         }
       } catch (e) {
         console.warn('[auth] Allowlist check failed:', e.message)

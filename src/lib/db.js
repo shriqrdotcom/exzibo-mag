@@ -13,10 +13,22 @@ export async function generateRestaurantUID() {
 export async function getRestaurants() {
   const { data: { user }, error: authError } = await supabase.auth.getUser()
   if (authError || !user) throw new Error('Not authenticated')
+
+  // Fetch all restaurant IDs accessible to this user:
+  //   • restaurants they own (owner_id = auth.uid())
+  //   • restaurants where they are an active team member
+  // Uses a SECURITY DEFINER RPC so cross-table access is handled server-side.
+  const { data: idRows, error: idError } = await supabase
+    .rpc('get_my_restaurant_ids')
+  if (idError) throw idError
+
+  const ids = (idRows ?? []).map(r => r.restaurant_id)
+  if (ids.length === 0) return []
+
   const { data, error } = await supabase
     .from('restaurants')
     .select('*')
-    .eq('owner_id', user.id)
+    .in('id', ids)
     .order('created_at', { ascending: false })
   if (error) throw error
   return data ?? []

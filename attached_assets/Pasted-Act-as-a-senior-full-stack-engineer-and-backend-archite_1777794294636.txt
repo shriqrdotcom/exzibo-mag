@@ -1,0 +1,137 @@
+Act as a senior full-stack engineer and backend architect.
+
+Goal:
+Fix the system so that ALL users (different Gmail accounts) access the SAME shared data instead of isolated/local environments.
+
+---
+
+CURRENT PROBLEM (MUST FIX)
+
+- Currently, each Gmail login creates or uses a separate "world" (isolated data).
+- When I login with Gmail A → I see my restaurant and settings.
+- When I login with Gmail B → I DO NOT see the same data.
+- This means data is being stored per user session or local storage instead of a shared backend.
+
+This is WRONG.
+
+---
+
+EXPECTED BEHAVIOR
+
+- All Gmail users should access the SAME global database.
+- If one user creates a restaurant → it must be visible to ALL authorized users.
+- If one user updates settings → it must reflect for ALL users instantly.
+- New Gmail users should JOIN the existing system, not create a new isolated one.
+
+---
+
+CORE ARCHITECTURE FIX
+
+1. REMOVE LOCAL STORAGE DEPENDENCY
+
+- Do NOT store restaurants, menu, settings, or orders in localStorage/sessionStorage.
+- All data must come ONLY from Supabase database.
+
+2. SINGLE SHARED DATABASE (SOURCE OF TRUTH)
+
+- Use Supabase tables:
+  
+  - users
+  - restaurants
+  - menu_items
+  - orders
+  - settings
+  - bookings
+
+- Every record must be globally accessible (based on permissions), NOT tied to a single login session.
+
+3. USER ROLE SYSTEM (IMPORTANT)
+   Create a proper access system:
+
+Table: users
+fields:
+
+- id (auth.uid)
+- email
+- role (master/admin/manager/employee)
+- restaurant_uid (nullable if master)
+
+Logic:
+
+- Users are linked to restaurants via restaurant_uid
+- Multiple users can belong to the SAME restaurant
+- This enables shared access
+
+4. RESTAURANT SHARING LOGIC
+
+- When a restaurant is created:
+  → store restaurant_uid in database
+  → assign creator as ADMIN
+
+- Add feature:
+  → invite/add new Gmail users to same restaurant_uid
+
+- When new Gmail logs in:
+  → check if user exists in "users" table
+  IF YES → load their assigned restaurant data
+  IF NO → create user entry and allow linking to existing restaurant
+
+---
+
+REAL-TIME SYNC (MANDATORY)
+
+- Use Supabase Realtime subscriptions
+
+- Sync:
+  
+  - restaurants
+  - menu_items
+  - orders
+  - bookings
+  - settings
+
+- Any change by one user must reflect for ALL users instantly
+
+---
+
+AUTHENTICATION FIX
+
+- Use Supabase Auth (Google OAuth)
+- After login:
+  → fetch user from "users" table
+  → DO NOT create new database "world"
+  → ONLY attach user to existing system
+
+---
+
+CRITICAL RULES
+
+- NEVER create separate database instances per user
+- NEVER isolate data per Gmail login
+- ALWAYS use shared tables
+- ALWAYS filter data using restaurant_uid
+- ALWAYS allow multi-user access to same restaurant
+
+---
+
+OPTIONAL (BUT RECOMMENDED)
+
+- Add "Invite User" feature:
+  → Admin can add another Gmail
+  → That Gmail gets access to same restaurant
+
+---
+
+FINAL EXPECTATION
+
+- Login with any Gmail → same data visible (if authorized)
+- No more isolated environments
+- Fully shared, real-time, multi-user system
+- Clean, scalable architecture
+- No bugs, no duplication, no desync
+
+Do NOT skip anything.
+Do NOT use temporary fixes.
+Do NOT rely on local storage.
+
+Build it as a real SaaS multi-user system.
