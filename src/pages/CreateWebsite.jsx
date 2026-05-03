@@ -6,7 +6,7 @@ import {
   ChefHat, Users, Zap, Bell
 } from 'lucide-react'
 import PlanSelector from '../components/PlanSelector'
-import { createRestaurant, getRestaurants, updateRestaurant } from '../lib/db'
+import { createRestaurant, getRestaurants, updateRestaurant, generateRestaurantUID } from '../lib/db'
 import { supabase } from '../lib/supabase'
 
 export default function CreateWebsite() {
@@ -145,12 +145,8 @@ export default function CreateWebsite() {
       } catch { /* first restaurant — no existing rows */ }
 
       const slug = generateSlug(form.restaurantName, existingSlugs)
-      let uid
-      do {
-        const firstDigit = [6, 7, 8, 9][Math.floor(Math.random() * 4)]
-        const rest = Math.floor(Math.random() * 1_000_000_000).toString().padStart(9, '0')
-        uid = `${firstDigit}${rest}`
-      } while (existingUIDs.includes(uid))
+      // UID is generated server-side: globally unique, 10 digits, starts 6-9
+      const uid = await generateRestaurantUID()
 
       // ── Step 1: Insert restaurant with text/metadata only ──────
       // Images are NOT included here — base64 blobs exceed Supabase

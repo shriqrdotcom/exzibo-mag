@@ -1,0 +1,175 @@
+Act as a senior full-stack engineer.
+
+🎯 Goal
+
+Build a restaurant system with a unique 10-digit UID per restaurant, where all roles (Master Control, Admin, Manager, Staff, Menu) communicate using this UID.
+
+---
+
+🧠 CORE LOGIC
+
+1. Unique Restaurant UID Generation
+
+- Every time a new restaurant is created:
+  - Generate a 10-digit numeric UID (example: 8910699771)
+  - UID must be:
+    - Exactly 10 digits
+    - Completely unique (no duplicates across database)
+    - Similar format to Indian mobile numbers
+- Store this UID in the "restaurants" table
+
+Implementation Rules:
+
+- Use backend (NOT frontend) to generate UID
+- Before saving:
+  - Check database to ensure UID does not already exist
+  - If exists → regenerate
+- Add a UNIQUE constraint on UID column in database
+
+---
+
+2. UID as Universal Link (IMPORTANT)
+
+This UID acts as a single communication key.
+
+All modules must use the SAME UID:
+
+- Master Control
+- Admin Panel
+- Manager Dashboard
+- Staff Panel
+- Public Menu Website
+
+👉 Meaning:
+Every piece of data must be filtered by "restaurant_uid"
+
+---
+
+🗂 DATABASE STRUCTURE (IMPORTANT)
+
+Ensure all tables include:
+
+- "restaurant_uid" (foreign key reference)
+
+Tables:
+
+- restaurants
+- menu_items
+- orders
+- team_members
+- bookings (if exists)
+
+---
+
+🔁 DATA FLOW RULES
+
+🟢 1. Order Flow (Menu → All Panels)
+
+When a customer orders from the Menu Website:
+
+- Save order with "restaurant_uid"
+- Instantly reflect in:
+  - Master Control
+  - Admin
+  - Manager
+  - Staff
+
+👉 Use:
+
+- Supabase Realtime / WebSockets / Subscriptions
+
+---
+
+🟡 2. Menu Update Flow (Admin Side → Internal Only)
+
+When:
+
+- Master Control / Admin / Manager adds food items
+
+Then:
+
+- Update should reflect in:
+  - Master Control
+  - Admin
+  - Manager
+  - Staff
+
+🚫 DO NOT show immediately on Menu Website (optional control layer)
+
+👉 Add flag:
+
+- "is_published = false" (default)
+- Only show on Menu when "is_published = true"
+
+---
+
+🔐 ACCESS CONTROL LOGIC
+
+Each user must have:
+
+- "restaurant_uid"
+- "role" (master | admin | manager | staff)
+
+Rules:
+
+- Users can ONLY access data where "restaurant_uid" matches
+- Enforce via:
+  - Supabase RLS (Row Level Security)
+
+---
+
+⚡ REAL-TIME SYNC (CRITICAL)
+
+- All dashboards must update instantly across devices
+- If order placed on phone → visible on PC dashboard immediately
+
+Use:
+
+- Supabase Realtime subscriptions on:
+  - orders
+  - menu_items
+
+Filter:
+
+- "restaurant_uid = current_user.restaurant_uid"
+
+---
+
+❌ CURRENT PROBLEMS TO FIX
+
+Fix these issues:
+
+1. Data not syncing across devices
+2. Restaurants not showing in "My Restaurants"
+3. Menu updates not reflecting everywhere
+4. Orders not appearing in dashboards
+
+---
+
+✅ EXPECTED RESULT
+
+- Every restaurant has a unique 10-digit UID
+- All roles connected via same UID
+- Real-time sync across devices
+- Orders flow correctly to all panels
+- Menu updates controlled via publish system
+- No duplication, no desync, no data leakage
+
+---
+
+🚀 FINAL NOTE
+
+DO NOT:
+
+- Generate UID on frontend
+- Skip uniqueness validation
+- Mix data between different restaurant UIDs
+
+DO:
+
+- Keep system scalable and real-time
+- Ensure clean backend-driven architecture
+
+---
+
+Build this in a clean, bug-free, production-ready way.

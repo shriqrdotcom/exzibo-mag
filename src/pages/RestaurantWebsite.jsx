@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { notifyAnalyticsUpdate } from '../context/AnalyticsContext'
-import { getRestaurantBySlug, getMenuCategories, getMenuItems } from '../lib/db'
+import { getRestaurantBySlug, getMenuCategories, getMenuItems, getPublishedMenuItems } from '../lib/db'
 import { supabase } from '../lib/supabase'
 import {
   Star, MapPin, Bell, ShoppingCart, Home,
@@ -723,10 +723,10 @@ export default function RestaurantWebsite() {
         setRestaurant(r)
         setCustomerOrders(loadAndFilterCustomerOrders(r.id))
 
-        // Load menu from Supabase
+        // Load menu from Supabase — public page shows only published items
         const [cats, items] = await Promise.all([
           getMenuCategories(r.id),
-          getMenuItems(r.id),
+          getPublishedMenuItems(r.id),
         ])
         if (cancelled) return
 
@@ -777,7 +777,7 @@ export default function RestaurantWebsite() {
       try {
         const [cats, menuItems] = await Promise.all([
           getMenuCategories(rid),
-          getMenuItems(rid),
+          getPublishedMenuItems(rid),
         ])
         if (!cats?.length) return
         const tabs = cats.map(c => ({ id: c.id, label: c.name.toUpperCase() }))

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useAnalytics, notifyAnalyticsUpdate } from '../context/AnalyticsContext'
 import { useRole } from '../context/RoleContext'
-import { getRestaurants, getOrders, getBookings, updateOrderStatus, updateBookingStatus, getMenuCategories, getMenuItems, insertMenuItem, updateMenuItem, deleteMenuItem, upsertMenuCategory, deleteMenuCategory, upsertMenuItems, uploadMenuImage, updateRestaurant, uploadToStorage, uploadDataUrlToStorage } from '../lib/db'
+import { getRestaurants, getOrders, getBookings, updateOrderStatus, updateBookingStatus, getMenuCategories, getMenuItems, insertMenuItem, updateMenuItem, deleteMenuItem, upsertMenuCategory, deleteMenuCategory, upsertMenuItems, uploadMenuImage, updateRestaurant, uploadToStorage, uploadDataUrlToStorage, toggleMenuItemPublish } from '../lib/db'
 import { supabase } from '../lib/supabase'
 import notificationIconImg from '@assets/image_1777373928129.png'
 import {
@@ -3992,6 +3992,7 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
                   img: it.image || null,
                   veg: it.veg !== false,
                   available: it.available !== false,
+                  is_published: it.is_published === true,
                   tags: it.tags || [],
                   addOns: it.add_ons || [],
                 })
@@ -4081,6 +4082,7 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
               image: imgUrl,
               veg: item.veg !== false,
               available: item.available !== false,
+              is_published: item.is_published === true,
               tags: item.tags || [],
               add_ons: item.addOns || [],
             }
@@ -4168,6 +4170,35 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
     setHasDraftChanges(true)
   }
 
+  async function togglePublish(id) {
+    const currentItems = menu[activeCategory] || []
+    const item = currentItems.find(i => i.id === id)
+    if (!item || !item.dbId) {
+      showToast('Save the item to Supabase first before publishing.')
+      return
+    }
+    const newVal = !item.is_published
+    setMenu(prev => ({
+      ...prev,
+      [activeCategory]: (prev[activeCategory] || []).map(i =>
+        i.id === id ? { ...i, is_published: newVal } : i
+      ),
+    }))
+    try {
+      await toggleMenuItemPublish(String(item.dbId), newVal)
+      showToast(newVal ? '✅ Published to customer menu' : '📦 Moved back to draft')
+    } catch (e) {
+      console.error('Failed to toggle publish:', e)
+      showToast('❌ Failed to update publish status')
+      setMenu(prev => ({
+        ...prev,
+        [activeCategory]: (prev[activeCategory] || []).map(i =>
+          i.id === id ? { ...i, is_published: !newVal } : i
+        ),
+      }))
+    }
+  }
+
   function startEdit(item) {
     setEditingId(item.id)
     setEditDraft({ ...item, price: String(item.price), addOns: item.addOns || [] })
@@ -4233,6 +4264,7 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
           image: resolvedImg,
           veg: updatedItem.veg !== false,
           available: updatedItem.available !== false,
+          is_published: updatedItem.is_published === true,
           tags: updatedItem.tags || [],
           add_ons: updatedItem.addOns || [],
         })
@@ -4266,6 +4298,7 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
         veg: item.veg,
         tags: item.tags,
         available: true,
+        is_published: false,
         category_id: categoryId,
       })
       item.dbId = saved.id
@@ -5537,6 +5570,35 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
                       position: 'absolute',
                       top: '3px',
                       left: item.available === false ? '3px' : '19px',
+                      width: '16px', height: '16px',
+                      borderRadius: '8px', background: '#fff',
+                      transition: 'left 0.25s ease',
+                      boxShadow: '0 1px 4px rgba(0,0,0,0.2)',
+                    }} />
+                  </div>
+                </div>
+
+                {/* Publish toggle row */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', marginBottom: '10px', gap: '8px' }}>
+                  <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.06em', color: item.is_published ? '#22c55e' : '#f59e0b', textTransform: 'uppercase' }}>
+                    {item.is_published ? 'Published' : 'Draft'}
+                  </span>
+                  <div
+                    onClick={() => togglePublish(item.id)}
+                    title={item.is_published ? 'Unpublish — hide from customer menu' : 'Publish — show on customer menu'}
+                    style={{
+                      width: '40px', height: '22px', borderRadius: '11px',
+                      background: item.is_published ? 'linear-gradient(135deg, #22c55e, #16a34a)' : '#e2e8f0',
+                      position: 'relative', cursor: 'pointer',
+                      transition: 'background 0.25s ease',
+                      flexShrink: 0,
+                      boxShadow: item.is_published ? '0 2px 8px rgba(34,197,94,0.4)' : 'none',
+                    }}
+                  >
+                    <div style={{
+                      position: 'absolute',
+                      top: '3px',
+                      left: item.is_published ? '19px' : '3px',
                       width: '16px', height: '16px',
                       borderRadius: '8px', background: '#fff',
                       transition: 'left 0.25s ease',

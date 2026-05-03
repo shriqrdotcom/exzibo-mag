@@ -1,5 +1,13 @@
 import { supabase } from './supabase'
 
+// ── Restaurant UID — server-side unique 10-digit generator ───
+
+export async function generateRestaurantUID() {
+  const { data, error } = await supabase.rpc('generate_restaurant_uid')
+  if (error) throw error
+  return data
+}
+
 // ── Restaurants ──────────────────────────────────────────────
 
 export async function getRestaurants() {
@@ -150,6 +158,30 @@ export async function getMenuItems(restaurantId) {
     .select('*')
     .eq('restaurant_id', restaurantId)
     .order('created_at')
+  if (error) throw error
+  return data
+}
+
+// Public-facing version — only returns items the admin has published
+export async function getPublishedMenuItems(restaurantId) {
+  const { data, error } = await supabase
+    .from('menu_items')
+    .select('*')
+    .eq('restaurant_id', restaurantId)
+    .eq('is_published', true)
+    .order('created_at')
+  if (error) throw error
+  return data
+}
+
+// Instantly publish or unpublish a single item (saves immediately, no draft)
+export async function toggleMenuItemPublish(id, isPublished) {
+  const { data, error } = await supabase
+    .from('menu_items')
+    .update({ is_published: isPublished })
+    .eq('id', id)
+    .select()
+    .single()
   if (error) throw error
   return data
 }
