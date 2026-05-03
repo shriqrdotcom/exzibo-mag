@@ -1,0 +1,166 @@
+Act as a senior full-stack engineer and debugging specialist.
+
+Goal:
+Fix data persistence and order status sync issues in a multi-dashboard restaurant system using Supabase.
+
+---
+
+CRITICAL PROBLEMS (MUST FIX)
+
+PROBLEM 1: DATA DISAPPEARS AFTER APP RESTART
+
+- When I add food items → they appear correctly
+- When I close app and reopen → items are missing from MENU
+- When I go to ADMIN and click "Save Changes" → items reappear
+
+This means:
+
+- Data is NOT being properly fetched from database on app load
+- Or data is only stored in frontend state until re-saved
+
+THIS IS A CRITICAL BUG.
+
+---
+
+EXPECTED BEHAVIOR (DATA PERSISTENCE)
+
+- All food items must ALWAYS load from database when app starts
+- No dependency on clicking "Save Changes"
+- Data must persist permanently
+
+---
+
+FIX IMPLEMENTATION (MANDATORY)
+
+1. REMOVE FRONTEND-ONLY STATE DEPENDENCY
+
+- Do NOT rely on temporary state for menu items
+- Always fetch from Supabase
+
+2. LOAD DATA ON APP INITIALIZATION
+
+- On page load (MENU + ADMIN + ALL dashboards):
+  → fetch menu_items WHERE restaurant_uid = current UID
+
+Example:
+
+- useEffect() or equivalent must call database fetch immediately
+
+3. ENSURE INSERT IS PERMANENT
+
+- When adding item:
+  → INSERT into menu_items table
+  → Confirm success response
+  → Update UI AFTER DB success
+
+4. NO "SAVE TO APPLY" LOGIC
+
+- Remove logic where data appears only after clicking save again
+- Every create/update must directly persist in DB
+
+---
+
+PROBLEM 2: ORDER STATUS NOT SYNCING
+
+- When order is placed → shows in dashboards ✅
+- When CONFIRM or CANCEL is clicked → updates in dashboard ❌
+- But status does NOT reflect in MENU "Order Details" page ❌
+
+---
+
+EXPECTED BEHAVIOR (ORDER SYNC)
+
+- MENU places order → status = "pending"
+
+- DASHBOARD clicks:
+  → CONFIRM → status = "confirmed"
+  → CANCEL → status = "cancelled"
+
+- MENU Order Details page MUST update instantly
+
+---
+
+FIX IMPLEMENTATION (MANDATORY)
+
+1. SINGLE SOURCE OF TRUTH
+
+- Use ONE "orders" table
+- Fields:
+  id
+  restaurant_uid
+  items
+  status
+  created_at
+
+2. UPDATE STATUS IN DATABASE
+
+- On CONFIRM:
+  → UPDATE orders SET status = 'confirmed'
+
+- On CANCEL:
+  → UPDATE orders SET status = 'cancelled'
+
+3. MENU MUST FETCH LIVE STATUS
+
+- MENU Order Details page must:
+  → fetch order by ID
+  → OR subscribe to realtime updates
+
+4. ADD REALTIME SUBSCRIPTION (IMPORTANT)
+
+- Subscribe to "orders" table changes
+
+- On UPDATE event:
+  → update UI instantly
+
+---
+
+REAL-TIME SYNC (MANDATORY FOR BOTH FIXES)
+
+- Enable Supabase Realtime for:
+  
+  - menu_items
+  - orders
+
+- On:
+  INSERT → add to UI
+  UPDATE → update UI
+  DELETE → remove from UI
+
+---
+
+COMMON ROOT CAUSE (FIX THIS)
+
+- Data not fetched on load
+- UI not subscribed to DB changes
+- Over-reliance on manual refresh/save
+
+---
+
+FRONTEND RULES
+
+- Always fetch fresh data on load
+- Never depend on cached/local state only
+- After any mutation → sync with DB response
+
+---
+
+BACKEND RULES
+
+- Ensure all inserts/updates succeed before UI update
+- Use restaurant_uid filter in ALL queries
+
+---
+
+FINAL EXPECTATION
+
+- Menu items NEVER disappear after restart
+- Data persists permanently
+- Orders status updates reflect instantly everywhere
+- No need to click "Save Changes" again
+- Fully real-time synced system
+- No glitches, no delays, no inconsistencies
+
+Do NOT skip anything.
+Do NOT use temporary fixes.
+Fix root cause only.

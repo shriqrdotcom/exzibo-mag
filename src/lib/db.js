@@ -296,12 +296,15 @@ export async function createOrder(restaurantId, order) {
 }
 
 export async function updateOrderStatus(orderId, status) {
+  // Use maybeSingle() so we don't throw when the order doesn't exist in Supabase
+  // (e.g. legacy localStorage-only orders). The UPDATE still fires the realtime
+  // event for rows that do exist, which is all that matters for cross-device sync.
   const { data, error } = await supabase
     .from('orders')
     .update({ status })
     .eq('id', orderId)
     .select()
-    .single()
+    .maybeSingle()
   if (error) throw error
   return data
 }

@@ -631,12 +631,8 @@ export default function AdminDashboard() {
     const key = `exzibo_orders_${restaurantId}`
     localStorage.setItem(key, JSON.stringify(updatedOrders))
     notifyAnalyticsUpdate()
-    // write-through to Supabase in background
-    if (!isDefault) {
-      updatedOrders.forEach(o => {
-        updateOrderStatus(o.id, o.status).catch(() => {})
-      })
-    }
+    // Targeted Supabase writes are done directly in confirmOrder / cancelOrder
+    // so we only fire one UPDATE per action instead of looping every order.
   }
 
   function confirmOrder(orderId) {
@@ -648,6 +644,12 @@ export default function AdminDashboard() {
         return { ...o, status: next }
       })
       persistOrders(updated)
+      // Write ONLY the changed order's status to Supabase so the realtime
+      // UPDATE event fires and the customer page reflects the change instantly.
+      if (!isDefault) {
+        const changedOrder = updated.find(o => o.id === orderId)
+        if (changedOrder) updateOrderStatus(orderId, changedOrder.status).catch(() => {})
+      }
       return updated
     })
   }
@@ -656,6 +658,8 @@ export default function AdminDashboard() {
     setOrders(prev => {
       const updated = prev.map(o => o.id === orderId ? { ...o, status: 'cancelled' } : o)
       persistOrders(updated)
+      // Write ONLY the cancelled order to Supabase so the realtime event fires.
+      if (!isDefault) updateOrderStatus(orderId, 'cancelled').catch(() => {})
       return updated
     })
     showToast('❌ Order Cancelled')
@@ -4378,6 +4382,10 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
     }
     const updated = { ...menu, [activeCategory]: [...(menu[activeCategory] || []), item] }
     saveMenu(updated)
+    // Write-through to localStorage so the customer page (same device) sees the
+    // new item immediately via the storage event, without waiting for Save Changes.
+    localStorage.setItem(storageKey, JSON.stringify(updated))
+    window.dispatchEvent(new StorageEvent('storage', { key: storageKey, newValue: JSON.stringify(updated) }))
     setAddDraft(BLANK_ITEM)
     setShowAdd(false)
   }

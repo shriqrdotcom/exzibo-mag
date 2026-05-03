@@ -720,7 +720,10 @@ export default function RestaurantWebsite() {
       setCustomerOrders(demoOrders)
       return
     }
-    // ── Try localStorage first (legacy / offline mode) ────────
+    // ── Try localStorage first for an instant initial render ─────────────────
+    // Do NOT return early — always fall through to the Supabase fetch below so
+    // the menu is never stale (addItem writes to Supabase but not always to the
+    // localStorage menu cache, so the cache can lag behind the DB).
     const localRestaurants = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
     const found = localRestaurants.find(r => r.slug === slug || r.id === slug)
     if (found) {
@@ -732,17 +735,20 @@ export default function RestaurantWebsite() {
       try { const fe = localStorage.getItem(`exzibo_filters_enabled_${found.id}`); if (fe) setFiltersEnabled(JSON.parse(fe)) } catch {}
       setActiveMenuTab(tabs[0]?.id || 'starters')
       setCustomerOrders(loadAndFilterCustomerOrders(found.id))
-      return
+      // intentionally no return — fall through to Supabase fetch below
     }
 
-    // ── Fallback: fetch from Supabase ─────────────────────────
-    // Restaurants created via the Supabase flow are NOT in localStorage.
+    // ── Fetch from Supabase (always, to keep menu data fresh) ─────────────
+    // • If the restaurant was already set from localStorage: update restaurant
+    //   info silently and overwrite menuData with the live Supabase menu.
+    // • If the restaurant was NOT in localStorage: this is the only data source.
     let cancelled = false
     async function fetchFromSupabase() {
       try {
         const dbRow = await getRestaurantBySlug(slug)
         if (cancelled) return
-        if (!dbRow) { setNotFound(true); return }
+        // Only show 404 when we have no local fallback to display
+        if (!dbRow) { if (!found) setNotFound(true); return }
 
         const r = {
           id:              dbRow.id,
@@ -803,9 +809,12 @@ export default function RestaurantWebsite() {
           setMenuData(menuObj)
         }
       } catch (e) {
-        if (!cancelled) {
+        // Only show a hard 404 when we have no local fallback to show the user
+        if (!cancelled && !found) {
           console.error('[RestaurantWebsite] Supabase fetch error:', e)
           setNotFound(true)
+        } else if (!cancelled) {
+          console.warn('[RestaurantWebsite] Supabase fetch failed (showing local data):', e.message)
         }
       }
     }
