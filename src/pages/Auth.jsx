@@ -21,7 +21,7 @@ export default function Auth() {
       const saved = localStorage.getItem('auth_redirect')
       localStorage.removeItem('auth_redirect')
       const safe = saved && saved.startsWith('/') && !saved.startsWith('//') && !saved.startsWith('/auth')
-      navigate(safe ? saved : '/dashboard', { replace: true })
+      navigate(safe ? saved : '/', { replace: true })
     }
   }, [user, navigate])
 

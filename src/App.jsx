@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './context/AuthContext'
 import { AnalyticsProvider } from './context/AnalyticsContext'
 import { RoleProvider } from './context/RoleContext'
 
+import Landing              from './pages/Landing'
 import Auth                 from './pages/Auth'
 import Dashboard            from './pages/Dashboard'
 import Settings             from './pages/Settings'
@@ -48,16 +49,9 @@ function GlobalLoader() {
   )
 }
 
-// ── Root route: redirect based on auth state ────────────────────────────────
-// While loading → show nothing (GlobalLoader above covers it).
-// Logged in     → /dashboard
-// Not logged in → /auth
-function RootRedirect() {
-  const { user, loading } = useAuth()
-  if (loading) return null
-  if (user) return <Navigate to="/dashboard" replace />
-  return <Navigate to="/auth" replace />
-}
+// ── Root route: always show the main/landing page ───────────────────────────
+// "/" is public — accessible whether logged in or not.
+// Dashboard is accessed only when the user clicks it manually.
 
 // ── Protected route guard ────────────────────────────────────────────────────
 function ProtectedRoute({ children }) {
@@ -88,6 +82,7 @@ function AppRoutes() {
         localStorage.removeItem('auth_redirect')
         const safe = saved.startsWith('/') && !saved.startsWith('//') && !saved.startsWith('/auth')
         if (safe) navigate(saved, { replace: true })
+        // No fallback redirect — user stays on "/" (the main page they landed on)
       }
     }
   }, [loading, user, navigate])
@@ -97,8 +92,8 @@ function AppRoutes() {
 
   return (
     <Routes>
-      {/* Auth gate — root immediately redirects based on session */}
-      <Route path="/"     element={<RootRedirect />} />
+      {/* Public — main page is always visible, auth page for login */}
+      <Route path="/"     element={<Landing />} />
       <Route path="/auth" element={<Auth />} />
 
       {/* Customer-facing — always public (these are for restaurant guests) */}

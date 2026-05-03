@@ -100,7 +100,7 @@ export function AuthProvider({ children }) {
     setAccessDenied(false)
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: `${window.location.origin}/dashboard` },
+      options: { redirectTo: `${window.location.origin}/` },
     })
     return { data, error }
   }
