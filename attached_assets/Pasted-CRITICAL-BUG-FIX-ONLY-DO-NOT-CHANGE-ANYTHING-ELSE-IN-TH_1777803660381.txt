@@ -1,0 +1,104 @@
+CRITICAL BUG FIX ONLY — DO NOT CHANGE ANYTHING ELSE IN THE PROJECT.
+
+THE EXACT PROBLEM:
+When admin clicks "Confirm" or "Cancel" on an order in the Admin Dashboard,
+the status does NOT instantly update on the customer's "My Orders" page.
+The customer has to refresh the page manually to see any change.
+This must be INSTANT — no page refresh required.
+
+---
+
+FIND THESE TWO THINGS IN THE CODEBASE FIRST:
+
+1. The Admin Dashboard component where "Confirm" and "Cancel" buttons exist
+   for orders — find the exact onClick handler functions for these buttons.
+
+2. The customer-facing "My Orders" page/component where orders are listed
+   and displayed.
+
+---
+
+WHAT IS CAUSING THE BUG (read carefully):
+
+The Admin action updates the database correctly BUT the "My Orders" page
+is only fetching orders ONCE when the page loads (inside useEffect with
+empty dependency array [], or a one-time fetch call). It is NOT listening
+for live changes. So the customer never sees the update unless they reload.
+
+---
+
+THE FIX YOU MUST IMPLEMENT:
+
+OPTION A — If this project uses Supabase:
+On the "My Orders" page, replace the one-time fetch with a Supabase
+real-time subscription on the orders table, filtered by the current
+customer/user ID. Like this pattern:
+
+  const subscription = supabase
+    .channel('my-orders')
+    .on('postgres_changes', {
+      event: 'UPDATE',
+      schema: 'public',
+      table: 'orders',         // use the actual orders table name
+      filter: `user_id=eq.${currentUserId}`  // use actual column name
+    }, (payload) => {
+      // update the specific order in local state using payload.new
+      setOrders(prev =>
+        prev.map(order =>
+          order.id === payload.new.id ? payload.new : order
+        )
+      );
+    })
+    .subscribe();
+
+  // cleanup on unmount:
+  return () => supabase.removeChannel(subscription);
+
+OPTION B — If this project uses Firebase/Firestore:
+Use onSnapshot() instead of getDocs() or getDoc() on the "My Orders"
+page so it listens for live document changes.
+
+OPTION C — If this project uses a REST API / custom backend:
+After the admin confirms or cancels (in the admin handler), also trigger
+a state update or context update that the "My Orders" page is subscribed
+to — OR set up a polling interval of 3–5 seconds on "My Orders" as a
+fallback using setInterval inside useEffect with proper cleanup.
+
+---
+
+ALSO CHECK THIS:
+After the admin clicks Confirm or Cancel, make sure the handler is
+correctly writing the updated status to the database BEFORE the
+real-time listener can pick it up. If the DB is not being updated
+at all, the listener will never fire. Verify the update is being
+saved to DB with the correct status value ("confirmed" / "cancelled").
+
+---
+
+STATUS DISPLAY ON "MY ORDERS" PAGE:
+Make sure each order card/row shows the current status value from the
+order object. If status display is missing, add a small status badge:
+- "Pending"   → grey or yellow color
+- "Confirmed" → green color  
+- "Cancelled" → red color
+Use the existing styling/className patterns already in the project.
+Do NOT redesign the page layout.
+
+---
+
+STRICT RULES:
+- Fix ONLY the real-time status sync between Admin Dashboard and My Orders page.
+- Do NOT touch order placement flow, menu, dashboard layout, or any other feature.
+- Do NOT rename files, variables, functions, or database columns.
+- Do NOT install new packages unless the project does not already have
+  the real-time capability available.
+- Make the MINIMUM code change needed to achieve instant status updates.
+- Preserve ALL existing functionality.
+
+---
+
+EXPECTED FINAL BEHAVIOR:
+Admin clicks "Confirm" → customer's "My Orders" page updates IN REAL TIME
+  showing ✅ Confirmed — NO page refresh needed.
+Admin clicks "Cancel" → customer's "My Orders" page updates IN REAL TIME
+  showing ❌ Cancelled — NO page refresh needed.
