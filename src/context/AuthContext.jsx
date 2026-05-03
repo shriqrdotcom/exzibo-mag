@@ -3,6 +3,15 @@ import { supabase } from '../lib/supabase'
 import { IS_PREVIEW } from '../lib/env'
 import { verifyPreviewSession, clearPreviewSession } from '../lib/previewAuth'
 
+// ── Allowed Gmail accounts ────────────────────────────────────────────────────
+// Only these two emails can access the system.
+// Email check happens CLIENT-SIDE against the session returned by Google/Supabase.
+// No database query needed — this is the simplest, most reliable approach.
+const ALLOWED_EMAILS = [
+  'exzibonew@gmail.com',
+  'trisanu07.nandi@gmail.com',
+]
+
 const AuthContext = createContext(null)
 
 export function AuthProvider({ children }) {
@@ -24,67 +33,46 @@ export function AuthProvider({ children }) {
     // ── Production mode ───────────────────────────────────────────────────
     let mounted = true
 
-    // Called for every session Supabase produces.
-    // Queries `allowed_users` directly (no RPC dependency).
-    // The "users_read_own" RLS policy on that table ensures only the row
-    // matching the signed-in user's email is returned — so a non-empty
-    // result means access is granted.
     async function validateAndSetUser(session) {
+      // No session → not logged in
       if (!session?.user) {
         if (mounted) { setUser(null); setLoading(false) }
         return
       }
 
-      try {
-        // Direct table query — works as long as the RLS policy
-        // "users_read_own" exists:
-        //   CREATE POLICY "users_read_own" ON public.allowed_users FOR SELECT
-        //   USING (lower(trim(email)) = lower(trim(auth.email())));
-        const { data, error } = await supabase
-          .from('allowed_users')
-          .select('role, is_active')
-          .eq('is_active', true)
-          .maybeSingle()
+      const email = (session.user.email ?? '').toLowerCase().trim()
+      console.log('[auth] Signed in as:', email)
 
-        if (!mounted) return
-
-        if (error || !data) {
-          // Not in allowlist — sign out
-          console.warn('[auth] Access denied:', error?.message ?? 'email not in allowed_users')
-          try { await supabase.auth.signOut() } catch {}
-          if (mounted) {
-            setUser(null)
-            setAccessDenied(true)
-            setLoading(false)
-          }
-        } else {
-          if (mounted) {
-            setUser(session.user)
-            setIsSuperAdmin(data.role === 'super_admin')
-            setAccessDenied(false)
-            setLoading(false)
-          }
-          // Auto-link this user to any team_members row matching their email.
-          supabase.rpc('link_team_member_on_login').catch(e =>
-            console.warn('[auth] link_team_member_on_login failed:', e.message)
-          )
+      // Check against the hardcoded allowlist
+      if (!ALLOWED_EMAILS.includes(email)) {
+        console.warn('[auth] Access denied for:', email)
+        try { await supabase.auth.signOut() } catch {}
+        if (mounted) {
+          setUser(null)
+          setAccessDenied(true)
+          setLoading(false)
         }
-      } catch (e) {
-        console.error('[auth] Auth check error:', e)
-        if (!mounted) return
-        // Show access denied so the user knows something went wrong
-        // (rather than silently bouncing back to the login screen).
-        setUser(null)
-        setAccessDenied(true)
+        return
+      }
+
+      // Allowed — grant full access
+      if (mounted) {
+        setUser(session.user)
+        setIsSuperAdmin(true) // Both accounts are super admins with identical access
+        setAccessDenied(false)
         setLoading(false)
       }
+
+      // Auto-link to any team_members row matching this email (best-effort)
+      supabase.rpc('link_team_member_on_login').catch(e =>
+        console.warn('[auth] link_team_member_on_login failed:', e.message)
+      )
     }
 
-    // Single source of truth — INITIAL_SESSION fires on mount after Supabase
-    // has fully processed any OAuth tokens in the URL, eliminating race
-    // conditions. SIGNED_IN fires on new logins. TOKEN_REFRESHED re-validates
-    // on every refresh cycle. SIGNED_OUT clears all state.
+    // Single source of truth — INITIAL_SESSION fires after Supabase finishes
+    // processing any OAuth redirect tokens in the URL (no race condition).
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('[auth] Event:', event, '| Email:', session?.user?.email ?? 'none')
       if (
         event === 'INITIAL_SESSION' ||
         event === 'SIGNED_IN'       ||

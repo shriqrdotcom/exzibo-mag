@@ -1,0 +1,155 @@
+PROJECT OBJECTIVE:
+Fix Google OAuth login issue and implement a strict "ALLOW ONLY 2 GMAIL USERS" system without breaking existing authentication flow.
+
+CURRENT PROBLEM:
+
+- Google login is not completing properly.
+- Even allowed Gmail IDs cannot log in.
+- System is rejecting or not recognizing authorized users.
+- Login flow is broken after OAuth redirect.
+
+EXPECTED BEHAVIOR:
+
+- ONLY 2 specific Gmail IDs are allowed to access the system.
+- Both Gmail accounts should:
+  - Successfully log in
+  - See the SAME interface (same dashboard, same control)
+- Any other Gmail should be:
+  - Instantly rejected
+  - Logged out
+  - Shown "Access Denied"
+
+ALLOWED USERS (HARDCODE OR DATABASE):
+Example:
+
+- exzibonew@gmail.com
+- trisanu07.nandi@gmail.com
+
+(Use actual emails in implementation)
+
+CORE LOGIC TO IMPLEMENT:
+
+1. AFTER GOOGLE LOGIN (CRITICAL STEP):
+
+- When Supabase returns session:
+  → Extract user.email
+
+- Check:
+  IF user.email EXISTS in allowed_users list:
+  → ALLOW access
+  ELSE:
+  → فورس SIGN OUT (supabase.auth.signOut())
+  → Redirect to "/auth"
+  → Show "Access Denied"
+
+2. DO NOT BLOCK BEFORE LOGIN:
+
+- Google OAuth should ALWAYS open normally
+- Do NOT restrict at button click level
+- Restriction happens ONLY AFTER successful login
+
+3. CREATE ALLOWED USERS SYSTEM:
+
+OPTION A (Simple - Fast):
+
+- Create constant array:
+  allowedEmails = ["exzibonew@gmail.com", "trisanu07.nandi@gmail.com"]
+
+OPTION B (Better - Scalable):
+
+- Create Supabase table:
+  "allowed_users"
+  columns:
+  
+  - email (text, unique)
+
+- Check email from database
+
+4. FIX AUTH FLOW BUG:
+
+- Ensure:
+  supabase.auth.signInWithOAuth({ provider: "google" })
+
+- Handle redirect correctly
+
+- On app load:
+  → Call getSession()
+  → Then validate email
+
+- Add listener:
+  supabase.auth.onAuthStateChange()
+
+5. CRITICAL FIX (WHY LOGIN FAILS NOW):
+
+- Probably system is:
+  - Checking permission BEFORE session exists ❌
+    OR
+  - Not handling OAuth redirect properly ❌
+
+Fix:
+
+- Wait until session is FULLY loaded
+- THEN run email check
+
+6. SAME INTERFACE RULE:
+
+- DO NOT create separate roles
+- Both Gmail IDs should:
+  → Have identical access
+  → Same dashboard
+  → Same permissions
+
+7. ERROR HANDLING:
+
+- If email not allowed:
+  → Show clean message:
+  "Access Denied: You are not authorized"
+
+- Do NOT crash app
+
+- Do NOT loop login
+
+8. DEBUG REQUIREMENTS:
+
+- Log:
+  user.email after login
+  session status
+- Ensure email is correctly received from Google
+
+9. DO NOT BREAK:
+
+- Existing UID system
+- Dashboard
+- Role structure
+- Database
+
+Only fix:
+
+- Login flow
+- Allowed user validation
+
+FINAL RESULT:
+
+FLOW:
+
+- User opens app →
+  → Redirect to Google login
+- User selects Gmail →
+  → System checks email
+
+IF allowed:
+→ Enter dashboard (full access)
+
+IF not allowed:
+→ Auto logout
+→ Back to login page with error
+
+IMPORTANT:
+
+- System must work for BOTH allowed Gmail IDs
+- No random rejection
+- No login failure
+- No UI glitch
+
+END GOAL:
+A stable, secure login system where ONLY 2 Gmail accounts can access and both get identical full control without errors.
