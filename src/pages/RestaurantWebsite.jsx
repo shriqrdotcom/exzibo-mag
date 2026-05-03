@@ -919,6 +919,47 @@ export default function RestaurantWebsite() {
     return () => { supabase.removeChannel(channel) }
   }, [restaurant?.id])
 
+  // ── Polling fallback: fetch order status from Supabase every 5 s ─────────
+  // Works even when Supabase Realtime is not configured — the customer page
+  // simply re-reads the order row directly and updates its state.
+  useEffect(() => {
+    const orderId     = currentOrder?.id
+    const restaurantId = currentOrder?._restaurantId || restaurant?.id
+    const isRealRestaurant = restaurantId && restaurantId !== 'demo' &&
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(restaurantId)
+    if (!orderId || !isRealRestaurant) return
+
+    async function pollStatus() {
+      try {
+        const { data } = await supabase
+          .from('orders')
+          .select('status')
+          .eq('id', orderId)
+          .maybeSingle()
+        if (!data) return
+        const { status } = data
+        setCustomerOrders(prev => {
+          let changed = false
+          const next = prev.map(co => {
+            if (co.id !== orderId) return co
+            if (co.status === status) return co
+            changed = true
+            return { ...co, status }
+          })
+          if (changed) persistCustomerOrders(restaurantId, next)
+          return changed ? next : prev
+        })
+        if (status === 'confirmed' || status === 'preparing' || status === 'completed') setOrderStatus(1)
+        else if (status === 'cancelled') setOrderStatus(-1)
+        else setOrderStatus(0)
+      } catch {}
+    }
+
+    pollStatus()
+    const timer = setInterval(pollStatus, 5000)
+    return () => clearInterval(timer)
+  }, [currentOrder?.id, restaurant?.id])
+
   // Load & live-sync about data (description + image) from admin panel
   useEffect(() => {
     const id = restaurant?.id || (slug === 'demo' ? 'demo' : null)
