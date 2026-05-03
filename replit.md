@@ -93,6 +93,23 @@ On UPDATE: row patched in place.
 On DELETE: row removed.
 All realtime handlers also call `notifyAnalyticsUpdate()` so analytics recompute live.
 
+## Private Access System
+All protected routes require the signed-in user's email to exist in the `allowed_users` Supabase table. This is enforced server-side via a `SECURITY DEFINER` RPC function (`is_user_allowed()`):
+
+- **No public signup** — email/password signup UI is removed; the login page shows Google OAuth only.
+- **Allowlist validation** — after every login and token refresh, `supabase.rpc('is_user_allowed')` is called. This runs a `SECURITY DEFINER` Postgres function that checks the email against `allowed_users` (bypassing RLS). The table itself is never accessible from the client.
+- **Instant denial** — if the email is not in the allowlist or `is_active = false`, `supabase.auth.signOut()` is called immediately and `accessDenied` is set to `true` in `AuthContext`. The user is redirected to `/auth` and sees an "Access Denied" message.
+- **Token refresh re-validation** — every token refresh triggers re-validation, so removing a user from the allowlist takes effect on their next refresh (within the JWT TTL).
+- **No hardcoded emails** — emails live only in the Supabase database; none appear in source code.
+
+**To add an authorized user:** Run this SQL in your Supabase SQL Editor:
+```sql
+INSERT INTO public.allowed_users (email, role)
+VALUES ('their-gmail@gmail.com', 'admin');
+```
+
+**Setup:** Run `supabase/allowed_users_setup.sql` once in Supabase SQL Editor, then insert your two Gmail accounts.
+
 ## Database Setup
 1. Run `supabase/schema.sql` in your Supabase project's SQL Editor to create all tables and RLS policies.
 2. **Run `supabase/realtime_setup.sql`** to enable Postgres logical replication for `orders`, `bookings`, `restaurants`, `menu_items`, `menu_categories`. **Required for cross-device live sync.**

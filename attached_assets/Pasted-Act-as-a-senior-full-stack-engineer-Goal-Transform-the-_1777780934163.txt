@@ -1,0 +1,155 @@
+Act as a senior full-stack engineer.
+
+Goal:
+Transform the current authentication system into a FULLY LOCKED, PRIVATE ACCESS SYSTEM.
+
+Only manually approved accounts (2 admin Gmail accounts) should be able to access the system.
+NO public signup. NO unauthorized access. NO bypass possible.
+
+-----------------------------------
+
+CORE PRINCIPLE:
+
+Access must be controlled via DATABASE + BACKEND VALIDATION.
+DO NOT hardcode emails anywhere in frontend or source code.
+
+-----------------------------------
+
+STEP 1: DISABLE ALL PUBLIC AUTH ENTRY
+
+- Disable email/password signup in Supabase Auth settings
+- Keep Google OAuth enabled BUT do NOT allow unrestricted access
+- Remove any "Sign up" UI from frontend
+
+-----------------------------------
+
+STEP 2: CREATE SECURE ALLOWLIST TABLE
+
+Create a Supabase table:
+
+Table: allowed_users
+
+Columns:
+- id (uuid, primary key)
+- email (text, unique, NOT NULL)
+- role (text, default 'admin')
+- is_active (boolean, default true)
+- created_at (timestamp)
+
+-----------------------------------
+
+STEP 3: ENABLE STRICT RLS (ROW LEVEL SECURITY)
+
+- Enable RLS on allowed_users
+
+Policies:
+1. Only service role (backend) can read/write
+2. NO public select access
+3. NO client-side direct access
+
+This ensures attackers cannot fetch allowed emails.
+
+-----------------------------------
+
+STEP 4: POST-LOGIN ACCESS VALIDATION (CRITICAL)
+
+After ANY login (Google OAuth):
+
+1. Get authenticated user from Supabase:
+   → const user = supabase.auth.getUser()
+
+2. Send request to secure backend (or Supabase RPC / Edge Function):
+
+   → check if user.email exists in allowed_users AND is_active = true
+
+3. If NOT FOUND:
+   → Immediately:
+       - signOut()
+       - destroy session
+       - redirect to /auth
+       - show error: "Access denied"
+
+4. If FOUND:
+   → allow access
+
+-----------------------------------
+
+STEP 5: ENFORCE VALIDATION ON EVERY REQUEST
+
+- On every dashboard load:
+    → re-check user against allowed_users
+
+- If user removed from allowlist later:
+    → next request should instantly log them out
+
+-----------------------------------
+
+STEP 6: FORCE LOGOUT FOR UNAUTHORIZED USERS
+
+- If ANY user logs in and is not in allowlist:
+    → session must NOT persist
+    → logout must be immediate and permanent
+
+- Prevent:
+    ✖ accessing dashboard via direct URL
+    ✖ using cached session
+    ✖ using old tokens
+
+-----------------------------------
+
+STEP 7: ADMIN CONTROL (YOU ONLY)
+
+- You will manually insert your 2 Gmail accounts into allowed_users table via Supabase dashboard
+- DO NOT create public UI to manage this
+
+-----------------------------------
+
+STEP 8: OPTIONAL (HIGHLY RECOMMENDED)
+
+Create a Supabase Edge Function:
+
+Function: validate-user-access
+
+- Input: user email
+- Check in allowed_users
+- Return: { allowed: true/false }
+
+Call this function after login instead of direct DB query
+
+-----------------------------------
+
+STEP 9: FRONTEND FLOW
+
+- Show only:
+    ✔ "Login with Google"
+
+- After login:
+    → call backend validation
+    → then redirect to dashboard ONLY if allowed
+
+-----------------------------------
+
+STEP 10: EXPECTED RESULT
+
+✔ Only your manually approved Gmail accounts can login
+✔ No hardcoded credentials
+✔ No signup possible
+✔ Unauthorized users are instantly logged out
+✔ System is secure even if frontend is bypassed
+✔ Works in production and preview
+
+-----------------------------------
+
+SECURITY RULES:
+
+- NEVER trust frontend
+- NEVER expose allowlist
+- NEVER allow session without validation
+- ALWAYS validate on backend
+
+-----------------------------------
+
+DELIVERABLE:
+
+Implement this with clean, bug-free logic.
+Ensure no race conditions, no session leaks, and consistent auth state.
