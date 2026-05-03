@@ -15,9 +15,14 @@ export default function Auth() {
   const [loading, setLoading]   = useState(false)
   const [error, setError]       = useState('')
 
-  // Redirect already-authenticated users away from the login page
+  // Redirect already-authenticated users — go to saved path or /dashboard
   useEffect(() => {
-    if (user) navigate('/dashboard', { replace: true })
+    if (user) {
+      const saved = localStorage.getItem('auth_redirect')
+      localStorage.removeItem('auth_redirect')
+      const safe = saved && saved.startsWith('/') && !saved.startsWith('//') && !saved.startsWith('/auth')
+      navigate(safe ? saved : '/dashboard', { replace: true })
+    }
   }, [user, navigate])
 
   /* ── Preview login ── */

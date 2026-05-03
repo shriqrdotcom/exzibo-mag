@@ -1,5 +1,5 @@
-import React from 'react'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import React, { useEffect } from 'react'
+import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { AnalyticsProvider } from './context/AnalyticsContext'
 import { RoleProvider } from './context/RoleContext'
@@ -60,21 +60,39 @@ function RootRedirect() {
 }
 
 // ── Protected route guard ────────────────────────────────────────────────────
-// Loading is handled at the app level (GlobalLoader), so here we only
-// redirect unauthenticated users and render children for authenticated ones.
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth()
+  const location = useLocation()
   if (loading) return null
-  if (!user) return <Navigate to="/auth" replace />
+  if (!user) {
+    // Save the page they wanted so we can return them after login
+    const intended = location.pathname + location.search
+    if (intended !== '/auth') localStorage.setItem('auth_redirect', intended)
+    return <Navigate to="/auth" replace />
+  }
   return children
 }
 
 // ── All routes — only rendered once auth state is known ────────────────────
 function AppRoutes() {
-  const { loading } = useAuth()
+  const { loading, user } = useAuth()
+  const navigate = useNavigate()
 
-  // Block ALL rendering until auth state is resolved.
-  // This prevents any page flash before we know if the user is logged in.
+  // After login completes, redirect to the page they originally intended.
+  // This handles the OAuth return-to-/dashboard case: we intercept and
+  // navigate to whatever was stored before the OAuth flow started.
+  useEffect(() => {
+    if (!loading && user) {
+      const saved = localStorage.getItem('auth_redirect')
+      if (saved) {
+        localStorage.removeItem('auth_redirect')
+        const safe = saved.startsWith('/') && !saved.startsWith('//') && !saved.startsWith('/auth')
+        if (safe) navigate(saved, { replace: true })
+      }
+    }
+  }, [loading, user, navigate])
+
+  // Block ALL rendering until auth state is resolved — zero UI flash.
   if (loading) return <GlobalLoader />
 
   return (

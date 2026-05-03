@@ -1,0 +1,119 @@
+PROJECT OBJECTIVE:
+Fix post-login redirect behavior so that after Google login, the user is returned to the ORIGINAL page they intended to visit (e.g., main page), instead of being forced to "/dashboard".
+
+CURRENT PROBLEM:
+
+- After successful Google login, system always redirects to "/dashboard".
+- This overrides the actual page user wanted (e.g., main homepage).
+- Breaks user flow and makes main page inaccessible after login.
+
+EXPECTED BEHAVIOR (CORRECT FLOW):
+
+1. USER ENTRY:
+
+- User opens any link (example: "/main", "/", "/menu", etc.)
+
+IF NOT LOGGED IN:
+→ Redirect to "/auth"
+→ BUT store the original path (IMPORTANT)
+
+Example:
+originalPath = "/main"
+
+2. AFTER LOGIN SUCCESS:
+
+- DO NOT hardcode redirect to "/dashboard"
+- Instead:
+  IF originalPath exists:
+  → redirect(originalPath)
+  ELSE:
+  → redirect("/")
+
+3. IMPLEMENT "RETURN URL" SYSTEM:
+
+OPTION A (RECOMMENDED - QUERY PARAM):
+
+- When redirecting to login:
+  redirect("/auth?redirect=/main")
+
+- After login:
+  const redirectTo = getQueryParam("redirect") || "/"
+  navigate(redirectTo)
+
+OPTION B (ALTERNATIVE - LOCAL STORAGE):
+
+- Before redirect to /auth:
+  localStorage.setItem("redirectPath", currentPath)
+
+- After login:
+  const path = localStorage.getItem("redirectPath") || "/"
+  navigate(path)
+  localStorage.removeItem("redirectPath")
+
+4. REMOVE WRONG LOGIC:
+
+- Remove ALL hardcoded:
+  navigate("/dashboard")
+
+- No forced redirect unless explicitly needed
+
+5. AUTH GUARD UPDATE:
+
+ProtectedRoute logic:
+IF no session:
+→ redirect("/auth?redirect=" + currentPath)
+
+IF session:
+→ allow access
+
+6. LOGIN PAGE (/auth):
+
+- After Google OAuth success:
+  → read redirect path
+  → navigate to that path
+
+7. MAIN PAGE PRIORITY:
+
+- If user originally opened main page:
+  → must return to main page after login
+- Dashboard should NOT override this
+
+8. EDGE CASE HANDLING:
+
+- If redirect path is invalid → fallback "/"
+- Prevent infinite redirect loops
+
+9. DO NOT BREAK:
+
+- Existing dashboard
+- UID system
+- Allowed Gmail login logic
+- Role system
+
+Only fix redirect behavior.
+
+10. FINAL EXPECTED FLOW:
+
+CASE 1:
+User opens "/main" (not logged in)
+→ Redirect to login
+→ Login success
+→ Return to "/main" ✅
+
+CASE 2:
+User directly logs in from "/auth"
+→ Redirect to "/" (or main page) ✅
+
+CASE 3:
+User already logged in
+→ Directly access any page without interruption ✅
+
+IMPORTANT:
+
+- No forced dashboard redirect
+- No UI glitch
+- Smooth navigation
+- Maintain session properly
+
+END GOAL:
+A clean, professional login system where users always return to the page they intended to visit after authentication.
