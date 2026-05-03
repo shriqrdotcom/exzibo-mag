@@ -87,7 +87,7 @@ const DEFAULT_ROLES = [
   },
   {
     key: 'staff',
-    label: 'STAFF',
+    label: 'EMPLOYEE',
     badge: 'Limited Access',
     badgeColor: '#10B981',
     badgeBg: 'rgba(16,185,129,0.18)',
@@ -686,7 +686,7 @@ function DefaultRolesSection() {
                   onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.background = 'rgba(255,255,255,0.1)' }}
                 >
                   <LayoutDashboard size={13} />
-                  OPEN STAFF
+                  OPEN EMPLOYEE
                 </button>
               )}
             </div>

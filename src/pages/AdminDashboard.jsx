@@ -22,7 +22,7 @@ import {
   ClipboardList, BookOpen, Users, Settings, ArrowLeft, BarChart2,
   Palette, DollarSign, Type, Save, Check, CalendarDays, UtensilsCrossed,
   SlidersHorizontal, Plus, Pencil, Trash2, X, Search, ChevronDown,
-  Tag, Info, Eye, EyeOff, Send, Bell,
+  Tag, Info, Eye, EyeOff, Send, Bell, User,
   Image as ImageIcon, AlertCircle, CheckCircle2,
 } from 'lucide-react'
 
@@ -61,6 +61,7 @@ const NAV_ITEMS = [
   { id: 'menu',      icon: BookOpen,      label: 'Menu',      permission: 'menuEdit' },
   { id: 'customers', icon: BarChart2,     label: 'Analytics', permission: 'analytics' },
   { id: 'settings',  icon: Settings,      label: 'Settings',  permission: 'settings' },
+  { id: 'profile',   icon: User,          label: 'Profile',   permission: 'profile' },
 ]
 
 const DEMO_ORDERS = [
@@ -889,7 +890,7 @@ export default function AdminDashboard() {
                 )}
               </div>
               <div style={{ fontSize: '11px', fontWeight: 700, color: accentStart, letterSpacing: '0.1em' }}>
-                {activeRole ? activeRole.toUpperCase() : 'ADMIN'}
+                {activeRole ? (activeRole === 'staff' ? 'EMPLOYEE' : activeRole.toUpperCase()) : 'ADMIN'}
               </div>
             </div>
           </div>
@@ -1348,6 +1349,69 @@ export default function AdminDashboard() {
           </>
         ) : activeNav === 'customers' ? (
           <AnalyticsPanel accentStart={accentStart} accentEnd={accentEnd} restaurantId={isDefault ? 'demo' : id} />
+        ) : activeNav === 'profile' ? (
+          <div style={{ animation: 'fadeSlideUp 0.35s ease both', padding: '8px 0' }}>
+            <div style={{
+              background: 'rgba(255,255,255,0.85)',
+              backdropFilter: 'blur(16px)',
+              WebkitBackdropFilter: 'blur(16px)',
+              borderRadius: '20px',
+              padding: '32px 24px 28px',
+              boxShadow: '0 4px 24px rgba(0,0,0,0.07), inset 0 1px 0 rgba(255,255,255,0.9)',
+              border: '1px solid rgba(255,255,255,0.6)',
+            }}>
+              {/* Avatar + name */}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '28px' }}>
+                <div style={{
+                  width: '72px', height: '72px', borderRadius: '22px',
+                  background: `linear-gradient(135deg, ${accentStart}, ${accentEnd})`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: '26px', fontWeight: 900, color: '#fff',
+                  boxShadow: `0 8px 24px ${accentStart}50`,
+                  marginBottom: '14px',
+                  overflow: 'hidden',
+                }}>
+                  {logoUrl
+                    ? <img src={logoUrl} alt="logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    : initials}
+                </div>
+                <div style={{ fontSize: '18px', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.01em', textAlign: 'center' }}>
+                  {displayName}
+                </div>
+                <div style={{
+                  marginTop: '6px', fontSize: '10px', fontWeight: 700,
+                  letterSpacing: '0.12em', color: accentStart,
+                  background: `${accentStart}14`, borderRadius: '6px',
+                  padding: '3px 10px',
+                }}>
+                  EMPLOYEE
+                </div>
+              </div>
+
+              {/* UID row */}
+              <div style={{
+                background: '#f8fafc', borderRadius: '14px',
+                padding: '16px 20px', border: '1px solid #e2e8f0',
+              }}>
+                <div style={{
+                  fontSize: '10px', fontWeight: 700, color: '#94A3B8',
+                  letterSpacing: '0.1em', marginBottom: '6px', textTransform: 'uppercase',
+                }}>
+                  UID
+                </div>
+                <div style={{
+                  fontSize: '16px', fontWeight: 800, color: '#0f172a',
+                  letterSpacing: '0.06em', fontFeatureSettings: '"tnum"',
+                }}>
+                  {restaurant?.uid || (() => {
+                    try {
+                      return JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')[0]?.uid || '—'
+                    } catch { return '—' }
+                  })()}
+                </div>
+              </div>
+            </div>
+          </div>
         ) : null}
       </div>
 
