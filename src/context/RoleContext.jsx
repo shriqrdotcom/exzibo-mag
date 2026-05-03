@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState } from 'react'
 
 const PERMISSIONS = {
   owner:   ['dashboard', 'menuEdit', 'settings', 'profile', 'teamManagement', 'orders', 'bookings', 'analytics'],
-  manager: ['dashboard', 'orders', 'bookings', 'menuEdit', 'analytics', 'settings'],
+  manager: ['dashboard', 'orders', 'bookings', 'menuEdit', 'analytics', 'settings', 'profile'],
   staff:   ['orders', 'bookings', 'profile'],
 }
 
