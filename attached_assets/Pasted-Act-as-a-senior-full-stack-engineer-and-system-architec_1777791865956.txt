@@ -1,0 +1,201 @@
+Act as a senior full-stack engineer and system architect.
+
+Goal:
+Fix and implement a real-time, fully synchronized restaurant management system where all sections are connected using a single UID per restaurant.
+
+System Sections:
+
+1. MASTER CONTROL
+2. ADMIN DASHBOARD
+3. MANAGER DASHBOARD
+4. EMPLOYEE PANEL
+5. MENU (Customer-facing website)
+
+All sections MUST be connected using the SAME Restaurant UID.
+
+---
+
+CORE RULES (DO NOT BREAK)
+
+1. Single Source of Truth:
+
+- All data must come from the backend (Supabase database).
+- No local state-only logic for critical data.
+- Every section reads/writes to the same database tables using UID.
+
+2. Real-Time Sync (MANDATORY):
+
+- Use Supabase Realtime subscriptions (or WebSocket equivalent).
+- Any change in database must instantly reflect in ALL dashboards and MENU.
+- No manual refresh required.
+
+3. UID Binding:
+
+- Every table MUST include restaurant_uid.
+- Every query MUST filter by restaurant_uid.
+- No default UID fallback allowed.
+
+---
+
+PROBLEM 1: SETTINGS & MENU LIVE SYNC
+
+Requirement:
+When ANY change happens in:
+
+- Food items (create/update/delete)
+- Price changes
+- Availability toggle
+- Restaurant settings
+
+It MUST instantly reflect in:
+
+- MASTER CONTROL
+- ADMIN
+- MANAGER
+- EMPLOYEE
+- MENU (customer side)
+
+Implementation Logic:
+
+- Create centralized tables:
+  
+  - restaurants
+  - menu_items
+  - settings
+
+- Add realtime listeners:
+  
+  - on INSERT → add item everywhere
+  - on UPDATE → update everywhere
+  - on DELETE → remove everywhere
+
+- Ensure UI state updates automatically via subscription events.
+
+---
+
+PROBLEM 2: ORDER FLOW SYNC
+
+Requirement:
+
+1. Customer places order from MENU.
+
+2. Order must instantly appear in:
+   
+   - MASTER
+   - ADMIN
+   - MANAGER
+   - EMPLOYEE dashboards
+
+3. Each dashboard has:
+   
+   - CONFIRM button
+   - CANCEL button
+
+4. When CONFIRM or CANCEL is clicked:
+   
+   - Order status updates in database
+   - Change must reflect instantly on:
+     → MENU "Orders Page"
+
+Implementation Logic:
+
+- Create "orders" table:
+  fields:
+  id
+  restaurant_uid
+  items
+  status (pending / confirmed / cancelled)
+  created_at
+
+- MENU:
+  
+  - Insert order with status = "pending"
+
+- DASHBOARDS:
+  
+  - Subscribe to orders table
+  - Show live incoming orders
+
+- ACTIONS:
+  
+  - On CONFIRM → update status = confirmed
+  - On CANCEL → update status = cancelled
+
+- MENU Orders Page:
+  
+  - Subscribe to same order
+  - Reflect live status updates
+
+---
+
+PROBLEM 3: TABLE BOOKING SYNC
+
+Requirement:
+
+1. Customer books table from MENU.
+2. Booking must appear instantly in:
+   - MASTER
+   - ADMIN
+   - MANAGER
+   - EMPLOYEE (order/booking section)
+
+Implementation Logic:
+
+- Create "bookings" table:
+  fields:
+  id
+  restaurant_uid
+  customer_name
+  phone
+  guests
+  time
+  status
+
+- MENU:
+  
+  - Insert booking into database
+
+- DASHBOARDS:
+  
+  - Subscribe to bookings table
+  - Show booking in real-time
+
+---
+
+FRONTEND RULES
+
+- Use global state synced with backend (React Context / Zustand)
+- NEVER rely only on local state
+- Always re-fetch or sync via realtime after mutation
+
+---
+
+BACKEND RULES
+
+- Enforce Row Level Security (RLS) using restaurant_uid
+- Use indexed queries for performance
+- Prevent duplicate data or race conditions
+
+---
+
+ERROR HANDLING
+
+- Handle failed inserts/updates gracefully
+- Show proper UI feedback
+- Ensure no silent failures
+
+---
+
+FINAL EXPECTATION
+
+- 100% real-time sync across all sections
+- No delay, no refresh needed
+- No mismatch between dashboards and menu
+- Fully UID-based isolation per restaurant
+- Bug-free, production-ready logic
+
+Do NOT skip any part.
+Do NOT simplify logic.
+Do NOT use temporary fixes.
+
+Build it clean, scalable, and stable.

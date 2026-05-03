@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useAnalytics, notifyAnalyticsUpdate } from '../context/AnalyticsContext'
 import { useRole } from '../context/RoleContext'
-import { getRestaurants, getOrders, getBookings, updateOrderStatus, updateBookingStatus, getMenuCategories, getMenuItems, insertMenuItem, updateMenuItem, deleteMenuItem, upsertMenuCategory, deleteMenuCategory, upsertMenuItems, uploadMenuImage, updateRestaurant, uploadToStorage, uploadDataUrlToStorage, toggleMenuItemPublish } from '../lib/db'
+import { getRestaurants, getOrders, getBookings, updateOrderStatus, updateBookingStatus, getMenuCategories, getMenuItems, insertMenuItem, updateMenuItem, deleteMenuItem, upsertMenuCategory, deleteMenuCategory, upsertMenuItems, uploadMenuImage, updateRestaurant, uploadToStorage, uploadDataUrlToStorage, toggleMenuItemPublish, normalizeOrder, normalizeBooking } from '../lib/db'
 import { supabase } from '../lib/supabase'
 import notificationIconImg from '@assets/image_1777373928129.png'
 import {
@@ -368,16 +368,18 @@ export default function AdminDashboard() {
         { event: '*', schema: 'public', table: 'orders', filter: `restaurant_id=eq.${id}` },
         (payload) => {
           if (payload.eventType === 'INSERT') {
+            const normalized = normalizeOrder(payload.new)
             setOrders(prev => {
-              if (prev.some(o => o.id === payload.new.id)) return prev
-              const updated = [payload.new, ...prev]
+              if (prev.some(o => o.id === normalized.id)) return prev
+              const updated = [normalized, ...prev]
               try { localStorage.setItem(`exzibo_orders_${id}`, JSON.stringify(updated)) } catch {}
               notifyAnalyticsUpdate()
               return updated
             })
           } else if (payload.eventType === 'UPDATE') {
+            const normalized = normalizeOrder(payload.new)
             setOrders(prev => {
-              const updated = prev.map(o => o.id === payload.new.id ? { ...o, ...payload.new } : o)
+              const updated = prev.map(o => o.id === normalized.id ? { ...o, ...normalized } : o)
               try { localStorage.setItem(`exzibo_orders_${id}`, JSON.stringify(updated)) } catch {}
               notifyAnalyticsUpdate()
               return updated
@@ -418,16 +420,18 @@ export default function AdminDashboard() {
         { event: '*', schema: 'public', table: 'bookings', filter: `restaurant_id=eq.${id}` },
         (payload) => {
           if (payload.eventType === 'INSERT') {
+            const normalized = normalizeBooking(payload.new)
             setBookings(prev => {
-              if (prev.some(b => b.id === payload.new.id)) return prev
-              const updated = [payload.new, ...prev]
+              if (prev.some(b => b.id === normalized.id)) return prev
+              const updated = [normalized, ...prev]
               try { localStorage.setItem(`exzibo_bookings_${id}`, JSON.stringify(updated)) } catch {}
               notifyAnalyticsUpdate()
               return updated
             })
           } else if (payload.eventType === 'UPDATE') {
+            const normalized = normalizeBooking(payload.new)
             setBookings(prev => {
-              const updated = prev.map(b => b.id === payload.new.id ? { ...b, ...payload.new } : b)
+              const updated = prev.map(b => b.id === normalized.id ? { ...b, ...normalized } : b)
               try { localStorage.setItem(`exzibo_bookings_${id}`, JSON.stringify(updated)) } catch {}
               notifyAnalyticsUpdate()
               return updated

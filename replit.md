@@ -86,12 +86,31 @@ Supabase Realtime channels are used for cross-device live sync. Each channel use
 | AdminDashboard | `rt-orders-{id}` | `orders` | 10 s |
 | AdminDashboard | `rt-bookings-{id}` | `bookings` | 15 s |
 | RestaurantWebsite | `rt-menu-{id}` | `menu_items`, `menu_categories` | 20 s |
+| RestaurantWebsite | `rt-order-status-{id}` | `orders` (UPDATE only) | — |
 | Restaurants list | `rt-restaurants` | `restaurants` | — |
 
 On INSERT: new row prepended to local state + localStorage cache updated.
 On UPDATE: row patched in place.
 On DELETE: row removed.
 All realtime handlers also call `notifyAnalyticsUpdate()` so analytics recompute live.
+
+## Field Normalization (snake_case ↔ camelCase)
+The Supabase `orders` table uses snake_case columns (`table_number`, `customer_name`, `customer_phone`, `customer_location`, `total`, `created_at`). AdminDashboard and RestaurantWebsite work in camelCase (`table`, `customerName`, `phone`, `location`, `grandTotal`, `submittedAt`). Two exported helpers in `src/lib/db.js` bridge this gap:
+- `normalizeOrder(row)` — converts a DB row to the camelCase shape all UI components expect
+- `normalizeBooking(row)` — same for bookings (`customer_name` → `name`, etc.)
+
+Both `getOrders` and `getBookings` run every returned row through these normalizers.
+Both `createOrder` and `createBooking` accept camelCase input and map it to snake_case before inserting.
+The AdminDashboard realtime handlers wrap `payload.new` with the normalizer before adding to React state.
+
+## Customer → Supabase Order & Booking Flow
+When a customer places an order or table booking on the public restaurant page (`/restaurant/:slug`):
+1. The order/booking is written to localStorage (same-device fallback, always works).
+2. If the `restaurant.id` is a valid Supabase UUID, a fire-and-forget `.insert()` is also sent to Supabase via the anon key — no auth required (`public_insert_orders` / `public_insert_bookings` RLS policies allow this).
+3. The AdminDashboard's existing `rt-orders-{id}` / `rt-bookings-{id}` realtime channels immediately receive the INSERT event and display the new order/booking across ALL devices signed into that admin panel.
+4. When the admin confirms/cancels an order, the `rt-order-status-{id}` channel on the customer page receives the UPDATE event and reflects the new status instantly without a page refresh.
+
+**Required SQL:** Run `supabase/realtime_public_access.sql` once in the Supabase SQL Editor to add `public_read_orders` and `public_read_bookings` SELECT policies. Without these, anon clients can insert but not subscribe to realtime status updates.
 
 ## Private Access System
 All protected routes require the signed-in user's email to exist in the `allowed_users` Supabase table. This is enforced server-side via a `SECURITY DEFINER` RPC function (`is_user_allowed()`):
@@ -113,6 +132,7 @@ VALUES ('their-gmail@gmail.com', 'admin');
 ## Database Setup
 1. Run `supabase/schema.sql` in your Supabase project's SQL Editor to create all tables and RLS policies.
 2. **Run `supabase/realtime_setup.sql`** to enable Postgres logical replication for `orders`, `bookings`, `restaurants`, `menu_items`, `menu_categories`. **Required for cross-device live sync.**
+3. **Run `supabase/realtime_public_access.sql`** to add public SELECT policies on `orders` and `bookings`. **Required for customer-side realtime order-status subscription and for INSERT … RETURNING to succeed from the anon key.**
 3. Run `supabase/storage_setup.sql` to create the `restaurant-images` and `menu-images` storage buckets and their access policies.
 4. Optionally run `supabase/migration_public_restaurant_read.sql` to add the public SELECT policy on the `restaurants` table (required for the public `/restaurant/:slug` page).
 5. Optionally run `supabase/migration_restaurants.sql` to add extended columns to the `restaurants` table.

@@ -409,8 +409,33 @@ export default function RestaurantWebsite() {
       status: 'pending',
       submittedAt: new Date().toISOString(),
     }
+    // Write to localStorage for same-device admin dashboard
     localStorage.setItem(storageKey, JSON.stringify([newBooking, ...existing]))
     notifyAnalyticsUpdate()
+
+    // Also persist to Supabase so admin dashboards on ALL devices see it instantly
+    const isSupabaseRestaurant = restaurantId && restaurantId !== 'demo' &&
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(restaurantId)
+    if (isSupabaseRestaurant) {
+      supabase.from('bookings').insert({
+        id:              newBooking.id,
+        restaurant_id:   restaurantId,
+        customer_name:   newBooking.name,
+        customer_phone:  newBooking.phone,
+        customer_email:  newBooking.email,
+        guests:          newBooking.guests,
+        date:            newBooking.date,
+        time:            newBooking.time,
+        occasion:        newBooking.occasion || null,
+        seating:         newBooking.seating  || null,
+        notes:           newBooking.notes    || null,
+        status:          'pending',
+      }).then(({ error }) => {
+        if (error) console.warn('[Booking] Supabase insert skipped (localStorage backup active):', error.message)
+        else console.log('[Booking] Persisted to Supabase:', newBooking.id)
+      })
+    }
+
     setBookingSubmitted(true)
   }
 
@@ -575,7 +600,10 @@ export default function RestaurantWebsite() {
     const now = new Date()
     const dateStr = now.toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' })
     const restaurantId = restaurant?.id || slug || 'demo'
-    const order = {
+    const tableNum = String(Math.floor(Math.random() * 20) + 1).padStart(2, '0')
+    const orderItems = cartItems.map(i => ({ name: i.name, qty: i.qty, price: i.price }))
+
+    const customerOrder = {
       id: orderId,
       items: [...cartItems],
       subtotal,
@@ -591,7 +619,7 @@ export default function RestaurantWebsite() {
       _restaurantId: restaurantId,
     }
     setCustomerOrders(prev => {
-      const next = [order, ...prev]
+      const next = [customerOrder, ...prev]
       persistCustomerOrders(restaurantId, next)
       return next
     })
@@ -603,9 +631,10 @@ export default function RestaurantWebsite() {
     setCouponApplied(false)
     setCouponInput('')
 
+    // Write to localStorage for same-device admin dashboard
     const adminOrder = {
       id: orderId,
-      table: String(Math.floor(Math.random() * 20) + 1).padStart(2, '0'),
+      table: tableNum,
       status: 'pending',
       customerName: '',
       phone: '',
@@ -613,12 +642,29 @@ export default function RestaurantWebsite() {
       submittedAt: new Date().toISOString(),
       createdAt: new Date().toISOString(),
       grandTotal,
-      items: cartItems.map(i => ({ name: i.name, qty: i.qty, price: i.price })),
+      items: orderItems,
     }
     const ordersKey = `exzibo_orders_${restaurantId}`
     const existing = JSON.parse(localStorage.getItem(ordersKey) || '[]')
     localStorage.setItem(ordersKey, JSON.stringify([adminOrder, ...existing]))
     notifyAnalyticsUpdate()
+
+    // Also persist to Supabase so admin dashboards on ALL devices see it instantly
+    const isSupabaseRestaurant = restaurantId && restaurantId !== 'demo' &&
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(restaurantId)
+    if (isSupabaseRestaurant) {
+      supabase.from('orders').insert({
+        id:            orderId,
+        restaurant_id: restaurantId,
+        table_number:  tableNum,
+        items:         orderItems,
+        status:        'pending',
+        total:         grandTotal,
+      }).then(({ error }) => {
+        if (error) console.warn('[Order] Supabase insert skipped (localStorage backup active):', error.message)
+        else console.log('[Order] Persisted to Supabase:', orderId)
+      })
+    }
 
     setTimeout(() => {
       setShowSuccessPopup(false)
@@ -826,6 +872,41 @@ export default function RestaurantWebsite() {
     const poll = setInterval(refetchMenu, 20_000)
 
     return () => { supabase.removeChannel(channel); clearInterval(poll) }
+  }, [restaurant?.id])
+
+  // ── Realtime: order status updates → customer page reflects instantly ────
+  useEffect(() => {
+    const rid = restaurant?.id
+    if (!rid || rid === 'demo' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(rid)) return
+
+    const channel = supabase
+      .channel(`rt-order-status-${rid}`)
+      .on('postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'orders', filter: `restaurant_id=eq.${rid}` },
+        (payload) => {
+          const { id: orderId, status } = payload.new
+          if (!orderId || !status) return
+          setCustomerOrders(prev => {
+            let changed = false
+            const next = prev.map(co => {
+              if (co.id !== String(orderId)) return co
+              changed = true
+              return { ...co, status }
+            })
+            if (changed) {
+              const restaurantId = rid
+              persistCustomerOrders(restaurantId, next)
+              if (status === 'confirmed' || status === 'preparing' || status === 'completed') setOrderStatus(1)
+            }
+            return changed ? next : prev
+          })
+        }
+      )
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') console.log('[rt] order-status subscribed:', rid)
+      })
+
+    return () => { supabase.removeChannel(channel) }
   }, [restaurant?.id])
 
   // Load & live-sync about data (description + image) from admin panel
