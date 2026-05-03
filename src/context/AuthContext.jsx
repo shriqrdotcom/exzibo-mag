@@ -9,6 +9,7 @@ export function AuthProvider({ children }) {
   const [user, setUser]                   = useState(null)
   const [loading, setLoading]             = useState(true)
   const [accessDenied, setAccessDenied]   = useState(false)
+  const [isSuperAdmin, setIsSuperAdmin]   = useState(false)
 
   useEffect(() => {
     // ── Preview mode — bypass Supabase entirely ───────────────────────────
@@ -51,6 +52,11 @@ export function AuthProvider({ children }) {
             setAccessDenied(false)
             setLoading(false)
           }
+          // Check super-admin status — used by MasterControl and any component
+          // that needs to distinguish the two master accounts from regular admins.
+          supabase.rpc('is_super_admin').then(({ data }) => {
+            if (mounted) setIsSuperAdmin(!!data)
+          }).catch(() => {})
           // Auto-link this user's auth.uid() to any team_members row that
           // matches their email address. This fires once per login and is what
           // lets a newly-invited Gmail account immediately see the restaurant
@@ -118,7 +124,7 @@ export function AuthProvider({ children }) {
 
   return (
     <AuthContext.Provider value={{
-      user, loading, accessDenied,
+      user, loading, accessDenied, isSuperAdmin,
       signOut, signInWithGoogle, setPreviewUser,
       isPreview: IS_PREVIEW,
     }}>

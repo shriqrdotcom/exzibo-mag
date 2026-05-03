@@ -1,0 +1,120 @@
+PROJECT: EXZIBO GLOBAL MASTER CONTROL SYSTEM
+
+GOAL:
+Fix authentication and multi-admin sync system with clean architecture, no bugs, and real-time consistency.
+
+---
+
+🔐 LOGIC 1: GOOGLE SIGN-IN GATE (ONE-TIME ACCESS CONTROL)
+
+REQUIREMENTS:
+
+1. When any user opens the Exzibo link:
+   
+   - Immediately redirect to "Continue with Google" login (Supabase Auth).
+   - This must act as a gate before accessing anything.
+
+2. After successful login:
+   
+   - Store session using Supabase Auth (NOT localStorage manually).
+   - Use built-in session persistence.
+
+3. One-time login behavior:
+   
+   - If user is already logged in → skip login page and go directly to dashboard.
+   - If not logged in → force login.
+
+4. Do NOT allow guest access.
+   
+   - No dashboard access without authentication.
+
+5. Use Supabase auth state listener:
+   
+   - onAuthStateChange → maintain session globally.
+
+---
+
+👑 LOGIC 2: DUAL SUPER ADMIN (SYNCED POWER SYSTEM)
+
+REQUIREMENTS:
+
+1. Define 2 Super Admin Gmail accounts:
+   Example:
+   
+   - admin1@gmail.com
+   - admin2@gmail.com
+
+2. Create a database table:
+   TABLE: super_admins
+   
+   - id
+   - email
+
+3. On login:
+   
+   - Check if user email exists in "super_admins" table.
+   - If YES → grant FULL MASTER CONTROL access
+   - If NO → deny or assign lower role
+
+4. BOTH admins must:
+   
+   - Have equal permissions
+   - Access same dashboard
+   - Control same data
+
+---
+
+🔄 REAL-TIME SYNC (VERY IMPORTANT)
+
+1. ALL data (restaurants, menu, orders, settings) must be stored in Supabase database.
+
+2. Enable REAL-TIME subscriptions:
+   
+   - Use Supabase Realtime channels
+   - Subscribe to changes (INSERT, UPDATE, DELETE)
+
+3. When Admin 1 makes changes:
+   
+   - Admin 2 must see updates instantly (no refresh)
+
+4. Apply to:
+   
+   - Menu items
+   - Orders
+   - Status updates
+   - Settings
+   - UID data
+
+---
+
+🚫 IMPORTANT RESTRICTIONS
+
+- DO NOT use localStorage for main data storage
+- DO NOT create separate state per device
+- DO NOT cache critical data without syncing
+- DO NOT create duplicate UID systems
+
+---
+
+✅ EXPECTED RESULT
+
+- First time opening → Google login required
+- After login → auto الدخول without asking again
+- 2 Super Admins → same power, same dashboard
+- Changes by one admin → instantly visible to other
+- Fully synced system across all devices
+
+---
+
+⚙️ TECH STACK
+
+- Supabase Auth (Google OAuth)
+- Supabase Database
+- Supabase Realtime
+- React Context for global state
+
+---
+
+FINAL NOTE:
+This system must behave like a single shared control panel used by multiple admins in real-time.
+No delay, no desync, no duplication.

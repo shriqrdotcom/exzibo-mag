@@ -4,19 +4,10 @@ import Sidebar from '../components/Sidebar'
 import AdminHeader from '../components/AdminHeader'
 import { LogIn, ShieldCheck, X, ArrowRight, AlertCircle } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { useAuth } from '../context/AuthContext'
 
 const LAST_UID_KEY = 'exzibo_master_last_uid'
-const SUPER_ADMIN_KEY = 'exzibo_is_super_admin'
 const DEFAULT_SUPER_ADMIN_UID = '0000000001'
-
-function isSuperAdmin() {
-  const stored = localStorage.getItem(SUPER_ADMIN_KEY)
-  if (stored === null) {
-    localStorage.setItem(SUPER_ADMIN_KEY, 'true')
-    return true
-  }
-  return stored === 'true'
-}
 
 async function resolveAdminTargetByUID(uid) {
   const trimmed = String(uid || '').trim()
@@ -47,7 +38,8 @@ async function resolveAdminTargetByUID(uid) {
 
 export default function MasterControl() {
   const navigate = useNavigate()
-  const [allowed, setAllowed] = useState(true)
+  const { isSuperAdmin, loading: authLoading } = useAuth()
+  const [allowed, setAllowed] = useState(null)
   const [showModal, setShowModal] = useState(false)
   const [uid, setUid] = useState('')
   const [error, setError] = useState('')
@@ -55,7 +47,8 @@ export default function MasterControl() {
   const [inlineError, setInlineError] = useState('')
 
   useEffect(() => {
-    const ok = isSuperAdmin()
+    if (authLoading) return
+    const ok = isSuperAdmin
     setAllowed(ok)
     if (!ok) {
       setTimeout(() => navigate('/dashboard'), 1500)
@@ -64,7 +57,7 @@ export default function MasterControl() {
     const last = localStorage.getItem(LAST_UID_KEY) || ''
     setUid(last)
     setInlineUid(last)
-  }, [navigate])
+  }, [isSuperAdmin, authLoading, navigate])
 
   async function accessPanel(value, setErr) {
     const trimmed = String(value || '').trim()
@@ -80,6 +73,17 @@ export default function MasterControl() {
     }
     localStorage.setItem(LAST_UID_KEY, trimmed)
     navigate(`/admin/${target.id}?from=master`)
+  }
+
+  if (allowed === null) {
+    return (
+      <div style={{ display: 'flex', height: '100vh', background: '#0A0A0A', overflow: 'hidden' }}>
+        <Sidebar />
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#555', fontSize: '14px' }}>
+          Verifying access…
+        </div>
+      </div>
+    )
   }
 
   if (!allowed) {
