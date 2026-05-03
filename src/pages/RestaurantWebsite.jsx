@@ -891,8 +891,9 @@ export default function RestaurantWebsite() {
     const channel = supabase
       .channel(`rt-order-status-${rid}`)
       .on('postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'orders', filter: `restaurant_id=eq.${rid}` },
+        { event: 'UPDATE', schema: 'public', table: 'orders' },
         (payload) => {
+          if (payload.new?.restaurant_id !== rid) return
           const { id: orderId, status } = payload.new
           if (!orderId || !status) return
           setCustomerOrders(prev => {

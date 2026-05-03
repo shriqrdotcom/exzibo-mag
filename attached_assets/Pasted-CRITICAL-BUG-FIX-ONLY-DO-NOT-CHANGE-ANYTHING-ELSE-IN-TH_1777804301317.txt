@@ -1,0 +1,163 @@
+CRITICAL BUG FIX ONLY — DO NOT CHANGE ANYTHING ELSE IN THE PROJECT.
+
+LOOK AT THE UI FIRST:
+There is a customer-facing order tracking page that shows an order card with:
+- ORDER ID (e.g. #581689919)
+- A horizontal status progress bar/tracker with steps like:
+  "PLACED" → "CONFIRMED" (and possibly more steps)
+- A status message box below it (e.g. "Order Received! Thanks for ordering...")
+- A MENU button on the top right
+
+THIS IS THE BUG:
+When the admin goes to the Admin Dashboard and clicks "Confirm" or "Cancel"
+on an order, the status progress bar on THIS customer order tracking page
+does NOT update in real time. It stays stuck on "PLACED" even after admin
+confirms. The customer has to manually refresh to see any change.
+
+THE FIX MUST BE REAL-TIME — INSTANT — NO PAGE REFRESH.
+
+---
+
+STEP 1 — FIND THESE FILES:
+
+A) The customer order tracking page/component that renders:
+   - The ORDER ID display
+   - The PLACED → CONFIRMED progress step bar
+   - The status message box ("Order Received!", "Order Confirmed!", etc.)
+
+B) The Admin Dashboard component where the admin sees incoming orders
+   and clicks "Confirm" or "Cancel" buttons.
+
+---
+
+STEP 2 — UNDERSTAND THE CURRENT DATA FLOW:
+
+The order tracking page is most likely fetching the order data ONCE
+on page load using useEffect(() => { fetchOrder() }, []) with an
+empty dependency array. This means it never re-fetches unless the
+user refreshes. This is the root cause.
+
+---
+
+STEP 3 — IMPLEMENT REAL-TIME LISTENER:
+
+IF the project uses SUPABASE:
+
+Replace the one-time fetch on the order tracking page with a
+Supabase real-time channel subscription. Use this exact pattern
+(adapt table/column names to match what already exists in the project):
+
+  useEffect(() => {
+    // Initial fetch
+    fetchOrderData();
+
+    // Real-time listener
+    const channel = supabase
+      .channel('order-status-' + orderId)
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'orders',        // use actual table name in project
+        filter: `id=eq.${orderId}`
+      }, (payload) => {
+        setOrder(payload.new);  // update local order state instantly
+      })
+      .subscribe();
+
+    return () => supabase.removeChannel(channel);
+  }, [orderId]);
+
+IF the project uses FIREBASE FIRESTORE:
+
+Replace getDocs/getDoc with onSnapshot() so it listens live:
+
+  useEffect(() => {
+    const unsubscribe = onSnapshot(
+      doc(db, 'orders', orderId),
+      (docSnap) => {
+        if (docSnap.exists()) {
+          setOrder({ id: docSnap.id, ...docSnap.data() });
+        }
+      }
+    );
+    return () => unsubscribe();
+  }, [orderId]);
+
+IF the project uses REST API / custom backend:
+
+Add a polling mechanism as fallback:
+
+  useEffect(() => {
+    fetchOrderData(); // initial load
+
+    const interval = setInterval(() => {
+      fetchOrderData(); // re-fetch every 4 seconds
+    }, 4000);
+
+    return () => clearInterval(interval);
+  }, [orderId]);
+
+---
+
+STEP 4 — UPDATE THE PROGRESS BAR AND MESSAGE BOX:
+
+The PLACED → CONFIRMED step bar and the message box below it must
+both be driven by the order's status field from the database.
+
+Map the status value to the UI like this:
+
+  status === "placed" or "pending":
+    → Progress: PLACED is active (red/filled), CONFIRMED is inactive (grey)
+    → Message box: "Order Received!" with hourglass emoji ⏳
+    → Background: light yellow
+
+  status === "confirmed":
+    → Progress: PLACED is done, CONFIRMED is now active (red/filled)
+    → Message box: "Order Confirmed!" with checkmark emoji ✅
+    → Background: light green
+
+  status === "cancelled":
+    → Progress bar: show cancelled state (all grey or red X)
+    → Message box: "Order Cancelled ❌" 
+    → Background: light red/pink
+
+DO NOT redesign the card. Keep the exact same layout, fonts, colors,
+and component structure. Only update the LOGIC that drives the active
+step and message text based on the status value.
+
+---
+
+STEP 5 — VERIFY ADMIN SIDE IS WRITING TO DB:
+
+Also check the Admin Dashboard confirm/cancel button handlers.
+Make sure they are actually SAVING the updated status to the database
+(Supabase UPDATE or Firestore setDoc/updateDoc) with the correct
+status value string that matches what the customer page is reading.
+If the admin action is only updating local state but not saving to DB,
+the real-time listener will never fire. Fix this too if needed.
+
+---
+
+STRICT RULES — DO NOT BREAK ANYTHING:
+- Fix ONLY the real-time status sync on the order tracking page.
+- Do NOT change the visual design or layout of the order card.
+- Do NOT rename any variables, functions, files, or DB columns.
+- Do NOT touch menu page, dashboard layout, or any unrelated feature.
+- Do NOT install new packages unless the project is missing real-time
+  capability entirely.
+- Preserve ALL existing functionality.
+- Use the EXACT same table names, column names, and state variable
+  names already in the codebase — do not invent new ones.
+
+---
+
+EXPECTED FINAL RESULT:
+Admin clicks "Confirm" on order #581689919
+→ Customer's order tracking page INSTANTLY shows:
+   ✅ PLACED (done) → ✅ CONFIRMED (active/filled)
+   Message: "Order Confirmed!"
+   No page refresh needed. Happens within 1-2 seconds.
+
+Admin clicks "Cancel"
+→ Customer's order tracking page INSTANTLY shows cancelled state.
+   No page refresh needed.
