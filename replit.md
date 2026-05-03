@@ -78,8 +78,24 @@ Upload sites:
 
 Demo restaurants (restaurantId === 'demo') use base64/localStorage as fallback (no auth session available).
 
+## Real-Time Architecture
+Supabase Realtime channels are used for cross-device live sync. Each channel uses filtered `postgres_changes` subscriptions so clients only receive events for their restaurant. A polling fallback runs in parallel so no event is ever permanently missed.
+
+| Page | Channel | Tables subscribed | Fallback poll |
+|---|---|---|---|
+| AdminDashboard | `rt-orders-{id}` | `orders` | 10 s |
+| AdminDashboard | `rt-bookings-{id}` | `bookings` | 15 s |
+| RestaurantWebsite | `rt-menu-{id}` | `menu_items`, `menu_categories` | 20 s |
+| Restaurants list | `rt-restaurants` | `restaurants` | — |
+
+On INSERT: new row prepended to local state + localStorage cache updated.
+On UPDATE: row patched in place.
+On DELETE: row removed.
+All realtime handlers also call `notifyAnalyticsUpdate()` so analytics recompute live.
+
 ## Database Setup
 1. Run `supabase/schema.sql` in your Supabase project's SQL Editor to create all tables and RLS policies.
-2. Run `supabase/storage_setup.sql` to create the `restaurant-images` and `menu-images` storage buckets and their access policies.
-3. Optionally run `supabase/migration_public_restaurant_read.sql` to add the public SELECT policy on the `restaurants` table (required for the public `/restaurant/:slug` page).
-4. Optionally run `supabase/migration_restaurants.sql` to add extended columns to the `restaurants` table.
+2. **Run `supabase/realtime_setup.sql`** to enable Postgres logical replication for `orders`, `bookings`, `restaurants`, `menu_items`, `menu_categories`. **Required for cross-device live sync.**
+3. Run `supabase/storage_setup.sql` to create the `restaurant-images` and `menu-images` storage buckets and their access policies.
+4. Optionally run `supabase/migration_public_restaurant_read.sql` to add the public SELECT policy on the `restaurants` table (required for the public `/restaurant/:slug` page).
+5. Optionally run `supabase/migration_restaurants.sql` to add extended columns to the `restaurants` table.

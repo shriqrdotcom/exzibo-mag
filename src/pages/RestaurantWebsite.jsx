@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { notifyAnalyticsUpdate } from '../context/AnalyticsContext'
 import { getRestaurantBySlug, getMenuCategories, getMenuItems } from '../lib/db'
+import { supabase } from '../lib/supabase'
 import {
   Star, MapPin, Bell, ShoppingCart, Home,
   UtensilsCrossed, ClipboardList, CalendarDays,
@@ -765,6 +766,67 @@ export default function RestaurantWebsite() {
     fetchFromSupabase()
     return () => { cancelled = true }
   }, [slug])
+
+  // ── Realtime: live menu updates → public page reflects instantly ──────────
+  useEffect(() => {
+    const rid = restaurant?.id
+    // Only subscribe for Supabase-backed restaurants (UUID format)
+    if (!rid || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(rid)) return
+
+    async function refetchMenu() {
+      try {
+        const [cats, menuItems] = await Promise.all([
+          getMenuCategories(rid),
+          getMenuItems(rid),
+        ])
+        if (!cats?.length) return
+        const tabs = cats.map(c => ({ id: c.id, label: c.name.toUpperCase() }))
+        setMenuTabs(tabs)
+        const menuObj = Object.fromEntries(tabs.map(t => [t.id, []]))
+        if (menuItems) {
+          menuItems.forEach(it => {
+            const key = it.category_id
+            if (key && menuObj[key] !== undefined) {
+              menuObj[key].push(normalizeItem({
+                id: it.id, dbId: it.id,
+                name: it.name,
+                description: it.description || '',
+                desc: it.description || '',
+                price: parseFloat(it.price) || 0,
+                img: it.image || null,
+                veg: it.veg !== false,
+                available: it.available !== false,
+                tags: it.tags || [],
+                addOns: it.add_ons || [],
+              }))
+            }
+          })
+        }
+        setMenuData(menuObj)
+      } catch (e) {
+        console.warn('[rt-menu] Refetch failed:', e.message)
+      }
+    }
+
+    const channel = supabase
+      .channel(`rt-menu-${rid}`)
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'menu_categories', filter: `restaurant_id=eq.${rid}` },
+        refetchMenu
+      )
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'menu_items', filter: `restaurant_id=eq.${rid}` },
+        refetchMenu
+      )
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') console.log('[rt] menu subscribed:', rid)
+      })
+
+    // Fallback poll — refetch every 20 s
+    const poll = setInterval(refetchMenu, 20_000)
+
+    return () => { supabase.removeChannel(channel); clearInterval(poll) }
+  }, [restaurant?.id])
 
   // Load & live-sync about data (description + image) from admin panel
   useEffect(() => {

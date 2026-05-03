@@ -3,6 +3,7 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useAnalytics, notifyAnalyticsUpdate } from '../context/AnalyticsContext'
 import { useRole } from '../context/RoleContext'
 import { getRestaurants, getOrders, getBookings, updateOrderStatus, updateBookingStatus, getMenuCategories, getMenuItems, insertMenuItem, updateMenuItem, deleteMenuItem, upsertMenuCategory, deleteMenuCategory, upsertMenuItems, uploadMenuImage, updateRestaurant, uploadToStorage, uploadDataUrlToStorage } from '../lib/db'
+import { supabase } from '../lib/supabase'
 import notificationIconImg from '@assets/image_1777373928129.png'
 import {
   NOTIFY_ROLES,
@@ -353,6 +354,102 @@ export default function AdminDashboard() {
     }
     init()
   }, [id])
+
+  // ── Realtime: live orders across all devices ──────────────────────────────
+  useEffect(() => {
+    if (isDefault || !id) return
+
+    const channel = supabase
+      .channel(`rt-orders-${id}`)
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'orders', filter: `restaurant_id=eq.${id}` },
+        (payload) => {
+          if (payload.eventType === 'INSERT') {
+            setOrders(prev => {
+              if (prev.some(o => o.id === payload.new.id)) return prev
+              const updated = [payload.new, ...prev]
+              try { localStorage.setItem(`exzibo_orders_${id}`, JSON.stringify(updated)) } catch {}
+              notifyAnalyticsUpdate()
+              return updated
+            })
+          } else if (payload.eventType === 'UPDATE') {
+            setOrders(prev => {
+              const updated = prev.map(o => o.id === payload.new.id ? { ...o, ...payload.new } : o)
+              try { localStorage.setItem(`exzibo_orders_${id}`, JSON.stringify(updated)) } catch {}
+              notifyAnalyticsUpdate()
+              return updated
+            })
+          } else if (payload.eventType === 'DELETE') {
+            setOrders(prev => {
+              const updated = prev.filter(o => o.id !== payload.old.id)
+              try { localStorage.setItem(`exzibo_orders_${id}`, JSON.stringify(updated)) } catch {}
+              return updated
+            })
+          }
+        }
+      )
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') console.log('[rt] orders subscribed:', id)
+      })
+
+    // Fallback poll — refetch every 10 s in case realtime misses an event
+    const poll = setInterval(async () => {
+      try {
+        const data = await getOrders(id)
+        setOrders(data)
+        try { localStorage.setItem(`exzibo_orders_${id}`, JSON.stringify(data)) } catch {}
+        notifyAnalyticsUpdate()
+      } catch { /* noop */ }
+    }, 10_000)
+
+    return () => { supabase.removeChannel(channel); clearInterval(poll) }
+  }, [id, isDefault])
+
+  // ── Realtime: live bookings across all devices ────────────────────────────
+  useEffect(() => {
+    if (isDefault || !id) return
+
+    const channel = supabase
+      .channel(`rt-bookings-${id}`)
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'bookings', filter: `restaurant_id=eq.${id}` },
+        (payload) => {
+          if (payload.eventType === 'INSERT') {
+            setBookings(prev => {
+              if (prev.some(b => b.id === payload.new.id)) return prev
+              const updated = [payload.new, ...prev]
+              try { localStorage.setItem(`exzibo_bookings_${id}`, JSON.stringify(updated)) } catch {}
+              notifyAnalyticsUpdate()
+              return updated
+            })
+          } else if (payload.eventType === 'UPDATE') {
+            setBookings(prev => {
+              const updated = prev.map(b => b.id === payload.new.id ? { ...b, ...payload.new } : b)
+              try { localStorage.setItem(`exzibo_bookings_${id}`, JSON.stringify(updated)) } catch {}
+              notifyAnalyticsUpdate()
+              return updated
+            })
+          } else if (payload.eventType === 'DELETE') {
+            setBookings(prev => prev.filter(b => b.id !== payload.old.id))
+          }
+        }
+      )
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') console.log('[rt] bookings subscribed:', id)
+      })
+
+    // Fallback poll — refetch every 15 s
+    const poll = setInterval(async () => {
+      try {
+        const data = await getBookings(id)
+        setBookings(data)
+        try { localStorage.setItem(`exzibo_bookings_${id}`, JSON.stringify(data)) } catch {}
+        notifyAnalyticsUpdate()
+      } catch { /* noop */ }
+    }, 15_000)
+
+    return () => { supabase.removeChannel(channel); clearInterval(poll) }
+  }, [id, isDefault])
 
   useEffect(() => {
     function refreshData() {

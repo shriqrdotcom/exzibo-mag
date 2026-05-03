@@ -1,0 +1,192 @@
+Act as a senior full-stack engineer.
+
+Goal:
+Build a UNIVERSAL, RELIABLE, REAL-TIME system where ALL data is shared across all devices with 100% consistency.
+
+System must behave like ONE connected app across:
+- PC
+- Smartphone
+- Admin dashboard
+- Public menu website
+
+---
+
+CURRENT PROBLEMS:
+- Data created on one device is not visible on another
+- Orders are not appearing live in admin dashboard
+- Data inconsistency between devices
+- Possible data loss or missed updates
+
+---
+
+STRICT REQUIREMENTS:
+
+1. SINGLE BACKEND (MANDATORY)
+- Use Supabase as the ONLY backend server
+- ALL reads and writes MUST go through Supabase
+- No local-only storage (no local arrays, no temp state persistence)
+
+---
+
+2. SINGLE SOURCE OF TRUTH
+- Supabase Database is the ONLY source of truth
+- UI must NEVER assume data without fetching/subscribing from DB
+
+---
+
+3. RELIABLE DATA WRITE (CRITICAL FOR 100% ACCURACY)
+
+For every write (restaurant creation, order placement, menu update):
+
+- Use async/await properly
+- Wait for database confirmation before updating UI
+- Handle errors properly
+
+Example flow:
+a. User action
+b. Send request to Supabase
+c. WAIT for success response
+d. Only then update UI
+
+- If write fails → DO NOT update UI
+- Show error message instead
+
+---
+
+4. REAL-TIME SUBSCRIPTIONS (MANDATORY)
+
+Enable Supabase Realtime for:
+- restaurants
+- menu_items
+- orders
+
+Each client (PC, mobile, admin panel, website) MUST:
+
+- Subscribe to changes:
+  - INSERT
+  - UPDATE
+  - DELETE
+
+- On event:
+  - Update UI immediately
+
+---
+
+5. GUARANTEED ORDER VISIBILITY (VERY IMPORTANT)
+
+When a customer places an order:
+
+a. Save order in Supabase
+b. Ensure response confirms success
+c. Admin dashboard must be subscribed to "orders" table
+d. New order must appear instantly
+
+Add fallback:
+- If realtime event is missed:
+  → auto-refetch latest orders every few seconds
+
+This ensures NO ORDER IS EVER MISSED
+
+---
+
+6. UNIVERSAL DATA FLOW (MULTI-DEVICE)
+
+When action happens on Device A:
+
+a. Data saved in Supabase
+b. Supabase emits realtime event
+c. Device B receives event
+d. UI updates automatically
+
+This must work for:
+- restaurant creation
+- menu updates
+- orders
+
+---
+
+7. REMOVE ALL LOCAL-ONLY LOGIC
+
+Remove:
+- localStorage-based data systems
+- mock/demo data
+- static arrays
+- duplicated frontend-only state
+
+Everything must come from Supabase
+
+---
+
+8. GLOBAL STATE MANAGEMENT
+
+- Use centralized state (React Context / Zustand)
+- Sync this state with realtime events
+- All pages must use same state source
+
+---
+
+9. DATA CONSISTENCY RULES
+
+- Always trust database over UI
+- Use timestamps (created_at) for ordering
+- Prevent duplicate entries
+- Prevent race conditions
+
+---
+
+10. ERROR + FALLBACK SYSTEM (IMPORTANT)
+
+- If realtime fails:
+  → auto-refetch data every 3–5 seconds
+
+- If network fails:
+  → retry logic for writes
+
+---
+
+11. SECURITY
+
+- Use Supabase RLS properly
+- Users only see their own restaurant data
+- Public menu → read-only
+- Orders → correctly scoped per restaurant
+
+---
+
+12. PERFORMANCE
+
+- Update only changed data (not full reload)
+- Use efficient state updates
+
+---
+
+IMPORTANT CONSTRAINTS:
+- Do NOT break existing working features
+- Do NOT change DB schema unnecessarily
+- Focus only on fixing:
+  - backend connection
+  - realtime sync
+  - data consistency
+
+---
+
+EXPECTED RESULT:
+
+- Create restaurant on PC → instantly visible on mobile
+- Update menu → reflected everywhere immediately
+- Customer places order → admin sees it LIVE
+- No refresh required
+- No missing orders
+- No duplicate data
+- 100% consistent system across devices
+
+---
+
+FINAL VALIDATION CHECKLIST:
+
+- Same account on 2 devices shows identical data
+- Orders appear instantly in admin dashboard
+- No manual refresh needed
+- No data mismatch
+- No lost updates
+- System behaves like one unified app

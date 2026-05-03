@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, Plus, Utensils, Store, MapPin, Star, ExternalLink, Settings, Globe } from 'lucide-react'
 import PlanBadge from '../components/PlanBadge'
 import { getRestaurants } from '../lib/db'
+import { supabase } from '../lib/supabase'
 
 export default function Restaurants() {
   const navigate = useNavigate()
@@ -12,11 +13,27 @@ export default function Restaurants() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    function fetchAll() {
+      return getRestaurants()
+        .then(rows => { setRestaurants(rows); setLoadError('') })
+        .catch(err => setLoadError(err.message || 'Failed to load restaurants'))
+    }
+
     setLoading(true)
-    getRestaurants()
-      .then(rows => { setRestaurants(rows); setLoadError('') })
-      .catch(err => setLoadError(err.message || 'Failed to load restaurants'))
-      .finally(() => setLoading(false))
+    fetchAll().finally(() => setLoading(false))
+
+    // Live-sync: refetch whenever any restaurant row changes
+    const channel = supabase
+      .channel('rt-restaurants')
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'restaurants' },
+        () => { fetchAll() }
+      )
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') console.log('[rt] restaurants subscribed')
+      })
+
+    return () => { supabase.removeChannel(channel) }
   }, [])
 
   const filtered = restaurants.filter(r =>
