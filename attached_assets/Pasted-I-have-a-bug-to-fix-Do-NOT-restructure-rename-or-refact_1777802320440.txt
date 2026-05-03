@@ -1,0 +1,53 @@
+I have a bug to fix. Do NOT restructure, rename, or refactor any existing 
+files, components, or logic. Only fix the specific issue described below.
+
+---
+
+ISSUE:
+When a customer places an order from the menu, and the admin confirms or 
+cancels that order from the Admin Dashboard, the updated order status 
+(Confirmed / Cancelled) is NOT reflecting on the customer-facing "My Orders" 
+page. The customer sees no status change after admin action.
+
+---
+
+WHAT YOU MUST FIX:
+
+1. Find the admin order action handlers — the functions triggered when admin 
+   clicks "Confirm" or "Cancel" on an order.
+
+2. Ensure those handlers UPDATE the order's status field in the database 
+   (e.g., Supabase/Firestore/your DB) to the correct value — for example: 
+   status: "confirmed" or status: "cancelled".
+
+3. On the customer-facing "My Orders" page, ensure the orders are being 
+   FETCHED with real-time updates OR re-fetched after status changes. 
+   If using Supabase, use a real-time subscription or re-fetch on mount. 
+   If using polling or state, make sure the latest status value from the 
+   DB is displayed.
+
+4. Ensure the "My Orders" page correctly DISPLAYS the status field for each 
+   order — show a visible status label like "Confirmed" (green), 
+   "Cancelled" (red), or "Pending" (yellow/grey) based on the DB value.
+
+---
+
+RULES — READ CAREFULLY:
+- Do NOT touch any unrelated pages, components, or features.
+- Do NOT rename any variables, functions, files, or database fields.
+- Do NOT add new dependencies unless absolutely necessary.
+- Do NOT change the UI layout of any page — only add the status display 
+  if it is missing.
+- Do NOT remove or rewrite any existing working logic.
+- Preserve ALL existing functionality including order placement, 
+  admin dashboard, and any other features.
+- Make the smallest possible change that fixes this bug end-to-end.
+
+---
+
+EXPECTED RESULT:
+- Admin confirms an order → Customer opens "My Orders" → sees status: 
+  ✅ Confirmed
+- Admin cancels an order → Customer opens "My Orders" → sees status: 
+  ❌ Cancelled
+- If no action taken → status shows: 🕐 Pending.

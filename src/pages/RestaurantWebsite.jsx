@@ -906,6 +906,7 @@ export default function RestaurantWebsite() {
               const restaurantId = rid
               persistCustomerOrders(restaurantId, next)
               if (status === 'confirmed' || status === 'preparing' || status === 'completed') setOrderStatus(1)
+              else if (status === 'cancelled') setOrderStatus(-1)
             }
             return changed ? next : prev
           })
@@ -945,11 +946,7 @@ export default function RestaurantWebsite() {
         setCustomerOrders(prev => {
           if (prev.length === 0) return prev
           let changed = false
-          const updated = prev.filter(co => {
-            const admin = adminOrders.find(o => o.id === co.id)
-            if (admin && admin.status === 'cancelled') { changed = true; return false }
-            return true
-          }).map(co => {
+          const updated = prev.map(co => {
             const admin = adminOrders.find(o => o.id === co.id)
             if (!admin) return co
             const newStatus = admin.status
@@ -960,6 +957,7 @@ export default function RestaurantWebsite() {
           const firstAdmin = adminOrders.find(o => o.id === (updated[0]?.id))
           if (firstAdmin) {
             if (firstAdmin.status === 'preparing' || firstAdmin.status === 'completed' || firstAdmin.status === 'confirmed') setOrderStatus(1)
+            else if (firstAdmin.status === 'cancelled') setOrderStatus(-1)
             else setOrderStatus(0)
           }
           return changed ? updated : prev
@@ -2391,47 +2389,72 @@ export default function RestaurantWebsite() {
 
                 {/* ── STATUS TRACKER ── */}
                 {(() => {
-                  const confirmed = orderStatus >= 1
-                  const steps = [
-                    { label: 'PLACED', done: true },
-                    { label: 'CONFIRMED', done: confirmed },
-                  ]
+                  const cancelled = orderStatus === -1
+                  const confirmed = !cancelled && orderStatus >= 1
+                  const steps = cancelled
+                    ? [{ label: 'PLACED', done: true }, { label: 'CANCELLED', done: true, red: true }]
+                    : [{ label: 'PLACED', done: true }, { label: 'CONFIRMED', done: confirmed }]
                   return (
                     <div>
                       <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
                         {/* Progress track */}
                         <div style={{ position: 'absolute', top: '14px', left: '14px', right: '14px', height: '3px', background: darkMode ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.08)', borderRadius: '2px', zIndex: 0 }}>
-                          <div style={{ height: '100%', borderRadius: '2px', background: '#E8321A', width: confirmed ? '100%' : '0%', transition: 'width 0.8s ease' }} />
+                          <div style={{ height: '100%', borderRadius: '2px', background: cancelled ? '#ef4444' : '#E8321A', width: (confirmed || cancelled) ? '100%' : '0%', transition: 'width 0.8s ease' }} />
                         </div>
-                        {steps.map((step, i) => (
-                          <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', zIndex: 1, flex: 1 }}>
-                            <div style={{
-                              width: '28px', height: '28px', borderRadius: '14px',
-                              background: step.done ? '#E8321A' : (darkMode ? 'rgba(255,255,255,0.10)' : '#e5e0db'),
-                              border: `2px solid ${step.done ? '#E8321A' : (darkMode ? 'rgba(255,255,255,0.15)' : '#ddd')}`,
-                              display: 'flex', alignItems: 'center', justifyContent: 'center',
-                              boxShadow: step.done ? '0 0 0 4px rgba(232,50,26,0.15)' : 'none',
-                              animation: step.done ? 'statusBounce 0.5s ease' : 'none',
-                              transition: 'all 0.4s ease',
-                            }}>
-                              {step.done
-                                ? <CheckCircle size={14} color="#fff" strokeWidth={2.5} />
-                                : <div style={{ width: '8px', height: '8px', borderRadius: '4px', background: darkMode ? 'rgba(255,255,255,0.25)' : '#ccc' }} />
-                              }
+                        {steps.map((step, i) => {
+                          const dotColor = step.red ? '#ef4444' : '#E8321A'
+                          return (
+                            <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', zIndex: 1, flex: 1 }}>
+                              <div style={{
+                                width: '28px', height: '28px', borderRadius: '14px',
+                                background: step.done ? dotColor : (darkMode ? 'rgba(255,255,255,0.10)' : '#e5e0db'),
+                                border: `2px solid ${step.done ? dotColor : (darkMode ? 'rgba(255,255,255,0.15)' : '#ddd')}`,
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                boxShadow: step.done ? `0 0 0 4px ${step.red ? 'rgba(239,68,68,0.15)' : 'rgba(232,50,26,0.15)'}` : 'none',
+                                animation: step.done ? 'statusBounce 0.5s ease' : 'none',
+                                transition: 'all 0.4s ease',
+                              }}>
+                                {step.done
+                                  ? <CheckCircle size={14} color="#fff" strokeWidth={2.5} />
+                                  : <div style={{ width: '8px', height: '8px', borderRadius: '4px', background: darkMode ? 'rgba(255,255,255,0.25)' : '#ccc' }} />
+                                }
+                              </div>
                             </div>
-                          </div>
-                        ))}
+                          )
+                        })}
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                         {steps.map((step, i) => (
-                          <div key={i} style={{ flex: 1, textAlign: 'center', fontSize: '9px', fontWeight: step.done ? 800 : 600, color: step.done ? theme.color : theme.locationColor, letterSpacing: '0.08em' }}>
+                          <div key={i} style={{ flex: 1, textAlign: 'center', fontSize: '9px', fontWeight: step.done ? 800 : 600, color: step.done ? (step.red ? '#ef4444' : theme.color) : theme.locationColor, letterSpacing: '0.08em' }}>
                             {step.label}
                           </div>
                         ))}
                       </div>
 
+                      {/* ── CANCELLED MESSAGE ── */}
+                      {cancelled && (
+                        <div style={{
+                          marginTop: '16px',
+                          background: darkMode ? 'rgba(239,68,68,0.08)' : 'rgba(239,68,68,0.06)',
+                          border: '1px solid rgba(239,68,68,0.30)',
+                          borderRadius: '14px',
+                          padding: '14px 16px',
+                          display: 'flex',
+                          alignItems: 'flex-start',
+                          gap: '10px',
+                        }}>
+                          <div style={{ fontSize: '22px', lineHeight: 1, flexShrink: 0 }}>❌</div>
+                          <div>
+                            <div style={{ fontSize: '13px', fontWeight: 800, color: '#ef4444', marginBottom: '4px' }}>Order Cancelled</div>
+                            <div style={{ fontSize: '12px', lineHeight: 1.6, color: theme.locationColor }}>
+                              Your order has been cancelled by the restaurant. Please contact staff if you need assistance.
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
                       {/* ── WAITING MESSAGE (shown when placed, not yet confirmed) ── */}
-                      {!confirmed && (
+                      {!confirmed && !cancelled && (
                         <div style={{
                           marginTop: '16px',
                           background: darkMode ? 'rgba(255,160,0,0.10)' : '#FFF8E1',
@@ -2492,11 +2515,11 @@ export default function RestaurantWebsite() {
                   { label: 'DATE', value: currentOrder.date },
                   { label: 'Total Items', value: `${currentOrder.itemCount}  ITEMS` },
                   { label: 'Grand Total', value: `₹${currentOrder.grandTotal.toLocaleString('en-IN')}  INR` },
-                  { label: 'STATUS', value: orderStatus >= 1 ? 'CONFIRMED' : 'PLACED', highlight: orderStatus >= 1 },
-                ].map(({ label, value, highlight }, i, arr) => (
+                  { label: 'STATUS', value: orderStatus === -1 ? 'CANCELLED' : orderStatus >= 1 ? 'CONFIRMED' : 'PLACED', highlight: orderStatus >= 1, red: orderStatus === -1 },
+                ].map(({ label, value, highlight, red }, i, arr) => (
                   <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 16px', borderBottom: i < arr.length - 1 ? `1px solid ${theme.cardBorder}` : 'none' }}>
                     <span style={{ fontSize: '13px', color: theme.locationColor, fontWeight: 500 }}>{label}</span>
-                    <span style={{ fontSize: '13px', fontWeight: 700, color: highlight ? '#22c55e' : theme.color }}>{value}</span>
+                    <span style={{ fontSize: '13px', fontWeight: 700, color: red ? '#ef4444' : highlight ? '#22c55e' : theme.color }}>{value}</span>
                   </div>
                 ))}
               </div>
