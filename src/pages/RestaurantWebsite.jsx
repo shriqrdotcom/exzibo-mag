@@ -998,9 +998,11 @@ export default function RestaurantWebsite() {
           if (changed) persistCustomerOrders(restaurantId, updated)
           const firstAdmin = adminOrders.find(o => o.id === (updated[0]?.id))
           if (firstAdmin) {
+            const ADVANCED = ['confirmed', 'preparing', 'completed', 'cancelled']
+            const currentStatus = updated[0]?.status
             if (firstAdmin.status === 'preparing' || firstAdmin.status === 'completed' || firstAdmin.status === 'confirmed') setOrderStatus(1)
             else if (firstAdmin.status === 'cancelled') setOrderStatus(-1)
-            else setOrderStatus(0)
+            else if (!ADVANCED.includes(currentStatus)) setOrderStatus(0)
           }
           return changed ? updated : prev
         })
@@ -1014,7 +1016,7 @@ export default function RestaurantWebsite() {
       window.removeEventListener('storage', syncOrderStatus)
       window.removeEventListener('exzibo-data-changed', syncOrderStatus)
     }
-  }, [currentOrder, restaurant, slug])
+  }, [currentOrder?.id, restaurant?.id, slug])
 
   useEffect(() => {
     function onLogoChanged(e) {
