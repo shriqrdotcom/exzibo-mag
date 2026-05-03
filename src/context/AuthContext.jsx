@@ -6,10 +6,10 @@ import { verifyPreviewSession, clearPreviewSession } from '../lib/previewAuth'
 const AuthContext = createContext(null)
 
 export function AuthProvider({ children }) {
-  const [user, setUser]                   = useState(null)
-  const [loading, setLoading]             = useState(true)
-  const [accessDenied, setAccessDenied]   = useState(false)
-  const [isSuperAdmin, setIsSuperAdmin]   = useState(false)
+  const [user, setUser]                 = useState(null)
+  const [loading, setLoading]           = useState(true)
+  const [accessDenied, setAccessDenied] = useState(false)
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false)
 
   useEffect(() => {
     // ── Preview mode — bypass Supabase entirely ───────────────────────────
@@ -24,10 +24,11 @@ export function AuthProvider({ children }) {
     // ── Production mode ───────────────────────────────────────────────────
     let mounted = true
 
-    // Called for every session that Supabase produces.
-    // Validates the user against the server-side allowlist RPC before
-    // granting access. If the user is not in the list they are signed out
-    // immediately and never reach any protected route.
+    // Called for every session Supabase produces.
+    // Queries `allowed_users` directly (no RPC dependency).
+    // The "users_read_own" RLS policy on that table ensures only the row
+    // matching the signed-in user's email is returned — so a non-empty
+    // result means access is granted.
     async function validateAndSetUser(session) {
       if (!session?.user) {
         if (mounted) { setUser(null); setLoading(false) }
@@ -35,11 +36,21 @@ export function AuthProvider({ children }) {
       }
 
       try {
-        const { data, error } = await supabase.rpc('is_user_allowed')
+        // Direct table query — works as long as the RLS policy
+        // "users_read_own" exists:
+        //   CREATE POLICY "users_read_own" ON public.allowed_users FOR SELECT
+        //   USING (lower(trim(email)) = lower(trim(auth.email())));
+        const { data, error } = await supabase
+          .from('allowed_users')
+          .select('role, is_active')
+          .eq('is_active', true)
+          .maybeSingle()
+
         if (!mounted) return
 
         if (error || !data) {
-          // Not in allowlist — destroy the session on the server immediately
+          // Not in allowlist — sign out
+          console.warn('[auth] Access denied:', error?.message ?? 'email not in allowed_users')
           try { await supabase.auth.signOut() } catch {}
           if (mounted) {
             setUser(null)
@@ -49,49 +60,44 @@ export function AuthProvider({ children }) {
         } else {
           if (mounted) {
             setUser(session.user)
+            setIsSuperAdmin(data.role === 'super_admin')
             setAccessDenied(false)
             setLoading(false)
           }
-          // Check super-admin status — used by MasterControl and any component
-          // that needs to distinguish the two master accounts from regular admins.
-          supabase.rpc('is_super_admin').then(({ data }) => {
-            if (mounted) setIsSuperAdmin(!!data)
-          }).catch(() => {})
-          // Auto-link this user's auth.uid() to any team_members row that
-          // matches their email address. This fires once per login and is what
-          // lets a newly-invited Gmail account immediately see the restaurant
-          // they were added to — no manual UID copying required.
+          // Auto-link this user to any team_members row matching their email.
           supabase.rpc('link_team_member_on_login').catch(e =>
             console.warn('[auth] link_team_member_on_login failed:', e.message)
           )
         }
       } catch (e) {
-        console.warn('[auth] Allowlist check failed:', e.message)
+        console.error('[auth] Auth check error:', e)
         if (!mounted) return
-        // On network error, deny access (fail closed)
-        try { await supabase.auth.signOut() } catch {}
+        // Show access denied so the user knows something went wrong
+        // (rather than silently bouncing back to the login screen).
         setUser(null)
+        setAccessDenied(true)
         setLoading(false)
       }
     }
 
-    // Single source of truth for session state.
-    // INITIAL_SESSION — fires on mount with the existing session (or null).
-    //                   Supabase guarantees this fires AFTER it has finished
-    //                   processing any OAuth tokens in the URL hash, so there
-    //                   is no race condition between getSession() and SIGNED_IN.
-    // SIGNED_IN       — new OAuth login
-    // TOKEN_REFRESHED — re-validate on every token refresh (catches removed users)
-    // SIGNED_OUT      — clear state
+    // Single source of truth — INITIAL_SESSION fires on mount after Supabase
+    // has fully processed any OAuth tokens in the URL, eliminating race
+    // conditions. SIGNED_IN fires on new logins. TOKEN_REFRESHED re-validates
+    // on every refresh cycle. SIGNED_OUT clears all state.
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (
         event === 'INITIAL_SESSION' ||
-        event === 'SIGNED_IN' ||
+        event === 'SIGNED_IN'       ||
         event === 'TOKEN_REFRESHED'
       ) {
         validateAndSetUser(session)
       } else if (event === 'SIGNED_OUT') {
-        if (mounted) { setUser(null); setAccessDenied(false); setIsSuperAdmin(false); setLoading(false) }
+        if (mounted) {
+          setUser(null)
+          setAccessDenied(false)
+          setIsSuperAdmin(false)
+          setLoading(false)
+        }
       }
     })
 
