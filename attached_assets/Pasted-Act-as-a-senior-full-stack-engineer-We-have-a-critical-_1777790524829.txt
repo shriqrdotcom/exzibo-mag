@@ -1,0 +1,154 @@
+Act as a senior full-stack engineer.
+
+We have a critical UID synchronization and visibility issue across the system.
+
+🧠 PROBLEM SUMMARY:
+
+1. When a new restaurant is created:
+   
+   - A 10-digit unique UID is generated successfully.
+
+2. BUT:
+   
+   - This UID is NOT visible in:
+     - Admin Dashboard
+     - Manager Dashboard
+     - Employee Dashboard
+
+3. In Master Control:
+   
+   - When searching using a valid existing UID → system shows "UID is invalid"
+   - Only a default UID is working (likely hardcoded or fallback data)
+
+---
+
+🎯 ROOT CAUSE (TO FIX):
+
+This is likely caused by one or more of the following:
+
+- UID is not stored in the database correctly
+- UID is not included in queries when fetching restaurant data
+- Dashboards are using stale/local state instead of real-time backend
+- Master Control search is querying wrong table or wrong column
+- UID mismatch (string vs number or trimmed incorrectly)
+- Hardcoded default UID overriding dynamic data
+
+---
+
+✅ REQUIRED FIX (STEP-BY-STEP):
+
+1. DATABASE STRUCTURE FIX
+
+- Ensure "restaurants" table has:
+  - "uid" column (type: TEXT or VARCHAR(10))
+  - Must be UNIQUE
+  - Must be NOT NULL
+
+2. UID GENERATION FIX
+
+- When creating a restaurant:
+  - Generate a 10-digit UID (like mobile number format)
+  - Example: 8910699771
+- BEFORE inserting:
+  - Check if UID already exists → regenerate if needed
+
+3. STORE UID PROPERLY
+
+- When inserting restaurant:
+  - Save UID in "restaurants.uid"
+- Return UID in API response
+
+4. GLOBAL DATA FLOW FIX
+
+- Every dashboard (Admin, Manager, Employee):
+  MUST fetch restaurant using UID
+
+Example:
+
+- On login or load:
+  
+  - Get user's assigned "restaurant_uid"
+  - Query:
+    SELECT * FROM restaurants WHERE uid = user.restaurant_uid
+
+- DO NOT use static or default UID anywhere
+
+5. MASTER CONTROL SEARCH FIX
+
+- When user enters UID:
+  - Trim input
+  - Treat as string
+
+Query:
+SELECT * FROM restaurants WHERE uid = input_uid
+
+If found:
+→ Load that restaurant's full data
+
+If not:
+→ Show "UID not found" (only if truly missing)
+
+6. REMOVE HARDCODED UID
+
+- Search entire codebase for:
+  - default UID
+  - fallback UID
+- REMOVE them completely
+
+7. REAL-TIME SYNC (CRITICAL)
+
+- Use Supabase real-time or refetch after insert
+- After creating restaurant:
+  - Immediately update:
+    - My Restaurants list
+    - All dashboards
+
+8. DEBUG LOGGING (TEMPORARY)
+
+Add logs:
+
+- When UID is generated
+- When stored
+- When fetched
+- When searched
+
+---
+
+🧪 TEST CASES (MUST PASS):
+
+1. Create restaurant → UID generated → visible everywhere
+2. Same UID appears in:
+   - Admin panel
+   - Manager panel
+   - Employee panel
+3. Paste UID in Master Control → correct restaurant loads
+4. No "UID invalid" error for valid UID
+5. No default UID anywhere
+6. Data sync works across devices (mobile + desktop)
+
+---
+
+🚫 STRICT RULES:
+
+- No hardcoded UID
+- UID must be single source of truth
+- All modules must depend on same database data
+- No local-only state
+
+---
+
+🎯 FINAL GOAL:
+
+ONE restaurant = ONE UID
+That UID controls:
+
+- Master Control
+- Admin
+- Manager
+- Employee
+- Menu
+- Orders
+
+Everything must be connected through this UID.
+
+Make it robust, real-time, and bug-free.

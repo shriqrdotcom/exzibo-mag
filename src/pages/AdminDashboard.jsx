@@ -324,6 +324,8 @@ export default function AdminDashboard() {
       let found = null
       try {
         const rows = await getRestaurants()
+        // Keep full list in localStorage in sync
+        try { localStorage.setItem('exzibo_restaurants', JSON.stringify(rows)) } catch { /* noop */ }
         found = rows.find(r => r.id === id)
       } catch { /* noop */ }
       if (!found) {

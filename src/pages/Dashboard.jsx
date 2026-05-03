@@ -172,6 +172,8 @@ export default function Dashboard() {
   const fetchRestaurants = useCallback(async () => {
     try {
       const rows = await getRestaurants()
+      // Keep localStorage in sync so MasterControl and other local-first code works
+      try { localStorage.setItem('exzibo_restaurants', JSON.stringify(rows)) } catch { /* noop */ }
       setRestaurants(rows.map(mapRow))
     } catch {
       const saved = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')

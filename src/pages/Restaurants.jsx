@@ -15,7 +15,12 @@ export default function Restaurants() {
   useEffect(() => {
     function fetchAll() {
       return getRestaurants()
-        .then(rows => { setRestaurants(rows); setLoadError('') })
+        .then(rows => {
+          // Keep localStorage in sync so MasterControl and other local-first code works
+          try { localStorage.setItem('exzibo_restaurants', JSON.stringify(rows)) } catch { /* noop */ }
+          setRestaurants(rows)
+          setLoadError('')
+        })
         .catch(err => setLoadError(err.message || 'Failed to load restaurants'))
     }
 

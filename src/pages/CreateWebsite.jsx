@@ -175,6 +175,14 @@ export default function CreateWebsite() {
 
       const created = await createRestaurant(corePayload)
 
+      // Sync to localStorage so MasterControl and other local-first code works immediately
+      try {
+        const prev = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
+        const merged = [created, ...prev.filter(r => r.id !== created.id)]
+        localStorage.setItem('exzibo_restaurants', JSON.stringify(merged))
+        console.log('[CreateWebsite] Synced UID', created.uid, 'to localStorage')
+      } catch { /* noop */ }
+
       // ── Step 2: Upload images to Supabase Storage (optional) ───
       // If the 'restaurant-images' bucket doesn't exist yet, this
       // block is skipped and the restaurant still saves successfully.

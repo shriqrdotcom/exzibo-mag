@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import Sidebar from '../components/Sidebar'
 import AdminHeader from '../components/AdminHeader'
 import { LogIn, ShieldCheck, X, ArrowRight, AlertCircle } from 'lucide-react'
+import { supabase } from '../lib/supabase'
 
 const LAST_UID_KEY = 'exzibo_master_last_uid'
 const SUPER_ADMIN_KEY = 'exzibo_is_super_admin'
@@ -17,15 +18,31 @@ function isSuperAdmin() {
   return stored === 'true'
 }
 
-function resolveAdminTargetByUID(uid) {
+async function resolveAdminTargetByUID(uid) {
   const trimmed = String(uid || '').trim()
   if (!trimmed) return null
   if (trimmed === DEFAULT_SUPER_ADMIN_UID) {
     return { id: 'default' }
   }
-  const all = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
-  const found = all.find(r => String(r.uid) === trimmed)
-  return found ? { id: String(found.id) } : null
+  // Fast path: check localStorage first
+  try {
+    const all = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
+    const found = all.find(r => String(r.uid) === trimmed)
+    if (found) return { id: String(found.id) }
+  } catch { /* noop */ }
+  // Fallback: query Supabase directly (handles restaurants not yet in localStorage)
+  try {
+    const { data, error } = await supabase
+      .from('restaurants')
+      .select('id, uid')
+      .eq('uid', trimmed)
+      .maybeSingle()
+    if (!error && data) {
+      console.log('[MasterControl] UID resolved via Supabase:', data.id)
+      return { id: String(data.id) }
+    }
+  } catch { /* noop */ }
+  return null
 }
 
 export default function MasterControl() {
@@ -49,15 +66,16 @@ export default function MasterControl() {
     setInlineUid(last)
   }, [navigate])
 
-  function accessPanel(value, setErr) {
+  async function accessPanel(value, setErr) {
     const trimmed = String(value || '').trim()
     if (!trimmed) {
       setErr('Please enter a Restaurant UID')
       return
     }
-    const target = resolveAdminTargetByUID(trimmed)
+    setErr('')
+    const target = await resolveAdminTargetByUID(trimmed)
     if (!target) {
-      setErr('Invalid UID')
+      setErr('UID not found — check the UID and try again')
       return
     }
     localStorage.setItem(LAST_UID_KEY, trimmed)
