@@ -1,0 +1,68 @@
+Act as a senior frontend + full-stack engineer.
+
+Goal:
+Enhance the existing Profile screen UI by adding an interactive profile editing flow when the user clicks on the profile picture.
+
+Requirements:
+
+1. PROFILE IMAGE CLICK ACTION
+- Make the profile picture (top avatar section) fully clickable.
+- On click, it must OPEN A NEW SECTION / SCREEN (not a modal, not inline expansion).
+- This new section should behave like a separate page or route (e.g., /edit-profile).
+
+2. NEW SECTION: "EDIT PROFILE"
+Create a clean UI screen with the following:
+
+A. Header:
+- Title: "Edit Profile"
+- Back button (top-left) to return to previous screen
+
+B. PROFILE IMAGE UPDATE:
+- Show current profile image (large preview)
+- Add button: "Change Image"
+- On click:
+  - Allow user to upload image from device
+  - Preview selected image before saving
+  - Store image properly (Supabase storage or existing backend system)
+
+C. CHANGE NAME:
+- Input field:
+  - Label: "Restaurant Name" (or "Profile Name")
+  - Pre-filled with current name (e.g., "Flip flap")
+- Allow user to edit name
+
+D. SAVE BUTTON:
+- Button: "Save Changes"
+- On click:
+  - Validate inputs (name should not be empty)
+  - Update database (Supabase)
+  - Update UI instantly after save
+  - Navigate back to Profile screen
+
+3. DATA HANDLING
+- Fetch existing profile data (name + image) from database
+- Use proper state management
+- Ensure real-time UI update after saving
+
+4. UI/UX REQUIREMENTS
+- Keep design consistent with current UI (rounded cards, soft colors, minimal look)
+- Smooth transitions when navigating
+- Mobile responsive
+- Proper spacing and alignment
+
+5. ERROR HANDLING
+- Show error if image upload fails
+- Show validation error if name is empty
+- Show success feedback after saving
+
+6. PERFORMANCE & CLEAN CODE
+- Do not break existing profile page
+- Keep code modular (separate component for Edit Profile)
+- Use clean routing/navigation
+- Avoid unnecessary re-renders
+
+Final Output:
+- Fully working clickable profile image
+- Dedicated "Edit Profile" screen
+- Working name + image update system
+- Clean UI consistent with existing design

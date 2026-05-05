@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { useNavigate } from 'react-router-dom'
 import { useRole } from '../context/RoleContext'
 import {
   X, Power, MapPin, Phone, Store, Users, Image,
@@ -106,6 +107,7 @@ export default function ProfileSlide({
   asPage = false,
   isMasterView = false,
 }) {
+  const navigate = useNavigate()
   const fileInputRef = useRef(null)
   const carouselInputRef = useRef(null)
   const nameInputRef = useRef(null)
@@ -678,7 +680,7 @@ export default function ProfileSlide({
             {/* Profile row — image straddles the blue/white boundary */}
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px', marginBottom: '22px', marginTop: '-48px', position: 'relative', zIndex: 1 }}>
               <div
-                onClick={() => fileInputRef.current?.click()}
+                onClick={() => navigate(`/edit-profile?restaurantId=${restaurantId || 'default'}`)}
                 style={{
                   width: '100px', height: '100px', borderRadius: '22px',
                   background: STAT_PILL, overflow: 'hidden', flexShrink: 0,
@@ -693,6 +695,16 @@ export default function ProfileSlide({
                     <Loader2 size={20} color="#fff" style={{ animation: 'spin 1s linear infinite' }} />
                   </div>
                 )}
+                {/* Camera overlay hint */}
+                <div style={{
+                  position: 'absolute', inset: 0,
+                  background: 'rgba(0,0,0,0)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  transition: 'background 0.2s',
+                }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,0,0,0.25)'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'rgba(0,0,0,0)'}
+                />
               </div>
               {/* Name/UID anchored in the white zone */}
               <div style={{ paddingTop: '52px' }}>

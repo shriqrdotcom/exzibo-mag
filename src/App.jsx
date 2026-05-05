@@ -20,6 +20,7 @@ import TablePage            from './pages/TablePage'
 import MenuLinkRoute        from './pages/MenuLinkRoute'
 import MasterControl        from './pages/MasterControl'
 import ProfilePage          from './pages/ProfilePage'
+import EditProfile          from './pages/EditProfile'
 
 // ── Full-screen loader ──────────────────────────────────────────────────────
 function GlobalLoader() {
@@ -116,6 +117,7 @@ function AppRoutes() {
       <Route path="/settings"          element={<ProtectedRoute><Settings /></ProtectedRoute>} />
       <Route path="/create-website"    element={<ProtectedRoute><CreateWebsite /></ProtectedRoute>} />
       <Route path="/restaurants"       element={<ProtectedRoute><Restaurants /></ProtectedRoute>} />
+      <Route path="/edit-profile"      element={<ProtectedRoute><EditProfile /></ProtectedRoute>} />
 
       {/* Catch-all → auth gate */}
       <Route path="*" element={<Navigate to="/" replace />} />
