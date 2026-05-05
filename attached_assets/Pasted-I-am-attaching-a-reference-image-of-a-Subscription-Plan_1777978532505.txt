@@ -1,0 +1,11 @@
+I am attaching a reference image of a Subscription Plan card UI. Add this section accurately to the existing page. Do not modify or break any existing code, styles, or layout outside of the Subscription Plan section. Only add this new section.
+Here is exactly what the card contains and how it should look:
+The outer card has a white background, large rounded corners, and a light grey page background. Inside the card:
+At the top row, there is a bold black heading that says SUBSCRIPTION PLAN on the left side, and on the right side there is a small dark black pill-shaped badge that shows the current month, for example MAY.
+Below the heading, there is a large bold number showing the plan amount, for example 8,000 followed by INR in a smaller weight label next to it.
+Below the amount, there is a small uppercase grey label that says SUBSCRIPTION DETAILS. Directly below that is a blue pill-shaped badge with a filled blue star icon on the left and the plan name STARTER in bold blue uppercase text.
+Below the plan badge, there is a small uppercase grey label that says REMAINING DAYS. Below that is a horizontal progress bar that is wide and rounded. The left portion of the bar is a gradient going from cyan or teal on the far left to dark grey or black in the middle, representing the days used. The remaining right portion of the bar is light grey, representing days left.
+Below the progress bar, there is a light blue-tinted rounded card with a blue calendar grid icon on the left. To the right of the icon, there is a small uppercase grey label that says REMAINING DAYS, and below that in bold black text it says 15 DAYS LEFT.
+At the very bottom of the card is a full-width black rounded button with white bold uppercase text that says RENEW.
+Spacing between each element should be consistent and generous. The overall style is clean, modern, and minimal with soft shadows on the card. Use the attached image as the pixel-accurate reference for proportions, colors, and layout.
+Do not change anything outside of this new section. Add it in a way that fits cleanly within the existing page structure.

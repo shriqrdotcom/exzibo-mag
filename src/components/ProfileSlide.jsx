@@ -1437,25 +1437,68 @@ export default function ProfileSlide({
           )}
 
           {/* REMAINING DAY Tab */}
-          {activeTab === 'REMAINING DAY' && (
-            <div style={{ background: '#fff', borderRadius: '16px', margin: '0 16px', overflow: 'hidden', boxShadow: '0 1px 8px rgba(0,0,0,0.07)' }}>
-              <div
-                onClick={() => setShowRemainingDays(true)}
-                style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '15px 18px', cursor: 'pointer', background: 'transparent', transition: 'background 0.15s' }}
-                onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,0,0,0.03)'}
-                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-              >
-                <div style={{ width: '44px', height: '44px', borderRadius: '14px', background: ICON_ROW_BG, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#555', flexShrink: 0 }}>
-                  <Calendar size={22} strokeWidth={1.5} />
+          {activeTab === 'REMAINING DAY' && (() => {
+            const totalDays = 30
+            const daysUsed = Math.max(0, totalDays - subscriptionInfo.daysLeft)
+            const progress = Math.min(100, Math.round((daysUsed / totalDays) * 100))
+            const currentMonth = new Date().toLocaleString('default', { month: 'short' }).toUpperCase()
+            return (
+              <div style={{ margin: '0 16px', background: '#fff', borderRadius: '20px', padding: '22px 20px 20px', boxShadow: '0 2px 16px rgba(0,0,0,0.08)' }}>
+
+                {/* Top row: title + month badge */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+                  <div style={{ fontWeight: 800, fontSize: '15px', color: '#111', letterSpacing: '0.01em' }}>SUBSCRIPTION PLAN</div>
+                  <div style={{ background: '#111', color: '#fff', fontWeight: 700, fontSize: '12px', borderRadius: '20px', padding: '5px 14px', letterSpacing: '0.04em' }}>{currentMonth}</div>
                 </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 800, fontSize: '13px', color: '#111', letterSpacing: '0.04em' }}>SUBSCRIPTION STATUS</div>
-                  <div style={{ fontSize: '11px', color: '#999', marginTop: '2px', letterSpacing: '0.03em' }}>VIEW REMAINING DAYS</div>
+
+                {/* Price */}
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', marginBottom: '20px' }}>
+                  <span style={{ fontWeight: 900, fontSize: '38px', color: '#111', letterSpacing: '-0.02em', lineHeight: 1 }}>8,000</span>
+                  <span style={{ fontWeight: 500, fontSize: '16px', color: '#555' }}>INR</span>
                 </div>
-                <ChevronRight size={16} color="#C7C7CC" strokeWidth={2.5} />
+
+                {/* Subscription details label + plan badge */}
+                <div style={{ fontSize: '11px', fontWeight: 600, color: '#AEAEB2', letterSpacing: '0.06em', marginBottom: '8px' }}>SUBSCRIPTION DETAILS</div>
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'rgba(59,130,246,0.1)', borderRadius: '20px', padding: '6px 14px', marginBottom: '20px' }}>
+                  <Star size={13} fill="#3B82F6" color="#3B82F6" />
+                  <span style={{ fontWeight: 800, fontSize: '12px', color: '#3B82F6', letterSpacing: '0.06em' }}>{subscriptionInfo.planName.toUpperCase()}</span>
+                </div>
+
+                {/* Remaining days label + progress bar */}
+                <div style={{ fontSize: '11px', fontWeight: 600, color: '#AEAEB2', letterSpacing: '0.06em', marginBottom: '10px' }}>REMAINING DAYS</div>
+                <div style={{ position: 'relative', height: '10px', background: '#E5E7EB', borderRadius: '99px', overflow: 'hidden', marginBottom: '14px' }}>
+                  <div style={{
+                    position: 'absolute', left: 0, top: 0, bottom: 0,
+                    width: `${progress}%`,
+                    background: 'linear-gradient(90deg, #06B6D4 0%, #111 100%)',
+                    borderRadius: '99px',
+                    transition: 'width 0.6s ease',
+                  }} />
+                </div>
+
+                {/* Days left card */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '14px', background: 'rgba(59,130,246,0.07)', borderRadius: '14px', padding: '14px 16px', marginBottom: '20px' }}>
+                  <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(59,130,246,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <Calendar size={20} strokeWidth={1.6} color="#3B82F6" />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '11px', fontWeight: 600, color: '#AEAEB2', letterSpacing: '0.06em', marginBottom: '2px' }}>REMAINING DAYS</div>
+                    <div style={{ fontWeight: 800, fontSize: '15px', color: '#111', letterSpacing: '0.01em' }}>{subscriptionInfo.daysLeft} DAYS LEFT</div>
+                  </div>
+                </div>
+
+                {/* Renew button */}
+                <button
+                  style={{ width: '100%', padding: '16px', background: '#111', border: 'none', borderRadius: '14px', color: '#fff', fontWeight: 800, fontSize: '14px', letterSpacing: '0.08em', cursor: 'pointer' }}
+                  onMouseEnter={e => e.currentTarget.style.background = '#222'}
+                  onMouseLeave={e => e.currentTarget.style.background = '#111'}
+                >
+                  RENEW
+                </button>
+
               </div>
-            </div>
-          )}
+            )
+          })()}
 
         </div>
 
