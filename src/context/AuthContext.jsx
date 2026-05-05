@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { IS_PREVIEW } from '../lib/env'
+import { IS_PREVIEW, DISABLE_AUTH } from '../lib/env'
 import { verifyPreviewSession, clearPreviewSession } from '../lib/previewAuth'
 
 // ── Allowed Gmail accounts ────────────────────────────────────────────────────
@@ -12,6 +12,15 @@ const ALLOWED_EMAILS = [
   'trisanu07.nandi@gmail.com',
 ]
 
+// ── Mock user injected when DISABLE_AUTH=true ─────────────────────────────────
+// Used only in preview/dev. Never reaches production.
+const MOCK_USER = {
+  id:             'preview-user-disable-auth',
+  email:          ALLOWED_EMAILS[0],
+  isPreviewUser:  true,
+  isDisableAuth:  true,
+}
+
 const AuthContext = createContext(null)
 
 export function AuthProvider({ children }) {
@@ -21,7 +30,21 @@ export function AuthProvider({ children }) {
   const [isSuperAdmin, setIsSuperAdmin] = useState(false)
 
   useEffect(() => {
-    // ── Preview mode — bypass Supabase entirely ───────────────────────────
+    // ── DISABLE_AUTH mode — skip all authentication checks ────────────────
+    // Controlled by VITE_DISABLE_AUTH=true (development env var only).
+    // Production never has this set, so this branch is unreachable in prod.
+    if (DISABLE_AUTH) {
+      console.warn(
+        '[auth] DISABLE_AUTH is active — authentication is bypassed. ' +
+        'This should NEVER appear in production.'
+      )
+      setUser(MOCK_USER)
+      setIsSuperAdmin(true)
+      setLoading(false)
+      return
+    }
+
+    // ── Preview mode — bypass Supabase, use local session token ──────────
     if (IS_PREVIEW) {
       verifyPreviewSession().then(previewUser => {
         setUser(previewUser)
@@ -96,7 +119,8 @@ export function AuthProvider({ children }) {
   }, [])
 
   async function signInWithGoogle() {
-    if (IS_PREVIEW) return { data: null, error: { message: 'Google sign-in is not available in preview mode.' } }
+    if (DISABLE_AUTH) return { data: null, error: { message: 'Auth is disabled in this environment.' } }
+    if (IS_PREVIEW)   return { data: null, error: { message: 'Google sign-in is not available in preview mode.' } }
     setAccessDenied(false)
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
@@ -106,6 +130,11 @@ export function AuthProvider({ children }) {
   }
 
   async function signOut() {
+    // In disable-auth mode sign-out is a no-op — re-inject the mock user
+    if (DISABLE_AUTH) {
+      setUser(MOCK_USER)
+      return
+    }
     if (IS_PREVIEW) {
       clearPreviewSession()
       setUser(null)
@@ -124,6 +153,7 @@ export function AuthProvider({ children }) {
       user, loading, accessDenied, isSuperAdmin,
       signOut, signInWithGoogle, setPreviewUser,
       isPreview: IS_PREVIEW,
+      isDisableAuth: DISABLE_AUTH,
     }}>
       {children}
     </AuthContext.Provider>

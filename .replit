@@ -63,3 +63,8 @@ externalPort = 6000
 deploymentTarget = "static"
 build = ["npm", "run", "build"]
 publicDir = "dist"
+
+[userenv]
+
+[userenv.development]
+VITE_DISABLE_AUTH = "true"
