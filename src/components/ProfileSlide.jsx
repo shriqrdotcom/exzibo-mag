@@ -18,15 +18,15 @@ const TEAM_ACCENT_START = '#6366F1'
 const TEAM_ACCENT_END   = '#8B5CF6'
 
 const TEAM_STATUS_CONFIG = {
-  active:  { color: '#22C55E', glow: 'rgba(34,197,94,0.3)',  label: 'Active'  },
-  idle:    { color: '#F97316', glow: 'rgba(249,115,22,0.3)', label: 'Idle'    },
+  active:  { color: '#22C55E', glow: 'rgba(34,197,94,0.3)',  label: 'Online'  },
+  idle:    { color: '#22C55E', glow: 'rgba(34,197,94,0.3)',  label: 'Online'  },
   offline: { color: '#9CA3AF', glow: 'none',                 label: 'Offline' },
 }
 
 const TEAM_DEMO_MEMBERS = [
   { id: 'demo1', name: 'Donna Hicks',    role: 'Admin',    group: 'Admin',    department: 'Finance & Admin', avatar: 'https://i.pravatar.cc/150?img=47', status: 'active' },
   { id: 'demo2', name: 'Kathleen Harper', role: 'Admin',   group: 'Admin',    department: 'Management',      avatar: 'https://i.pravatar.cc/150?img=44', status: 'active' },
-  { id: 'demo3', name: 'Mary Long',      role: 'Employee', group: 'Employee', department: 'Marketing',       avatar: 'https://i.pravatar.cc/150?img=32', status: 'active' },
+  { id: 'demo3', name: 'Mary Long',      role: 'Manager',  group: 'Manager',  department: 'Marketing',       avatar: 'https://i.pravatar.cc/150?img=32', status: 'active' },
 ]
 
 const SUPPORT_MEMBERS = [
@@ -1423,10 +1423,10 @@ export default function ProfileSlide({
                 </div>
               ))}
 
-              {/* Support Team section */}
+              {/* Employee section */}
               <div style={{ marginBottom: '8px' }}>
                 <div style={{ fontSize: '11px', fontWeight: 600, color: '#9CA3AF', letterSpacing: '0.02em', marginBottom: '6px', paddingLeft: '2px' }}>
-                  Support Team
+                  Employee
                 </div>
                 <div style={{ background: '#fff', borderRadius: '14px', boxShadow: '0 1px 8px rgba(0,0,0,0.07)', overflow: 'hidden' }}>
                   {SUPPORT_MEMBERS.map((m, idx) => (
