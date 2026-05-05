@@ -1139,13 +1139,23 @@ export default function ProfileSlide({
           {/* Tab Switcher */}
           <div style={{ display: 'flex', background: TAB_BG, borderRadius: '14px', margin: '0 16px 16px', padding: '4px' }}>
             {['PROFILE', 'TEAM', 'REMAINING DAY'].map(tab => (
-              <button key={tab} onClick={() => setActiveTab(tab)} style={{
-                flex: 1, padding: '9px 4px', borderRadius: '10px', border: 'none',
-                background: activeTab === tab ? TAB_ACTIVE : 'transparent',
-                color: activeTab === tab ? '#fff' : '#666',
-                fontWeight: 700, fontSize: '11px', letterSpacing: '0.04em',
-                cursor: 'pointer', transition: 'background 0.2s, color 0.2s',
-              }}>
+              <button
+                key={tab}
+                onClick={() => {
+                  if (tab === 'TEAM') {
+                    if (onTeamClick) onTeamClick()
+                  } else {
+                    setActiveTab(tab)
+                  }
+                }}
+                style={{
+                  flex: 1, padding: '9px 4px', borderRadius: '10px', border: 'none',
+                  background: activeTab === tab ? TAB_ACTIVE : 'transparent',
+                  color: activeTab === tab ? '#fff' : '#666',
+                  fontWeight: 700, fontSize: '11px', letterSpacing: '0.04em',
+                  cursor: 'pointer', transition: 'background 0.2s, color 0.2s',
+                }}
+              >
                 {tab}
               </button>
             ))}
