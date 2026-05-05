@@ -12,7 +12,84 @@ import { FaFacebook, FaInstagram, FaLinkedinIn, FaYoutube } from 'react-icons/fa
 import { FaXTwitter } from 'react-icons/fa6'
 import AddMembersModal from './AddMembersModal'
 import RemainingDaysModal from './RemainingDaysModal'
-import { updateRestaurant, uploadDataUrlToStorage } from '../lib/db'
+import { updateRestaurant, uploadDataUrlToStorage, getTeamMembers } from '../lib/db'
+
+const TEAM_ACCENT_START = '#6366F1'
+const TEAM_ACCENT_END   = '#8B5CF6'
+
+const TEAM_STATUS_CONFIG = {
+  active:  { color: '#22C55E', glow: 'rgba(34,197,94,0.3)',  label: 'Active'  },
+  idle:    { color: '#F97316', glow: 'rgba(249,115,22,0.3)', label: 'Idle'    },
+  offline: { color: '#9CA3AF', glow: 'none',                 label: 'Offline' },
+}
+
+const TEAM_DEMO_MEMBERS = [
+  { id: 'demo1', name: 'Donna Hicks',    role: 'Admin',    group: 'Admin',    department: 'Finance & Admin', avatar: 'https://i.pravatar.cc/150?img=47', status: 'active' },
+  { id: 'demo2', name: 'Kathleen Harper', role: 'Admin',   group: 'Admin',    department: 'Management',      avatar: 'https://i.pravatar.cc/150?img=44', status: 'active' },
+  { id: 'demo3', name: 'Mary Long',      role: 'Employee', group: 'Employee', department: 'Marketing',       avatar: 'https://i.pravatar.cc/150?img=32', status: 'active' },
+]
+
+const SUPPORT_MEMBERS = [
+  { id: 'sup1', name: 'Alex Carter',  role: 'Support Agent', department: 'Customer Support',  avatar: 'https://i.pravatar.cc/150?img=11', status: 'active'  },
+  { id: 'sup2', name: 'Sophia Lee',   role: 'HR Manager',    department: 'Human Resources',   avatar: 'https://i.pravatar.cc/150?img=25', status: 'idle'    },
+  { id: 'sup3', name: 'Daniel Smith', role: 'Developer',     department: 'Engineering',        avatar: 'https://i.pravatar.cc/150?img=59', status: 'offline' },
+]
+
+function groupTeamMembers(members) {
+  const order = [], map = {}
+  members.forEach(m => {
+    const key = m.group || m.role || 'Other'
+    if (!map[key]) { map[key] = []; order.push(key) }
+    map[key].push(m)
+  })
+  return order.map(k => ({ label: k, members: map[k] }))
+}
+
+function InlineMemberRow({ member, isLast }) {
+  const [imgError, setImgError] = React.useState(false)
+  const [hovered, setHovered]   = React.useState(false)
+  const initials = member.name.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase()
+  const statusKey = member.status || 'active'
+  const status = TEAM_STATUS_CONFIG[statusKey] || TEAM_STATUS_CONFIG.offline
+  return (
+    <div
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        display: 'flex', alignItems: 'center', gap: '13px',
+        padding: '13px 16px',
+        background: hovered ? '#FAFAFA' : '#fff',
+        borderBottom: isLast ? 'none' : '1px solid #F5F5F7',
+        transition: 'background 0.15s',
+      }}
+    >
+      <div style={{ position: 'relative', flexShrink: 0 }}>
+        <div style={{
+          width: '44px', height: '44px', borderRadius: '50%',
+          background: `linear-gradient(135deg, ${TEAM_ACCENT_START}, ${TEAM_ACCENT_END})`,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
+        }}>
+          {member.avatar && !imgError
+            ? <img src={member.avatar} alt={member.name} onError={() => setImgError(true)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            : <span style={{ fontWeight: 800, fontSize: '15px', color: '#fff' }}>{initials}</span>
+          }
+        </div>
+        <span style={{
+          position: 'absolute', bottom: '1px', right: '1px',
+          width: '11px', height: '11px', borderRadius: '50%',
+          background: status.color, border: '2px solid #fff',
+          boxShadow: status.glow !== 'none' ? `0 0 0 1px ${status.glow}` : 'none',
+        }} />
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontWeight: 700, fontSize: '13px', color: '#111', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: '2px' }}>{member.name}</div>
+        <div style={{ fontSize: '12px', color: '#555', fontWeight: 500, marginBottom: '1px' }}>{member.role}</div>
+        {member.department && <div style={{ fontSize: '11px', color: '#AEAEB2', fontWeight: 500 }}>{member.department}</div>}
+      </div>
+      <div style={{ fontSize: '11px', fontWeight: 600, color: status.color, flexShrink: 0 }}>{status.label}</div>
+    </div>
+  )
+}
 
 const LIME = '#A8E63D'
 
@@ -179,6 +256,22 @@ export default function ProfileSlide({
   const [restaurantUID, setRestaurantUID] = useState('')
 
   const [activeTab, setActiveTab] = useState('PROFILE')
+  const [teamMembers, setTeamMembers] = useState([])
+
+  useEffect(() => {
+    async function loadTeam() {
+      try {
+        const rows = await getTeamMembers(restaurantId)
+        if (rows && rows.length > 0) { setTeamMembers(rows); return }
+      } catch { /* fallback below */ }
+      try {
+        const raw = localStorage.getItem(`exzibo_team_${restaurantId || 'default'}`)
+        if (raw) { const p = JSON.parse(raw); if (p.length > 0) { setTeamMembers(p); return } }
+      } catch { /* noop */ }
+      setTeamMembers(TEAM_DEMO_MEMBERS)
+    }
+    loadTeam()
+  }, [restaurantId])
   const [stats, setStats] = useState({ members: 0, todayOrders: 0, tables: 0 })
 
   const [googleReviewOpen, setGoogleReviewOpen] = useState(false)
@@ -1141,13 +1234,7 @@ export default function ProfileSlide({
             {['PROFILE', 'TEAM', 'REMAINING DAY'].map(tab => (
               <button
                 key={tab}
-                onClick={() => {
-                  if (tab === 'TEAM') {
-                    if (onTeamClick) onTeamClick()
-                  } else {
-                    setActiveTab(tab)
-                  }
-                }}
+                onClick={() => setActiveTab(tab)}
                 style={{
                   flex: 1, padding: '9px 4px', borderRadius: '10px', border: 'none',
                   background: activeTab === tab ? TAB_ACTIVE : 'transparent',
@@ -1318,6 +1405,36 @@ export default function ProfileSlide({
             </div>
           )}
 
+
+          {/* TEAM Tab */}
+          {activeTab === 'TEAM' && (
+            <div style={{ padding: '0 16px 8px' }}>
+              {groupTeamMembers(teamMembers).map(group => (
+                <div key={group.label} style={{ marginBottom: '12px' }}>
+                  <div style={{ fontSize: '11px', fontWeight: 600, color: '#9CA3AF', letterSpacing: '0.02em', marginBottom: '6px', paddingLeft: '2px' }}>
+                    {group.label}
+                  </div>
+                  <div style={{ background: '#fff', borderRadius: '14px', boxShadow: '0 1px 8px rgba(0,0,0,0.07)', overflow: 'hidden' }}>
+                    {group.members.map((m, idx) => (
+                      <InlineMemberRow key={m.id} member={m} isLast={idx === group.members.length - 1} />
+                    ))}
+                  </div>
+                </div>
+              ))}
+
+              {/* Support Team section */}
+              <div style={{ marginBottom: '8px' }}>
+                <div style={{ fontSize: '11px', fontWeight: 600, color: '#9CA3AF', letterSpacing: '0.02em', marginBottom: '6px', paddingLeft: '2px' }}>
+                  Support Team
+                </div>
+                <div style={{ background: '#fff', borderRadius: '14px', boxShadow: '0 1px 8px rgba(0,0,0,0.07)', overflow: 'hidden' }}>
+                  {SUPPORT_MEMBERS.map((m, idx) => (
+                    <InlineMemberRow key={m.id} member={m} isLast={idx === SUPPORT_MEMBERS.length - 1} />
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* REMAINING DAY Tab */}
           {activeTab === 'REMAINING DAY' && (
