@@ -210,6 +210,7 @@ export default function ProfileSlide({
   const [showAddMembers, setShowAddMembers] = useState(false)
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false)
   const [showRemainingDays, setShowRemainingDays] = useState(false)
+  const [showSubscriptionDates, setShowSubscriptionDates] = useState(false)
   const { activeRole } = useRole()
 
   const subscriptionInfo = {
@@ -1446,10 +1447,24 @@ export default function ProfileSlide({
               <div style={{ margin: '0 16px', background: '#fff', borderRadius: '20px', padding: '22px 20px 20px', boxShadow: '0 2px 16px rgba(0,0,0,0.08)' }}>
 
                 {/* Top row: title + month badge */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: showSubscriptionDates ? '10px' : '14px' }}>
                   <div style={{ fontWeight: 800, fontSize: '15px', color: '#111', letterSpacing: '0.01em' }}>SUBSCRIPTION PLAN</div>
-                  <div style={{ background: '#111', color: '#fff', fontWeight: 700, fontSize: '12px', borderRadius: '20px', padding: '5px 14px', letterSpacing: '0.04em' }}>{currentMonth}</div>
+                  <button
+                    onClick={() => setShowSubscriptionDates(v => !v)}
+                    style={{ background: '#111', color: '#fff', fontWeight: 700, fontSize: '12px', borderRadius: '20px', padding: '5px 14px', letterSpacing: '0.04em', border: 'none', cursor: 'pointer', transition: 'background 0.15s' }}
+                    onMouseEnter={e => e.currentTarget.style.background = '#333'}
+                    onMouseLeave={e => e.currentTarget.style.background = '#111'}
+                  >{currentMonth}</button>
                 </div>
+
+                {/* Date dropdown */}
+                {showSubscriptionDates && (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', background: '#F5F5F7', borderRadius: '12px', padding: '10px 14px', marginBottom: '14px', fontSize: '12px', fontWeight: 600, color: '#444', letterSpacing: '0.02em' }}>
+                    <span style={{ color: '#111' }}>{subscriptionInfo.startDate}</span>
+                    <span style={{ color: '#AEAEB2', fontWeight: 400, fontSize: '14px' }}>—</span>
+                    <span style={{ color: '#111' }}>{subscriptionInfo.endDate}</span>
+                  </div>
+                )}
 
                 {/* Price */}
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', marginBottom: '20px' }}>
