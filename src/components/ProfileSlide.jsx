@@ -11,6 +11,7 @@ import { PiPencilCircle } from 'react-icons/pi'
 import { FaFacebook, FaInstagram, FaLinkedinIn, FaYoutube } from 'react-icons/fa'
 import { FaXTwitter } from 'react-icons/fa6'
 import AddMembersModal from './AddMembersModal'
+import RemainingDaysModal from './RemainingDaysModal'
 import { updateRestaurant, uploadDataUrlToStorage, getTeamMembers } from '../lib/db'
 
 const TEAM_ACCENT_START = '#6366F1'
@@ -208,7 +209,15 @@ export default function ProfileSlide({
 
   const [showAddMembers, setShowAddMembers] = useState(false)
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false)
+  const [showRemainingDays, setShowRemainingDays] = useState(false)
   const { activeRole } = useRole()
+
+  const subscriptionInfo = {
+    planName: 'Growth',
+    startDate: '22-04-2026',
+    endDate: '03-05-2026',
+    daysLeft: 24,
+  }
 
   const [editingName, setEditingName] = useState(false)
   const [nameInput, setNameInput] = useState(restaurantName || '')
@@ -1222,7 +1231,7 @@ export default function ProfileSlide({
 
           {/* Tab Switcher */}
           <div style={{ display: 'flex', background: TAB_BG, borderRadius: '14px', margin: '0 16px 16px', padding: '4px' }}>
-            {['PROFILE', 'TEAM'].map(tab => (
+            {['PROFILE', 'TEAM', 'REMAINING DAY'].map(tab => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -1427,6 +1436,27 @@ export default function ProfileSlide({
             </div>
           )}
 
+          {/* REMAINING DAY Tab */}
+          {activeTab === 'REMAINING DAY' && (
+            <div style={{ background: '#fff', borderRadius: '16px', margin: '0 16px', overflow: 'hidden', boxShadow: '0 1px 8px rgba(0,0,0,0.07)' }}>
+              <div
+                onClick={() => setShowRemainingDays(true)}
+                style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '15px 18px', cursor: 'pointer', background: 'transparent', transition: 'background 0.15s' }}
+                onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,0,0,0.03)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+              >
+                <div style={{ width: '44px', height: '44px', borderRadius: '14px', background: ICON_ROW_BG, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#555', flexShrink: 0 }}>
+                  <Calendar size={22} strokeWidth={1.5} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 800, fontSize: '13px', color: '#111', letterSpacing: '0.04em' }}>SUBSCRIPTION STATUS</div>
+                  <div style={{ fontSize: '11px', color: '#999', marginTop: '2px', letterSpacing: '0.03em' }}>VIEW REMAINING DAYS</div>
+                </div>
+                <ChevronRight size={16} color="#C7C7CC" strokeWidth={2.5} />
+              </div>
+            </div>
+          )}
+
         </div>
 
         {/* Status toasts */}
@@ -1441,6 +1471,11 @@ export default function ProfileSlide({
         )}
 
         <AddMembersModal open={showAddMembers} onClose={() => setShowAddMembers(false)} restaurantId={restaurantId} />
+        <RemainingDaysModal
+          open={showRemainingDays} onClose={() => setShowRemainingDays(false)}
+          planName={subscriptionInfo.planName} startDate={subscriptionInfo.startDate}
+          endDate={subscriptionInfo.endDate} daysLeft={subscriptionInfo.daysLeft} isActive={true}
+        />
 
         {logoCompressModal && (
           <div style={{ position: 'fixed', inset: 0, zIndex: 2000, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
@@ -1696,6 +1731,16 @@ export default function ProfileSlide({
             restaurantId={restaurantId}
           />
 
+
+          <RemainingDaysModal
+            open={showRemainingDays}
+            onClose={() => setShowRemainingDays(false)}
+            planName={subscriptionInfo.planName}
+            startDate={subscriptionInfo.startDate}
+            endDate={subscriptionInfo.endDate}
+            daysLeft={subscriptionInfo.daysLeft}
+            isActive={true}
+          />
 
           {/* Logout */}
           <div style={{
