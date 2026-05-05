@@ -1453,7 +1453,7 @@ export default function ProfileSlide({
 
                 {/* Price */}
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', marginBottom: '20px' }}>
-                  <span style={{ fontWeight: 900, fontSize: '38px', color: '#111', letterSpacing: '-0.02em', lineHeight: 1 }}>8,000</span>
+                  <span style={{ fontWeight: 'bold', fontSize: '38px', color: '#111', letterSpacing: '-0.02em', lineHeight: 1 }}>8,000</span>
                   <span style={{ fontWeight: 500, fontSize: '16px', color: '#555' }}>INR</span>
                 </div>
 
