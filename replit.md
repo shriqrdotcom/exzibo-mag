@@ -21,10 +21,11 @@ A full-stack restaurant management SaaS platform. Features a cinematic dark them
 - `attached_assets/` — Design references and screenshots
 
 ## Environment Variables (Secrets)
-- `VITE_SUPABASE_URL` — Supabase project URL (set in Replit Secrets)
-- `VITE_SUPABASE_ANON_KEY` — Supabase anonymous/public key (set in Replit Secrets)
+All secrets are stored in Replit Secrets (never in code):
+- `VITE_SUPABASE_URL` — Supabase project URL
+- `VITE_SUPABASE_ANON_KEY` — Supabase anonymous/public key
 - `PREVIEW_EMAIL` — (optional) Email for dev preview login bypass
-- `PREVIEW_PASSWORD` — (optional) Password for dev preview login bypass
+- `PREVIEW_PASSWORD_HASH` — (optional) bcrypt hash of preview password
 - `PREVIEW_SECRET` — (optional) HMAC secret for preview session tokens
 
 ## Running
@@ -33,10 +34,15 @@ A full-stack restaurant management SaaS platform. Features a cinematic dark them
 - Vite config: `allowedHosts: true` for Replit proxy compatibility
 
 ## Auth & Data
-- **Auth**: Supabase Auth (Google OAuth in production). Only allowlisted emails can access the system.
-- **Preview/Dev mode**: A separate email+password bypass is built into `vite.config.js` (middleware at `/api/preview-login` and `/api/preview-verify`). Set `PREVIEW_EMAIL` and `PREVIEW_PASSWORD` secrets to use it.
+- **Auth**: Supabase Auth (Google OAuth in production). Only allowlisted emails (`exzibonew@gmail.com`, `trisanu07.nandi@gmail.com`) can access the system.
+- **Preview/Dev mode**: A separate email+password bypass is built into `vite.config.js` (middleware at `/api/preview-login` and `/api/preview-verify`). Set `PREVIEW_EMAIL` and `PREVIEW_PASSWORD_HASH` secrets to use it. Since Replit is detected as a preview environment (`IS_PREVIEW=true`), the login page shows the preview credentials form instead of Google OAuth.
 - **Database**: Supabase PostgreSQL with Row Level Security. Tables: `restaurants`, `menu_items`, `menu_categories`, `orders`, `bookings`, `team_members`, `user_settings`, `allowed_users`.
 - **Service layer**: `src/lib/db.js` — typed functions for all Supabase CRUD operations.
+
+## Replit Compatibility Notes
+- `vite.config.js` has `server.allowedHosts: true` — required for Replit's proxy iframe
+- `src/lib/env.js` detects Replit/localhost and sets `IS_PREVIEW=true`, enabling the preview login bypass
+- The app is a pure frontend SPA — all Supabase calls happen client-side using the anon key with Row Level Security
 
 ## Routes
 ### Public
