@@ -2,12 +2,13 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
 import { createHmac } from 'crypto'
+import bcrypt from 'bcryptjs'
 
 function previewAuthPlugin() {
   return {
     name: 'preview-auth',
     configureServer(server) {
-      server.middlewares.use('/api/preview-login', (req, res) => {
+      server.middlewares.use('/api/preview-login', async (req, res) => {
         if (req.method !== 'POST') {
           res.statusCode = 405
           res.end('Method Not Allowed')
@@ -16,20 +17,23 @@ function previewAuthPlugin() {
 
         let body = ''
         req.on('data', chunk => { body += chunk })
-        req.on('end', () => {
+        req.on('end', async () => {
           try {
             const { email, password } = JSON.parse(body)
             const validEmail    = process.env.PREVIEW_EMAIL
-            const validPassword = process.env.PREVIEW_PASSWORD
+            const validHash     = process.env.PREVIEW_PASSWORD_HASH
 
-            if (!validEmail || !validPassword) {
+            if (!validEmail || !validHash) {
               res.statusCode = 500
               res.setHeader('Content-Type', 'application/json')
               res.end(JSON.stringify({ error: 'Preview credentials not configured on server.' }))
               return
             }
 
-            if (email === validEmail && password === validPassword) {
+            const emailMatch    = email === validEmail
+            const passwordMatch = await bcrypt.compare(password, validHash)
+
+            if (emailMatch && passwordMatch) {
               const secret  = process.env.PREVIEW_SECRET || process.env.REPL_ID || 'preview-hmac-secret'
               const payload = JSON.stringify({ email, exp: Date.now() + 8 * 60 * 60 * 1000 })
               const sig     = createHmac('sha256', secret).update(payload).digest('hex')

@@ -1,0 +1,64 @@
+Act as a senior full-stack developer.
+
+Context:
+My project already has Google Authentication implemented for the main production login.
+
+Problem:
+In Replit preview mode, there is a separate “preview login system” using credentials (email + password), which is currently different from the main authentication system.
+
+Goal:
+Create a clean and controlled preview login system with updated credentials.
+
+Requirements:
+
+1. Remove Old Preview Credentials
+- Completely remove any existing hardcoded or stored preview login email/password.
+- Ensure no old credentials can be used anymore.
+
+2. Create New Preview Login Credentials
+- Email: trisanu07.nandi@gmail.com
+- Password: tn487442
+- Store these securely (use environment variables if possible, NOT hardcoded in frontend).
+
+3. Preview Login System Behavior
+- This login should ONLY work in preview/development mode.
+- It must NOT interfere with the main Google Authentication system.
+- Keep both systems fully isolated.
+
+4. Authentication Logic
+- When user logs in with preview credentials:
+  - Validate email & password
+  - If correct → allow access to preview dashboard/site
+  - If incorrect → show proper error message
+
+5. Security
+- Hash the password before storing (use bcrypt or similar).
+- Do NOT expose credentials in frontend code.
+- Prevent bypass (no direct URL access without login).
+
+6. UI Requirements
+- Simple login form:
+  - Email input
+  - Password input
+  - Login button
+- Show:
+  - "Invalid credentials" on failure
+  - Redirect to preview dashboard on success
+
+7. Routing Protection
+- Protect all preview routes using middleware/auth guard.
+- If not logged in → redirect to preview login page.
+
+8. Clean Code Structure
+- Separate preview auth logic from main auth.
+- Use modular structure (auth service / middleware / routes).
+
+9. Optional (Recommended)
+- Add a flag like:
+  ENV: PREVIEW_MODE=true
+- Only enable this login system when preview mode is active.
+
+Deliver:
+- Fully working preview login system
+- Clean, maintainable, and secure implementation
+- No impact on existing Google Authentication
