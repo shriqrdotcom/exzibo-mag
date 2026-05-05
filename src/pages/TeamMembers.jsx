@@ -15,6 +15,7 @@ const DEMO_MEMBERS = [
     department: 'Finance & Admin',
     avatar: 'https://i.pravatar.cc/150?img=47',
     active: true,
+    status: 'active',
   },
   {
     id: 'demo2',
@@ -24,6 +25,7 @@ const DEMO_MEMBERS = [
     department: 'Management',
     avatar: 'https://i.pravatar.cc/150?img=44',
     active: true,
+    status: 'active',
   },
   {
     id: 'demo3',
@@ -33,8 +35,42 @@ const DEMO_MEMBERS = [
     department: 'Marketing',
     avatar: 'https://i.pravatar.cc/150?img=32',
     active: true,
+    status: 'active',
   },
 ]
+
+const SUPPORT_TEAM_MEMBERS = [
+  {
+    id: 'support1',
+    name: 'Alex Carter',
+    role: 'Support Agent',
+    department: 'Customer Support',
+    avatar: 'https://i.pravatar.cc/150?img=11',
+    status: 'active',
+  },
+  {
+    id: 'support2',
+    name: 'Sophia Lee',
+    role: 'HR Manager',
+    department: 'Human Resources',
+    avatar: 'https://i.pravatar.cc/150?img=25',
+    status: 'idle',
+  },
+  {
+    id: 'support3',
+    name: 'Daniel Smith',
+    role: 'Developer',
+    department: 'Engineering',
+    avatar: 'https://i.pravatar.cc/150?img=59',
+    status: 'offline',
+  },
+]
+
+const STATUS_CONFIG = {
+  active:  { color: '#22C55E', glow: 'rgba(34,197,94,0.3)',   label: 'Active'  },
+  idle:    { color: '#F97316', glow: 'rgba(249,115,22,0.3)',  label: 'Idle'    },
+  offline: { color: '#9CA3AF', glow: 'none',                  label: 'Offline' },
+}
 
 function storageKey(id) { return `exzibo_team_${id || 'default'}` }
 
@@ -129,7 +165,7 @@ export default function TeamMembers() {
       {/* Content */}
       <div style={{ padding: '20px 16px', maxWidth: '520px', margin: '0 auto' }}>
 
-        {/* Grouped list */}
+        {/* Grouped list — Admin & Employee */}
         {members.length === 0 ? (
           <div style={{
             textAlign: 'center', padding: '44px 20px',
@@ -174,6 +210,35 @@ export default function TeamMembers() {
             </div>
           ))
         )}
+
+        {/* ── Support Team section ───────────────────────────────────────── */}
+        <div style={{ marginTop: '24px' }}>
+          {/* Section header */}
+          <div style={{
+            fontSize: '12px', fontWeight: 600,
+            color: '#9CA3AF', letterSpacing: '0.02em',
+            marginBottom: '8px', paddingLeft: '4px',
+          }}>
+            Support Team
+          </div>
+
+          {/* Cards container */}
+          <div style={{
+            background: '#fff',
+            borderRadius: '16px',
+            boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
+            overflow: 'hidden',
+          }}>
+            {SUPPORT_TEAM_MEMBERS.map((member, idx) => (
+              <MemberRow
+                key={member.id}
+                member={member}
+                isLast={idx === SUPPORT_TEAM_MEMBERS.length - 1}
+              />
+            ))}
+          </div>
+        </div>
+
       </div>
     </div>
   )
@@ -190,6 +255,9 @@ function MemberRow({ member, isLast }) {
     .join('')
     .toUpperCase()
 
+  const statusKey = member.status || (member.active ? 'active' : 'offline')
+  const status    = STATUS_CONFIG[statusKey] || STATUS_CONFIG.offline
+
   return (
     <div
       onMouseEnter={() => setHovered(true)}
@@ -202,7 +270,7 @@ function MemberRow({ member, isLast }) {
         transition: 'background 0.15s',
       }}
     >
-      {/* Avatar with online dot */}
+      {/* Avatar with status dot */}
       <div style={{ position: 'relative', flexShrink: 0 }}>
         <div style={{
           width: '48px', height: '48px', borderRadius: '50%',
@@ -220,13 +288,13 @@ function MemberRow({ member, isLast }) {
             : <span style={{ fontWeight: 800, fontSize: '17px', color: '#fff' }}>{initials}</span>
           }
         </div>
-        {/* Green online dot */}
+        {/* Status dot */}
         <span style={{
           position: 'absolute', bottom: '1px', right: '1px',
           width: '12px', height: '12px', borderRadius: '50%',
-          background: '#22C55E',
+          background: status.color,
           border: '2px solid #fff',
-          boxShadow: '0 0 0 1px rgba(34,197,94,0.3)',
+          boxShadow: status.glow !== 'none' ? `0 0 0 1px ${status.glow}` : 'none',
         }} />
       </div>
 
@@ -247,6 +315,15 @@ function MemberRow({ member, isLast }) {
             {member.department}
           </div>
         )}
+      </div>
+
+      {/* Status label */}
+      <div style={{
+        fontSize: '11px', fontWeight: 600,
+        color: status.color,
+        flexShrink: 0,
+      }}>
+        {status.label}
       </div>
     </div>
   )
