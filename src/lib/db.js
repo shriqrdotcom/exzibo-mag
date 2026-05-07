@@ -1,4 +1,5 @@
 import { supabase } from './supabase'
+import { DISABLE_AUTH } from './env'
 
 // ── Restaurant UID — server-side unique 10-digit generator ───
 
@@ -11,6 +12,17 @@ export async function generateRestaurantUID() {
 // ── Restaurants ──────────────────────────────────────────────
 
 export async function getRestaurants() {
+  // In DISABLE_AUTH dev mode there is no real Supabase session, so we cannot
+  // call auth-gated RPCs. Fetch all restaurants publicly instead.
+  if (DISABLE_AUTH) {
+    const { data, error } = await supabase
+      .from('restaurants')
+      .select('*')
+      .order('created_at', { ascending: false })
+    if (error) throw error
+    return data ?? []
+  }
+
   const { data: { user }, error: authError } = await supabase.auth.getUser()
   if (authError || !user) throw new Error('Not authenticated')
 
