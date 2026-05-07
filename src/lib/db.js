@@ -19,10 +19,7 @@ export async function getRestaurants() {
       .from('restaurants')
       .select('*')
       .order('created_at', { ascending: false })
-    if (error) {
-      console.error('[db] getRestaurants error:', JSON.stringify(error))
-      throw error
-    }
+    if (error) throw error
     return data ?? []
   }
 
