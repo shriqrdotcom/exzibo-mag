@@ -5,7 +5,7 @@ import { useRole } from '../context/RoleContext'
 import {
   X, Power, MapPin, Phone, Store, Users, Image,
   Loader2, AlertCircle, CheckCircle2, Check, XCircle, Mail, Clock, UserPlus,
-  User, UserX, ChevronRight, Calendar, Star, Link2,
+  User, UserX, ChevronRight, Calendar, Star, Link2, Send,
 } from 'lucide-react'
 import { PiPencilCircle } from 'react-icons/pi'
 import { FaFacebook, FaInstagram, FaLinkedinIn, FaYoutube } from 'react-icons/fa'
@@ -1958,6 +1958,13 @@ export default function ProfileSlide({
                     setContactEmail(email)
                     setEditingContact(true)
                   },
+                },
+                {
+                  key: 'telegram',
+                  icon: <Send size={20} strokeWidth={1.8} />,
+                  label: 'Telegram',
+                  desc: 'Connect your Telegram',
+                  onClick: () => {},
                 },
               ].map((row, idx, arr) => (
                 <div
