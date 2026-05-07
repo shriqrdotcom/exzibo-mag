@@ -1,0 +1,63 @@
+In the Master Control section, I have a TELEGRAM row that was recently added 
+to the profile settings list. Now I need to add full logic to it.
+
+CURRENT BEHAVIOR:
+The TELEGRAM row exists as a static list item with a chevron (>).
+
+REQUIRED BEHAVIOR:
+
+─────────────────────────────────────────
+STEP 1 — CLICK TO OPEN MODAL
+─────────────────────────────────────────
+When the user clicks the TELEGRAM row, open a modal/overlay panel 
+following the exact same style as the other existing modals in this 
+dashboard (centered overlay, blurred background, card style).
+
+Inside this modal:
+
+- Title: "TELEGRAM" at the top
+- A labeled input field titled "ADD URL"
+  - Placeholder text: "Enter your Telegram link"
+  - Example: https://t.me/yourusername
+- A "SAVE" button below the input
+  - On click: save the entered URL to the database/state 
+    (same way other settings like Google Reviews Link are saved)
+  - Show a success confirmation after saving
+  - Close the modal after successful save
+
+─────────────────────────────────────────
+STEP 2 — VIEW SECTION BELOW INPUT
+─────────────────────────────────────────
+Below the input + SAVE button (inside the same modal), add a 
+separate section labeled "VIEW":
+
+- Display the official Telegram logo (use the real blue Telegram 
+  SVG logo — the paper plane inside a blue circle)
+- Below or beside the logo, show the text "VIEW"
+- This entire area is clickable
+- When clicked: open the saved Telegram URL in a new browser tab
+  (window.open(savedURL, '_blank'))
+- If no URL has been saved yet, show a disabled/grayed state 
+  with tooltip: "Save a link first"
+
+─────────────────────────────────────────
+STEP 3 — PERSIST THE URL
+─────────────────────────────────────────
+- Save the Telegram URL to the same database field/table 
+  used by other profile settings in this section
+- On modal open, pre-fill the input with the previously saved 
+  URL if one exists
+- The TELEGRAM row in the list should show a small 
+  active indicator (like a colored dot or checkmark) 
+  when a URL has been saved — same pattern used elsewhere 
+  in the dashboard if applicable
+
+─────────────────────────────────────────
+IMPORTANT RULES:
+─────────────────────────────────────────
+- Do NOT modify any other existing rows or their modals
+- Match the exact modal style, font, button style, and 
+  spacing used in other settings modals in this dashboard
+- Do NOT hardcode the Telegram URL — it must be dynamic 
+  and editable by the user
+- Follow all existing save/update patterns used in this project

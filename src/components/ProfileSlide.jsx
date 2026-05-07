@@ -289,6 +289,26 @@ export default function ProfileSlide({
     setGoogleReviewOpen(false)
   }
 
+  const [telegramOpen, setTelegramOpen] = useState(false)
+  const [telegramInput, setTelegramInput] = useState('')
+  const [telegramSaved, setTelegramSaved] = useState('')
+  const [telegramSuccess, setTelegramSuccess] = useState(false)
+
+  useEffect(() => {
+    const key = `exzibo_telegram_${restaurantId || 'default'}`
+    const val = localStorage.getItem(key) || ''
+    setTelegramInput(val)
+    setTelegramSaved(val)
+  }, [restaurantId])
+
+  function handleTelegramSave() {
+    const key = `exzibo_telegram_${restaurantId || 'default'}`
+    localStorage.setItem(key, telegramInput)
+    setTelegramSaved(telegramInput)
+    setTelegramSuccess(true)
+    setTimeout(() => { setTelegramSuccess(false); setTelegramOpen(false) }, 1200)
+  }
+
   async function handleGoogleReviewPaste() {
     try {
       const text = await navigator.clipboard.readText()
@@ -753,13 +773,18 @@ export default function ProfileSlide({
         title: 'TELEGRAM',
         sub: 'CONNECT YOUR TELEGRAM',
         onClick: () => {
-          setHoursModalOpen(false)
-          setEditingLocation(false)
-          setAddressError('')
-          setEditingContact(false)
-          setContactPhoneError('')
-          setContactEmailError('')
-          setGoogleReviewOpen(false)
+          if (telegramOpen) { setTelegramOpen(false) }
+          else {
+            setHoursModalOpen(false)
+            setEditingLocation(false)
+            setAddressError('')
+            setEditingContact(false)
+            setContactPhoneError('')
+            setContactEmailError('')
+            setGoogleReviewOpen(false)
+            setTelegramInput(localStorage.getItem(`exzibo_telegram_${restaurantId || 'default'}`) || '')
+            setTelegramOpen(true)
+          }
         },
       },
     ]
@@ -1270,9 +1295,9 @@ export default function ProfileSlide({
                 <React.Fragment key={row.title}>
                   <div
                     onClick={row.onClick}
-                    style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '15px 18px', cursor: 'pointer', background: row.title === 'OPENING HOURS' && hoursModalOpen ? 'rgba(0,0,0,0.03)' : 'transparent', transition: 'background 0.15s' }}
+                    style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '15px 18px', cursor: 'pointer', background: (row.title === 'OPENING HOURS' && hoursModalOpen) || (row.title === 'TELEGRAM' && telegramOpen) ? 'rgba(0,0,0,0.03)' : 'transparent', transition: 'background 0.15s' }}
                     onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,0,0,0.03)'}
-                    onMouseLeave={e => e.currentTarget.style.background = row.title === 'OPENING HOURS' && hoursModalOpen ? 'rgba(0,0,0,0.03)' : 'transparent'}
+                    onMouseLeave={e => e.currentTarget.style.background = (row.title === 'OPENING HOURS' && hoursModalOpen) || (row.title === 'TELEGRAM' && telegramOpen) ? 'rgba(0,0,0,0.03)' : 'transparent'}
                   >
                     <div style={{ width: '44px', height: '44px', borderRadius: '14px', background: ICON_ROW_BG, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#555', flexShrink: 0 }}>
                       {row.icon}
@@ -1281,7 +1306,10 @@ export default function ProfileSlide({
                       <div style={{ fontWeight: 800, fontSize: '13px', color: '#111', letterSpacing: '0.04em' }}>{row.title}</div>
                       <div style={{ fontSize: '11px', color: '#999', marginTop: '2px', letterSpacing: '0.03em' }}>{row.sub}</div>
                     </div>
-                    <ChevronRight size={16} color={row.title === 'OPENING HOURS' && hoursModalOpen ? '#3B6BE8' : '#C7C7CC'} strokeWidth={2.5} style={{ transform: row.title === 'OPENING HOURS' && hoursModalOpen ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s' }} />
+                    {row.title === 'TELEGRAM' && telegramSaved && (
+                      <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#29B6F6', marginRight: '6px', flexShrink: 0 }} />
+                    )}
+                    <ChevronRight size={16} color={(row.title === 'OPENING HOURS' && hoursModalOpen) || (row.title === 'TELEGRAM' && telegramOpen) ? '#3B6BE8' : '#C7C7CC'} strokeWidth={2.5} style={{ transform: (row.title === 'OPENING HOURS' && hoursModalOpen) || (row.title === 'TELEGRAM' && telegramOpen) ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s' }} />
                   </div>
                   {row.title === 'OPENING HOURS' && hoursModalOpen && (
                     <div style={{ background: '#f8fafc', borderTop: '1px solid #F0F0F5', padding: '20px 18px', animation: 'hoursInlineIn 0.2s cubic-bezier(0.2, 0.8, 0.2, 1)' }}>
@@ -1411,6 +1439,76 @@ export default function ProfileSlide({
                           autoFocus
                           style={{ flex: 1, border: 'none', background: 'transparent', fontSize: '13px', color: '#0f172a', outline: 'none', fontFamily: 'inherit', minWidth: 0 }}
                         />
+                      </div>
+                    </div>
+                  )}
+                  {row.title === 'TELEGRAM' && telegramOpen && (
+                    <div style={{ background: '#f8fafc', borderTop: '1px solid #F0F0F5', padding: '18px 18px 16px', animation: 'locInlineIn 0.2s cubic-bezier(0.2, 0.8, 0.2, 1)' }}>
+                      {/* Header */}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#fff', border: '1.5px solid #E0E0E8', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                            <svg viewBox="0 0 240 240" width="22" height="22" xmlns="http://www.w3.org/2000/svg">
+                              <defs>
+                                <linearGradient id="tgGrad" x1="120" y1="0" x2="120" y2="240" gradientUnits="userSpaceOnUse">
+                                  <stop offset="0%" stopColor="#2AABEE"/>
+                                  <stop offset="100%" stopColor="#229ED9"/>
+                                </linearGradient>
+                              </defs>
+                              <circle cx="120" cy="120" r="120" fill="url(#tgGrad)"/>
+                              <path d="M81.2 166.1c-3.8 0-3.1-1.5-4.4-5.2l-11.1-36.6 85.6-50.8" fill="#C8DAEA"/>
+                              <path d="M81.2 166.1c3 0 4.3-1.4 6-3l16-15.6-20-12" fill="#A9C9DD"/>
+                              <path d="M83.1 135.5l48.3 35.6c5.5 3 9.5 1.5 10.9-5.1l19.7-92.8c2-8.1-3.1-11.8-8.4-9.3L46 101.8c-7.9 3.1-7.8 7.6-1.4 9.6l38.3 11.9 88.6-55.9c4.2-2.5 8-1.2 4.9 1.6" fill="#F6FBFE"/>
+                            </svg>
+                          </div>
+                          <span style={{ fontWeight: 700, fontSize: '15px', color: '#0f172a' }}>Telegram</span>
+                        </div>
+                        <button
+                          onClick={handleTelegramSave}
+                          style={{ padding: '8px 18px', background: telegramSuccess ? '#16a34a' : '#229ED9', border: 'none', borderRadius: '10px', color: '#fff', fontSize: '13px', fontWeight: 400, letterSpacing: '0.05em', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', transition: 'background 0.2s' }}
+                        >
+                          {telegramSuccess ? <><Check size={13} /> SAVED</> : 'SAVE'}
+                        </button>
+                      </div>
+                      {/* URL input pill */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: '#f1f5f9', border: '1.5px solid #e2e8f0', borderRadius: '50px', padding: '10px 16px', marginBottom: '16px' }}>
+                        <Link2 size={16} color="#94a3b8" strokeWidth={2} style={{ flexShrink: 0 }} />
+                        <span style={{ fontWeight: 700, fontSize: '13px', color: '#334155', whiteSpace: 'nowrap' }}>Telegram Link</span>
+                        <input
+                          type="url"
+                          value={telegramInput}
+                          onChange={e => setTelegramInput(e.target.value)}
+                          onKeyDown={e => { if (e.key === 'Enter') handleTelegramSave(); if (e.key === 'Escape') setTelegramOpen(false) }}
+                          placeholder="https://t.me/yourusername"
+                          autoFocus
+                          style={{ flex: 1, border: 'none', background: 'transparent', fontSize: '13px', color: '#0f172a', outline: 'none', fontFamily: 'inherit', minWidth: 0 }}
+                        />
+                      </div>
+                      {/* VIEW section */}
+                      <div style={{ borderTop: '1px solid #E8EDF5', paddingTop: '14px' }}>
+                        <div style={{ fontSize: '10px', fontWeight: 700, color: '#94a3b8', letterSpacing: '0.08em', marginBottom: '10px' }}>VIEW</div>
+                        <div
+                          onClick={() => { if (telegramSaved) { window.open(telegramSaved, '_blank') } }}
+                          title={telegramSaved ? 'Open Telegram' : 'Save a link first'}
+                          style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', padding: '10px 16px', borderRadius: '12px', background: telegramSaved ? '#EFF9FF' : '#F5F5F7', border: `1.5px solid ${telegramSaved ? '#BAE6FD' : '#E0E0E8'}`, cursor: telegramSaved ? 'pointer' : 'not-allowed', opacity: telegramSaved ? 1 : 0.5, transition: 'all 0.15s' }}
+                        >
+                          <svg viewBox="0 0 240 240" width="28" height="28" xmlns="http://www.w3.org/2000/svg">
+                            <defs>
+                              <linearGradient id="tgGrad2" x1="120" y1="0" x2="120" y2="240" gradientUnits="userSpaceOnUse">
+                                <stop offset="0%" stopColor="#2AABEE"/>
+                                <stop offset="100%" stopColor="#229ED9"/>
+                              </linearGradient>
+                            </defs>
+                            <circle cx="120" cy="120" r="120" fill="url(#tgGrad2)"/>
+                            <path d="M81.2 166.1c-3.8 0-3.1-1.5-4.4-5.2l-11.1-36.6 85.6-50.8" fill="#C8DAEA"/>
+                            <path d="M81.2 166.1c3 0 4.3-1.4 6-3l16-15.6-20-12" fill="#A9C9DD"/>
+                            <path d="M83.1 135.5l48.3 35.6c5.5 3 9.5 1.5 10.9-5.1l19.7-92.8c2-8.1-3.1-11.8-8.4-9.3L46 101.8c-7.9 3.1-7.8 7.6-1.4 9.6l38.3 11.9 88.6-55.9c4.2-2.5 8-1.2 4.9 1.6" fill="#F6FBFE"/>
+                          </svg>
+                          <div>
+                            <div style={{ fontWeight: 700, fontSize: '13px', color: telegramSaved ? '#0369a1' : '#94a3b8', letterSpacing: '0.03em' }}>Open Telegram</div>
+                            <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '1px' }}>{telegramSaved ? telegramSaved.slice(0, 32) + (telegramSaved.length > 32 ? '…' : '') : 'No link saved yet'}</div>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   )}
