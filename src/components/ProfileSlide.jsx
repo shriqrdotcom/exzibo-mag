@@ -748,6 +748,20 @@ export default function ProfileSlide({
           else { setHoursModalOpen(false); setEditingLocation(false); setAddressError(''); setEditingContact(false); setContactPhoneError(''); setContactEmailError(''); setGoogleReviewInput(localStorage.getItem(`exzibo_google_review_${restaurantId || 'default'}`) || ''); setGoogleReviewOpen(true) }
         },
       },
+      {
+        icon: <Send size={22} strokeWidth={1.5} />,
+        title: 'TELEGRAM',
+        sub: 'CONNECT YOUR TELEGRAM',
+        onClick: () => {
+          setHoursModalOpen(false)
+          setEditingLocation(false)
+          setAddressError('')
+          setEditingContact(false)
+          setContactPhoneError('')
+          setContactEmailError('')
+          setGoogleReviewOpen(false)
+        },
+      },
     ]
     const socialBtns = [
       { icon: <FaFacebook size={20} />, key: 'facebook' },
