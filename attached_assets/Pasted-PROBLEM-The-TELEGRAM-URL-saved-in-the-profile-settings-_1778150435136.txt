@@ -1,0 +1,71 @@
+PROBLEM:
+The TELEGRAM URL saved in the profile settings is currently 
+only saving locally (local state or localStorage).
+When I open the dashboard on another device, the saved 
+Telegram URL does not appear — it is empty.
+
+This means it is NOT connected to the main server/database.
+
+REQUIRED FIX:
+
+─────────────────────────────────────────
+STEP 1 — IDENTIFY THE DATABASE TABLE
+─────────────────────────────────────────
+Find the existing database table/collection where other 
+profile settings are saved — such as:
+- Google Reviews Link
+- Opening Hours
+- Location
+- Contact Info
+
+The Telegram URL must be saved in that SAME table,
+under the SAME restaurant/user record.
+
+─────────────────────────────────────────
+STEP 2 — ADD TELEGRAM FIELD TO DATABASE
+─────────────────────────────────────────
+If the telegram_url field does not already exist in the 
+profile/restaurant settings table, add it now:
+
+- Field name: telegram_url
+- Type: text/string
+- Nullable: true (optional field)
+
+Run the required migration or schema update.
+
+─────────────────────────────────────────
+STEP 3 — UPDATE SAVE LOGIC (WRITE)
+─────────────────────────────────────────
+When the user clicks SAVE in the Telegram modal:
+- Send the URL to the backend API
+- Update the telegram_url field in the database 
+  for the current logged-in restaurant/user record
+- Use the exact same API call pattern used by 
+  other settings like Google Reviews Link
+
+─────────────────────────────────────────
+STEP 4 — UPDATE LOAD LOGIC (READ)
+─────────────────────────────────────────
+When the dashboard loads or the Telegram modal opens:
+- Fetch the telegram_url value from the backend/database
+- Pre-fill the input field with the saved value
+- This must work on ALL devices and browsers 
+  because data is coming from the server, not local storage
+
+─────────────────────────────────────────
+STEP 5 — VERIFY
+─────────────────────────────────────────
+After the fix:
+- Save a Telegram URL on Device A
+- Open the dashboard on Device B
+- The same Telegram URL should appear pre-filled
+- The VIEW button should open the correct link on both devices
+
+─────────────────────────────────────────
+IMPORTANT RULES:
+─────────────────────────────────────────
+- Do NOT change any other settings fields or their logic
+- Follow the exact same save/fetch pattern used by 
+  Google Reviews Link or any other existing profile setting
+- Do NOT use localStorage or sessionStorage for this value
+- Data must always come from and go to the main server

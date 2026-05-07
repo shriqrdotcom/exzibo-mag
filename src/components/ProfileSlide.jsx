@@ -12,7 +12,7 @@ import { FaFacebook, FaInstagram, FaLinkedinIn, FaYoutube } from 'react-icons/fa
 import { FaXTwitter } from 'react-icons/fa6'
 import AddMembersModal from './AddMembersModal'
 import RemainingDaysModal from './RemainingDaysModal'
-import { updateRestaurant, uploadDataUrlToStorage, getTeamMembers } from '../lib/db'
+import { updateRestaurant, uploadDataUrlToStorage, getTeamMembers, getRestaurantById } from '../lib/db'
 
 const TEAM_ACCENT_START = '#6366F1'
 const TEAM_ACCENT_END   = '#8B5CF6'
@@ -293,20 +293,56 @@ export default function ProfileSlide({
   const [telegramInput, setTelegramInput] = useState('')
   const [telegramSaved, setTelegramSaved] = useState('')
   const [telegramSuccess, setTelegramSuccess] = useState(false)
+  const [telegramSaving, setTelegramSaving] = useState(false)
+  const socialLinksRef = useRef({})
+
+  const isRealId = id => id && id !== 'default' && /^[0-9a-f-]{36}$/.test(id)
 
   useEffect(() => {
-    const key = `exzibo_telegram_${restaurantId || 'default'}`
-    const val = localStorage.getItem(key) || ''
-    setTelegramInput(val)
-    setTelegramSaved(val)
+    async function loadTelegram() {
+      const lsKey = `exzibo_telegram_${restaurantId || 'default'}`
+      if (isRealId(restaurantId)) {
+        try {
+          const restaurant = await getRestaurantById(restaurantId)
+          if (restaurant) {
+            socialLinksRef.current = restaurant.social_links || {}
+            const val = restaurant.social_links?.telegram || ''
+            setTelegramInput(val)
+            setTelegramSaved(val)
+            localStorage.setItem(lsKey, val)
+            return
+          }
+        } catch { /* fall through to localStorage */ }
+      }
+      const val = localStorage.getItem(lsKey) || ''
+      setTelegramInput(val)
+      setTelegramSaved(val)
+    }
+    loadTelegram()
   }, [restaurantId])
 
-  function handleTelegramSave() {
-    const key = `exzibo_telegram_${restaurantId || 'default'}`
-    localStorage.setItem(key, telegramInput)
-    setTelegramSaved(telegramInput)
-    setTelegramSuccess(true)
-    setTimeout(() => { setTelegramSuccess(false); setTelegramOpen(false) }, 1200)
+  async function handleTelegramSave() {
+    setTelegramSaving(true)
+    const lsKey = `exzibo_telegram_${restaurantId || 'default'}`
+    try {
+      if (isRealId(restaurantId)) {
+        const merged = { ...socialLinksRef.current, telegram: telegramInput }
+        const updated = await updateRestaurant(restaurantId, { social_links: merged })
+        socialLinksRef.current = updated?.social_links || merged
+      }
+      localStorage.setItem(lsKey, telegramInput)
+      setTelegramSaved(telegramInput)
+      setTelegramSuccess(true)
+      setTimeout(() => { setTelegramSuccess(false); setTelegramOpen(false) }, 1200)
+    } catch (err) {
+      console.error('[Telegram save]', err)
+      localStorage.setItem(lsKey, telegramInput)
+      setTelegramSaved(telegramInput)
+      setTelegramSuccess(true)
+      setTimeout(() => { setTelegramSuccess(false); setTelegramOpen(false) }, 1200)
+    } finally {
+      setTelegramSaving(false)
+    }
   }
 
   async function handleGoogleReviewPaste() {
@@ -782,7 +818,6 @@ export default function ProfileSlide({
             setContactPhoneError('')
             setContactEmailError('')
             setGoogleReviewOpen(false)
-            setTelegramInput(localStorage.getItem(`exzibo_telegram_${restaurantId || 'default'}`) || '')
             setTelegramOpen(true)
           }
         },
@@ -1465,9 +1500,10 @@ export default function ProfileSlide({
                         </div>
                         <button
                           onClick={handleTelegramSave}
-                          style={{ padding: '8px 18px', background: telegramSuccess ? '#16a34a' : '#229ED9', border: 'none', borderRadius: '10px', color: '#fff', fontSize: '13px', fontWeight: 400, letterSpacing: '0.05em', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', transition: 'background 0.2s' }}
+                          disabled={telegramSaving}
+                          style={{ padding: '8px 18px', background: telegramSuccess ? '#16a34a' : '#229ED9', border: 'none', borderRadius: '10px', color: '#fff', fontSize: '13px', fontWeight: 400, letterSpacing: '0.05em', cursor: telegramSaving ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: '6px', transition: 'background 0.2s', opacity: telegramSaving ? 0.75 : 1 }}
                         >
-                          {telegramSuccess ? <><Check size={13} /> SAVED</> : 'SAVE'}
+                          {telegramSaving ? <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> : telegramSuccess ? <><Check size={13} /> SAVED</> : 'SAVE'}
                         </button>
                       </div>
                       {/* URL input pill */}

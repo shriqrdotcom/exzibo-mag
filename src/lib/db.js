@@ -78,6 +78,16 @@ export async function getRestaurantBySlug(slug) {
   return data
 }
 
+export async function getRestaurantById(id) {
+  const { data, error } = await supabase
+    .from('restaurants')
+    .select('*')
+    .eq('id', id)
+    .single()
+  if (error) return null
+  return data
+}
+
 // ── Menu Categories ───────────────────────────────────────────
 
 export async function getMenuCategories(restaurantId) {
