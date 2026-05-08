@@ -1304,7 +1304,8 @@ export default function ProfileSlide({
             )}
           </div>
 
-          {/* Tab Switcher */}
+          {/* Tab Switcher + Tab Contents — hidden for staff role */}
+          {activeRole !== 'staff' && (<>
           <div style={{ display: 'flex', background: TAB_BG, borderRadius: '14px', margin: '0 16px 16px', padding: '4px' }}>
             {['PROFILE', 'TEAM', 'REMAINING DAY'].map(tab => (
               <button
@@ -1662,6 +1663,8 @@ export default function ProfileSlide({
               </div>
             )
           })()}
+          </>
+          )}
 
         </div>
 
