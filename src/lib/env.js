@@ -1,18 +1,10 @@
 /**
- * Returns true when running inside a Replit preview / dev environment.
- * Credentials and OAuth are handled differently per environment.
+ * Returns true only when VITE_PREVIEW_MODE=true is explicitly set.
+ * Running on Replit (replit.dev / replit.app) uses real Supabase Google OAuth —
+ * NOT the preview login form — so Replit hostnames are NOT treated as preview.
  */
 export function isPreviewEnvironment() {
-  if (typeof window === 'undefined') return false
-  const host = window.location.hostname
-  return (
-    host.includes('replit') ||
-    host.includes('repl.co') ||
-    host.includes('replit.app') ||
-    host.includes('replit.dev') ||
-    host === 'localhost' ||
-    host === '127.0.0.1'
-  )
+  return import.meta.env.VITE_PREVIEW_MODE === 'true'
 }
 
 export const IS_PREVIEW = isPreviewEnvironment()
