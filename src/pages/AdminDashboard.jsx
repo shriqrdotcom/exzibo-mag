@@ -260,6 +260,9 @@ export default function AdminDashboard() {
   const bookingSettingsBtnRef = useRef(null)
   const bookingSettingsPanelRef = useRef(null)
   const broadcastChannelRef = useRef(null)
+  // These refs mirror the state values so the broadcast handler never has stale closures
+  const fromMasterRef  = useRef(fromMaster)
+  const activeRoleRef  = useRef(activeRole)
   const [globalConfig, setGlobalConfig] = useState(loadGlobalConfig)
 
   // Draft state for the settings panel
@@ -585,14 +588,19 @@ export default function AdminDashboard() {
     }
   }, [fromMaster, activeRole])
 
+  // Keep mirror refs in sync so the broadcast handler always reads current values
+  useEffect(() => { fromMasterRef.current = fromMaster },  [fromMaster])
+  useEffect(() => { activeRoleRef.current = activeRole },  [activeRole])
+
   // ── Broadcast channel: instant cross-device delivery (no DB needed) ─────────
-  // All sessions subscribe so master can send. Non-master sessions receive.
+  // Created ONCE on mount so the WebSocket stays open and sends are always ready.
+  // The handler reads fromMasterRef / activeRoleRef to avoid stale closures.
   useEffect(() => {
-    const role = effectiveRole(activeRole)
     const ch = supabase
-      .channel('exzibo-master-alerts')
+      .channel('exzibo-master-alerts', { config: { broadcast: { ack: false } } })
       .on('broadcast', { event: 'master-alert' }, ({ payload }) => {
-        if (fromMaster) return // master never shows its own popups
+        if (fromMasterRef.current) return   // master never shows its own popups
+        const role = effectiveRole(activeRoleRef.current)
         if (Array.isArray(payload.send_to) && !payload.send_to.includes(role)) return
         addNotification({
           title: payload.topic,
@@ -601,13 +609,23 @@ export default function AdminDashboard() {
         })
         setLivePopupMsg({ topic: payload.topic, message: payload.message })
       })
-      .subscribe()
-    broadcastChannelRef.current = ch
+      .subscribe((status, err) => {
+        if (status === 'SUBSCRIBED') {
+          broadcastChannelRef.current = ch
+          console.log('[broadcast] ready ✓')
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          console.warn('[broadcast] channel error:', err)
+          broadcastChannelRef.current = null
+        } else if (status === 'CLOSED') {
+          broadcastChannelRef.current = null
+        }
+      })
+
     return () => {
-      supabase.removeChannel(ch)
       broadcastChannelRef.current = null
+      supabase.removeChannel(ch)
     }
-  }, [fromMaster, activeRole])
+  }, []) // ← empty deps: subscribe once, stay connected for the component's lifetime
 
   // ── Messages Realtime subscription (non-master only, DB-backed fallback) ────
   useEffect(() => {
