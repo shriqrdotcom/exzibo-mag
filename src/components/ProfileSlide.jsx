@@ -213,6 +213,13 @@ export default function ProfileSlide({
   const [showSubscriptionDates, setShowSubscriptionDates] = useState(false)
   const { activeRole } = useRole()
 
+  // Edit-profile bottom sheet state
+  const [editSheetOpen, setEditSheetOpen] = useState(false)
+  const [sheetNameInput, setSheetNameInput] = useState(restaurantName || '')
+  const [sheetNameError, setSheetNameError] = useState('')
+  const [sheetSaving, setSheetSaving] = useState(false)
+  const [sheetSaveSuccess, setSheetSaveSuccess] = useState(false)
+
   const subscriptionInfo = {
     planName: 'Growth',
     startDate: '22-04-2026',
@@ -700,6 +707,31 @@ export default function ProfileSlide({
     finally { setUploading(false) }
   }
 
+  async function handleSheetSave() {
+    const trimmed = sheetNameInput.trim()
+    if (!trimmed) { setSheetNameError('Name cannot be empty.'); return }
+    setSheetNameError('')
+    setSheetSaving(true)
+    try {
+      await new Promise(r => setTimeout(r, 350))
+      if (!restaurantId || restaurantId === 'default') {
+        const config = JSON.parse(localStorage.getItem('exzibo_admin_global_config') || '{}')
+        config.adminTitle = trimmed
+        localStorage.setItem('exzibo_admin_global_config', JSON.stringify(config))
+        localStorage.setItem('exzibo_name_default', trimmed)
+      } else {
+        const all = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
+        localStorage.setItem('exzibo_restaurants', JSON.stringify(all.map(r => r.id === restaurantId ? { ...r, name: trimmed } : r)))
+        try { const { updateRestaurant: upd } = await import('../lib/db'); await upd(restaurantId, { name: trimmed }) } catch {}
+      }
+      window.dispatchEvent(new CustomEvent('exzibo-name-changed', { detail: { restaurantId, name: trimmed } }))
+      onNameUpdate && onNameUpdate(trimmed)
+      setSheetSaveSuccess(true)
+      setTimeout(() => { setSheetSaveSuccess(false); setEditSheetOpen(false) }, 900)
+    } catch { setSheetNameError('Failed to save. Please try again.') }
+    finally { setSheetSaving(false) }
+  }
+
   async function handleSaveName() {
     const trimmed = nameInput.trim()
     if (!trimmed) { setNameError('Restaurant name cannot be empty.'); return }
@@ -870,7 +902,7 @@ export default function ProfileSlide({
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px', marginBottom: '22px', marginTop: '-48px', position: 'relative', zIndex: 1 }}>
               {/* Profile picture — only MASTER/ADMIN (activeRole === null) may click to edit */}
               <div
-                onClick={!activeRole ? () => navigate(`/edit-profile?restaurantId=${restaurantId || 'default'}`) : undefined}
+                onClick={!activeRole ? () => { setSheetNameInput(restaurantName || ''); setSheetNameError(''); setSheetSaveSuccess(false); setEditSheetOpen(true) } : undefined}
                 style={{
                   width: '100px', height: '100px', borderRadius: '22px',
                   background: STAT_PILL, overflow: 'hidden', flexShrink: 0,
@@ -1757,9 +1789,156 @@ export default function ProfileSlide({
           </EditFieldModal>
         )}
 
+        {/* ── Edit Profile Bottom Sheet ── */}
+        {editSheetOpen && createPortal(
+          <div
+            onClick={() => { if (!sheetSaving) setEditSheetOpen(false) }}
+            style={{
+              position: 'fixed', inset: 0, zIndex: 9000,
+              background: 'rgba(0,0,0,0.45)',
+              display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+              animation: 'sheetFadeIn 0.22s ease',
+            }}
+          >
+            <div
+              onClick={e => e.stopPropagation()}
+              style={{
+                width: '100%', maxWidth: '390px',
+                background: '#fff',
+                borderRadius: '24px 24px 0 0',
+                padding: '0 0 40px',
+                boxShadow: '0 -8px 40px rgba(0,0,0,0.18)',
+                animation: 'sheetSlideUp 0.28s cubic-bezier(0.32,0.72,0,1)',
+                overflow: 'hidden',
+              }}
+            >
+              {/* Drag handle */}
+              <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0 4px' }}>
+                <div style={{ width: '36px', height: '4px', borderRadius: '2px', background: '#D1D1D6' }} />
+              </div>
 
+              {/* Blue hero band */}
+              <div style={{ background: '#EAF1FD', height: '80px', position: 'relative' }} />
 
-        <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+              {/* Profile image — straddles the band */}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '-56px', paddingBottom: '4px' }}>
+                <div style={{ position: 'relative', marginBottom: '10px' }}>
+                  <div style={{
+                    width: '110px', height: '110px', borderRadius: '26px',
+                    background: '#C8D9F8',
+                    overflow: 'hidden',
+                    border: '4px solid #fff',
+                    boxShadow: '0 4px 20px rgba(59,107,232,0.18)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    cursor: 'pointer',
+                  }}
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    {previewUrl
+                      ? <img src={previewUrl} alt="profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      : <User size={40} color="#7fa8e8" strokeWidth={1.5} />
+                    }
+                    {uploading && (
+                      <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '26px' }}>
+                        <Loader2 size={20} color="#fff" style={{ animation: 'spin 1s linear infinite' }} />
+                      </div>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    style={{
+                      position: 'absolute', bottom: '-6px', right: '-6px',
+                      width: '34px', height: '34px', borderRadius: '50%',
+                      background: '#3B6BE8',
+                      border: '3px solid #fff',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      cursor: 'pointer',
+                      boxShadow: '0 2px 8px rgba(59,107,232,0.35)',
+                    }}
+                    aria-label="Change profile image"
+                  >
+                    <Camera size={14} color="#fff" strokeWidth={2.2} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Form */}
+              <div style={{ padding: '20px 20px 0' }}>
+                <label style={{
+                  display: 'block',
+                  fontSize: '11px', fontWeight: 700, color: '#888',
+                  letterSpacing: '0.08em', marginBottom: '8px',
+                }}>
+                  RESTAURANT NAME
+                </label>
+                <input
+                  type="text"
+                  value={sheetNameInput}
+                  onChange={e => { setSheetNameInput(e.target.value); setSheetNameError('') }}
+                  onKeyDown={e => { if (e.key === 'Enter') handleSheetSave() }}
+                  placeholder="Enter restaurant name…"
+                  style={{
+                    width: '100%',
+                    padding: '14px 16px',
+                    borderRadius: '14px',
+                    border: `1.5px solid ${sheetNameError ? '#FECACA' : '#E0E0E8'}`,
+                    background: '#F8F9FC',
+                    fontSize: '15px',
+                    fontWeight: 600,
+                    color: '#111',
+                    outline: 'none',
+                    fontFamily: 'inherit',
+                    boxSizing: 'border-box',
+                  }}
+                  onFocus={e => { e.target.style.borderColor = '#3B6BE8' }}
+                  onBlur={e => { e.target.style.borderColor = sheetNameError ? '#FECACA' : '#E0E0E8' }}
+                />
+                {sheetNameError && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '7px' }}>
+                    <AlertCircle size={13} color="#EF4444" />
+                    <span style={{ fontSize: '12px', color: '#EF4444', fontWeight: 500 }}>{sheetNameError}</span>
+                  </div>
+                )}
+
+                <button
+                  onClick={handleSheetSave}
+                  disabled={sheetSaving || sheetSaveSuccess}
+                  style={{
+                    width: '100%',
+                    marginTop: '16px',
+                    padding: '15px',
+                    borderRadius: '16px',
+                    background: sheetSaveSuccess ? '#22c55e' : sheetSaving ? '#94a3b8' : '#3B6BE8',
+                    border: 'none',
+                    color: '#fff',
+                    fontSize: '14px',
+                    fontWeight: 800,
+                    letterSpacing: '0.06em',
+                    cursor: sheetSaving || sheetSaveSuccess ? 'not-allowed' : 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                    boxShadow: sheetSaving || sheetSaveSuccess ? 'none' : '0 4px 16px rgba(59,107,232,0.3)',
+                    transition: 'background 0.2s',
+                    fontFamily: 'inherit',
+                  }}
+                >
+                  {sheetSaving
+                    ? <><Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} /> SAVING…</>
+                    : sheetSaveSuccess
+                    ? <><CheckCircle2 size={15} /> SAVED!</>
+                    : 'SAVE CHANGES'
+                  }
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
+
+        <style>{`
+          @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+          @keyframes sheetFadeIn { from { opacity: 0; } to { opacity: 1; } }
+          @keyframes sheetSlideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        `}</style>
       </>
     )
   }
