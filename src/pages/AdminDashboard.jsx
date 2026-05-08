@@ -6082,6 +6082,64 @@ function buildCategoryItems(restaurantId) {
 
 const WEEKLY_REVENUE = [8200, 9450, 8800, 8178]
 
+function AnalyticsPillBarChart() {
+  const dow = new Date().getDay()
+  const dayIndices = [1, 2, 3, 4, 5]
+  const todayIdx = dayIndices.indexOf(dow)
+  const activeBar = todayIdx === -1 ? 2 : todayIdx
+  const heights = [62, 50, 72, 85, 42]
+  const CHART_H = 110
+  const BAR_W = 36
+  const activePercent = heights[activeBar]
+  return (
+    <div style={{
+      background: 'rgba(240,240,245,0.6)',
+      borderRadius: 16,
+      padding: '14px 12px 10px',
+    }}>
+      <div style={{
+        display: 'flex',
+        alignItems: 'flex-end',
+        justifyContent: 'space-between',
+        height: CHART_H + 20,
+        gap: 8,
+      }}>
+        {heights.map((h, i) => {
+          const isToday = i === activeBar
+          const isPast = i < activeBar
+          const barColor = isToday
+            ? '#4B3FA0'
+            : isPast
+            ? 'rgba(100, 80, 200, 0.25)'
+            : '#DCDCE0'
+          const barH = (h / 100) * CHART_H
+          return (
+            <div key={i} style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'flex-end',
+              flex: 1,
+              height: CHART_H + 20,
+            }}>
+              {isToday
+                ? <span style={{ fontSize: 10, fontWeight: 600, color: '#94a3b8', marginBottom: 5, letterSpacing: '0.02em' }}>{activePercent}%</span>
+                : <span style={{ height: 19, display: 'block' }} />
+              }
+              <div style={{
+                width: BAR_W,
+                height: barH,
+                background: barColor,
+                borderRadius: 999,
+              }} />
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 function AnalyticsPanel({ accentStart, accentEnd, restaurantId }) {
   const [showSheet, setShowSheet] = React.useState(false)
   const [showRevenueModal, setShowRevenueModal] = React.useState(false)
@@ -6163,11 +6221,7 @@ function AnalyticsPanel({ accentStart, accentEnd, restaurantId }) {
             <span style={{ fontSize: '24px', fontWeight: 900, color: '#0f172a' }}>{totalWealth}</span>
             <span style={{ fontSize: '12px', color: '#94a3b8', fontWeight: 500 }}>Total wealth</span>
           </div>
-          <div style={{ fontSize: '10px', color: '#94a3b8', marginBottom: '2px' }}>{fmtK(chartMax)}</div>
-          <AnalyticsLineChart data={chartData || WEALTH_DATA.map(v => v * 1000)} minV={chartMin} maxV={chartMax * 1.15} />
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: '#94a3b8', marginTop: '2px' }}>
-            <span>{fmtK(chartMin)}</span><span>{fmtK(Math.round(chartMax / 2))}</span><span>{fmtK(chartMax)}</span>
-          </div>
+          <AnalyticsPillBarChart />
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>

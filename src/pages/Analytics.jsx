@@ -67,6 +67,86 @@ function LineChart() {
   )
 }
 
+function PillBarChart() {
+  const today = new Date()
+  const dow = today.getDay()
+  const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+
+  const dayIndices = [1, 2, 3, 4, 5]
+  const todayIdx = dayIndices.indexOf(dow)
+  const activeBar = todayIdx === -1 ? 2 : todayIdx
+
+  const heights = [62, 50, 72, 85, 42]
+
+  const CHART_H = 110
+  const BAR_W = 36
+  const activePercent = heights[activeBar]
+
+  return (
+    <div style={{
+      background: '#fff',
+      borderRadius: 20,
+      boxShadow: '0 2px 16px rgba(0,0,0,0.07)',
+      padding: '18px 16px 14px',
+    }}>
+      <div style={{
+        display: 'flex',
+        alignItems: 'flex-end',
+        justifyContent: 'space-between',
+        height: CHART_H + 20,
+        gap: 10,
+      }}>
+        {heights.map((h, i) => {
+          const isPast = i < activeBar
+          const isToday = i === activeBar
+          const isFuture = i > activeBar
+
+          const barColor = isToday
+            ? '#4B3FA0'
+            : isPast
+            ? 'rgba(100, 80, 200, 0.25)'
+            : '#DCDCE0'
+
+          const barH = (h / 100) * CHART_H
+
+          return (
+            <div key={i} style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'flex-end',
+              flex: 1,
+              height: CHART_H + 20,
+            }}>
+              {isToday && (
+                <span style={{
+                  fontSize: 11,
+                  fontWeight: 600,
+                  color: '#999',
+                  marginBottom: 6,
+                  letterSpacing: '0.02em',
+                }}>
+                  {activePercent}%
+                </span>
+              )}
+              {!isToday && (
+                <span style={{ height: 21, display: 'block' }} />
+              )}
+              <div style={{
+                width: BAR_W,
+                height: barH,
+                background: barColor,
+                borderRadius: 999,
+                transition: 'height 0.3s ease',
+              }} />
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 function DonutChart({ segments }) {
   const total = segments.reduce((s, d) => s + d.value, 0)
   const cx = 60, cy = 60, r = 44, strokeW = 18
@@ -283,15 +363,7 @@ export default function Analytics() {
                 <span style={{ fontSize: 26, fontWeight: 900, color: '#111' }}>{totalWealth}</span>
                 <span style={{ fontSize: 13, color: '#888' }}>Total wealth</span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#aaa', marginBottom: 4 }}>
-                <span>75k</span>
-              </div>
-              <LineChart />
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#aaa', marginTop: 2 }}>
-                <span>35k</span>
-                <span>55k</span>
-                <span>75k</span>
-              </div>
+              <PillBarChart />
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
