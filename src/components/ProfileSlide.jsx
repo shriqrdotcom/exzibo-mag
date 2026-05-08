@@ -922,13 +922,22 @@ export default function ProfileSlide({
                   s.key === 'linkedin' ? '#e8f0fe' :
                   s.key === 'youtube' ? '#fff0f0' :
                   s.key === 'twitter' ? '#f0f0f0' : '#fff'
-                const handleClick =
-                  s.key === 'facebook' ? () => { setFacebookModalOpen(o => !o); setInstagramModalOpen(false); setLinkedinModalOpen(false); setYoutubeModalOpen(false); setTwitterModalOpen(false) } :
-                  s.key === 'instagram' ? () => { setInstagramModalOpen(o => !o); setFacebookModalOpen(false); setLinkedinModalOpen(false); setYoutubeModalOpen(false); setTwitterModalOpen(false) } :
-                  s.key === 'linkedin' ? () => { setLinkedinModalOpen(o => !o); setFacebookModalOpen(false); setInstagramModalOpen(false); setYoutubeModalOpen(false); setTwitterModalOpen(false) } :
-                  s.key === 'youtube' ? () => { setYoutubeModalOpen(o => !o); setFacebookModalOpen(false); setInstagramModalOpen(false); setLinkedinModalOpen(false); setTwitterModalOpen(false) } :
-                  s.key === 'twitter' ? () => { setTwitterModalOpen(o => !o); setFacebookModalOpen(false); setInstagramModalOpen(false); setLinkedinModalOpen(false); setYoutubeModalOpen(false) } :
-                  undefined
+                const savedUrl =
+                  s.key === 'facebook' ? facebookUrlInput :
+                  s.key === 'instagram' ? instagramUrlInput :
+                  s.key === 'linkedin' ? linkedinUrlInput :
+                  s.key === 'youtube' ? youtubeUrlInput :
+                  s.key === 'twitter' ? twitterUrlInput : ''
+                const handleClick = activeRole === 'staff'
+                  ? (savedUrl ? () => window.open(savedUrl, '_blank') : undefined)
+                  : (
+                    s.key === 'facebook' ? () => { setFacebookModalOpen(o => !o); setInstagramModalOpen(false); setLinkedinModalOpen(false); setYoutubeModalOpen(false); setTwitterModalOpen(false) } :
+                    s.key === 'instagram' ? () => { setInstagramModalOpen(o => !o); setFacebookModalOpen(false); setLinkedinModalOpen(false); setYoutubeModalOpen(false); setTwitterModalOpen(false) } :
+                    s.key === 'linkedin' ? () => { setLinkedinModalOpen(o => !o); setFacebookModalOpen(false); setInstagramModalOpen(false); setYoutubeModalOpen(false); setTwitterModalOpen(false) } :
+                    s.key === 'youtube' ? () => { setYoutubeModalOpen(o => !o); setFacebookModalOpen(false); setInstagramModalOpen(false); setLinkedinModalOpen(false); setTwitterModalOpen(false) } :
+                    s.key === 'twitter' ? () => { setTwitterModalOpen(o => !o); setFacebookModalOpen(false); setInstagramModalOpen(false); setLinkedinModalOpen(false); setYoutubeModalOpen(false) } :
+                    undefined
+                  )
                 return (
                   <button key={s.key}
                     onClick={handleClick}
