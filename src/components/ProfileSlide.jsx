@@ -1803,13 +1803,13 @@ export default function ProfileSlide({
             <div
               onClick={e => e.stopPropagation()}
               style={{
-                width: '100%', maxWidth: '390px',
+                width: '100vw',
                 background: '#fff',
                 borderRadius: '24px 24px 0 0',
-                padding: '0 0 40px',
                 boxShadow: '0 -8px 40px rgba(0,0,0,0.18)',
                 animation: 'sheetSlideUp 0.28s cubic-bezier(0.32,0.72,0,1)',
                 overflow: 'hidden',
+                paddingBottom: 'env(safe-area-inset-bottom, 24px)',
               }}
             >
               {/* Drag handle */}
@@ -1817,12 +1817,12 @@ export default function ProfileSlide({
                 <div style={{ width: '36px', height: '4px', borderRadius: '2px', background: '#D1D1D6' }} />
               </div>
 
-              {/* Blue hero band */}
-              <div style={{ background: '#EAF1FD', height: '80px', position: 'relative' }} />
+              {/* Blue hero band — full width */}
+              <div style={{ background: '#EAF1FD', height: '80px' }} />
 
-              {/* Profile image — straddles the band */}
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '-56px', paddingBottom: '4px' }}>
-                <div style={{ position: 'relative', marginBottom: '10px' }}>
+              {/* Profile image — centered, straddles the band */}
+              <div style={{ display: 'flex', justifyContent: 'center', marginTop: '-56px', paddingBottom: '8px' }}>
+                <div style={{ position: 'relative' }}>
                   <div style={{
                     width: '110px', height: '110px', borderRadius: '26px',
                     background: '#C8D9F8',
@@ -1862,8 +1862,8 @@ export default function ProfileSlide({
                 </div>
               </div>
 
-              {/* Form */}
-              <div style={{ padding: '20px 20px 0' }}>
+              {/* Form — full width with internal padding only */}
+              <div style={{ padding: '16px 20px 32px' }}>
                 <label style={{
                   display: 'block',
                   fontSize: '11px', fontWeight: 700, color: '#888',
@@ -1878,6 +1878,7 @@ export default function ProfileSlide({
                   onKeyDown={e => { if (e.key === 'Enter') handleSheetSave() }}
                   placeholder="Enter restaurant name…"
                   style={{
+                    display: 'block',
                     width: '100%',
                     padding: '14px 16px',
                     borderRadius: '14px',
