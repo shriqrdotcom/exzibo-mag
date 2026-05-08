@@ -393,22 +393,23 @@ export default function TeamMembersAdmin() {
                               const roleMembers = team.filter(m => m.role === col.key)
                               const Icon = col.icon
                               return (
-                                <td key={col.key} style={{ padding: '18px 24px' }}>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <td key={col.key} style={{ padding: '14px 24px' }}>
+                                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
                                     <div style={{
                                       width: '32px', height: '32px', borderRadius: '8px',
                                       background: col.accentBg,
                                       border: `1px solid ${col.accent}30`,
                                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                                       flexShrink: 0,
+                                      marginTop: '2px',
                                     }}>
                                       <Icon size={14} color={col.accent} />
                                     </div>
                                     <div style={{ flex: 1 }}>
                                       {roleMembers.length === 0 ? (
-                                        <div style={{ fontSize: '11px', color: '#444', fontWeight: 600 }}>No {col.label}</div>
+                                        <div style={{ fontSize: '11px', color: '#444', fontWeight: 600, marginBottom: '3px' }}>No {col.label}</div>
                                       ) : (
-                                        <div style={{ fontSize: '12px', color: '#ccc', fontWeight: 700 }}>
+                                        <div style={{ fontSize: '12px', color: '#ccc', fontWeight: 700, marginBottom: '3px' }}>
                                           {roleMembers.length} {col.label}{roleMembers.length > 1 ? 'S' : ''}
                                         </div>
                                       )}
@@ -418,11 +419,19 @@ export default function TeamMembersAdmin() {
                                           background: 'none', border: 'none', padding: 0,
                                           fontSize: '10px', color: col.accent, fontWeight: 700,
                                           cursor: 'pointer', letterSpacing: '0.04em',
-                                          textDecoration: 'none',
+                                          display: 'block', marginBottom: '6px',
                                         }}
                                       >
                                         + ADD GMAIL
                                       </button>
+                                      <ViewDashboardBtn
+                                        accent={col.accent}
+                                        accentBg={col.accentBg}
+                                        onClick={() => {
+                                          activateRole(col.key)
+                                          navigate(`/admin/${r.id}`)
+                                        }}
+                                      />
                                     </div>
                                   </div>
                                 </td>
@@ -528,6 +537,37 @@ export default function TeamMembersAdmin() {
         @keyframes spin { from { transform:rotate(0deg); } to { transform:rotate(360deg); } }
       `}</style>
     </div>
+  )
+}
+
+function ViewDashboardBtn({ accent, accentBg, onClick }) {
+  const [hovered, setHovered] = React.useState(false)
+  return (
+    <button
+      onClick={onClick}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '4px',
+        background: hovered ? accent : accentBg,
+        border: `1px solid ${accent}50`,
+        borderRadius: '6px',
+        padding: '3px 8px',
+        fontSize: '10px',
+        fontWeight: 700,
+        color: hovered ? '#fff' : accent,
+        cursor: 'pointer',
+        letterSpacing: '0.06em',
+        textTransform: 'uppercase',
+        transition: 'all 0.15s ease',
+        whiteSpace: 'nowrap',
+      }}
+    >
+      <LayoutDashboard size={10} />
+      VIEW
+    </button>
   )
 }
 
