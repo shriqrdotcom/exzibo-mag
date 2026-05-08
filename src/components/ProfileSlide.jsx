@@ -5,7 +5,7 @@ import { useRole } from '../context/RoleContext'
 import {
   X, Power, MapPin, Phone, Store, Users, Image,
   Loader2, AlertCircle, CheckCircle2, Check, XCircle, Mail, Clock, UserPlus,
-  User, UserX, ChevronRight, Calendar, Star, Link2, Send, Copy,
+  User, UserX, ChevronRight, Calendar, Star, Link2, Send, Copy, Camera,
 } from 'lucide-react'
 import { PiPencilCircle } from 'react-icons/pi'
 import { FaFacebook, FaInstagram, FaLinkedinIn, FaYoutube } from 'react-icons/fa'
