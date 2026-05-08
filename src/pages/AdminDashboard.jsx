@@ -225,6 +225,7 @@ export default function AdminDashboard() {
   const [inboxMessages, setInboxMessages] = useState([])
   const [inboxOpen, setInboxOpen] = useState(false)
   const [inboxUnread, setInboxUnread] = useState(0)
+  const [livePopupMsg, setLivePopupMsg] = useState(null)
 
   const [activePopup, setActivePopup] = useState(null)
   const [bellOpen, setBellOpen]       = useState(false)
@@ -603,7 +604,7 @@ export default function AdminDashboard() {
         addNotification({ title: msg.topic, message: msg.message, target_roles: msg.send_to })
         setInboxMessages(prev => [msg, ...prev])
         setInboxUnread(prev => prev + 1)
-        showToast(`📨 New message: ${msg.topic}`)
+        setLivePopupMsg({ topic: msg.topic, message: msg.message })
       })
       .subscribe()
 
@@ -1642,6 +1643,150 @@ export default function AdminDashboard() {
           role={effectiveRole(activeRole)}
         />
       )}
+
+      {!fromMaster && livePopupMsg && (
+        <MasterNotificationPopup
+          topic={livePopupMsg.topic}
+          message={livePopupMsg.message}
+          onClose={() => setLivePopupMsg(null)}
+        />
+      )}
+    </div>
+  )
+}
+
+function MasterNotificationPopup({ topic, message, onClose }) {
+  return (
+    <div
+      style={{
+        position: 'fixed', inset: 0, zIndex: 9500,
+        background: 'rgba(0,0,0,0.55)',
+        backdropFilter: 'blur(6px)',
+        WebkitBackdropFilter: 'blur(6px)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: '24px',
+      }}
+    >
+      <div
+        style={{
+          width: '100%', maxWidth: '420px',
+          background: '#fff',
+          borderRadius: '24px',
+          boxShadow: '0 32px 80px rgba(0,0,0,0.35)',
+          overflow: 'hidden',
+          animation: 'notifPopIn 0.3s cubic-bezier(0.34,1.56,0.64,1)',
+          position: 'relative',
+        }}
+      >
+        {/* Close button */}
+        <button
+          onClick={onClose}
+          style={{
+            position: 'absolute', top: '14px', right: '14px',
+            width: '36px', height: '36px', borderRadius: '50%',
+            background: '#F1F5F9',
+            border: 'none',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: 'pointer',
+            fontSize: '18px', color: '#475569', fontWeight: 700,
+            lineHeight: 1,
+            zIndex: 1,
+          }}
+          aria-label="Close"
+        >
+          ×
+        </button>
+
+        {/* Header */}
+        <div style={{ padding: '24px 24px 20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
+          {/* Black circular icon */}
+          <div style={{
+            width: '64px', height: '64px', borderRadius: '50%',
+            background: '#0A0A0A',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            flexShrink: 0,
+          }}>
+            <svg width="30" height="30" viewBox="0 0 24 24" fill="none">
+              <path d="M20 2H4C2.9 2 2 2.9 2 4V22L6 18H20C21.1 18 22 17.1 22 16V4C22 2.9 21.1 2 20 2Z" fill="white" />
+              <path d="M7 9H17M7 13H13" stroke="#0A0A0A" strokeWidth="1.8" strokeLinecap="round" />
+            </svg>
+          </div>
+          <div>
+            <div style={{
+              fontSize: '10px', fontWeight: 700, color: '#94A3B8',
+              letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: '4px',
+            }}>
+              New Notification
+            </div>
+            <div style={{
+              fontSize: '18px', fontWeight: 900, color: '#0A0A0A',
+              letterSpacing: '0.02em', textTransform: 'uppercase',
+              lineHeight: 1.2,
+            }}>
+              {topic}
+            </div>
+          </div>
+        </div>
+
+        {/* Divider */}
+        <div style={{ height: '1px', background: '#E2E8F0', margin: '0 24px' }} />
+
+        {/* Message card */}
+        <div style={{ padding: '20px 24px 28px' }}>
+          <div style={{
+            background: '#F1F3F5',
+            borderRadius: '16px',
+            padding: '20px 20px 48px',
+            position: 'relative',
+            overflow: 'hidden',
+            minHeight: '140px',
+          }}>
+            <div style={{ fontSize: '14px', fontWeight: 800, color: '#0A0A0A', marginBottom: '10px' }}>
+              Message:
+            </div>
+            <div style={{
+              fontSize: '14px', fontWeight: 400, color: '#1e293b',
+              lineHeight: 1.65, whiteSpace: 'pre-wrap',
+              maxWidth: 'calc(100% - 80px)',
+            }}>
+              {message}
+            </div>
+
+            {/* Decorative restaurant illustration */}
+            <svg
+              width="80" height="80"
+              viewBox="0 0 80 80"
+              fill="none"
+              style={{
+                position: 'absolute', bottom: '8px', right: '8px',
+                opacity: 0.13,
+              }}
+            >
+              {/* Building body */}
+              <rect x="12" y="34" width="56" height="38" rx="2" stroke="#334155" strokeWidth="2.5" fill="none"/>
+              {/* Awning */}
+              <path d="M8 34 Q40 22 72 34" stroke="#334155" strokeWidth="2.5" fill="none" strokeLinecap="round"/>
+              {/* Door */}
+              <rect x="32" y="52" width="16" height="20" rx="2" stroke="#334155" strokeWidth="2" fill="none"/>
+              {/* Window left */}
+              <rect x="16" y="42" width="14" height="12" rx="2" stroke="#334155" strokeWidth="2" fill="none"/>
+              {/* Window right */}
+              <rect x="50" y="42" width="14" height="12" rx="2" stroke="#334155" strokeWidth="2" fill="none"/>
+              {/* Cutlery */}
+              <path d="M58 8 L58 20 M55 8 L55 14 Q55 18 58 18 M61 8 L61 20" stroke="#334155" strokeWidth="2" strokeLinecap="round"/>
+              {/* Plant */}
+              <path d="M20 72 Q20 60 14 56 M20 72 Q20 60 26 56 M20 66 L20 72" stroke="#334155" strokeWidth="2" strokeLinecap="round"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <style>{`
+        @keyframes notifPopIn {
+          from { transform: scale(0.85); opacity: 0; }
+          to   { transform: scale(1);    opacity: 1; }
+        }
+      `}</style>
     </div>
   )
 }
