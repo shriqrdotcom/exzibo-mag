@@ -602,12 +602,11 @@ export default function AdminDashboard() {
         if (fromMasterRef.current) return   // master never shows its own popups
         const role = effectiveRole(activeRoleRef.current)
         if (Array.isArray(payload.send_to) && !payload.send_to.includes(role)) return
-        addNotification({
-          title: payload.topic,
-          message: payload.message,
-          target_roles: payload.send_to || NOTIFY_ROLES,
-        })
-        setLivePopupMsg({ topic: payload.topic, message: payload.message })
+        // Only show the live popup — do NOT call addNotification here.
+        // addNotification writes to localStorage which triggers checkPopup() and shows
+        // a duplicate "NEW NOTIFICATION / CONFIRM" popup at the same time.
+        // We add to bell history only when the user dismisses the live popup.
+        setLivePopupMsg({ topic: payload.topic, message: payload.message, send_to: payload.send_to || NOTIFY_ROLES })
       })
       .subscribe((status, err) => {
         if (status === 'SUBSCRIBED') {
@@ -637,9 +636,8 @@ export default function AdminDashboard() {
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, payload => {
         const msg = payload.new
         if (!Array.isArray(msg.send_to) || !msg.send_to.includes(role)) return
-        addNotification({ title: msg.topic, message: msg.message, target_roles: msg.send_to })
-        // Only show popup if broadcast didn't already handle it
-        setLivePopupMsg(prev => prev || { topic: msg.topic, message: msg.message })
+        // Only show live popup if broadcast didn't already handle it (avoid duplicates)
+        setLivePopupMsg(prev => prev || { topic: msg.topic, message: msg.message, send_to: msg.send_to })
       })
       .subscribe()
 
@@ -1672,7 +1670,15 @@ export default function AdminDashboard() {
         <MasterNotificationPopup
           topic={livePopupMsg.topic}
           message={livePopupMsg.message}
-          onClose={() => setLivePopupMsg(null)}
+          onClose={() => {
+            // Add to bell history now that the user has seen the popup
+            addNotification({
+              title: livePopupMsg.topic,
+              message: livePopupMsg.message,
+              target_roles: Array.isArray(livePopupMsg.send_to) ? livePopupMsg.send_to : NOTIFY_ROLES,
+            })
+            setLivePopupMsg(null)
+          }}
         />
       )}
     </div>
