@@ -8,6 +8,8 @@ export function isPreviewEnvironment() {
   return (
     host.includes('replit') ||
     host.includes('repl.co') ||
+    host.includes('replit.app') ||
+    host.includes('replit.dev') ||
     host === 'localhost' ||
     host === '127.0.0.1'
   )

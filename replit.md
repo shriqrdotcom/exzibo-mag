@@ -4,7 +4,7 @@
 A full-stack restaurant management SaaS platform. Features a cinematic dark theme (obsidian black + crimson red) with interfaces for Super Admins, Restaurant Owners, and customers. Backed by Supabase for auth, database, and real-time data.
 
 ## Tech Stack
-- **Framework**: React 19 + Vite
+- **Framework**: React 19 + Vite 8
 - **Routing**: React Router DOM v7
 - **Backend**: Supabase (PostgreSQL + Auth + Realtime + Storage)
 - **Icons**: Lucide React, React Icons
@@ -16,9 +16,8 @@ A full-stack restaurant management SaaS platform. Features a cinematic dark them
 - `src/components/` — Reusable UI elements (Sidebar, AdminHeader, PermissionGate, modals)
 - `src/context/` — React Context providers (AuthContext for Supabase auth, RoleContext for RBAC, AnalyticsContext)
 - `src/lib/` — Utilities: `supabase.js` (client), `db.js` (service layer), `notifications.js`, `previewAuth.js`, `env.js`
-- `supabase/schema.sql` — Full database schema to run in Supabase SQL Editor
+- `supabase/` — SQL migration files for Supabase (schema, RLS policies, storage, realtime setup)
 - `public/` — Static assets (menu images, icons)
-- `attached_assets/` — Design references and screenshots
 
 ## Environment Variables (Secrets)
 All secrets are stored in Replit Secrets (never in code):
@@ -29,20 +28,26 @@ All secrets are stored in Replit Secrets (never in code):
 - `PREVIEW_SECRET` — (optional) HMAC secret for preview session tokens
 
 ## Running
-- Dev server: `npm run dev` (port 5000, host 0.0.0.0)
+- Dev server: `npm run dev` (uses `npx vite`, port 5000, host 0.0.0.0)
 - Build: `npm run build`
 - Vite config: `allowedHosts: true` for Replit proxy compatibility
 
 ## Auth & Data
 - **Auth**: Supabase Auth (Google OAuth in production). Only allowlisted emails (`exzibonew@gmail.com`, `trisanu07.nandi@gmail.com`) can access the system.
-- **Preview/Dev mode**: A separate email+password bypass is built into `vite.config.js` (middleware at `/api/preview-login` and `/api/preview-verify`). Set `PREVIEW_EMAIL` and `PREVIEW_PASSWORD_HASH` secrets to use it. Since Replit is detected as a preview environment (`IS_PREVIEW=true`), the login page shows the preview credentials form instead of Google OAuth.
+- **Dev mode**: `VITE_DISABLE_AUTH=true` (set in `.replit` development env) bypasses auth and injects a mock super-admin user — never set in production.
+- **Preview login**: A separate email+password bypass is built into `vite.config.js` (middleware at `/api/preview-login` and `/api/preview-verify`). Set `PREVIEW_EMAIL` and `PREVIEW_PASSWORD_HASH` secrets to use it. Since Replit is detected as a preview environment (`IS_PREVIEW=true`), the login page shows the preview credentials form instead of Google OAuth.
 - **Database**: Supabase PostgreSQL with Row Level Security. Tables: `restaurants`, `menu_items`, `menu_categories`, `orders`, `bookings`, `team_members`, `user_settings`, `allowed_users`.
 - **Service layer**: `src/lib/db.js` — typed functions for all Supabase CRUD operations.
 
 ## Replit Compatibility Notes
 - `vite.config.js` has `server.allowedHosts: true` — required for Replit's proxy iframe
-- `src/lib/env.js` detects Replit/localhost and sets `IS_PREVIEW=true`, enabling the preview login bypass
+- `src/lib/env.js` detects Replit/localhost (`.replit.app`, `.replit.dev`, `.repl.co`, `localhost`) and sets `IS_PREVIEW=true`, enabling the preview login bypass
 - The app is a pure frontend SPA — all Supabase calls happen client-side using the anon key with Row Level Security
+- Dev scripts use `npx vite` to ensure the binary is found regardless of PATH configuration
+
+## User Preferences
+- Keep Supabase for auth, database, and realtime — it is deeply integrated and holds live data
+- `VITE_DISABLE_AUTH=true` is the correct dev workflow on Replit (bypasses Google OAuth which requires a redirect URI)
 
 ## Routes
 ### Public
@@ -66,7 +71,7 @@ All secrets are stored in Replit Secrets (never in code):
 - `/restaurants` — Restaurant listing
 
 ## Image Storage Architecture
-All images are stored exclusively in Supabase Storage — no base64 blobs in localStorage or the database.
+All images are stored in Supabase Storage buckets.
 
 | Image type | Bucket | Path pattern |
 |---|---|---|
@@ -87,11 +92,12 @@ Supabase Realtime channels for cross-device live sync:
 | Restaurants list | `rt-restaurants` | `restaurants` |
 
 ## Database Setup (Supabase SQL Editor)
-1. Run `supabase/schema.sql` — creates all tables and RLS policies
-2. Run `supabase/realtime_setup.sql` — enables Postgres logical replication
-3. Run `supabase/realtime_public_access.sql` — adds public SELECT policies on orders/bookings
-4. Run `supabase/storage_setup.sql` — creates storage buckets and access policies
-5. Run `supabase/allowed_users_setup.sql` — creates the allowlist table and validation function
-6. Run `supabase/super_admin_setup.sql` — sets up super admin role and RPC
-7. Run `supabase/multi_user_access.sql` — enables team member shared access
-8. Optionally run `supabase/uid_and_publish_setup.sql` — UID system + menu publish control
+Run these in order in your Supabase Dashboard → SQL Editor:
+1. `supabase/schema.sql` — creates all tables and RLS policies
+2. `supabase/realtime_setup.sql` — enables Postgres logical replication
+3. `supabase/realtime_public_access.sql` — adds public SELECT policies on orders/bookings
+4. `supabase/storage_setup.sql` — creates storage buckets and access policies
+5. `supabase/allowed_users_setup.sql` — creates the allowlist table and validation function
+6. `supabase/super_admin_setup.sql` — sets up super admin role and RPC
+7. `supabase/multi_user_access.sql` — enables team member shared access
+8. `supabase/uid_and_publish_setup.sql` — UID system + menu publish control
