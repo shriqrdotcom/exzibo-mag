@@ -868,12 +868,13 @@ export default function ProfileSlide({
           <div style={{ padding: '0 20px 20px', background: '#fff' }}>
             {/* Profile row — image straddles the blue/white boundary */}
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px', marginBottom: '22px', marginTop: '-48px', position: 'relative', zIndex: 1 }}>
+              {/* Profile picture — only MASTER/ADMIN (activeRole === null) may click to edit */}
               <div
-                onClick={() => navigate(`/edit-profile?restaurantId=${restaurantId || 'default'}`)}
+                onClick={!activeRole ? () => navigate(`/edit-profile?restaurantId=${restaurantId || 'default'}`) : undefined}
                 style={{
                   width: '100px', height: '100px', borderRadius: '22px',
                   background: STAT_PILL, overflow: 'hidden', flexShrink: 0,
-                  cursor: 'pointer', position: 'relative',
+                  cursor: !activeRole ? 'pointer' : 'default', position: 'relative',
                 }}
               >
                 {previewUrl
@@ -884,16 +885,18 @@ export default function ProfileSlide({
                     <Loader2 size={20} color="#fff" style={{ animation: 'spin 1s linear infinite' }} />
                   </div>
                 )}
-                {/* Camera overlay hint */}
-                <div style={{
-                  position: 'absolute', inset: 0,
-                  background: 'rgba(0,0,0,0)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  transition: 'background 0.2s',
-                }}
-                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,0,0,0.25)'}
-                  onMouseLeave={e => e.currentTarget.style.background = 'rgba(0,0,0,0)'}
-                />
+                {/* Camera overlay hint — only shown for editable roles */}
+                {!activeRole && (
+                  <div style={{
+                    position: 'absolute', inset: 0,
+                    background: 'rgba(0,0,0,0)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    transition: 'background 0.2s',
+                  }}
+                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,0,0,0.25)'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'rgba(0,0,0,0)'}
+                  />
+                )}
               </div>
               {/* Name/UID anchored in the white zone */}
               <div style={{ paddingTop: '52px' }}>

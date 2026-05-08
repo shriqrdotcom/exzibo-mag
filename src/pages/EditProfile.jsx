@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Loader2, CheckCircle2, AlertCircle, Camera, ChevronLeft, User } from 'lucide-react'
 import { updateRestaurant, uploadDataUrlToStorage } from '../lib/db'
+import { useRole } from '../context/RoleContext'
 
 const FONT = "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif"
 const BLUE = '#3B6BE8'
@@ -77,6 +78,15 @@ export default function EditProfile() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const restaurantId = searchParams.get('restaurantId') || 'default'
+
+  // Only MASTER / ADMIN (activeRole === null) may access this page.
+  // Manager and Employee are redirected back immediately.
+  const { activeRole } = useRole()
+  useEffect(() => {
+    if (activeRole !== null && activeRole !== undefined) {
+      navigate(-1)
+    }
+  }, [activeRole, navigate])
 
   const fileInputRef = useRef(null)
 
