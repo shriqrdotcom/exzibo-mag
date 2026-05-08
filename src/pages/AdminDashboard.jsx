@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useAnalytics, notifyAnalyticsUpdate } from '../context/AnalyticsContext'
 import { useRole } from '../context/RoleContext'
-import { getRestaurants, getOrders, getBookings, updateOrderStatus, updateBookingStatus, getMenuCategories, getMenuItems, insertMenuItem, updateMenuItem, deleteMenuItem, upsertMenuCategory, deleteMenuCategory, upsertMenuItems, uploadMenuImage, updateRestaurant, uploadToStorage, uploadDataUrlToStorage, toggleMenuItemPublish, normalizeOrder, normalizeBooking, sendMessage } from '../lib/db'
+import { getRestaurants, getOrders, getBookings, updateOrderStatus, updateBookingStatus, getMenuCategories, getMenuItems, insertMenuItem, updateMenuItem, deleteMenuItem, upsertMenuCategory, deleteMenuCategory, upsertMenuItems, uploadMenuImage, updateRestaurant, uploadToStorage, uploadDataUrlToStorage, toggleMenuItemPublish, normalizeOrder, normalizeBooking, sendMessage, getLatestSmsNotification, upsertSmsNotification } from '../lib/db'
 import { supabase } from '../lib/supabase'
 import notificationIconImg from '@assets/image_1777373928129.png'
 import {
@@ -228,6 +228,7 @@ export default function AdminDashboard() {
   const [bellOpen, setBellOpen]       = useState(false)
   const [bellItems, setBellItems]     = useState([])
   const [unreadCount, setUnreadCount] = useState(0)
+  const [smsHistory, setSmsHistory]   = useState([])
 
   const MASTER_SHOW_ORDERS_KEY   = 'exzibo_master_show_live_orders'
   const MASTER_SHOW_BOOKINGS_KEY = 'exzibo_master_show_table_confirmations'
@@ -605,6 +606,44 @@ export default function AdminDashboard() {
     }
   }, [fromMaster, activeRole])
 
+  // ── SMS Notifications: persistent cross-device broadcasts ─────────────────
+  // Helpers to track which notifications this browser has already seen
+  const SMS_SEEN_PREFIX = 'exzibo_seen_sms_'
+  function isSmsNotifSeen(id) { return localStorage.getItem(SMS_SEEN_PREFIX + id) === '1' }
+  function markSmsNotifSeen(id) { localStorage.setItem(SMS_SEEN_PREFIX + id, '1') }
+
+  useEffect(() => {
+    if (fromMaster) return
+
+    // On mount: fetch the latest persisted notification and show popup if unseen
+    async function fetchLatest() {
+      const notif = await getLatestSmsNotification()
+      if (!notif) return
+      if (Date.now() > new Date(notif.expires_at).getTime()) return // expired
+      setSmsHistory([notif])
+      if (!isSmsNotifSeen(notif.id)) {
+        markSmsNotifSeen(notif.id)
+        setLivePopupMsg({ topic: notif.title, message: notif.message })
+      }
+    }
+    fetchLatest()
+
+    // Realtime: show popup immediately when a new notification is inserted on any device
+    const smsChannel = supabase
+      .channel('rt-sms-notifications-global')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'sms_notifications' }, payload => {
+        const notif = payload.new
+        setSmsHistory([notif])
+        if (!isSmsNotifSeen(notif.id)) {
+          markSmsNotifSeen(notif.id)
+          setLivePopupMsg({ topic: notif.title, message: notif.message })
+        }
+      })
+      .subscribe()
+
+    return () => { supabase.removeChannel(smsChannel) }
+  }, [fromMaster])
+
   async function handleSendMasterMessage() {
     if (masterMsgSending) return
     const topic   = masterMsgTopic.trim()
@@ -613,6 +652,10 @@ export default function AdminDashboard() {
     setMasterMsgSending(true)
     try {
       await sendMessage({ topic, message, send_to: masterMsgTargets, sent_by: 'Master Control' })
+      // Persist to sms_notifications for cross-device delivery (non-realtime sessions)
+      upsertSmsNotification({ title: topic, message }).catch(e =>
+        console.warn('[sms_notifications] upsert failed (non-fatal):', e.message)
+      )
     } catch (err) {
       console.error('[MasterMessage] Supabase insert failed:', err)
       showToast('❌ Failed to send — check your connection')
@@ -1569,6 +1612,7 @@ export default function AdminDashboard() {
       {!fromMaster && bellOpen && (
         <NotificationCenter
           items={bellItems}
+          smsItems={smsHistory}
           onClose={() => setBellOpen(false)}
           accentStart={accentStart}
           accentEnd={accentEnd}
@@ -1953,7 +1997,7 @@ function StorefrontIcon({ size = 96 }) {
   )
 }
 
-function NotificationCenter({ items, onClose, accentStart, accentEnd, role }) {
+function NotificationCenter({ items, smsItems = [], onClose, accentStart, accentEnd, role }) {
   React.useEffect(() => {
     function onKey(e) { if (e.key === 'Escape') onClose() }
     document.addEventListener('keydown', onKey)
@@ -2037,8 +2081,63 @@ function NotificationCenter({ items, onClose, accentStart, accentEnd, role }) {
           </button>
         </div>
 
-        <div style={{ overflowY: 'auto', padding: items.length === 0 ? '0' : '8px 0' }}>
-          {items.length === 0 ? (
+        <div style={{ overflowY: 'auto', padding: (items.length === 0 && smsItems.length === 0) ? '0' : '8px 0' }}>
+
+          {/* ── Broadcast Alerts from DB (sms_notifications) ── */}
+          {smsItems.length > 0 && (
+            <>
+              <div style={{
+                padding: '8px 20px 4px',
+                fontSize: '10px', fontWeight: 800,
+                color: '#94A3B8', letterSpacing: '0.1em',
+                textTransform: 'uppercase',
+              }}>
+                Broadcast Alerts
+              </div>
+              {smsItems.map(item => (
+                <div key={item.id} style={{
+                  padding: '12px 20px',
+                  borderTop: '1px solid rgba(15,23,42,0.04)',
+                  background: 'rgba(99,102,241,0.03)',
+                }}>
+                  <div style={{
+                    display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: '10px',
+                    marginBottom: '4px',
+                  }}>
+                    <div style={{ fontSize: '14px', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.01em', wordBreak: 'break-word' }}>
+                      {item.title}
+                    </div>
+                    <div style={{ fontSize: '11px', fontWeight: 700, color: '#94A3B8', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                      {timeAgo(item.sent_at)}
+                    </div>
+                  </div>
+                  <div style={{
+                    fontSize: '13px', color: '#475569', lineHeight: 1.55,
+                    display: '-webkit-box',
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: 'vertical',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                  }}>
+                    {item.message}
+                  </div>
+                </div>
+              ))}
+              {items.length > 0 && (
+                <div style={{
+                  padding: '10px 20px 4px',
+                  fontSize: '10px', fontWeight: 800,
+                  color: '#94A3B8', letterSpacing: '0.1em',
+                  textTransform: 'uppercase',
+                }}>
+                  Confirmed Alerts
+                </div>
+              )}
+            </>
+          )}
+
+          {/* ── Confirmed alerts from localStorage ── */}
+          {items.length === 0 && smsItems.length === 0 ? (
             <div style={{
               padding: '40px 24px',
               textAlign: 'center',

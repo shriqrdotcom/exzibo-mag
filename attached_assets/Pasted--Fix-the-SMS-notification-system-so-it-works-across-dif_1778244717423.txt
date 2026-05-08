@@ -1,0 +1,46 @@
+---
+
+**Fix the SMS notification system so it works across different devices and sessions in real-time. Also add a notification history section with auto-delete logic. Do not break any existing functionality.**
+
+---
+
+### PROBLEM TO FIX:
+The floating SMS popup currently only shows on the same device that sent the SMS. It does NOT appear on other devices/sessions where Owner, Manager, or Employee are logged in. Fix this using **Supabase Realtime** (or whichever realtime/database layer is already in the project) so the notification broadcasts to ALL active sessions across ALL devices.
+
+---
+
+### FULL LOGIC TO IMPLEMENT:
+
+**1. Cross-Device Broadcasting:**
+- When Master Control sends an SMS, save the notification into a database table (e.g., `sms_notifications`) with these fields:
+  - `id`, `title`, `message`, `sent_at` (timestamp), `is_read` (default: false), `expires_at` (sent_at + 24 hours)
+- Use Supabase Realtime `subscribe` on this table so that Owner, Manager, and Employee dashboards — on ANY device — automatically receive and display the floating popup the moment the SMS is sent
+
+**2. Show Only ONCE Per User Per Notification:**
+- Track which notifications a user has already seen using either:
+  - A `sms_notification_views` table with `notification_id` + `user_id` + `viewed_at`, OR
+  - LocalStorage keyed by notification ID
+- When a new notification arrives via Realtime, check if the current user has already seen it. If yes — do NOT show the popup again. If no — show it and immediately mark it as seen for that user.
+
+**3. Only Show to: Admin, Owner, Employee roles**
+- The popup and history section must only be visible to users with roles: `admin`, `owner`, `employee` (or whatever the exact role names are in the existing auth system)
+- Do NOT show to Master Control or Super Admin roles
+
+**4. Notification History Section:**
+- Add a "Notification History" section inside the Admin, Owner, and Employee dashboards
+- List all notifications from the `sms_notifications` table, newest first
+- Each entry shows: title, message preview, and time sent
+- **Auto-delete rule:** When a new SMS notification is sent, automatically delete all previous notifications from the database that are older than 24 hours OR delete the oldest one if a new one comes in — so only the latest 1 notification exists in history at any time
+- In short: **sending a new SMS replaces the old one** — history always shows maximum 1 active notification
+
+**5. Cleanup Logic:**
+- On every new SMS send from Master Control, before inserting the new notification, delete all existing records from the `sms_notifications` table
+- This ensures only 1 notification exists at a time in history
+
+---
+
+### IMPORTANT RULES:
+- Do not touch or break any existing SMS send logic, master control UI, or dashboard layouts
+- All changes must be additive only
+- Use the existing Supabase client already configured in the project
+- The floating popup design already built must remain unchanged — only fix the trigger/delivery mechanism

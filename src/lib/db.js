@@ -472,3 +472,30 @@ export async function getMessagesForRole(role) {
   if (error) throw error
   return data ?? []
 }
+
+// ── SMS Notifications (cross-device persistent broadcasts) ────────────────────
+// Only 1 notification exists at a time. Each new send wipes previous records.
+
+export async function getLatestSmsNotification() {
+  const { data, error } = await supabase
+    .from('sms_notifications')
+    .select('*')
+    .order('sent_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  if (error) { console.warn('[sms_notifications] fetch error:', error.message); return null }
+  return data
+}
+
+export async function upsertSmsNotification({ title, message }) {
+  // Delete ALL existing notifications first — only 1 active at a time
+  await supabase.from('sms_notifications').delete().not('id', 'is', null)
+  const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+  const { data, error } = await supabase
+    .from('sms_notifications')
+    .insert({ title, message, expires_at: expiresAt })
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
