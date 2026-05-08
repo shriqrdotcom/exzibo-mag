@@ -61,7 +61,6 @@ const NAV_ITEMS = [
   { id: 'menu',      icon: BookOpen,      label: 'Menu',      permission: 'menuEdit' },
   { id: 'customers', icon: BarChart2,     label: 'Analytics', permission: 'analytics' },
   { id: 'settings',  icon: Settings,      label: 'Settings',  permission: 'settings' },
-  { id: 'profile',   icon: User,          label: 'Profile',   permission: 'profile' },
 ]
 
 const DEMO_ORDERS = [
