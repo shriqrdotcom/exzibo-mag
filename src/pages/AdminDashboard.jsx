@@ -259,6 +259,7 @@ export default function AdminDashboard() {
   const orderSettingsPanelRef = useRef(null)
   const bookingSettingsBtnRef = useRef(null)
   const bookingSettingsPanelRef = useRef(null)
+  const broadcastChannelRef = useRef(null)
   const [globalConfig, setGlobalConfig] = useState(loadGlobalConfig)
 
   // Draft state for the settings panel
@@ -584,11 +585,34 @@ export default function AdminDashboard() {
     }
   }, [fromMaster, activeRole])
 
-  // ── Messages Realtime subscription (non-master only) ─────────────────────
+  // ── Broadcast channel: instant cross-device delivery (no DB needed) ─────────
+  // All sessions subscribe so master can send. Non-master sessions receive.
+  useEffect(() => {
+    const role = effectiveRole(activeRole)
+    const ch = supabase
+      .channel('exzibo-master-alerts')
+      .on('broadcast', { event: 'master-alert' }, ({ payload }) => {
+        if (fromMaster) return // master never shows its own popups
+        if (Array.isArray(payload.send_to) && !payload.send_to.includes(role)) return
+        addNotification({
+          title: payload.topic,
+          message: payload.message,
+          target_roles: payload.send_to || NOTIFY_ROLES,
+        })
+        setLivePopupMsg({ topic: payload.topic, message: payload.message })
+      })
+      .subscribe()
+    broadcastChannelRef.current = ch
+    return () => {
+      supabase.removeChannel(ch)
+      broadcastChannelRef.current = null
+    }
+  }, [fromMaster, activeRole])
+
+  // ── Messages Realtime subscription (non-master only, DB-backed fallback) ────
   useEffect(() => {
     if (fromMaster) return
     const role = effectiveRole(activeRole)
-    let mounted = true
 
     const channel = supabase
       .channel(`rt-messages-${role}`)
@@ -596,14 +620,12 @@ export default function AdminDashboard() {
         const msg = payload.new
         if (!Array.isArray(msg.send_to) || !msg.send_to.includes(role)) return
         addNotification({ title: msg.topic, message: msg.message, target_roles: msg.send_to })
-        setLivePopupMsg({ topic: msg.topic, message: msg.message })
+        // Only show popup if broadcast didn't already handle it
+        setLivePopupMsg(prev => prev || { topic: msg.topic, message: msg.message })
       })
       .subscribe()
 
-    return () => {
-      mounted = false
-      supabase.removeChannel(channel)
-    }
+    return () => { supabase.removeChannel(channel) }
   }, [fromMaster, activeRole])
 
   // ── SMS Notifications: persistent cross-device broadcasts ─────────────────
@@ -651,11 +673,19 @@ export default function AdminDashboard() {
     if (!topic || !message || masterMsgTargets.length === 0) return
     setMasterMsgSending(true)
     try {
-      await sendMessage({ topic, message, send_to: masterMsgTargets, sent_by: 'Master Control' })
-      // Persist to sms_notifications for cross-device delivery (non-realtime sessions)
-      upsertSmsNotification({ title: topic, message }).catch(e =>
-        console.warn('[sms_notifications] upsert failed (non-fatal):', e.message)
-      )
+      // 1. Broadcast instantly to all currently connected devices (no DB required)
+      if (broadcastChannelRef.current) {
+        broadcastChannelRef.current.send({
+          type: 'broadcast',
+          event: 'master-alert',
+          payload: { topic, message, send_to: masterMsgTargets },
+        }).catch(e => console.warn('[broadcast] send failed (non-fatal):', e.message))
+      }
+      // 2. Persist to DB for late-joiners (requires SQL setup in Supabase)
+      sendMessage({ topic, message, send_to: masterMsgTargets, sent_by: 'Master Control' })
+        .catch(e => console.warn('[messages] insert failed (non-fatal):', e.message))
+      upsertSmsNotification({ title: topic, message })
+        .catch(e => console.warn('[sms_notifications] upsert failed (non-fatal):', e.message))
     } catch (err) {
       console.error('[MasterMessage] Supabase insert failed:', err)
       showToast('❌ Failed to send — check your connection')
