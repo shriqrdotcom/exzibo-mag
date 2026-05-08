@@ -257,7 +257,7 @@ export default function ProfileSlide({
   const [restaurantUID, setRestaurantUID] = useState('')
   const [uidCopied, setUidCopied] = useState(false)
 
-  const [activeTab, setActiveTab] = useState('PROFILE')
+  const [activeTab, setActiveTab] = useState(() => activeRole === 'manager' ? 'TEAM' : 'PROFILE')
   const [teamMembers, setTeamMembers] = useState([])
 
   useEffect(() => {
@@ -1351,7 +1351,7 @@ export default function ProfileSlide({
           {/* Tab Switcher + Tab Contents — hidden for staff role */}
           {activeRole !== 'staff' && (<>
           <div style={{ display: 'flex', background: TAB_BG, borderRadius: '14px', margin: '0 16px 16px', padding: '4px' }}>
-            {['PROFILE', 'TEAM', 'REMAINING DAY'].map(tab => (
+            {(activeRole === 'manager' ? ['TEAM', 'REMAINING DAY'] : ['PROFILE', 'TEAM', 'REMAINING DAY']).map(tab => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -1369,7 +1369,7 @@ export default function ProfileSlide({
           </div>
 
           {/* PROFILE Tab */}
-          {activeTab === 'PROFILE' && (
+          {activeTab === 'PROFILE' && activeRole !== 'manager' && (
             <div style={{ background: '#fff', borderRadius: '16px', margin: '0 16px', overflow: 'hidden', boxShadow: '0 1px 8px rgba(0,0,0,0.07)' }}>
               {settingsRows.map((row, idx, arr) => (
                 <React.Fragment key={row.title}>
