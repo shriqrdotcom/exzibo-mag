@@ -22,7 +22,7 @@ import {
   ClipboardList, BookOpen, Users, Settings, ArrowLeft, BarChart2,
   Palette, DollarSign, Type, Save, Check, CalendarDays, UtensilsCrossed,
   SlidersHorizontal, Plus, Pencil, Trash2, X, Search, ChevronDown,
-  Tag, Info, Eye, EyeOff, Send, Bell, User,
+  Tag, Info, Eye, EyeOff, Send, Bell, User, Copy,
   Image as ImageIcon, AlertCircle, CheckCircle2,
 } from 'lucide-react'
 
@@ -207,6 +207,7 @@ export default function AdminDashboard() {
   const [orders, setOrders] = useState([])
   const [bookings, setBookings] = useState([])
   const [activeNav, setActiveNav] = useState('orders')
+  const [uidCopied, setUidCopied] = useState(false)
   const [orderView, setOrderView] = useState('orders')
   const [showOrderSettings, setShowOrderSettings] = useState(false)
   const [orderSettings, setOrderSettings] = useState({ showName: false, showPhone: false, showLocation: false })
@@ -1413,14 +1414,56 @@ export default function AdminDashboard() {
                   UID
                 </div>
                 <div style={{
-                  fontSize: '16px', fontWeight: 800, color: '#0f172a',
-                  letterSpacing: '0.06em', fontFeatureSettings: '"tnum"',
+                  display: 'flex', alignItems: 'center', gap: '8px',
                 }}>
-                  {restaurant?.uid || (() => {
-                    try {
-                      return JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')[0]?.uid || '—'
-                    } catch { return '—' }
-                  })()}
+                  <span style={{
+                    fontSize: '16px', fontWeight: 800, color: '#0f172a',
+                    letterSpacing: '0.06em', fontFeatureSettings: '"tnum"',
+                  }}>
+                    {restaurant?.uid || (() => {
+                      try {
+                        const all = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
+                        return all.find(r => r.id === id)?.uid || '—'
+                      } catch { return '—' }
+                    })()}
+                  </span>
+                  <button
+                    onClick={() => {
+                      const val = restaurant?.uid || (() => {
+                        try {
+                          const all = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
+                          return all.find(r => r.id === id)?.uid || ''
+                        } catch { return '' }
+                      })()
+                      if (!val || val === '—') return
+                      navigator.clipboard.writeText(String(val)).then(() => {
+                        setUidCopied(true)
+                        setTimeout(() => setUidCopied(false), 1500)
+                      }).catch(() => {
+                        try {
+                          const el = document.createElement('textarea')
+                          el.value = String(val)
+                          document.body.appendChild(el)
+                          el.select()
+                          document.execCommand('copy')
+                          document.body.removeChild(el)
+                          setUidCopied(true)
+                          setTimeout(() => setUidCopied(false), 1500)
+                        } catch { /* noop */ }
+                      })
+                    }}
+                    title={uidCopied ? 'Copied!' : 'Copy UID'}
+                    style={{
+                      background: 'none', border: 'none', cursor: 'pointer', padding: '3px 4px',
+                      color: uidCopied ? '#22C55E' : '#94A3B8',
+                      display: 'flex', alignItems: 'center',
+                      borderRadius: '6px',
+                      transition: 'color 0.2s ease',
+                      lineHeight: 1,
+                    }}
+                  >
+                    {uidCopied ? <Check size={15} strokeWidth={2.5} /> : <Copy size={15} strokeWidth={2} />}
+                  </button>
                 </div>
               </div>
             </div>

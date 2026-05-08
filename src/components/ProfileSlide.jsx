@@ -5,7 +5,7 @@ import { useRole } from '../context/RoleContext'
 import {
   X, Power, MapPin, Phone, Store, Users, Image,
   Loader2, AlertCircle, CheckCircle2, Check, XCircle, Mail, Clock, UserPlus,
-  User, UserX, ChevronRight, Calendar, Star, Link2, Send,
+  User, UserX, ChevronRight, Calendar, Star, Link2, Send, Copy,
 } from 'lucide-react'
 import { PiPencilCircle } from 'react-icons/pi'
 import { FaFacebook, FaInstagram, FaLinkedinIn, FaYoutube } from 'react-icons/fa'
@@ -255,6 +255,7 @@ export default function ProfileSlide({
   const [descText, setDescText] = useState('')
   const [badgeText, setBadgeText] = useState('')
   const [restaurantUID, setRestaurantUID] = useState('')
+  const [uidCopied, setUidCopied] = useState(false)
 
   const [activeTab, setActiveTab] = useState('PROFILE')
   const [teamMembers, setTeamMembers] = useState([])
@@ -431,6 +432,26 @@ export default function ProfileSlide({
     const r = all.find(r => r.id === restaurantId)
     setRestaurantUID(r?.uid || '')
   }, [restaurantId])
+
+  function copyUID(val) {
+    const text = String(val || '')
+    if (!text) return
+    navigator.clipboard.writeText(text).then(() => {
+      setUidCopied(true)
+      setTimeout(() => setUidCopied(false), 1500)
+    }).catch(() => {
+      try {
+        const el = document.createElement('textarea')
+        el.value = text
+        document.body.appendChild(el)
+        el.select()
+        document.execCommand('copy')
+        document.body.removeChild(el)
+        setUidCopied(true)
+        setTimeout(() => setUidCopied(false), 1500)
+      } catch { /* noop */ }
+    })
+  }
 
   useEffect(() => {
     const storageBase = (!restaurantId || restaurantId === 'default') ? 'default' : restaurantId
@@ -879,8 +900,22 @@ export default function ProfileSlide({
                 <div style={{ fontWeight: 800, fontSize: '16px', color: '#111', letterSpacing: '0.01em', lineHeight: 1.2 }}>
                   {restaurantName || 'RESTAURANT NAME'}
                 </div>
-                <div style={{ fontSize: '13px', color: '#888', marginTop: '4px', fontFamily: 'monospace', letterSpacing: '0.04em' }}>
-                  UID: {restaurantUID || '0000000001'}
+                <div style={{ fontSize: '13px', color: '#888', marginTop: '4px', fontFamily: 'monospace', letterSpacing: '0.04em', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span>UID: {restaurantUID || '0000000001'}</span>
+                  <button
+                    onClick={e => { e.stopPropagation(); copyUID(restaurantUID || '0000000001') }}
+                    title={uidCopied ? 'Copied!' : 'Copy UID'}
+                    style={{
+                      background: 'none', border: 'none', cursor: 'pointer', padding: '2px 3px',
+                      color: uidCopied ? '#22C55E' : '#bbb',
+                      display: 'flex', alignItems: 'center',
+                      borderRadius: '4px',
+                      transition: 'color 0.2s ease',
+                      lineHeight: 1,
+                    }}
+                  >
+                    {uidCopied ? <Check size={13} strokeWidth={2.5} /> : <Copy size={13} strokeWidth={2} />}
+                  </button>
                 </div>
               </div>
             </div>
