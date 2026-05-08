@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useAnalytics, notifyAnalyticsUpdate } from '../context/AnalyticsContext'
 import { useRole } from '../context/RoleContext'
-import { getRestaurants, getOrders, getBookings, updateOrderStatus, updateBookingStatus, getMenuCategories, getMenuItems, insertMenuItem, updateMenuItem, deleteMenuItem, upsertMenuCategory, deleteMenuCategory, upsertMenuItems, uploadMenuImage, updateRestaurant, uploadToStorage, uploadDataUrlToStorage, toggleMenuItemPublish, normalizeOrder, normalizeBooking } from '../lib/db'
+import { getRestaurants, getOrders, getBookings, updateOrderStatus, updateBookingStatus, getMenuCategories, getMenuItems, insertMenuItem, updateMenuItem, deleteMenuItem, upsertMenuCategory, deleteMenuCategory, upsertMenuItems, uploadMenuImage, updateRestaurant, uploadToStorage, uploadDataUrlToStorage, toggleMenuItemPublish, normalizeOrder, normalizeBooking, sendMessage, getMessagesForRole } from '../lib/db'
 import { supabase } from '../lib/supabase'
 import notificationIconImg from '@assets/image_1777373928129.png'
 import {
@@ -23,7 +23,7 @@ import {
   Palette, DollarSign, Type, Save, Check, CalendarDays, UtensilsCrossed,
   SlidersHorizontal, Plus, Pencil, Trash2, X, Search, ChevronDown,
   Tag, Info, Eye, EyeOff, Send, Bell, User, Copy,
-  Image as ImageIcon, AlertCircle, CheckCircle2,
+  Image as ImageIcon, AlertCircle, CheckCircle2, MessageSquare,
 } from 'lucide-react'
 
 const MAX_GALLERY = 10
@@ -220,6 +220,11 @@ export default function AdminDashboard() {
   const [masterMsgTopic, setMasterMsgTopic] = useState('')
   const [masterMsgBody, setMasterMsgBody]   = useState('')
   const [masterMsgTargets, setMasterMsgTargets] = useState(['admin', 'manager', 'staff'])
+  const [masterMsgSending, setMasterMsgSending] = useState(false)
+
+  const [inboxMessages, setInboxMessages] = useState([])
+  const [inboxOpen, setInboxOpen] = useState(false)
+  const [inboxUnread, setInboxUnread] = useState(0)
 
   const [activePopup, setActivePopup] = useState(null)
   const [bellOpen, setBellOpen]       = useState(false)
@@ -580,18 +585,55 @@ export default function AdminDashboard() {
     }
   }, [fromMaster, activeRole])
 
-  function handleSendMasterMessage() {
-    const created = addNotification({
-      title: masterMsgTopic,
-      message: masterMsgBody,
-      target_roles: masterMsgTargets,
-    })
-    if (!created) return
+  // ── Messages Realtime subscription (non-master only) ─────────────────────
+  useEffect(() => {
+    if (fromMaster) return
+    const role = effectiveRole(activeRole)
+    let mounted = true
+
+    getMessagesForRole(role)
+      .then(msgs => { if (mounted) { setInboxMessages(msgs); setInboxUnread(msgs.length) } })
+      .catch(() => {})
+
+    const channel = supabase
+      .channel(`rt-messages-${role}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, payload => {
+        const msg = payload.new
+        if (!Array.isArray(msg.send_to) || !msg.send_to.includes(role)) return
+        addNotification({ title: msg.topic, message: msg.message, target_roles: msg.send_to })
+        setInboxMessages(prev => [msg, ...prev])
+        setInboxUnread(prev => prev + 1)
+        showToast(`📨 New message: ${msg.topic}`)
+      })
+      .subscribe()
+
+    return () => {
+      mounted = false
+      supabase.removeChannel(channel)
+    }
+  }, [fromMaster, activeRole])
+
+  async function handleSendMasterMessage() {
+    if (masterMsgSending) return
+    const topic   = masterMsgTopic.trim()
+    const message = masterMsgBody.trim()
+    if (!topic || !message || masterMsgTargets.length === 0) return
+    setMasterMsgSending(true)
+    try {
+      await sendMessage({ topic, message, send_to: masterMsgTargets, sent_by: 'Master Control' })
+    } catch (err) {
+      console.error('[MasterMessage] Supabase insert failed:', err)
+      showToast('❌ Failed to send — check your connection')
+      setMasterMsgSending(false)
+      return
+    }
+    addNotification({ title: topic, message, target_roles: masterMsgTargets })
     setMasterMsgOpen(false)
     setMasterMsgTopic('')
     setMasterMsgBody('')
     setMasterMsgTargets(['admin', 'manager', 'staff'])
-    showToast('✅ Notification sent')
+    setMasterMsgSending(false)
+    showToast('✅ Message sent to all devices')
   }
 
   function handlePopupConfirm() {
@@ -932,6 +974,55 @@ export default function AdminDashboard() {
               >
                 <Search size={18} color={showMenuSearch ? accentStart : '#64748b'} />
               </div>
+            )}
+            {!fromMaster && (
+              <button
+                type="button"
+                aria-label="Inbox"
+                onClick={() => { setInboxOpen(true); setInboxUnread(0) }}
+                style={{
+                  position: 'relative',
+                  width: '42px', height: '42px', borderRadius: '13px',
+                  background: 'rgba(255,255,255,0.8)',
+                  border: '1px solid rgba(255,255,255,0.6)',
+                  boxShadow: '4px 4px 10px rgba(0,0,0,0.08), -2px -2px 8px rgba(255,255,255,0.9)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  cursor: 'pointer',
+                  color: '#64748b',
+                  transition: 'all 0.2s ease',
+                  padding: 0,
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.color = accentStart
+                  e.currentTarget.style.borderColor = `${accentStart}40`
+                  e.currentTarget.style.boxShadow = `0 0 0 1.5px ${accentStart}30, 4px 4px 10px rgba(0,0,0,0.08)`
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.color = '#64748b'
+                  e.currentTarget.style.borderColor = 'rgba(255,255,255,0.6)'
+                  e.currentTarget.style.boxShadow = '4px 4px 10px rgba(0,0,0,0.08), -2px -2px 8px rgba(255,255,255,0.9)'
+                }}
+              >
+                <MessageSquare size={18} strokeWidth={2.1} />
+                {inboxUnread > 0 && (
+                  <span style={{
+                    position: 'absolute',
+                    top: '-4px', right: '-4px',
+                    minWidth: '18px', height: '18px',
+                    padding: '0 5px',
+                    borderRadius: '9px',
+                    background: accentStart,
+                    color: '#fff',
+                    fontSize: '10px', fontWeight: 800,
+                    lineHeight: '18px',
+                    textAlign: 'center',
+                    boxShadow: `0 2px 6px ${accentStart}80, 0 0 0 2px #fff`,
+                    pointerEvents: 'none',
+                  }}>
+                    {inboxUnread > 9 ? '9+' : inboxUnread}
+                  </span>
+                )}
+              </button>
             )}
             {!fromMaster && (
               <button
@@ -1541,6 +1632,147 @@ export default function AdminDashboard() {
           role={effectiveRole(activeRole)}
         />
       )}
+
+      {!fromMaster && inboxOpen && (
+        <InboxPanel
+          messages={inboxMessages}
+          onClose={() => setInboxOpen(false)}
+          accentStart={accentStart}
+          accentEnd={accentEnd}
+          role={effectiveRole(activeRole)}
+        />
+      )}
+    </div>
+  )
+}
+
+function InboxPanel({ messages = [], onClose, accentStart, accentEnd, role }) {
+  React.useEffect(() => {
+    function onKey(e) { if (e.key === 'Escape') onClose() }
+    document.addEventListener('keydown', onKey)
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.removeEventListener('keydown', onKey)
+      document.body.style.overflow = prev
+    }
+  }, [onClose])
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 9100,
+        background: 'rgba(0,0,0,0.35)',
+        backdropFilter: 'blur(4px)',
+        display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-end',
+      }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          width: '380px', maxWidth: '95vw',
+          height: '100%', maxHeight: '100vh',
+          background: '#fff',
+          boxShadow: '-8px 0 40px rgba(0,0,0,0.14)',
+          display: 'flex', flexDirection: 'column',
+          animation: 'slideInRight 0.25s cubic-bezier(0.32,0.72,0,1)',
+        }}
+      >
+        {/* Header */}
+        <div style={{
+          padding: '20px 20px 16px',
+          borderBottom: '1px solid #F1F5F9',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          flexShrink: 0,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{
+              width: '34px', height: '34px', borderRadius: '10px',
+              background: `linear-gradient(135deg, ${accentStart}, ${accentEnd})`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <MessageSquare size={16} color="#fff" strokeWidth={2.2} />
+            </div>
+            <div>
+              <div style={{ fontSize: '15px', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.01em' }}>
+                Messages
+              </div>
+              <div style={{ fontSize: '11px', fontWeight: 600, color: '#94A3B8', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                {role} inbox
+              </div>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            style={{
+              width: '32px', height: '32px', borderRadius: '10px',
+              background: '#F1F5F9', border: 'none',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer', color: '#64748b',
+            }}
+          >
+            <X size={16} />
+          </button>
+        </div>
+
+        {/* Message list */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '12px 16px' }}>
+          {messages.length === 0 ? (
+            <div style={{
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+              height: '200px', gap: '10px', color: '#94A3B8',
+            }}>
+              <MessageSquare size={32} strokeWidth={1.5} />
+              <span style={{ fontSize: '13px', fontWeight: 600 }}>No messages yet</span>
+            </div>
+          ) : (
+            messages.map((msg, i) => (
+              <div
+                key={msg.id || i}
+                style={{
+                  padding: '14px 16px',
+                  marginBottom: '8px',
+                  borderRadius: '14px',
+                  background: '#F8FAFC',
+                  border: '1px solid #E2E8F0',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px', marginBottom: '6px' }}>
+                  <div style={{ fontSize: '13px', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.01em', lineHeight: 1.3 }}>
+                    {msg.topic}
+                  </div>
+                  <div style={{ fontSize: '11px', fontWeight: 600, color: '#94A3B8', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                    {timeAgo(msg.created_at)}
+                  </div>
+                </div>
+                <div style={{ fontSize: '13px', fontWeight: 500, color: '#475569', lineHeight: 1.55 }}>
+                  {msg.message}
+                </div>
+                <div style={{ marginTop: '8px', display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                  {(msg.send_to || []).map(r => (
+                    <span key={r} style={{
+                      padding: '2px 8px', borderRadius: '6px',
+                      background: `${accentStart}14`,
+                      color: accentStart,
+                      fontSize: '10px', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase',
+                    }}>
+                      {r}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+
+      <style>{`
+        @keyframes slideInRight {
+          from { transform: translateX(100%); opacity: 0; }
+          to   { transform: translateX(0);    opacity: 1; }
+        }
+      `}</style>
     </div>
   )
 }

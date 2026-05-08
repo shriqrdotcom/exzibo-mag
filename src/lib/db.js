@@ -449,3 +449,26 @@ export async function saveUserSettings(config) {
     .upsert({ user_id: user.id, global_config: config })
   if (error) throw error
 }
+
+// ── Messages (cross-device real-time notifications) ───────────────────────────
+
+export async function sendMessage({ topic, message, send_to, sent_by = 'Master Control' }) {
+  const { data, error } = await supabase
+    .from('messages')
+    .insert({ topic, message, send_to, sent_by })
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
+export async function getMessagesForRole(role) {
+  const { data, error } = await supabase
+    .from('messages')
+    .select('*')
+    .contains('send_to', [role])
+    .order('created_at', { ascending: false })
+    .limit(50)
+  if (error) throw error
+  return data ?? []
+}
