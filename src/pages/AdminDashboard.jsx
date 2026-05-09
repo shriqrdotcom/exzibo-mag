@@ -1671,12 +1671,14 @@ export default function AdminDashboard() {
           topic={livePopupMsg.topic}
           message={livePopupMsg.message}
           onClose={() => {
-            // Add to bell history now that the user has seen the popup
-            addNotification({
+            // Add to bell history, then immediately mark as session-shown so the
+            // localStorage write does NOT trigger the violet NotificationPopup duplicate.
+            const notif = addNotification({
               title: livePopupMsg.topic,
               message: livePopupMsg.message,
               target_roles: Array.isArray(livePopupMsg.send_to) ? livePopupMsg.send_to : NOTIFY_ROLES,
             })
+            if (notif) markPopupShownThisSession(notif.id)
             setLivePopupMsg(null)
           }}
         />
