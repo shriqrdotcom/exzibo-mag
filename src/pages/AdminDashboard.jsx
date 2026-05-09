@@ -2,12 +2,13 @@ import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useAnalytics, notifyAnalyticsUpdate } from '../context/AnalyticsContext'
 import { useRole } from '../context/RoleContext'
-import { getRestaurants, getOrders, getBookings, updateOrderStatus, updateBookingStatus, getMenuCategories, getMenuItems, insertMenuItem, updateMenuItem, deleteMenuItem, upsertMenuCategory, deleteMenuCategory, upsertMenuItems, uploadMenuImage, updateRestaurant, uploadToStorage, uploadDataUrlToStorage, toggleMenuItemPublish, normalizeOrder, normalizeBooking, sendMessage, getLatestSmsNotification, upsertSmsNotification } from '../lib/db'
+import { getRestaurants, getOrders, getBookings, updateOrderStatus, updateBookingStatus, getMenuCategories, getMenuItems, insertMenuItem, updateMenuItem, deleteMenuItem, upsertMenuCategory, deleteMenuCategory, upsertMenuItems, uploadMenuImage, updateRestaurant, uploadToStorage, uploadDataUrlToStorage, toggleMenuItemPublish, normalizeOrder, normalizeBooking, sendMessage, getLatestSmsNotification, upsertSmsNotification, fetchActiveNotification, publishActiveNotification, confirmActiveNotification } from '../lib/db'
 import { supabase } from '../lib/supabase'
 import notificationIconImg from '@assets/image_1777373928129.png'
 import {
   NOTIFY_ROLES,
   addNotification,
+  clearAllNotifications,
   getNextPopupForRole,
   confirmNotification,
   markPopupShownThisSession,
@@ -568,9 +569,9 @@ export default function AdminDashboard() {
   }
 
   // ── Single entry-point for all live notification popups ───────────────────
-  // Deduplicates across the three delivery paths (broadcast, messages, sms_notifications)
-  // and directly sets the purple NotificationPopup — no second popup ever fires.
-  function showLiveNotification(topic, message, send_to) {
+  // Deduplicates across the three delivery paths (broadcast, messages, active_notification).
+  // Accepts an optional sharedId from Supabase so all devices share the same notification id.
+  function showLiveNotification(topic, message, send_to, sharedId = null) {
     if (fromMasterRef.current) return
     const key = `${topic}::${message}`
     if (
@@ -579,6 +580,7 @@ export default function AdminDashboard() {
     ) return
     lastLiveNotifRef.current = { key, shownAt: Date.now() }
     const notif = addNotification({
+      id: sharedId,
       title: topic,
       message,
       target_roles: Array.isArray(send_to) ? send_to : NOTIFY_ROLES,
@@ -623,7 +625,7 @@ export default function AdminDashboard() {
         if (fromMasterRef.current) return   // master never shows its own popups
         const role = effectiveRole(activeRoleRef.current)
         if (Array.isArray(payload.send_to) && !payload.send_to.includes(role)) return
-        showLiveNotification(payload.topic, payload.message, payload.send_to || NOTIFY_ROLES)
+        showLiveNotification(payload.topic, payload.message, payload.send_to || NOTIFY_ROLES, payload.id || null)
       })
       .subscribe((status, err) => {
         if (status === 'SUBSCRIBED') {
@@ -696,33 +698,101 @@ export default function AdminDashboard() {
     return () => { supabase.removeChannel(smsChannel) }
   }, [fromMaster])
 
+  // ── Active Notification: cross-device sync (single source of truth) ────────
+  // Subscribes to the active_notification table. INSERT = new popup on all devices.
+  // UPDATE with confirmed_at = someone confirmed → dismiss popup, move to bell everywhere.
+  // DELETE = old notification cleared (new one arriving).
+  useEffect(() => {
+    if (fromMaster) return
+
+    // On mount: fetch current active notification and sync local state
+    fetchActiveNotification().then(notif => {
+      if (!notif) return
+      if (Date.now() > new Date(notif.expires_at).getTime()) return
+      const role = effectiveRole(activeRoleRef.current)
+      const roles = Array.isArray(notif.target_roles) ? notif.target_roles : []
+      if (roles.length > 0 && !roles.includes(role)) return
+      if (notif.confirmed_at) {
+        // Already confirmed on another device — sync to local bell
+        addNotification({ id: notif.id, title: notif.title, message: notif.message, target_roles: roles })
+        confirmNotification(notif.id, activeRoleRef.current)
+        setBellItems(getConfirmedForRole(activeRoleRef.current))
+        setUnreadCount(getUnreadCount(activeRoleRef.current))
+      } else {
+        // Unconfirmed — show popup (dedup guard prevents double-showing with broadcast)
+        showLiveNotification(notif.title, notif.message, roles, notif.id)
+      }
+    }).catch(e => console.warn('[active_notification] initial fetch failed (non-fatal):', e.message))
+
+    const channel = supabase
+      .channel('rt-active-notification')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'active_notification' }, ({ new: notif }) => {
+        const role = effectiveRole(activeRoleRef.current)
+        const roles = Array.isArray(notif.target_roles) ? notif.target_roles : []
+        if (roles.length > 0 && !roles.includes(role)) return
+        showLiveNotification(notif.title, notif.message, roles, notif.id)
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'active_notification' }, ({ new: notif }) => {
+        if (!notif.confirmed_at) return
+        const role = effectiveRole(activeRoleRef.current)
+        const roles = Array.isArray(notif.target_roles) ? notif.target_roles : []
+        if (roles.length > 0 && !roles.includes(role)) return
+        // Confirmed on another device — sync locally
+        confirmNotification(notif.id, activeRoleRef.current)
+        setBellItems(getConfirmedForRole(activeRoleRef.current))
+        setUnreadCount(getUnreadCount(activeRoleRef.current))
+        setActivePopup(prev => {
+          if (prev?.id === notif.id) {
+            markPopupShownThisSession(notif.id)
+            return null
+          }
+          return prev
+        })
+      })
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'active_notification' }, () => {
+        // Previous notification deleted — a new one is about to arrive
+        clearAllNotifications()
+        setActivePopup(null)
+        setBellItems([])
+        setUnreadCount(0)
+      })
+      .subscribe((status, err) => {
+        if (status === 'CHANNEL_ERROR') console.warn('[active_notification] channel error:', err)
+      })
+
+    return () => supabase.removeChannel(channel)
+  }, [fromMaster])
+
   async function handleSendMasterMessage() {
     if (masterMsgSending) return
     const topic   = masterMsgTopic.trim()
     const message = masterMsgBody.trim()
     if (!topic || !message || masterMsgTargets.length === 0) return
     setMasterMsgSending(true)
+    // Shared id used by both local state and Supabase so all devices reference the same notification
+    const notifId = 'n_' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36)
     try {
       // 1. Broadcast instantly to all currently connected devices (no DB required)
       if (broadcastChannelRef.current) {
         broadcastChannelRef.current.send({
           type: 'broadcast',
           event: 'master-alert',
-          payload: { topic, message, send_to: masterMsgTargets },
+          payload: { id: notifId, topic, message, send_to: masterMsgTargets },
         }).catch(e => console.warn('[broadcast] send failed (non-fatal):', e.message))
       }
-      // 2. Persist to DB for late-joiners (requires SQL setup in Supabase)
+      // 2. Persist to messages table (historical record)
       sendMessage({ topic, message, send_to: masterMsgTargets, sent_by: 'Master Control' })
         .catch(e => console.warn('[messages] insert failed (non-fatal):', e.message))
-      upsertSmsNotification({ title: topic, message })
-        .catch(e => console.warn('[sms_notifications] upsert failed (non-fatal):', e.message))
+      // 3. Publish as active_notification — single row, replaces old, syncs confirm state across devices
+      publishActiveNotification({ id: notifId, title: topic, message, target_roles: masterMsgTargets })
+        .catch(e => console.warn('[active_notification] publish failed (non-fatal):', e.message))
     } catch (err) {
-      console.error('[MasterMessage] Supabase insert failed:', err)
+      console.error('[MasterMessage] send failed:', err)
       showToast('❌ Failed to send — check your connection')
       setMasterMsgSending(false)
       return
     }
-    addNotification({ title: topic, message, target_roles: masterMsgTargets })
+    addNotification({ id: notifId, title: topic, message, target_roles: masterMsgTargets })
     setMasterMsgOpen(false)
     setMasterMsgTopic('')
     setMasterMsgBody('')
@@ -733,10 +803,14 @@ export default function AdminDashboard() {
 
   function handlePopupConfirm() {
     if (!activePopup) return
-    confirmNotification(activePopup.id, activeRole)
-    markPopupShownThisSession(activePopup.id)
+    const popup = activePopup
+    confirmNotification(popup.id, activeRole)
+    markPopupShownThisSession(popup.id)
     setActivePopup(null)
     refreshBellState()
+    // Sync confirmation to Supabase — all other devices will see the UPDATE via Realtime
+    confirmActiveNotification(popup.id, effectiveRole(activeRole))
+      .catch(e => console.warn('[active_notification] confirm sync failed (non-fatal):', e.message))
   }
 
   function handlePopupClose() {

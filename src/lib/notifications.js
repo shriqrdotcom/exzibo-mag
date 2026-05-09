@@ -74,7 +74,7 @@ export function pruneExpired() {
   return alive
 }
 
-export function addNotification({ title, message, target_roles }) {
+export function addNotification({ id: providedId, title, message, target_roles }) {
   const cleanTitle = String(title || '').trim()
   const cleanMessage = String(message || '').trim()
   const cleanRoles = Array.isArray(target_roles)
@@ -84,26 +84,27 @@ export function addNotification({ title, message, target_roles }) {
     return null
   }
   const notification = {
-    id: uid(),
+    id: providedId || uid(),
     title: cleanTitle,
     message: cleanMessage,
     target_roles: cleanRoles,
     created_at: new Date().toISOString(),
     is_active: true,
   }
-  // Replace only existing notifications with the same title (sender key).
-  // Notifications from other senders are preserved so multiple senders each
-  // show their latest message. Only the reads for replaced IDs are removed.
-  const existing = loadAll()
-  const replaced = existing.filter(n => n.title === cleanTitle)
-  const kept = existing.filter(n => n.title !== cleanTitle)
-  saveAll([...kept, notification])
-  if (replaced.length > 0) {
-    const replacedIds = new Set(replaced.map(n => n.id))
+  // Only ONE notification is kept at a time (the latest). Clear all previous
+  // notifications and their reads before saving the new one.
+  const replacedIds = new Set(loadAll().map(n => n.id))
+  saveAll([notification])
+  if (replacedIds.size > 0) {
     const reads = loadReads()
     saveReads(reads.filter(r => !replacedIds.has(r.notification_id)))
   }
   return notification
+}
+
+export function clearAllNotifications() {
+  saveAll([])
+  saveReads([])
 }
 
 export function getActiveForRole(activeRole) {

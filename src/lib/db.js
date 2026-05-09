@@ -473,6 +473,41 @@ export async function getMessagesForRole(role) {
   return data ?? []
 }
 
+// ── Active Notification (cross-device single notification with confirm sync) ───
+// One row in the table at a time. New notification deletes old before inserting.
+// Confirmation is written back so all devices see it via Realtime UPDATE.
+
+export async function fetchActiveNotification() {
+  const { data, error } = await supabase
+    .from('active_notification')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  if (error) { console.warn('[active_notification] fetch error:', error.message); return null }
+  return data
+}
+
+export async function publishActiveNotification({ id, title, message, target_roles }) {
+  await supabase.from('active_notification').delete().neq('id', '__placeholder__')
+  const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+  const { data, error } = await supabase
+    .from('active_notification')
+    .insert({ id, title, message, target_roles, expires_at: expiresAt })
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
+export async function confirmActiveNotification(id, confirmedBy) {
+  const { error } = await supabase
+    .from('active_notification')
+    .update({ confirmed_at: new Date().toISOString(), confirmed_by: confirmedBy })
+    .eq('id', id)
+  if (error) { console.warn('[active_notification] confirm sync error:', error.message) }
+}
+
 // ── SMS Notifications (cross-device persistent broadcasts) ────────────────────
 // Only 1 notification exists at a time. Each new send wipes previous records.
 
