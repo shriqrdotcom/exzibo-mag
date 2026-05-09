@@ -91,9 +91,10 @@ export function addNotification({ title, message, target_roles }) {
     created_at: new Date().toISOString(),
     is_active: true,
   }
-  const list = pruneExpired()
-  list.unshift(notification)
-  saveAll(list)
+  // Replace all existing notifications with only this one (keep max 1 at a time).
+  // Also clear all read records so the history stays in sync with the new notification.
+  saveAll([notification])
+  saveReads([])
   return notification
 }
 

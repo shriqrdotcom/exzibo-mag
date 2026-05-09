@@ -226,7 +226,6 @@ export default function AdminDashboard() {
   const [bellOpen, setBellOpen]       = useState(false)
   const [bellItems, setBellItems]     = useState([])
   const [unreadCount, setUnreadCount] = useState(0)
-  const [smsHistory, setSmsHistory]   = useState([])
 
   const MASTER_SHOW_ORDERS_KEY   = 'exzibo_master_show_live_orders'
   const MASTER_SHOW_BOOKINGS_KEY = 'exzibo_master_show_table_confirmations'
@@ -675,7 +674,6 @@ export default function AdminDashboard() {
       const notif = await getLatestSmsNotification()
       if (!notif) return
       if (Date.now() > new Date(notif.expires_at).getTime()) return // expired
-      setSmsHistory([notif])
       if (!isSmsNotifSeen(notif.id)) {
         markSmsNotifSeen(notif.id)
         showLiveNotification(notif.title, notif.message, NOTIFY_ROLES)
@@ -688,7 +686,6 @@ export default function AdminDashboard() {
       .channel('rt-sms-notifications-global')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'sms_notifications' }, payload => {
         const notif = payload.new
-        setSmsHistory([notif])
         if (!isSmsNotifSeen(notif.id)) {
           markSmsNotifSeen(notif.id)
           showLiveNotification(notif.title, notif.message, NOTIFY_ROLES)
@@ -1675,7 +1672,6 @@ export default function AdminDashboard() {
       {!fromMaster && bellOpen && (
         <NotificationCenter
           items={bellItems}
-          smsItems={smsHistory}
           onClose={() => setBellOpen(false)}
           accentStart={accentStart}
           accentEnd={accentEnd}
@@ -2053,7 +2049,7 @@ function StorefrontIcon({ size = 96 }) {
   )
 }
 
-function NotificationCenter({ items, smsItems = [], onClose, accentStart, accentEnd, role }) {
+function NotificationCenter({ items, onClose, accentStart, accentEnd, role }) {
   React.useEffect(() => {
     function onKey(e) { if (e.key === 'Escape') onClose() }
     document.addEventListener('keydown', onKey)
@@ -2137,63 +2133,9 @@ function NotificationCenter({ items, smsItems = [], onClose, accentStart, accent
           </button>
         </div>
 
-        <div style={{ overflowY: 'auto', padding: (items.length === 0 && smsItems.length === 0) ? '0' : '8px 0' }}>
+        <div style={{ overflowY: 'auto', padding: items.length === 0 ? '0' : '8px 0' }}>
 
-          {/* ── Broadcast Alerts from DB (sms_notifications) ── */}
-          {smsItems.length > 0 && (
-            <>
-              <div style={{
-                padding: '8px 20px 4px',
-                fontSize: '10px', fontWeight: 800,
-                color: '#94A3B8', letterSpacing: '0.1em',
-                textTransform: 'uppercase',
-              }}>
-                Broadcast Alerts
-              </div>
-              {smsItems.map(item => (
-                <div key={item.id} style={{
-                  padding: '12px 20px',
-                  borderTop: '1px solid rgba(15,23,42,0.04)',
-                  background: 'rgba(99,102,241,0.03)',
-                }}>
-                  <div style={{
-                    display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: '10px',
-                    marginBottom: '4px',
-                  }}>
-                    <div style={{ fontSize: '14px', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.01em', wordBreak: 'break-word' }}>
-                      {item.title}
-                    </div>
-                    <div style={{ fontSize: '11px', fontWeight: 700, color: '#94A3B8', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                      {timeAgo(item.sent_at)}
-                    </div>
-                  </div>
-                  <div style={{
-                    fontSize: '13px', color: '#475569', lineHeight: 1.55,
-                    display: '-webkit-box',
-                    WebkitLineClamp: 2,
-                    WebkitBoxOrient: 'vertical',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                  }}>
-                    {item.message}
-                  </div>
-                </div>
-              ))}
-              {items.length > 0 && (
-                <div style={{
-                  padding: '10px 20px 4px',
-                  fontSize: '10px', fontWeight: 800,
-                  color: '#94A3B8', letterSpacing: '0.1em',
-                  textTransform: 'uppercase',
-                }}>
-                  Confirmed Alerts
-                </div>
-              )}
-            </>
-          )}
-
-          {/* ── Confirmed alerts from localStorage ── */}
-          {items.length === 0 && smsItems.length === 0 ? (
+          {items.length === 0 ? (
             <div style={{
               padding: '40px 24px',
               textAlign: 'center',
