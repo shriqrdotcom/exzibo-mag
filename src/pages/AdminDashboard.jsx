@@ -222,8 +222,6 @@ export default function AdminDashboard() {
   const [masterMsgTargets, setMasterMsgTargets] = useState(['admin', 'manager', 'staff'])
   const [masterMsgSending, setMasterMsgSending] = useState(false)
 
-  const [livePopupMsg, setLivePopupMsg] = useState(null)
-
   const [activePopup, setActivePopup] = useState(null)
   const [bellOpen, setBellOpen]       = useState(false)
   const [bellItems, setBellItems]     = useState([])
@@ -260,6 +258,7 @@ export default function AdminDashboard() {
   const bookingSettingsBtnRef = useRef(null)
   const bookingSettingsPanelRef = useRef(null)
   const broadcastChannelRef = useRef(null)
+  const lastLiveNotifRef    = useRef(null) // { key, shownAt } — dedup guard
   // These refs mirror the state values so the broadcast handler never has stale closures
   const fromMasterRef  = useRef(fromMaster)
   const activeRoleRef  = useRef(activeRole)
@@ -569,6 +568,29 @@ export default function AdminDashboard() {
     if (next) setActivePopup(next)
   }
 
+  // ── Single entry-point for all live notification popups ───────────────────
+  // Deduplicates across the three delivery paths (broadcast, messages, sms_notifications)
+  // and directly sets the purple NotificationPopup — no second popup ever fires.
+  function showLiveNotification(topic, message, send_to) {
+    if (fromMasterRef.current) return
+    const key = `${topic}::${message}`
+    if (
+      lastLiveNotifRef.current?.key === key &&
+      Date.now() - lastLiveNotifRef.current.shownAt < 5000
+    ) return
+    lastLiveNotifRef.current = { key, shownAt: Date.now() }
+    const notif = addNotification({
+      title: topic,
+      message,
+      target_roles: Array.isArray(send_to) ? send_to : NOTIFY_ROLES,
+    })
+    if (notif) {
+      // Mark as session-shown immediately so checkPopup() never shows a duplicate
+      markPopupShownThisSession(notif.id)
+      setActivePopup(notif)
+    }
+  }
+
   useEffect(() => {
     if (fromMaster) {
       setActivePopup(null)
@@ -602,11 +624,7 @@ export default function AdminDashboard() {
         if (fromMasterRef.current) return   // master never shows its own popups
         const role = effectiveRole(activeRoleRef.current)
         if (Array.isArray(payload.send_to) && !payload.send_to.includes(role)) return
-        // Only show the live popup — do NOT call addNotification here.
-        // addNotification writes to localStorage which triggers checkPopup() and shows
-        // a duplicate "NEW NOTIFICATION / CONFIRM" popup at the same time.
-        // We add to bell history only when the user dismisses the live popup.
-        setLivePopupMsg({ topic: payload.topic, message: payload.message, send_to: payload.send_to || NOTIFY_ROLES })
+        showLiveNotification(payload.topic, payload.message, payload.send_to || NOTIFY_ROLES)
       })
       .subscribe((status, err) => {
         if (status === 'SUBSCRIBED') {
@@ -636,8 +654,7 @@ export default function AdminDashboard() {
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, payload => {
         const msg = payload.new
         if (!Array.isArray(msg.send_to) || !msg.send_to.includes(role)) return
-        // Only show live popup if broadcast didn't already handle it (avoid duplicates)
-        setLivePopupMsg(prev => prev || { topic: msg.topic, message: msg.message, send_to: msg.send_to })
+        showLiveNotification(msg.topic, msg.message, msg.send_to)
       })
       .subscribe()
 
@@ -661,7 +678,7 @@ export default function AdminDashboard() {
       setSmsHistory([notif])
       if (!isSmsNotifSeen(notif.id)) {
         markSmsNotifSeen(notif.id)
-        setLivePopupMsg({ topic: notif.title, message: notif.message })
+        showLiveNotification(notif.title, notif.message, NOTIFY_ROLES)
       }
     }
     fetchLatest()
@@ -674,7 +691,7 @@ export default function AdminDashboard() {
         setSmsHistory([notif])
         if (!isSmsNotifSeen(notif.id)) {
           markSmsNotifSeen(notif.id)
-          setLivePopupMsg({ topic: notif.title, message: notif.message })
+          showLiveNotification(notif.title, notif.message, NOTIFY_ROLES)
         }
       })
       .subscribe()
@@ -1666,23 +1683,6 @@ export default function AdminDashboard() {
         />
       )}
 
-      {!fromMaster && livePopupMsg && (
-        <MasterNotificationPopup
-          topic={livePopupMsg.topic}
-          message={livePopupMsg.message}
-          onClose={() => {
-            // Add to bell history, then immediately mark as session-shown so the
-            // localStorage write does NOT trigger the violet NotificationPopup duplicate.
-            const notif = addNotification({
-              title: livePopupMsg.topic,
-              message: livePopupMsg.message,
-              target_roles: Array.isArray(livePopupMsg.send_to) ? livePopupMsg.send_to : NOTIFY_ROLES,
-            })
-            if (notif) markPopupShownThisSession(notif.id)
-            setLivePopupMsg(null)
-          }}
-        />
-      )}
     </div>
   )
 }
@@ -1848,7 +1848,7 @@ function NotificationPopup({ notification, onConfirm, onClose }) {
       style={{
         position: 'fixed',
         inset: 0,
-        zIndex: 1100,
+        zIndex: 9999,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
