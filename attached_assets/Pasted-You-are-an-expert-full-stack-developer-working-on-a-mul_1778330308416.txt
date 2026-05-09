@@ -1,0 +1,34 @@
+You are an expert full-stack developer working on a multi-role dashboard application (Admin, Manager, Employee).
+
+### Current Situation:
+- SMS notifications are now sending successfully.
+- We have a Notifications system that currently shows in three dashboards: Admin, Manager, and Employee.
+- The notification panel works fine when all dashboards are opened in the **same device/browser**.
+- **Problem**: When the same user logs in from **different devices** (phone + laptop, or different browsers), the notifications do not appear on all logged-in devices.
+
+### Goal:
+Notifications should be **real-time and device-agnostic**. Any confirmed alert should immediately (or within seconds) appear on **all devices** where the user is logged in, regardless of role dashboard (Admin/Manager/Employee).
+
+### Technical Requirements:
+
+1. Notifications must be stored in the **database** (not localStorage or session only).
+2. Each notification should be associated with the **user ID** (and possibly role if needed).
+3. The frontend should **fetch notifications from the backend** on:
+   - Page load
+   - Login
+   - Every few seconds (polling) or via WebSocket / Server-Sent Events (preferred)
+4. When a new notification is created (after SMS is sent), it should be immediately pushed to all active sessions of that user.
+5. The notification bell/counter should update in real-time across all open dashboards.
+
+### Current Code Areas to Check/Fix:
+- Backend: Notification creation logic (after SMS success)
+- Backend: API endpoint to fetch user notifications
+- Frontend: Notification component used in Admin/Manager/Employee dashboards
+- Any use of localStorage, sessionStorage, or in-memory state for notifications
+
+### Task:
+Please analyze the current notification implementation and refactor it so that notifications are properly synced across all devices for the same logged-in user.
+
+Start by exploring the relevant files (notification related routes, models, components, etc.) and then propose the complete solution with code changes.
+
+Focus on reliability, performance, and real-time experience.
