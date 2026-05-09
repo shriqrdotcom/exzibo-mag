@@ -705,6 +705,12 @@ export default function AdminDashboard() {
   useEffect(() => {
     if (fromMaster) return
 
+    // Always wipe stale local state on mount so old confirmed notifications
+    // from previous sessions never linger in the bell history.
+    clearAllNotifications()
+    setBellItems([])
+    setUnreadCount(0)
+
     // On mount: fetch current active notification and sync local state
     fetchActiveNotification().then(notif => {
       if (!notif) return
@@ -2136,7 +2142,7 @@ function NotificationCenter({ items, onClose, accentStart, accentEnd, role }) {
     if (seen.has(item.id)) return false
     seen.add(item.id)
     return true
-  })
+  }).slice(0, 1)
 
   return (
     <div
