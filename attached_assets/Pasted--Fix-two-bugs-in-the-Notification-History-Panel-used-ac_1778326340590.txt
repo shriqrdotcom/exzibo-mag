@@ -1,0 +1,36 @@
+---
+
+Fix two bugs in the **Notification History Panel** used across the Owner, Manager, and Employee dashboards. This panel shows a modal/drawer with a bell icon header labeled "Notifications" and subtitle "ADMIN · LAST 24 HOURS". Do NOT redesign the UI or change any existing layout, colors, or structure. Only fix the two logic bugs described below.
+
+---
+
+**BUG 1 — Duplicate Notifications on Open**
+
+When the notification panel is opened, each notification appears twice in the list. This is likely caused by one of the following — identify which applies and fix it:
+- The data-fetch or listener function is being called/registered twice (e.g., `useEffect` with no dependency cleanup, or an event listener added twice)
+- The notification array is being merged with itself or appended to existing state without clearing first
+- A real-time subscription (e.g., Supabase `onSnapshot` or socket listener) is being set up every time the panel opens without unsubscribing the previous one
+
+**Fix:** Ensure the notification fetch/subscription is initialized only once. If using a real-time listener, unsubscribe/remove it on component unmount or panel close. Deduplicate the final rendered list by notification ID as a safety fallback.
+
+---
+
+**BUG 2 — Only Latest Notification Per Sender Should Be Kept**
+
+Currently, every notification from the same sender stacks up in the list. The required behavior is: **when a new notification arrives from the same sender (or of the same type/category), the previous notification from that sender must be deleted/replaced — only the most recent one should be stored and displayed.**
+
+**Fix:**
+- When inserting a new notification into the database or state, first check if a notification already exists from the same sender (match by `sender_id`, `user_id`, or equivalent identifier)
+- If one exists, **delete or overwrite** the old record before inserting the new one — do not append
+- This must apply both to the database/storage layer AND the local state so the UI reflects it immediately
+- If using Supabase, use an `upsert` with the sender identifier as the conflict key, OR delete the existing row first then insert the new one
+
+---
+
+**Constraints:**
+- Do NOT change the UI design, modal layout, or any unrelated functionality
+- Do NOT break existing notification triggers or the way notifications are sent
+- Changes must apply consistently across Owner, Manager, and Employee dashboard views since they share the same panel
+- Test that after the fix: (a) opening the panel shows each notification exactly once, and (b) a second notification from the same sender replaces the first
+
+---

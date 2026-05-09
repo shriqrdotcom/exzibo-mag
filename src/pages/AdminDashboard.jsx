@@ -746,9 +746,10 @@ export default function AdminDashboard() {
   }
 
   function openBell() {
-    setBellOpen(true)
     markBellOpened(activeRole)
     setUnreadCount(0)
+    setBellItems(getConfirmedForRole(activeRole))
+    setBellOpen(true)
   }
   // ────────────────────────────────────────────────────────────────
 
@@ -2056,6 +2057,13 @@ function NotificationCenter({ items, onClose, accentStart, accentEnd, role }) {
     return () => document.removeEventListener('keydown', onKey)
   }, [onClose])
 
+  const seen = new Set()
+  const uniqueItems = (items || []).filter(item => {
+    if (seen.has(item.id)) return false
+    seen.add(item.id)
+    return true
+  })
+
   return (
     <div
       onClick={onClose}
@@ -2133,9 +2141,9 @@ function NotificationCenter({ items, onClose, accentStart, accentEnd, role }) {
           </button>
         </div>
 
-        <div style={{ overflowY: 'auto', padding: items.length === 0 ? '0' : '8px 0' }}>
+        <div style={{ overflowY: 'auto', padding: uniqueItems.length === 0 ? '0' : '8px 0' }}>
 
-          {items.length === 0 ? (
+          {uniqueItems.length === 0 ? (
             <div style={{
               padding: '40px 24px',
               textAlign: 'center',
@@ -2148,7 +2156,7 @@ function NotificationCenter({ items, onClose, accentStart, accentEnd, role }) {
                 Confirmed alerts from the last 24 hours will appear here.
               </span>
             </div>
-          ) : items.map(item => (
+          ) : uniqueItems.map(item => (
             <div key={item.id} style={{
               padding: '14px 20px',
               borderTop: '1px solid rgba(15,23,42,0.04)',

@@ -91,10 +91,18 @@ export function addNotification({ title, message, target_roles }) {
     created_at: new Date().toISOString(),
     is_active: true,
   }
-  // Replace all existing notifications with only this one (keep max 1 at a time).
-  // Also clear all read records so the history stays in sync with the new notification.
-  saveAll([notification])
-  saveReads([])
+  // Replace only existing notifications with the same title (sender key).
+  // Notifications from other senders are preserved so multiple senders each
+  // show their latest message. Only the reads for replaced IDs are removed.
+  const existing = loadAll()
+  const replaced = existing.filter(n => n.title === cleanTitle)
+  const kept = existing.filter(n => n.title !== cleanTitle)
+  saveAll([...kept, notification])
+  if (replaced.length > 0) {
+    const replacedIds = new Set(replaced.map(n => n.id))
+    const reads = loadReads()
+    saveReads(reads.filter(r => !replacedIds.has(r.notification_id)))
+  }
   return notification
 }
 
