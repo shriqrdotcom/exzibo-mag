@@ -508,6 +508,32 @@ export async function confirmActiveNotification(id, confirmedBy) {
   if (error) { console.warn('[active_notification] confirm sync error:', error.message) }
 }
 
+// ── Notification History (persistent cross-device bell log) ──────────────────
+// Each confirmed notification is written here so ALL devices can load the bell
+// history on mount — independent of whether active_notification still exists.
+
+export async function insertNotificationHistory({ id, title, message, target_roles }) {
+  const { error } = await supabase
+    .from('notification_history')
+    .upsert(
+      { id, title, message, target_roles, confirmed_at: new Date().toISOString() },
+      { onConflict: 'id' }
+    )
+  if (error) { console.warn('[notification_history] insert error:', error.message) }
+}
+
+export async function fetchNotificationHistory(hoursBack = 24) {
+  const since = new Date(Date.now() - hoursBack * 60 * 60 * 1000).toISOString()
+  const { data, error } = await supabase
+    .from('notification_history')
+    .select('*')
+    .gte('confirmed_at', since)
+    .order('confirmed_at', { ascending: false })
+    .limit(20)
+  if (error) { console.warn('[notification_history] fetch error:', error.message); return [] }
+  return data ?? []
+}
+
 // ── SMS Notifications (cross-device persistent broadcasts) ────────────────────
 // Only 1 notification exists at a time. Each new send wipes previous records.
 

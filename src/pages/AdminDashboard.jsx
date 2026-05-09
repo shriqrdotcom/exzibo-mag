@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useAnalytics, notifyAnalyticsUpdate } from '../context/AnalyticsContext'
 import { useRole } from '../context/RoleContext'
-import { getRestaurants, getOrders, getBookings, updateOrderStatus, updateBookingStatus, getMenuCategories, getMenuItems, insertMenuItem, updateMenuItem, deleteMenuItem, upsertMenuCategory, deleteMenuCategory, upsertMenuItems, uploadMenuImage, updateRestaurant, uploadToStorage, uploadDataUrlToStorage, toggleMenuItemPublish, normalizeOrder, normalizeBooking, sendMessage, getLatestSmsNotification, upsertSmsNotification, fetchActiveNotification, publishActiveNotification, confirmActiveNotification } from '../lib/db'
+import { getRestaurants, getOrders, getBookings, updateOrderStatus, updateBookingStatus, getMenuCategories, getMenuItems, insertMenuItem, updateMenuItem, deleteMenuItem, upsertMenuCategory, deleteMenuCategory, upsertMenuItems, uploadMenuImage, updateRestaurant, uploadToStorage, uploadDataUrlToStorage, toggleMenuItemPublish, normalizeOrder, normalizeBooking, sendMessage, getLatestSmsNotification, upsertSmsNotification, fetchActiveNotification, publishActiveNotification, confirmActiveNotification, insertNotificationHistory, fetchNotificationHistory } from '../lib/db'
 import { supabase } from '../lib/supabase'
 import notificationIconImg from '@assets/image_1777373928129.png'
 import {
@@ -705,29 +705,39 @@ export default function AdminDashboard() {
   useEffect(() => {
     if (fromMaster) return
 
-    // Always wipe stale local state on mount so old confirmed notifications
-    // from previous sessions never linger in the bell history.
+    // Wipe stale local state on mount so no old localStorage ghosts linger.
     clearAllNotifications()
     setBellItems([])
     setUnreadCount(0)
 
-    // On mount: fetch current active notification and sync local state
+    // ── 1. Load persistent bell history from Supabase (last 24 hours) ──────────
+    // This runs on EVERY device mount so the bell is always in sync — even on
+    // devices that were offline when the notification was confirmed elsewhere.
+    fetchNotificationHistory(24).then(items => {
+      if (!items.length) return
+      const role = effectiveRole(activeRoleRef.current)
+      items.forEach(item => {
+        const roles = Array.isArray(item.target_roles) ? item.target_roles : []
+        if (roles.length > 0 && !roles.includes(role)) return
+        addNotification({ id: item.id, title: item.title, message: item.message, target_roles: roles })
+        confirmNotification(item.id, activeRoleRef.current)
+      })
+      setBellItems(getConfirmedForRole(activeRoleRef.current))
+      setUnreadCount(getUnreadCount(activeRoleRef.current))
+    }).catch(e => console.warn('[notification_history] initial fetch failed (non-fatal):', e.message))
+
+    // ── 2. Also check active_notification for an unconfirmed popup ─────────────
     fetchActiveNotification().then(notif => {
       if (!notif) return
       if (Date.now() > new Date(notif.expires_at).getTime()) return
       const role = effectiveRole(activeRoleRef.current)
       const roles = Array.isArray(notif.target_roles) ? notif.target_roles : []
       if (roles.length > 0 && !roles.includes(role)) return
-      if (notif.confirmed_at) {
-        // Already confirmed on another device — sync to local bell
-        addNotification({ id: notif.id, title: notif.title, message: notif.message, target_roles: roles })
-        confirmNotification(notif.id, activeRoleRef.current)
-        setBellItems(getConfirmedForRole(activeRoleRef.current))
-        setUnreadCount(getUnreadCount(activeRoleRef.current))
-      } else {
+      if (!notif.confirmed_at) {
         // Unconfirmed — show popup (dedup guard prevents double-showing with broadcast)
         showLiveNotification(notif.title, notif.message, roles, notif.id)
       }
+      // If confirmed, notification_history fetch above already populated the bell
     }).catch(e => console.warn('[active_notification] initial fetch failed (non-fatal):', e.message))
 
     const channel = supabase
@@ -743,7 +753,7 @@ export default function AdminDashboard() {
         const role = effectiveRole(activeRoleRef.current)
         const roles = Array.isArray(notif.target_roles) ? notif.target_roles : []
         if (roles.length > 0 && !roles.includes(role)) return
-        // Confirmed on another device — sync locally
+        // Confirmed on another device — sync locally via localStorage bridge
         confirmNotification(notif.id, activeRoleRef.current)
         setBellItems(getConfirmedForRole(activeRoleRef.current))
         setUnreadCount(getUnreadCount(activeRoleRef.current))
@@ -756,17 +766,36 @@ export default function AdminDashboard() {
         })
       })
       .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'active_notification' }, () => {
-        // Previous notification deleted — a new one is about to arrive
-        clearAllNotifications()
+        // Previous notification deleted — a new one is about to arrive.
+        // Do NOT clear bell items here — history is preserved in notification_history.
         setActivePopup(null)
-        setBellItems([])
-        setUnreadCount(0)
       })
       .subscribe((status, err) => {
         if (status === 'CHANNEL_ERROR') console.warn('[active_notification] channel error:', err)
       })
 
-    return () => supabase.removeChannel(channel)
+    // ── 3. Realtime on notification_history INSERT ─────────────────────────────
+    // When any device confirms a popup it inserts into notification_history.
+    // This fires on ALL other connected devices so their bells update instantly.
+    const historyChannel = supabase
+      .channel('rt-notification-history')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notification_history' }, ({ new: item }) => {
+        const role = effectiveRole(activeRoleRef.current)
+        const roles = Array.isArray(item.target_roles) ? item.target_roles : []
+        if (roles.length > 0 && !roles.includes(role)) return
+        addNotification({ id: item.id, title: item.title, message: item.message, target_roles: roles })
+        confirmNotification(item.id, activeRoleRef.current)
+        setBellItems(getConfirmedForRole(activeRoleRef.current))
+        setUnreadCount(getUnreadCount(activeRoleRef.current))
+      })
+      .subscribe((status, err) => {
+        if (status === 'CHANNEL_ERROR') console.warn('[notification_history] channel error:', err)
+      })
+
+    return () => {
+      supabase.removeChannel(channel)
+      supabase.removeChannel(historyChannel)
+    }
   }, [fromMaster])
 
   async function handleSendMasterMessage() {
@@ -814,9 +843,19 @@ export default function AdminDashboard() {
     markPopupShownThisSession(popup.id)
     setActivePopup(null)
     refreshBellState()
-    // Sync confirmation to Supabase — all other devices will see the UPDATE via Realtime
+    // Sync confirmation to Supabase — all other devices see the UPDATE via Realtime
     confirmActiveNotification(popup.id, effectiveRole(activeRole))
       .catch(e => console.warn('[active_notification] confirm sync failed (non-fatal):', e.message))
+    // Write to notification_history — the persistent cross-device bell log.
+    // Any device that opens later will load this from Supabase on mount and
+    // see the confirmed notification in their bell, even after active_notification
+    // has been replaced by a new notification or expired.
+    insertNotificationHistory({
+      id: popup.id,
+      title: popup.title,
+      message: popup.message,
+      target_roles: Array.isArray(popup.target_roles) ? popup.target_roles : NOTIFY_ROLES,
+    }).catch(e => console.warn('[notification_history] insert failed (non-fatal):', e.message))
   }
 
   function handlePopupClose() {
