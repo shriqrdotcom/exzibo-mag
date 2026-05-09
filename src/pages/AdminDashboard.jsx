@@ -7,19 +7,17 @@ import { supabase } from '../lib/supabase'
 import notificationIconImg from '@assets/image_1777373928129.png'
 import {
   NOTIFY_ROLES,
+  addNotification,
+  clearAllNotifications,
+  getNextPopupForRole,
+  confirmNotification,
   markPopupShownThisSession,
+  getConfirmedForRole,
+  getUnreadCount,
+  markBellOpened,
   effectiveRole,
   timeAgo,
 } from '../lib/notifications'
-
-// ── Bell opened timestamp: device-local preference, localStorage is fine ──────
-const BELL_OPENED_KEY = 'exzibo_bell_last_opened_v2'
-function readBellLastOpened() {
-  try { return parseInt(localStorage.getItem(BELL_OPENED_KEY) || '0', 10) } catch { return 0 }
-}
-function writeBellLastOpened(ts) {
-  try { localStorage.setItem(BELL_OPENED_KEY, String(ts)) } catch {}
-}
 import {
   CheckCircle, XCircle,
   ClipboardList, BookOpen, Users, Settings, ArrowLeft, BarChart2,
@@ -225,14 +223,10 @@ export default function AdminDashboard() {
   const [masterMsgTargets, setMasterMsgTargets] = useState(['admin', 'manager', 'staff'])
   const [masterMsgSending, setMasterMsgSending] = useState(false)
 
-  const [activePopup, setActivePopup]     = useState(null)
-  const [bellOpen, setBellOpen]           = useState(false)
-  const [bellItems, setBellItems]         = useState([])
-  const [bellLastOpened, setBellLastOpened] = useState(readBellLastOpened)
-  // unreadCount is derived — no localStorage needed, just compare timestamps
-  const unreadCount = bellItems.filter(
-    item => item.confirmed_at && new Date(item.confirmed_at).getTime() > bellLastOpened
-  ).length
+  const [activePopup, setActivePopup] = useState(null)
+  const [bellOpen, setBellOpen]       = useState(false)
+  const [bellItems, setBellItems]     = useState([])
+  const [unreadCount, setUnreadCount] = useState(0)
 
   const MASTER_SHOW_ORDERS_KEY   = 'exzibo_master_show_live_orders'
   const MASTER_SHOW_BOOKINGS_KEY = 'exzibo_master_show_table_confirmations'
@@ -562,16 +556,16 @@ export default function AdminDashboard() {
   }, [showOrderSettings, showBookingSettings])
 
   // ── Notification system ─────────────────────────────────────────
-  // All notification state is pure React state driven by Supabase.
-  // localStorage is NOT used for bell items — so any device that opens the
-  // dashboard will see the same state, even if it missed the original broadcast.
+  function refreshBellState() {
+    if (fromMaster) return
+    setBellItems(getConfirmedForRole(activeRole))
+    setUnreadCount(getUnreadCount(activeRole))
+  }
 
-  // Add a confirmed notification to the bell (deduplicates by id).
-  function addToBell(notif) {
-    setBellItems(prev => {
-      if (prev.some(item => item.id === notif.id)) return prev
-      return [notif, ...prev]
-    })
+  function checkPopup() {
+    if (fromMaster) return
+    const next = getNextPopupForRole(activeRole)
+    if (next) setActivePopup(next)
   }
 
   // ── Single entry-point for all live notification popups ───────────────────
@@ -585,17 +579,37 @@ export default function AdminDashboard() {
       Date.now() - lastLiveNotifRef.current.shownAt < 5000
     ) return
     lastLiveNotifRef.current = { key, shownAt: Date.now() }
-    const notifId = sharedId || ('n_' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36))
-    const notif = {
-      id: notifId,
+    const notif = addNotification({
+      id: sharedId,
       title: topic,
       message,
       target_roles: Array.isArray(send_to) ? send_to : NOTIFY_ROLES,
-      created_at: new Date().toISOString(),
+    })
+    if (notif) {
+      // Mark as session-shown immediately so checkPopup() never shows a duplicate
+      markPopupShownThisSession(notif.id)
+      setActivePopup(notif)
     }
-    markPopupShownThisSession(notifId)
-    setActivePopup(notif)
   }
+
+  useEffect(() => {
+    if (fromMaster) {
+      setActivePopup(null)
+      return
+    }
+    refreshBellState()
+    checkPopup()
+    function onChange() {
+      refreshBellState()
+      if (!activePopup) checkPopup()
+    }
+    window.addEventListener('exzibo-notifications-changed', onChange)
+    window.addEventListener('storage', onChange)
+    return () => {
+      window.removeEventListener('exzibo-notifications-changed', onChange)
+      window.removeEventListener('storage', onChange)
+    }
+  }, [fromMaster, activeRole])
 
   // Keep mirror refs in sync so the broadcast handler always reads current values
   useEffect(() => { fromMasterRef.current = fromMaster },  [fromMaster])
@@ -685,61 +699,54 @@ export default function AdminDashboard() {
   }, [fromMaster])
 
   // ── Active Notification: cross-device sync (single source of truth) ────────
-  // INSERT  → new popup on ALL connected devices immediately.
-  // UPDATE (confirmed_at set) → move notification to bell on ALL devices.
-  // DELETE  → old notification cleared (a new one is about to arrive).
-  // On mount we fetch the current row so devices that were offline still catch up.
+  // Subscribes to the active_notification table. INSERT = new popup on all devices.
+  // UPDATE with confirmed_at = someone confirmed → dismiss popup, move to bell everywhere.
+  // DELETE = old notification cleared (new one arriving).
   useEffect(() => {
     if (fromMaster) return
 
-    // On mount: fetch current active notification and populate bell/popup from DB
+    // Always wipe stale local state on mount so old confirmed notifications
+    // from previous sessions never linger in the bell history.
+    clearAllNotifications()
+    setBellItems([])
+    setUnreadCount(0)
+
+    // On mount: fetch current active notification and sync local state
     fetchActiveNotification().then(notif => {
       if (!notif) return
-      if (Date.now() > new Date(notif.expires_at).getTime()) return // expired
+      if (Date.now() > new Date(notif.expires_at).getTime()) return
       const role = effectiveRole(activeRoleRef.current)
       const roles = Array.isArray(notif.target_roles) ? notif.target_roles : []
       if (roles.length > 0 && !roles.includes(role)) return
       if (notif.confirmed_at) {
-        // Already confirmed on another device — add directly to bell React state
-        addToBell({
-          id: notif.id,
-          title: notif.title,
-          message: notif.message,
-          target_roles: roles,
-          created_at: notif.created_at,
-          confirmed_at: notif.confirmed_at,
-        })
+        // Already confirmed on another device — sync to local bell
+        addNotification({ id: notif.id, title: notif.title, message: notif.message, target_roles: roles })
+        confirmNotification(notif.id, activeRoleRef.current)
+        setBellItems(getConfirmedForRole(activeRoleRef.current))
+        setUnreadCount(getUnreadCount(activeRoleRef.current))
       } else {
-        // Unconfirmed — show popup (dedup guard in showLiveNotification prevents duplicates)
+        // Unconfirmed — show popup (dedup guard prevents double-showing with broadcast)
         showLiveNotification(notif.title, notif.message, roles, notif.id)
       }
     }).catch(e => console.warn('[active_notification] initial fetch failed (non-fatal):', e.message))
 
     const channel = supabase
       .channel('rt-active-notification')
-      // New notification sent → show popup on all connected devices instantly
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'active_notification' }, ({ new: notif }) => {
         const role = effectiveRole(activeRoleRef.current)
         const roles = Array.isArray(notif.target_roles) ? notif.target_roles : []
         if (roles.length > 0 && !roles.includes(role)) return
         showLiveNotification(notif.title, notif.message, roles, notif.id)
       })
-      // Confirmed on any device → move to bell on ALL devices (no localStorage needed)
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'active_notification' }, ({ new: notif }) => {
         if (!notif.confirmed_at) return
         const role = effectiveRole(activeRoleRef.current)
         const roles = Array.isArray(notif.target_roles) ? notif.target_roles : []
         if (roles.length > 0 && !roles.includes(role)) return
-        // Add to bell React state directly — works on every device simultaneously
-        addToBell({
-          id: notif.id,
-          title: notif.title,
-          message: notif.message,
-          target_roles: roles,
-          created_at: notif.created_at,
-          confirmed_at: notif.confirmed_at,
-        })
-        // Dismiss popup if it was showing on this device
+        // Confirmed on another device — sync locally
+        confirmNotification(notif.id, activeRoleRef.current)
+        setBellItems(getConfirmedForRole(activeRoleRef.current))
+        setUnreadCount(getUnreadCount(activeRoleRef.current))
         setActivePopup(prev => {
           if (prev?.id === notif.id) {
             markPopupShownThisSession(notif.id)
@@ -748,10 +755,12 @@ export default function AdminDashboard() {
           return prev
         })
       })
-      // Old notification deleted (a new one is arriving) → clear everything
       .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'active_notification' }, () => {
+        // Previous notification deleted — a new one is about to arrive
+        clearAllNotifications()
         setActivePopup(null)
         setBellItems([])
+        setUnreadCount(0)
       })
       .subscribe((status, err) => {
         if (status === 'CHANNEL_ERROR') console.warn('[active_notification] channel error:', err)
@@ -766,7 +775,7 @@ export default function AdminDashboard() {
     const message = masterMsgBody.trim()
     if (!topic || !message || masterMsgTargets.length === 0) return
     setMasterMsgSending(true)
-    // Shared id — used across all three delivery paths so all devices reference the same notification
+    // Shared id used by both local state and Supabase so all devices reference the same notification
     const notifId = 'n_' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36)
     try {
       // 1. Broadcast instantly to all currently connected devices (no DB required)
@@ -780,7 +789,7 @@ export default function AdminDashboard() {
       // 2. Persist to messages table (historical record)
       sendMessage({ topic, message, send_to: masterMsgTargets, sent_by: 'Master Control' })
         .catch(e => console.warn('[messages] insert failed (non-fatal):', e.message))
-      // 3. Publish as active_notification — single row, replaces old, syncs confirm state across all devices
+      // 3. Publish as active_notification — single row, replaces old, syncs confirm state across devices
       publishActiveNotification({ id: notifId, title: topic, message, target_roles: masterMsgTargets })
         .catch(e => console.warn('[active_notification] publish failed (non-fatal):', e.message))
     } catch (err) {
@@ -789,6 +798,7 @@ export default function AdminDashboard() {
       setMasterMsgSending(false)
       return
     }
+    addNotification({ id: notifId, title: topic, message, target_roles: masterMsgTargets })
     setMasterMsgOpen(false)
     setMasterMsgTopic('')
     setMasterMsgBody('')
@@ -800,12 +810,11 @@ export default function AdminDashboard() {
   function handlePopupConfirm() {
     if (!activePopup) return
     const popup = activePopup
-    const confirmedAt = new Date().toISOString()
+    confirmNotification(popup.id, activeRole)
     markPopupShownThisSession(popup.id)
     setActivePopup(null)
-    // Add to bell React state immediately on this device
-    addToBell({ ...popup, confirmed_at: confirmedAt })
-    // Write to Supabase — all other devices receive the UPDATE via Realtime and add to their bell
+    refreshBellState()
+    // Sync confirmation to Supabase — all other devices will see the UPDATE via Realtime
     confirmActiveNotification(popup.id, effectiveRole(activeRole))
       .catch(e => console.warn('[active_notification] confirm sync failed (non-fatal):', e.message))
   }
@@ -817,9 +826,9 @@ export default function AdminDashboard() {
   }
 
   function openBell() {
-    const now = Date.now()
-    writeBellLastOpened(now)
-    setBellLastOpened(now)
+    markBellOpened(activeRole)
+    setUnreadCount(0)
+    setBellItems(getConfirmedForRole(activeRole))
     setBellOpen(true)
   }
   // ────────────────────────────────────────────────────────────────
