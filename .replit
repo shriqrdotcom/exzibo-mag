@@ -63,4 +63,3 @@ publicDir = "dist"
 [userenv]
 
 [userenv.development]
-VITE_DISABLE_AUTH = "true"
