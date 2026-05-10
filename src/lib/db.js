@@ -318,6 +318,21 @@ export function normalizeBooking(row) {
 
 // ── Orders ───────────────────────────────────────────────────
 
+// Returns the total number of orders placed across ALL restaurants
+// within the current calendar month (based on created_at).
+export async function getOrderCountThisMonth() {
+  const now = new Date()
+  const from = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
+  const to   = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString()
+  const { count, error } = await supabase
+    .from('orders')
+    .select('id', { count: 'exact', head: true })
+    .gte('created_at', from)
+    .lt('created_at', to)
+  if (error) throw error
+  return count ?? 0
+}
+
 export async function getOrders(restaurantId) {
   const { data, error } = await supabase
     .from('orders')

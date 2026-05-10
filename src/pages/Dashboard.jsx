@@ -4,7 +4,7 @@ import Sidebar from '../components/Sidebar'
 import AdminHeader from '../components/AdminHeader'
 import { TrendingUp, Filter, Download, ChevronLeft, ChevronRight, Plus, Trash2, Clock, X, Pencil } from 'lucide-react'
 import { useRole } from '../context/RoleContext'
-import { getRestaurants, updateRestaurant, deleteRestaurant } from '../lib/db'
+import { getRestaurants, updateRestaurant, deleteRestaurant, getOrderCountThisMonth } from '../lib/db'
 
 function getAvatarFromName(name) {
   return name.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase()
@@ -166,6 +166,7 @@ export default function Dashboard() {
   const [toast, setToast] = useState('')
   const [revenueEntries, setRevenueEntries] = useState([])
   const [revenueHistoryOpen, setRevenueHistoryOpen] = useState(false)
+  const [monthOrderCount, setMonthOrderCount] = useState(null)
   const [editDraft, setEditDraft] = useState(null)
   const [viewTarget, setViewTarget] = useState(null)
 
@@ -263,10 +264,23 @@ export default function Dashboard() {
     exitRoleView()
   }, [])
 
+  const fetchOrderCount = useCallback(async () => {
+    try {
+      const count = await getOrderCountThisMonth()
+      setMonthOrderCount(count)
+    } catch {
+      setMonthOrderCount(0)
+    }
+  }, [])
+
   useEffect(() => {
     fetchRestaurants()
+    fetchOrderCount()
     setRevenueEntries(syncRevenueLedger())
-    const onFocus = () => setRevenueEntries(syncRevenueLedger())
+    const onFocus = () => {
+      setRevenueEntries(syncRevenueLedger())
+      fetchOrderCount()
+    }
     const onStorage = (e) => {
       if (!e.key || e.key === 'exzibo_payment_amounts' || e.key === 'exzibo_revenue_entries') {
         setRevenueEntries(syncRevenueLedger())
@@ -278,7 +292,7 @@ export default function Dashboard() {
       window.removeEventListener('focus', onFocus)
       window.removeEventListener('storage', onStorage)
     }
-  }, [fetchRestaurants])
+  }, [fetchRestaurants, fetchOrderCount])
 
   const currentMonthKey = monthKey(new Date())
   const currentMonthRevenue = revenueEntries
@@ -361,9 +375,19 @@ export default function Dashboard() {
               <div style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.1em', color: '#555', marginBottom: '8px', textTransform: 'uppercase' }}>
                 {currentMonthAbbr}
               </div>
-              <span style={{ fontSize: '42px', fontWeight: 800, lineHeight: 1, letterSpacing: '-0.02em' }}>
-                {currentMonthOrderCount.toLocaleString('en-IN')}
-              </span>
+              {monthOrderCount === null ? (
+                <div style={{
+                  width: '48px', height: '48px', borderRadius: '50%',
+                  border: '3px solid rgba(232,50,26,0.15)',
+                  borderTopColor: '#E8321A',
+                  animation: 'spin 0.8s linear infinite',
+                  marginTop: '4px',
+                }} />
+              ) : (
+                <span style={{ fontSize: '42px', fontWeight: 800, lineHeight: 1, letterSpacing: '-0.02em' }}>
+                  {monthOrderCount.toLocaleString('en-IN')}
+                </span>
+              )}
             </div>
           </div>
 
