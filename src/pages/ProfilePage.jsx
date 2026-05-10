@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import ProfileSlide from '../components/ProfileSlide'
+import HelpBottomSheet from '../components/HelpBottomSheet'
 
 const MOBILE_FONT = "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif"
 
@@ -37,6 +38,7 @@ export default function ProfilePage() {
   const [restaurantName, setRestaurantName] = useState(() => loadRestaurantName(restaurantId))
   const [logoUrl, setLogoUrl] = useState(() => loadLogoUrl(restaurantId))
   const [menuOpen, setMenuOpen] = useState(false)
+  const [helpOpen, setHelpOpen] = useState(false)
 
   useEffect(() => {
     setRestaurantName(loadRestaurantName(restaurantId))
@@ -53,6 +55,7 @@ export default function ProfilePage() {
 
   function handleHelp() {
     setMenuOpen(false)
+    setHelpOpen(true)
   }
 
   return (
@@ -206,6 +209,9 @@ export default function ProfilePage() {
           />
         </div>
       </div>
+
+      {/* ── Help bottom sheet ── */}
+      <HelpBottomSheet isOpen={helpOpen} onClose={() => setHelpOpen(false)} />
     </div>
   )
 }
