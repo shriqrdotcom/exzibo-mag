@@ -730,7 +730,7 @@ export default function Settings() {
               </div>
             )}
 
-            <Section title="SECTION 1 — RESTAURANT INFO" subtitle="Search by Restaurant UID to view details.">
+            <Section title="INFORMATION" subtitle="Search by Restaurant UID to view details.">
               <div style={{ display: 'flex', gap: '10px', marginBottom: '18px', flexWrap: 'wrap' }}>
                 <div style={{
                   flex: 1, minWidth: '180px',
