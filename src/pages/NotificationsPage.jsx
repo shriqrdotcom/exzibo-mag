@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import Sidebar from '../components/Sidebar'
 import AdminHeader from '../components/AdminHeader'
-import { Bell, CheckCircle2, Clock, Trash2, X } from 'lucide-react'
+import { Bell, CheckCircle2, Clock, Trash2, X, ThumbsUp, ThumbsDown } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 
 const FONT = "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif"
@@ -303,6 +303,43 @@ export default function NotificationsPage() {
                           </span>
                         )}
                       </div>
+
+                      {/* Restaurant UID + feedback badge */}
+                      {(n.restaurant_uid || n.feedback) && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '8px' }}>
+                          {n.restaurant_uid && (
+                            <span style={{
+                              fontFamily: 'monospace', fontSize: '11px',
+                              color: '#555', letterSpacing: '0.04em',
+                              background: 'rgba(255,255,255,0.04)',
+                              border: '1px solid rgba(255,255,255,0.08)',
+                              borderRadius: '6px', padding: '2px 8px',
+                            }}>
+                              UID: {n.restaurant_uid}
+                            </span>
+                          )}
+                          {n.feedback === 'helpful' && (
+                            <span style={{
+                              display: 'inline-flex', alignItems: 'center', gap: '4px',
+                              padding: '2px 9px', borderRadius: '99px',
+                              background: 'rgba(74,222,128,0.1)', border: '1px solid rgba(74,222,128,0.25)',
+                              color: '#4ADE80', fontSize: '10px', fontWeight: 700, letterSpacing: '0.06em',
+                            }}>
+                              <ThumbsUp size={10} /> HELPFUL
+                            </span>
+                          )}
+                          {n.feedback === 'not_helpful' && (
+                            <span style={{
+                              display: 'inline-flex', alignItems: 'center', gap: '4px',
+                              padding: '2px 9px', borderRadius: '99px',
+                              background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)',
+                              color: '#F87171', fontSize: '10px', fontWeight: 700, letterSpacing: '0.06em',
+                            }}>
+                              <ThumbsDown size={10} /> NOT HELPFUL
+                            </span>
+                          )}
+                        </div>
+                      )}
 
                       <p style={{
                         margin: '0 0 10px', fontSize: '13px', fontWeight: 500,
