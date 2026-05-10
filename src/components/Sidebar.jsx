@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { LayoutDashboard, Settings, Zap, Users, Table2, ShieldCheck, Bell, Info } from 'lucide-react'
+import { LayoutDashboard, Settings, Zap, Users, Table2, ShieldCheck, Bell, Info, Trash2 } from 'lucide-react'
 import PermissionGate from './PermissionGate'
 import { supabase } from '../lib/supabase'
 
@@ -186,6 +186,49 @@ export default function Sidebar() {
             </span>
           )}
         </button>
+
+        {/* Deleted Restaurants nav item */}
+        {(() => {
+          const isActive = location.pathname === '/deleted-restaurants'
+          return (
+            <button
+              onClick={() => navigate('/deleted-restaurants')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                padding: '12px 16px',
+                borderRadius: '12px',
+                background: isActive ? '#E8321A' : 'transparent',
+                border: isActive ? 'none' : '1px solid rgba(255,255,255,0.06)',
+                color: isActive ? '#fff' : '#888',
+                fontSize: '14px',
+                fontWeight: isActive ? 600 : 500,
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                textAlign: 'left',
+                width: '100%',
+              }}
+              onMouseEnter={e => {
+                if (!isActive) {
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.04)'
+                  e.currentTarget.style.color = '#fff'
+                  e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'
+                }
+              }}
+              onMouseLeave={e => {
+                if (!isActive) {
+                  e.currentTarget.style.background = 'transparent'
+                  e.currentTarget.style.color = '#888'
+                  e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)'
+                }
+              }}
+            >
+              <Trash2 size={18} />
+              Deleted
+            </button>
+          )
+        })()}
 
         {/* ── INFORMATION section ── */}
         <div style={{ marginTop: '10px' }}>

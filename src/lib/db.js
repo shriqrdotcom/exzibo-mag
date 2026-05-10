@@ -18,6 +18,7 @@ export async function getRestaurants() {
     const { data, error } = await supabase
       .from('restaurants')
       .select('*')
+      .or('is_deleted.is.null,is_deleted.eq.false')
       .order('created_at', { ascending: false })
     if (error) throw error
     return data ?? []
@@ -41,9 +42,31 @@ export async function getRestaurants() {
     .from('restaurants')
     .select('*')
     .in('id', ids)
+    .or('is_deleted.is.null,is_deleted.eq.false')
     .order('created_at', { ascending: false })
   if (error) throw error
   return data ?? []
+}
+
+// Returns soft-deleted restaurants (is_deleted = true).
+export async function getDeletedRestaurants() {
+  const { data, error } = await supabase
+    .from('restaurants')
+    .select('*')
+    .eq('is_deleted', true)
+    .order('deleted_at', { ascending: false })
+  if (error) throw error
+  return data ?? []
+}
+
+// Soft-delete: marks the restaurant as deleted without removing data.
+// The restaurant moves to the "Deleted Restaurants" section.
+export async function softDeleteRestaurant(id) {
+  const { error } = await supabase
+    .from('restaurants')
+    .update({ is_deleted: true, deleted_at: new Date().toISOString() })
+    .eq('id', id)
+  if (error) throw error
 }
 
 export async function createRestaurant(payload) {
@@ -336,6 +359,7 @@ export async function getOrderCountThisMonth() {
 // Returns the number of restaurants created in the current calendar month.
 // Automatically resets to 0 at the start of each new month since it
 // filters by created_at within the month's date range.
+// Excludes soft-deleted restaurants.
 export async function getRestaurantsCreatedThisMonth() {
   const now  = new Date()
   const from = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
@@ -345,6 +369,7 @@ export async function getRestaurantsCreatedThisMonth() {
     .select('id', { count: 'exact', head: true })
     .gte('created_at', from)
     .lt('created_at', to)
+    .or('is_deleted.is.null,is_deleted.eq.false')
   if (error) throw error
   return count ?? 0
 }

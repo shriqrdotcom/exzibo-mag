@@ -1,0 +1,47 @@
+---
+
+**Task: Implement Soft Delete + Permanent Delete for Restaurants**
+
+I have a restaurant management system. Currently, the "DELETE RESTAURANT PERMANENTLY" feature is deleting restaurants immediately, which is not what I want.
+
+### **New Required Behavior:**
+
+1. **First Delete (Soft Delete)**
+   - When user clicks **DELETE** from the normal restaurant list or from the modal shown in the image (UID: 6833700906, Name: MODI), it should **NOT** delete the restaurant permanently.
+   - Instead, it should:
+     - Mark the restaurant as **soft deleted**.
+     - Move it to a new section called **"DELETED RESTAURANTS"**.
+     - Keep all data intact in the database.
+
+2. **Second Delete (Permanent Delete)**
+   - In the **"DELETED RESTAURANTS"** section, show all soft-deleted restaurants.
+   - Each restaurant in this section should have a **"DELETE PERMANENTLY"** button.
+   - When clicked, it should **completely remove** the restaurant from the database (all tables/collections, references, images if any, etc.).
+
+### **Technical Requirements:**
+
+- Add a field in the Restaurant model/schema: `isDeleted` (boolean, default: false) and optionally `deletedAt` (timestamp).
+- **Soft Delete** should only set `isDeleted: true` and `deletedAt: new Date()`.
+- **Main Restaurant List** should only show restaurants where `isDeleted: false`.
+- Create a new page/section/route: **/deleted-restaurants** or a tab called **"DELETED RESTAURANTS"**.
+- In the deleted section, show restaurants with `isDeleted: true`.
+- Implement a separate API endpoint for **permanent delete** that actually runs `deleteOne()` or equivalent and cleans up any related data.
+
+### **UI Flow:**
+1. User clicks delete on any active restaurant → Shows current modal → Clicking **DELETE** performs **soft delete** and moves it to "DELETED RESTAURANTS" section.
+2. User goes to "DELETED RESTAURANTS" section → Can see MODI (example) → Clicks permanent delete → Truly removed from backend.
+
+### **Additional Instructions:**
+- Make sure all queries in the main dashboard, search, statistics, etc. filter out `isDeleted: true` restaurants.
+- Handle any foreign key references or related data properly during permanent delete.
+- Show success messages:
+   - After soft delete: "Restaurant moved to Deleted Restaurants"
+   - After permanent delete: "Restaurant permanently deleted"
+- Add confirmation modal for permanent delete (strong warning).
+- Keep the current modal design but change the logic behind it.
+
+Please implement this **completely and correctly** with proper backend and frontend changes. Use clean code, proper error handling, and make sure no restaurant is lost accidentally.
+
+Start by showing me the changes needed in the schema and the main delete function.
+
+---

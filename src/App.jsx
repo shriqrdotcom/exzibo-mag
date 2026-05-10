@@ -22,7 +22,8 @@ import MasterControl        from './pages/MasterControl'
 import ProfilePage          from './pages/ProfilePage'
 import EditProfile          from './pages/EditProfile'
 import NotificationsPage    from './pages/NotificationsPage'
-import InformationPage     from './pages/InformationPage'
+import InformationPage      from './pages/InformationPage'
+import DeletedRestaurants   from './pages/DeletedRestaurants'
 
 // ── Full-screen loader ──────────────────────────────────────────────────────
 function GlobalLoader() {
@@ -121,7 +122,8 @@ function AppRoutes() {
       <Route path="/restaurants"       element={<ProtectedRoute><Restaurants /></ProtectedRoute>} />
       <Route path="/edit-profile"      element={<ProtectedRoute><EditProfile /></ProtectedRoute>} />
       <Route path="/notifications"     element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
-      <Route path="/information"       element={<ProtectedRoute><InformationPage /></ProtectedRoute>} />
+      <Route path="/information"          element={<ProtectedRoute><InformationPage /></ProtectedRoute>} />
+      <Route path="/deleted-restaurants" element={<ProtectedRoute><DeletedRestaurants /></ProtectedRoute>} />
 
       {/* Catch-all → auth gate */}
       <Route path="*" element={<Navigate to="/" replace />} />

@@ -4,7 +4,7 @@ import Sidebar from '../components/Sidebar'
 import AdminHeader from '../components/AdminHeader'
 import { TrendingUp, Filter, Download, ChevronLeft, ChevronRight, Plus, Trash2, Clock, X, Pencil } from 'lucide-react'
 import { useRole } from '../context/RoleContext'
-import { getRestaurants, updateRestaurant, deleteRestaurant, getRestaurantsCreatedThisMonth } from '../lib/db'
+import { getRestaurants, updateRestaurant, softDeleteRestaurant, getRestaurantsCreatedThisMonth } from '../lib/db'
 
 function getAvatarFromName(name) {
   return name.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase()
@@ -247,18 +247,22 @@ export default function Dashboard() {
       return
     }
     try {
-      await deleteRestaurant(deleteTarget.id)
+      await softDeleteRestaurant(deleteTarget.id)
     } catch {
+      // Fallback: mark as deleted in localStorage
       const saved = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
       localStorage.setItem('exzibo_restaurants', JSON.stringify(
-        saved.filter(r => r.id !== deleteTarget.id && (r.uid || r.id) !== deleteTarget.uid)
+        saved.map(r => (r.id === deleteTarget.id || (r.uid || r.id) === deleteTarget.uid)
+          ? { ...r, is_deleted: true, deleted_at: new Date().toISOString() }
+          : r
+        )
       ))
     }
     fetchRestaurants()
     fetchOrderCount()
     closeDeleteModal()
-    setToast('Restaurant deleted successfully')
-    setTimeout(() => setToast(''), 2400)
+    setToast('Restaurant moved to Deleted Restaurants')
+    setTimeout(() => setToast(''), 2800)
   }
 
   useLayoutEffect(() => {
@@ -641,7 +645,7 @@ export default function Dashboard() {
               fontSize: '15px', fontWeight: 800, color: '#E8321A',
               letterSpacing: '0.06em', marginBottom: '18px', paddingRight: '40px',
             }}>
-              DELETE RESTAURANT PERMANENTLY
+              MOVE TO DELETED RESTAURANTS
             </div>
 
             <div style={{
