@@ -3,6 +3,7 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import ProfileSlide from '../components/ProfileSlide'
 import HelpBottomSheet from '../components/HelpBottomSheet'
 import { useAuth } from '../context/AuthContext'
+import { useRole } from '../context/RoleContext'
 
 const MOBILE_FONT = "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif"
 
@@ -37,12 +38,21 @@ export default function ProfilePage() {
   const isMasterView = searchParams.get('from') === 'master'
 
   const { isSuperAdmin } = useAuth()
+  const { activeRole } = useRole()
   const [restaurantName, setRestaurantName] = useState(() => loadRestaurantName(restaurantId))
   const [logoUrl, setLogoUrl] = useState(() => loadLogoUrl(restaurantId))
   const [menuOpen, setMenuOpen] = useState(false)
   const [helpOpen, setHelpOpen] = useState(false)
 
-  const userRole = isSuperAdmin ? 'Super Admin' : isMasterView ? 'Admin' : 'Admin'
+  function resolveUserRole() {
+    if (isSuperAdmin && !activeRole) return 'Super Admin'
+    if (activeRole === 'manager')   return 'Manager'
+    if (activeRole === 'staff')     return 'Employee'
+    if (activeRole === 'owner')     return 'Admin'
+    if (isMasterView)               return 'Admin'
+    return 'Admin'
+  }
+  const userRole = resolveUserRole()
 
   useEffect(() => {
     setRestaurantName(loadRestaurantName(restaurantId))
