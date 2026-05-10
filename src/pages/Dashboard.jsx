@@ -178,7 +178,11 @@ export default function Dashboard() {
       setRestaurants(rows.map(mapRow))
     } catch {
       const saved = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
-      setRestaurants(saved.map(mapRow))
+      // Filter out any rows marked as soft-deleted in localStorage
+      let softDeleted = new Set()
+      try { softDeleted = new Set(JSON.parse(localStorage.getItem('exzibo_soft_deleted_ids') || '[]')) } catch {}
+      const active = saved.filter(r => !r.is_deleted && !softDeleted.has(r.id))
+      setRestaurants(active.map(mapRow))
     }
   }, [])
 

@@ -71,6 +71,12 @@ export default function DeletedRestaurants() {
     setDeleting(true)
     try {
       await deleteRestaurant(deleteTarget.id)
+      // Also remove from localStorage soft-delete tracking (deleteRestaurant does this,
+      // but be explicit here in case the DB call itself failed internally)
+      try {
+        const ids = JSON.parse(localStorage.getItem('exzibo_soft_deleted_ids') || '[]')
+        localStorage.setItem('exzibo_soft_deleted_ids', JSON.stringify(ids.filter(i => i !== deleteTarget.id)))
+      } catch {}
       closeDeleteModal()
       fetchDeleted()
       setToast('Restaurant permanently deleted')

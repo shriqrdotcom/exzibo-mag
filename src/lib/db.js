@@ -1,6 +1,35 @@
 import { supabase } from './supabase'
 import { DISABLE_AUTH } from './env'
 
+// ── Soft-delete localStorage fallback helpers ─────────────────
+// Used when the is_deleted column hasn't been migrated to Supabase yet.
+// Stores an array of restaurant IDs that have been soft-deleted locally.
+const LS_SOFT_DELETED = 'exzibo_soft_deleted_ids'
+
+function getSoftDeletedIds() {
+  try { return new Set(JSON.parse(localStorage.getItem(LS_SOFT_DELETED) || '[]')) } catch { return new Set() }
+}
+
+function addSoftDeletedId(id) {
+  const ids = getSoftDeletedIds()
+  ids.add(id)
+  localStorage.setItem(LS_SOFT_DELETED, JSON.stringify([...ids]))
+}
+
+function removeSoftDeletedId(id) {
+  const ids = getSoftDeletedIds()
+  ids.delete(id)
+  localStorage.setItem(LS_SOFT_DELETED, JSON.stringify([...ids]))
+}
+
+// Returns true when a Supabase/PostgREST error is caused by a missing column.
+// This happens when the soft_delete_setup.sql migration hasn't been run yet.
+function isMissingColumnError(err) {
+  const msg  = (err?.message || '').toLowerCase()
+  const code = err?.code || ''
+  return code === 'PGRST204' || code === '42703' || msg.includes('is_deleted') || msg.includes('column') && msg.includes('exist')
+}
+
 // ── Restaurant UID — server-side unique 10-digit generator ───
 
 export async function generateRestaurantUID() {
@@ -11,17 +40,36 @@ export async function generateRestaurantUID() {
 
 // ── Restaurants ──────────────────────────────────────────────
 
+// Filters rows that should be excluded (soft-deleted), merging DB flag + localStorage fallback.
+function filterActive(rows) {
+  const localDeleted = getSoftDeletedIds()
+  return rows.filter(r => !r.is_deleted && !localDeleted.has(r.id))
+}
+
 export async function getRestaurants() {
   // In DISABLE_AUTH dev mode there is no real Supabase session, so we cannot
   // call auth-gated RPCs. Fetch all restaurants publicly instead.
   if (DISABLE_AUTH) {
+    // Try with is_deleted column filter first
     const { data, error } = await supabase
       .from('restaurants')
       .select('*')
       .or('is_deleted.is.null,is_deleted.eq.false')
       .order('created_at', { ascending: false })
-    if (error) throw error
-    return data ?? []
+
+    if (error) {
+      // Column doesn't exist yet — fetch everything and filter client-side
+      if (isMissingColumnError(error)) {
+        const { data: all, error: e2 } = await supabase
+          .from('restaurants')
+          .select('*')
+          .order('created_at', { ascending: false })
+        if (e2) throw e2
+        return filterActive(all ?? [])
+      }
+      throw error
+    }
+    return filterActive(data ?? [])
   }
 
   const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -44,29 +92,78 @@ export async function getRestaurants() {
     .in('id', ids)
     .or('is_deleted.is.null,is_deleted.eq.false')
     .order('created_at', { ascending: false })
-  if (error) throw error
-  return data ?? []
+
+  if (error) {
+    if (isMissingColumnError(error)) {
+      const { data: all, error: e2 } = await supabase
+        .from('restaurants')
+        .select('*')
+        .in('id', ids)
+        .order('created_at', { ascending: false })
+      if (e2) throw e2
+      return filterActive(all ?? [])
+    }
+    throw error
+  }
+  return filterActive(data ?? [])
 }
 
 // Returns soft-deleted restaurants (is_deleted = true).
+// If the column doesn't exist yet, falls back to the localStorage soft-delete list.
 export async function getDeletedRestaurants() {
   const { data, error } = await supabase
     .from('restaurants')
     .select('*')
     .eq('is_deleted', true)
     .order('deleted_at', { ascending: false })
-  if (error) throw error
-  return data ?? []
+
+  if (error) {
+    if (isMissingColumnError(error)) {
+      // Column not migrated yet — use localStorage fallback
+      const localDeleted = getSoftDeletedIds()
+      if (localDeleted.size === 0) return []
+      const { data: all, error: e2 } = await supabase
+        .from('restaurants')
+        .select('*')
+        .in('id', [...localDeleted])
+      if (e2) return []
+      return all ?? []
+    }
+    throw error
+  }
+
+  // Also include any locally soft-deleted IDs not yet synced to DB
+  const dbResult = data ?? []
+  const localDeleted = getSoftDeletedIds()
+  const dbIds = new Set(dbResult.map(r => r.id))
+  const missingLocal = [...localDeleted].filter(id => !dbIds.has(id))
+
+  if (missingLocal.length > 0) {
+    const { data: extra } = await supabase
+      .from('restaurants')
+      .select('*')
+      .in('id', missingLocal)
+    return [...dbResult, ...(extra ?? [])]
+  }
+  return dbResult
 }
 
 // Soft-delete: marks the restaurant as deleted without removing data.
-// The restaurant moves to the "Deleted Restaurants" section.
+// Falls back to localStorage persistence if the DB column doesn't exist yet.
 export async function softDeleteRestaurant(id) {
   const { error } = await supabase
     .from('restaurants')
     .update({ is_deleted: true, deleted_at: new Date().toISOString() })
     .eq('id', id)
-  if (error) throw error
+
+  if (error) {
+    // Column not migrated yet — persist deletion in localStorage
+    addSoftDeletedId(id)
+    // Don't re-throw; the localStorage fallback IS the soft delete in this state
+    return
+  }
+  // Also track locally for UI consistency across all fallback paths
+  addSoftDeletedId(id)
 }
 
 export async function createRestaurant(payload) {
@@ -122,6 +219,8 @@ export async function updateRestaurant(id, patch) {
 export async function deleteRestaurant(id) {
   const { error } = await supabase.from('restaurants').delete().eq('id', id)
   if (error) throw error
+  // Clear the localStorage soft-delete tracking entry when permanently deleted
+  removeSoftDeletedId(id)
 }
 
 export async function getRestaurantBySlug(slug) {
@@ -364,13 +463,29 @@ export async function getRestaurantsCreatedThisMonth() {
   const now  = new Date()
   const from = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
   const to   = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString()
+
   const { count, error } = await supabase
     .from('restaurants')
     .select('id', { count: 'exact', head: true })
     .gte('created_at', from)
     .lt('created_at', to)
     .or('is_deleted.is.null,is_deleted.eq.false')
-  if (error) throw error
+
+  if (error) {
+    if (isMissingColumnError(error)) {
+      // Column not migrated yet — fetch IDs for the month and exclude soft-deleted locally
+      const { data, error: e2 } = await supabase
+        .from('restaurants')
+        .select('id')
+        .gte('created_at', from)
+        .lt('created_at', to)
+      if (e2) throw e2
+      const localDeleted = getSoftDeletedIds()
+      return (data ?? []).filter(r => !localDeleted.has(r.id)).length
+    }
+    throw error
+  }
+  // Subtract any locally soft-deleted ones in case DB hasn't caught up
   return count ?? 0
 }
 
