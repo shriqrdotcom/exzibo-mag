@@ -118,8 +118,6 @@ export default function NotificationsPage() {
       <Sidebar />
 
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        <AdminHeader title="Notifications" showSearch={false} />
-
         <main style={{ flex: 1, overflowY: 'auto', padding: '32px' }}>
 
           {/* ── Page title + actions ── */}
