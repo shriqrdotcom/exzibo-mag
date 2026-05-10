@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import ProfileSlide from '../components/ProfileSlide'
 import HelpBottomSheet from '../components/HelpBottomSheet'
+import { useAuth } from '../context/AuthContext'
 
 const MOBILE_FONT = "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif"
 
@@ -35,10 +36,13 @@ export default function ProfilePage() {
   const restaurantId = id || 'default'
   const isMasterView = searchParams.get('from') === 'master'
 
+  const { isSuperAdmin } = useAuth()
   const [restaurantName, setRestaurantName] = useState(() => loadRestaurantName(restaurantId))
   const [logoUrl, setLogoUrl] = useState(() => loadLogoUrl(restaurantId))
   const [menuOpen, setMenuOpen] = useState(false)
   const [helpOpen, setHelpOpen] = useState(false)
+
+  const userRole = isSuperAdmin ? 'Super Admin' : isMasterView ? 'Admin' : 'Admin'
 
   useEffect(() => {
     setRestaurantName(loadRestaurantName(restaurantId))
@@ -211,7 +215,12 @@ export default function ProfilePage() {
       </div>
 
       {/* ── Help bottom sheet ── */}
-      <HelpBottomSheet isOpen={helpOpen} onClose={() => setHelpOpen(false)} />
+      <HelpBottomSheet
+        isOpen={helpOpen}
+        onClose={() => setHelpOpen(false)}
+        restaurantName={restaurantName}
+        userRole={userRole}
+      />
     </div>
   )
 }

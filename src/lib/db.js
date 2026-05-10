@@ -560,3 +560,41 @@ export async function upsertSmsNotification({ title, message }) {
   if (error) throw error
   return data
 }
+
+// ── Help Notifications (global HELP request feed) ─────────────────────────────
+
+export async function createHelpNotification({ restaurant_name, user_role, message }) {
+  const { data, error } = await supabase
+    .from('help_notifications')
+    .insert({
+      restaurant_name: restaurant_name || 'Unknown',
+      user_role:       user_role       || 'admin',
+      message:         message         || 'Help Requested',
+      status:          'unread',
+    })
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
+export async function getHelpNotifications() {
+  const { data, error } = await supabase
+    .from('help_notifications')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(50)
+  if (error) throw error
+  return data ?? []
+}
+
+export async function updateHelpNotificationStatus(id, status) {
+  const { data, error } = await supabase
+    .from('help_notifications')
+    .update({ status })
+    .eq('id', id)
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}

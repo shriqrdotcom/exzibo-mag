@@ -1,120 +1,238 @@
-import React from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { LayoutDashboard, Settings, Zap, Users, Table2, ShieldCheck } from 'lucide-react'
+import { LayoutDashboard, Settings, Zap, Users, Table2, ShieldCheck, Bell } from 'lucide-react'
 import PermissionGate from './PermissionGate'
+import NotificationDrawer from './NotificationDrawer'
+import { supabase } from '../lib/supabase'
 
 const navItems = [
-  { icon: LayoutDashboard, label: 'Dashboard',       path: '/dashboard',     permission: 'dashboard' },
-  { icon: Users,           label: 'Team Members',    path: '/team-members',  permission: 'teamManagement' },
-  { icon: Table2,          label: 'Table',           path: '/table',         permission: 'dashboard' },
-  { icon: ShieldCheck,     label: 'Master Control',  path: '/master-control', permission: 'dashboard' },
-  { icon: Settings,        label: 'Settings',        path: '/settings',      permission: 'settings' },
+  { icon: LayoutDashboard, label: 'Dashboard',      path: '/dashboard',      permission: 'dashboard' },
+  { icon: Users,           label: 'Team Members',   path: '/team-members',   permission: 'teamManagement' },
+  { icon: Table2,          label: 'Table',          path: '/table',          permission: 'dashboard' },
+  { icon: ShieldCheck,     label: 'Master Control', path: '/master-control', permission: 'dashboard' },
+  { icon: Settings,        label: 'Settings',       path: '/settings',       permission: 'settings' },
 ]
 
 export default function Sidebar() {
   const navigate = useNavigate()
   const location = useLocation()
-  return (
-    <aside style={{
-      width: '270px',
-      minWidth: '270px',
-      height: '100vh',
-      background: '#0e0e0e',
-      borderRight: '1px solid rgba(255,255,255,0.05)',
-      display: 'flex',
-      flexDirection: 'column',
-      padding: '28px 16px',
-      position: 'sticky',
-      top: 0,
-    }}>
-      <div style={{ marginBottom: '40px', paddingLeft: '8px' }}>
-        <div style={{ fontSize: '20px', fontWeight: 900, letterSpacing: '0.05em', color: '#fff' }}>
-          EXZI<span style={{ color: '#E8321A' }}>BO</span>
-        </div>
-        <div style={{ fontSize: '10px', fontWeight: 500, letterSpacing: '0.2em', color: '#555', marginTop: '4px', textTransform: 'uppercase' }}>
-          Premium Management
-        </div>
-      </div>
+  const [drawerOpen, setDrawerOpen] = useState(false)
+  const [unreadCount, setUnreadCount] = useState(0)
 
-      <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
-        {navItems.map(({ icon: Icon, label, path, permission }) => {
-          const isActive = location.pathname === path
-          return (
-            <PermissionGate key={path} permission={permission}>
-              <button
-                onClick={() => navigate(path)}
-                style={{
+  const refreshUnread = useCallback(async () => {
+    try {
+      const { count } = await supabase
+        .from('help_notifications')
+        .select('id', { count: 'exact', head: true })
+        .eq('status', 'unread')
+      setUnreadCount(count ?? 0)
+    } catch { /* table may not exist yet */ }
+  }, [])
+
+  // Subscribe to real-time changes so badge updates across all sessions
+  useEffect(() => {
+    refreshUnread()
+    const channel = supabase
+      .channel('rt-help-badge')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'help_notifications',
+      }, () => refreshUnread())
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [refreshUnread])
+
+  return (
+    <>
+      <aside style={{
+        width: '270px',
+        minWidth: '270px',
+        height: '100vh',
+        background: '#0e0e0e',
+        borderRight: '1px solid rgba(255,255,255,0.05)',
+        display: 'flex',
+        flexDirection: 'column',
+        padding: '28px 16px',
+        position: 'sticky',
+        top: 0,
+      }}>
+        {/* Logo */}
+        <div style={{ marginBottom: '40px', paddingLeft: '8px' }}>
+          <div style={{ fontSize: '20px', fontWeight: 900, letterSpacing: '0.05em', color: '#fff' }}>
+            EXZI<span style={{ color: '#E8321A' }}>BO</span>
+          </div>
+          <div style={{ fontSize: '10px', fontWeight: 500, letterSpacing: '0.2em', color: '#555', marginTop: '4px', textTransform: 'uppercase' }}>
+            Premium Management
+          </div>
+        </div>
+
+        {/* Nav items */}
+        <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          {navItems.map(({ icon: Icon, label, path, permission }) => {
+            const isActive = location.pathname === path
+            return (
+              <PermissionGate key={path} permission={permission}>
+                <button
+                  onClick={() => navigate(path)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    padding: '12px 16px',
+                    borderRadius: '12px',
+                    background: isActive ? '#E8321A' : 'transparent',
+                    border: isActive ? 'none' : '1px solid rgba(255,255,255,0.06)',
+                    color: isActive ? '#fff' : '#888',
+                    fontSize: '14px',
+                    fontWeight: isActive ? 600 : 500,
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    textAlign: 'left',
+                    width: '100%',
+                  }}
+                  onMouseEnter={e => {
+                    if (!isActive) {
+                      e.currentTarget.style.background = 'rgba(255,255,255,0.04)'
+                      e.currentTarget.style.color = '#fff'
+                      e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'
+                    }
+                  }}
+                  onMouseLeave={e => {
+                    if (!isActive) {
+                      e.currentTarget.style.background = 'transparent'
+                      e.currentTarget.style.color = '#888'
+                      e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)'
+                    }
+                  }}
+                >
+                  <Icon size={18} />
+                  {label}
+                </button>
+              </PermissionGate>
+            )
+          })}
+
+          {/* ── Notifications button ── */}
+          <button
+            onClick={() => setDrawerOpen(true)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              padding: '12px 16px',
+              borderRadius: '12px',
+              background: drawerOpen ? 'rgba(232,50,26,0.12)' : 'transparent',
+              border: drawerOpen
+                ? '1px solid rgba(232,50,26,0.3)'
+                : '1px solid rgba(255,255,255,0.06)',
+              color: drawerOpen ? '#E8321A' : '#888',
+              fontSize: '14px',
+              fontWeight: drawerOpen ? 600 : 500,
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              textAlign: 'left',
+              width: '100%',
+              position: 'relative',
+            }}
+            onMouseEnter={e => {
+              if (!drawerOpen) {
+                e.currentTarget.style.background = 'rgba(255,255,255,0.04)'
+                e.currentTarget.style.color = '#fff'
+                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'
+              }
+            }}
+            onMouseLeave={e => {
+              if (!drawerOpen) {
+                e.currentTarget.style.background = 'transparent'
+                e.currentTarget.style.color = '#888'
+                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)'
+              }
+            }}
+          >
+            <div style={{ position: 'relative', flexShrink: 0 }}>
+              <Bell size={18} />
+              {unreadCount > 0 && (
+                <span style={{
+                  position: 'absolute',
+                  top: '-6px',
+                  right: '-7px',
+                  minWidth: '16px',
+                  height: '16px',
+                  borderRadius: '99px',
+                  background: '#E8321A',
+                  color: '#fff',
+                  fontSize: '9px',
+                  fontWeight: 800,
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '12px',
-                  padding: '12px 16px',
-                  borderRadius: '12px',
-                  background: isActive ? '#E8321A' : 'transparent',
-                  border: isActive ? 'none' : '1px solid rgba(255,255,255,0.06)',
-                  color: isActive ? '#fff' : '#888',
-                  fontSize: '14px',
-                  fontWeight: isActive ? 600 : 500,
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  textAlign: 'left',
-                  width: '100%',
-                }}
-                onMouseEnter={e => {
-                  if (!isActive) {
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.04)'
-                    e.currentTarget.style.color = '#fff'
-                    e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'
-                  }
-                }}
-                onMouseLeave={e => {
-                  if (!isActive) {
-                    e.currentTarget.style.background = 'transparent'
-                    e.currentTarget.style.color = '#888'
-                    e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)'
-                  }
-                }}
-              >
-                <Icon size={18} />
-                {label}
-              </button>
-            </PermissionGate>
-          )
-        })}
+                  justifyContent: 'center',
+                  padding: '0 3px',
+                  boxShadow: '0 0 6px rgba(232,50,26,0.6)',
+                  lineHeight: 1,
+                }}>
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </span>
+              )}
+            </div>
+            Notifications
+            {unreadCount > 0 && (
+              <span style={{
+                marginLeft: 'auto',
+                padding: '2px 7px',
+                borderRadius: '99px',
+                background: 'rgba(232,50,26,0.15)',
+                color: '#E8321A',
+                fontSize: '10px',
+                fontWeight: 700,
+              }}>
+                {unreadCount} new
+              </span>
+            )}
+          </button>
+        </nav>
 
-      </nav>
+        {/* Go Live button */}
+        <button
+          onClick={() => navigate('/')}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px',
+            padding: '13px',
+            borderRadius: '50px',
+            background: 'transparent',
+            border: '1px solid rgba(255,255,255,0.12)',
+            color: '#fff',
+            fontSize: '13px',
+            fontWeight: 600,
+            letterSpacing: '0.05em',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease',
+          }}
+          onMouseEnter={e => {
+            e.currentTarget.style.background = '#E8321A'
+            e.currentTarget.style.borderColor = '#E8321A'
+            e.currentTarget.style.boxShadow = '0 0 20px rgba(232,50,26,0.4)'
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.background = 'transparent'
+            e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)'
+            e.currentTarget.style.boxShadow = 'none'
+          }}
+        >
+          <Zap size={15} />
+          GO LIVE
+        </button>
+      </aside>
 
-      <button
-        onClick={() => navigate('/')}
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: '8px',
-          padding: '13px',
-          borderRadius: '50px',
-          background: 'transparent',
-          border: '1px solid rgba(255,255,255,0.12)',
-          color: '#fff',
-          fontSize: '13px',
-          fontWeight: 600,
-          letterSpacing: '0.05em',
-          cursor: 'pointer',
-          transition: 'all 0.2s ease',
-        }}
-        onMouseEnter={e => {
-          e.currentTarget.style.background = '#E8321A'
-          e.currentTarget.style.borderColor = '#E8321A'
-          e.currentTarget.style.boxShadow = '0 0 20px rgba(232,50,26,0.4)'
-        }}
-        onMouseLeave={e => {
-          e.currentTarget.style.background = 'transparent'
-          e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)'
-          e.currentTarget.style.boxShadow = 'none'
-        }}
-      >
-        <Zap size={15} />
-        GO LIVE
-      </button>
-    </aside>
+      {/* Notification drawer — rendered outside the aside so it can overlay full screen */}
+      <NotificationDrawer
+        isOpen={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        onUnreadChange={setUnreadCount}
+      />
+    </>
   )
 }

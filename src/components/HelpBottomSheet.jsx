@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { X, ThumbsUp, ThumbsDown } from 'lucide-react'
+import { createHelpNotification } from '../lib/db'
 
 const FONT = "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif"
 const YELLOW = '#F5C518'
@@ -7,10 +8,11 @@ const YELLOW_SHADOW = 'rgba(245,197,24,0.35)'
 const YELLOW_BG = 'rgba(245,197,24,0.14)'
 const YELLOW_BORDER = '#F5C518'
 
-export default function HelpBottomSheet({ isOpen, onClose }) {
+export default function HelpBottomSheet({ isOpen, onClose, restaurantName = 'Unknown', userRole = 'Admin' }) {
   const [feedback, setFeedback] = useState(null)
   const [text, setText] = useState('')
   const [submitted, setSubmitted] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [visible, setVisible] = useState(false)
   const [animIn, setAnimIn] = useState(false)
@@ -44,9 +46,10 @@ export default function HelpBottomSheet({ isOpen, onClose }) {
     setText('')
     setError('')
     setSubmitted(false)
+    setSubmitting(false)
   }
 
-  function handleSubmit() {
+  async function handleSubmit() {
     if (!feedback) {
       setError('Please select Helpful or Not helpful.')
       return
@@ -56,8 +59,19 @@ export default function HelpBottomSheet({ isOpen, onClose }) {
       return
     }
     setError('')
-    console.log('[HelpBottomSheet] feedback submitted:', { feedback, text })
-    setSubmitted(true)
+    setSubmitting(true)
+    try {
+      await createHelpNotification({
+        restaurant_name: restaurantName,
+        user_role: userRole,
+        message: text.trim(),
+      })
+    } catch (e) {
+      console.warn('[HelpBottomSheet] could not save to DB, continuing:', e.message)
+    } finally {
+      setSubmitting(false)
+      setSubmitted(true)
+    }
   }
 
   if (!visible) return null
@@ -130,7 +144,7 @@ export default function HelpBottomSheet({ isOpen, onClose }) {
               Thank you!
             </div>
             <div style={{ fontSize: '13px', color: '#888', fontWeight: 500, lineHeight: 1.5 }}>
-              Your feedback helps us make Exzibo better for everyone.
+              Your feedback has been sent to the team and will appear in the notification panel.
             </div>
             <button
               onClick={() => { handleReset(); handleClose() }}
@@ -285,9 +299,7 @@ export default function HelpBottomSheet({ isOpen, onClose }) {
                 lineHeight: 1.6,
                 transition: 'border-color 0.18s ease',
               }}
-              onFocus={e => {
-                e.target.style.borderColor = YELLOW_BORDER
-              }}
+              onFocus={e => { e.target.style.borderColor = YELLOW_BORDER }}
               onBlur={e => {
                 e.target.style.borderColor = error && !text.trim()
                   ? '#e53935'
@@ -334,25 +346,26 @@ export default function HelpBottomSheet({ isOpen, onClose }) {
 
               <button
                 onClick={handleSubmit}
+                disabled={submitting}
                 style={{
                   flex: 1,
                   padding: '14px',
-                  background: YELLOW,
+                  background: submitting ? 'rgba(245,197,24,0.5)' : YELLOW,
                   border: 'none',
                   borderRadius: '14px',
                   color: '#111',
                   fontSize: '14px',
                   fontWeight: 800,
-                  cursor: 'pointer',
+                  cursor: submitting ? 'not-allowed' : 'pointer',
                   fontFamily: FONT,
                   letterSpacing: '0.04em',
-                  boxShadow: `0 4px 20px ${YELLOW_SHADOW}`,
+                  boxShadow: submitting ? 'none' : `0 4px 20px ${YELLOW_SHADOW}`,
                   transition: 'opacity 0.15s ease',
                 }}
-                onMouseEnter={e => { e.currentTarget.style.opacity = '0.88' }}
+                onMouseEnter={e => { if (!submitting) e.currentTarget.style.opacity = '0.88' }}
                 onMouseLeave={e => { e.currentTarget.style.opacity = '1' }}
               >
-                Submit
+                {submitting ? 'Sending…' : 'Submit'}
               </button>
             </div>
           </div>
