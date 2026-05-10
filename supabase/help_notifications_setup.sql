@@ -5,11 +5,17 @@
 CREATE TABLE IF NOT EXISTS public.help_notifications (
   id              UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
   restaurant_name TEXT        NOT NULL DEFAULT 'Unknown',
+  restaurant_uid  TEXT                 DEFAULT NULL,
   user_role       TEXT        NOT NULL DEFAULT 'admin',
+  feedback        TEXT                 DEFAULT NULL,
   message         TEXT        NOT NULL DEFAULT 'Help Requested',
   status          TEXT        NOT NULL DEFAULT 'unread',
   created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- Add new columns if the table already exists (safe to run multiple times)
+ALTER TABLE public.help_notifications ADD COLUMN IF NOT EXISTS restaurant_uid TEXT DEFAULT NULL;
+ALTER TABLE public.help_notifications ADD COLUMN IF NOT EXISTS feedback        TEXT DEFAULT NULL;
 
 ALTER TABLE public.help_notifications ENABLE ROW LEVEL SECURITY;
 

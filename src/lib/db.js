@@ -563,12 +563,14 @@ export async function upsertSmsNotification({ title, message }) {
 
 // ── Help Notifications (global HELP request feed) ─────────────────────────────
 
-export async function createHelpNotification({ restaurant_name, user_role, message }) {
+export async function createHelpNotification({ restaurant_name, restaurant_uid, user_role, feedback, message }) {
   const { data, error } = await supabase
     .from('help_notifications')
     .insert({
       restaurant_name: restaurant_name || 'Unknown',
+      restaurant_uid:  restaurant_uid  || null,
       user_role:       user_role       || 'admin',
+      feedback:        feedback        || null,
       message:         message         || 'Help Requested',
       status:          'unread',
     })

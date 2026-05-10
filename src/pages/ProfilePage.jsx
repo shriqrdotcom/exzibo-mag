@@ -20,6 +20,14 @@ function loadRestaurantName(restaurantId) {
   } catch { return 'Restaurant' }
 }
 
+function loadRestaurantUid(restaurantId) {
+  if (!restaurantId || restaurantId === 'default') return null
+  try {
+    const all = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
+    return all.find(r => r.id === restaurantId)?.uid || null
+  } catch { return null }
+}
+
 function loadLogoUrl(restaurantId) {
   if (!restaurantId || restaurantId === 'default') {
     return localStorage.getItem('exzibo_logo_default') || ''
@@ -41,6 +49,7 @@ export default function ProfilePage() {
   const { activeRole } = useRole()
   const urlRole = searchParams.get('role')
   const [restaurantName, setRestaurantName] = useState(() => loadRestaurantName(restaurantId))
+  const [restaurantUid, setRestaurantUid]   = useState(() => loadRestaurantUid(restaurantId))
   const [logoUrl, setLogoUrl] = useState(() => loadLogoUrl(restaurantId))
   const [menuOpen, setMenuOpen] = useState(false)
   const [helpOpen, setHelpOpen] = useState(false)
@@ -58,6 +67,7 @@ export default function ProfilePage() {
 
   useEffect(() => {
     setRestaurantName(loadRestaurantName(restaurantId))
+    setRestaurantUid(loadRestaurantUid(restaurantId))
     setLogoUrl(loadLogoUrl(restaurantId))
   }, [restaurantId])
 
@@ -231,6 +241,7 @@ export default function ProfilePage() {
         isOpen={helpOpen}
         onClose={() => setHelpOpen(false)}
         restaurantName={restaurantName}
+        restaurantUid={restaurantUid}
         userRole={userRole}
       />
     </div>

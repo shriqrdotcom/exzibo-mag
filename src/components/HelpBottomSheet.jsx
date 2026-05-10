@@ -8,7 +8,7 @@ const YELLOW_SHADOW = 'rgba(245,197,24,0.35)'
 const YELLOW_BG = 'rgba(245,197,24,0.14)'
 const YELLOW_BORDER = '#F5C518'
 
-export default function HelpBottomSheet({ isOpen, onClose, restaurantName = 'Unknown', userRole = 'Admin' }) {
+export default function HelpBottomSheet({ isOpen, onClose, restaurantName = 'Unknown', restaurantUid = null, userRole = 'Admin' }) {
   const [feedback, setFeedback] = useState(null)
   const [text, setText] = useState('')
   const [submitted, setSubmitted] = useState(false)
@@ -63,8 +63,10 @@ export default function HelpBottomSheet({ isOpen, onClose, restaurantName = 'Unk
     try {
       await createHelpNotification({
         restaurant_name: restaurantName,
-        user_role: userRole,
-        message: text.trim(),
+        restaurant_uid:  restaurantUid,
+        user_role:       userRole,
+        feedback:        feedback,
+        message:         text.trim(),
       })
     } catch (e) {
       console.warn('[HelpBottomSheet] could not save to DB, continuing:', e.message)

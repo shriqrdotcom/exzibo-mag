@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { X, Bell, CheckCircle2, Clock, Trash2, BellRing } from 'lucide-react'
+import { X, Bell, CheckCircle2, Clock, Trash2, BellRing, ThumbsUp, ThumbsDown } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 
 const FONT = "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif"
@@ -323,8 +323,8 @@ export default function HelpRequestsDrawer({ isOpen, onClose, onUnreadChange }) 
 
                     {/* Content */}
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      {/* Restaurant + role badge */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '5px' }}>
+                      {/* Restaurant name + role badge + status indicators */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '3px' }}>
                         <span style={{ fontSize: '13px', fontWeight: 700, color: isResolved ? '#555' : '#fff', letterSpacing: '-0.01em' }}>
                           {n.restaurant_name}
                         </span>
@@ -346,6 +346,38 @@ export default function HelpRequestsDrawer({ isOpen, onClose, onUnreadChange }) 
                         {isResolved && (
                           <span style={{ display: 'flex', alignItems: 'center', gap: '3px', color: '#4ADE80', fontSize: '10px', fontWeight: 600 }}>
                             <CheckCircle2 size={10} /> Resolved
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Restaurant UID + feedback badge */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '6px' }}>
+                        {n.restaurant_uid && (
+                          <span style={{
+                            fontFamily: 'monospace', fontSize: '10px',
+                            color: '#555', letterSpacing: '0.04em',
+                          }}>
+                            UID: {n.restaurant_uid}
+                          </span>
+                        )}
+                        {n.feedback === 'helpful' && (
+                          <span style={{
+                            display: 'inline-flex', alignItems: 'center', gap: '4px',
+                            padding: '2px 8px', borderRadius: '99px',
+                            background: 'rgba(74,222,128,0.1)', border: '1px solid rgba(74,222,128,0.25)',
+                            color: '#4ADE80', fontSize: '9px', fontWeight: 700, letterSpacing: '0.06em',
+                          }}>
+                            <ThumbsUp size={9} /> HELPFUL
+                          </span>
+                        )}
+                        {n.feedback === 'not_helpful' && (
+                          <span style={{
+                            display: 'inline-flex', alignItems: 'center', gap: '4px',
+                            padding: '2px 8px', borderRadius: '99px',
+                            background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)',
+                            color: '#F87171', fontSize: '9px', fontWeight: 700, letterSpacing: '0.06em',
+                          }}>
+                            <ThumbsDown size={9} /> NOT HELPFUL
                           </span>
                         )}
                       </div>
