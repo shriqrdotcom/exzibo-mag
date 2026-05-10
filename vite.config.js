@@ -3,6 +3,7 @@ import react from '@vitejs/plugin-react'
 import path from 'path'
 import { createHmac } from 'crypto'
 import bcrypt from 'bcryptjs'
+import pg from 'pg'
 
 function previewAuthPlugin() {
   return {
@@ -84,8 +85,171 @@ function previewAuthPlugin() {
   }
 }
 
+function restaurantDbPlugin() {
+  return {
+    name: 'restaurant-db',
+    configureServer(server) {
+
+      // ── POST /api/restaurant-db/create ─────────────────────────────────────
+      // Called right after a restaurant row is inserted into Supabase.
+      // Creates a dedicated PostgreSQL schema + tables in the Replit DB so every
+      // restaurant's operational data is physically isolated from all others.
+      server.middlewares.use('/api/restaurant-db/create', (req, res) => {
+        if (req.method !== 'POST') {
+          res.statusCode = 405
+          res.end('Method Not Allowed')
+          return
+        }
+
+        let body = ''
+        req.on('data', chunk => { body += chunk })
+        req.on('end', async () => {
+          try {
+            const { restaurant_id, restaurant_name } = JSON.parse(body)
+            if (!restaurant_id) {
+              res.statusCode = 400
+              res.setHeader('Content-Type', 'application/json')
+              res.end(JSON.stringify({ error: 'restaurant_id is required' }))
+              return
+            }
+
+            const { Client } = pg
+            const client = new Client({ connectionString: process.env.DATABASE_URL })
+            await client.connect()
+
+            // Schema name: r_ + first 12 hex chars of UUID (no hyphens)
+            const shortId    = restaurant_id.replace(/-/g, '').substring(0, 12)
+            const schemaName = `r_${shortId}`
+
+            // 1. Central registry — one row per restaurant
+            await client.query(`
+              CREATE TABLE IF NOT EXISTS public.restaurant_databases (
+                restaurant_id   TEXT PRIMARY KEY,
+                schema_name     TEXT NOT NULL UNIQUE,
+                restaurant_name TEXT,
+                created_at      TIMESTAMPTZ DEFAULT NOW()
+              )
+            `)
+
+            // 2. Dedicated schema for this restaurant
+            await client.query(`CREATE SCHEMA IF NOT EXISTS "${schemaName}"`)
+
+            // 3. orders
+            await client.query(`
+              CREATE TABLE IF NOT EXISTS "${schemaName}".orders (
+                id                TEXT PRIMARY KEY,
+                table_number      TEXT,
+                customer_name     TEXT,
+                customer_phone    TEXT,
+                customer_location TEXT,
+                items             JSONB        DEFAULT '[]',
+                status            TEXT         DEFAULT 'pending',
+                total             DECIMAL(10,2) DEFAULT 0,
+                notes             TEXT,
+                created_at        TIMESTAMPTZ  DEFAULT NOW()
+              )
+            `)
+
+            // 4. bookings
+            await client.query(`
+              CREATE TABLE IF NOT EXISTS "${schemaName}".bookings (
+                id              TEXT PRIMARY KEY,
+                customer_name   TEXT         NOT NULL DEFAULT '',
+                customer_phone  TEXT,
+                customer_email  TEXT,
+                guests          INTEGER      DEFAULT 1,
+                date            TEXT,
+                time            TEXT,
+                occasion        TEXT,
+                seating         TEXT,
+                notes           TEXT,
+                status          TEXT         DEFAULT 'pending',
+                created_at      TIMESTAMPTZ  DEFAULT NOW()
+              )
+            `)
+
+            // 5. menu_categories
+            await client.query(`
+              CREATE TABLE IF NOT EXISTS "${schemaName}".menu_categories (
+                id         TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+                name       TEXT        NOT NULL DEFAULT '',
+                emoji      TEXT        DEFAULT '🍽️',
+                position   INTEGER     DEFAULT 0,
+                created_at TIMESTAMPTZ DEFAULT NOW()
+              )
+            `)
+
+            // 6. menu_items
+            await client.query(`
+              CREATE TABLE IF NOT EXISTS "${schemaName}".menu_items (
+                id           TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+                category_id  TEXT,
+                name         TEXT         NOT NULL DEFAULT '',
+                description  TEXT,
+                price        DECIMAL(10,2) DEFAULT 0,
+                image        TEXT,
+                available    BOOLEAN      DEFAULT true,
+                veg          BOOLEAN      DEFAULT true,
+                tags         JSONB        DEFAULT '[]',
+                add_ons      JSONB        DEFAULT '[]',
+                is_published BOOLEAN      DEFAULT false,
+                created_at   TIMESTAMPTZ  DEFAULT NOW()
+              )
+            `)
+
+            // 7. Register in the central registry
+            await client.query(`
+              INSERT INTO public.restaurant_databases (restaurant_id, schema_name, restaurant_name)
+              VALUES ($1, $2, $3)
+              ON CONFLICT (restaurant_id) DO NOTHING
+            `, [restaurant_id, schemaName, restaurant_name || null])
+
+            await client.end()
+
+            console.log(`[restaurant-db] Schema "${schemaName}" created for restaurant ${restaurant_id}`)
+            res.setHeader('Content-Type', 'application/json')
+            res.end(JSON.stringify({ success: true, schema: schemaName }))
+
+          } catch (err) {
+            console.error('[restaurant-db/create] Error:', err.message)
+            res.statusCode = 500
+            res.setHeader('Content-Type', 'application/json')
+            res.end(JSON.stringify({ error: err.message }))
+          }
+        })
+      })
+
+      // ── GET /api/restaurant-db/list ────────────────────────────────────────
+      // Returns all restaurant schemas from the registry. Used by admin views.
+      server.middlewares.use('/api/restaurant-db/list', (req, res) => {
+        if (req.method !== 'GET') {
+          res.statusCode = 405
+          res.end('Method Not Allowed')
+          return
+        }
+        ;(async () => {
+          try {
+            const { Client } = pg
+            const client = new Client({ connectionString: process.env.DATABASE_URL })
+            await client.connect()
+            const result = await client.query(
+              'SELECT * FROM public.restaurant_databases ORDER BY created_at DESC'
+            )
+            await client.end()
+            res.setHeader('Content-Type', 'application/json')
+            res.end(JSON.stringify({ databases: result.rows }))
+          } catch (err) {
+            res.setHeader('Content-Type', 'application/json')
+            res.end(JSON.stringify({ databases: [] }))
+          }
+        })()
+      })
+    },
+  }
+}
+
 export default defineConfig({
-  plugins: [react(), previewAuthPlugin()],
+  plugins: [react(), previewAuthPlugin(), restaurantDbPlugin()],
   resolve: {
     alias: {
       '@assets': path.resolve(__dirname, 'attached_assets'),

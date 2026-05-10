@@ -61,6 +61,27 @@ export async function createRestaurant(payload) {
     throw error
   }
   console.log('[createRestaurant] created id:', data.id)
+
+  // ── Provision a dedicated database schema for this restaurant ─────────────
+  // Runs server-side via Vite middleware — creates an isolated PostgreSQL schema
+  // (r_<shortId>) with its own orders, bookings, menu_items, menu_categories tables.
+  // Non-blocking: a schema failure never prevents the restaurant from being created.
+  try {
+    const res = await fetch('/api/restaurant-db/create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ restaurant_id: data.id, restaurant_name: data.name }),
+    })
+    const json = await res.json()
+    if (json.success) {
+      console.log('[createRestaurant] Dedicated DB schema provisioned:', json.schema)
+    } else {
+      console.warn('[createRestaurant] Schema provisioning returned error:', json.error)
+    }
+  } catch (schemaErr) {
+    console.warn('[createRestaurant] Schema provisioning failed (non-blocking):', schemaErr.message)
+  }
+
   return data
 }
 
