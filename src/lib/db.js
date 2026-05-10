@@ -333,6 +333,22 @@ export async function getOrderCountThisMonth() {
   return count ?? 0
 }
 
+// Returns the number of restaurants created in the current calendar month.
+// Automatically resets to 0 at the start of each new month since it
+// filters by created_at within the month's date range.
+export async function getRestaurantsCreatedThisMonth() {
+  const now  = new Date()
+  const from = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
+  const to   = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString()
+  const { count, error } = await supabase
+    .from('restaurants')
+    .select('id', { count: 'exact', head: true })
+    .gte('created_at', from)
+    .lt('created_at', to)
+  if (error) throw error
+  return count ?? 0
+}
+
 export async function getOrders(restaurantId) {
   const { data, error } = await supabase
     .from('orders')

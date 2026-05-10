@@ -4,7 +4,7 @@ import Sidebar from '../components/Sidebar'
 import AdminHeader from '../components/AdminHeader'
 import { TrendingUp, Filter, Download, ChevronLeft, ChevronRight, Plus, Trash2, Clock, X, Pencil } from 'lucide-react'
 import { useRole } from '../context/RoleContext'
-import { getRestaurants, updateRestaurant, deleteRestaurant, getOrderCountThisMonth } from '../lib/db'
+import { getRestaurants, updateRestaurant, deleteRestaurant, getRestaurantsCreatedThisMonth } from '../lib/db'
 
 function getAvatarFromName(name) {
   return name.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase()
@@ -166,7 +166,7 @@ export default function Dashboard() {
   const [toast, setToast] = useState('')
   const [revenueEntries, setRevenueEntries] = useState([])
   const [revenueHistoryOpen, setRevenueHistoryOpen] = useState(false)
-  const [monthOrderCount, setMonthOrderCount] = useState(null)
+  const [monthRestaurantCount, setMonthRestaurantCount] = useState(null)
   const [editDraft, setEditDraft] = useState(null)
   const [viewTarget, setViewTarget] = useState(null)
 
@@ -255,6 +255,7 @@ export default function Dashboard() {
       ))
     }
     fetchRestaurants()
+    fetchOrderCount()
     closeDeleteModal()
     setToast('Restaurant deleted successfully')
     setTimeout(() => setToast(''), 2400)
@@ -266,10 +267,10 @@ export default function Dashboard() {
 
   const fetchOrderCount = useCallback(async () => {
     try {
-      const count = await getOrderCountThisMonth()
-      setMonthOrderCount(count)
+      const count = await getRestaurantsCreatedThisMonth()
+      setMonthRestaurantCount(count)
     } catch {
-      setMonthOrderCount(0)
+      setMonthRestaurantCount(0)
     }
   }, [])
 
@@ -370,12 +371,12 @@ export default function Dashboard() {
               padding: '28px',
             }}>
               <div style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.1em', color: '#555', marginBottom: '16px', textTransform: 'uppercase' }}>
-                ORDER PER MONTH
+                NEW RESTAURANTS
               </div>
               <div style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.1em', color: '#555', marginBottom: '8px', textTransform: 'uppercase' }}>
                 {currentMonthAbbr}
               </div>
-              {monthOrderCount === null ? (
+              {monthRestaurantCount === null ? (
                 <div style={{
                   width: '48px', height: '48px', borderRadius: '50%',
                   border: '3px solid rgba(232,50,26,0.15)',
@@ -385,7 +386,7 @@ export default function Dashboard() {
                 }} />
               ) : (
                 <span style={{ fontSize: '42px', fontWeight: 800, lineHeight: 1, letterSpacing: '-0.02em' }}>
-                  {monthOrderCount.toLocaleString('en-IN')}
+                  {monthRestaurantCount.toLocaleString('en-IN')}
                 </span>
               )}
             </div>
