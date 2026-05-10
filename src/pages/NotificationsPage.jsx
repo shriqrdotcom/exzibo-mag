@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import Sidebar from '../components/Sidebar'
 import AdminHeader from '../components/AdminHeader'
-import { Bell, CheckCircle2, Clock, Trash2, X, ThumbsUp, ThumbsDown } from 'lucide-react'
+import { Bell, CheckCircle2, Clock, Trash2, X, ThumbsUp, ThumbsDown, Copy, Check } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 
 const FONT = "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif"
@@ -40,6 +40,14 @@ export default function NotificationsPage() {
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('All')
   const [pulse, setPulse] = useState(false)
+  const [copiedId, setCopiedId] = useState(null)
+
+  function copyUid(uid, id) {
+    navigator.clipboard.writeText(uid).then(() => {
+      setCopiedId(id)
+      setTimeout(() => setCopiedId(null), 2000)
+    })
+  }
 
   const fetchNotifications = useCallback(async () => {
     try {
@@ -309,13 +317,28 @@ export default function NotificationsPage() {
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '8px' }}>
                           {n.restaurant_uid && (
                             <span style={{
+                              display: 'inline-flex', alignItems: 'center', gap: '6px',
                               fontFamily: 'monospace', fontSize: '11px',
-                              color: '#555', letterSpacing: '0.04em',
+                              color: '#777', letterSpacing: '0.04em',
                               background: 'rgba(255,255,255,0.04)',
                               border: '1px solid rgba(255,255,255,0.08)',
                               borderRadius: '6px', padding: '2px 8px',
                             }}>
                               UID: {n.restaurant_uid}
+                              <button
+                                onClick={() => copyUid(n.restaurant_uid, n.id)}
+                                title="Copy UID"
+                                style={{
+                                  background: 'none', border: 'none', padding: '0',
+                                  cursor: 'pointer', display: 'flex', alignItems: 'center',
+                                  color: copiedId === n.id ? '#4ADE80' : '#555',
+                                  transition: 'color 0.15s',
+                                }}
+                                onMouseEnter={e => { if (copiedId !== n.id) e.currentTarget.style.color = '#fff' }}
+                                onMouseLeave={e => { if (copiedId !== n.id) e.currentTarget.style.color = '#555' }}
+                              >
+                                {copiedId === n.id ? <Check size={11} /> : <Copy size={11} />}
+                              </button>
                             </span>
                           )}
                           {n.feedback === 'helpful' && (
