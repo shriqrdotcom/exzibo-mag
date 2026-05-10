@@ -1102,7 +1102,15 @@ export default function AdminDashboard() {
               <ArrowLeft size={16} />
             </button>
             <div
-              onClick={() => hasPermission('profile') && navigate(`/admin/${id || 'default'}/profile${fromMaster ? '?from=master' : ''}`)}
+              onClick={() => {
+                if (!hasPermission('profile')) return
+                const base = `/admin/${id || 'default'}/profile`
+                const params = new URLSearchParams()
+                if (fromMaster) params.set('from', 'master')
+                if (activeRole) params.set('role', activeRole)
+                const qs = params.toString()
+                navigate(qs ? `${base}?${qs}` : base)
+              }}
               style={{
                 width: '44px', height: '44px', borderRadius: '14px',
                 background: `linear-gradient(135deg, ${accentStart}, ${accentEnd})`,

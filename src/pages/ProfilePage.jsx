@@ -39,17 +39,19 @@ export default function ProfilePage() {
 
   const { isSuperAdmin } = useAuth()
   const { activeRole } = useRole()
+  const urlRole = searchParams.get('role')
   const [restaurantName, setRestaurantName] = useState(() => loadRestaurantName(restaurantId))
   const [logoUrl, setLogoUrl] = useState(() => loadLogoUrl(restaurantId))
   const [menuOpen, setMenuOpen] = useState(false)
   const [helpOpen, setHelpOpen] = useState(false)
 
   function resolveUserRole() {
-    if (isSuperAdmin && !activeRole) return 'Super Admin'
-    if (activeRole === 'manager')   return 'Manager'
-    if (activeRole === 'staff')     return 'Employee'
-    if (activeRole === 'owner')     return 'Admin'
-    if (isMasterView)               return 'Admin'
+    const role = urlRole || activeRole
+    if (isSuperAdmin && !role) return 'Super Admin'
+    if (role === 'manager') return 'Manager'
+    if (role === 'staff')   return 'Employee'
+    if (role === 'owner')   return 'Admin'
+    if (isMasterView)       return 'Admin'
     return 'Admin'
   }
   const userRole = resolveUserRole()
