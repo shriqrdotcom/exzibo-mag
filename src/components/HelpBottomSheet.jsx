@@ -2,6 +2,10 @@ import React, { useState, useEffect, useRef } from 'react'
 import { X, ThumbsUp, ThumbsDown } from 'lucide-react'
 
 const FONT = "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif"
+const YELLOW = '#F5C518'
+const YELLOW_SHADOW = 'rgba(245,197,24,0.35)'
+const YELLOW_BG = 'rgba(245,197,24,0.14)'
+const YELLOW_BORDER = '#F5C518'
 
 export default function HelpBottomSheet({ isOpen, onClose }) {
   const [feedback, setFeedback] = useState(null)
@@ -79,10 +83,10 @@ export default function HelpBottomSheet({ isOpen, onClose }) {
         style={{
           width: '100%',
           maxWidth: '480px',
-          background: '#141414',
+          background: '#ffffff',
           borderRadius: '24px 24px 0 0',
           padding: '0 0 max(24px, env(safe-area-inset-bottom)) 0',
-          boxShadow: '0 -8px 40px rgba(0,0,0,0.6)',
+          boxShadow: '0 -8px 40px rgba(0,0,0,0.18)',
           transform: animIn ? 'translateY(0)' : 'translateY(100%)',
           transition: 'transform 0.32s cubic-bezier(0.32, 0.72, 0, 1)',
           fontFamily: FONT,
@@ -94,7 +98,7 @@ export default function HelpBottomSheet({ isOpen, onClose }) {
         <div style={{
           width: '36px',
           height: '4px',
-          background: 'rgba(255,255,255,0.15)',
+          background: 'rgba(0,0,0,0.12)',
           borderRadius: '99px',
           margin: '12px auto 0',
         }} />
@@ -113,8 +117,8 @@ export default function HelpBottomSheet({ isOpen, onClose }) {
               width: '56px',
               height: '56px',
               borderRadius: '50%',
-              background: 'rgba(232,50,26,0.12)',
-              border: '1.5px solid rgba(232,50,26,0.3)',
+              background: YELLOW_BG,
+              border: `1.5px solid ${YELLOW_BORDER}`,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -122,10 +126,10 @@ export default function HelpBottomSheet({ isOpen, onClose }) {
             }}>
               🎉
             </div>
-            <div style={{ fontWeight: 800, fontSize: '20px', color: '#fff', letterSpacing: '-0.01em' }}>
+            <div style={{ fontWeight: 800, fontSize: '20px', color: '#111', letterSpacing: '-0.01em' }}>
               Thank you!
             </div>
-            <div style={{ fontSize: '13px', color: '#666', fontWeight: 500, lineHeight: 1.5 }}>
+            <div style={{ fontSize: '13px', color: '#888', fontWeight: 500, lineHeight: 1.5 }}>
               Your feedback helps us make Exzibo better for everyone.
             </div>
             <button
@@ -133,15 +137,15 @@ export default function HelpBottomSheet({ isOpen, onClose }) {
               style={{
                 marginTop: '8px',
                 padding: '13px 36px',
-                background: '#E8321A',
+                background: YELLOW,
                 border: 'none',
                 borderRadius: '99px',
-                color: '#fff',
+                color: '#111',
                 fontSize: '14px',
                 fontWeight: 800,
                 cursor: 'pointer',
                 letterSpacing: '0.04em',
-                boxShadow: '0 4px 20px rgba(232,50,26,0.35)',
+                boxShadow: `0 4px 20px ${YELLOW_SHADOW}`,
                 fontFamily: FONT,
               }}
             >
@@ -158,7 +162,7 @@ export default function HelpBottomSheet({ isOpen, onClose }) {
               justifyContent: 'space-between',
               marginBottom: '20px',
             }}>
-              <div style={{ fontWeight: 800, fontSize: '20px', color: '#fff', letterSpacing: '-0.01em' }}>
+              <div style={{ fontWeight: 800, fontSize: '20px', color: '#111', letterSpacing: '-0.01em' }}>
                 Help us improve
               </div>
               <button
@@ -167,8 +171,8 @@ export default function HelpBottomSheet({ isOpen, onClose }) {
                   width: '32px',
                   height: '32px',
                   borderRadius: '50%',
-                  background: 'rgba(255,255,255,0.08)',
-                  border: '1px solid rgba(255,255,255,0.1)',
+                  background: 'rgba(0,0,0,0.06)',
+                  border: '1px solid rgba(0,0,0,0.1)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -177,7 +181,7 @@ export default function HelpBottomSheet({ isOpen, onClose }) {
                 }}
                 aria-label="Close"
               >
-                <X size={15} color="#aaa" />
+                <X size={15} color="#888" />
               </button>
             </div>
 
@@ -190,11 +194,11 @@ export default function HelpBottomSheet({ isOpen, onClose }) {
                   padding: '12px 10px',
                   borderRadius: '14px',
                   border: feedback === 'helpful'
-                    ? '1.5px solid #E8321A'
-                    : '1.5px solid rgba(255,255,255,0.1)',
+                    ? `1.5px solid ${YELLOW_BORDER}`
+                    : '1.5px solid rgba(0,0,0,0.1)',
                   background: feedback === 'helpful'
-                    ? 'rgba(232,50,26,0.14)'
-                    : 'rgba(255,255,255,0.04)',
+                    ? YELLOW_BG
+                    : 'rgba(0,0,0,0.03)',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
@@ -206,13 +210,13 @@ export default function HelpBottomSheet({ isOpen, onClose }) {
               >
                 <ThumbsUp
                   size={17}
-                  color={feedback === 'helpful' ? '#E8321A' : '#666'}
-                  fill={feedback === 'helpful' ? 'rgba(232,50,26,0.3)' : 'none'}
+                  color={feedback === 'helpful' ? '#b8940a' : '#888'}
+                  fill={feedback === 'helpful' ? YELLOW_BG : 'none'}
                 />
                 <span style={{
                   fontSize: '13px',
                   fontWeight: 700,
-                  color: feedback === 'helpful' ? '#E8321A' : '#666',
+                  color: feedback === 'helpful' ? '#b8940a' : '#555',
                   letterSpacing: '0.02em',
                 }}>
                   Helpful
@@ -226,11 +230,11 @@ export default function HelpBottomSheet({ isOpen, onClose }) {
                   padding: '12px 10px',
                   borderRadius: '14px',
                   border: feedback === 'not_helpful'
-                    ? '1.5px solid #E8321A'
-                    : '1.5px solid rgba(255,255,255,0.1)',
+                    ? `1.5px solid ${YELLOW_BORDER}`
+                    : '1.5px solid rgba(0,0,0,0.1)',
                   background: feedback === 'not_helpful'
-                    ? 'rgba(232,50,26,0.14)'
-                    : 'rgba(255,255,255,0.04)',
+                    ? YELLOW_BG
+                    : 'rgba(0,0,0,0.03)',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
@@ -242,13 +246,13 @@ export default function HelpBottomSheet({ isOpen, onClose }) {
               >
                 <ThumbsDown
                   size={17}
-                  color={feedback === 'not_helpful' ? '#E8321A' : '#666'}
-                  fill={feedback === 'not_helpful' ? 'rgba(232,50,26,0.3)' : 'none'}
+                  color={feedback === 'not_helpful' ? '#b8940a' : '#888'}
+                  fill={feedback === 'not_helpful' ? YELLOW_BG : 'none'}
                 />
                 <span style={{
                   fontSize: '13px',
                   fontWeight: 700,
-                  color: feedback === 'not_helpful' ? '#E8321A' : '#666',
+                  color: feedback === 'not_helpful' ? '#b8940a' : '#555',
                   letterSpacing: '0.02em',
                 }}>
                   Not helpful
@@ -266,13 +270,13 @@ export default function HelpBottomSheet({ isOpen, onClose }) {
               style={{
                 width: '100%',
                 boxSizing: 'border-box',
-                background: 'rgba(255,255,255,0.05)',
+                background: 'rgba(0,0,0,0.03)',
                 border: error && !text.trim()
-                  ? '1.5px solid rgba(232,50,26,0.5)'
-                  : '1.5px solid rgba(255,255,255,0.1)',
+                  ? '1.5px solid #e53935'
+                  : '1.5px solid rgba(0,0,0,0.1)',
                 borderRadius: '14px',
                 padding: '14px 16px',
-                color: '#fff',
+                color: '#111',
                 fontSize: '14px',
                 fontWeight: 500,
                 fontFamily: FONT,
@@ -282,12 +286,12 @@ export default function HelpBottomSheet({ isOpen, onClose }) {
                 transition: 'border-color 0.18s ease',
               }}
               onFocus={e => {
-                e.target.style.borderColor = 'rgba(232,50,26,0.4)'
+                e.target.style.borderColor = YELLOW_BORDER
               }}
               onBlur={e => {
                 e.target.style.borderColor = error && !text.trim()
-                  ? 'rgba(232,50,26,0.5)'
-                  : 'rgba(255,255,255,0.1)'
+                  ? '#e53935'
+                  : 'rgba(0,0,0,0.1)'
               }}
             />
 
@@ -295,7 +299,7 @@ export default function HelpBottomSheet({ isOpen, onClose }) {
             {error && (
               <div style={{
                 fontSize: '12px',
-                color: '#E8321A',
+                color: '#e53935',
                 fontWeight: 600,
                 marginTop: '8px',
                 paddingLeft: '2px',
@@ -311,10 +315,10 @@ export default function HelpBottomSheet({ isOpen, onClose }) {
                 style={{
                   flex: 1,
                   padding: '14px',
-                  background: 'rgba(255,255,255,0.06)',
-                  border: '1.5px solid rgba(255,255,255,0.1)',
+                  background: 'rgba(0,0,0,0.04)',
+                  border: '1.5px solid rgba(0,0,0,0.1)',
                   borderRadius: '14px',
-                  color: '#aaa',
+                  color: '#555',
                   fontSize: '14px',
                   fontWeight: 700,
                   cursor: 'pointer',
@@ -322,8 +326,8 @@ export default function HelpBottomSheet({ isOpen, onClose }) {
                   letterSpacing: '0.02em',
                   transition: 'background 0.15s ease',
                 }}
-                onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
-                onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
+                onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,0,0,0.08)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'rgba(0,0,0,0.04)'}
               >
                 Cancel
               </button>
@@ -333,17 +337,17 @@ export default function HelpBottomSheet({ isOpen, onClose }) {
                 style={{
                   flex: 1,
                   padding: '14px',
-                  background: '#E8321A',
+                  background: YELLOW,
                   border: 'none',
                   borderRadius: '14px',
-                  color: '#fff',
+                  color: '#111',
                   fontSize: '14px',
                   fontWeight: 800,
                   cursor: 'pointer',
                   fontFamily: FONT,
                   letterSpacing: '0.04em',
-                  boxShadow: '0 4px 20px rgba(232,50,26,0.35)',
-                  transition: 'opacity 0.15s ease, box-shadow 0.15s ease',
+                  boxShadow: `0 4px 20px ${YELLOW_SHADOW}`,
+                  transition: 'opacity 0.15s ease',
                 }}
                 onMouseEnter={e => { e.currentTarget.style.opacity = '0.88' }}
                 onMouseLeave={e => { e.currentTarget.style.opacity = '1' }}
