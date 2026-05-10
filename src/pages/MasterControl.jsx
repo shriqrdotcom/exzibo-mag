@@ -162,32 +162,6 @@ export default function MasterControl() {
               )}
             </button>
 
-            {/* Login button */}
-            <button
-              onClick={() => { setError(''); setShowModal(true) }}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: '10px 16px',
-                borderRadius: '10px',
-                background: '#E8321A',
-                border: 'none',
-                color: '#fff',
-                fontSize: '13px',
-                fontWeight: 600,
-                letterSpacing: '0.05em',
-                textTransform: 'uppercase',
-                cursor: 'pointer',
-                transition: 'all 0.2s',
-                boxShadow: '0 0 20px rgba(232,50,26,0.25)',
-              }}
-              onMouseEnter={e => e.currentTarget.style.boxShadow = '0 0 30px rgba(232,50,26,0.5)'}
-              onMouseLeave={e => e.currentTarget.style.boxShadow = '0 0 20px rgba(232,50,26,0.25)'}
-            >
-              <LogIn size={15} />
-              Login
-            </button>
           </div>
 
           <div style={{ maxWidth: '640px', margin: '60px auto 0' }}>
