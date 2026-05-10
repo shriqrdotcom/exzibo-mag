@@ -1,0 +1,124 @@
+FEATURE: Global Notification System for Help Requests
+
+OBJECTIVE
+
+Create a centralized "NOTIFICATION" button in the Global Dashboard (Master Control section) that aggregates all help requests triggered by users across the system.
+
+---
+
+UI REQUIREMENTS
+
+1. Add a button named "NOTIFICATION" next to or behind the "Master Control" section.
+2. On click:
+   - Open a notification panel / modal / side drawer.
+   - The UI must be clean, real-time, and scrollable.
+
+---
+
+FUNCTIONAL LOGIC
+
+TRIGGER EVENT
+
+- When any user clicks the "HELP" button from:
+  - MASTER
+  - ADMIN
+  - MANAGER
+  - EMPLOYEE
+
+DATA TO CAPTURE
+
+Each help request must store:
+
+- "restaurant_name"
+- "user_role" (Master/Admin/Manager/Employee)
+- "message" (optional or default: "Help Requested")
+- "timestamp" (exact time of click)
+- "user_id" (optional but recommended for tracking)
+
+---
+
+BACKEND LOGIC
+
+1. Create a central notification collection / table:
+   
+   notifications {
+  id
+  restaurant_name
+  user_role
+  message
+  timestamp
+  status (unread/read/resolved)
+}
+
+2. On HELP button click:
+   
+   - Create a new notification entry.
+   - Push/store it in real-time database (Firebase / WebSocket / API).
+
+3. Ensure:
+   
+   - Real-time sync across all logged-in devices
+   - No duplicate entries
+   - Proper timestamp ordering (latest first)
+
+---
+
+FRONTEND DISPLAY LOGIC
+
+Inside "NOTIFICATION" panel:
+
+- Show list of notifications with:
+  - Restaurant Name
+  - Role (who triggered it)
+  - Message
+  - Time (formatted, e.g. "2 min ago")
+
+Example:
+
+[Restaurant: Spice Hub]
+Role: Manager
+Message: Help Requested
+Time: 2 min ago
+
+---
+
+BEHAVIOR RULES
+
+1. Real-time updates:
+   
+   - If a new HELP request is triggered → instantly visible in all dashboards.
+
+2. Notification states:
+   
+   - New notifications → marked as unread
+   - On view → mark as read
+
+3. Optional (recommended for scalability):
+   
+   - Add "Resolve" or "Dismiss" action
+   - Auto-remove old notifications after a limit (e.g., keep last 50)
+
+---
+
+EDGE CASE HANDLING
+
+- If multiple requests come from same restaurant:
+  → Do NOT overwrite, store separately
+- If user refreshes:
+  → Notifications should persist
+- If multiple devices are logged in:
+  → Must sync instantly (critical requirement)
+
+---
+
+PERFORMANCE REQUIREMENTS
+
+- Must handle high-frequency events without lag
+- Use efficient real-time listeners (WebSockets / Firebase listeners)
+- Optimize queries (index by timestamp)
+
+---
+
+FINAL EXPECTATION
+
+A centralized, real-time, multi-device synced notification system that gives full visibility of all HELP requests across the platform in one place under "Master Control".

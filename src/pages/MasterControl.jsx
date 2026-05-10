@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Sidebar from '../components/Sidebar'
 import AdminHeader from '../components/AdminHeader'
-import { LogIn, ShieldCheck, X, ArrowRight, AlertCircle } from 'lucide-react'
+import HelpRequestsDrawer from '../components/HelpRequestsDrawer'
+import { LogIn, ShieldCheck, X, ArrowRight, AlertCircle, BellRing } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 
@@ -41,6 +42,8 @@ export default function MasterControl() {
   const { isSuperAdmin, loading: authLoading } = useAuth()
   const [allowed, setAllowed] = useState(null)
   const [showModal, setShowModal] = useState(false)
+  const [showDrawer, setShowDrawer] = useState(false)
+  const [unreadCount, setUnreadCount] = useState(0)
   const [uid, setUid] = useState('')
   const [error, setError] = useState('')
   const [inlineUid, setInlineUid] = useState('')
@@ -104,7 +107,62 @@ export default function MasterControl() {
         <AdminHeader title="Master Control" showSearch={false} />
 
         <main style={{ flex: 1, overflowY: 'auto', padding: '32px', position: 'relative' }}>
-          <div style={{ position: 'absolute', top: '24px', right: '32px' }}>
+          <div style={{ position: 'absolute', top: '24px', right: '32px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+            {/* NOTIFICATION button */}
+            <button
+              onClick={() => setShowDrawer(true)}
+              style={{
+                position: 'relative',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '10px 16px',
+                borderRadius: '10px',
+                background: unreadCount > 0 ? 'rgba(232,50,26,0.1)' : 'rgba(255,255,255,0.05)',
+                border: unreadCount > 0 ? '1px solid rgba(232,50,26,0.3)' : '1px solid rgba(255,255,255,0.1)',
+                color: unreadCount > 0 ? '#E8321A' : '#888',
+                fontSize: '13px',
+                fontWeight: 600,
+                letterSpacing: '0.05em',
+                textTransform: 'uppercase',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.background = 'rgba(232,50,26,0.15)'
+                e.currentTarget.style.borderColor = 'rgba(232,50,26,0.4)'
+                e.currentTarget.style.color = '#E8321A'
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.background = unreadCount > 0 ? 'rgba(232,50,26,0.1)' : 'rgba(255,255,255,0.05)'
+                e.currentTarget.style.borderColor = unreadCount > 0 ? 'rgba(232,50,26,0.3)' : 'rgba(255,255,255,0.1)'
+                e.currentTarget.style.color = unreadCount > 0 ? '#E8321A' : '#888'
+              }}
+            >
+              <BellRing size={15} />
+              Notifications
+              {unreadCount > 0 && (
+                <span style={{
+                  minWidth: '18px',
+                  height: '18px',
+                  borderRadius: '99px',
+                  background: '#E8321A',
+                  color: '#fff',
+                  fontSize: '10px',
+                  fontWeight: 800,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '0 4px',
+                  boxShadow: '0 0 10px rgba(232,50,26,0.5)',
+                  animation: 'pulse 1.5s ease-in-out infinite',
+                }}>
+                  {unreadCount}
+                </span>
+              )}
+            </button>
+
+            {/* Login button */}
             <button
               onClick={() => { setError(''); setShowModal(true) }}
               style={{
@@ -366,6 +424,20 @@ export default function MasterControl() {
           </div>
         </div>
       )}
+
+      {/* ── Help Requests Drawer ── */}
+      <HelpRequestsDrawer
+        isOpen={showDrawer}
+        onClose={() => setShowDrawer(false)}
+        onUnreadChange={count => setUnreadCount(count)}
+      />
+
+      <style>{`
+        @keyframes pulse {
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50%       { opacity: 0.75; transform: scale(0.92); }
+        }
+      `}</style>
     </div>
   )
 }
