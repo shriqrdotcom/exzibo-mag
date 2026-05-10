@@ -186,6 +186,29 @@ export default function Sidebar() {
             </span>
           )}
         </button>
+
+        {/* ── INFORMATION section ── */}
+        <div style={{ marginTop: '10px' }}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            padding: '10px 8px 6px',
+          }}>
+            <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.06)' }} />
+            <span style={{
+              fontSize: '9px',
+              fontWeight: 700,
+              letterSpacing: '0.18em',
+              color: '#444',
+              textTransform: 'uppercase',
+              whiteSpace: 'nowrap',
+            }}>
+              Information
+            </span>
+            <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.06)' }} />
+          </div>
+        </div>
       </nav>
 
       {/* Go Live button */}
