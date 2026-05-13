@@ -307,20 +307,28 @@ function spaFallbackPlugin() {
   return {
     name: 'spa-fallback',
     configureServer(server) {
-      // Return a function → this runs as a POST-hook, AFTER all of Vite's
-      // internal middlewares. Any request that reached this point was not
-      // handled by a real file or the API middlewares, so serve index.html.
+      // Returning a function makes this a POST-hook — it runs after ALL of
+      // Vite's own internal middleware (transform, static, etc.).
+      // Any GET request that reached here without a response is a client-side
+      // SPA route, so serve the root index.html with a 200.
       return () => {
         server.middlewares.use(async (req, res, next) => {
           const url = req.url || '/'
-          // Skip API routes and asset/file requests (anything with a file extension)
-          if (req.method !== 'GET' || url.startsWith('/api/') || /\.\w+$/.test(url)) {
+          // Pass through: non-GET, API routes, Vite internals (@/*), and
+          // any URL that looks like a real file (has an extension).
+          if (
+            req.method !== 'GET' ||
+            url.startsWith('/api/') ||
+            url.startsWith('/@') ||
+            /\.\w{1,5}(\?.*)?$/.test(url)
+          ) {
             return next()
           }
           try {
             const indexPath = path.resolve(server.config.root, 'index.html')
             let html = fs.readFileSync(indexPath, 'utf-8')
-            html = await server.transformIndexHtml(url, html)
+            // Always transform as '/' — all SPA routes render the same shell
+            html = await server.transformIndexHtml('/', html)
             res.setHeader('Content-Type', 'text/html; charset=utf-8')
             res.statusCode = 200
             res.end(html)
@@ -345,6 +353,5 @@ export default defineConfig({
     host: '0.0.0.0',
     port: 5000,
     allowedHosts: true,
-    historyApiFallback: true,
   }
 })
