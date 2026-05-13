@@ -2947,15 +2947,15 @@ export default function RestaurantWebsite() {
               gap: '6px',
               background: '#3B6FF0',
               border: 'none',
-              borderRadius: '8px',
-              padding: '7px 14px',
+              borderRadius: '10px',
+              padding: '9px 18px',
               cursor: 'pointer',
               flexShrink: 0,
             }}
           >
-            <ShoppingCart size={14} color="#fff" strokeWidth={2.5} />
+            <ShoppingCart size={16} color="#fff" strokeWidth={2.5} />
             <span style={{
-              fontSize: '12px',
+              fontSize: '13px',
               fontWeight: 700,
               color: '#fff',
               letterSpacing: '0.01em',
