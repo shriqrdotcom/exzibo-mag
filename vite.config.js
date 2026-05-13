@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
+import fs from 'fs'
 import { createHmac } from 'crypto'
 import bcrypt from 'bcryptjs'
 import pg from 'pg'
@@ -302,8 +303,38 @@ function restaurantDbPlugin() {
   }
 }
 
+function spaFallbackPlugin() {
+  return {
+    name: 'spa-fallback',
+    configureServer(server) {
+      // Return a function → this runs as a POST-hook, AFTER all of Vite's
+      // internal middlewares. Any request that reached this point was not
+      // handled by a real file or the API middlewares, so serve index.html.
+      return () => {
+        server.middlewares.use(async (req, res, next) => {
+          const url = req.url || '/'
+          // Skip API routes and asset/file requests (anything with a file extension)
+          if (req.method !== 'GET' || url.startsWith('/api/') || /\.\w+$/.test(url)) {
+            return next()
+          }
+          try {
+            const indexPath = path.resolve(server.config.root, 'index.html')
+            let html = fs.readFileSync(indexPath, 'utf-8')
+            html = await server.transformIndexHtml(url, html)
+            res.setHeader('Content-Type', 'text/html; charset=utf-8')
+            res.statusCode = 200
+            res.end(html)
+          } catch {
+            next()
+          }
+        })
+      }
+    },
+  }
+}
+
 export default defineConfig({
-  plugins: [react(), previewAuthPlugin(), restaurantDbPlugin()],
+  plugins: [react(), previewAuthPlugin(), restaurantDbPlugin(), spaFallbackPlugin()],
   appType: 'spa',
   resolve: {
     alias: {
