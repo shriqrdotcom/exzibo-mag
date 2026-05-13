@@ -2945,7 +2945,7 @@ export default function RestaurantWebsite() {
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
-              background: '#3B6FF0',
+              background: '#111111',
               border: 'none',
               borderRadius: '10px',
               padding: '9px 18px',
