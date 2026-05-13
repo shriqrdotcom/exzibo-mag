@@ -304,6 +304,7 @@ function restaurantDbPlugin() {
 
 export default defineConfig({
   plugins: [react(), previewAuthPlugin(), restaurantDbPlugin()],
+  appType: 'spa',
   resolve: {
     alias: {
       '@assets': path.resolve(__dirname, 'attached_assets'),
@@ -312,6 +313,7 @@ export default defineConfig({
   server: {
     host: '0.0.0.0',
     port: 5000,
-    allowedHosts: true
+    allowedHosts: true,
+    historyApiFallback: true,
   }
 })
