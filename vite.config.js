@@ -219,6 +219,60 @@ function restaurantDbPlugin() {
         })
       })
 
+      // ── DELETE /api/restaurant-db/drop ────────────────────────────────────
+      // Drops the dedicated PostgreSQL schema for a restaurant and removes its
+      // entry from the central registry. Called during permanent deletion.
+      server.middlewares.use('/api/restaurant-db/drop', (req, res) => {
+        if (req.method !== 'POST') {
+          res.statusCode = 405
+          res.end('Method Not Allowed')
+          return
+        }
+
+        let body = ''
+        req.on('data', chunk => { body += chunk })
+        req.on('end', async () => {
+          try {
+            const { restaurant_id } = JSON.parse(body)
+            if (!restaurant_id) {
+              res.statusCode = 400
+              res.setHeader('Content-Type', 'application/json')
+              res.end(JSON.stringify({ error: 'restaurant_id is required' }))
+              return
+            }
+
+            const { Client } = pg
+            const client = new Client({ connectionString: process.env.DATABASE_URL })
+            await client.connect()
+
+            const shortId    = restaurant_id.replace(/-/g, '').substring(0, 12)
+            const schemaName = `r_${shortId}`
+
+            // Drop the schema and all its tables
+            await client.query(`DROP SCHEMA IF EXISTS "${schemaName}" CASCADE`)
+
+            // Remove from central registry (ignore if table doesn't exist yet)
+            try {
+              await client.query(
+                'DELETE FROM public.restaurant_databases WHERE restaurant_id = $1',
+                [restaurant_id]
+              )
+            } catch {}
+
+            await client.end()
+
+            console.log(`[restaurant-db] Schema "${schemaName}" dropped for restaurant ${restaurant_id}`)
+            res.setHeader('Content-Type', 'application/json')
+            res.end(JSON.stringify({ success: true, schema: schemaName }))
+          } catch (err) {
+            console.error('[restaurant-db/drop] Error:', err.message)
+            res.statusCode = 500
+            res.setHeader('Content-Type', 'application/json')
+            res.end(JSON.stringify({ error: err.message }))
+          }
+        })
+      })
+
       // ── GET /api/restaurant-db/list ────────────────────────────────────────
       // Returns all restaurant schemas from the registry. Used by admin views.
       server.middlewares.use('/api/restaurant-db/list', (req, res) => {

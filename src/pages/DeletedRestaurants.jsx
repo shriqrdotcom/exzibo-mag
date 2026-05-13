@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import Sidebar from '../components/Sidebar'
 import AdminHeader from '../components/AdminHeader'
 import { Trash2, AlertTriangle, X, RotateCcw } from 'lucide-react'
-import { getDeletedRestaurants, deleteRestaurant } from '../lib/db'
+import { getDeletedRestaurants, permanentDeleteRestaurant } from '../lib/db'
 
 function formatDDMMYYYY(iso) {
   if (!iso) return '—'
@@ -70,17 +70,11 @@ export default function DeletedRestaurants() {
     }
     setDeleting(true)
     try {
-      await deleteRestaurant(deleteTarget.id)
-      // Also remove from localStorage soft-delete tracking (deleteRestaurant does this,
-      // but be explicit here in case the DB call itself failed internally)
-      try {
-        const ids = JSON.parse(localStorage.getItem('exzibo_soft_deleted_ids') || '[]')
-        localStorage.setItem('exzibo_soft_deleted_ids', JSON.stringify(ids.filter(i => i !== deleteTarget.id)))
-      } catch {}
+      await permanentDeleteRestaurant(deleteTarget)
       closeDeleteModal()
       fetchDeleted()
-      setToast('Restaurant permanently deleted')
-      setTimeout(() => setToast(''), 2800)
+      setToast('Restaurant permanently deleted — all data and files removed')
+      setTimeout(() => setToast(''), 3200)
     } catch (err) {
       setDeleteError('Failed to delete: ' + (err.message || 'Unknown error'))
     } finally {

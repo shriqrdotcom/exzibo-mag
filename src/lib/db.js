@@ -219,7 +219,108 @@ export async function updateRestaurant(id, patch) {
 export async function deleteRestaurant(id) {
   const { error } = await supabase.from('restaurants').delete().eq('id', id)
   if (error) throw error
-  // Clear the localStorage soft-delete tracking entry when permanently deleted
+  removeSoftDeletedId(id)
+}
+
+// ── Helper: extract a storage path from a Supabase public URL ────────────────
+// e.g. "https://xxx.supabase.co/storage/v1/object/public/menu-images/abc/def.jpg"
+//   → "abc/def.jpg"
+function storagePathFromUrl(url, bucket) {
+  if (!url || typeof url !== 'string') return null
+  const marker = `/object/public/${bucket}/`
+  const idx = url.indexOf(marker)
+  if (idx === -1) return null
+  return url.slice(idx + marker.length)
+}
+
+// ── Helper: list + delete all files inside a storage folder prefix ────────────
+async function purgeStorageFolder(bucket, folderPrefix) {
+  const deletedPaths = []
+  let offset = 0
+  const limit = 100
+
+  while (true) {
+    const { data: files, error } = await supabase.storage
+      .from(bucket)
+      .list(folderPrefix, { limit, offset })
+
+    if (error || !files || files.length === 0) break
+
+    // Filter out placeholder/folder entries (they have no id or are named '.emptyFolderPlaceholder')
+    const realFiles = files.filter(f => f.id && f.name !== '.emptyFolderPlaceholder')
+    if (realFiles.length > 0) {
+      const paths = realFiles.map(f => `${folderPrefix}/${f.name}`)
+      await supabase.storage.from(bucket).remove(paths)
+      deletedPaths.push(...paths)
+    }
+
+    if (files.length < limit) break
+    offset += limit
+  }
+
+  return deletedPaths
+}
+
+// ── Full permanent delete ─────────────────────────────────────────────────────
+// Wipes everything related to a restaurant:
+//   1. All Supabase Storage files (restaurant-images + menu-images)
+//   2. All child DB rows via Supabase CASCADE (orders, bookings, menu_items,
+//      menu_categories, team_members are all ON DELETE CASCADE)
+//   3. The restaurant row itself
+//   4. The Replit PostgreSQL isolated schema (r_<shortId>)
+//   5. localStorage soft-delete tracking entry
+export async function permanentDeleteRestaurant(restaurant) {
+  const id = restaurant.id
+
+  // ── Step 1: collect menu item image paths BEFORE cascade delete wipes them ──
+  let menuImagePaths = []
+  try {
+    const { data: menuItems } = await supabase
+      .from('menu_items')
+      .select('image')
+      .eq('restaurant_id', id)
+      .not('image', 'is', null)
+
+    if (menuItems) {
+      menuImagePaths = menuItems
+        .map(m => storagePathFromUrl(m.image, 'menu-images'))
+        .filter(Boolean)
+    }
+  } catch {}
+
+  // ── Step 2: purge restaurant-images bucket ───────────────────────────────────
+  // Images live under {restaurantId}/logo/, {restaurantId}/about/, {restaurantId}/carousel/
+  // Also sweep the root prefix to catch anything placed there directly.
+  const restaurantImageFolders = ['logo', 'about', 'carousel']
+  await Promise.allSettled([
+    ...restaurantImageFolders.map(sub =>
+      purgeStorageFolder('restaurant-images', `${id}/${sub}`)
+    ),
+    purgeStorageFolder('restaurant-images', id),
+  ])
+
+  // ── Step 3: purge menu-images bucket ────────────────────────────────────────
+  if (menuImagePaths.length > 0) {
+    // Remove in batches of 100 (Supabase limit)
+    for (let i = 0; i < menuImagePaths.length; i += 100) {
+      await supabase.storage.from('menu-images').remove(menuImagePaths.slice(i, i + 100))
+    }
+  }
+
+  // ── Step 4: delete restaurant row (Supabase CASCADE handles child tables) ───
+  const { error } = await supabase.from('restaurants').delete().eq('id', id)
+  if (error) throw error
+
+  // ── Step 5: drop the Replit PostgreSQL isolated schema ───────────────────────
+  try {
+    await fetch('/api/restaurant-db/drop', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ restaurant_id: id }),
+    })
+  } catch {}
+
+  // ── Step 6: clean up localStorage tracking ───────────────────────────────────
   removeSoftDeletedId(id)
 }
 
