@@ -2972,6 +2972,58 @@ export default function RestaurantWebsite() {
         </div>
       )}
 
+      {/* ── FLOATING CART SUMMARY BAR ── */}
+      {cartCount > 0 && activeNav !== 'cart' && (
+        <div style={{
+          position: 'fixed',
+          bottom: '100px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          width: 'calc(100% - 32px)',
+          maxWidth: '440px',
+          zIndex: 90,
+          background: '#fff',
+          borderRadius: '16px',
+          boxShadow: '0 4px 24px rgba(0,0,0,0.18)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '16px 20px',
+          gap: '12px',
+        }}>
+          <span style={{
+            fontSize: '15px',
+            fontWeight: 700,
+            color: '#111',
+            whiteSpace: 'nowrap',
+          }}>
+            {cartCount} {cartCount === 1 ? 'item' : 'items'} | ₹{subtotal.toLocaleString('en-IN')}
+          </span>
+          <button
+            onClick={() => setActiveNav('cart')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              background: '#3B6FF0',
+              border: 'none',
+              borderRadius: '10px',
+              padding: '10px 18px',
+              cursor: 'pointer',
+              flexShrink: 0,
+            }}
+          >
+            <ShoppingCart size={17} color="#fff" strokeWidth={2.5} />
+            <span style={{
+              fontSize: '14px',
+              fontWeight: 700,
+              color: '#fff',
+              letterSpacing: '0.01em',
+            }}>View Cart</span>
+          </button>
+        </div>
+      )}
+
       <nav style={{
         position: 'fixed', bottom: '16px', left: '50%', transform: 'translateX(-50%)',
         width: 'calc(100% - 32px)', maxWidth: '440px', zIndex: 100,
