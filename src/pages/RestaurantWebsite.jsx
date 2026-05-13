@@ -2916,23 +2916,23 @@ export default function RestaurantWebsite() {
       {cartCount > 0 && activeNav !== 'cart' && (
         <div style={{
           position: 'fixed',
-          bottom: '100px',
+          bottom: '88px',
           left: '50%',
           transform: 'translateX(-50%)',
           width: 'calc(100% - 32px)',
           maxWidth: '440px',
           zIndex: 90,
           background: '#fff',
-          borderRadius: '16px',
-          boxShadow: '0 4px 24px rgba(0,0,0,0.18)',
+          borderRadius: '12px',
+          boxShadow: '0 2px 12px rgba(0,0,0,0.15)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          padding: '12px 20px',
-          gap: '12px',
+          padding: '8px 12px',
+          gap: '8px',
         }}>
           <span style={{
-            fontSize: '15px',
+            fontSize: '13px',
             fontWeight: 700,
             color: '#111',
             whiteSpace: 'nowrap',
@@ -2944,18 +2944,18 @@ export default function RestaurantWebsite() {
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: '8px',
+              gap: '6px',
               background: '#3B6FF0',
               border: 'none',
-              borderRadius: '10px',
-              padding: '10px 18px',
+              borderRadius: '8px',
+              padding: '7px 14px',
               cursor: 'pointer',
               flexShrink: 0,
             }}
           >
-            <ShoppingCart size={17} color="#fff" strokeWidth={2.5} />
+            <ShoppingCart size={14} color="#fff" strokeWidth={2.5} />
             <span style={{
-              fontSize: '14px',
+              fontSize: '12px',
               fontWeight: 700,
               color: '#fff',
               letterSpacing: '0.01em',
