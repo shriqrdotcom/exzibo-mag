@@ -2928,7 +2928,7 @@ export default function RestaurantWebsite() {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          padding: '16px 20px',
+          padding: '12px 20px',
           gap: '12px',
         }}>
           <span style={{
