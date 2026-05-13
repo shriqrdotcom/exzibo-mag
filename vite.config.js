@@ -353,6 +353,10 @@ export default defineConfig({
     host: '0.0.0.0',
     port: 5000,
     allowedHosts: true,
-    historyApiFallback: true,
+    historyApiFallback: {
+      rewrites: [
+        { from: /^\/dashboard(\/.*)?$/, to: '/index.html' },
+      ],
+    },
   }
 })

@@ -8,7 +8,11 @@ const PORT = process.env.PORT || 5000
 
 app.use(express.static(path.resolve(__dirname, 'dist')))
 
-app.get('*', (req, res) => {
+app.get('/dashboard', (req, res) => {
+  res.sendFile(path.resolve(__dirname, 'dist', 'index.html'))
+})
+
+app.get('/dashboard/*', (req, res) => {
   res.sendFile(path.resolve(__dirname, 'dist', 'index.html'))
 })
 
