@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { LayoutDashboard, Settings, Zap, Users, Table2, ShieldCheck, Bell, Info, Trash2 } from 'lucide-react'
+import { LayoutDashboard, Settings, Zap, Users, Table2, ShieldCheck, Bell, Info, Trash2, Play } from 'lucide-react'
 import PermissionGate from './PermissionGate'
 import { supabase } from '../lib/supabase'
 
@@ -110,6 +110,40 @@ export default function Sidebar() {
             </PermissionGate>
           )
         })}
+
+        {/* DEMO nav item */}
+        <button
+          onClick={() => navigate('/restaurant/demo')}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            padding: '12px 16px',
+            borderRadius: '12px',
+            background: 'transparent',
+            border: '1px solid rgba(255,255,255,0.06)',
+            color: '#888',
+            fontSize: '14px',
+            fontWeight: 500,
+            cursor: 'pointer',
+            transition: 'all 0.2s ease',
+            textAlign: 'left',
+            width: '100%',
+          }}
+          onMouseEnter={e => {
+            e.currentTarget.style.background = 'rgba(255,255,255,0.04)'
+            e.currentTarget.style.color = '#fff'
+            e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.background = 'transparent'
+            e.currentTarget.style.color = '#888'
+            e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)'
+          }}
+        >
+          <Play size={18} />
+          DEMO
+        </button>
 
         {/* Notifications nav item */}
         <button
