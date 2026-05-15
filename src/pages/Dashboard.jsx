@@ -1281,6 +1281,114 @@ function DemoPanel({ navigate }) {
           <DemoBtn key={btn.label} {...btn} />
         ))}
       </div>
+
+      {/* Demo Restaurant Row */}
+      <div style={{ width: '100%', maxWidth: '860px', marginTop: '48px' }}>
+        <div style={{
+          fontSize: '11px', fontWeight: 700, letterSpacing: '0.14em',
+          color: '#444', textTransform: 'uppercase', marginBottom: '12px',
+          display: 'flex', alignItems: 'center', gap: '8px',
+        }}>
+          <span style={{
+            display: 'inline-block', width: '18px', height: '1px', background: '#333',
+          }} />
+          Sample Restaurant Entry
+          <span style={{
+            display: 'inline-block', width: '18px', height: '1px', background: '#333',
+          }} />
+        </div>
+        <div style={{
+          background: '#111',
+          border: '1px solid rgba(255,255,255,0.06)',
+          borderRadius: '16px',
+          overflow: 'hidden',
+        }}>
+          {/* Table header */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: '1.6fr 1fr 2fr 1fr 0.8fr 1fr',
+            padding: '12px 24px',
+            borderBottom: '1px solid rgba(255,255,255,0.05)',
+          }}>
+            {['UID', 'STATUS', 'TIMELINE', 'PLAN', 'PLACE', 'ACTIONS'].map(col => (
+              <span key={col} style={{
+                fontSize: '10px', fontWeight: 600, letterSpacing: '0.08em', color: '#444',
+              }}>{col}</span>
+            ))}
+          </div>
+          {/* Demo row */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: '1.6fr 1fr 2fr 1fr 0.8fr 1fr',
+            padding: '18px 24px',
+            alignItems: 'center',
+          }}>
+            {/* UID */}
+            <div>
+              <div style={{ fontSize: '13px', fontWeight: 700, fontFamily: 'monospace', letterSpacing: '0.02em', color: '#fff' }}>6920307970</div>
+              <div style={{ fontSize: '11px', color: '#555', marginTop: '2px' }}>YOUR WEBSITE NAME</div>
+            </div>
+            {/* Status */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
+              <span style={{
+                width: '8px', height: '8px', borderRadius: '50%',
+                background: '#22c55e', boxShadow: '0 0 8px #22c55e',
+                display: 'inline-block', flexShrink: 0,
+              }} />
+              <span style={{ fontSize: '12px', fontWeight: 700, color: '#22c55e', letterSpacing: '0.04em' }}>RUNNING</span>
+            </div>
+            {/* Timeline */}
+            <div style={{ fontSize: '12px', fontWeight: 600, fontFamily: 'monospace', letterSpacing: '0.02em', color: '#ccc' }}>
+              15-05-2026 <span style={{ color: '#444', margin: '0 4px' }}>TO</span> 14-06-2026
+            </div>
+            {/* Plan */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
+              <span style={{
+                width: '8px', height: '8px', borderRadius: '50%',
+                background: '#3B82F6', boxShadow: '0 0 8px #3B82F6',
+                display: 'inline-block', flexShrink: 0,
+              }} />
+              <span style={{ fontSize: '12px', fontWeight: 700, color: '#ddd', letterSpacing: '0.06em' }}>STARTER</span>
+            </div>
+            {/* Place placeholder */}
+            <div>
+              <span style={{
+                display: 'inline-block',
+                padding: '5px 10px',
+                background: 'rgba(255,255,255,0.05)',
+                border: '1px solid rgba(255,255,255,0.1)',
+                borderRadius: '8px',
+                color: '#666',
+                fontSize: '12px', fontWeight: 800, fontFamily: 'monospace',
+              }}>—</span>
+            </div>
+            {/* Actions — disabled in demo */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', opacity: 0.3 }}>
+              <div style={{
+                width: '32px', height: '32px', borderRadius: '9px',
+                background: 'rgba(255,255,255,0.04)',
+                border: '1px solid rgba(255,255,255,0.1)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: '#888',
+              }}>
+                <Pencil size={13} />
+              </div>
+              <div style={{
+                width: '32px', height: '32px', borderRadius: '9px',
+                background: 'rgba(255,255,255,0.04)',
+                border: '1px solid rgba(255,255,255,0.1)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: '#888',
+              }}>
+                <Trash2 size={13} />
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style={{ textAlign: 'center', marginTop: '10px', fontSize: '11px', color: '#333', fontStyle: 'italic' }}>
+          This is a read-only demo entry — actions are disabled
+        </div>
+      </div>
     </div>
   )
 }
