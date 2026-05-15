@@ -1577,8 +1577,40 @@ function DemoWebsitesPanel({ restaurants, onEdit, onDelete }) {
                           fontSize: '12px', fontWeight: 800, letterSpacing: '0.08em', fontFamily: 'monospace',
                         }}>{r.place}</span>
                       </td>
-                      <td style={{ padding: '20px 28px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <td style={{ padding: '16px 28px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                          {[
+                            { label: 'VIEW',   color: '#22c55e' },
+                            { label: 'ADMIN',  color: '#3B82F6' },
+                            { label: 'MASTER', color: '#A855F7' },
+                          ].map(({ label, color }) => (
+                            <button
+                              key={label}
+                              style={{
+                                display: 'inline-flex', alignItems: 'center',
+                                padding: '7px 13px',
+                                background: `rgba(${color === '#22c55e' ? '34,197,94' : color === '#3B82F6' ? '59,130,246' : '168,85,247'},0.08)`,
+                                border: `1px solid ${color}44`,
+                                borderRadius: '8px',
+                                color,
+                                fontSize: '11px', fontWeight: 800, letterSpacing: '0.06em',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s',
+                              }}
+                              onMouseEnter={e => {
+                                e.currentTarget.style.background = color
+                                e.currentTarget.style.color = '#fff'
+                                e.currentTarget.style.boxShadow = `0 0 14px ${color}66`
+                              }}
+                              onMouseLeave={e => {
+                                e.currentTarget.style.background = `rgba(${color === '#22c55e' ? '34,197,94' : color === '#3B82F6' ? '59,130,246' : '168,85,247'},0.08)`
+                                e.currentTarget.style.color = color
+                                e.currentTarget.style.boxShadow = 'none'
+                              }}
+                            >
+                              {label}
+                            </button>
+                          ))}
                           <EditRowBtn onClick={() => onEdit(r)} />
                           <DeleteBtn onClick={() => onDelete(r)} />
                         </div>

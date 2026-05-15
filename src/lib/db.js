@@ -42,9 +42,7 @@ export function markRestoredId(id) {
 // These restaurants were removed by admin but RLS prevents anon-key hard delete.
 // Adding their IDs here ensures filterActive() excludes them on every client.
 // IDs in the LS_RESTORED set are exempt and will not be re-added.
-const PERMANENTLY_DELETED_IDS = [
-  '2fb3a200-f494-4fb3-99cb-ea6f3e917804', // UID 6920307970 "YOUR WEBSITE NAME"
-]
+const PERMANENTLY_DELETED_IDS = []
 ;(function seedPermanentDeletes() {
   const restored = getRestoredIds()
   const ids = getSoftDeletedIds()
@@ -54,6 +52,17 @@ const PERMANENTLY_DELETED_IDS = [
   })
   if (changed) localStorage.setItem(LS_SOFT_DELETED, JSON.stringify([...ids]))
 })()
+
+// ── Restaurants whose status is forced to 'demo' client-side ─
+// Used when RLS prevents the anon-key from writing the status column directly.
+// The restaurant will always appear in the Demo section regardless of DB value.
+const FORCED_DEMO_IDS = new Set([
+  '2fb3a200-f494-4fb3-99cb-ea6f3e917804', // UID 6920307970 "YOUR WEBSITE NAME"
+])
+
+function applyForcedDemoStatus(rows) {
+  return rows.map(r => FORCED_DEMO_IDS.has(r.id) ? { ...r, status: 'demo', is_deleted: false } : r)
+}
 
 // Returns true when a Supabase/PostgREST error is caused by a missing column.
 // This happens when the soft_delete_setup.sql migration hasn't been run yet.
@@ -74,11 +83,15 @@ export async function generateRestaurantUID() {
 // ── Restaurants ──────────────────────────────────────────────
 
 // Filters rows that should be excluded (soft-deleted), merging DB flag + localStorage fallback.
-// IDs in the restored set are always kept regardless of other flags.
+// IDs in the restored set or forced-demo set are always kept regardless of other flags.
 function filterActive(rows) {
   const localDeleted = getSoftDeletedIds()
   const restored = getRestoredIds()
-  return rows.filter(r => restored.has(r.id) || (!r.is_deleted && !localDeleted.has(r.id)))
+  return rows.filter(r =>
+    FORCED_DEMO_IDS.has(r.id) ||
+    restored.has(r.id) ||
+    (!r.is_deleted && !localDeleted.has(r.id))
+  )
 }
 
 export async function getRestaurants() {
@@ -100,11 +113,11 @@ export async function getRestaurants() {
           .select('*')
           .order('created_at', { ascending: false })
         if (e2) throw e2
-        return filterActive(all ?? [])
+        return applyForcedDemoStatus(filterActive(all ?? []))
       }
       throw error
     }
-    return filterActive(data ?? [])
+    return applyForcedDemoStatus(filterActive(data ?? []))
   }
 
   const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -136,11 +149,11 @@ export async function getRestaurants() {
         .in('id', ids)
         .order('created_at', { ascending: false })
       if (e2) throw e2
-      return filterActive(all ?? [])
+      return applyForcedDemoStatus(filterActive(all ?? []))
     }
     throw error
   }
-  return filterActive(data ?? [])
+  return applyForcedDemoStatus(filterActive(data ?? []))
 }
 
 // Returns soft-deleted restaurants (is_deleted = true).
@@ -182,8 +195,8 @@ export async function getDeletedRestaurants() {
       .in('id', missingLocal)
     return [...dbResult, ...(extra ?? [])]
   }
-  // Filter out any DB rows that have since been restored locally
-  return dbResult.filter(r => !restored.has(r.id))
+  // Filter out any DB rows that have since been restored locally or are forced-demo
+  return dbResult.filter(r => !restored.has(r.id) && !FORCED_DEMO_IDS.has(r.id))
 }
 
 // Soft-delete: marks the restaurant as deleted without removing data.
