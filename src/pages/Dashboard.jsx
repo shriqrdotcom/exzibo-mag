@@ -144,7 +144,7 @@ function mapRow(r) {
     id:        r.id,
     uid:       r.uid || r.id,
     name:      (r.name || '').toUpperCase(),
-    status:    r.status === 'paused' ? 'PAUSED' : 'RUNNING',
+    status:    r.status === 'paused' ? 'PAUSED' : r.status === 'demo' ? 'DEMO' : 'RUNNING',
     startDate,
     endDate,
     plan:      normalizePlan(r.plan),
@@ -225,7 +225,7 @@ export default function Dashboard() {
     const place = (editDraft.place || '').toUpperCase().replace(/[^A-Z]/g, '').slice(0, 2)
     const note  = (editDraft.note || '').slice(0, 20)
     persistRestaurantPatch(editDraft.id, {
-      status: editDraft.status === 'PAUSED' ? 'paused' : 'active',
+      status: editDraft.status === 'PAUSED' ? 'paused' : editDraft.status === 'DEMO' ? 'demo' : 'active',
       place:  place || '—',
       note,
     })
@@ -336,6 +336,12 @@ export default function Dashboard() {
         <main style={{ flex: 1, overflowY: 'auto', padding: '32px' }}>
           {activeSection === 'image-compressor' ? (
             <ImageCompressor />
+          ) : activeSection === 'demo' ? (
+            <DemoWebsitesPanel
+              restaurants={restaurants.filter(r => r.status === 'DEMO')}
+              onEdit={openEditModal}
+              onDelete={openDeleteModal}
+            />
           ) : (
           <>
           <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '16px', marginBottom: '32px' }}>
@@ -425,7 +431,7 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {restaurants.length === 0 ? (
+            {restaurants.filter(r => r.status !== 'DEMO').length === 0 ? (
               <div style={{
                 display: 'flex', flexDirection: 'column',
                 alignItems: 'center', justifyContent: 'center',
@@ -477,7 +483,7 @@ export default function Dashboard() {
                 </tr>
               </thead>
               <tbody>
-                {restaurants.map((r, i) => {
+                {restaurants.filter(r => r.status !== 'DEMO').map((r, i) => {
                   const statusDot = r.status === 'RUNNING' ? '#22c55e' : '#9CA3AF'
                   const statusLabelColor = r.status === 'RUNNING' ? '#22c55e' : '#aaa'
                   const planDot = PLAN_DOT_COLOR[r.plan] || '#888'
@@ -574,7 +580,7 @@ export default function Dashboard() {
               padding: '18px 28px',
               borderTop: '1px solid rgba(255,255,255,0.05)',
             }}>
-              <span style={{ fontSize: '12px', color: '#555' }}>Showing {restaurants.length} {restaurants.length === 1 ? 'user' : 'users'}</span>
+              <span style={{ fontSize: '12px', color: '#555' }}>{(() => { const n = restaurants.filter(r => r.status !== 'DEMO').length; return `Showing ${n} ${n === 1 ? 'user' : 'users'}` })()}</span>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <PageBtn icon={<ChevronLeft size={14} />} onClick={() => setCurrentPage(p => Math.max(1, p - 1))} />
                 {[1, 2, 3].map(p => (
@@ -879,9 +885,9 @@ export default function Dashboard() {
 
             <FieldLabel>STATUS</FieldLabel>
             <div style={{ display: 'flex', gap: '8px', marginBottom: '18px' }}>
-              {['RUNNING', 'PAUSED'].map(s => {
+              {['RUNNING', 'PAUSED', 'DEMO'].map(s => {
                 const active = editDraft.status === s
-                const dot = s === 'RUNNING' ? '#22c55e' : '#9CA3AF'
+                const dot = s === 'RUNNING' ? '#22c55e' : s === 'DEMO' ? '#F59E0B' : '#9CA3AF'
                 return (
                   <button
                     key={s}
@@ -1468,6 +1474,128 @@ function ImageCompressor() {
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+function DemoWebsitesPanel({ restaurants, onEdit, onDelete }) {
+  return (
+    <div>
+      <div style={{ marginBottom: '28px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
+          <div style={{
+            display: 'inline-flex', alignItems: 'center', gap: '6px',
+            padding: '4px 12px',
+            background: 'rgba(245,158,11,0.1)',
+            border: '1px solid rgba(245,158,11,0.25)',
+            borderRadius: '50px',
+          }}>
+            <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#F59E0B', boxShadow: '0 0 8px #F59E0B', display: 'inline-block' }} />
+            <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.16em', color: '#F59E0B', textTransform: 'uppercase' }}>Demo Mode</span>
+          </div>
+        </div>
+        <h2 style={{ fontSize: '20px', fontWeight: 800, color: '#fff', margin: '0 0 4px' }}>Demo Websites</h2>
+        <p style={{ fontSize: '13px', color: '#555', margin: 0 }}>
+          Restaurants marked as Demo. Use the edit (✎) button on any entry to change its status.
+        </p>
+      </div>
+
+      <div style={{
+        background: '#111',
+        border: '1px solid rgba(245,158,11,0.12)',
+        borderRadius: '20px',
+        overflow: 'hidden',
+      }}>
+        {restaurants.length === 0 ? (
+          <div style={{
+            display: 'flex', flexDirection: 'column',
+            alignItems: 'center', justifyContent: 'center',
+            padding: '80px 24px', textAlign: 'center',
+          }}>
+            <div style={{
+              width: '60px', height: '60px', borderRadius: '18px',
+              background: 'rgba(245,158,11,0.08)',
+              border: '2px dashed rgba(245,158,11,0.25)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: '26px', marginBottom: '20px',
+            }}>🎬</div>
+            <div style={{ fontSize: '16px', fontWeight: 700, marginBottom: '8px', color: '#fff' }}>No Demo Websites Yet</div>
+            <p style={{ fontSize: '13px', color: '#555', maxWidth: '300px', lineHeight: 1.6, margin: 0 }}>
+              To add a website here, open the Dashboard, click the edit (✎) icon on any restaurant, and set its status to <strong style={{ color: '#F59E0B' }}>DEMO</strong>.
+            </p>
+          </div>
+        ) : (
+          <>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                  {['UID', 'STATUS', 'TIMELINE', 'PLAN', 'PLACE', 'ACTIONS'].map(col => (
+                    <th key={col} style={{
+                      padding: '14px 28px', textAlign: 'left',
+                      fontSize: '11px', fontWeight: 600, letterSpacing: '0.08em',
+                      color: '#555', borderBottom: '1px solid rgba(255,255,255,0.05)',
+                    }}>{col}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {restaurants.map((r, i) => {
+                  const planDot = PLAN_DOT_COLOR[r.plan] || '#888'
+                  return (
+                    <tr key={r.uid + i} style={{
+                      borderBottom: i < restaurants.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none',
+                      transition: 'background 0.2s',
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(245,158,11,0.03)'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                    >
+                      <td style={{ padding: '20px 28px' }}>
+                        <div style={{ fontSize: '13px', fontWeight: 700, fontFamily: 'monospace', letterSpacing: '0.02em' }}>{r.uid}</div>
+                        <div style={{ fontSize: '11px', color: '#555', marginTop: '2px' }}>{r.name}</div>
+                      </td>
+                      <td style={{ padding: '20px 28px' }}>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '7px' }}>
+                          <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#F59E0B', boxShadow: '0 0 8px #F59E0B', display: 'inline-block' }} />
+                          <span style={{ fontSize: '12px', fontWeight: 700, color: '#F59E0B', letterSpacing: '0.04em' }}>DEMO</span>
+                        </div>
+                      </td>
+                      <td style={{ padding: '20px 28px', color: '#ccc', fontSize: '12px', fontWeight: 600, fontFamily: 'monospace', letterSpacing: '0.02em' }}>
+                        {formatDDMMYYYY(r.startDate)} <span style={{ color: '#555', margin: '0 4px' }}>TO</span> {formatDDMMYYYY(r.endDate)}
+                      </td>
+                      <td style={{ padding: '20px 28px' }}>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '7px' }}>
+                          <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: planDot, boxShadow: `0 0 8px ${planDot}`, display: 'inline-block' }} />
+                          <span style={{ fontSize: '12px', fontWeight: 700, color: '#ddd', letterSpacing: '0.06em' }}>{r.plan}</span>
+                        </div>
+                      </td>
+                      <td style={{ padding: '20px 28px' }}>
+                        <span style={{
+                          display: 'inline-block', padding: '5px 10px',
+                          background: 'rgba(255,255,255,0.05)',
+                          border: '1px solid rgba(255,255,255,0.1)',
+                          borderRadius: '8px', color: '#fff',
+                          fontSize: '12px', fontWeight: 800, letterSpacing: '0.08em', fontFamily: 'monospace',
+                        }}>{r.place}</span>
+                      </td>
+                      <td style={{ padding: '20px 28px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <EditRowBtn onClick={() => onEdit(r)} />
+                          <DeleteBtn onClick={() => onDelete(r)} />
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+            <div style={{ padding: '14px 28px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+              <span style={{ fontSize: '12px', color: '#555' }}>
+                {restaurants.length} demo {restaurants.length === 1 ? 'website' : 'websites'}
+              </span>
+            </div>
+          </>
+        )}
+      </div>
     </div>
   )
 }
