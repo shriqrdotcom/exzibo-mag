@@ -1477,13 +1477,6 @@ function ImageCompressor() {
 function DemoPanel({ navigate }) {
   const buttons = [
     {
-      icon: <ExternalLink size={22} />,
-      label: 'DEMO WEBSITE',
-      desc: 'Customer-facing restaurant page',
-      onClick: () => navigate('/create-website'),
-      accent: '#E8321A',
-    },
-    {
       icon: <ShieldCheck size={22} />,
       label: 'MASTER CONTROL',
       desc: 'System-wide controls & broadcasts',
