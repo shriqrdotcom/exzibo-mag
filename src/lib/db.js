@@ -22,6 +22,19 @@ function removeSoftDeletedId(id) {
   localStorage.setItem(LS_SOFT_DELETED, JSON.stringify([...ids]))
 }
 
+// ── One-time deleted restaurant IDs (hard-coded cleanup) ─────
+// These restaurants were removed by admin but RLS prevents anon-key hard delete.
+// Adding their IDs here ensures filterActive() excludes them on every client.
+const PERMANENTLY_DELETED_IDS = [
+  '2fb3a200-f494-4fb3-99cb-ea6f3e917804', // UID 6920307970 "YOUR WEBSITE NAME"
+]
+;(function seedPermanentDeletes() {
+  const ids = getSoftDeletedIds()
+  let changed = false
+  PERMANENTLY_DELETED_IDS.forEach(id => { if (!ids.has(id)) { ids.add(id); changed = true } })
+  if (changed) localStorage.setItem(LS_SOFT_DELETED, JSON.stringify([...ids]))
+})()
+
 // Returns true when a Supabase/PostgREST error is caused by a missing column.
 // This happens when the soft_delete_setup.sql migration hasn't been run yet.
 function isMissingColumnError(err) {

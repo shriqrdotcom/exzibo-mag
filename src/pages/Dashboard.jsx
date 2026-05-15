@@ -1223,7 +1223,7 @@ function DemoPanel({ navigate }) {
       icon: <ExternalLink size={22} />,
       label: 'DEMO WEBSITE',
       desc: 'Customer-facing restaurant page',
-      onClick: () => navigate('/restaurant/demo'),
+      onClick: () => navigate('/create-website'),
       accent: '#E8321A',
     },
     {
