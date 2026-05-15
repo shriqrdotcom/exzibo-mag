@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { ArrowRight, Store, Wrench, Bell, User, Search, Palette, X, ExternalLink, LayoutDashboard } from 'lucide-react'
+import { ArrowRight, Store, Wrench, Bell, User, Search, Palette, X, ExternalLink, LayoutDashboard, Play, ChevronDown } from 'lucide-react'
 
 const THEMES = [
   {
@@ -71,6 +71,7 @@ export default function Landing() {
   const [loaded, setLoaded] = useState(false)
   const [showThemes, setShowThemes] = useState(false)
   const [selectedTheme, setSelectedTheme] = useState(null)
+  const [showDemo, setShowDemo] = useState(false)
 
   useEffect(() => {
     setTimeout(() => setLoaded(true), 100)
@@ -177,8 +178,102 @@ export default function Landing() {
           <CTAButton onClick={() => setShowThemes(true)} icon={<Palette size={15} />} dashed>
             THEME'S
           </CTAButton>
+          <CTAButton onClick={() => setShowDemo(prev => !prev)} icon={showDemo ? <ChevronDown size={15} style={{ transform: 'rotate(180deg)', transition: 'transform 0.3s' }} /> : <Play size={15} />} dashed>
+            VIEW DEMO
+          </CTAButton>
         </div>
       </main>
+
+      {/* ── DEMO SECTION ── */}
+      <div style={{
+        maxHeight: showDemo ? '700px' : '0px',
+        overflow: 'hidden',
+        transition: 'max-height 0.55s cubic-bezier(0.4,0,0.2,1)',
+      }}>
+        <div style={{
+          padding: '0 48px 56px',
+          opacity: showDemo ? 1 : 0,
+          transform: showDemo ? 'translateY(0)' : 'translateY(16px)',
+          transition: 'opacity 0.4s ease 0.15s, transform 0.4s ease 0.15s',
+        }}>
+          {/* Section header */}
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            marginBottom: '20px',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{
+                width: '36px', height: '36px', borderRadius: '10px',
+                background: 'rgba(232,50,26,0.12)', border: '1px solid rgba(232,50,26,0.2)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <Play size={15} color="#E8321A" />
+              </div>
+              <div>
+                <div style={{ fontSize: '16px', fontWeight: 800, letterSpacing: '-0.01em' }}>Live Demo</div>
+                <div style={{ fontSize: '12px', color: '#555', marginTop: '1px' }}>
+                  Customer-facing restaurant website — Crimson Dark theme
+                </div>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+              <button
+                onClick={() => navigate('/restaurant/demo')}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '6px',
+                  padding: '8px 18px', borderRadius: '50px',
+                  background: 'rgba(232,50,26,0.12)', border: '1px solid rgba(232,50,26,0.25)',
+                  color: '#E8321A', fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em',
+                  cursor: 'pointer', transition: 'all 0.2s',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(232,50,26,0.22)' }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'rgba(232,50,26,0.12)' }}
+              >
+                <ExternalLink size={12} /> OPEN FULL PAGE
+              </button>
+              <button
+                onClick={() => setShowDemo(false)}
+                style={{
+                  width: '32px', height: '32px', borderRadius: '8px',
+                  background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)',
+                  color: '#555', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  transition: 'all 0.2s',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.09)'; e.currentTarget.style.color = '#fff' }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; e.currentTarget.style.color = '#555' }}
+              >
+                <X size={14} />
+              </button>
+            </div>
+          </div>
+
+          {/* iframe preview */}
+          <div style={{
+            width: '100%',
+            height: '560px',
+            borderRadius: '20px',
+            overflow: 'hidden',
+            border: '1px solid rgba(255,255,255,0.07)',
+            boxShadow: '0 24px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(232,50,26,0.08)',
+            position: 'relative',
+            background: '#0A0A0A',
+          }}>
+            {showDemo && (
+              <iframe
+                src="/restaurant/demo"
+                title="Exzibo Demo"
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  border: 'none',
+                  display: 'block',
+                }}
+              />
+            )}
+          </div>
+        </div>
+      </div>
 
 
 
