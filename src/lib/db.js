@@ -5,15 +5,24 @@ import { DISABLE_AUTH } from './env'
 // Used when the is_deleted column hasn't been migrated to Supabase yet.
 // Stores an array of restaurant IDs that have been soft-deleted locally.
 const LS_SOFT_DELETED = 'exzibo_soft_deleted_ids'
+// Tracks IDs explicitly restored (overrides the hardcoded PERMANENTLY_DELETED_IDS seed)
+const LS_RESTORED = 'exzibo_restored_ids'
 
 function getSoftDeletedIds() {
   try { return new Set(JSON.parse(localStorage.getItem(LS_SOFT_DELETED) || '[]')) } catch { return new Set() }
+}
+
+function getRestoredIds() {
+  try { return new Set(JSON.parse(localStorage.getItem(LS_RESTORED) || '[]')) } catch { return new Set() }
 }
 
 function addSoftDeletedId(id) {
   const ids = getSoftDeletedIds()
   ids.add(id)
   localStorage.setItem(LS_SOFT_DELETED, JSON.stringify([...ids]))
+  // Remove from restored set if re-deleted
+  const restored = getRestoredIds()
+  if (restored.has(id)) { restored.delete(id); localStorage.setItem(LS_RESTORED, JSON.stringify([...restored])) }
 }
 
 function removeSoftDeletedId(id) {
@@ -22,16 +31,27 @@ function removeSoftDeletedId(id) {
   localStorage.setItem(LS_SOFT_DELETED, JSON.stringify([...ids]))
 }
 
+export function markRestoredId(id) {
+  const restored = getRestoredIds()
+  restored.add(id)
+  localStorage.setItem(LS_RESTORED, JSON.stringify([...restored]))
+  removeSoftDeletedId(id)
+}
+
 // ── One-time deleted restaurant IDs (hard-coded cleanup) ─────
 // These restaurants were removed by admin but RLS prevents anon-key hard delete.
 // Adding their IDs here ensures filterActive() excludes them on every client.
+// IDs in the LS_RESTORED set are exempt and will not be re-added.
 const PERMANENTLY_DELETED_IDS = [
   '2fb3a200-f494-4fb3-99cb-ea6f3e917804', // UID 6920307970 "YOUR WEBSITE NAME"
 ]
 ;(function seedPermanentDeletes() {
+  const restored = getRestoredIds()
   const ids = getSoftDeletedIds()
   let changed = false
-  PERMANENTLY_DELETED_IDS.forEach(id => { if (!ids.has(id)) { ids.add(id); changed = true } })
+  PERMANENTLY_DELETED_IDS.forEach(id => {
+    if (!restored.has(id) && !ids.has(id)) { ids.add(id); changed = true }
+  })
   if (changed) localStorage.setItem(LS_SOFT_DELETED, JSON.stringify([...ids]))
 })()
 
@@ -54,9 +74,11 @@ export async function generateRestaurantUID() {
 // ── Restaurants ──────────────────────────────────────────────
 
 // Filters rows that should be excluded (soft-deleted), merging DB flag + localStorage fallback.
+// IDs in the restored set are always kept regardless of other flags.
 function filterActive(rows) {
   const localDeleted = getSoftDeletedIds()
-  return rows.filter(r => !r.is_deleted && !localDeleted.has(r.id))
+  const restored = getRestoredIds()
+  return rows.filter(r => restored.has(r.id) || (!r.is_deleted && !localDeleted.has(r.id)))
 }
 
 export async function getRestaurants() {
@@ -146,10 +168,12 @@ export async function getDeletedRestaurants() {
   }
 
   // Also include any locally soft-deleted IDs not yet synced to DB
+  // Exclude IDs that have been explicitly restored
   const dbResult = data ?? []
   const localDeleted = getSoftDeletedIds()
+  const restored = getRestoredIds()
   const dbIds = new Set(dbResult.map(r => r.id))
-  const missingLocal = [...localDeleted].filter(id => !dbIds.has(id))
+  const missingLocal = [...localDeleted].filter(id => !dbIds.has(id) && !restored.has(id))
 
   if (missingLocal.length > 0) {
     const { data: extra } = await supabase
@@ -158,7 +182,8 @@ export async function getDeletedRestaurants() {
       .in('id', missingLocal)
     return [...dbResult, ...(extra ?? [])]
   }
-  return dbResult
+  // Filter out any DB rows that have since been restored locally
+  return dbResult.filter(r => !restored.has(r.id))
 }
 
 // Soft-delete: marks the restaurant as deleted without removing data.
