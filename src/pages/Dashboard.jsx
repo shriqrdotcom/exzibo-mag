@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useLayoutEffect, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import Sidebar from '../components/Sidebar'
 import AdminHeader from '../components/AdminHeader'
-import { TrendingUp, Filter, Download, ChevronLeft, ChevronRight, Plus, Trash2, Clock, X, Pencil } from 'lucide-react'
+import { TrendingUp, Filter, Download, ChevronLeft, ChevronRight, Plus, Trash2, Clock, X, Pencil, Play, ExternalLink, LayoutDashboard, ShieldCheck } from 'lucide-react'
 import { useRole } from '../context/RoleContext'
 import { getRestaurants, updateRestaurant, softDeleteRestaurant, getRestaurantsCreatedThisMonth } from '../lib/db'
 
@@ -156,6 +156,8 @@ function mapRow(r) {
 
 export default function Dashboard() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const activeSection = searchParams.get('section')
   const { exitRoleView } = useRole()
   const [currentPage, setCurrentPage] = useState(1)
   const [restaurants, setRestaurants] = useState([])
@@ -332,6 +334,10 @@ export default function Dashboard() {
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <AdminHeader />
         <main style={{ flex: 1, overflowY: 'auto', padding: '32px' }}>
+          {activeSection === 'demo' ? (
+            <DemoPanel navigate={navigate} />
+          ) : (
+          <>
           <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '16px', marginBottom: '32px' }}>
             <KPICard
               label="ACTIVE OPERATIONS"
@@ -588,6 +594,8 @@ export default function Dashboard() {
             </>
             )}
           </div>
+          </>
+          )}
         </main>
       </div>
 
@@ -1205,6 +1213,131 @@ function DeleteBtn({ onClick }) {
       }}
     >
       <Trash2 size={14} />
+    </button>
+  )
+}
+
+function DemoPanel({ navigate }) {
+  const buttons = [
+    {
+      icon: <ExternalLink size={22} />,
+      label: 'DEMO WEBSITE',
+      desc: 'Customer-facing restaurant page',
+      onClick: () => navigate('/restaurant/demo'),
+      accent: '#E8321A',
+    },
+    {
+      icon: <ShieldCheck size={22} />,
+      label: 'MASTER CONTROL',
+      desc: 'System-wide controls & broadcasts',
+      onClick: () => navigate('/master-control'),
+      accent: '#7C3AED',
+    },
+    {
+      icon: <LayoutDashboard size={22} />,
+      label: 'ADMIN DASHBOARD',
+      desc: 'Orders, bookings, menu & analytics',
+      onClick: () => navigate('/dashboard'),
+      accent: '#2563EB',
+    },
+  ]
+
+  return (
+    <div style={{
+      height: '100%',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      minHeight: 'calc(100vh - 160px)',
+    }}>
+      {/* Header */}
+      <div style={{ textAlign: 'center', marginBottom: '52px' }}>
+        <div style={{
+          display: 'inline-flex', alignItems: 'center', gap: '8px',
+          background: 'rgba(232,50,26,0.08)',
+          border: '1px solid rgba(232,50,26,0.18)',
+          borderRadius: '50px', padding: '6px 18px', marginBottom: '20px',
+        }}>
+          <Play size={11} color="#E8321A" />
+          <span style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.18em', color: '#E8321A', textTransform: 'uppercase' }}>
+            Demo Mode
+          </span>
+        </div>
+        <h2 style={{
+          fontSize: '28px', fontWeight: 900, letterSpacing: '-0.01em',
+          color: '#fff', margin: '0 0 10px',
+        }}>
+          Explore the Platform
+        </h2>
+        <p style={{ fontSize: '14px', color: '#555', margin: 0, fontWeight: 400 }}>
+          Choose a section to preview
+        </p>
+      </div>
+
+      {/* Buttons */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', width: '100%', maxWidth: '400px' }}>
+        {buttons.map(btn => (
+          <DemoBtn key={btn.label} {...btn} />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function DemoBtn({ icon, label, desc, onClick, accent }) {
+  const [hov, setHov] = useState(false)
+  return (
+    <button
+      onClick={onClick}
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '18px',
+        width: '100%',
+        padding: '20px 24px',
+        borderRadius: '16px',
+        background: hov ? `${accent}12` : 'rgba(255,255,255,0.03)',
+        border: `1px solid ${hov ? accent + '40' : 'rgba(255,255,255,0.07)'}`,
+        color: '#fff',
+        cursor: 'pointer',
+        textAlign: 'left',
+        transition: 'all 0.22s ease',
+        boxShadow: hov ? `0 8px 30px ${accent}20` : 'none',
+        transform: hov ? 'translateY(-1px)' : 'translateY(0)',
+      }}
+    >
+      <div style={{
+        width: '46px', height: '46px', borderRadius: '12px', flexShrink: 0,
+        background: hov ? `${accent}20` : 'rgba(255,255,255,0.05)',
+        border: `1px solid ${hov ? accent + '35' : 'rgba(255,255,255,0.08)'}`,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        color: hov ? accent : '#666',
+        transition: 'all 0.22s ease',
+      }}>
+        {icon}
+      </div>
+      <div style={{ flex: 1 }}>
+        <div style={{
+          fontSize: '14px', fontWeight: 800, letterSpacing: '0.06em',
+          color: hov ? '#fff' : '#ccc',
+          transition: 'color 0.2s',
+        }}>
+          {label}
+        </div>
+        <div style={{ fontSize: '12px', color: '#555', marginTop: '3px', fontWeight: 400 }}>
+          {desc}
+        </div>
+      </div>
+      <div style={{
+        color: hov ? accent : '#333',
+        transition: 'all 0.2s',
+        transform: hov ? 'translateX(3px)' : 'translateX(0)',
+      }}>
+        <ExternalLink size={15} />
+      </div>
     </button>
   )
 }

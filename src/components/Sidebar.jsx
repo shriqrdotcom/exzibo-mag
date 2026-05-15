@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom'
 import { LayoutDashboard, Settings, Zap, Users, Table2, ShieldCheck, Bell, Info, Trash2, Play } from 'lucide-react'
 import PermissionGate from './PermissionGate'
 import { supabase } from '../lib/supabase'
@@ -15,7 +15,9 @@ const navItems = [
 export default function Sidebar() {
   const navigate = useNavigate()
   const location = useLocation()
+  const [searchParams] = useSearchParams()
   const [unreadCount, setUnreadCount] = useState(0)
+  const isDemoActive = location.pathname === '/dashboard' && searchParams.get('section') === 'demo'
 
   const refreshUnread = useCallback(async () => {
     try {
@@ -113,32 +115,36 @@ export default function Sidebar() {
 
         {/* DEMO nav item */}
         <button
-          onClick={() => navigate('/restaurant/demo')}
+          onClick={() => navigate('/dashboard?section=demo')}
           style={{
             display: 'flex',
             alignItems: 'center',
             gap: '12px',
             padding: '12px 16px',
             borderRadius: '12px',
-            background: 'transparent',
-            border: '1px solid rgba(255,255,255,0.06)',
-            color: '#888',
+            background: isDemoActive ? '#E8321A' : 'transparent',
+            border: isDemoActive ? 'none' : '1px solid rgba(255,255,255,0.06)',
+            color: isDemoActive ? '#fff' : '#888',
             fontSize: '14px',
-            fontWeight: 500,
+            fontWeight: isDemoActive ? 600 : 500,
             cursor: 'pointer',
             transition: 'all 0.2s ease',
             textAlign: 'left',
             width: '100%',
           }}
           onMouseEnter={e => {
-            e.currentTarget.style.background = 'rgba(255,255,255,0.04)'
-            e.currentTarget.style.color = '#fff'
-            e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'
+            if (!isDemoActive) {
+              e.currentTarget.style.background = 'rgba(255,255,255,0.04)'
+              e.currentTarget.style.color = '#fff'
+              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'
+            }
           }}
           onMouseLeave={e => {
-            e.currentTarget.style.background = 'transparent'
-            e.currentTarget.style.color = '#888'
-            e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)'
+            if (!isDemoActive) {
+              e.currentTarget.style.background = 'transparent'
+              e.currentTarget.style.color = '#888'
+              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)'
+            }
           }}
         >
           <Play size={18} />
