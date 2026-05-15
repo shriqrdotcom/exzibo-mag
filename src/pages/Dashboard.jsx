@@ -1477,13 +1477,6 @@ function ImageCompressor() {
 function DemoPanel({ navigate }) {
   const buttons = [
     {
-      icon: <ShieldCheck size={22} />,
-      label: 'MASTER CONTROL',
-      desc: 'System-wide controls & broadcasts',
-      onClick: () => navigate('/master-control'),
-      accent: '#7C3AED',
-    },
-    {
       icon: <LayoutDashboard size={22} />,
       label: 'ADMIN DASHBOARD',
       desc: 'Orders, bookings, menu & analytics',
