@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import Sidebar from '../components/Sidebar'
 import AdminHeader from '../components/AdminHeader'
 import { Trash2, AlertTriangle, X, RotateCcw } from 'lucide-react'
-import { getDeletedRestaurants, permanentDeleteRestaurant } from '../lib/db'
+import { getDeletedRestaurants, permanentDeleteRestaurant, updateRestaurant } from '../lib/db'
 
 function formatDDMMYYYY(iso) {
   if (!iso) return '—'
@@ -59,6 +59,21 @@ export default function DeletedRestaurants() {
     setDeleteStage('initial')
     setConfirmUidInput('')
     setDeleteError('')
+  }
+
+  async function restoreToDemo(r) {
+    try {
+      await updateRestaurant(r.id, { status: 'demo', is_deleted: false, deleted_at: null })
+    } catch {
+      // fallback: update localStorage
+      const saved = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
+      localStorage.setItem('exzibo_restaurants', JSON.stringify(
+        saved.map(s => s.id === r.id ? { ...s, status: 'demo', is_deleted: false, deleted_at: null } : s)
+      ))
+    }
+    fetchDeleted()
+    setToast('Restaurant restored to Demo section')
+    setTimeout(() => setToast(''), 2800)
   }
 
   async function handlePermanentDelete() {
@@ -244,32 +259,60 @@ export default function DeletedRestaurants() {
                         </div>
                       </td>
                       <td style={{ padding: '20px 28px' }}>
-                        <button
-                          onClick={() => openDeleteModal(r)}
-                          style={{
-                            display: 'inline-flex', alignItems: 'center', gap: '7px',
-                            padding: '9px 14px',
-                            background: 'rgba(232,50,26,0.08)',
-                            border: '1px solid rgba(232,50,26,0.25)',
-                            borderRadius: '9px',
-                            color: '#E8321A',
-                            fontSize: '11px', fontWeight: 800, letterSpacing: '0.06em',
-                            cursor: 'pointer',
-                            transition: 'all 0.2s',
-                          }}
-                          onMouseEnter={e => {
-                            e.currentTarget.style.background = '#E8321A'
-                            e.currentTarget.style.color = '#fff'
-                            e.currentTarget.style.boxShadow = '0 0 16px rgba(232,50,26,0.4)'
-                          }}
-                          onMouseLeave={e => {
-                            e.currentTarget.style.background = 'rgba(232,50,26,0.08)'
-                            e.currentTarget.style.color = '#E8321A'
-                            e.currentTarget.style.boxShadow = 'none'
-                          }}
-                        >
-                          <Trash2 size={12} /> DELETE PERMANENTLY
-                        </button>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                          <button
+                            onClick={() => restoreToDemo(r)}
+                            style={{
+                              display: 'inline-flex', alignItems: 'center', gap: '7px',
+                              padding: '9px 14px',
+                              background: 'rgba(245,158,11,0.08)',
+                              border: '1px solid rgba(245,158,11,0.3)',
+                              borderRadius: '9px',
+                              color: '#F59E0B',
+                              fontSize: '11px', fontWeight: 800, letterSpacing: '0.06em',
+                              cursor: 'pointer',
+                              transition: 'all 0.2s',
+                            }}
+                            onMouseEnter={e => {
+                              e.currentTarget.style.background = '#F59E0B'
+                              e.currentTarget.style.color = '#000'
+                              e.currentTarget.style.boxShadow = '0 0 16px rgba(245,158,11,0.4)'
+                            }}
+                            onMouseLeave={e => {
+                              e.currentTarget.style.background = 'rgba(245,158,11,0.08)'
+                              e.currentTarget.style.color = '#F59E0B'
+                              e.currentTarget.style.boxShadow = 'none'
+                            }}
+                          >
+                            <RotateCcw size={12} /> RESTORE TO DEMO
+                          </button>
+                          <button
+                            onClick={() => openDeleteModal(r)}
+                            style={{
+                              display: 'inline-flex', alignItems: 'center', gap: '7px',
+                              padding: '9px 14px',
+                              background: 'rgba(232,50,26,0.08)',
+                              border: '1px solid rgba(232,50,26,0.25)',
+                              borderRadius: '9px',
+                              color: '#E8321A',
+                              fontSize: '11px', fontWeight: 800, letterSpacing: '0.06em',
+                              cursor: 'pointer',
+                              transition: 'all 0.2s',
+                            }}
+                            onMouseEnter={e => {
+                              e.currentTarget.style.background = '#E8321A'
+                              e.currentTarget.style.color = '#fff'
+                              e.currentTarget.style.boxShadow = '0 0 16px rgba(232,50,26,0.4)'
+                            }}
+                            onMouseLeave={e => {
+                              e.currentTarget.style.background = 'rgba(232,50,26,0.08)'
+                              e.currentTarget.style.color = '#E8321A'
+                              e.currentTarget.style.boxShadow = 'none'
+                            }}
+                          >
+                            <Trash2 size={12} /> DELETE PERMANENTLY
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
