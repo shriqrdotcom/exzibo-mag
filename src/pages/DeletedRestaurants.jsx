@@ -284,7 +284,7 @@ export default function DeletedRestaurants() {
                               e.currentTarget.style.boxShadow = 'none'
                             }}
                           >
-                            <RotateCcw size={12} /> RESTORE TO DEMO
+                            <RotateCcw size={12} /> RESTORE
                           </button>
                           <button
                             onClick={() => openDeleteModal(r)}
