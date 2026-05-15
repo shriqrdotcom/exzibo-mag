@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom'
-import { LayoutDashboard, Settings, Zap, Users, Table2, ShieldCheck, Bell, Info, Trash2, Play } from 'lucide-react'
+import { LayoutDashboard, Settings, Zap, Users, Table2, ShieldCheck, Bell, Info, Trash2, Play, ImageDown } from 'lucide-react'
 import PermissionGate from './PermissionGate'
 import { supabase } from '../lib/supabase'
 
@@ -18,6 +18,7 @@ export default function Sidebar() {
   const [searchParams] = useSearchParams()
   const [unreadCount, setUnreadCount] = useState(0)
   const isDemoActive = location.pathname === '/dashboard' && searchParams.get('section') === 'demo'
+  const isCompressorActive = location.pathname === '/dashboard' && searchParams.get('section') === 'image-compressor'
 
   const refreshUnread = useCallback(async () => {
     try {
@@ -149,6 +150,44 @@ export default function Sidebar() {
         >
           <Play size={18} />
           DEMO
+        </button>
+
+        {/* IMAGE COMPRESSOR nav item */}
+        <button
+          onClick={() => navigate('/dashboard?section=image-compressor')}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            padding: '12px 16px',
+            borderRadius: '12px',
+            background: isCompressorActive ? '#E8321A' : 'transparent',
+            border: isCompressorActive ? 'none' : '1px solid rgba(255,255,255,0.06)',
+            color: isCompressorActive ? '#fff' : '#888',
+            fontSize: '14px',
+            fontWeight: isCompressorActive ? 600 : 500,
+            cursor: 'pointer',
+            transition: 'all 0.2s ease',
+            textAlign: 'left',
+            width: '100%',
+          }}
+          onMouseEnter={e => {
+            if (!isCompressorActive) {
+              e.currentTarget.style.background = 'rgba(255,255,255,0.04)'
+              e.currentTarget.style.color = '#fff'
+              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'
+            }
+          }}
+          onMouseLeave={e => {
+            if (!isCompressorActive) {
+              e.currentTarget.style.background = 'transparent'
+              e.currentTarget.style.color = '#888'
+              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)'
+            }
+          }}
+        >
+          <ImageDown size={18} />
+          Image Compressor
         </button>
 
         {/* Notifications nav item */}

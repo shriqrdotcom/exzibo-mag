@@ -2,7 +2,7 @@ import React, { useState, useEffect, useLayoutEffect, useCallback } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import Sidebar from '../components/Sidebar'
 import AdminHeader from '../components/AdminHeader'
-import { TrendingUp, Filter, Download, ChevronLeft, ChevronRight, Plus, Trash2, Clock, X, Pencil, Play, ExternalLink, LayoutDashboard, ShieldCheck } from 'lucide-react'
+import { TrendingUp, Filter, Download, ChevronLeft, ChevronRight, Plus, Trash2, Clock, X, Pencil, Play, ExternalLink, LayoutDashboard, ShieldCheck, ImageDown, Upload, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react'
 import { useRole } from '../context/RoleContext'
 import { getRestaurants, updateRestaurant, softDeleteRestaurant, getRestaurantsCreatedThisMonth } from '../lib/db'
 
@@ -336,6 +336,8 @@ export default function Dashboard() {
         <main style={{ flex: 1, overflowY: 'auto', padding: '32px' }}>
           {activeSection === 'demo' ? (
             <DemoPanel navigate={navigate} />
+          ) : activeSection === 'image-compressor' ? (
+            <ImageCompressor />
           ) : (
           <>
           <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '16px', marginBottom: '32px' }}>
@@ -1214,6 +1216,261 @@ function DeleteBtn({ onClick }) {
     >
       <Trash2 size={14} />
     </button>
+  )
+}
+
+function ImageCompressor() {
+  const [original, setOriginal] = useState(null)   // { file, url, size, w, h }
+  const [compressed, setCompressed] = useState(null) // { url, size, blob }
+  const [quality, setQuality] = useState(80)
+  const [format, setFormat] = useState('image/jpeg')
+  const [dragging, setDragging] = useState(false)
+  const [processing, setProcessing] = useState(false)
+  const canvasRef = React.useRef(null)
+
+  function fmtSize(bytes) {
+    if (bytes < 1024) return `${bytes} B`
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+    return `${(bytes / (1024 * 1024)).toFixed(2)} MB`
+  }
+
+  function loadFile(file) {
+    if (!file || !file.type.startsWith('image/')) return
+    const url = URL.createObjectURL(file)
+    const img = new Image()
+    img.onload = () => {
+      setOriginal({ file, url, size: file.size, w: img.naturalWidth, h: img.naturalHeight })
+      setCompressed(null)
+    }
+    img.src = url
+  }
+
+  function onDrop(e) {
+    e.preventDefault(); setDragging(false)
+    loadFile(e.dataTransfer.files[0])
+  }
+
+  function onInputChange(e) { loadFile(e.target.files[0]) }
+
+  const compress = useCallback(() => {
+    if (!original) return
+    setProcessing(true)
+    const img = new Image()
+    img.onload = () => {
+      const canvas = canvasRef.current
+      canvas.width = original.w
+      canvas.height = original.h
+      const ctx = canvas.getContext('2d')
+      ctx.clearRect(0, 0, canvas.width, canvas.height)
+      if (format === 'image/png') {
+        ctx.fillStyle = 'transparent'
+      }
+      ctx.drawImage(img, 0, 0)
+      const q = format === 'image/png' ? undefined : quality / 100
+      canvas.toBlob(blob => {
+        if (!blob) { setProcessing(false); return }
+        const url = URL.createObjectURL(blob)
+        setCompressed({ url, size: blob.size, blob })
+        setProcessing(false)
+      }, format, q)
+    }
+    img.src = original.url
+  }, [original, quality, format])
+
+  useEffect(() => {
+    if (original) compress()
+  }, [original, quality, format, compress])
+
+  function handleDownload() {
+    if (!compressed) return
+    const ext = format === 'image/webp' ? 'webp' : format === 'image/png' ? 'png' : 'jpg'
+    const a = document.createElement('a')
+    a.href = compressed.url
+    a.download = `compressed-${Date.now()}.${ext}`
+    a.click()
+  }
+
+  function reset() { setOriginal(null); setCompressed(null); setQuality(80); setFormat('image/jpeg') }
+
+  const saving = original && compressed ? Math.round((1 - compressed.size / original.size) * 100) : 0
+
+  const cardStyle = {
+    background: '#111',
+    border: '1px solid rgba(255,255,255,0.06)',
+    borderRadius: '20px',
+    padding: '28px',
+  }
+
+  return (
+    <div style={{ maxWidth: '960px', margin: '0 auto' }}>
+      {/* Header */}
+      <div style={{ marginBottom: '32px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+          <div style={{
+            width: '40px', height: '40px', borderRadius: '12px',
+            background: 'rgba(232,50,26,0.12)', border: '1px solid rgba(232,50,26,0.2)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <ImageDown size={20} color="#E8321A" />
+          </div>
+          <div>
+            <h2 style={{ margin: 0, fontSize: '22px', fontWeight: 800, color: '#fff' }}>Image Compressor</h2>
+            <p style={{ margin: 0, fontSize: '12px', color: '#555' }}>Compress JPG, PNG & WebP — fully in-browser, nothing uploaded</p>
+          </div>
+          {original && (
+            <button onClick={reset} style={{
+              marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '6px',
+              padding: '8px 16px', borderRadius: '50px',
+              background: 'transparent', border: '1px solid rgba(255,255,255,0.1)',
+              color: '#888', fontSize: '12px', fontWeight: 600, cursor: 'pointer',
+              transition: 'all 0.2s',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = '#E8321A'; e.currentTarget.style.color = '#E8321A' }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; e.currentTarget.style.color = '#888' }}
+            >
+              <RotateCcw size={12} /> Reset
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Hidden canvas for compression */}
+      <canvas ref={canvasRef} style={{ display: 'none' }} />
+
+      {!original ? (
+        /* Drop zone */
+        <div
+          onDragOver={e => { e.preventDefault(); setDragging(true) }}
+          onDragLeave={() => setDragging(false)}
+          onDrop={onDrop}
+          style={{
+            ...cardStyle,
+            border: `2px dashed ${dragging ? '#E8321A' : 'rgba(255,255,255,0.1)'}`,
+            background: dragging ? 'rgba(232,50,26,0.04)' : '#111',
+            minHeight: '320px',
+            display: 'flex', flexDirection: 'column',
+            alignItems: 'center', justifyContent: 'center',
+            cursor: 'pointer',
+            transition: 'all 0.2s',
+          }}
+          onClick={() => document.getElementById('img-file-input').click()}
+        >
+          <input id="img-file-input" type="file" accept="image/*" onChange={onInputChange} style={{ display: 'none' }} />
+          <div style={{
+            width: '64px', height: '64px', borderRadius: '20px',
+            background: dragging ? 'rgba(232,50,26,0.15)' : 'rgba(255,255,255,0.04)',
+            border: `2px dashed ${dragging ? '#E8321A' : 'rgba(255,255,255,0.12)'}`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            marginBottom: '20px', transition: 'all 0.2s',
+          }}>
+            <Upload size={26} color={dragging ? '#E8321A' : '#555'} />
+          </div>
+          <div style={{ fontSize: '16px', fontWeight: 700, color: dragging ? '#E8321A' : '#ccc', marginBottom: '8px' }}>
+            {dragging ? 'Drop your image here' : 'Click or drag an image here'}
+          </div>
+          <div style={{ fontSize: '13px', color: '#444' }}>Supports JPG, PNG, WebP — up to any size</div>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          {/* Controls row */}
+          <div style={{ ...cardStyle, display: 'flex', alignItems: 'center', gap: '32px', flexWrap: 'wrap', padding: '20px 28px' }}>
+            {/* Format */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.1em', color: '#555', textTransform: 'uppercase' }}>Output Format</span>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                {[['image/jpeg','JPG'], ['image/webp','WebP'], ['image/png','PNG']].map(([val, lbl]) => (
+                  <button key={val} onClick={() => setFormat(val)} style={{
+                    padding: '7px 16px', borderRadius: '8px', fontSize: '12px', fontWeight: 700,
+                    border: `1px solid ${format === val ? '#E8321A' : 'rgba(255,255,255,0.08)'}`,
+                    background: format === val ? 'rgba(232,50,26,0.15)' : 'transparent',
+                    color: format === val ? '#E8321A' : '#666', cursor: 'pointer', transition: 'all 0.2s',
+                  }}>{lbl}</button>
+                ))}
+              </div>
+            </div>
+            {/* Quality slider */}
+            {format !== 'image/png' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1, minWidth: '200px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.1em', color: '#555', textTransform: 'uppercase' }}>Quality</span>
+                  <span style={{ fontSize: '16px', fontWeight: 800, color: quality >= 70 ? '#22c55e' : quality >= 40 ? '#f59e0b' : '#E8321A' }}>{quality}%</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <ZoomOut size={14} color="#555" />
+                  <input type="range" min={1} max={100} value={quality} onChange={e => setQuality(Number(e.target.value))}
+                    style={{ flex: 1, accentColor: '#E8321A', cursor: 'pointer' }} />
+                  <ZoomIn size={14} color="#555" />
+                </div>
+              </div>
+            )}
+            {/* Download */}
+            <button onClick={handleDownload} disabled={!compressed || processing} style={{
+              marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px',
+              padding: '11px 24px', borderRadius: '50px',
+              background: compressed && !processing ? '#E8321A' : '#222',
+              border: 'none', color: compressed && !processing ? '#fff' : '#555',
+              fontSize: '13px', fontWeight: 700, letterSpacing: '0.05em',
+              cursor: compressed && !processing ? 'pointer' : 'not-allowed',
+              boxShadow: compressed && !processing ? '0 0 20px rgba(232,50,26,0.35)' : 'none',
+              transition: 'all 0.2s',
+            }}>
+              <Download size={15} />
+              {processing ? 'Processing…' : 'Download'}
+            </button>
+          </div>
+
+          {/* Stats row */}
+          {compressed && (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
+              {[
+                { label: 'Original Size', value: fmtSize(original.size), accent: '#888' },
+                { label: 'Compressed Size', value: fmtSize(compressed.size), accent: '#22c55e' },
+                { label: 'Size Saved', value: `${saving > 0 ? saving : 0}%`, accent: saving > 0 ? '#E8321A' : '#888' },
+              ].map(s => (
+                <div key={s.label} style={{ ...cardStyle, padding: '20px 24px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.1em', color: '#555', textTransform: 'uppercase', marginBottom: '8px' }}>{s.label}</div>
+                  <div style={{ fontSize: '26px', fontWeight: 800, color: s.accent }}>{s.value}</div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Preview row */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+            {/* Original */}
+            <div style={{ ...cardStyle }}>
+              <div style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.1em', color: '#555', textTransform: 'uppercase', marginBottom: '14px' }}>
+                Original · {original.w}×{original.h}px · {fmtSize(original.size)}
+              </div>
+              <img src={original.url} alt="original" style={{
+                width: '100%', height: '220px', objectFit: 'contain',
+                borderRadius: '10px', background: 'rgba(255,255,255,0.03)',
+              }} />
+            </div>
+            {/* Compressed */}
+            <div style={{ ...cardStyle }}>
+              <div style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.1em', color: compressed ? '#22c55e' : '#555', textTransform: 'uppercase', marginBottom: '14px' }}>
+                {compressed ? `Compressed · ${format.split('/')[1].toUpperCase()} · ${fmtSize(compressed.size)}` : 'Processing…'}
+              </div>
+              {processing ? (
+                <div style={{ width: '100%', height: '220px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <div style={{
+                    width: '36px', height: '36px', borderRadius: '50%',
+                    border: '3px solid rgba(232,50,26,0.15)', borderTopColor: '#E8321A',
+                    animation: 'spin 0.8s linear infinite',
+                  }} />
+                </div>
+              ) : compressed ? (
+                <img src={compressed.url} alt="compressed" style={{
+                  width: '100%', height: '220px', objectFit: 'contain',
+                  borderRadius: '10px', background: 'rgba(255,255,255,0.03)',
+                }} />
+              ) : null}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   )
 }
 
