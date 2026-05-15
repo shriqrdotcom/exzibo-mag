@@ -144,6 +144,7 @@ function mapRow(r) {
     id:        r.id,
     uid:       r.uid || r.id,
     name:      (r.name || '').toUpperCase(),
+    slug:      r.slug || '',
     status:    r.status === 'paused' ? 'PAUSED' : r.status === 'demo' ? 'DEMO' : 'RUNNING',
     startDate,
     endDate,
@@ -1479,6 +1480,7 @@ function ImageCompressor() {
 }
 
 function DemoWebsitesPanel({ restaurants, onEdit, onDelete }) {
+  const navigate = useNavigate()
   return (
     <div>
       <div style={{ marginBottom: '28px' }}>
@@ -1580,12 +1582,13 @@ function DemoWebsitesPanel({ restaurants, onEdit, onDelete }) {
                       <td style={{ padding: '16px 28px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                           {[
-                            { label: 'VIEW',   color: '#22c55e' },
-                            { label: 'ADMIN',  color: '#3B82F6' },
-                            { label: 'MASTER', color: '#A855F7' },
-                          ].map(({ label, color }) => (
+                            { label: 'VIEW',   color: '#22c55e', onClick: () => r.slug ? navigate(`/restaurant/${r.slug}`) : null },
+                            { label: 'ADMIN',  color: '#3B82F6', onClick: () => navigate(`/admin/${r.id}`) },
+                            { label: 'MASTER', color: '#A855F7', onClick: () => {} },
+                          ].map(({ label, color, onClick }) => (
                             <button
                               key={label}
+                              onClick={onClick}
                               style={{
                                 display: 'inline-flex', alignItems: 'center',
                                 padding: '7px 13px',
