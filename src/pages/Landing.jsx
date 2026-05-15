@@ -178,9 +178,6 @@ export default function Landing() {
           <CTAButton onClick={() => setShowThemes(true)} icon={<Palette size={15} />} dashed>
             THEME'S
           </CTAButton>
-          <CTAButton onClick={() => setShowDemo(prev => !prev)} icon={showDemo ? <ChevronDown size={15} style={{ transform: 'rotate(180deg)', transition: 'transform 0.3s' }} /> : <Play size={15} />} dashed>
-            VIEW DEMO
-          </CTAButton>
         </div>
       </main>
 
