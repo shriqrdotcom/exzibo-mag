@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Plus, Utensils, Store, MapPin, Star, ExternalLink, Settings, Globe } from 'lucide-react'
+import { ArrowLeft, Plus, Store, ExternalLink, Settings, Globe, Utensils } from 'lucide-react'
 import PlanBadge from '../components/PlanBadge'
 import { getRestaurants } from '../lib/db'
 import { supabase } from '../lib/supabase'
@@ -16,8 +16,7 @@ export default function Restaurants() {
     function fetchAll() {
       return getRestaurants()
         .then(rows => {
-          // Keep localStorage in sync so MasterControl and other local-first code works
-          try { localStorage.setItem('exzibo_restaurants', JSON.stringify(rows)) } catch { /* noop */ }
+          try { localStorage.setItem('exzibo_restaurants', JSON.stringify(rows)) } catch { }
           setRestaurants(rows)
           setLoadError('')
         })
@@ -27,50 +26,37 @@ export default function Restaurants() {
     setLoading(true)
     fetchAll().finally(() => setLoading(false))
 
-    // Live-sync: refetch whenever any restaurant row changes
     const channel = supabase
       .channel('rt-restaurants')
       .on('postgres_changes',
         { event: '*', schema: 'public', table: 'restaurants' },
         () => { fetchAll() }
       )
-      .subscribe((status) => {
-        if (status === 'SUBSCRIBED') console.log('[rt] restaurants subscribed')
-      })
+      .subscribe()
 
     return () => { supabase.removeChannel(channel) }
   }, [])
 
-  const filtered = restaurants.filter(r =>
-    activeFilter === 'live'
-      ? r.status === 'active'
-      : r.status !== 'active'
-  )
-
-  const hasAny = restaurants.length > 0
+  const liveList = restaurants.filter(r => r.status === 'active')
+  const pausedList = restaurants.filter(r => r.status !== 'active')
+  const filtered = activeFilter === 'live' ? liveList : pausedList
 
   return (
     <div style={{
       minHeight: '100vh',
-      background: 'radial-gradient(ellipse 70% 50% at 50% 0%, rgba(232,50,26,0.08) 0%, #0A0A0A 55%)',
+      background: '#0A0A0A',
       color: '#fff',
       fontFamily: "'Inter', -apple-system, sans-serif",
     }}>
-      <style>{`
-        @keyframes filterFadeIn {
-          from { opacity: 0; transform: translateY(10px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
-        .restaurant-grid-item {
-          animation: filterFadeIn 0.3s ease both;
-        }
-      `}</style>
 
       {/* Nav */}
       <nav style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '22px 48px',
         borderBottom: '1px solid rgba(255,255,255,0.05)',
+        background: 'rgba(10,10,10,0.95)',
+        position: 'sticky', top: 0, zIndex: 50,
+        backdropFilter: 'blur(12px)',
       }}>
         <button
           onClick={() => navigate('/')}
@@ -107,340 +93,309 @@ export default function Restaurants() {
         </button>
       </nav>
 
-      <div style={{ padding: '60px 48px', maxWidth: '1100px', margin: '0 auto' }}>
-        {/* Header */}
-        <div style={{ marginBottom: '48px' }}>
+      <div style={{ padding: '48px 48px 80px', maxWidth: '1200px', margin: '0 auto' }}>
+
+        {/* Page title */}
+        <div style={{ marginBottom: '40px' }}>
           <div style={{
             fontSize: '11px', fontWeight: 700, letterSpacing: '0.2em',
-            color: '#E8321A', textTransform: 'uppercase', marginBottom: '14px',
+            color: '#E8321A', textTransform: 'uppercase', marginBottom: '10px',
           }}>
             My Restaurants
           </div>
-          <h1 style={{ fontSize: 'clamp(32px, 4vw, 52px)', fontWeight: 900, lineHeight: 1.05, marginBottom: '14px' }}>
-            YOUR CULINARY<br />
+          <h1 style={{ fontSize: 'clamp(28px, 3.5vw, 44px)', fontWeight: 900, lineHeight: 1.05, margin: 0 }}>
+            YOUR CULINARY{' '}
             <span style={{ color: '#E8321A', textShadow: '0 0 40px rgba(232,50,26,0.35)' }}>PORTFOLIO</span>
           </h1>
-          <p style={{ fontSize: '14px', color: '#555', maxWidth: '420px', lineHeight: 1.7 }}>
-            Each restaurant you create gets its own live customer page. Click "Customer Page" to preview it instantly.
-          </p>
         </div>
 
-        {loading && (
+        {/* ── Two top filter buttons ── */}
+        <div style={{ display: 'flex', gap: '14px', marginBottom: '32px' }}>
+          {/* LIVE WEBSITES */}
+          <button
+            onClick={() => setActiveFilter('live')}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '10px',
+              padding: '14px 28px',
+              background: activeFilter === 'live'
+                ? 'linear-gradient(135deg, rgba(34,197,94,0.15) 0%, rgba(34,197,94,0.05) 100%)'
+                : 'rgba(255,255,255,0.03)',
+              border: activeFilter === 'live'
+                ? '1.5px solid rgba(34,197,94,0.5)'
+                : '1.5px solid rgba(255,255,255,0.08)',
+              borderRadius: '14px',
+              color: activeFilter === 'live' ? '#4ade80' : '#555',
+              fontSize: '12px', fontWeight: 800, letterSpacing: '0.12em',
+              cursor: 'pointer',
+              transition: 'all 0.25s',
+              boxShadow: activeFilter === 'live' ? '0 0 24px rgba(34,197,94,0.12)' : 'none',
+            }}
+            onMouseEnter={e => { if (activeFilter !== 'live') { e.currentTarget.style.borderColor = 'rgba(34,197,94,0.25)'; e.currentTarget.style.color = '#4ade80' } }}
+            onMouseLeave={e => { if (activeFilter !== 'live') { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = '#555' } }}
+          >
+            <span style={{
+              width: '8px', height: '8px', borderRadius: '50%',
+              background: activeFilter === 'live' ? '#4ade80' : '#333',
+              boxShadow: activeFilter === 'live' ? '0 0 8px rgba(74,222,128,0.9)' : 'none',
+              flexShrink: 0,
+              transition: 'all 0.25s',
+            }} />
+            LIVE WEBSITES
+            <span style={{
+              background: activeFilter === 'live' ? 'rgba(34,197,94,0.2)' : 'rgba(255,255,255,0.06)',
+              color: activeFilter === 'live' ? '#4ade80' : '#444',
+              fontSize: '11px', fontWeight: 700,
+              padding: '2px 8px', borderRadius: '20px',
+              transition: 'all 0.25s',
+            }}>
+              {liveList.length}
+            </span>
+          </button>
+
+          {/* PAUSED WEBSITES */}
+          <button
+            onClick={() => setActiveFilter('paused')}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '10px',
+              padding: '14px 28px',
+              background: activeFilter === 'paused'
+                ? 'linear-gradient(135deg, rgba(251,191,36,0.12) 0%, rgba(251,191,36,0.04) 100%)'
+                : 'rgba(255,255,255,0.03)',
+              border: activeFilter === 'paused'
+                ? '1.5px solid rgba(251,191,36,0.45)'
+                : '1.5px solid rgba(255,255,255,0.08)',
+              borderRadius: '14px',
+              color: activeFilter === 'paused' ? '#fbbf24' : '#555',
+              fontSize: '12px', fontWeight: 800, letterSpacing: '0.12em',
+              cursor: 'pointer',
+              transition: 'all 0.25s',
+              boxShadow: activeFilter === 'paused' ? '0 0 24px rgba(251,191,36,0.1)' : 'none',
+            }}
+            onMouseEnter={e => { if (activeFilter !== 'paused') { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.25)'; e.currentTarget.style.color = '#fbbf24' } }}
+            onMouseLeave={e => { if (activeFilter !== 'paused') { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = '#555' } }}
+          >
+            <span style={{ fontSize: '13px', opacity: activeFilter === 'paused' ? 1 : 0.35, transition: 'opacity 0.25s' }}>⏸</span>
+            PAUSED WEBSITES
+            <span style={{
+              background: activeFilter === 'paused' ? 'rgba(251,191,36,0.18)' : 'rgba(255,255,255,0.06)',
+              color: activeFilter === 'paused' ? '#fbbf24' : '#444',
+              fontSize: '11px', fontWeight: 700,
+              padding: '2px 8px', borderRadius: '20px',
+              transition: 'all 0.25s',
+            }}>
+              {pausedList.length}
+            </span>
+          </button>
+        </div>
+
+        {/* ── Table ── */}
+        {loading ? (
           <div style={{ textAlign: 'center', padding: '80px 0', color: '#444', fontSize: '14px' }}>
             Loading your restaurants…
           </div>
-        )}
-
-        {!loading && loadError && (
+        ) : loadError ? (
           <div style={{
             display: 'flex', alignItems: 'flex-start', gap: '12px',
-            padding: '16px 20px', borderRadius: '14px', marginBottom: '32px',
+            padding: '16px 20px', borderRadius: '14px',
             background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)',
           }}>
-            <span style={{ fontSize: '18px', lineHeight: 1 }}>⚠️</span>
+            <span style={{ fontSize: '18px' }}>⚠️</span>
             <div>
               <div style={{ fontSize: '13px', fontWeight: 700, color: '#EF4444', marginBottom: '4px' }}>
                 Could not load restaurants
               </div>
-              <div style={{ fontSize: '12px', color: '#888', lineHeight: 1.5 }}>{loadError}</div>
-              {loadError.includes('column') && (
-                <div style={{ fontSize: '11px', color: '#666', marginTop: '6px' }}>
-                  Run <code style={{ color: '#E8321A' }}>supabase/migration_restaurants.sql</code> in your Supabase SQL Editor to add missing columns.
-                </div>
-              )}
+              <div style={{ fontSize: '12px', color: '#888' }}>{loadError}</div>
             </div>
           </div>
-        )}
-
-        {!loading && !loadError && !hasAny ? (
+        ) : restaurants.length === 0 ? (
           <EmptyState onAdd={() => navigate('/create-website')} />
-        ) : !loading && !loadError && (
-          <>
-            {/* ── Filter Tab Bar ── */}
-            <div style={{ marginBottom: '36px', display: 'flex', alignItems: 'center', gap: '20px' }}>
-              <FilterTabs activeFilter={activeFilter} onChange={setActiveFilter} />
-              <span style={{ fontSize: '12px', color: '#444', fontWeight: 500 }}>
-                {filtered.length} restaurant{filtered.length !== 1 ? 's' : ''}
-              </span>
+        ) : (
+          <div style={{
+            background: 'rgba(255,255,255,0.02)',
+            border: '1px solid rgba(255,255,255,0.07)',
+            borderRadius: '20px',
+            overflow: 'hidden',
+          }}>
+            {/* Table header */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: '2fr 120px 1fr 140px 220px',
+              padding: '14px 28px',
+              borderBottom: '1px solid rgba(255,255,255,0.05)',
+              background: 'rgba(255,255,255,0.02)',
+            }}>
+              {['RESTAURANT', 'STATUS', 'PLAN', 'URL', 'ACTIONS'].map(col => (
+                <div key={col} style={{
+                  fontSize: '10px', fontWeight: 700, letterSpacing: '0.15em',
+                  color: '#333', textTransform: 'uppercase',
+                }}>
+                  {col}
+                </div>
+              ))}
             </div>
 
+            {/* Rows */}
             {filtered.length === 0 ? (
               <div style={{
                 display: 'flex', flexDirection: 'column', alignItems: 'center',
-                padding: '80px 24px', textAlign: 'center',
-                color: '#444', fontSize: '14px',
+                padding: '64px 24px', textAlign: 'center',
               }}>
-                <Store size={36} style={{ marginBottom: '16px', opacity: 0.3 }} />
-                <div style={{ fontWeight: 700, marginBottom: '6px' }}>
+                <Store size={32} style={{ color: '#2a2a2a', marginBottom: '14px' }} />
+                <div style={{ fontSize: '14px', fontWeight: 700, color: '#333', marginBottom: '6px' }}>
                   No {activeFilter === 'live' ? 'live' : 'paused'} restaurants
                 </div>
-                <div style={{ fontSize: '12px', color: '#555' }}>
+                <div style={{ fontSize: '12px', color: '#2a2a2a' }}>
                   {activeFilter === 'live'
                     ? 'Activate a restaurant to see it here'
                     : 'Pause a restaurant to see it here'}
                 </div>
               </div>
             ) : (
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
-                gap: '20px',
-              }}>
-                {filtered.map((r, i) => (
-                  <div
-                    key={r.id}
-                    className="restaurant-grid-item"
-                    style={{ animationDelay: `${i * 60}ms` }}
-                  >
-                    <RestaurantCard
-                      restaurant={r}
-                      onCustomer={() => navigate(`/restaurant/${r.slug || r.id}`)}
-                      onAdmin={() => navigate(`/admin/${r.id}`)}
-                    />
-                  </div>
-                ))}
-              </div>
+              filtered.map((r, i) => (
+                <RestaurantRow
+                  key={r.id}
+                  restaurant={r}
+                  isLast={i === filtered.length - 1}
+                  onCustomer={() => navigate(`/restaurant/${r.slug || r.id}`)}
+                  onAdmin={() => navigate(`/admin/${r.id}`)}
+                />
+              ))
             )}
-          </>
+
+            {/* Footer count */}
+            <div style={{
+              padding: '14px 28px',
+              borderTop: '1px solid rgba(255,255,255,0.05)',
+            }}>
+              <span style={{ fontSize: '12px', color: '#333' }}>
+                {filtered.length} {filtered.length === 1 ? 'website' : 'websites'}
+              </span>
+            </div>
+          </div>
         )}
       </div>
     </div>
   )
 }
 
-function FilterTabs({ activeFilter, onChange }) {
-  return (
-    <div style={{ position: 'relative', display: 'inline-flex' }}>
-      <div style={{
-        display: 'flex',
-        background: '#161616',
-        borderRadius: '60px',
-        padding: '5px',
-        gap: '2px',
-        border: '1px solid rgba(255,255,255,0.07)',
-        boxShadow: '0 4px 24px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.04)',
-        position: 'relative',
-      }}>
-        {['live', 'paused'].map(tab => {
-          const isActive = activeFilter === tab
-          return (
-            <button
-              key={tab}
-              onClick={() => onChange(tab)}
-              style={{
-                padding: '11px 36px',
-                borderRadius: '50px',
-                border: 'none',
-                cursor: 'pointer',
-                fontSize: '13px',
-                fontWeight: 800,
-                letterSpacing: '0.12em',
-                textTransform: 'uppercase',
-                transition: 'all 0.25s cubic-bezier(0.4,0,0.2,1)',
-                background: isActive ? '#fff' : 'transparent',
-                color: isActive ? '#0A0A0A' : '#444',
-                boxShadow: isActive
-                  ? '0 0 20px rgba(255,255,255,0.55), 0 0 40px rgba(255,255,255,0.2), 0 2px 8px rgba(0,0,0,0.3)'
-                  : 'none',
-                position: 'relative',
-                zIndex: 1,
-              }}
-              onMouseEnter={e => { if (!isActive) e.currentTarget.style.color = '#888' }}
-              onMouseLeave={e => { if (!isActive) e.currentTarget.style.color = '#444' }}
-            >
-              {tab === 'live' && (
-                <span style={{
-                  display: 'inline-block',
-                  width: '7px', height: '7px', borderRadius: '50%',
-                  background: isActive ? '#22c55e' : '#333',
-                  boxShadow: isActive ? '0 0 6px rgba(34,197,94,0.8)' : 'none',
-                  marginRight: '8px',
-                  verticalAlign: 'middle',
-                  marginTop: '-2px',
-                  transition: 'all 0.25s',
-                }} />
-              )}
-              {tab === 'paused' && (
-                <span style={{
-                  display: 'inline-block',
-                  marginRight: '8px',
-                  verticalAlign: 'middle',
-                  marginTop: '-2px',
-                  fontSize: '11px',
-                  opacity: isActive ? 1 : 0.4,
-                  transition: 'opacity 0.25s',
-                }}>⏸</span>
-              )}
-              {tab}
-            </button>
-          )
-        })}
-      </div>
-      {/* Decorative sparkle */}
-      <span style={{
-        position: 'absolute',
-        bottom: '-4px',
-        right: '-8px',
-        fontSize: '11px',
-        color: 'rgba(255,255,255,0.25)',
-        pointerEvents: 'none',
-        userSelect: 'none',
-        lineHeight: 1,
-      }}>✦</span>
-    </div>
-  )
-}
-
-
-function RestaurantCard({ restaurant, onAdmin, onCustomer }) {
+function RestaurantRow({ restaurant, isLast, onCustomer, onAdmin }) {
   const slug = restaurant.slug || restaurant.id
+  const isActive = restaurant.status === 'active'
   const initials = restaurant.name
     .split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase()
-  const isActive = restaurant.status === 'active'
 
   return (
     <div style={{
-      background: 'rgba(255,255,255,0.03)',
-      border: '1px solid rgba(255,255,255,0.08)',
-      borderRadius: '20px',
-      overflow: 'hidden',
-      transition: 'border-color 0.25s, box-shadow 0.25s',
+      display: 'grid',
+      gridTemplateColumns: '2fr 120px 1fr 140px 220px',
+      alignItems: 'center',
+      padding: '18px 28px',
+      borderBottom: isLast ? 'none' : '1px solid rgba(255,255,255,0.04)',
+      transition: 'background 0.2s',
     }}
-      onMouseEnter={e => {
-        e.currentTarget.style.borderColor = 'rgba(232,50,26,0.3)'
-        e.currentTarget.style.boxShadow = '0 0 30px rgba(232,50,26,0.08)'
-      }}
-      onMouseLeave={e => {
-        e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'
-        e.currentTarget.style.boxShadow = 'none'
-      }}
+      onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.02)'}
+      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
     >
-      {/* Card header */}
-      <div style={{
-        height: '120px',
-        background: restaurant.images?.[0]
-          ? `url(${restaurant.images[0]}) center/cover no-repeat`
-          : 'linear-gradient(135deg, rgba(232,50,26,0.15) 0%, rgba(10,10,10,0.8) 100%)',
-        position: 'relative',
-      }}>
+      {/* Restaurant name + initials */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '14px', minWidth: 0 }}>
         <div style={{
-          position: 'absolute', inset: 0,
-          background: 'linear-gradient(to bottom, rgba(0,0,0,0.1), rgba(0,0,0,0.7))',
-        }} />
-
-        {/* Top badges row */}
-        <div style={{
-          position: 'absolute', top: '12px', right: '12px',
-          display: 'flex', alignItems: 'center', gap: '6px',
-        }}>
-          {restaurant.plan && <PlanBadge plan={restaurant.plan} />}
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: '5px',
-            background: isActive ? 'rgba(74,222,128,0.15)' : 'rgba(255,255,255,0.08)',
-            border: isActive ? '1px solid rgba(74,222,128,0.3)' : '1px solid rgba(255,255,255,0.12)',
-            borderRadius: '20px', padding: '4px 10px',
-          }}>
-            <div style={{
-              width: '6px', height: '6px', borderRadius: '50%',
-              background: isActive ? '#4ade80' : '#555',
-              boxShadow: isActive ? '0 0 6px rgba(74,222,128,0.8)' : 'none',
-            }} />
-            <span style={{ fontSize: '10px', fontWeight: 700, color: isActive ? '#4ade80' : '#666', letterSpacing: '0.06em' }}>
-              {isActive ? 'LIVE' : 'PAUSED'}
-            </span>
-          </div>
-        </div>
-
-        {/* Initials avatar */}
-        <div style={{
-          position: 'absolute', bottom: '-24px', left: '20px',
-          width: '48px', height: '48px', borderRadius: '14px',
-          background: '#E8321A', border: '3px solid #0A0A0A',
+          width: '40px', height: '40px', borderRadius: '12px', flexShrink: 0,
+          background: restaurant.images?.[0]
+            ? `url(${restaurant.images[0]}) center/cover no-repeat`
+            : '#E8321A',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: '16px', fontWeight: 900, color: '#fff',
-          boxShadow: '0 4px 16px rgba(232,50,26,0.5)',
+          fontSize: '13px', fontWeight: 900, color: '#fff',
+          boxShadow: '0 4px 12px rgba(232,50,26,0.35)',
         }}>
-          {initials}
+          {!restaurant.images?.[0] && initials}
+        </div>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontSize: '14px', fontWeight: 700, color: '#fff', marginBottom: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {restaurant.name}
+          </div>
+          {restaurant.tables && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#444' }}>
+              <Utensils size={10} /> {restaurant.tables} tables
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Card body */}
-      <div style={{ padding: '32px 20px 20px' }}>
-        <div style={{ marginBottom: '6px', fontSize: '17px', fontWeight: 800, letterSpacing: '0.01em' }}>
-          {restaurant.name}
-        </div>
-
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginBottom: '16px' }}>
-          {restaurant.location && (
-            <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#666' }}>
-              <MapPin size={11} /> {restaurant.location}
-            </span>
-          )}
-          {restaurant.rating && (
-            <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#FFB800' }}>
-              <Star size={11} fill="#FFB800" /> {restaurant.rating}
-            </span>
-          )}
-          {restaurant.tables && (
-            <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#666' }}>
-              <Utensils size={11} /> {restaurant.tables} tables
-            </span>
-          )}
-        </div>
-
-        {restaurant.description && (
-          <p style={{ fontSize: '12px', color: '#555', lineHeight: 1.6, marginBottom: '18px' }}>
-            {restaurant.description.slice(0, 90)}{restaurant.description.length > 90 ? '…' : ''}
-          </p>
-        )}
-
-        {/* URL preview */}
+      {/* Status */}
+      <div>
         <div style={{
-          display: 'flex', alignItems: 'center', gap: '6px',
-          background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)',
-          borderRadius: '8px', padding: '7px 10px', marginBottom: '16px',
+          display: 'inline-flex', alignItems: 'center', gap: '6px',
+          background: isActive ? 'rgba(34,197,94,0.1)' : 'rgba(255,255,255,0.05)',
+          border: isActive ? '1px solid rgba(34,197,94,0.25)' : '1px solid rgba(255,255,255,0.08)',
+          borderRadius: '20px', padding: '5px 12px',
         }}>
-          <Globe size={11} color="#444" />
-          <span style={{ fontSize: '11px', color: '#555', fontFamily: 'monospace' }}>
-            /restaurant/{slug}
+          <div style={{
+            width: '6px', height: '6px', borderRadius: '50%',
+            background: isActive ? '#4ade80' : '#444',
+            boxShadow: isActive ? '0 0 6px rgba(74,222,128,0.8)' : 'none',
+          }} />
+          <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em', color: isActive ? '#4ade80' : '#555' }}>
+            {isActive ? 'LIVE' : 'PAUSED'}
           </span>
         </div>
+      </div>
 
-        {/* Action buttons */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-          <button
-            onClick={onCustomer}
-            style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '7px',
-              background: '#E8321A', border: 'none', borderRadius: '12px',
-              padding: '12px 8px', color: '#fff', fontSize: '12px', fontWeight: 700,
-              cursor: 'pointer', letterSpacing: '0.04em',
-              boxShadow: '0 4px 14px rgba(232,50,26,0.35)',
-              transition: 'all 0.2s',
-            }}
-            onMouseEnter={e => { e.currentTarget.style.background = '#ff4d35'; e.currentTarget.style.transform = 'translateY(-1px)' }}
-            onMouseLeave={e => { e.currentTarget.style.background = '#E8321A'; e.currentTarget.style.transform = 'none' }}
-          >
-            <ExternalLink size={13} />
-            Customer Page
-          </button>
+      {/* Plan */}
+      <div>
+        {restaurant.plan
+          ? <PlanBadge plan={restaurant.plan} />
+          : <span style={{ fontSize: '11px', color: '#333' }}>—</span>
+        }
+      </div>
 
-          <button
-            onClick={onAdmin}
-            style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '7px',
-              background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
-              borderRadius: '12px', padding: '12px 8px', color: '#ccc',
-              fontSize: '12px', fontWeight: 700, cursor: 'pointer', letterSpacing: '0.04em',
-              transition: 'all 0.2s',
-            }}
-            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; e.currentTarget.style.color = '#fff' }}
-            onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.color = '#ccc' }}
-          >
-            <Settings size={13} />
-            Admin Page
-          </button>
-        </div>
+      {/* URL */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '5px', minWidth: 0 }}>
+        <Globe size={10} color="#333" style={{ flexShrink: 0 }} />
+        <span style={{
+          fontSize: '11px', color: '#444', fontFamily: 'monospace',
+          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+        }}>
+          /restaurant/{slug}
+        </span>
+      </div>
+
+      {/* Actions */}
+      <div style={{ display: 'flex', gap: '8px' }}>
+        <button
+          onClick={onCustomer}
+          style={{
+            display: 'flex', alignItems: 'center', gap: '6px',
+            padding: '8px 14px',
+            background: '#E8321A', border: 'none', borderRadius: '10px',
+            color: '#fff', fontSize: '11px', fontWeight: 700, letterSpacing: '0.04em',
+            cursor: 'pointer',
+            boxShadow: '0 2px 10px rgba(232,50,26,0.35)',
+            transition: 'all 0.2s',
+            whiteSpace: 'nowrap',
+          }}
+          onMouseEnter={e => { e.currentTarget.style.background = '#ff4d35'; e.currentTarget.style.transform = 'translateY(-1px)' }}
+          onMouseLeave={e => { e.currentTarget.style.background = '#E8321A'; e.currentTarget.style.transform = 'none' }}
+        >
+          <ExternalLink size={11} /> Customer
+        </button>
+        <button
+          onClick={onAdmin}
+          style={{
+            display: 'flex', alignItems: 'center', gap: '6px',
+            padding: '8px 14px',
+            background: 'rgba(255,255,255,0.05)',
+            border: '1px solid rgba(255,255,255,0.1)',
+            borderRadius: '10px',
+            color: '#aaa', fontSize: '11px', fontWeight: 700, letterSpacing: '0.04em',
+            cursor: 'pointer',
+            transition: 'all 0.2s',
+            whiteSpace: 'nowrap',
+          }}
+          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; e.currentTarget.style.color = '#fff' }}
+          onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.color = '#aaa' }}
+        >
+          <Settings size={11} /> Admin
+        </button>
       </div>
     </div>
   )
@@ -462,7 +417,7 @@ function EmptyState({ onAdd }) {
       </div>
       <div style={{ fontSize: '20px', fontWeight: 800, marginBottom: '10px' }}>No Restaurants Yet</div>
       <p style={{ fontSize: '13px', color: '#555', maxWidth: '320px', lineHeight: 1.7, marginBottom: '36px' }}>
-        Create your first restaurant and it will get its own live customer page instantly — just fill the form and you're done.
+        Create your first restaurant and it will get its own live customer page instantly.
       </p>
       <button
         onClick={onAdd}
