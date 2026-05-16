@@ -1584,7 +1584,7 @@ function DemoWebsitesPanel({ restaurants, onEdit, onDelete }) {
                           {[
                             { label: 'VIEW',   color: '#22c55e', onClick: () => r.slug ? navigate(`/restaurant/${r.slug}`) : null },
                             { label: 'ADMIN',  color: '#3B82F6', onClick: () => navigate(`/admin/${r.id}`) },
-                            { label: 'MASTER', color: '#A855F7', onClick: () => {} },
+                            { label: 'MASTER', color: '#A855F7', onClick: () => { console.log('Opening MASTER for:', r.uid); navigate(`/master-control/${r.uid}`) } },
                           ].map(({ label, color, onClick }) => (
                             <button
                               key={label}

@@ -110,7 +110,8 @@ function AppRoutes() {
 
       {/* Protected — require valid session */}
       <Route path="/dashboard"         element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-      <Route path="/master-control"    element={<ProtectedRoute><MasterControl /></ProtectedRoute>} />
+      <Route path="/master-control"        element={<ProtectedRoute><MasterControl /></ProtectedRoute>} />
+      <Route path="/master-control/:uid"  element={<ProtectedRoute><MasterControl /></ProtectedRoute>} />
       <Route path="/admin/:id"         element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
       <Route path="/admin/:id/team"    element={<ProtectedRoute><TeamMembers /></ProtectedRoute>} />
       <Route path="/admin/:id/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />

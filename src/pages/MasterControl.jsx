@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import Sidebar from '../components/Sidebar'
 import AdminHeader from '../components/AdminHeader'
 import HelpRequestsDrawer from '../components/HelpRequestsDrawer'
@@ -39,6 +39,7 @@ async function resolveAdminTargetByUID(uid) {
 
 export default function MasterControl() {
   const navigate = useNavigate()
+  const { uid: uidParam } = useParams()
   const { isSuperAdmin, loading: authLoading } = useAuth()
   const [allowed, setAllowed] = useState(null)
   const [showModal, setShowModal] = useState(false)
@@ -48,6 +49,8 @@ export default function MasterControl() {
   const [error, setError] = useState('')
   const [inlineUid, setInlineUid] = useState('')
   const [inlineError, setInlineError] = useState('')
+  const [autoLoading, setAutoLoading] = useState(false)
+  const [autoError, setAutoError] = useState('')
 
   useEffect(() => {
     if (authLoading) return
@@ -61,6 +64,28 @@ export default function MasterControl() {
     setUid(last)
     setInlineUid(last)
   }, [isSuperAdmin, authLoading, navigate])
+
+  // Auto-navigate when a UID is passed via URL param (e.g. /master-control/6920307970)
+  useEffect(() => {
+    if (!uidParam || !allowed) return
+    const trimmed = uidParam.trim()
+    if (!trimmed) return
+    console.log('Opening MASTER for:', trimmed)
+    setAutoLoading(true)
+    setAutoError('')
+    resolveAdminTargetByUID(trimmed).then(target => {
+      if (!target) {
+        setAutoLoading(false)
+        setAutoError(`Restaurant UID "${trimmed}" not found.`)
+        return
+      }
+      localStorage.setItem(LAST_UID_KEY, trimmed)
+      navigate(`/admin/${target.id}?from=master`, { replace: true })
+    }).catch(() => {
+      setAutoLoading(false)
+      setAutoError('Failed to resolve restaurant. Please try manually.')
+    })
+  }, [uidParam, allowed, navigate])
 
   async function accessPanel(value, setErr) {
     const trimmed = String(value || '').trim()
@@ -84,6 +109,49 @@ export default function MasterControl() {
         <Sidebar />
         <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#555', fontSize: '14px' }}>
           Verifying access…
+        </div>
+      </div>
+    )
+  }
+
+  if (autoLoading) {
+    return (
+      <div style={{ display: 'flex', height: '100vh', background: '#0A0A0A', overflow: 'hidden' }}>
+        <Sidebar />
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '16px' }}>
+          <div style={{
+            width: '36px', height: '36px', borderRadius: '50%',
+            border: '3px solid rgba(168,85,247,0.2)',
+            borderTopColor: '#A855F7',
+            animation: 'spin 0.8s linear infinite',
+          }} />
+          <span style={{ color: '#888', fontSize: '13px', letterSpacing: '0.05em' }}>
+            Opening Master Control for UID: {uidParam}…
+          </span>
+          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+        </div>
+      </div>
+    )
+  }
+
+  if (autoError) {
+    return (
+      <div style={{ display: 'flex', height: '100vh', background: '#0A0A0A', overflow: 'hidden' }}>
+        <Sidebar />
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '16px' }}>
+          <AlertCircle size={32} color="#EF4444" />
+          <span style={{ color: '#EF4444', fontSize: '14px' }}>{autoError}</span>
+          <button
+            onClick={() => navigate('/master-control')}
+            style={{
+              marginTop: '8px', padding: '10px 20px',
+              background: 'rgba(168,85,247,0.1)', border: '1px solid rgba(168,85,247,0.3)',
+              borderRadius: '10px', color: '#A855F7',
+              fontSize: '13px', fontWeight: 600, cursor: 'pointer',
+            }}
+          >
+            ← Back to Master Control
+          </button>
         </div>
       </div>
     )
