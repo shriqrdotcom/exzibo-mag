@@ -565,7 +565,6 @@ export default function Dashboard() {
                       <td style={{ padding: '20px 28px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                           <EditRowBtn onClick={() => openEditModal(r)} />
-                          <DeleteBtn onClick={() => openDeleteModal(r)} />
                         </div>
                       </td>
                     </tr>
