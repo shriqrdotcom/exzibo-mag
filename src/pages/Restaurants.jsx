@@ -283,6 +283,7 @@ function RestaurantRow({ restaurant, isLast, onCustomer, onAdmin }) {
   const isActive = restaurant.status === 'active'
   const initials = restaurant.name
     .split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase()
+  const thumbSrc = restaurant.logo || restaurant.images?.[0] || null
 
   return (
     <div style={{
@@ -300,14 +301,14 @@ function RestaurantRow({ restaurant, isLast, onCustomer, onAdmin }) {
       <div style={{ display: 'flex', alignItems: 'center', gap: '14px', minWidth: 0 }}>
         <div style={{
           width: '40px', height: '40px', borderRadius: '12px', flexShrink: 0,
-          background: restaurant.logo
-            ? `url(${restaurant.logo}) center/cover no-repeat`
+          background: thumbSrc
+            ? `url(${thumbSrc}) center/cover no-repeat`
             : '#E8321A',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           fontSize: '13px', fontWeight: 900, color: '#fff',
           boxShadow: '0 4px 12px rgba(232,50,26,0.35)',
         }}>
-          {!restaurant.logo && initials}
+          {!thumbSrc && initials}
         </div>
         <div style={{ minWidth: 0 }}>
           <div style={{ fontSize: '14px', fontWeight: 700, color: '#fff', marginBottom: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
