@@ -1614,7 +1614,6 @@ function DemoWebsitesPanel({ restaurants, onEdit, onDelete }) {
                             </button>
                           ))}
                           <EditRowBtn onClick={() => onEdit(r)} />
-                          <DeleteBtn onClick={() => onDelete(r)} />
                         </div>
                       </td>
                     </tr>
