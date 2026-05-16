@@ -48,9 +48,40 @@ export default function Restaurants() {
       color: '#fff',
       fontFamily: "'Inter', -apple-system, sans-serif",
     }}>
+      <style>{`
+        @media (max-width: 640px) {
+          .rest-nav { padding: 16px 20px !important; }
+          .rest-page-body { padding: 28px 16px 60px !important; }
+          .rest-filter-wrap { gap: 10px !important; }
+          .rest-filter-btn { padding: 11px 16px !important; font-size: 11px !important; }
+          .rest-table-header { display: none !important; }
+          .rest-row {
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 10px !important;
+            padding: 16px !important;
+          }
+          .rest-row-meta { display: flex !important; }
+          .rest-tables-desktop { display: none !important; }
+          .rest-col-status { display: none !important; }
+          .rest-col-plan  { display: none !important; }
+          .rest-col-url   { display: none !important; }
+          .rest-row-actions {
+            display: flex !important;
+            gap: 8px !important;
+            width: 100% !important;
+          }
+          .rest-row-actions button {
+            flex: 1 !important;
+            justify-content: center !important;
+            padding: 11px 8px !important;
+            font-size: 13px !important;
+          }
+        }
+      `}</style>
 
       {/* Nav */}
-      <nav style={{
+      <nav className="rest-nav" style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '22px 48px',
         borderBottom: '1px solid rgba(255,255,255,0.05)',
@@ -93,7 +124,7 @@ export default function Restaurants() {
         </button>
       </nav>
 
-      <div style={{ padding: '48px 48px 80px', maxWidth: '1200px', margin: '0 auto' }}>
+      <div className="rest-page-body" style={{ padding: '48px 48px 80px', maxWidth: '1200px', margin: '0 auto' }}>
 
         {/* Page title */}
         <div style={{ marginBottom: '40px' }}>
@@ -110,9 +141,10 @@ export default function Restaurants() {
         </div>
 
         {/* ── Two top filter buttons ── */}
-        <div style={{ display: 'flex', gap: '14px', marginBottom: '32px' }}>
+        <div className="rest-filter-wrap" style={{ display: 'flex', gap: '14px', marginBottom: '32px' }}>
           {/* LIVE WEBSITES */}
           <button
+            className="rest-filter-btn"
             onClick={() => setActiveFilter('live')}
             style={{
               display: 'flex', alignItems: 'center', gap: '10px',
@@ -154,6 +186,7 @@ export default function Restaurants() {
 
           {/* PAUSED WEBSITES */}
           <button
+            className="rest-filter-btn"
             onClick={() => setActiveFilter('paused')}
             style={{
               display: 'flex', alignItems: 'center', gap: '10px',
@@ -217,7 +250,7 @@ export default function Restaurants() {
             overflow: 'hidden',
           }}>
             {/* Table header */}
-            <div style={{
+            <div className="rest-table-header" style={{
               display: 'grid',
               gridTemplateColumns: '2fr 120px 1fr 140px 220px',
               padding: '14px 28px',
@@ -286,7 +319,7 @@ function RestaurantRow({ restaurant, isLast, onCustomer, onAdmin }) {
   const thumbSrc = restaurant.logo || restaurant.images?.[0] || null
 
   return (
-    <div style={{
+    <div className="rest-row" style={{
       display: 'grid',
       gridTemplateColumns: '2fr 120px 1fr 140px 220px',
       alignItems: 'center',
@@ -297,33 +330,54 @@ function RestaurantRow({ restaurant, isLast, onCustomer, onAdmin }) {
       onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.02)'}
       onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
     >
-      {/* Restaurant name + initials */}
+      {/* Restaurant name + logo */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '14px', minWidth: 0 }}>
         <div style={{
           width: '40px', height: '40px', borderRadius: '12px', flexShrink: 0,
-          background: thumbSrc
-            ? `url(${thumbSrc}) center/cover no-repeat`
-            : '#E8321A',
+          background: thumbSrc ? `url(${thumbSrc}) center/cover no-repeat` : '#E8321A',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           fontSize: '13px', fontWeight: 900, color: '#fff',
           boxShadow: '0 4px 12px rgba(232,50,26,0.35)',
         }}>
           {!thumbSrc && initials}
         </div>
-        <div style={{ minWidth: 0 }}>
+        <div className="rest-row-info" style={{ minWidth: 0 }}>
           <div style={{ fontSize: '14px', fontWeight: 700, color: '#fff', marginBottom: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {restaurant.name}
           </div>
+          {/* On mobile this row shows status + tables inline under the name */}
+          <div className="rest-row-meta" style={{ display: 'none' }}>
+            <div style={{
+              display: 'inline-flex', alignItems: 'center', gap: '5px',
+              background: isActive ? 'rgba(34,197,94,0.1)' : 'rgba(255,255,255,0.05)',
+              border: isActive ? '1px solid rgba(34,197,94,0.25)' : '1px solid rgba(255,255,255,0.08)',
+              borderRadius: '20px', padding: '3px 9px',
+            }}>
+              <div style={{
+                width: '5px', height: '5px', borderRadius: '50%',
+                background: isActive ? '#4ade80' : '#444',
+                boxShadow: isActive ? '0 0 5px rgba(74,222,128,0.8)' : 'none',
+              }} />
+              <span style={{ fontSize: '10px', fontWeight: 700, color: isActive ? '#4ade80' : '#555' }}>
+                {isActive ? 'LIVE' : 'PAUSED'}
+              </span>
+            </div>
+            {restaurant.tables && (
+              <span style={{ fontSize: '11px', color: '#444', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                <Utensils size={10} /> {restaurant.tables} tables
+              </span>
+            )}
+          </div>
           {restaurant.tables && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#444' }}>
+            <div className="rest-tables-desktop" style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#444' }}>
               <Utensils size={10} /> {restaurant.tables} tables
             </div>
           )}
         </div>
       </div>
 
-      {/* Status */}
-      <div>
+      {/* Status — hidden on mobile (shown inline above) */}
+      <div className="rest-col-status">
         <div style={{
           display: 'inline-flex', alignItems: 'center', gap: '6px',
           background: isActive ? 'rgba(34,197,94,0.1)' : 'rgba(255,255,255,0.05)',
@@ -342,7 +396,7 @@ function RestaurantRow({ restaurant, isLast, onCustomer, onAdmin }) {
       </div>
 
       {/* Plan */}
-      <div>
+      <div className="rest-col-plan">
         {restaurant.plan
           ? <PlanBadge plan={restaurant.plan} />
           : <span style={{ fontSize: '11px', color: '#333' }}>—</span>
@@ -350,7 +404,7 @@ function RestaurantRow({ restaurant, isLast, onCustomer, onAdmin }) {
       </div>
 
       {/* URL */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '5px', minWidth: 0 }}>
+      <div className="rest-col-url" style={{ display: 'flex', alignItems: 'center', gap: '5px', minWidth: 0 }}>
         <Globe size={10} color="#333" style={{ flexShrink: 0 }} />
         <span style={{
           fontSize: '11px', color: '#444', fontFamily: 'monospace',
@@ -361,7 +415,7 @@ function RestaurantRow({ restaurant, isLast, onCustomer, onAdmin }) {
       </div>
 
       {/* Actions */}
-      <div style={{ display: 'flex', gap: '8px' }}>
+      <div className="rest-row-actions" style={{ display: 'flex', gap: '8px' }}>
         <button
           onClick={onCustomer}
           style={{
