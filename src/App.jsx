@@ -100,49 +100,53 @@ function SuperAdminRoute({ children }) {
 }
 
 // ── Slug resolver for dashboard subdomain ───────────────────────────────────
-// Reads :slug from URL params, fetches the full restaurant list via
-// getRestaurants(), finds the matching row, then redirects internally so that
-// the target components (AdminDashboard, MasterControl, etc.) can work without
-// any modification — they read :id / :uid from params as usual.
+// Reads :restaurantSlug from URL params, fetches the restaurant list,
+// finds the matching row, then renders the target component by redirecting
+// to an internal route that carries the resolved :id. Role subPaths map
+// directly to the corresponding internal route.
+//
+// Supported subPaths and their internal targets:
+//   (none)      → /admin/:id              base dashboard
+//   "admin"     → /admin/:id              admin role view
+//   "manager"   → /admin/:id              manager role view
+//   "employee"  → /admin/:id              employee role view
+//   "master"    → /master-control/:uid    super-admin control panel
 function SlugResolver({ subPath }) {
-  const { slug } = useParams()
+  const { restaurantSlug } = useParams()
   const navigate = useNavigate()
   const [notFound, setNotFound] = useState(false)
 
   useEffect(() => {
-    if (!slug) { setNotFound(true); return }
+    if (!restaurantSlug) { setNotFound(true); return }
     getRestaurants()
       .then(list => {
-        const restaurant = list.find(r => r.slug === slug)
+        const restaurant = list.find(r => r.slug === restaurantSlug)
         if (!restaurant || !restaurant.id) { setNotFound(true); return }
+
         let target
         if (subPath === 'master') {
-          // Always route through MasterControl using the restaurant's UID.
-          // MasterControl auto-resolves uid → id and opens the admin panel in
-          // master mode. If uid is absent (legacy row), we fall back to the
-          // internal master-control page without a uid param so the user can
-          // enter it manually — this keeps behavior deterministic.
           target = restaurant.uid
             ? `/master-control/${restaurant.uid}`
             : '/master-control'
-        } else if (subPath === 'team') {
-          target = `/admin/${restaurant.id}/team`
-        } else if (subPath === 'profile') {
-          target = `/admin/${restaurant.id}/profile`
         } else {
+          // base, admin, manager, employee — all render AdminDashboard
           target = `/admin/${restaurant.id}`
         }
         navigate(target, { replace: true })
       })
       .catch(() => setNotFound(true))
-  }, [slug, subPath, navigate])
+  }, [restaurantSlug, subPath, navigate])
 
-  if (notFound) return <NotFound message={`Restaurant "${slug}" not found`} />
+  if (notFound) return <NotFound message={`Restaurant "${restaurantSlug}" not found`} />
   return <GlobalLoader />
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
 // SUPERADMIN SUBDOMAIN APP   superadmin.exzibo.online
+//
+// Routes:
+//   /      → SuperAdminDashboard (superadmin only)
+//   /auth  → Auth (login)
 // ═══════════════════════════════════════════════════════════════════════════
 function SuperAdminApp() {
   const { loading } = useAuth()
@@ -160,36 +164,39 @@ function SuperAdminApp() {
 
 // ═══════════════════════════════════════════════════════════════════════════
 // MENU SUBDOMAIN APP   menu.exzibo.online
+//
 // Fully public — no auth required.
+//
+// Routes:
+//   /:restaurantSlug              → public restaurant website / menu
+//   /:restaurantSlug/:pageSlug    → sub-page (e.g. food detail)
+//   *                             → 404
 // ═══════════════════════════════════════════════════════════════════════════
 function MenuApp() {
   return (
     <Routes>
-      {/* Primary slug-based routes */}
-      <Route path="/:slug"                      element={<RestaurantWebsite />} />
-      <Route path="/:slug/food/:itemName"        element={<FoodDetail />} />
-
-      {/* Compatibility aliases — RestaurantWebsite and FoodDetail use navigate()
-          with /restaurant/:slug paths internally; these aliases ensure those
-          navigations resolve correctly instead of hitting the 404 catch-all. */}
-      <Route path="/restaurant/:slug"                element={<RestaurantWebsite />} />
-      <Route path="/restaurant/:slug/food/:itemName" element={<FoodDetail />} />
-
-      {/* QR / table-order routes */}
-      <Route path="/m/:linkName/:tableNumber"    element={<MenuLinkRoute />} />
-      <Route path="/m/:linkName"                 element={<MenuLinkRoute />} />
-      <Route path="/table"                       element={<TablePage />} />
-
-      {/* Root → landing page */}
-      <Route path="/" element={<Landing />} />
-      <Route path="*" element={<NotFound />} />
+      <Route path="/:slug"                   element={<RestaurantWebsite />} />
+      <Route path="/:slug/food/:itemName"    element={<FoodDetail />} />
+      <Route path="*"                        element={<NotFound />} />
     </Routes>
   )
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
 // DASHBOARD SUBDOMAIN APP   dashboard.exzibo.online
-// Slug-based entry → resolves to uuid → renders existing admin components.
+//
+// Routes:
+//   /                           → login (unauthenticated) or hint (authenticated)
+//   /auth                       → Auth page
+//   /:restaurantSlug            → base dashboard       (any authenticated user)
+//   /:restaurantSlug/admin      → admin role view      (authenticated)
+//   /:restaurantSlug/manager    → manager role view    (authenticated)
+//   /:restaurantSlug/employee   → employee role view   (authenticated)
+//   /:restaurantSlug/master     → master control panel (superadmin only)
+//
+// Slug resolution: each slug route resolves the restaurant name to its UUID
+// via SlugResolver, then renders the appropriate component by redirecting
+// to an internal /admin/:id or /master-control/:uid path.
 // ═══════════════════════════════════════════════════════════════════════════
 function DashboardApp() {
   const { loading, user } = useAuth()
@@ -211,29 +218,37 @@ function DashboardApp() {
 
   return (
     <Routes>
-      {/* Auth page for this subdomain */}
+      {/* Auth */}
       <Route path="/auth" element={<Auth />} />
 
-      {/* Slug-based entry points — each resolves to an internal /admin/:id route */}
-      <Route path="/:slug"         element={<ProtectedRoute><SlugResolver /></ProtectedRoute>} />
-      <Route path="/:slug/team"    element={<ProtectedRoute><SlugResolver subPath="team" /></ProtectedRoute>} />
-      <Route path="/:slug/profile" element={<ProtectedRoute><SlugResolver subPath="profile" /></ProtectedRoute>} />
+      {/* ── Slug-based role routes ── */}
+      <Route path="/:restaurantSlug" element={
+        <ProtectedRoute><SlugResolver /></ProtectedRoute>
+      } />
+      <Route path="/:restaurantSlug/admin" element={
+        <ProtectedRoute><SlugResolver subPath="admin" /></ProtectedRoute>
+      } />
+      <Route path="/:restaurantSlug/manager" element={
+        <ProtectedRoute><SlugResolver subPath="manager" /></ProtectedRoute>
+      } />
+      <Route path="/:restaurantSlug/employee" element={
+        <ProtectedRoute><SlugResolver subPath="employee" /></ProtectedRoute>
+      } />
+      <Route path="/:restaurantSlug/master" element={
+        <SuperAdminRoute><SlugResolver subPath="master" /></SuperAdminRoute>
+      } />
 
-      {/* Master route: SuperAdmin-gated — slug resolves to /admin/:id?from=master */}
-      <Route path="/:slug/master"  element={<SuperAdminRoute><SlugResolver subPath="master" /></SuperAdminRoute>} />
-
-      {/* Internal routes that SlugResolver redirects to (components read :id from params) */}
-      <Route path="/admin/:id"         element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
-      <Route path="/admin/:id/team"    element={<ProtectedRoute><TeamMembers /></ProtectedRoute>} />
-      <Route path="/admin/:id/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
-      {/* MasterControl internal route — rendered after slug/master resolves */}
+      {/* ── Internal routes — rendered after SlugResolver redirects ── */}
+      <Route path="/admin/:id"           element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
+      <Route path="/admin/:id/team"      element={<ProtectedRoute><TeamMembers /></ProtectedRoute>} />
+      <Route path="/admin/:id/profile"   element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
       <Route path="/master-control"      element={<SuperAdminRoute><MasterControl /></SuperAdminRoute>} />
       <Route path="/master-control/:uid" element={<SuperAdminRoute><MasterControl /></SuperAdminRoute>} />
 
-      {/* Root → prompt for a restaurant */}
+      {/* Root */}
       <Route path="/" element={
         user
-          ? <NotFound message="Please use a restaurant link, e.g. dashboard.exzibo.online/your-restaurant" />
+          ? <NotFound message="Please open a restaurant link, e.g. dashboard.exzibo.online/your-restaurant" />
           : <Navigate to="/auth" replace />
       } />
 
@@ -243,8 +258,9 @@ function DashboardApp() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// DEFAULT APP (dev / Replit / main domain)
-// All existing routes — completely unchanged.
+// DEFAULT APP (dev / Replit preview / main domain)
+// All existing routes — completely unchanged. Used when no known subdomain
+// is detected (localhost, *.replit.dev, *.replit.app, exzibo.online).
 // ═══════════════════════════════════════════════════════════════════════════
 function DefaultApp() {
   const { loading, user } = useAuth()
@@ -287,7 +303,7 @@ function DefaultApp() {
       <Route path="/profile"                 element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
       <Route path="/super-admin"             element={<ProtectedRoute><SuperAdminDashboard /></ProtectedRoute>} />
       <Route path="/team-members"            element={<ProtectedRoute><TeamMembersAdmin /></ProtectedRoute>} />
-      <Route path="/settings"                element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+      <Route path="/settings"               element={<ProtectedRoute><Settings /></ProtectedRoute>} />
       <Route path="/create-website"          element={<ProtectedRoute><CreateWebsite /></ProtectedRoute>} />
       <Route path="/restaurants"             element={<ProtectedRoute><Restaurants /></ProtectedRoute>} />
       <Route path="/edit-profile"            element={<ProtectedRoute><EditProfile /></ProtectedRoute>} />
@@ -302,7 +318,9 @@ function DefaultApp() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// SUBDOMAIN ROUTER — picks the right app based on hostname
+// SUBDOMAIN ROUTER — picks the right app tree based on hostname
+// Evaluated once at module load; subdomains only apply on exzibo.online.
+// Dev / Replit / localhost always falls through to DefaultApp.
 // ═══════════════════════════════════════════════════════════════════════════
 const ACTIVE_SUBDOMAIN = getSubdomain()
 
