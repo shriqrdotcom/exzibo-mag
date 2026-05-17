@@ -145,18 +145,36 @@ function SlugResolver({ subPath }) {
 // SUPERADMIN SUBDOMAIN APP   superadmin.exzibo.online
 //
 // Routes:
-//   /      → SuperAdminDashboard (superadmin only)
-//   /auth  → Auth (login)
+//   /                    → Landing page (public entry point)
+//   /auth                → Auth (login)
+//   /dashboard           → SuperAdminDashboard (superadmin only)
+//   /restaurants         → Restaurants list (superadmin only)
+//   /create-website      → Create website (superadmin only)
+//   /profile             → Profile page (superadmin only)
+//   /restaurant/:slug    → Public restaurant website (no auth)
+//   /admin/:id           → AdminDashboard (superadmin only)
+//   *                    → redirect to /
 // ═══════════════════════════════════════════════════════════════════════════
 function SuperAdminApp() {
   const { loading } = useAuth()
   if (loading) return <GlobalLoader />
   return (
     <Routes>
+      {/* Public entry point — landing page opens when visiting superadmin.exzibo.online */}
+      <Route path="/" element={<Landing />} />
       <Route path="/auth" element={<Auth />} />
-      <Route path="/" element={
-        <SuperAdminRoute><SuperAdminDashboard /></SuperAdminRoute>
-      } />
+
+      {/* Public customer-facing pages (linked from Landing themes/demo) */}
+      <Route path="/restaurant/:slug"                element={<RestaurantWebsite />} />
+      <Route path="/restaurant/:slug/food/:itemName" element={<FoodDetail />} />
+
+      {/* Protected — superadmin only */}
+      <Route path="/dashboard"      element={<SuperAdminRoute><SuperAdminDashboard /></SuperAdminRoute>} />
+      <Route path="/restaurants"    element={<SuperAdminRoute><Restaurants /></SuperAdminRoute>} />
+      <Route path="/create-website" element={<SuperAdminRoute><CreateWebsite /></SuperAdminRoute>} />
+      <Route path="/profile"        element={<SuperAdminRoute><ProfilePage /></SuperAdminRoute>} />
+      <Route path="/admin/:id"      element={<SuperAdminRoute><AdminDashboard /></SuperAdminRoute>} />
+
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )
