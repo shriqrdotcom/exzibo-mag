@@ -1,0 +1,169 @@
+---
+
+🎯 GOAL
+
+Fix restaurant dashboard data loading on:
+
+dashboard.exzibo.online/{restaurantSlug}/admin
+
+Currently it shows 404 (restaurant not found) even though routing is correct.
+
+
+---
+
+🔴 ROOT PROBLEM
+
+URL slug is received: "your-website-name"
+
+But backend cannot find restaurant
+
+Either:
+
+slug is not saved in DB
+
+OR slug mismatch
+
+OR wrong query logic
+
+OR slug not passed correctly to server
+
+
+
+
+---
+
+✅ REQUIRED FIX (STEP BY STEP)
+
+
+---
+
+1. Verify Dynamic Route (Next.js)
+
+Ensure this structure exists:
+
+app/[restaurantSlug]/admin/page.tsx
+
+
+---
+
+2. Get Slug Properly
+
+export default async function Page({ params }) {
+  const { restaurantSlug } = params
+}
+
+
+---
+
+3. Fetch Restaurant Correctly
+
+👉 FIX QUERY (IMPORTANT)
+
+const restaurant = await db.restaurant.findUnique({
+  where: {
+    slug: restaurantSlug
+  }
+})
+
+
+---
+
+4. Handle Not Found Properly
+
+if (!restaurant) {
+  return notFound()
+}
+
+
+---
+
+5. DEBUG LOG (VERY IMPORTANT)
+
+Add this:
+
+console.log("Slug:", restaurantSlug)
+
+👉 Check:
+
+Is slug coming correctly?
+
+Is it same as DB?
+
+
+
+---
+
+6. CHECK DATABASE
+
+👉 Ensure DB has:
+
+name	slug
+
+My Restaurant	your-website-name
+
+
+❌ If slug missing → FIX:
+
+slug: name.toLowerCase().replace(/\s+/g, "-")
+
+
+---
+
+7. FIX NAVIGATION (CRITICAL)
+
+👉 When clicking dashboard:
+
+window.location.href = `https://dashboard.exzibo.online/${restaurant.slug}/admin`
+
+❌ Do NOT use dummy slug like:
+
+your-website-name
+
+
+---
+
+8. MULTI-TENANT SAFETY (OPTIONAL BUT IMPORTANT)
+
+Ensure:
+
+User only accesses their restaurant
+
+Match user.restaurantId with fetched restaurant.id
+
+
+
+---
+
+🚫 DO NOT DO
+
+❌ Hardcode slug
+
+❌ Use placeholder like "your-website-name"
+
+❌ Fetch by ID if URL uses slug
+
+❌ Ignore case sensitivity
+
+
+
+---
+
+✅ FINAL EXPECTED RESULT
+
+URL:
+
+dashboard.exzibo.online/my-restaurant/admin
+
+Loads: ✅ Correct restaurant data
+❌ No 404
+
+
+
+---
+
+🎯 ONE-LINE FIX SUMMARY
+
+👉 Routing is correct — fix slug-based DB query + ensure slug exists and matches exactly
+
+
+---
