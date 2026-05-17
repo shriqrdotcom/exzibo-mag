@@ -1,0 +1,137 @@
+Project Goal:
+Set up clean, production-ready domain routing for a multi-tenant SaaS application (Exzibo) using subdomains. Ensure zero routing conflicts, no duplicate paths, and proper role-based access handling.
+
+Domains to Configure:
+1. superadmin.exzibo.online
+2. dashboard.exzibo.online
+3. menu.exzibo.online
+
+----------------------------------------
+
+1. SUPERADMIN DOMAIN (Global Control Panel)
+
+Domain: superadmin.exzibo.online
+
+Purpose:
+- This is the MAIN ADMIN dashboard (highest authority).
+- Used only by platform owner (Super Admin).
+
+Routing Rules:
+- "/" → Super Admin Dashboard Home
+- Protect all routes with authentication (superadmin role only)
+- No restaurant-specific routing here
+- No public access
+
+----------------------------------------
+
+2. DASHBOARD DOMAIN (Multi-Tenant Role-Based Dashboard)
+
+Domain: dashboard.exzibo.online
+
+Purpose:
+- Central dashboard for ALL restaurant roles:
+  - Master Control
+  - Owner
+  - Manager
+  - Staff / Employee
+
+Routing Structure:
+- Use dynamic routing based on restaurantSlug
+
+Routes:
+- "/" → Login / Role Selection Page
+- "/:restaurantSlug" → Dashboard Home for that restaurant
+- "/:restaurantSlug/master" → Master Control Panel
+- "/:restaurantSlug/owner" → Owner Dashboard
+- "/:restaurantSlug/manager" → Manager Dashboard
+- "/:restaurantSlug/staff" → Employee Dashboard
+
+Rules:
+- Implement strict role-based access control (RBAC)
+- Prevent unauthorized role access (e.g., staff cannot access owner routes)
+- Validate restaurantSlug before loading dashboard
+- Use middleware to:
+  - Authenticate user
+  - Identify role
+  - Redirect to correct dashboard
+
+----------------------------------------
+
+3. MENU DOMAIN (Customer-Facing)
+
+Domain: menu.exzibo.online
+
+Purpose:
+- Public-facing restaurant menu (no login required)
+
+Routing Structure:
+- "/:restaurantSlug" → Restaurant Menu Page
+- "/:restaurantSlug/:pageSlug" → Optional (category/item pages)
+
+Rules:
+- Fully public access
+- No authentication required
+- Fetch restaurant data using restaurantSlug
+- Show 404 if restaurant does not exist
+
+----------------------------------------
+
+4. GLOBAL DOMAIN RULES
+
+- Each domain must be isolated (no cross-domain routing conflicts)
+- Do NOT use "/dashboard" or "/menu" paths inside domains (subdomains already define context)
+- Use clean root-based routing per domain
+
+Examples:
+- superadmin.exzibo.online → Admin system
+- dashboard.exzibo.online/pizzahut/owner → Owner dashboard
+- menu.exzibo.online/pizzahut → Customer menu
+
+----------------------------------------
+
+5. TECHNICAL REQUIREMENTS
+
+- Use middleware for:
+  - Authentication
+  - Role validation
+  - Subdomain detection (if required)
+
+- Ensure:
+  - No infinite redirects
+  - No duplicate routes
+  - No fallback to wrong domain
+
+- Optimize for:
+  - Fast loading
+  - SEO (only for menu domain)
+  - Security (dashboard domains must be protected)
+
+----------------------------------------
+
+6. EDGE CASE HANDLING
+
+- Invalid restaurantSlug → Show 404 page
+- Unauthorized role → Redirect to allowed dashboard
+- Not logged in (dashboard domain) → Redirect to login page
+- Logged-in user accessing wrong role route → Auto-redirect to correct role
+
+----------------------------------------
+
+7. FINAL EXPECTATION
+
+- Clean separation between:
+  - Super Admin
+  - Internal Dashboard
+  - Public Menu
+
+- No UI glitches
+- No broken routes
+- Fully scalable structure for thousands of restaurants
+
+----------------------------------------
+
+IMPORTANT:
+Do NOT overcomplicate.
+Do NOT create unnecessary routes.
+Do NOT mix domains.
+Follow the structure exactly.
