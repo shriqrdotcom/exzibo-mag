@@ -26,15 +26,15 @@ const ROLE_TO_PATH = {
 export function openRoleDashboard(navigate, restaurant, roleKey) {
   const pathRole = ROLE_TO_PATH[roleKey] || 'admin'
 
-  // When both subdomains are deployed, open the dashboard subdomain in a new tab.
-  // This is opt-in: only fires when the caller is on the superadmin subdomain
-  // AND the restaurant has a slug for constructing the URL.
-  if (getSubdomain() === 'superadmin' && restaurant?.slug) {
-    window.open(
-      `https://${DASHBOARD_DOMAIN}/${restaurant.slug}/${pathRole}`,
-      '_blank',
-      'noopener,noreferrer'
-    )
+  // On the superadmin subdomain, always open the dashboard subdomain in a new tab.
+  // SuperAdminApp intentionally has no /admin/:id routes — those belong to DashboardApp.
+  if (getSubdomain() === 'superadmin') {
+    const url = restaurant?.slug
+      // Real restaurant → slug-based URL
+      ? `https://${DASHBOARD_DOMAIN}/${restaurant.slug}/${pathRole}`
+      // Demo / role-template button → default demo dashboard
+      : `https://${DASHBOARD_DOMAIN}/admin/default`
+    window.open(url, '_blank', 'noopener,noreferrer')
     return
   }
 
