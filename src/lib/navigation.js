@@ -39,7 +39,7 @@ export function openRoleDashboard(navigate, restaurant, roleKey) {
   }
 
   // Dev / Replit / single-domain: navigate within the current app.
-  // SuperAdminApp, DashboardApp, and DefaultApp all include /admin/:id routes.
+  // DefaultApp (Replit preview) and DashboardApp both include /admin/:id routes.
   if (restaurant?.id) {
     navigate(`/admin/${restaurant.id}`)
   } else {

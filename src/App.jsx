@@ -4,7 +4,7 @@ import { AuthProvider, useAuth } from './context/AuthContext'
 import { AnalyticsProvider } from './context/AnalyticsContext'
 import { RoleProvider } from './context/RoleContext'
 import { getSubdomain } from './lib/subdomain'
-import { getRestaurants } from './lib/db'
+import { getRestaurantBySlug } from './lib/db'
 
 import Landing              from './pages/Landing'
 import Auth                 from './pages/Auth'
@@ -121,9 +121,12 @@ function SlugResolver({ subPath, section }) {
 
   useEffect(() => {
     if (!restaurantSlug) { setNotFound(true); return }
-    getRestaurants()
-      .then(list => {
-        const restaurant = list.find(r => r.slug === restaurantSlug)
+    // getRestaurantBySlug is a public query — no auth session required.
+    // This is important on dashboard.exzibo.online where a fresh tab has
+    // no session yet; we resolve the slug first, then guard auth inside
+    // AdminDashboard / MasterControl as normal.
+    getRestaurantBySlug(restaurantSlug)
+      .then(restaurant => {
         if (!restaurant || !restaurant.id) { setNotFound(true); return }
 
         let target
