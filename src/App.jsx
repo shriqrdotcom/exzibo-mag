@@ -197,7 +197,7 @@ function SuperAdminApp() {
 
       {/* Main dashboard — "OPEN DASHBOARD" from Landing leads here */}
       <Route path="/dashboard"
-        element={<SuperAdminRoute><SuperAdminDashboard /></SuperAdminRoute>} />
+        element={<SuperAdminRoute><Dashboard /></SuperAdminRoute>} />
 
       {/* Sidebar nav items */}
       <Route path="/team-members"
