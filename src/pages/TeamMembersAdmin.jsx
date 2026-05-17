@@ -8,6 +8,32 @@ import Sidebar from '../components/Sidebar'
 import AdminHeader from '../components/AdminHeader'
 import { useRole } from '../context/RoleContext'
 import { getRestaurants, getTeamMembers, createTeamMember, deleteTeamMember, updateTeamMember } from '../lib/db'
+import { getSubdomain } from '../lib/subdomain'
+
+// ── Cross-subdomain dashboard navigation ────────────────────────────────────
+// Maps internal role keys to dashboard URL path segments.
+const ROLE_TO_PATH = { owner: 'admin', manager: 'manager', staff: 'employee' }
+const DASHBOARD_DOMAIN = 'dashboard.exzibo.online'
+
+// When on superadmin.exzibo.online, opens the correct role view on
+// dashboard.exzibo.online. Falls back to local navigate() in dev/Replit.
+function openRoleDashboard(navigate, restaurant, roleKey) {
+  const pathRole = ROLE_TO_PATH[roleKey] || 'admin'
+  if (getSubdomain() === 'superadmin') {
+    if (restaurant?.slug) {
+      window.location.href = `https://${DASHBOARD_DOMAIN}/${restaurant.slug}/${pathRole}`
+    } else {
+      window.location.href = `https://${DASHBOARD_DOMAIN}`
+    }
+  } else {
+    // Dev / Replit preview — navigate locally
+    if (restaurant?.id) {
+      navigate(`/admin/${restaurant.id}`)
+    } else {
+      navigate('/admin/default')
+    }
+  }
+}
 
 const TEAM_KEY = id => `exzibo_team_admin_${id}`
 
@@ -429,7 +455,7 @@ export default function TeamMembersAdmin() {
                                         accentBg={col.accentBg}
                                         onClick={() => {
                                           activateRole(col.key)
-                                          navigate(`/admin/${r.id}`)
+                                          openRoleDashboard(navigate, r, col.key)
                                         }}
                                       />
                                     </div>
@@ -576,17 +602,17 @@ function DefaultRolesSection() {
   const { activateRole } = useRole()
 
   function openDefaultAdmin() {
-    navigate('/admin/default')
+    openRoleDashboard(navigate, null, 'owner')
   }
 
   function openManagerDashboard() {
     activateRole('manager')
-    navigate('/admin/default')
+    openRoleDashboard(navigate, null, 'manager')
   }
 
   function openStaffDashboard() {
     activateRole('staff')
-    navigate('/admin/default')
+    openRoleDashboard(navigate, null, 'staff')
   }
 
   return (
@@ -824,8 +850,7 @@ function MemberRow({ member, restaurant, isLast, onRemove, onChangeRole }) {
     } else {
       activateRole(member.role)
     }
-    const restaurantId = restaurant?.id || restaurant?.uid || 'default'
-    navigate(`/admin/${restaurantId}`)
+    openRoleDashboard(navigate, restaurant, member.role)
   }
 
   return (
