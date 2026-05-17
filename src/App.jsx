@@ -145,35 +145,93 @@ function SlugResolver({ subPath }) {
 // SUPERADMIN SUBDOMAIN APP   superadmin.exzibo.online
 //
 // Routes:
-//   /                    → Landing page (public entry point)
-//   /auth                → Auth (login)
-//   /dashboard           → SuperAdminDashboard (superadmin only)
-//   /restaurants         → Restaurants list (superadmin only)
-//   /create-website      → Create website (superadmin only)
-//   /profile             → Profile page (superadmin only)
-//   /restaurant/:slug    → Public restaurant website (no auth)
-//   /admin/:id           → AdminDashboard (superadmin only)
-//   *                    → redirect to /
+//   /                         → Landing page (public entry point)
+//   /auth                     → Auth (login)
+//   /dashboard                → SuperAdminDashboard — "OPEN DASHBOARD" lands here
+//   /team-members             → Team Members admin (sidebar)
+//   /table                    → Table page (sidebar)
+//   /master-control           → Master Control panel (sidebar)
+//   /master-control/:uid      → Master Control for a specific restaurant
+//   /settings                 → Settings (sidebar)
+//   /notifications            → Notifications (sidebar)
+//   /deleted-restaurants      → Deleted restaurants (sidebar)
+//   /information              → Information page (sidebar)
+//   /restaurants              → Restaurants list
+//   /create-website           → Website builder
+//   /profile                  → Profile page
+//   /edit-profile             → Edit profile
+//   /admin/:id                → Restaurant admin panel
+//   /restaurant/:slug         → Public restaurant website
+//   *                         → redirect to /
 // ═══════════════════════════════════════════════════════════════════════════
 function SuperAdminApp() {
-  const { loading } = useAuth()
+  const { loading, user } = useAuth()
+  const navigate = useNavigate()
+
+  // After login, restore the original intended destination (e.g. /dashboard)
+  useEffect(() => {
+    if (!loading && user) {
+      const saved = localStorage.getItem('auth_redirect')
+      if (saved) {
+        localStorage.removeItem('auth_redirect')
+        const safe = saved.startsWith('/') && !saved.startsWith('//') && !saved.startsWith('/auth')
+        if (safe) navigate(saved, { replace: true })
+      }
+    }
+  }, [loading, user, navigate])
+
   if (loading) return <GlobalLoader />
+
   return (
     <Routes>
-      {/* Public entry point — landing page opens when visiting superadmin.exzibo.online */}
-      <Route path="/" element={<Landing />} />
+      {/* Public entry point */}
+      <Route path="/"    element={<Landing />} />
       <Route path="/auth" element={<Auth />} />
 
-      {/* Public customer-facing pages (linked from Landing themes/demo) */}
+      {/* Public customer-facing pages (restaurant preview / demo / themes) */}
       <Route path="/restaurant/:slug"                element={<RestaurantWebsite />} />
       <Route path="/restaurant/:slug/food/:itemName" element={<FoodDetail />} />
+      <Route path="/r/:slug"                         element={<RestaurantWebsite />} />
 
-      {/* Protected — superadmin only */}
-      <Route path="/dashboard"      element={<SuperAdminRoute><SuperAdminDashboard /></SuperAdminRoute>} />
-      <Route path="/restaurants"    element={<SuperAdminRoute><Restaurants /></SuperAdminRoute>} />
-      <Route path="/create-website" element={<SuperAdminRoute><CreateWebsite /></SuperAdminRoute>} />
-      <Route path="/profile"        element={<SuperAdminRoute><ProfilePage /></SuperAdminRoute>} />
-      <Route path="/admin/:id"      element={<SuperAdminRoute><AdminDashboard /></SuperAdminRoute>} />
+      {/* ── Superadmin-protected routes ── */}
+
+      {/* Main dashboard — "OPEN DASHBOARD" from Landing leads here */}
+      <Route path="/dashboard"
+        element={<SuperAdminRoute><SuperAdminDashboard /></SuperAdminRoute>} />
+
+      {/* Sidebar nav items */}
+      <Route path="/team-members"
+        element={<SuperAdminRoute><TeamMembersAdmin /></SuperAdminRoute>} />
+      <Route path="/table"
+        element={<SuperAdminRoute><TablePage /></SuperAdminRoute>} />
+      <Route path="/master-control"
+        element={<SuperAdminRoute><MasterControl /></SuperAdminRoute>} />
+      <Route path="/master-control/:uid"
+        element={<SuperAdminRoute><MasterControl /></SuperAdminRoute>} />
+      <Route path="/settings"
+        element={<SuperAdminRoute><Settings /></SuperAdminRoute>} />
+      <Route path="/notifications"
+        element={<SuperAdminRoute><NotificationsPage /></SuperAdminRoute>} />
+      <Route path="/deleted-restaurants"
+        element={<SuperAdminRoute><DeletedRestaurants /></SuperAdminRoute>} />
+      <Route path="/information"
+        element={<SuperAdminRoute><InformationPage /></SuperAdminRoute>} />
+
+      {/* Other linked pages */}
+      <Route path="/restaurants"
+        element={<SuperAdminRoute><Restaurants /></SuperAdminRoute>} />
+      <Route path="/create-website"
+        element={<SuperAdminRoute><CreateWebsite /></SuperAdminRoute>} />
+      <Route path="/profile"
+        element={<SuperAdminRoute><ProfilePage /></SuperAdminRoute>} />
+      <Route path="/edit-profile"
+        element={<SuperAdminRoute><EditProfile /></SuperAdminRoute>} />
+      <Route path="/admin/:id"
+        element={<SuperAdminRoute><AdminDashboard /></SuperAdminRoute>} />
+      <Route path="/admin/:id/team"
+        element={<SuperAdminRoute><TeamMembers /></SuperAdminRoute>} />
+      <Route path="/admin/:id/profile"
+        element={<SuperAdminRoute><ProfilePage /></SuperAdminRoute>} />
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
