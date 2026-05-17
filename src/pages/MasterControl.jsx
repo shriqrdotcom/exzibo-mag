@@ -81,7 +81,7 @@ export default function MasterControl() {
         return
       }
       localStorage.setItem(LAST_UID_KEY, trimmed)
-      openRoleDashboard(navigate, target, 'master')
+      navigate(`/admin/${target.id}?from=master`, { replace: true })
     }).catch(() => {
       setAutoLoading(false)
       setAutoError('Failed to resolve restaurant. Please try manually.')
@@ -101,7 +101,7 @@ export default function MasterControl() {
       return
     }
     localStorage.setItem(LAST_UID_KEY, trimmed)
-    openRoleDashboard(navigate, target, 'master')
+    navigate(`/admin/${target.id}?from=master`)
   }
 
   if (allowed === null) {
