@@ -4,7 +4,7 @@ import { AuthProvider, useAuth } from './context/AuthContext'
 import { AnalyticsProvider } from './context/AnalyticsContext'
 import { RoleProvider } from './context/RoleContext'
 import { getSubdomain } from './lib/subdomain'
-import { getRestaurantBySlug } from './lib/db'
+import { getRestaurants } from './lib/db'
 
 import Landing              from './pages/Landing'
 import Auth                 from './pages/Auth'
@@ -100,9 +100,10 @@ function SuperAdminRoute({ children }) {
 }
 
 // ── Slug resolver for dashboard subdomain ───────────────────────────────────
-// Reads :slug from URL params, resolves it to a DB uuid, then internally
-// redirects to the corresponding /admin/:id route so AdminDashboard can work
-// without any modification (it reads `id` from useParams as usual).
+// Reads :slug from URL params, fetches the full restaurant list via
+// getRestaurants(), finds the matching row, then redirects internally so that
+// the target components (AdminDashboard, MasterControl, etc.) can work without
+// any modification — they read :id / :uid from params as usual.
 function SlugResolver({ subPath }) {
   const { slug } = useParams()
   const navigate = useNavigate()
@@ -110,15 +111,24 @@ function SlugResolver({ subPath }) {
 
   useEffect(() => {
     if (!slug) { setNotFound(true); return }
-    getRestaurantBySlug(slug)
-      .then(restaurant => {
+    getRestaurants()
+      .then(list => {
+        const restaurant = list.find(r => r.slug === slug)
         if (!restaurant || !restaurant.id) { setNotFound(true); return }
-        const base = `/admin/${restaurant.id}`
-        const target =
-          subPath === 'master'  ? `${base}?from=master` :
-          subPath === 'team'    ? `${base}/team`         :
-          subPath === 'profile' ? `${base}/profile`      :
-          base
+        let target
+        if (subPath === 'master') {
+          // Navigate to MasterControl with the restaurant's UID so it can
+          // perform its own auth checks and load the admin panel in master mode.
+          target = restaurant.uid
+            ? `/master-control/${restaurant.uid}`
+            : `/admin/${restaurant.id}?from=master`
+        } else if (subPath === 'team') {
+          target = `/admin/${restaurant.id}/team`
+        } else if (subPath === 'profile') {
+          target = `/admin/${restaurant.id}/profile`
+        } else {
+          target = `/admin/${restaurant.id}`
+        }
         navigate(target, { replace: true })
       })
       .catch(() => setNotFound(true))
@@ -167,8 +177,8 @@ function MenuApp() {
       <Route path="/m/:linkName"                 element={<MenuLinkRoute />} />
       <Route path="/table"                       element={<TablePage />} />
 
-      {/* Root → 404 (no slug provided) */}
-      <Route path="/" element={<NotFound message="Please use a restaurant link, e.g. menu.exzibo.online/your-restaurant" />} />
+      {/* Root → landing page */}
+      <Route path="/" element={<Landing />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   )
