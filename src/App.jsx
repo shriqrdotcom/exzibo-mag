@@ -117,11 +117,14 @@ function SlugResolver({ subPath }) {
         if (!restaurant || !restaurant.id) { setNotFound(true); return }
         let target
         if (subPath === 'master') {
-          // Navigate to MasterControl with the restaurant's UID so it can
-          // perform its own auth checks and load the admin panel in master mode.
+          // Always route through MasterControl using the restaurant's UID.
+          // MasterControl auto-resolves uid → id and opens the admin panel in
+          // master mode. If uid is absent (legacy row), we fall back to the
+          // internal master-control page without a uid param so the user can
+          // enter it manually — this keeps behavior deterministic.
           target = restaurant.uid
             ? `/master-control/${restaurant.uid}`
-            : `/admin/${restaurant.id}?from=master`
+            : '/master-control'
         } else if (subPath === 'team') {
           target = `/admin/${restaurant.id}/team`
         } else if (subPath === 'profile') {
@@ -132,7 +135,7 @@ function SlugResolver({ subPath }) {
         navigate(target, { replace: true })
       })
       .catch(() => setNotFound(true))
-  }, [slug])
+  }, [slug, subPath, navigate])
 
   if (notFound) return <NotFound message={`Restaurant "${slug}" not found`} />
   return <GlobalLoader />
