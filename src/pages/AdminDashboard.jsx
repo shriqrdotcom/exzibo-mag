@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useAnalytics, notifyAnalyticsUpdate } from '../context/AnalyticsContext'
 import { useRole } from '../context/RoleContext'
-import { getRestaurants, getOrders, getBookings, updateOrderStatus, updateBookingStatus, getMenuCategories, getMenuItems, insertMenuItem, updateMenuItem, deleteMenuItem, upsertMenuCategory, deleteMenuCategory, upsertMenuItems, uploadMenuImage, updateRestaurant, uploadToStorage, uploadDataUrlToStorage, toggleMenuItemPublish, normalizeOrder, normalizeBooking, sendMessage, getLatestSmsNotification, upsertSmsNotification, fetchActiveNotification, publishActiveNotification, confirmActiveNotification, insertNotificationHistory, fetchNotificationHistory } from '../lib/db'
+import { getRestaurantById, getRestaurants, getOrders, getBookings, updateOrderStatus, updateBookingStatus, getMenuCategories, getMenuItems, insertMenuItem, updateMenuItem, deleteMenuItem, upsertMenuCategory, deleteMenuCategory, upsertMenuItems, uploadMenuImage, updateRestaurant, uploadToStorage, uploadDataUrlToStorage, toggleMenuItemPublish, normalizeOrder, normalizeBooking, sendMessage, getLatestSmsNotification, upsertSmsNotification, fetchActiveNotification, publishActiveNotification, confirmActiveNotification, insertNotificationHistory, fetchNotificationHistory } from '../lib/db'
 import { supabase } from '../lib/supabase'
 import notificationIconImg from '@assets/image_1777373928129.png'
 import {
@@ -327,13 +327,20 @@ export default function AdminDashboard() {
         setBookings(loadBookings('demo'))
         return
       }
-      // Try Supabase first, fall back to localStorage
+      // Try Supabase first (public query — no auth needed), fall back to localStorage
       let found = null
       try {
-        const rows = await getRestaurants()
-        // Keep full list in localStorage in sync
-        try { localStorage.setItem('exzibo_restaurants', JSON.stringify(rows)) } catch { /* noop */ }
-        found = rows.find(r => r.id === id)
+        found = await getRestaurantById(id)
+        // Keep this restaurant in localStorage in sync
+        if (found) {
+          try {
+            const all = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
+            const updated = all.some(r => r.id === id)
+              ? all.map(r => r.id === id ? found : r)
+              : [...all, found]
+            localStorage.setItem('exzibo_restaurants', JSON.stringify(updated))
+          } catch { /* noop */ }
+        }
       } catch { /* noop */ }
       if (!found) {
         const all = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
