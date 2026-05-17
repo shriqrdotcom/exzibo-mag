@@ -1,0 +1,49 @@
+CONTEXT:
+My Exzibo platform has two separate dashboard applications with different subdomains:
+
+1. superadmin.exzibo.online → Super Admin Dashboard only (Exzibo god-mode, no dynamic routing)
+2. dashboard.exzibo.online → Role-based Restaurant Dashboards (Master, Admin, Manager, Staff)
+   - Routes like: dashboard.exzibo.online/{restaurantId-slug}/dashboard
+   - dashboard.exzibo.online/{restaurantId-slug}/orders
+   - dashboard.exzibo.online/{restaurantId-slug}/tables
+   - dashboard.exzibo.online/{restaurantId-slug}/menu
+   - dashboard.exzibo.online/{restaurantId-slug}/analytics
+
+CURRENT PROBLEM:
+Right now, when I access the role-based dashboards (Master Control, Admin, Manager, Staff),
+they are incorrectly loading under superadmin.exzibo.online instead of dashboard.exzibo.online.
+
+WHAT I NEED FIXED:
+Separate the routing so that:
+
+→ superadmin.exzibo.online serves ONLY the Super Admin Dashboard component/page.
+   No restaurant role pages should render here.
+
+→ dashboard.exzibo.online serves ONLY the restaurant role-based dashboards.
+   This includes all roles: Master, Admin (Owner), Manager, and Staff/Employee.
+   Dynamic routing pattern: /{restaurantId-slug}/{section}
+
+HOW TO FIX:
+1. Check how the app currently detects which subdomain is active (look for window.location.hostname
+   or any existing subdomain detection logic).
+
+2. Add or fix subdomain-based routing logic:
+   - If hostname === "superadmin.exzibo.online" → render SuperAdminDashboard only
+   - If hostname === "dashboard.exzibo.online" → render the role-based dashboard
+     with dynamic routing /{restaurantId-slug}/{section}
+   - Do NOT mix these two — they must be fully isolated
+
+3. In Vercel (or wherever deployed), make sure both subdomains are configured
+   as separate deployments OR the single deployment correctly redirects/renders
+   based on hostname detection.
+
+4. Do NOT break any existing functionality:
+   - Super Admin features must still work on superadmin.exzibo.online
+   - All role-based features (Master Control panel, Admin dashboard, Manager view,
+     Staff view) must work on dashboard.exzibo.online
+   - Supabase auth and role detection must still function correctly after the split
+
+IMPORTANT:
+- Make changes non-destructively. Do not rewrite full components.
+- Only modify routing logic, subdomain detection, and entry point rendering.
+- Show me exactly which files you modified and what changed.

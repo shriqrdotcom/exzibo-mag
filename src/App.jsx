@@ -102,16 +102,19 @@ function SuperAdminRoute({ children }) {
 // ── Slug resolver for dashboard subdomain ───────────────────────────────────
 // Reads :restaurantSlug from URL params, fetches the restaurant list,
 // finds the matching row, then renders the target component by redirecting
-// to an internal route that carries the resolved :id. Role subPaths map
-// directly to the corresponding internal route.
+// to an internal route that carries the resolved :id.
 //
-// Supported subPaths and their internal targets:
-//   (none)      → /admin/:id              base dashboard
-//   "admin"     → /admin/:id              admin role view
-//   "manager"   → /admin/:id              manager role view
-//   "employee"  → /admin/:id              employee role view
-//   "master"    → /master-control/:uid    super-admin control panel
-function SlugResolver({ subPath }) {
+// Props:
+//   subPath  — role hint: "admin" | "manager" | "employee" | "master"
+//   section  — dashboard section: "dashboard" | "orders" | "tables" |
+//              "menu" | "analytics" (passed as ?section= query param so
+//              AdminDashboard can open the right tab on arrival)
+//
+// Internal redirect targets:
+//   subPath "master"   → /master-control/:uid
+//   section present    → /admin/:id?section=<section>
+//   everything else    → /admin/:id   (base dashboard)
+function SlugResolver({ subPath, section }) {
   const { restaurantSlug } = useParams()
   const navigate = useNavigate()
   const [notFound, setNotFound] = useState(false)
@@ -128,6 +131,9 @@ function SlugResolver({ subPath }) {
           target = restaurant.uid
             ? `/master-control/${restaurant.uid}`
             : '/master-control'
+        } else if (section) {
+          // Section-based routing — open AdminDashboard at the requested tab
+          target = `/admin/${restaurant.id}?section=${section}`
         } else {
           // base, admin, manager, employee — all render AdminDashboard
           target = `/admin/${restaurant.id}`
@@ -135,7 +141,7 @@ function SlugResolver({ subPath }) {
         navigate(target, { replace: true })
       })
       .catch(() => setNotFound(true))
-  }, [restaurantSlug, subPath, navigate])
+  }, [restaurantSlug, subPath, section, navigate])
 
   if (notFound) return <NotFound message={`Restaurant "${restaurantSlug}" not found`} />
   return <GlobalLoader />
@@ -144,14 +150,16 @@ function SlugResolver({ subPath }) {
 // ═══════════════════════════════════════════════════════════════════════════
 // SUPERADMIN SUBDOMAIN APP   superadmin.exzibo.online
 //
+// Serves ONLY the Super Admin god-mode dashboard. Restaurant role pages
+// (Admin, Manager, Staff, Master Control) are intentionally excluded — they
+// live exclusively on dashboard.exzibo.online (DashboardApp below).
+//
 // Routes:
 //   /                         → Landing page (public entry point)
 //   /auth                     → Auth (login)
 //   /dashboard                → SuperAdminDashboard — "OPEN DASHBOARD" lands here
 //   /team-members             → Team Members admin (sidebar)
 //   /table                    → Table page (sidebar)
-//   /master-control           → Master Control panel (sidebar)
-//   /master-control/:uid      → Master Control for a specific restaurant
 //   /settings                 → Settings (sidebar)
 //   /notifications            → Notifications (sidebar)
 //   /deleted-restaurants      → Deleted restaurants (sidebar)
@@ -160,8 +168,7 @@ function SlugResolver({ subPath }) {
 //   /create-website           → Website builder
 //   /profile                  → Profile page
 //   /edit-profile             → Edit profile
-//   /admin/:id                → Restaurant admin panel
-//   /restaurant/:slug         → Public restaurant website
+//   /restaurant/:slug         → Public restaurant website (preview only)
 //   *                         → redirect to /
 // ═══════════════════════════════════════════════════════════════════════════
 function SuperAdminApp() {
@@ -204,11 +211,6 @@ function SuperAdminApp() {
         element={<SuperAdminRoute><TeamMembersAdmin /></SuperAdminRoute>} />
       <Route path="/table"
         element={<SuperAdminRoute><TablePage /></SuperAdminRoute>} />
-      {/* Auth temporarily removed from master-control + admin panel routes */}
-      <Route path="/master-control"
-        element={<MasterControl />} />
-      <Route path="/master-control/:uid"
-        element={<MasterControl />} />
       <Route path="/settings"
         element={<SuperAdminRoute><Settings /></SuperAdminRoute>} />
       <Route path="/notifications"
@@ -227,13 +229,9 @@ function SuperAdminApp() {
         element={<SuperAdminRoute><ProfilePage /></SuperAdminRoute>} />
       <Route path="/edit-profile"
         element={<SuperAdminRoute><EditProfile /></SuperAdminRoute>} />
-      {/* Auth temporarily removed from admin panel routes */}
-      <Route path="/admin/:id"
-        element={<AdminDashboard />} />
-      <Route path="/admin/:id/team"
-        element={<TeamMembers />} />
-      <Route path="/admin/:id/profile"
-        element={<ProfilePage />} />
+
+      {/* /admin/:id and /master-control are intentionally NOT here.
+          They are served exclusively by DashboardApp on dashboard.exzibo.online. */}
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
@@ -263,18 +261,29 @@ function MenuApp() {
 // ═══════════════════════════════════════════════════════════════════════════
 // DASHBOARD SUBDOMAIN APP   dashboard.exzibo.online
 //
-// Routes:
-//   /                           → login (unauthenticated) or hint (authenticated)
-//   /auth                       → Auth page
-//   /:restaurantSlug            → base dashboard       (any authenticated user)
-//   /:restaurantSlug/admin      → admin role view      (authenticated)
-//   /:restaurantSlug/manager    → manager role view    (authenticated)
-//   /:restaurantSlug/employee   → employee role view   (authenticated)
-//   /:restaurantSlug/master     → master control panel (superadmin only)
+// Serves ALL restaurant role-based dashboards. SuperAdmin god-mode pages
+// are intentionally excluded — they live on superadmin.exzibo.online.
 //
-// Slug resolution: each slug route resolves the restaurant name to its UUID
-// via SlugResolver, then renders the appropriate component by redirecting
-// to an internal /admin/:id or /master-control/:uid path.
+// Public slug routes (resolved via SlugResolver → internal redirect):
+//   /:restaurantSlug                  → base dashboard  (default tab)
+//   /:restaurantSlug/dashboard        → dashboard tab
+//   /:restaurantSlug/orders           → orders tab
+//   /:restaurantSlug/tables           → tables tab
+//   /:restaurantSlug/menu             → menu tab
+//   /:restaurantSlug/analytics        → analytics tab
+//
+// Role-specific slug routes:
+//   /:restaurantSlug/admin            → admin role view
+//   /:restaurantSlug/manager          → manager role view
+//   /:restaurantSlug/employee         → employee/staff view
+//   /:restaurantSlug/master           → master control panel
+//
+// Internal routes (rendered after SlugResolver redirects):
+//   /admin/:id                        → AdminDashboard (owner / role panel)
+//   /admin/:id/team                   → Team Members page
+//   /admin/:id/profile                → Restaurant profile
+//   /master-control                   → Master Control panel
+//   /master-control/:uid              → Master Control for a specific restaurant
 // ═══════════════════════════════════════════════════════════════════════════
 function DashboardApp() {
   const { loading, user } = useAuth()
@@ -299,15 +308,25 @@ function DashboardApp() {
       {/* Auth */}
       <Route path="/auth" element={<Auth />} />
 
-      {/* Auth temporarily removed from role routes ── */}
-      <Route path="/:restaurantSlug" element={<SlugResolver />} />
+      {/* ── Section-based slug routes (/{slug}/{section}) ── */}
+      {/* Each resolves the slug to a restaurant UUID, then redirects to   */}
+      {/* /admin/:id?section=<section> so AdminDashboard opens the right tab */}
+      <Route path="/:restaurantSlug/dashboard"  element={<SlugResolver section="dashboard" />} />
+      <Route path="/:restaurantSlug/orders"     element={<SlugResolver section="orders" />} />
+      <Route path="/:restaurantSlug/tables"     element={<SlugResolver section="tables" />} />
+      <Route path="/:restaurantSlug/menu"       element={<SlugResolver section="menu" />} />
+      <Route path="/:restaurantSlug/analytics"  element={<SlugResolver section="analytics" />} />
+
+      {/* ── Role-based slug routes ── */}
       <Route path="/:restaurantSlug/admin"     element={<SlugResolver subPath="admin" />} />
       <Route path="/:restaurantSlug/manager"   element={<SlugResolver subPath="manager" />} />
       <Route path="/:restaurantSlug/employee"  element={<SlugResolver subPath="employee" />} />
       <Route path="/:restaurantSlug/master"    element={<SlugResolver subPath="master" />} />
 
+      {/* ── Base slug route (no section/role) ── */}
+      <Route path="/:restaurantSlug" element={<SlugResolver />} />
+
       {/* ── Internal routes — rendered after SlugResolver redirects ── */}
-      {/* Auth temporarily removed from admin panel + master control routes */}
       <Route path="/admin/:id"           element={<AdminDashboard />} />
       <Route path="/admin/:id/team"      element={<TeamMembers />} />
       <Route path="/admin/:id/profile"   element={<ProfilePage />} />
