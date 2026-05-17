@@ -204,10 +204,11 @@ function SuperAdminApp() {
         element={<SuperAdminRoute><TeamMembersAdmin /></SuperAdminRoute>} />
       <Route path="/table"
         element={<SuperAdminRoute><TablePage /></SuperAdminRoute>} />
+      {/* Auth temporarily removed from master-control + admin panel routes */}
       <Route path="/master-control"
-        element={<SuperAdminRoute><MasterControl /></SuperAdminRoute>} />
+        element={<MasterControl />} />
       <Route path="/master-control/:uid"
-        element={<SuperAdminRoute><MasterControl /></SuperAdminRoute>} />
+        element={<MasterControl />} />
       <Route path="/settings"
         element={<SuperAdminRoute><Settings /></SuperAdminRoute>} />
       <Route path="/notifications"
@@ -226,12 +227,13 @@ function SuperAdminApp() {
         element={<SuperAdminRoute><ProfilePage /></SuperAdminRoute>} />
       <Route path="/edit-profile"
         element={<SuperAdminRoute><EditProfile /></SuperAdminRoute>} />
+      {/* Auth temporarily removed from admin panel routes */}
       <Route path="/admin/:id"
-        element={<SuperAdminRoute><AdminDashboard /></SuperAdminRoute>} />
+        element={<AdminDashboard />} />
       <Route path="/admin/:id/team"
-        element={<SuperAdminRoute><TeamMembers /></SuperAdminRoute>} />
+        element={<TeamMembers />} />
       <Route path="/admin/:id/profile"
-        element={<SuperAdminRoute><ProfilePage /></SuperAdminRoute>} />
+        element={<ProfilePage />} />
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
@@ -297,29 +299,20 @@ function DashboardApp() {
       {/* Auth */}
       <Route path="/auth" element={<Auth />} />
 
-      {/* ── Slug-based role routes ── */}
-      <Route path="/:restaurantSlug" element={
-        <ProtectedRoute><SlugResolver /></ProtectedRoute>
-      } />
-      <Route path="/:restaurantSlug/admin" element={
-        <ProtectedRoute><SlugResolver subPath="admin" /></ProtectedRoute>
-      } />
-      <Route path="/:restaurantSlug/manager" element={
-        <ProtectedRoute><SlugResolver subPath="manager" /></ProtectedRoute>
-      } />
-      <Route path="/:restaurantSlug/employee" element={
-        <ProtectedRoute><SlugResolver subPath="employee" /></ProtectedRoute>
-      } />
-      <Route path="/:restaurantSlug/master" element={
-        <SuperAdminRoute><SlugResolver subPath="master" /></SuperAdminRoute>
-      } />
+      {/* Auth temporarily removed from role routes ── */}
+      <Route path="/:restaurantSlug" element={<SlugResolver />} />
+      <Route path="/:restaurantSlug/admin"     element={<SlugResolver subPath="admin" />} />
+      <Route path="/:restaurantSlug/manager"   element={<SlugResolver subPath="manager" />} />
+      <Route path="/:restaurantSlug/employee"  element={<SlugResolver subPath="employee" />} />
+      <Route path="/:restaurantSlug/master"    element={<SlugResolver subPath="master" />} />
 
       {/* ── Internal routes — rendered after SlugResolver redirects ── */}
-      <Route path="/admin/:id"           element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
-      <Route path="/admin/:id/team"      element={<ProtectedRoute><TeamMembers /></ProtectedRoute>} />
-      <Route path="/admin/:id/profile"   element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
-      <Route path="/master-control"      element={<SuperAdminRoute><MasterControl /></SuperAdminRoute>} />
-      <Route path="/master-control/:uid" element={<SuperAdminRoute><MasterControl /></SuperAdminRoute>} />
+      {/* Auth temporarily removed from admin panel + master control routes */}
+      <Route path="/admin/:id"           element={<AdminDashboard />} />
+      <Route path="/admin/:id/team"      element={<TeamMembers />} />
+      <Route path="/admin/:id/profile"   element={<ProfilePage />} />
+      <Route path="/master-control"      element={<MasterControl />} />
+      <Route path="/master-control/:uid" element={<MasterControl />} />
 
       {/* Root */}
       <Route path="/" element={
@@ -371,11 +364,12 @@ function DefaultApp() {
 
       {/* Protected — require valid session */}
       <Route path="/dashboard"               element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-      <Route path="/master-control"          element={<ProtectedRoute><MasterControl /></ProtectedRoute>} />
-      <Route path="/master-control/:uid"     element={<ProtectedRoute><MasterControl /></ProtectedRoute>} />
-      <Route path="/admin/:id"               element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
-      <Route path="/admin/:id/team"          element={<ProtectedRoute><TeamMembers /></ProtectedRoute>} />
-      <Route path="/admin/:id/profile"       element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
+      {/* Auth temporarily removed from master-control + admin panel routes */}
+      <Route path="/master-control"          element={<MasterControl />} />
+      <Route path="/master-control/:uid"     element={<MasterControl />} />
+      <Route path="/admin/:id"               element={<AdminDashboard />} />
+      <Route path="/admin/:id/team"          element={<TeamMembers />} />
+      <Route path="/admin/:id/profile"       element={<ProfilePage />} />
       <Route path="/profile"                 element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
       <Route path="/super-admin"             element={<ProtectedRoute><SuperAdminDashboard /></ProtectedRoute>} />
       <Route path="/team-members"            element={<ProtectedRoute><TeamMembersAdmin /></ProtectedRoute>} />
