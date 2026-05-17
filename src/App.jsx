@@ -152,9 +152,15 @@ function SuperAdminApp() {
 function MenuApp() {
   return (
     <Routes>
-      {/* Restaurant website — customer-facing */}
+      {/* Primary slug-based routes */}
       <Route path="/:slug"                      element={<RestaurantWebsite />} />
       <Route path="/:slug/food/:itemName"        element={<FoodDetail />} />
+
+      {/* Compatibility aliases — RestaurantWebsite and FoodDetail use navigate()
+          with /restaurant/:slug paths internally; these aliases ensure those
+          navigations resolve correctly instead of hitting the 404 catch-all. */}
+      <Route path="/restaurant/:slug"                element={<RestaurantWebsite />} />
+      <Route path="/restaurant/:slug/food/:itemName" element={<FoodDetail />} />
 
       {/* QR / table-order routes */}
       <Route path="/m/:linkName/:tableNumber"    element={<MenuLinkRoute />} />
@@ -197,14 +203,19 @@ function DashboardApp() {
 
       {/* Slug-based entry points — each resolves to an internal /admin/:id route */}
       <Route path="/:slug"         element={<ProtectedRoute><SlugResolver /></ProtectedRoute>} />
-      <Route path="/:slug/master"  element={<ProtectedRoute><SlugResolver subPath="master" /></ProtectedRoute>} />
       <Route path="/:slug/team"    element={<ProtectedRoute><SlugResolver subPath="team" /></ProtectedRoute>} />
       <Route path="/:slug/profile" element={<ProtectedRoute><SlugResolver subPath="profile" /></ProtectedRoute>} />
 
-      {/* Internal routes that SlugResolver redirects to (AdminDashboard reads :id from params) */}
+      {/* Master route: SuperAdmin-gated — slug resolves to /admin/:id?from=master */}
+      <Route path="/:slug/master"  element={<SuperAdminRoute><SlugResolver subPath="master" /></SuperAdminRoute>} />
+
+      {/* Internal routes that SlugResolver redirects to (components read :id from params) */}
       <Route path="/admin/:id"         element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
       <Route path="/admin/:id/team"    element={<ProtectedRoute><TeamMembers /></ProtectedRoute>} />
       <Route path="/admin/:id/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
+      {/* MasterControl internal route — rendered after slug/master resolves */}
+      <Route path="/master-control"      element={<SuperAdminRoute><MasterControl /></SuperAdminRoute>} />
+      <Route path="/master-control/:uid" element={<SuperAdminRoute><MasterControl /></SuperAdminRoute>} />
 
       {/* Root → prompt for a restaurant */}
       <Route path="/" element={
