@@ -6,6 +6,7 @@ import HelpRequestsDrawer from '../components/HelpRequestsDrawer'
 import { LogIn, ShieldCheck, X, ArrowRight, AlertCircle, BellRing } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
+import { openRoleDashboard } from '../lib/navigation'
 
 const LAST_UID_KEY = 'exzibo_master_last_uid'
 const DEFAULT_SUPER_ADMIN_UID = '0000000001'
@@ -14,24 +15,24 @@ async function resolveAdminTargetByUID(uid) {
   const trimmed = String(uid || '').trim()
   if (!trimmed) return null
   if (trimmed === DEFAULT_SUPER_ADMIN_UID) {
-    return { id: 'default' }
+    return { id: 'default', slug: null }
   }
   // Fast path: check localStorage first
   try {
     const all = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
     const found = all.find(r => String(r.uid) === trimmed)
-    if (found) return { id: String(found.id) }
+    if (found) return { id: String(found.id), slug: found.slug || null }
   } catch { /* noop */ }
   // Fallback: query Supabase directly (handles restaurants not yet in localStorage)
   try {
     const { data, error } = await supabase
       .from('restaurants')
-      .select('id, uid')
+      .select('id, uid, slug')
       .eq('uid', trimmed)
       .maybeSingle()
     if (!error && data) {
       console.log('[MasterControl] UID resolved via Supabase:', data.id)
-      return { id: String(data.id) }
+      return { id: String(data.id), slug: data.slug || null }
     }
   } catch { /* noop */ }
   return null
@@ -80,7 +81,7 @@ export default function MasterControl() {
         return
       }
       localStorage.setItem(LAST_UID_KEY, trimmed)
-      navigate(`/admin/${target.id}?from=master`, { replace: true })
+      openRoleDashboard(navigate, target, 'master')
     }).catch(() => {
       setAutoLoading(false)
       setAutoError('Failed to resolve restaurant. Please try manually.')
@@ -100,7 +101,7 @@ export default function MasterControl() {
       return
     }
     localStorage.setItem(LAST_UID_KEY, trimmed)
-    navigate(`/admin/${target.id}?from=master`)
+    openRoleDashboard(navigate, target, 'master')
   }
 
   if (allowed === null) {

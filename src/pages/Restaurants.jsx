@@ -4,6 +4,7 @@ import { ArrowLeft, Plus, Store, ExternalLink, Settings, Globe, Utensils } from 
 import PlanBadge from '../components/PlanBadge'
 import { getRestaurants } from '../lib/db'
 import { supabase } from '../lib/supabase'
+import { openRoleDashboard } from '../lib/navigation'
 
 export default function Restaurants() {
   const navigate = useNavigate()
@@ -290,7 +291,7 @@ export default function Restaurants() {
                   restaurant={r}
                   isLast={i === filtered.length - 1}
                   onCustomer={() => navigate(`/restaurant/${r.slug || r.id}`)}
-                  onAdmin={() => navigate(`/admin/${r.id}`)}
+                  onAdmin={() => openRoleDashboard(navigate, r, 'owner')}
                 />
               ))
             )}

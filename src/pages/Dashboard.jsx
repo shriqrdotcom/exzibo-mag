@@ -5,6 +5,7 @@ import AdminHeader from '../components/AdminHeader'
 import { TrendingUp, Filter, Download, ChevronLeft, ChevronRight, Plus, Trash2, Clock, X, Pencil, Play, ExternalLink, LayoutDashboard, ShieldCheck, ImageDown, Upload, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react'
 import { useRole } from '../context/RoleContext'
 import { getRestaurants, updateRestaurant, softDeleteRestaurant, getRestaurantsCreatedThisMonth } from '../lib/db'
+import { openRoleDashboard } from '../lib/navigation'
 
 function getAvatarFromName(name) {
   return name.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase()
@@ -1583,8 +1584,8 @@ function DemoWebsitesPanel({ restaurants, onEdit, onDelete }) {
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                           {[
                             { label: 'VIEW',   color: '#22c55e', onClick: () => r.slug ? navigate(`/restaurant/${r.slug}`) : null },
-                            { label: 'ADMIN',  color: '#3B82F6', onClick: () => navigate(`/admin/${r.id}`) },
-                            { label: 'MASTER', color: '#A855F7', onClick: () => { console.log('Opening MASTER for:', r.uid); navigate(`/master-control/${r.uid}`) } },
+                            { label: 'ADMIN',  color: '#3B82F6', onClick: () => openRoleDashboard(navigate, r, 'owner') },
+                            { label: 'MASTER', color: '#A855F7', onClick: () => openRoleDashboard(navigate, r, 'master') },
                           ].map(({ label, color, onClick }) => (
                             <button
                               key={label}
