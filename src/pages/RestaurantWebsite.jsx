@@ -3,6 +3,7 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { notifyAnalyticsUpdate } from '../context/AnalyticsContext'
 import { getRestaurantBySlug, getMenuCategories, getMenuItems, getPublishedMenuItems } from '../lib/db'
 import { supabase } from '../lib/supabase'
+import { useMenuSubdomainRedirect } from '../lib/routeConfig'
 import {
   Star, MapPin, Bell, ShoppingCart, Home,
   UtensilsCrossed, ClipboardList, CalendarDays,
@@ -200,6 +201,15 @@ export default function RestaurantWebsite() {
   const { slug, tableNumber: tableParam, page: pageParam } = useParams()
   const navigate = useNavigate()
   const location = useLocation()
+
+  // Build the canonical path for this page on the menu subdomain:
+  //   /{slug}  |  /{slug}/{tableNumber}  |  /{slug}/{tableNumber}/{page}
+  const menuSubdomainPath = slug
+    ? (tableParam
+        ? (pageParam ? `/${slug}/${tableParam}/${pageParam}` : `/${slug}/${tableParam}`)
+        : `/${slug}`)
+    : null
+  useMenuSubdomainRedirect(menuSubdomainPath)
 
   // Table number: URL param (:tableNumber) wins, then ?table= query string
   const searchParams = new URLSearchParams(location.search)

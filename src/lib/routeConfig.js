@@ -1,6 +1,40 @@
+import { useEffect, useRef } from 'react'
 import { supabase } from './supabase'
 
 const DEFAULT_MENU_SUBDOMAIN = 'menu'
+
+const PRODUCTION_DOMAIN = 'exzibo.online'
+
+function isProductionHost() {
+  const h = window.location.hostname
+  return h === PRODUCTION_DOMAIN || h.endsWith(`.${PRODUCTION_DOMAIN}`)
+}
+
+function isOnSubdomain(subdomain) {
+  return window.location.hostname === `${subdomain}.${PRODUCTION_DOMAIN}`
+}
+
+/**
+ * Hook: redirects customer-facing pages to the configured menu subdomain.
+ * targetPath — the path to load on the subdomain, e.g. "/my-restaurant" or "/my-restaurant/food/wagyu"
+ * Only fires in production (exzibo.online). Dev/Replit is unaffected.
+ */
+export function useMenuSubdomainRedirect(targetPath) {
+  const redirected = useRef(false)
+
+  useEffect(() => {
+    if (redirected.current) return
+    if (!targetPath) return
+    if (!isProductionHost()) return
+
+    getMenuSubdomain().then(subdomain => {
+      if (isOnSubdomain(subdomain)) return
+      redirected.current = true
+      const url = `https://${subdomain}.${PRODUCTION_DOMAIN}${targetPath}`
+      window.location.replace(url)
+    }).catch(() => {})
+  }, [targetPath])
+}
 
 export async function getRouteConfig(key) {
   const { data, error } = await supabase

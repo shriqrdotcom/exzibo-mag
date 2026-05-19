@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
+import { useMenuSubdomainRedirect } from '../lib/routeConfig'
 import { ArrowLeft, Share2, Heart, Search, Star, ChevronRight, ChevronDown, Flame } from 'lucide-react'
 
 const FALLBACK_IMG = '/menu/wagyu-ribeye.png'
@@ -41,6 +42,9 @@ export default function FoodDetail() {
   const { slug, itemName } = useParams()
   const navigate = useNavigate()
   const location = useLocation()
+
+  // Redirect to configured menu subdomain in production
+  useMenuSubdomainRedirect(slug && itemName ? `/${slug}/food/${itemName}` : null)
 
   const [item, setItem] = useState(location.state?.item ? injectOldPrice(location.state.item) : null)
   const returnTab = location.state?.returnTab || 'menu'
