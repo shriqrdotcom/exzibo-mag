@@ -233,6 +233,8 @@ function SuperAdminApp() {
         element={<SuperAdminRoute><ProfilePage /></SuperAdminRoute>} />
       <Route path="/edit-profile"
         element={<SuperAdminRoute><EditProfile /></SuperAdminRoute>} />
+      <Route path="/dynamic-route"
+        element={<SuperAdminRoute><DynamicRoute /></SuperAdminRoute>} />
 
       {/* /admin/:id and /master-control are intentionally NOT here.
           They are served exclusively by DashboardApp on dashboard.exzibo.online. */}
