@@ -1,0 +1,72 @@
+---
+
+**Task: Implement Subdomain Prefix Logic for MENU ROUTE MAPPING**
+
+### Current UI:
+We have a section called **"MENU ROUTE MAPPING"** with:
+- A tab **"Add Sub Domain"**
+- Input field: **SUBDOMAIN PREFIX** (placeholder: "e.g. restaurant-name")
+
+### Requirement:
+
+When the user enters a subdomain prefix (example: `menu`) and clicks **Save**:
+
+1. **Save permanently** this subdomain prefix in the database for that restaurant.
+2. All **Menu-related pages** should now permanently use this custom subdomain instead of the default domain.
+
+### Expected Behavior:
+
+- User adds `menu` → Saves
+- The full URL becomes: **`menu.exzibo.online`**
+- From now on, whenever anyone opens **any menu page** of this restaurant, it should redirect to / load from **`menu.exzibo.online`** (not the old domain).
+- This setting should be **permanent** until changed again.
+
+### Technical Requirements:
+
+- Store the `subdomain_prefix` in the database (probably in the restaurant model or a separate `menu_settings` table).
+- Create a global middleware / route handler that checks if a restaurant has a saved `subdomain_prefix`.
+- If it exists, **rewrite or redirect** all menu routes (`/menu`, `/menu/*`, `/restaurant/*/menu`, etc.) to use the custom subdomain.
+- Handle both:
+  - **Redirect** (301 permanent) for SEO
+  - **URL rewriting** (if possible) so the user sees `menu.exzibo.online` in the address bar.
+
+### Pages that should respect this subdomain:
+- All menu pages
+- Menu categories
+- Item details
+- Cart (if menu-related)
+- Any route under menu section
+
+### Vercel Note:
+The subdomain `menu.exzibo.online` is already added in Vercel. We just need to route traffic correctly from our app.
+
+### Additional Logic Needed:
+
+1. **Validation**: Subdomain prefix should only contain lowercase letters, numbers, and hyphens.
+2. **Uniqueness**: Check if the full subdomain is already used by another restaurant.
+3. **UI Feedback**: Show success message "Menu subdomain updated successfully. All menu pages will now use menu.exzibo.online"
+4. **Display current subdomain**: Show the currently active subdomain below the input field.
+
+### Database Suggestion:
+```js
+restaurant.menuSettings = {
+  subdomainPrefix: "menu",
+  fullSubdomain: "menu.exzibo.online",
+  updatedAt: Date
+}
+```
+
+### Important:
+- Make it **multi-tenant safe**.
+- Handle both custom subdomain and fallback to default domain.
+- Add proper error handling.
+
+Please generate the complete code changes including:
+- Backend model/schema update
+- API endpoint to save subdomain prefix
+- Middleware / route rewrite logic
+- Frontend form handling and validation
+
+---
+
+**

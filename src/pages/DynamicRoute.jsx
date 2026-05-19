@@ -95,6 +95,7 @@ function Toast({ msg, type }) {
 
 function MenuTab() {
   const [subdomain, setSubdomain] = useState('')
+  const [savedSubdomain, setSavedSubdomain] = useState('')
   const [routePattern, setRoutePattern] = useState('')
   const [card2State, setCard2State] = useState({ routePath: '', redirectTarget: '', routeType: '301' })
   const [savingSubdomain, setSavingSubdomain] = useState(false)
@@ -104,7 +105,7 @@ function MenuTab() {
 
   function showToast(msg, type = 'success') {
     setToast({ msg, type })
-    setTimeout(() => setToast(null), 3200)
+    setTimeout(() => setToast(null), 4000)
   }
 
   useEffect(() => {
@@ -114,7 +115,7 @@ function MenuTab() {
           getRouteConfig('menu_subdomain'),
           getRouteConfig('menu_route_pattern'),
         ])
-        if (sd) setSubdomain(sd)
+        if (sd) { setSubdomain(sd); setSavedSubdomain(sd) }
         if (rp) setRoutePattern(rp)
         else if (sd) setRoutePattern(`${sd}.exzibo.online/{restaurantName}/{tableNumber}/menu`)
       } catch (err) {
@@ -140,11 +141,13 @@ function MenuTab() {
   async function handleSaveSubdomain() {
     const val = subdomain.trim()
     if (!val) { showToast('Subdomain prefix cannot be empty.', 'error'); return }
-    if (!/^[a-z0-9-]+$/.test(val)) { showToast('Only letters, numbers, and hyphens allowed.', 'error'); return }
+    if (!/^[a-z0-9-]+$/.test(val)) { showToast('Only lowercase letters, numbers, and hyphens allowed.', 'error'); return }
+    if (val.startsWith('-') || val.endsWith('-')) { showToast('Subdomain cannot start or end with a hyphen.', 'error'); return }
     setSavingSubdomain(true)
     try {
       await setRouteConfig('menu_subdomain', val)
-      showToast('Subdomain saved successfully')
+      setSavedSubdomain(val)
+      showToast(`Menu subdomain updated successfully. All menu pages will now use ${val}.exzibo.online`)
     } catch (err) {
       showToast('Failed to save subdomain: ' + err.message, 'error')
     } finally {
@@ -174,6 +177,8 @@ function MenuTab() {
     )
   }
 
+  const isDirty = subdomain.trim() !== savedSubdomain
+
   return (
     <>
       <style>{`@keyframes fadeInUp { from { opacity:0; transform:translate(-50%,8px) } to { opacity:1; transform:translate(-50%,0) } }`}</style>
@@ -182,15 +187,39 @@ function MenuTab() {
       {/* Card 1 — Add Sub Domain */}
       <div style={cardStyle}>
         <div style={cardTitleStyle}>Add Sub Domain</div>
-        <div style={{ marginBottom: '18px' }}>
+        <div style={{ marginBottom: '8px' }}>
           <label style={labelStyle}>Subdomain Prefix</label>
           <input
-            style={inputStyle}
+            style={{ ...inputStyle, borderColor: isDirty ? 'rgba(232,50,26,0.4)' : 'rgba(255,255,255,0.08)' }}
             placeholder="e.g. menu"
             value={subdomain}
             onChange={e => handleSubdomainChange(e.target.value)}
           />
         </div>
+
+        {/* Currently active subdomain badge */}
+        {savedSubdomain ? (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: '8px',
+            marginBottom: '18px', padding: '8px 12px',
+            background: 'rgba(21,128,61,0.12)',
+            border: '1px solid rgba(21,128,61,0.25)',
+            borderRadius: '8px',
+          }}>
+            <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#22c55e', flexShrink: 0 }} />
+            <span style={{ fontSize: '12px', color: '#86efac', fontWeight: 600 }}>
+              Currently active:&nbsp;
+            </span>
+            <span style={{ fontSize: '12px', color: '#22c55e', fontFamily: 'monospace', fontWeight: 700 }}>
+              {savedSubdomain}.exzibo.online
+            </span>
+          </div>
+        ) : (
+          <div style={{ marginBottom: '18px', fontSize: '12px', color: '#555', fontStyle: 'italic' }}>
+            No subdomain configured yet. Menu pages use the default domain.
+          </div>
+        )}
+
         <div style={{ marginBottom: '6px' }}>
           <label style={labelStyle}>Dynamic Route Pattern</label>
           <input
@@ -200,6 +229,24 @@ function MenuTab() {
             onChange={e => setRoutePattern(e.target.value)}
           />
         </div>
+
+        {/* Full URL preview */}
+        {subdomain && (
+          <div style={{
+            marginTop: '10px', marginBottom: '4px',
+            padding: '8px 12px',
+            background: '#1a1a1a',
+            border: '1px solid rgba(255,255,255,0.06)',
+            borderRadius: '8px',
+            fontSize: '12px', color: '#888',
+          }}>
+            Full URL:&nbsp;
+            <span style={{ color: ACCENT, fontFamily: 'monospace', fontWeight: 600 }}>
+              https://{subdomain}.exzibo.online
+            </span>
+          </div>
+        )}
+
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginTop: '20px' }}>
           <button
             style={ghostButtonStyle}
