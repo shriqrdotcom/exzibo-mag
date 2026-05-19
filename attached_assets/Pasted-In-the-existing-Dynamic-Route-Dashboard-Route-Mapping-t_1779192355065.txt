@@ -1,0 +1,66 @@
+In the existing **Dynamic Route → " Dashboard Route Mapping** " tab, make the following **additive-only** changes. Do NOT modify the `MENU ROUTE MAPPING` tab, sidebar, or any other section.
+
+---
+
+**CHANGE 1 — "Add Sub Domain" Card (Dashboard Route Mapping tab only)**
+
+In the `Add Sub Domain` card inside the `DASHBOARD ROUTE MAPPING` tab, add a new button labeled `DEFAULT DASHBOARD` placed **to the left** of the existing `SAVE SUBDOMAIN` button on the same row.
+
+- Button label: `DEFAULT DASHBOARD`
+- Style: Dark/outlined style — dark background, orange-red border, orange-red text — same outlined style pattern already used in the project
+- Behavior: When clicked, auto-fill:
+  - `Subdomain Prefix` input → `dashboard`
+  - `Generated URL Preview` → `dashboard.exzibo.online`
+- Layout: Both `DEFAULT DASHBOARD` and `SAVE SUBDOMAIN` sit in a flex row with a small gap between them. Wrap to next line on small screens.
+
+---
+
+**CHANGE 2 — "Add Dynamic Routing Logic" Card (Dashboard Route Mapping tab only)**
+
+In the `Add Dynamic Routing Logic` card inside the `DASHBOARD ROUTE MAPPING` tab, add **4 new default-fill buttons** placed **above** the existing `SAVE ROUTE` button in a flex-wrap row:
+
+**Button 1 — `DEFAULT MASTER`**
+- Style: **White background, dark/black text, no colored border** — solid white button
+- Behavior: When clicked, auto-fill:
+  - `Route Path` → `/master`
+  - `Redirect Target URL` → `https://exzibo.online/master`
+  - `Route Type` dropdown → `Permanent (301)`
+
+**Button 2 — `DEFAULT OWNER`**
+- Style: Same solid white button style
+- Behavior: When clicked, auto-fill:
+  - `Route Path` → `/owner`
+  - `Redirect Target URL` → `https://exzibo.online/owner`
+  - `Route Type` dropdown → `Permanent (301)`
+
+**Button 3 — `DEFAULT ADMIN`**
+- Style: Same solid white button style
+- Behavior: When clicked, auto-fill:
+  - `Route Path` → `/admin`
+  - `Redirect Target URL` → `https://exzibo.online/admin`
+  - `Route Type` dropdown → `Permanent (301)`
+
+**Button 4 — `DEFAULT EMPLOYEE`**
+- Style: Same solid white button style
+- Behavior: When clicked, auto-fill:
+  - `Route Path` → `/employee`
+  - `Redirect Target URL` → `https://exzibo.online/employee`
+  - `Route Type` dropdown → `Permanent (301)`
+
+Layout of all buttons in this card (top to bottom):
+1. Row 1 (flex-wrap): `DEFAULT MASTER` · `DEFAULT OWNER` · `DEFAULT ADMIN` · `DEFAULT EMPLOYEE`
+2. Row 2: existing `SAVE ROUTE` button (unchanged, keep its existing orange-red outlined style)
+
+All 4 white buttons should have equal width, consistent padding, and wrap gracefully on smaller screens.
+
+---
+
+**CONSTRAINTS:**
+
+- These changes apply **only** inside the `DASHBOARD ROUTE MAPPING` tab
+- Do NOT touch `MENU ROUTE MAPPING` tab or any of its buttons/logic
+- Do NOT change any existing input fields, dropdowns, or `SAVE` button styles
+- The 4 white buttons must be **clearly white** — `background: white`, `color: #111` or equivalent dark text — so they stand out against the dark card background
+- No new color tokens or design system imports — use inline styles or existing utility classes already in the project
+
+---

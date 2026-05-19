@@ -60,7 +60,22 @@ const ghostButtonStyle = {
   background: '#1a1a1a',
 }
 
-function RouteCards({ state, setState, showDefaults }) {
+const whiteButtonStyle = {
+  padding: '10px 18px',
+  borderRadius: '8px',
+  background: '#ffffff',
+  border: '1.5px solid #ffffff',
+  color: '#111111',
+  fontSize: '13px',
+  fontWeight: 700,
+  letterSpacing: '0.07em',
+  cursor: 'pointer',
+  transition: 'all 0.2s ease',
+  flex: '1 1 auto',
+  minWidth: '120px',
+}
+
+function RouteCards({ state, setState, showDefaults, isDashboard }) {
   return (
     <>
       {/* Card 1 — Add Subdomain */}
@@ -98,6 +113,22 @@ function RouteCards({ state, setState, showDefaults }) {
               onClick={() => setState(s => ({ ...s, subdomain: 'menu' }))}
             >
               DEFAULT MENU
+            </button>
+          )}
+          {isDashboard && (
+            <button
+              style={ghostButtonStyle}
+              onMouseEnter={e => {
+                e.currentTarget.style.background = ACCENT
+                e.currentTarget.style.color = '#fff'
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.background = '#1a1a1a'
+                e.currentTarget.style.color = ACCENT
+              }}
+              onClick={() => setState(s => ({ ...s, subdomain: 'dashboard' }))}
+            >
+              DEFAULT DASHBOARD
             </button>
           )}
           <button
@@ -191,8 +222,39 @@ function RouteCards({ state, setState, showDefaults }) {
               </button>
             </>
           )}
+          {isDashboard && (
+            <div style={{ width: '100%', display: 'flex', flexWrap: 'wrap', gap: '10px', marginTop: '10px' }}>
+              {[
+                { label: 'DEFAULT MASTER',   path: '/master',   target: 'https://exzibo.online/master' },
+                { label: 'DEFAULT OWNER',    path: '/owner',    target: 'https://exzibo.online/owner' },
+                { label: 'DEFAULT ADMIN',    path: '/admin',    target: 'https://exzibo.online/admin' },
+                { label: 'DEFAULT EMPLOYEE', path: '/employee', target: 'https://exzibo.online/employee' },
+              ].map(({ label, path, target }) => (
+                <button
+                  key={label}
+                  style={whiteButtonStyle}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.background = '#e0e0e0'
+                    e.currentTarget.style.borderColor = '#e0e0e0'
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.background = '#ffffff'
+                    e.currentTarget.style.borderColor = '#ffffff'
+                  }}
+                  onClick={() => setState(s => ({
+                    ...s,
+                    routePath: path,
+                    redirectTarget: target,
+                    routeType: '301',
+                  }))}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
           <button
-            style={saveButtonStyle}
+            style={{ ...saveButtonStyle, marginTop: isDashboard ? '0' : '20px' }}
             onMouseEnter={e => {
               e.currentTarget.style.background = ACCENT
               e.currentTarget.style.color = '#fff'
@@ -284,7 +346,7 @@ export default function DynamicRoute() {
             <RouteCards state={menuState} setState={setMenuState} showDefaults />
           )}
           {activeTab === 'dashboard' && (
-            <RouteCards state={dashboardState} setState={setDashboardState} />
+            <RouteCards state={dashboardState} setState={setDashboardState} isDashboard />
           )}
         </div>
       </main>
