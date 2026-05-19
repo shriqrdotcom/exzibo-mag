@@ -137,6 +137,76 @@ function RestaurantSlugList() {
   )
 }
 
+function TableNumberList() {
+  const [restaurants, setRestaurants] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    supabase
+      .from('restaurants')
+      .select('id, name, table_numbers')
+      .order('name')
+      .then(({ data }) => { setRestaurants(data || []); setLoading(false) })
+      .catch(() => setLoading(false))
+  }, [])
+
+  if (loading) {
+    return (
+      <div style={{ color: '#555', fontSize: '13px', fontStyle: 'italic', padding: '10px 0' }}>
+        Loading tables…
+      </div>
+    )
+  }
+
+  const hasAny = restaurants.some(r => Array.isArray(r.table_numbers) && r.table_numbers.length > 0)
+
+  if (!hasAny) {
+    return (
+      <div style={{
+        background: '#1a1a1a',
+        border: '1px solid rgba(255,255,255,0.08)',
+        borderRadius: '8px',
+        padding: '10px 14px',
+        display: 'flex', alignItems: 'center', gap: '10px',
+      }}>
+        <span style={{ fontSize: '11px', fontWeight: 600, color: '#555', letterSpacing: '0.05em', flexShrink: 0 }}>
+          CONNECTED WITH UID
+        </span>
+        <span style={{ color: ACCENT, fontFamily: 'monospace', fontWeight: 700, fontSize: '13px' }}>/1/</span>
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+      {restaurants.map(r => {
+        const nums = Array.isArray(r.table_numbers) && r.table_numbers.length > 0
+          ? r.table_numbers
+          : ['1']
+        return nums.map(n => (
+          <div key={`${r.id}-${n}`} style={{
+            background: '#1a1a1a',
+            border: '1px solid rgba(255,255,255,0.08)',
+            borderRadius: '8px',
+            padding: '10px 14px',
+            display: 'flex', alignItems: 'center', gap: '10px',
+          }}>
+            <span style={{ fontSize: '11px', fontWeight: 600, color: '#555', letterSpacing: '0.05em', flexShrink: 0 }}>
+              CONNECTED WITH UID
+            </span>
+            <span style={{ color: ACCENT, fontFamily: 'monospace', fontWeight: 700, fontSize: '13px' }}>
+              /{n}/
+            </span>
+            <span style={{ marginLeft: 'auto', fontSize: '11px', color: '#444', fontWeight: 500, whiteSpace: 'nowrap' }}>
+              {r.name} · Table {n}
+            </span>
+          </div>
+        ))
+      })}
+    </div>
+  )
+}
+
 function Toast({ msg, type }) {
   if (!msg) return null
   return (
@@ -347,12 +417,7 @@ function MenuTab() {
         </div>
         <div style={{ marginBottom: '18px' }}>
           <label style={labelStyle}>TABLE NUMBER LOGIC</label>
-          <input
-            style={inputStyle}
-            placeholder="e.g. https://exzibo.online/menu/xyz"
-            value={card2State.redirectTarget}
-            onChange={e => setCard2State(s => ({ ...s, redirectTarget: e.target.value }))}
-          />
+          <TableNumberList />
         </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
           <button
@@ -473,12 +538,7 @@ function RouteCards({ state, setState, showDefaults, isDashboard }) {
         </div>
         <div style={{ marginBottom: '18px' }}>
           <label style={labelStyle}>TABLE NUMBER LOGIC</label>
-          <input
-            style={inputStyle}
-            placeholder="e.g. https://exzibo.online/menu/xyz"
-            value={state.redirectTarget}
-            onChange={e => setState(s => ({ ...s, redirectTarget: e.target.value }))}
-          />
+          <TableNumberList />
         </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
           {showDefaults && (
