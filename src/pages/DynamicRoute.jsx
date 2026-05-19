@@ -1,5 +1,6 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import Sidebar from '../components/Sidebar'
+import { getRouteConfig, setRouteConfig } from '../lib/routeConfig'
 
 const ACCENT = '#E8321A'
 
@@ -73,6 +74,230 @@ const whiteButtonStyle = {
   transition: 'all 0.2s ease',
   flex: '1 1 auto',
   minWidth: '120px',
+}
+
+function Toast({ msg, type }) {
+  if (!msg) return null
+  return (
+    <div style={{
+      position: 'fixed', bottom: '28px', left: '50%', transform: 'translateX(-50%)',
+      background: type === 'error' ? '#b91c1c' : '#15803d',
+      color: '#fff', padding: '11px 26px', borderRadius: '10px',
+      fontSize: '13px', fontWeight: 600, zIndex: 9999,
+      boxShadow: '0 6px 24px rgba(0,0,0,0.5)',
+      whiteSpace: 'nowrap', pointerEvents: 'none',
+      animation: 'fadeInUp 0.2s ease',
+    }}>
+      {msg}
+    </div>
+  )
+}
+
+function MenuTab() {
+  const [subdomain, setSubdomain] = useState('')
+  const [routePattern, setRoutePattern] = useState('')
+  const [card2State, setCard2State] = useState({ routePath: '', redirectTarget: '', routeType: '301' })
+  const [savingSubdomain, setSavingSubdomain] = useState(false)
+  const [savingPattern, setSavingPattern] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [toast, setToast] = useState(null)
+
+  function showToast(msg, type = 'success') {
+    setToast({ msg, type })
+    setTimeout(() => setToast(null), 3200)
+  }
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const [sd, rp] = await Promise.all([
+          getRouteConfig('menu_subdomain'),
+          getRouteConfig('menu_route_pattern'),
+        ])
+        if (sd) setSubdomain(sd)
+        if (rp) setRoutePattern(rp)
+        else if (sd) setRoutePattern(`${sd}.exzibo.online/{restaurantName}/{tableNumber}/menu`)
+      } catch (err) {
+        console.warn('[route_config] load error:', err.message)
+      } finally {
+        setLoading(false)
+      }
+    }
+    load()
+  }, [])
+
+  function handleSubdomainChange(raw) {
+    const sanitized = raw.toLowerCase().replace(/[^a-z0-9-]/g, '')
+    setSubdomain(sanitized)
+    setRoutePattern(prev => {
+      const suffix = prev.includes('/')
+        ? prev.substring(prev.indexOf('/'))
+        : '/{restaurantName}/{tableNumber}/menu'
+      return sanitized ? `${sanitized}.exzibo.online${suffix}` : ''
+    })
+  }
+
+  async function handleSaveSubdomain() {
+    const val = subdomain.trim()
+    if (!val) { showToast('Subdomain prefix cannot be empty.', 'error'); return }
+    if (!/^[a-z0-9-]+$/.test(val)) { showToast('Only letters, numbers, and hyphens allowed.', 'error'); return }
+    setSavingSubdomain(true)
+    try {
+      await setRouteConfig('menu_subdomain', val)
+      showToast('Subdomain saved successfully')
+    } catch (err) {
+      showToast('Failed to save subdomain: ' + err.message, 'error')
+    } finally {
+      setSavingSubdomain(false)
+    }
+  }
+
+  async function handleSaveRoutePattern() {
+    const val = routePattern.trim()
+    if (!val) { showToast('Route pattern cannot be empty.', 'error'); return }
+    setSavingPattern(true)
+    try {
+      await setRouteConfig('menu_route_pattern', val)
+      showToast('Route pattern saved successfully')
+    } catch (err) {
+      showToast('Failed to save route pattern: ' + err.message, 'error')
+    } finally {
+      setSavingPattern(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div style={{ color: '#555', fontSize: '14px', padding: '20px 0', letterSpacing: '0.04em' }}>
+        Loading…
+      </div>
+    )
+  }
+
+  return (
+    <>
+      <style>{`@keyframes fadeInUp { from { opacity:0; transform:translate(-50%,8px) } to { opacity:1; transform:translate(-50%,0) } }`}</style>
+      <Toast msg={toast?.msg} type={toast?.type} />
+
+      {/* Card 1 — Add Sub Domain */}
+      <div style={cardStyle}>
+        <div style={cardTitleStyle}>Add Sub Domain</div>
+        <div style={{ marginBottom: '18px' }}>
+          <label style={labelStyle}>Subdomain Prefix</label>
+          <input
+            style={inputStyle}
+            placeholder="e.g. menu"
+            value={subdomain}
+            onChange={e => handleSubdomainChange(e.target.value)}
+          />
+        </div>
+        <div style={{ marginBottom: '6px' }}>
+          <label style={labelStyle}>Dynamic Route Pattern</label>
+          <input
+            style={inputStyle}
+            placeholder="e.g. menu.exzibo.online/{restaurantName}/{tableNumber}/menu"
+            value={routePattern}
+            onChange={e => setRoutePattern(e.target.value)}
+          />
+        </div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginTop: '20px' }}>
+          <button
+            style={ghostButtonStyle}
+            onMouseEnter={e => { e.currentTarget.style.background = ACCENT; e.currentTarget.style.color = '#fff' }}
+            onMouseLeave={e => { e.currentTarget.style.background = '#1a1a1a'; e.currentTarget.style.color = ACCENT }}
+            onClick={() => handleSubdomainChange('menu')}
+          >
+            DEFAULT MENU
+          </button>
+          <button
+            style={{ ...saveButtonStyle, opacity: savingPattern ? 0.65 : 1, cursor: savingPattern ? 'default' : 'pointer' }}
+            disabled={savingPattern}
+            onMouseEnter={e => { if (!savingPattern) { e.currentTarget.style.background = ACCENT; e.currentTarget.style.color = '#fff' } }}
+            onMouseLeave={e => { if (!savingPattern) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = ACCENT } }}
+            onClick={handleSaveRoutePattern}
+          >
+            {savingPattern ? 'SAVING…' : 'SAVE ROUTE PATTERN'}
+          </button>
+          <button
+            style={{ ...saveButtonStyle, opacity: savingSubdomain ? 0.65 : 1, cursor: savingSubdomain ? 'default' : 'pointer' }}
+            disabled={savingSubdomain}
+            onMouseEnter={e => { if (!savingSubdomain) { e.currentTarget.style.background = ACCENT; e.currentTarget.style.color = '#fff' } }}
+            onMouseLeave={e => { if (!savingSubdomain) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = ACCENT } }}
+            onClick={handleSaveSubdomain}
+          >
+            {savingSubdomain ? 'SAVING…' : 'SAVE SUBDOMAIN'}
+          </button>
+        </div>
+      </div>
+
+      {/* Card 2 — Add Dynamic Routing Logic (UI only, same as before) */}
+      <div style={cardStyle}>
+        <div style={cardTitleStyle}>Add Dynamic Routing Logic</div>
+        <div style={{ marginBottom: '18px' }}>
+          <label style={labelStyle}>Route Path</label>
+          <input
+            style={inputStyle}
+            placeholder="e.g. /menu"
+            value={card2State.routePath}
+            onChange={e => setCard2State(s => ({ ...s, routePath: e.target.value }))}
+          />
+        </div>
+        <div style={{ marginBottom: '18px' }}>
+          <label style={labelStyle}>Redirect Target URL</label>
+          <input
+            style={inputStyle}
+            placeholder="e.g. https://exzibo.online/menu/xyz"
+            value={card2State.redirectTarget}
+            onChange={e => setCard2State(s => ({ ...s, redirectTarget: e.target.value }))}
+          />
+        </div>
+        <div>
+          <label style={labelStyle}>Route Type</label>
+          <select
+            style={{ ...inputStyle, cursor: 'pointer' }}
+            value={card2State.routeType}
+            onChange={e => setCard2State(s => ({ ...s, routeType: e.target.value }))}
+          >
+            <option value="301">Permanent (301)</option>
+            <option value="302">Temporary (302)</option>
+          </select>
+        </div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+          <button
+            style={ghostButtonStyle}
+            onMouseEnter={e => { e.currentTarget.style.background = ACCENT; e.currentTarget.style.color = '#fff' }}
+            onMouseLeave={e => { e.currentTarget.style.background = '#1a1a1a'; e.currentTarget.style.color = ACCENT }}
+            onClick={() => setCard2State(s => ({ ...s, routePath: '/restaurant', redirectTarget: 'https://exzibo.online/restaurant', routeType: '301' }))}
+          >
+            DEFAULT RESTAURANT
+          </button>
+          <button
+            style={ghostButtonStyle}
+            onMouseEnter={e => { e.currentTarget.style.background = ACCENT; e.currentTarget.style.color = '#fff' }}
+            onMouseLeave={e => { e.currentTarget.style.background = '#1a1a1a'; e.currentTarget.style.color = ACCENT }}
+            onClick={() => setCard2State(s => ({ ...s, routePath: '/table', redirectTarget: 'https://exzibo.online/table', routeType: '301' }))}
+          >
+            DEFAULT TABLE
+          </button>
+          <button
+            style={ghostButtonStyle}
+            onMouseEnter={e => { e.currentTarget.style.background = ACCENT; e.currentTarget.style.color = '#fff' }}
+            onMouseLeave={e => { e.currentTarget.style.background = '#1a1a1a'; e.currentTarget.style.color = ACCENT }}
+            onClick={() => setCard2State(s => ({ ...s, routePath: '/menu', redirectTarget: 'https://exzibo.online/menu', routeType: '301' }))}
+          >
+            DEFAULT MENU
+          </button>
+        </div>
+        <button
+          style={{ ...saveButtonStyle, marginTop: '20px' }}
+          onMouseEnter={e => { e.currentTarget.style.background = ACCENT; e.currentTarget.style.color = '#fff' }}
+          onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = ACCENT }}
+        >
+          SAVE ROUTE
+        </button>
+      </div>
+    </>
+  )
 }
 
 function RouteCards({ state, setState, showDefaults, isDashboard }) {
@@ -286,7 +511,6 @@ const TABS = [
 
 export default function DynamicRoute() {
   const [activeTab, setActiveTab] = useState('menu')
-  const [menuState, setMenuState] = useState(initialTabState)
   const [dashboardState, setDashboardState] = useState(initialTabState)
 
   return (
@@ -343,7 +567,7 @@ export default function DynamicRoute() {
         {/* Tab Content */}
         <div style={{ maxWidth: '600px' }}>
           {activeTab === 'menu' && (
-            <RouteCards state={menuState} setState={setMenuState} showDefaults />
+            <MenuTab />
           )}
           {activeTab === 'dashboard' && (
             <RouteCards state={dashboardState} setState={setDashboardState} isDashboard />

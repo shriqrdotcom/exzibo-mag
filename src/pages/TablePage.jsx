@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import Sidebar from '../components/Sidebar'
 import AdminHeader from '../components/AdminHeader'
 import { X, Check, Copy, ExternalLink, Plus, Lock } from 'lucide-react'
+import { getMenuSubdomain, buildMenuBaseUrl } from '../lib/routeConfig'
 
 function getAvatar(name) {
   return (name || '?').split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase()
@@ -54,7 +55,7 @@ function saveLinkTableCount(uid, count) {
   localStorage.setItem(`exzibo_link_table_count_${uid}`, String(count))
 }
 
-const LINK_BASE_URL = 'https://menu.exzibo.online'
+const FALLBACK_LINK_BASE_URL = 'https://menu.exzibo.online'
 
 function sanitizeLinkName(value) {
   return value
@@ -97,6 +98,7 @@ export default function TablePage() {
   const [showAddTables, setShowAddTables] = useState(false)
   const [addTablesInput, setAddTablesInput] = useState('')
   const [copiedTableUrl, setCopiedTableUrl] = useState(null)
+  const [linkBaseUrl, setLinkBaseUrl] = useState(FALLBACK_LINK_BASE_URL)
   const inputRef = useRef(null)
   const toastTimer = useRef(null)
 
@@ -105,7 +107,12 @@ export default function TablePage() {
     setRestaurants(saved)
   }
 
-  useEffect(() => { loadRestaurants() }, [])
+  useEffect(() => {
+    loadRestaurants()
+    getMenuSubdomain()
+      .then(sd => setLinkBaseUrl(buildMenuBaseUrl(sd)))
+      .catch(() => setLinkBaseUrl(FALLBACK_LINK_BASE_URL))
+  }, [])
 
   function openPanel(restaurant) {
     setPanelTarget(restaurant)
@@ -263,7 +270,7 @@ export default function TablePage() {
   }
 
   function getTableUrl(slug, tableNumber) {
-    return `${LINK_BASE_URL}/${slug}/${tableNumber}`
+    return `${linkBaseUrl}/${slug}/${tableNumber}`
   }
 
   return (
@@ -704,7 +711,7 @@ export default function TablePage() {
                       borderRadius: '8px',
                       overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                     }}>
-                      {LINK_BASE_URL}/menu/{linkNameInput || '[linkname]'}/table-1
+                      {linkBaseUrl}/menu/{linkNameInput || '[linkname]'}/table-1
                     </div>
                   </div>
 

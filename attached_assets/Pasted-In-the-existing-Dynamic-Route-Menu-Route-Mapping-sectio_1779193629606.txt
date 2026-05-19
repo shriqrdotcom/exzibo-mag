@@ -1,0 +1,67 @@
+In the existing **Dynamic Route → Menu Route Mapping** section, implement real **persistent backend logic** for both cards. This is not UI-only — data must be saved to Supabase and applied across the project permanently. This is **additive-only** — do NOT break any existing functionality.
+
+---
+
+**PART 1 — SUBDOMAIN PREFIX: SAVE & APPLY LOGIC**
+
+**What it does:** When the user types a subdomain prefix (e.g. `menu`) and clicks `SAVE SUBDOMAIN`, it permanently saves that subdomain and applies it as the base URL for all menu pages across the entire project.
+
+**Implementation steps:**
+
+1. Create a Supabase table called `route_config` if it doesn't already exist, with these columns:
+   - `id` (uuid, primary key, default gen_random_uuid())
+   - `config_key` (text, unique) — e.g. `"menu_subdomain"`
+   - `config_value` (text) — e.g. `"menu"`
+   - `updated_at` (timestamp, default now())
+
+2. On `SAVE SUBDOMAIN` button click:
+   - Validate the input is not empty and contains no spaces or special characters (only letters, numbers, hyphens allowed)
+   - Upsert into `route_config` table: `config_key = "menu_subdomain"`, `config_value = [user input]`
+   - Show a success toast: `"Subdomain saved successfully"`
+   - Show an error toast on failure
+
+3. On page load of the Dynamic Route section:
+   - Fetch the saved `menu_subdomain` value from `route_config`
+   - Pre-fill the `Subdomain Prefix` input with the saved value
+   - Update the Generated URL Preview to reflect the saved subdomain
+
+4. **Apply across the project:** Wherever menu page URLs are constructed in the codebase (search for all places that build or display menu URLs), replace the hardcoded base domain with the dynamically fetched `menu_subdomain` value from `route_config`. The final menu base URL pattern should be: `[menu_subdomain].exzibo.online`
+
+---
+
+**PART 2 — DYNAMIC ROUTING LOGIC: SAVE & APPLY LOGIC**
+
+**What it does:** The `Generated URL Preview` field is repurposed as a **Dynamic Route Pattern input**. The user defines a URL pattern like `menu.exzibo.online/{restaurantName}/{tableNumber}/menu` — and when saved, this pattern is stored permanently and used as the routing template for all menu page deep links.
+
+**Implementation steps:**
+
+1. Rename the field label from `GENERATED URL PREVIEW` to `DYNAMIC ROUTE PATTERN` in the Menu Route Mapping tab.
+
+2. Change the field from read-only to **editable input** so the user can type or edit the full route pattern manually. Placeholder text: `e.g. menu.exzibo.online/{restaurantName}/{tableNumber}/menu`
+
+3. Keep the live preview behavior: as user types in `Subdomain Prefix`, still auto-update the start of this pattern field to reflect the subdomain.
+
+4. Add a new button below this field (or reuse `SAVE SUBDOMAIN` flow — but keep them separate): a dedicated **`SAVE ROUTE PATTERN`** button with the same orange-red outlined style.
+
+5. On `SAVE ROUTE PATTERN` click:
+   - Validate the pattern is not empty
+   - Upsert into `route_config` table: `config_key = "menu_route_pattern"`, `config_value = [user input pattern]`
+   - Show success toast: `"Route pattern saved successfully"`
+   - Show error toast on failure
+
+6. On page load:
+   - Fetch saved `menu_route_pattern` from `route_config`
+   - Pre-fill the Dynamic Route Pattern input with saved value
+
+7. **Apply across the project:** Wherever the project generates deep links for menu pages (e.g. QR code URLs, shareable links, table links), replace the hardcoded URL construction logic with the dynamic pattern fetched from `route_config`. Use the saved pattern as the template, substituting `{restaurantName}` and `{tableNumber}` with actual values at runtime.
+
+---
+
+**CONSTRAINTS:**
+
+- All saves must use **Supabase upsert** (insert or update on conflict) — never duplicate rows
+- `route_config` table must be created only if it does not already exist — do not drop or alter existing tables
+- Do NOT touch `DASHBOARD ROUTE MAPPING` tab, sidebar, or any other section
+- All existing menu URL logic must remain functional during transition — only replace hardcoded values after confirming the new config fetch works
+- Use the existing Supabase client already initialized in the project — do not create a new client instance
+- Handle loading states on both Save buttons (disable button + show spinner while saving)
