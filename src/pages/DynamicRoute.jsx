@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import Sidebar from '../components/Sidebar'
 import { getRouteConfig, setRouteConfig } from '../lib/routeConfig'
+import { supabase } from '../lib/supabase'
 
 const ACCENT = '#E8321A'
 
@@ -74,6 +75,66 @@ const whiteButtonStyle = {
   transition: 'all 0.2s ease',
   flex: '1 1 auto',
   minWidth: '120px',
+}
+
+function slugify(name) {
+  return name.toLowerCase().trim().replace(/\s+/g, '-')
+}
+
+function RestaurantSlugList() {
+  const [restaurants, setRestaurants] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    supabase
+      .from('restaurants')
+      .select('id, name')
+      .order('name')
+      .then(({ data }) => { setRestaurants(data || []); setLoading(false) })
+      .catch(() => setLoading(false))
+  }, [])
+
+  if (loading) {
+    return (
+      <div style={{ color: '#555', fontSize: '13px', fontStyle: 'italic', padding: '10px 0' }}>
+        Loading restaurants…
+      </div>
+    )
+  }
+
+  if (!restaurants.length) {
+    return (
+      <div style={{ ...inputStyle, color: '#555', fontStyle: 'italic', cursor: 'default' }}>
+        /your-restaurant-name/
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+      {restaurants.map(r => (
+        <div key={r.id} style={{
+          background: '#1a1a1a',
+          border: '1px solid rgba(255,255,255,0.08)',
+          borderRadius: '8px',
+          padding: '10px 14px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px',
+        }}>
+          <span style={{ fontSize: '11px', fontWeight: 600, color: '#555', letterSpacing: '0.05em', flexShrink: 0 }}>
+            CONNECTED WITH UID
+          </span>
+          <span style={{ color: ACCENT, fontFamily: 'monospace', fontWeight: 700, fontSize: '13px' }}>
+            /{slugify(r.name)}/
+          </span>
+          <span style={{ marginLeft: 'auto', fontSize: '11px', color: '#444', fontWeight: 500, whiteSpace: 'nowrap' }}>
+            {r.name}
+          </span>
+        </div>
+      ))}
+    </div>
+  )
 }
 
 function Toast({ msg, type }) {
@@ -282,12 +343,7 @@ function MenuTab() {
         <div style={cardTitleStyle}>Add Dynamic Routing Logic</div>
         <div style={{ marginBottom: '18px' }}>
           <label style={labelStyle}>NAME OF THE RESTAURANT CONNECTED WITH UID</label>
-          <input
-            style={inputStyle}
-            placeholder="e.g. /menu"
-            value={card2State.routePath}
-            onChange={e => setCard2State(s => ({ ...s, routePath: e.target.value }))}
-          />
+          <RestaurantSlugList />
         </div>
         <div style={{ marginBottom: '18px' }}>
           <label style={labelStyle}>TABLE NUMBER LOGIC</label>
@@ -413,12 +469,7 @@ function RouteCards({ state, setState, showDefaults, isDashboard }) {
         <div style={cardTitleStyle}>Add Dynamic Routing Logic</div>
         <div style={{ marginBottom: '18px' }}>
           <label style={labelStyle}>NAME OF THE RESTAURANT CONNECTED WITH UID</label>
-          <input
-            style={inputStyle}
-            placeholder="e.g. /menu"
-            value={state.routePath}
-            onChange={e => setState(s => ({ ...s, routePath: e.target.value }))}
-          />
+          <RestaurantSlugList />
         </div>
         <div style={{ marginBottom: '18px' }}>
           <label style={labelStyle}>TABLE NUMBER LOGIC</label>
