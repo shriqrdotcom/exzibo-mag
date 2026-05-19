@@ -1,0 +1,44 @@
+In the existing **Dynamic Route → Menu Route Mapping** section, make the following **additive-only** changes. Do NOT modify any other section, tab, or existing functionality.
+
+---
+
+**CHANGE 1 — "Add Sub Domain" Card**
+
+In the `Add Sub Domain` card, add a new button labeled `DEFAULT MENU` placed **before** the existing `SAVE SUBDOMAIN` button (to its left, on the same row).
+
+- Button label: `DEFAULT MENU`
+- Style: Same height as `SAVE SUBDOMAIN` button, but use a **dark/outlined** style (dark background, orange-red border, orange-red text) — to visually differentiate it from the primary `SAVE SUBDOMAIN` button
+- Behavior: When clicked, auto-fill the `Subdomain Prefix` input field with the value `menu` and update the Generated URL Preview to show `menu.exzibo.online`
+- Both buttons (`DEFAULT MENU` and `SAVE SUBDOMAIN`) should sit side by side in a flex row with a small gap
+
+---
+
+**CHANGE 2 — "Add Dynamic Routing Logic" Card**
+
+In the `Add Dynamic Routing Logic` card, add **2 new buttons** placed **before** the existing `SAVE ROUTE` button — all three buttons on the same row (flex row, small gap between them):
+
+**Button 1 — `DEFAULT RESTAURANT`**
+- Style: Dark/outlined style (dark background, orange-red border, orange-red text)
+- Behavior: When clicked, auto-fill:
+  - `Route Path` input → `/restaurant`
+  - `Redirect Target URL` input → `https://exzibo.online/restaurant`
+  - `Route Type` dropdown → `Permanent (301)`
+
+**Button 2 — `DEFAULT TABLE`**
+- Style: Same dark/outlined style as above
+- Behavior: When clicked, auto-fill:
+  - `Route Path` input → `/table`
+  - `Redirect Target URL` input → `https://exzibo.online/table`
+  - `Route Type` dropdown → `Permanent (301)`
+
+**Button 3 — existing `SAVE ROUTE`** (keep as-is, no changes)
+
+---
+
+**CONSTRAINTS:**
+
+- This change applies **only** inside the `MENU ROUTE MAPPING` tab of the Dynamic Route section
+- Do NOT touch `DASHBOARD ROUTE MAPPING` tab, sidebar, or any other section
+- Do NOT change any existing button styles, input fields, or logic
+- New buttons must match the existing card's dark theme — no new color tokens
+- All 3 buttons in the routing card must be **responsive** — wrap to next line on small screens if needed

@@ -54,7 +54,13 @@ const saveButtonStyle = {
   transition: 'all 0.2s ease',
 }
 
-function RouteCards({ state, setState }) {
+const ghostButtonStyle = {
+  ...saveButtonStyle,
+  marginTop: '20px',
+  background: '#1a1a1a',
+}
+
+function RouteCards({ state, setState, showDefaults }) {
   return (
     <>
       {/* Card 1 — Add Subdomain */}
@@ -77,19 +83,37 @@ function RouteCards({ state, setState }) {
             value={state.subdomain ? `${state.subdomain}.exzibo.online` : 'your-subdomain.exzibo.online'}
           />
         </div>
-        <button
-          style={saveButtonStyle}
-          onMouseEnter={e => {
-            e.currentTarget.style.background = ACCENT
-            e.currentTarget.style.color = '#fff'
-          }}
-          onMouseLeave={e => {
-            e.currentTarget.style.background = 'transparent'
-            e.currentTarget.style.color = ACCENT
-          }}
-        >
-          SAVE SUBDOMAIN
-        </button>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+          {showDefaults && (
+            <button
+              style={ghostButtonStyle}
+              onMouseEnter={e => {
+                e.currentTarget.style.background = ACCENT
+                e.currentTarget.style.color = '#fff'
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.background = '#1a1a1a'
+                e.currentTarget.style.color = ACCENT
+              }}
+              onClick={() => setState(s => ({ ...s, subdomain: 'menu' }))}
+            >
+              DEFAULT MENU
+            </button>
+          )}
+          <button
+            style={saveButtonStyle}
+            onMouseEnter={e => {
+              e.currentTarget.style.background = ACCENT
+              e.currentTarget.style.color = '#fff'
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.background = 'transparent'
+              e.currentTarget.style.color = ACCENT
+            }}
+          >
+            SAVE SUBDOMAIN
+          </button>
+        </div>
       </div>
 
       {/* Card 2 — Add Dynamic Routing Logic */}
@@ -124,19 +148,63 @@ function RouteCards({ state, setState }) {
             <option value="302">Temporary (302)</option>
           </select>
         </div>
-        <button
-          style={saveButtonStyle}
-          onMouseEnter={e => {
-            e.currentTarget.style.background = ACCENT
-            e.currentTarget.style.color = '#fff'
-          }}
-          onMouseLeave={e => {
-            e.currentTarget.style.background = 'transparent'
-            e.currentTarget.style.color = ACCENT
-          }}
-        >
-          SAVE ROUTE
-        </button>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+          {showDefaults && (
+            <>
+              <button
+                style={ghostButtonStyle}
+                onMouseEnter={e => {
+                  e.currentTarget.style.background = ACCENT
+                  e.currentTarget.style.color = '#fff'
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.background = '#1a1a1a'
+                  e.currentTarget.style.color = ACCENT
+                }}
+                onClick={() => setState(s => ({
+                  ...s,
+                  routePath: '/restaurant',
+                  redirectTarget: 'https://exzibo.online/restaurant',
+                  routeType: '301',
+                }))}
+              >
+                DEFAULT RESTAURANT
+              </button>
+              <button
+                style={ghostButtonStyle}
+                onMouseEnter={e => {
+                  e.currentTarget.style.background = ACCENT
+                  e.currentTarget.style.color = '#fff'
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.background = '#1a1a1a'
+                  e.currentTarget.style.color = ACCENT
+                }}
+                onClick={() => setState(s => ({
+                  ...s,
+                  routePath: '/table',
+                  redirectTarget: 'https://exzibo.online/table',
+                  routeType: '301',
+                }))}
+              >
+                DEFAULT TABLE
+              </button>
+            </>
+          )}
+          <button
+            style={saveButtonStyle}
+            onMouseEnter={e => {
+              e.currentTarget.style.background = ACCENT
+              e.currentTarget.style.color = '#fff'
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.background = 'transparent'
+              e.currentTarget.style.color = ACCENT
+            }}
+          >
+            SAVE ROUTE
+          </button>
+        </div>
       </div>
     </>
   )
@@ -213,7 +281,7 @@ export default function DynamicRoute() {
         {/* Tab Content */}
         <div style={{ maxWidth: '600px' }}>
           {activeTab === 'menu' && (
-            <RouteCards state={menuState} setState={setMenuState} />
+            <RouteCards state={menuState} setState={setMenuState} showDefaults />
           )}
           {activeTab === 'dashboard' && (
             <RouteCards state={dashboardState} setState={setDashboardState} />
