@@ -1,0 +1,55 @@
+In the existing **Dynamic Route** section of the Master dashboard, implement the following changes. This is an **additive-only** change — do NOT remove or modify any existing code outside this section.
+
+---
+
+**STEP 1 — ADD TAB NAVIGATION BAR**
+
+At the top of the Dynamic Route section content area (below the section title "Dynamic Route"), add a **horizontal tab navigation bar** with exactly 2 tabs:
+
+- `MENU ROUTE MAPPING`
+- `DASHBOARD ROUTE MAPPING`
+
+Style the tabs to match the existing dashboard dark theme (dark background, white text, orange/red active tab highlight — consistent with the sidebar active state color `#E8441A` or equivalent already used in the project). Only one tab is active at a time. Default active tab is `MENU ROUTE MAPPING`.
+
+---
+
+**STEP 2 — MENU ROUTE MAPPING TAB CONTENT**
+
+When `MENU ROUTE MAPPING` tab is active, render two distinct cards/sections stacked vertically inside the content area:
+
+**Card 1 — ADD SUBDOMAIN**
+- Title: `Add Sub Domain`
+- A labeled input field: `Subdomain Prefix` (placeholder: e.g. `restaurant-name`)
+- A read-only field showing the full generated URL preview: `[subdomain].exzibo.online` (dynamically updates as user types)
+- A button: `SAVE SUBDOMAIN` (outlined, orange/red)
+
+**Card 2 — ADD DYNAMIC ROUTING LOGIC**
+- Title: `Add Dynamic Routing Logic`
+- A labeled input field: `Route Path` (placeholder: e.g. `/menu`)
+- A labeled input field: `Redirect Target URL` (placeholder: e.g. `https://exzibo.online/menu/xyz`)
+- A dropdown labeled `Route Type` with options: `Permanent (301)`, `Temporary (302)`
+- A button: `SAVE ROUTE` (outlined, orange/red)
+
+Both cards should have a dark card background (slightly lighter than the page background), rounded corners, and consistent padding — matching the existing dashboard card/panel style.
+
+---
+
+**STEP 3 — DASHBOARD ROUTE MAPPING TAB CONTENT**
+
+When `DASHBOARD ROUTE MAPPING` tab is active, render the **same two cards** as above with identical structure and styling:
+
+**Card 1 — ADD SUBDOMAIN** (same as above)
+
+**Card 2 — ADD DYNAMIC ROUTING LOGIC** (same as above)
+
+Both tabs have their own **independent state** — input values in one tab do not affect the other tab.
+
+---
+
+**STEP 4 — CONSTRAINTS**
+
+- Do NOT touch the sidebar, other tabs, or any other section outside the Dynamic Route content panel.
+- All new UI is rendered only inside the Dynamic Route section's content area.
+- Tab switching must be purely frontend state-based (no page reload).
+- Keep all existing Dynamic Route placeholder text/logic intact — only add above it or replace the "under construction" placeholder text with the new tab UI.
+- Match spacing, font sizes, and color tokens already used in the project — do not introduce new design systems.
