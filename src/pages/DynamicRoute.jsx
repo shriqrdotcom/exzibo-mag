@@ -298,17 +298,6 @@ function MenuTab() {
             onChange={e => setCard2State(s => ({ ...s, redirectTarget: e.target.value }))}
           />
         </div>
-        <div>
-          <label style={labelStyle}>Route Type</label>
-          <select
-            style={{ ...inputStyle, cursor: 'pointer' }}
-            value={card2State.routeType}
-            onChange={e => setCard2State(s => ({ ...s, routeType: e.target.value }))}
-          >
-            <option value="301">Permanent (301)</option>
-            <option value="302">Temporary (302)</option>
-          </select>
-        </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
           <button
             style={ghostButtonStyle}
@@ -439,17 +428,6 @@ function RouteCards({ state, setState, showDefaults, isDashboard }) {
             value={state.redirectTarget}
             onChange={e => setState(s => ({ ...s, redirectTarget: e.target.value }))}
           />
-        </div>
-        <div>
-          <label style={labelStyle}>Route Type</label>
-          <select
-            style={{ ...inputStyle, cursor: 'pointer' }}
-            value={state.routeType}
-            onChange={e => setState(s => ({ ...s, routeType: e.target.value }))}
-          >
-            <option value="301">Permanent (301)</option>
-            <option value="302">Temporary (302)</option>
-          </select>
         </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
           {showDefaults && (
