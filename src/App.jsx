@@ -26,6 +26,7 @@ import EditProfile          from './pages/EditProfile'
 import NotificationsPage    from './pages/NotificationsPage'
 import InformationPage      from './pages/InformationPage'
 import DeletedRestaurants   from './pages/DeletedRestaurants'
+import DynamicRoute         from './pages/DynamicRoute'
 
 // ── Full-screen loader ──────────────────────────────────────────────────────
 function GlobalLoader() {
@@ -410,6 +411,7 @@ function DefaultApp() {
       <Route path="/notifications"           element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
       <Route path="/information"             element={<ProtectedRoute><InformationPage /></ProtectedRoute>} />
       <Route path="/deleted-restaurants"     element={<ProtectedRoute><DeletedRestaurants /></ProtectedRoute>} />
+      <Route path="/dynamic-route"           element={<ProtectedRoute><DynamicRoute /></ProtectedRoute>} />
 
       {/* Catch-all */}
       <Route path="*" element={<Navigate to="/" replace />} />
