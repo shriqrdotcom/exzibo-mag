@@ -281,7 +281,7 @@ function MenuTab() {
       <div style={cardStyle}>
         <div style={cardTitleStyle}>Add Dynamic Routing Logic</div>
         <div style={{ marginBottom: '18px' }}>
-          <label style={labelStyle}>Route Path</label>
+          <label style={labelStyle}>NAME OF THE RESTAURANT CONNECTED WITH UID</label>
           <input
             style={inputStyle}
             placeholder="e.g. /menu"
@@ -423,7 +423,7 @@ function RouteCards({ state, setState, showDefaults, isDashboard }) {
       <div style={cardStyle}>
         <div style={cardTitleStyle}>Add Dynamic Routing Logic</div>
         <div style={{ marginBottom: '18px' }}>
-          <label style={labelStyle}>Route Path</label>
+          <label style={labelStyle}>NAME OF THE RESTAURANT CONNECTED WITH UID</label>
           <input
             style={inputStyle}
             placeholder="e.g. /menu"
