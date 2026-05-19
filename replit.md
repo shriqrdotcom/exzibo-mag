@@ -28,8 +28,9 @@ All secrets are stored in Replit Secrets (never in code):
 - `PREVIEW_SECRET` — (optional) HMAC secret for preview session tokens
 
 ## Running
-- Dev server: `npm run dev` (uses `npx vite`, port 5000, host 0.0.0.0)
+- Dev server: `npm run dev` (uses locally installed vite, port 5000, host 0.0.0.0)
 - Build: `npm run build`
+- Production: `npm start` (Express server serves built `dist/` + API routes)
 - Vite config: `allowedHosts: true` for Replit proxy compatibility
 
 ## Auth & Data
@@ -43,7 +44,9 @@ All secrets are stored in Replit Secrets (never in code):
 - `vite.config.js` has `server.allowedHosts: true` — required for Replit's proxy iframe
 - `src/lib/env.js` detects Replit/localhost (`.replit.app`, `.replit.dev`, `.repl.co`, `localhost`) and sets `IS_PREVIEW=true`, enabling the preview login bypass
 - The app is a pure frontend SPA — all Supabase calls happen client-side using the anon key with Row Level Security
-- Dev scripts use `npx vite` to ensure the binary is found regardless of PATH configuration
+- `npm run dev` uses the locally installed `vite` binary (not `npx vite`) to avoid install prompts
+- Replit PostgreSQL (`DATABASE_URL`) is used alongside Supabase for isolated per-restaurant schemas (`r_<shortId>`)
+- API routes in `vite.config.js` (dev) and `server.js` (prod) handle restaurant DB provisioning (`/api/restaurant-db/*`)
 
 ## User Preferences
 - Keep Supabase for auth, database, and realtime — it is deeply integrated and holds live data
