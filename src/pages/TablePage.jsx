@@ -54,7 +54,7 @@ function saveLinkTableCount(uid, count) {
   localStorage.setItem(`exzibo_link_table_count_${uid}`, String(count))
 }
 
-const LINK_BASE_URL = 'https://exzibo-mag.vercel.app'
+const LINK_BASE_URL = 'https://menu.exzibo.online'
 
 function sanitizeLinkName(value) {
   return value
@@ -262,8 +262,8 @@ export default function TablePage() {
     })
   }
 
-  function getTableUrl(linkName, tableNumber) {
-    return `${LINK_BASE_URL}/menu/${linkName}/table-${tableNumber}`
+  function getTableUrl(slug, tableNumber) {
+    return `${LINK_BASE_URL}/${slug}/${tableNumber}`
   }
 
   return (
@@ -770,7 +770,7 @@ export default function TablePage() {
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     {Array.from({ length: savedTableCount }, (_, i) => String(i + 1)).map((t) => {
-                      const url = getTableUrl(savedLinkName, t)
+                      const url = getTableUrl(linksTarget?.slug || linksTarget?.id || savedLinkName, t)
                       const isCopied = copiedTableUrl === url
                       return (
                         <div key={t} style={{

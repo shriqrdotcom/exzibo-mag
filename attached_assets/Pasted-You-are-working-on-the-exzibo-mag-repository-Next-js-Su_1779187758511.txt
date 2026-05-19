@@ -1,0 +1,56 @@
+You are working on the **exzibo-mag** repository (Next.js + Supabase).
+
+### Current Setup:
+- The main app is deployed on Vercel.
+- Subdomain **`menu.exzibo.online`** already exists and points to this project.
+
+### Requirement:
+
+Implement **dynamic restaurant menu routing** with the following structure:
+
+```
+https://menu.exzibo.online/{restaurant-slug}/{table-number}
+```
+
+**Example:**
+- `https://menu.exzibo.online/the-taj-restaurant/5/home`
+- `https://menu.exzibo.online/pizza-hut/12/menu`
+
+### Specifications:
+
+1. **{restaurant-slug}**
+   - Dynamic route that loads full restaurant data (menu categories, food items, prices, images, description, etc.)
+   - Data should be fetched from Supabase using the restaurant’s `user_id` or `restaurant_id`.
+   - Slug should be unique per restaurant.
+
+2. **{table-number}**
+   - Optional but preferred route segment.
+   - Used to identify the specific table (for future ordering, QR code scanning, etc.).
+   - Should be stored/validated against the restaurant’s table data.
+
+3. **Routing (Next.js App Router)**
+   - Create proper dynamic routes: `app/[restaurant-slug]/[table]/page.tsx`
+   - Also support `/[restaurant-slug]` as fallback (table-less access).
+   - Add loading states and proper error handling (404 if restaurant not found).
+
+4. **Superadmin Integration**
+   - When a new restaurant is created from **superadmin.exzibo.online**, automatically:
+     - Generate a clean `slug`
+     - Enable it on the menu subdomain
+     - Store the necessary menu data structure in Supabase
+
+5. **Vercel Subdomain Mapping**
+   - Ensure `menu.exzibo.online` correctly serves these dynamic routes (already pointed to Vercel).
+
+### Tasks:
+- Set up the dynamic route structure properly.
+- Create necessary Supabase queries for restaurant + menu data.
+- Make the menu UI mobile-friendly and fast.
+- Add middleware or server-side logic to validate restaurant slug and table if needed.
+- Update any existing menu-related code.
+
+**Repository:** [Your GitHub repo link]
+
+Start by exploring the current folder structure and then implement the dynamic routing for the menu subdomain. Ask me if you need any specific component or Supabase table schema.
+
+---

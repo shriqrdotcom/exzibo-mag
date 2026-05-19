@@ -197,15 +197,25 @@ function loadMenuFromStorage(id, tabs) {
 }
 
 export default function RestaurantWebsite() {
-  const { slug } = useParams()
+  const { slug, tableNumber: tableParam, page: pageParam } = useParams()
   const navigate = useNavigate()
   const location = useLocation()
+
+  // Table number: URL param (:tableNumber) wins, then ?table= query string
+  const searchParams = new URLSearchParams(location.search)
+  const tableNumber = tableParam || searchParams.get('table') || null
+
   const [restaurant, setRestaurant] = useState(null)
   const [aboutData, setAboutData] = useState({ description: '', image: '' })
   const [notFound, setNotFound] = useState(false)
   const [menuTabs, setMenuTabs] = useState(MENU_TABS)
   const [menuData, setMenuData] = useState(() => Object.fromEntries(MENU_TABS.map(t => [t.id, []])))
-  const [activeNav, setActiveNav] = useState(location.state?.activeNav || 'home')
+
+  // Initial tab: URL page segment (:page) wins, then router state, then 'home'
+  const VALID_NAV_PAGES = ['home', 'menu', 'orders', 'booking', 'cart']
+  const [activeNav, setActiveNav] = useState(
+    (pageParam && VALID_NAV_PAGES.includes(pageParam)) ? pageParam : (location.state?.activeNav || 'home')
+  )
   const [activeMenuTab, setActiveMenuTab] = useState('starters')
   const [darkMode, setDarkMode] = useState(() => {
     try { return JSON.parse(localStorage.getItem('exzibo_darkmode') || 'false') } catch { return false }
@@ -600,7 +610,8 @@ export default function RestaurantWebsite() {
     const now = new Date()
     const dateStr = now.toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' })
     const restaurantId = restaurant?.id || slug || 'demo'
-    const tableNum = String(Math.floor(Math.random() * 20) + 1).padStart(2, '0')
+    // Use table number from URL param/query string; fall back to random if not present
+    const tableNum = tableNumber || String(Math.floor(Math.random() * 20) + 1).padStart(2, '0')
     const orderItems = cartItems.map(i => ({ name: i.name, qty: i.qty, price: i.price }))
 
     const customerOrder = {

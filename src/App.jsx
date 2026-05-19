@@ -254,9 +254,15 @@ function SuperAdminApp() {
 function MenuApp() {
   return (
     <Routes>
-      <Route path="/:slug"                   element={<RestaurantWebsite />} />
-      <Route path="/:slug/food/:itemName"    element={<FoodDetail />} />
-      <Route path="*"                        element={<NotFound />} />
+      {/* Literal segment must come before dynamic :tableNumber to win specificity */}
+      <Route path="/:slug/food/:itemName"            element={<FoodDetail />} />
+      {/* /:slug/:tableNumber/:page — e.g. /the-taj/5/menu */}
+      <Route path="/:slug/:tableNumber/:page"        element={<RestaurantWebsite />} />
+      {/* /:slug/:tableNumber — e.g. /the-taj/5 */}
+      <Route path="/:slug/:tableNumber"              element={<RestaurantWebsite />} />
+      {/* bare slug — e.g. /the-taj */}
+      <Route path="/:slug"                           element={<RestaurantWebsite />} />
+      <Route path="*"                                element={<NotFound />} />
     </Routes>
   )
 }
@@ -377,9 +383,11 @@ function DefaultApp() {
       <Route path="/auth" element={<Auth />} />
 
       {/* Customer-facing — always public */}
-      <Route path="/restaurant/:slug"                element={<RestaurantWebsite />} />
-      <Route path="/restaurant/:slug/food/:itemName" element={<FoodDetail />} />
-      <Route path="/r/:slug"                         element={<RestaurantWebsite />} />
+      <Route path="/restaurant/:slug/food/:itemName"            element={<FoodDetail />} />
+      <Route path="/restaurant/:slug/:tableNumber/:page"        element={<RestaurantWebsite />} />
+      <Route path="/restaurant/:slug/:tableNumber"              element={<RestaurantWebsite />} />
+      <Route path="/restaurant/:slug"                           element={<RestaurantWebsite />} />
+      <Route path="/r/:slug"                                    element={<RestaurantWebsite />} />
       <Route path="/table"                           element={<TablePage />} />
       <Route path="/menu/:linkName/:tableNumber"     element={<MenuLinkRoute />} />
       <Route path="/menu/:linkName"                  element={<MenuLinkRoute />} />
