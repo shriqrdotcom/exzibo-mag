@@ -290,7 +290,7 @@ function MenuTab() {
           />
         </div>
         <div style={{ marginBottom: '18px' }}>
-          <label style={labelStyle}>Redirect Target URL</label>
+          <label style={labelStyle}>TABLE NUMBER LOGIC</label>
           <input
             style={inputStyle}
             placeholder="e.g. https://exzibo.online/menu/xyz"
@@ -432,7 +432,7 @@ function RouteCards({ state, setState, showDefaults, isDashboard }) {
           />
         </div>
         <div style={{ marginBottom: '18px' }}>
-          <label style={labelStyle}>Redirect Target URL</label>
+          <label style={labelStyle}>TABLE NUMBER LOGIC</label>
           <input
             style={inputStyle}
             placeholder="e.g. https://exzibo.online/menu/xyz"
