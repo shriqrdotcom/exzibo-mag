@@ -784,10 +784,6 @@ function DashboardTab() {
           <label style={labelStyle}>Name of the Restaurant Connected with UID</label>
           <RestaurantSlugList />
         </div>
-        <div style={{ marginBottom: '18px' }}>
-          <label style={labelStyle}>Table Number Logic</label>
-          <TableNumberList />
-        </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
           {[
             { label: 'DEFAULT MASTER' },
