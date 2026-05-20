@@ -239,8 +239,11 @@ function SuperAdminApp() {
       <Route path="/dynamic-route"
         element={<SuperAdminRoute><DynamicRoute /></SuperAdminRoute>} />
 
-      {/* /admin/:id and /master-control are intentionally NOT here.
-          They are served exclusively by DashboardApp on dashboard.exzibo.online. */}
+      {/* Master Control — available on superadmin subdomain too */}
+      <Route path="/master-control"      element={<MasterControl />} />
+      <Route path="/master-control/:uid" element={<MasterControl />} />
+
+      {/* /admin/:id panel lives on dashboard.exzibo.online (DashboardApp) */}
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
