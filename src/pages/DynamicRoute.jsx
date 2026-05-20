@@ -691,9 +691,7 @@ function DashboardTab() {
     }
   }
 
-  const previewUrl = prefix.trim()
-    ? `dashboard.exzibo.online/${prefix.trim()}/`
-    : 'your-subdomain.exzibo.online'
+  const previewUrl = 'dashboard.exzibo.online'
 
   const isDirty = prefix.trim() !== savedPrefix
 
