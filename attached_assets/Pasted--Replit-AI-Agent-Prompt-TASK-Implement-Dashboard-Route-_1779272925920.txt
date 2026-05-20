@@ -1,0 +1,116 @@
+## Replit AI Agent Prompt
+
+:
+
+---
+
+**TASK: Implement Dashboard Route Prefix Mapping from "Dashboard Route Mapping" Section**
+
+**IMPORTANT: This is an ADDITIVE change only. Do NOT remove, rename, or restructure any existing pages, components, routes, or Supabase tables. Preserve all existing functionality completely.**
+
+---
+
+**CONTEXT:**
+
+There is an existing "Dynamic Route" page with a "Dashboard Route Mapping" tab. It has:
+- A **SUBDOMAIN PREFIX** input field (e.g. `restaurant-name`)
+- A **GENERATED URL PREVIEW** field showing `your-subdomain.exzibo.online`
+- A **SAVE SUBDOMAIN** button
+- A **DEFAULT DASHBOARD** button
+
+---
+
+**WHAT NEEDS TO CHANGE:**
+
+The URL logic needs to be corrected. This is NOT a true subdomain system. The actual URL pattern is:
+
+```
+dashboard.exzibo.online/{restaurantname}/
+```
+
+So the prefix entered in the **SUBDOMAIN PREFIX** field becomes a **path segment**, not a subdomain.
+
+---
+
+**STEP 1 — Fix URL Preview Display:**
+
+When the user types in the SUBDOMAIN PREFIX input field, the GENERATED URL PREVIEW field must update in real-time to show:
+
+```
+dashboard.exzibo.online/{typed-prefix}/
+```
+
+Example: If user types `spicegarden`, preview shows:
+```
+dashboard.exzibo.online/spicegarden/
+```
+
+---
+
+**STEP 2 — Save Subdomain Prefix to Supabase:**
+
+When the user clicks **SAVE SUBDOMAIN**:
+
+1. Check if a `dashboard_route_config` table exists in Supabase. If not, create it with columns:
+   - `id` (uuid, primary key, default gen_random_uuid())
+   - `route_prefix` (text, not null)
+   - `created_at` (timestamp with time zone, default now())
+   - `updated_at` (timestamp with time zone, default now())
+
+2. Save/upsert the entered prefix into this table (single-row config — always upsert the same record).
+
+3. Show a success toast/notification: `"Dashboard route prefix saved successfully"`
+
+4. Show an error toast if save fails.
+
+---
+
+**STEP 3 — DEFAULT DASHBOARD button:**
+
+When clicked:
+- Clear the saved prefix (set `route_prefix` to empty string `""` or delete the row)
+- Reset the GENERATED URL PREVIEW to `your-subdomain.exzibo.online`
+- Show toast: `"Reverted to default dashboard route"`
+
+---
+
+**STEP 4 — Apply the Saved Prefix Across ALL Four Dashboards:**
+
+On page load of each of the following dashboards, fetch the saved `route_prefix` from Supabase `dashboard_route_config` table:
+
+- **Master Control Dashboard**
+- **Owner/Admin Dashboard**
+- **Manager Dashboard**
+- **Employee Dashboard**
+
+If a `route_prefix` exists and is non-empty, display it visually in a **route info bar** near the top of each dashboard. This bar should show:
+
+```
+🌐 Dashboard Route: dashboard.exzibo.online/{route_prefix}/
+```
+
+Style this bar subtly — small text, muted background, does not interfere with existing UI layout.
+
+If no prefix is saved, do NOT show the bar (hide it entirely).
+
+---
+
+**STEP 5 — Load Saved Prefix on the Dynamic Route Page:**
+
+When the Dashboard Route Mapping tab loads:
+- Fetch the existing `route_prefix` from Supabase
+- Pre-fill the SUBDOMAIN PREFIX input with the saved value
+- Show the correct GENERATED URL PREVIEW immediately on load
+
+---
+
+**CONSTRAINTS:**
+
+- Do NOT touch Menu Route Mapping tab logic
+- Do NOT restructure existing routing files or `next.config.js` for actual subdomain DNS — this is display/config only
+- Do NOT modify any existing dashboard layout, tabs, or permission logic
+- All Supabase calls must use the existing Supabase client already configured in the project
+- Handle loading states on the Save and Default buttons (disable button while saving)
+- All changes must be non-destructive and additive only
+
+---

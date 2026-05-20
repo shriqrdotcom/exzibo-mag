@@ -633,6 +633,185 @@ function RouteCards({ state, setState, showDefaults, isDashboard }) {
   )
 }
 
+function DashboardTab() {
+  const [prefix, setPrefix]         = useState('')
+  const [savedPrefix, setSavedPrefix] = useState('')
+  const [saving, setSaving]         = useState(false)
+  const [resetting, setResetting]   = useState(false)
+  const [loading, setLoading]       = useState(true)
+  const [toast, setToast]           = useState(null)
+
+  function showToast(msg, type = 'success') {
+    setToast({ msg, type })
+    setTimeout(() => setToast(null), 4000)
+  }
+
+  useEffect(() => {
+    getRouteConfig('dashboard_route_prefix')
+      .then(val => {
+        const v = val || ''
+        setPrefix(v)
+        setSavedPrefix(v)
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [])
+
+  function handlePrefixChange(raw) {
+    const sanitized = raw.toLowerCase().replace(/[^a-z0-9-]/g, '')
+    setPrefix(sanitized)
+  }
+
+  async function handleSave() {
+    const val = prefix.trim()
+    if (!val) { showToast('Prefix cannot be empty.', 'error'); return }
+    setSaving(true)
+    try {
+      await setRouteConfig('dashboard_route_prefix', val)
+      setSavedPrefix(val)
+      showToast('Dashboard route prefix saved successfully')
+    } catch (err) {
+      showToast('Failed to save: ' + err.message, 'error')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function handleDefault() {
+    setResetting(true)
+    try {
+      await setRouteConfig('dashboard_route_prefix', '')
+      setPrefix('')
+      setSavedPrefix('')
+      showToast('Reverted to default dashboard route')
+    } catch (err) {
+      showToast('Failed to reset: ' + err.message, 'error')
+    } finally {
+      setResetting(false)
+    }
+  }
+
+  const previewUrl = prefix.trim()
+    ? `dashboard.exzibo.online/${prefix.trim()}/`
+    : 'your-subdomain.exzibo.online'
+
+  const isDirty = prefix.trim() !== savedPrefix
+
+  if (loading) {
+    return <div style={{ color: '#555', fontSize: '14px', padding: '20px 0' }}>Loading…</div>
+  }
+
+  return (
+    <>
+      <style>{`@keyframes fadeInUpDB { from { opacity:0; transform:translate(-50%,8px) } to { opacity:1; transform:translate(-50%,0) } }`}</style>
+      {toast && (
+        <div style={{
+          position: 'fixed', bottom: '28px', left: '50%', transform: 'translateX(-50%)',
+          background: toast.type === 'error' ? '#b91c1c' : '#15803d',
+          color: '#fff', padding: '11px 26px', borderRadius: '10px',
+          fontSize: '13px', fontWeight: 600, zIndex: 9999,
+          boxShadow: '0 6px 24px rgba(0,0,0,0.5)',
+          whiteSpace: 'nowrap', pointerEvents: 'none',
+          animation: 'fadeInUpDB 0.2s ease',
+        }}>
+          {toast.msg}
+        </div>
+      )}
+
+      {/* Card 1 — Add Sub Domain */}
+      <div style={cardStyle}>
+        <div style={cardTitleStyle}>Add Sub Domain</div>
+
+        <div style={{ marginBottom: '18px' }}>
+          <label style={labelStyle}>Subdomain Prefix</label>
+          <input
+            style={{ ...inputStyle, borderColor: isDirty ? 'rgba(232,50,26,0.4)' : 'rgba(255,255,255,0.08)' }}
+            placeholder="e.g. restaurant-name"
+            value={prefix}
+            onChange={e => handlePrefixChange(e.target.value)}
+          />
+        </div>
+
+        <div style={{ marginBottom: '20px' }}>
+          <label style={labelStyle}>Generated URL Preview</label>
+          <input
+            style={{ ...inputStyle, color: '#aaa', cursor: 'default' }}
+            readOnly
+            value={previewUrl}
+          />
+        </div>
+
+        {savedPrefix && (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: '8px',
+            marginBottom: '18px', padding: '8px 12px',
+            background: 'rgba(21,128,61,0.12)',
+            border: '1px solid rgba(21,128,61,0.25)',
+            borderRadius: '8px',
+          }}>
+            <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#22c55e', flexShrink: 0 }} />
+            <span style={{ fontSize: '12px', color: '#86efac', fontWeight: 600 }}>Currently active:&nbsp;</span>
+            <span style={{ fontSize: '12px', color: '#22c55e', fontFamily: 'monospace', fontWeight: 700 }}>
+              dashboard.exzibo.online/{savedPrefix}/
+            </span>
+          </div>
+        )}
+
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+          <button
+            style={{ ...ghostButtonStyle, opacity: resetting ? 0.65 : 1, cursor: resetting ? 'default' : 'pointer' }}
+            disabled={resetting}
+            onClick={handleDefault}
+            onMouseEnter={e => { if (!resetting) { e.currentTarget.style.background = ACCENT; e.currentTarget.style.color = '#fff' } }}
+            onMouseLeave={e => { if (!resetting) { e.currentTarget.style.background = '#1a1a1a'; e.currentTarget.style.color = ACCENT } }}
+          >
+            {resetting ? 'RESETTING…' : 'DEFAULT DASHBOARD'}
+          </button>
+          <button
+            style={{ ...saveButtonStyle, opacity: saving ? 0.65 : 1, cursor: saving ? 'default' : 'pointer' }}
+            disabled={saving}
+            onClick={handleSave}
+            onMouseEnter={e => { if (!saving) { e.currentTarget.style.background = ACCENT; e.currentTarget.style.color = '#fff' } }}
+            onMouseLeave={e => { if (!saving) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = ACCENT } }}
+          >
+            {saving ? 'SAVING…' : 'SAVE SUBDOMAIN'}
+          </button>
+        </div>
+      </div>
+
+      {/* Card 2 — Dynamic Routing Logic */}
+      <div style={cardStyle}>
+        <div style={cardTitleStyle}>Add Dynamic Routing Logic</div>
+        <div style={{ marginBottom: '18px' }}>
+          <label style={labelStyle}>Name of the Restaurant Connected with UID</label>
+          <RestaurantSlugList />
+        </div>
+        <div style={{ marginBottom: '18px' }}>
+          <label style={labelStyle}>Table Number Logic</label>
+          <TableNumberList />
+        </div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+          {[
+            { label: 'DEFAULT MASTER' },
+            { label: 'DEFAULT OWNER' },
+            { label: 'DEFAULT ADMIN' },
+            { label: 'DEFAULT EMPLOYEE' },
+          ].map(({ label }) => (
+            <button
+              key={label}
+              style={whiteButtonStyle}
+              onMouseEnter={e => { e.currentTarget.style.background = '#e0e0e0'; e.currentTarget.style.borderColor = '#e0e0e0' }}
+              onMouseLeave={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.borderColor = '#fff' }}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+    </>
+  )
+}
+
 const initialTabState = () => ({
   subdomain: '',
   routePath: '',
@@ -647,7 +826,6 @@ const TABS = [
 
 export default function DynamicRoute() {
   const [activeTab, setActiveTab] = useState('menu')
-  const [dashboardState, setDashboardState] = useState(initialTabState)
 
   return (
     <div style={{ display: 'flex', height: '100vh', background: '#0A0A0A', overflow: 'hidden' }}>
@@ -706,7 +884,7 @@ export default function DynamicRoute() {
             <MenuTab />
           )}
           {activeTab === 'dashboard' && (
-            <RouteCards state={dashboardState} setState={setDashboardState} isDashboard />
+            <DashboardTab />
           )}
         </div>
       </main>

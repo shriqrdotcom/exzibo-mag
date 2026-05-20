@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { getRouteConfig } from '../lib/routeConfig'
 import { useAnalytics, notifyAnalyticsUpdate } from '../context/AnalyticsContext'
 import { useRole } from '../context/RoleContext'
 import { getRestaurantById, getRestaurants, getOrders, getBookings, updateOrderStatus, updateBookingStatus, getMenuCategories, getMenuItems, insertMenuItem, updateMenuItem, deleteMenuItem, upsertMenuCategory, deleteMenuCategory, upsertMenuItems, uploadMenuImage, updateRestaurant, uploadToStorage, uploadDataUrlToStorage, toggleMenuItemPublish, normalizeOrder, normalizeBooking, sendMessage, getLatestSmsNotification, upsertSmsNotification, fetchActiveNotification, publishActiveNotification, confirmActiveNotification, insertNotificationHistory, fetchNotificationHistory } from '../lib/db'
@@ -263,6 +264,13 @@ export default function AdminDashboard() {
   const fromMasterRef  = useRef(fromMaster)
   const activeRoleRef  = useRef(activeRole)
   const [globalConfig, setGlobalConfig] = useState(loadGlobalConfig)
+  const [dashRoutePrefix, setDashRoutePrefix] = useState('')
+
+  useEffect(() => {
+    getRouteConfig('dashboard_route_prefix')
+      .then(val => { if (val) setDashRoutePrefix(val) })
+      .catch(() => {})
+  }, [])
 
   // Draft state for the settings panel
   const [draft, setDraft] = useState(null)
@@ -984,6 +992,31 @@ export default function AdminDashboard() {
         .nav-tab { transition: background 0.2s ease, transform 0.15s ease; }
         .nav-tab:hover { transform: scale(1.08); }
       `}</style>
+
+      {/* Dashboard Route Info Bar */}
+      {dashRoutePrefix && (
+        <div style={{
+          width: '100%',
+          background: 'rgba(232,50,26,0.06)',
+          borderBottom: '1px solid rgba(232,50,26,0.12)',
+          padding: '6px 20px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '6px',
+          fontSize: '11px',
+          fontWeight: 600,
+          color: '#aaa',
+          letterSpacing: '0.04em',
+          flexShrink: 0,
+        }}>
+          <span style={{ fontSize: '12px' }}>🌐</span>
+          <span>Dashboard Route:</span>
+          <span style={{ color: '#E8321A', fontFamily: 'monospace', fontWeight: 700 }}>
+            dashboard.exzibo.online/{dashRoutePrefix}/
+          </span>
+        </div>
+      )}
 
       {/* Toast */}
       {notification && (

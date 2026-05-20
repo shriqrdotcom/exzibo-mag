@@ -7,6 +7,7 @@ import { LogIn, ShieldCheck, X, ArrowRight, AlertCircle, BellRing } from 'lucide
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { openRoleDashboard } from '../lib/navigation'
+import { getRouteConfig } from '../lib/routeConfig'
 
 const LAST_UID_KEY = 'exzibo_master_last_uid'
 const DEFAULT_SUPER_ADMIN_UID = '0000000001'
@@ -52,6 +53,13 @@ export default function MasterControl() {
   const [inlineError, setInlineError] = useState('')
   const [autoLoading, setAutoLoading] = useState(false)
   const [autoError, setAutoError] = useState('')
+  const [dashRoutePrefix, setDashRoutePrefix] = useState('')
+
+  useEffect(() => {
+    getRouteConfig('dashboard_route_prefix')
+      .then(val => { if (val) setDashRoutePrefix(val) })
+      .catch(() => {})
+  }, [])
 
   useEffect(() => {
     if (authLoading) return
@@ -170,6 +178,29 @@ export default function MasterControl() {
       <Sidebar />
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <AdminHeader title="Master Control" showSearch={false} />
+
+        {/* Dashboard Route Info Bar */}
+        {dashRoutePrefix && (
+          <div style={{
+            background: 'rgba(232,50,26,0.06)',
+            borderBottom: '1px solid rgba(232,50,26,0.12)',
+            padding: '6px 20px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            fontSize: '11px',
+            fontWeight: 600,
+            color: '#aaa',
+            letterSpacing: '0.04em',
+            flexShrink: 0,
+          }}>
+            <span style={{ fontSize: '12px' }}>🌐</span>
+            <span>Dashboard Route:</span>
+            <span style={{ color: '#E8321A', fontFamily: 'monospace', fontWeight: 700 }}>
+              dashboard.exzibo.online/{dashRoutePrefix}/
+            </span>
+          </div>
+        )}
 
         <main style={{ flex: 1, overflowY: 'auto', padding: '32px', position: 'relative' }}>
           <div style={{ position: 'absolute', top: '24px', right: '32px', display: 'flex', alignItems: 'center', gap: '10px' }}>
