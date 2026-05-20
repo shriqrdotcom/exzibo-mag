@@ -1,0 +1,66 @@
+Fix the UID search functionality in the Master Control dashboard.
+
+Current issue:
+- In Replit AI Agent preview mode, searching any restaurant/user UID in the Master Control search bar works correctly and opens the proper restaurant/dashboard.
+- But in the main deployed project/production environment, searching by UID does not work.
+- Need to identify and fix the difference between preview and production behavior.
+
+Tasks to perform:
+
+1. Debug the complete UID search flow
+- Check frontend search component
+- Check API request
+- Check backend route/controller
+- Check database query
+- Check authentication/session middleware
+- Check environment variable differences between preview and production
+
+2. Verify production database connection
+- Ensure production is connected to the correct database
+- Confirm restaurant/user records exist in production DB
+- Verify UID fields are indexed and searchable
+- Ensure UID values are not case-sensitive if needed
+
+3. Check API routes
+- Verify the search endpoint works in production
+- Ensure correct base URL is used
+- Fix any CORS, proxy, or deployment routing issue
+- Add proper error logging for failed searches
+
+4. Fix search logic
+- UID search should:
+  - instantly find the matching restaurant/user
+  - open the correct master control page
+  - work exactly like preview mode
+- Handle partial UID and exact UID properly
+- Trim spaces before search
+- Prevent undefined/null query issues
+
+5. Add debugging logs
+Add logs for:
+- searched UID
+- API response
+- database result
+- auth state
+- routing/navigation result
+- production errors
+
+6. Verify role permissions
+- Master Control role must have permission to search all restaurants/users globally
+- Ensure no production middleware blocks access
+
+7. Deployment validation
+After fixing:
+- test locally
+- test preview mode
+- test deployed production mode
+- confirm same behavior in all environments
+
+8. Improve reliability
+- Add loading state
+- Add “UID not found” message
+- Prevent app crash on invalid UID
+- Add debounce for search input
+
+Expected result:
+Searching any valid restaurant/user UID from Master Control should correctly open the target restaurant/dashboard in both preview and deployed production environments without failure.

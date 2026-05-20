@@ -6,8 +6,8 @@ import HelpRequestsDrawer from '../components/HelpRequestsDrawer'
 import { LogIn, ShieldCheck, X, ArrowRight, AlertCircle, BellRing } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
-import { openRoleDashboard } from '../lib/navigation'
 import { getRouteConfig } from '../lib/routeConfig'
+import { getSubdomain } from '../lib/subdomain'
 
 const LAST_UID_KEY = 'exzibo_master_last_uid'
 const DEFAULT_SUPER_ADMIN_UID = '0000000001'
@@ -15,16 +15,22 @@ const DEFAULT_SUPER_ADMIN_UID = '0000000001'
 async function resolveAdminTargetByUID(uid) {
   const trimmed = String(uid || '').trim()
   if (!trimmed) return null
-  if (trimmed === DEFAULT_SUPER_ADMIN_UID) {
-    return { id: 'default', slug: null }
-  }
-  // Fast path: check localStorage first
+
+  // Super-admin shortcut
+  if (trimmed === DEFAULT_SUPER_ADMIN_UID) return { id: 'default', slug: null }
+
+  // ── Fast path: localStorage cache ────────────────────────────────────────
   try {
     const all = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
-    const found = all.find(r => String(r.uid) === trimmed)
-    if (found) return { id: String(found.id), slug: found.slug || null }
+    const found = all.find(r => String(r.uid) === trimmed || r.id === trimmed)
+    if (found) {
+      console.log('[MasterControl] UID resolved via localStorage:', found.id)
+      return { id: String(found.id), slug: found.slug || null }
+    }
   } catch { /* noop */ }
-  // Fallback: query Supabase directly (handles restaurants not yet in localStorage)
+
+  // ── Supabase lookup — three strategies ───────────────────────────────────
+  // Strategy 1: exact string match on the uid (TEXT) column
   try {
     const { data, error } = await supabase
       .from('restaurants')
@@ -32,10 +38,52 @@ async function resolveAdminTargetByUID(uid) {
       .eq('uid', trimmed)
       .maybeSingle()
     if (!error && data) {
-      console.log('[MasterControl] UID resolved via Supabase:', data.id)
+      console.log('[MasterControl] UID resolved via uid-string match:', data.id)
       return { id: String(data.id), slug: data.slug || null }
     }
-  } catch { /* noop */ }
+    if (error) console.warn('[MasterControl] uid-string query error:', error.message)
+  } catch (err) {
+    console.error('[MasterControl] uid-string lookup threw:', err)
+  }
+
+  // Strategy 2: uid stored as numeric — cast before comparing
+  const numericUid = Number(trimmed)
+  if (!isNaN(numericUid) && String(numericUid) === trimmed) {
+    try {
+      const { data, error } = await supabase
+        .from('restaurants')
+        .select('id, uid, slug')
+        .eq('uid', numericUid)
+        .maybeSingle()
+      if (!error && data) {
+        console.log('[MasterControl] UID resolved via uid-numeric match:', data.id)
+        return { id: String(data.id), slug: data.slug || null }
+      }
+      if (error) console.warn('[MasterControl] uid-numeric query error:', error.message)
+    } catch (err) {
+      console.error('[MasterControl] uid-numeric lookup threw:', err)
+    }
+  }
+
+  // Strategy 3: caller may have pasted the internal UUID (id) directly
+  if (trimmed.includes('-') && trimmed.length === 36) {
+    try {
+      const { data, error } = await supabase
+        .from('restaurants')
+        .select('id, uid, slug')
+        .eq('id', trimmed)
+        .maybeSingle()
+      if (!error && data) {
+        console.log('[MasterControl] UID resolved via direct id match:', data.id)
+        return { id: String(data.id), slug: data.slug || null }
+      }
+      if (error) console.warn('[MasterControl] id-direct query error:', error.message)
+    } catch (err) {
+      console.error('[MasterControl] id-direct lookup threw:', err)
+    }
+  }
+
+  console.warn('[MasterControl] No restaurant found for UID:', trimmed)
   return null
 }
 
@@ -53,6 +101,7 @@ export default function MasterControl() {
   const [inlineError, setInlineError] = useState('')
   const [autoLoading, setAutoLoading] = useState(false)
   const [autoError, setAutoError] = useState('')
+  const [accessLoading, setAccessLoading] = useState(false)
   const [dashRoutePrefix, setDashRoutePrefix] = useState('')
 
   useEffect(() => {
@@ -75,22 +124,34 @@ export default function MasterControl() {
     if (!uidParam || !allowed) return
     const trimmed = uidParam.trim()
     if (!trimmed) return
-    console.log('Opening MASTER for:', trimmed)
+    console.log('[MasterControl] Auto-opening UID from URL param:', trimmed)
     setAutoLoading(true)
     setAutoError('')
     resolveAdminTargetByUID(trimmed).then(target => {
       if (!target) {
         setAutoLoading(false)
-        setAutoError(`Restaurant UID "${trimmed}" not found.`)
+        setAutoError(`Restaurant UID "${trimmed}" not found. It may not exist in the database.`)
         return
       }
       localStorage.setItem(LAST_UID_KEY, trimmed)
-      navigate(`/admin/${target.id}?from=master`, { replace: true })
-    }).catch(() => {
+      const dest = buildNavTarget(target)
+      console.log('[MasterControl] Auto-navigating to:', dest)
+      navigate(dest, { replace: true })
+    }).catch(err => {
+      console.error('[MasterControl] Auto-navigate failed:', err)
       setAutoLoading(false)
-      setAutoError('Failed to resolve restaurant. Please try manually.')
+      setAutoError('Failed to resolve restaurant. Please try entering the UID manually.')
     })
   }, [uidParam, allowed, navigate])
+
+  // Build the navigation target — prefer slug URL on dashboard subdomain
+  function buildNavTarget(target) {
+    if (target.id === 'default') return '/admin/default?from=master'
+    if (target.slug && getSubdomain() === 'dashboard') {
+      return `/${target.slug}?from=master`
+    }
+    return `/admin/${target.id}?from=master`
+  }
 
   async function accessPanel(value, setErr) {
     const trimmed = String(value || '').trim()
@@ -99,13 +160,25 @@ export default function MasterControl() {
       return
     }
     setErr('')
-    const target = await resolveAdminTargetByUID(trimmed)
-    if (!target) {
-      setErr('UID not found — check the UID and try again')
-      return
+    setAccessLoading(true)
+    try {
+      console.log('[MasterControl] Searching for UID:', trimmed)
+      const target = await resolveAdminTargetByUID(trimmed)
+      if (!target) {
+        setErr('UID not found — verify the UID and try again')
+        console.warn('[MasterControl] accessPanel: UID not resolved:', trimmed)
+        return
+      }
+      localStorage.setItem(LAST_UID_KEY, trimmed)
+      const dest = buildNavTarget(target)
+      console.log('[MasterControl] Navigating to:', dest)
+      navigate(dest)
+    } catch (err) {
+      console.error('[MasterControl] accessPanel error:', err)
+      setErr('Search failed — please check your connection and try again')
+    } finally {
+      setAccessLoading(false)
     }
-    localStorage.setItem(LAST_UID_KEY, trimmed)
-    navigate(`/admin/${target.id}?from=master`)
   }
 
   if (allowed === null) {
@@ -320,8 +393,9 @@ export default function MasterControl() {
                 <input
                   value={inlineUid}
                   onChange={e => { setInlineUid(e.target.value); setInlineError('') }}
-                  onKeyDown={e => e.key === 'Enter' && accessPanel(inlineUid, setInlineError)}
+                  onKeyDown={e => e.key === 'Enter' && !accessLoading && accessPanel(inlineUid, setInlineError)}
                   placeholder="e.g. 0000000001 or 8472019465"
+                  disabled={accessLoading}
                   style={{
                     flex: 1,
                     background: '#0A0A0A',
@@ -333,15 +407,17 @@ export default function MasterControl() {
                     fontFamily: 'inherit',
                     outline: 'none',
                     transition: 'border-color 0.2s',
+                    opacity: accessLoading ? 0.6 : 1,
                   }}
                 />
                 <button
-                  onClick={() => accessPanel(inlineUid, setInlineError)}
+                  onClick={() => !accessLoading && accessPanel(inlineUid, setInlineError)}
+                  disabled={accessLoading}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
                     gap: '8px',
-                    background: '#E8321A',
+                    background: accessLoading ? 'rgba(232,50,26,0.5)' : '#E8321A',
                     border: 'none',
                     borderRadius: '12px',
                     color: '#fff',
@@ -350,14 +426,31 @@ export default function MasterControl() {
                     fontWeight: 600,
                     letterSpacing: '0.05em',
                     textTransform: 'uppercase',
-                    cursor: 'pointer',
-                    transition: 'box-shadow 0.2s',
+                    cursor: accessLoading ? 'default' : 'pointer',
+                    transition: 'box-shadow 0.2s, background 0.2s',
+                    minWidth: '140px',
+                    justifyContent: 'center',
                   }}
-                  onMouseEnter={e => e.currentTarget.style.boxShadow = '0 0 25px rgba(232,50,26,0.45)'}
-                  onMouseLeave={e => e.currentTarget.style.boxShadow = 'none'}
+                  onMouseEnter={e => { if (!accessLoading) e.currentTarget.style.boxShadow = '0 0 25px rgba(232,50,26,0.45)' }}
+                  onMouseLeave={e => { e.currentTarget.style.boxShadow = 'none' }}
                 >
-                  Access Panel
-                  <ArrowRight size={14} />
+                  {accessLoading ? (
+                    <>
+                      <div style={{
+                        width: '13px', height: '13px', borderRadius: '50%',
+                        border: '2px solid rgba(255,255,255,0.3)',
+                        borderTopColor: '#fff',
+                        animation: 'mcSpin 0.7s linear infinite',
+                        flexShrink: 0,
+                      }} />
+                      Searching…
+                    </>
+                  ) : (
+                    <>
+                      Access Panel
+                      <ArrowRight size={14} />
+                    </>
+                  )}
                 </button>
               </div>
               {inlineError && (
@@ -468,11 +561,12 @@ export default function MasterControl() {
             )}
 
             <button
-              onClick={() => accessPanel(uid, setError)}
+              onClick={() => !accessLoading && accessPanel(uid, setError)}
+              disabled={accessLoading}
               style={{
                 width: '100%',
                 marginTop: '20px',
-                background: '#E8321A',
+                background: accessLoading ? 'rgba(232,50,26,0.5)' : '#E8321A',
                 border: 'none',
                 borderRadius: '12px',
                 color: '#fff',
@@ -481,15 +575,30 @@ export default function MasterControl() {
                 fontWeight: 700,
                 letterSpacing: '0.08em',
                 textTransform: 'uppercase',
-                cursor: 'pointer',
+                cursor: accessLoading ? 'default' : 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: '8px',
+                transition: 'background 0.2s',
               }}
             >
-              Access Panel
-              <ArrowRight size={14} />
+              {accessLoading ? (
+                <>
+                  <div style={{
+                    width: '13px', height: '13px', borderRadius: '50%',
+                    border: '2px solid rgba(255,255,255,0.3)',
+                    borderTopColor: '#fff',
+                    animation: 'mcSpin 0.7s linear infinite',
+                  }} />
+                  Searching…
+                </>
+              ) : (
+                <>
+                  Access Panel
+                  <ArrowRight size={14} />
+                </>
+              )}
             </button>
           </div>
         </div>
@@ -507,6 +616,7 @@ export default function MasterControl() {
           0%, 100% { opacity: 1; transform: scale(1); }
           50%       { opacity: 0.75; transform: scale(0.92); }
         }
+        @keyframes mcSpin { to { transform: rotate(360deg); } }
       `}</style>
     </div>
   )
