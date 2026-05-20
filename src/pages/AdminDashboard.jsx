@@ -196,8 +196,9 @@ function MasterVisibilityToggle({ label, on, onToggle, accentStart, accentEnd })
   )
 }
 
-export default function AdminDashboard() {
-  const { id } = useParams()
+export default function AdminDashboard({ restaurantId: restaurantIdProp, initialSection } = {}) {
+  const { id: idParam } = useParams()
+  const id = restaurantIdProp || idParam
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const fromMaster = searchParams.get('from') === 'master'
@@ -207,7 +208,7 @@ export default function AdminDashboard() {
   const [restaurant, setRestaurant] = useState(null)
   const [orders, setOrders] = useState([])
   const [bookings, setBookings] = useState([])
-  const [activeNav, setActiveNav] = useState('orders')
+  const [activeNav, setActiveNav] = useState(initialSection || 'orders')
   const [uidCopied, setUidCopied] = useState(false)
   const [orderView, setOrderView] = useState('orders')
   const [showOrderSettings, setShowOrderSettings] = useState(false)

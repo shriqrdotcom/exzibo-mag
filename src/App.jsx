@@ -100,55 +100,58 @@ function SuperAdminRoute({ children }) {
   return children
 }
 
-// ── Slug resolver for dashboard subdomain ───────────────────────────────────
-// Reads :restaurantSlug from URL params, fetches the restaurant list,
-// finds the matching row, then renders the target component by redirecting
-// to an internal route that carries the resolved :id.
-//
-// Props:
-//   subPath  — role hint: "admin" | "manager" | "employee" | "master"
-//   section  — dashboard section: "dashboard" | "orders" | "tables" |
-//              "menu" | "analytics" (passed as ?section= query param so
-//              AdminDashboard can open the right tab on arrival)
-//
-// Internal redirect targets:
-//   subPath "master"   → /master-control/:uid
-//   section present    → /admin/:id?section=<section>
-//   everything else    → /admin/:id   (base dashboard)
-function SlugResolver({ subPath, section }) {
+// ── Slug resolver — only used for master-control redirect ───────────────────
+// For admin/section routes, SlugAdminRoute renders AdminDashboard in-place
+// so the pretty slug URL is preserved in the address bar.
+function SlugResolver({ subPath }) {
   const { restaurantSlug } = useParams()
   const navigate = useNavigate()
   const [notFound, setNotFound] = useState(false)
 
   useEffect(() => {
     if (!restaurantSlug) { setNotFound(true); return }
-    // getRestaurantBySlug is a public query — no auth session required.
-    // This is important on dashboard.exzibo.online where a fresh tab has
-    // no session yet; we resolve the slug first, then guard auth inside
-    // AdminDashboard / MasterControl as normal.
     getRestaurantBySlug(restaurantSlug)
       .then(restaurant => {
         if (!restaurant || !restaurant.id) { setNotFound(true); return }
-
-        let target
         if (subPath === 'master') {
-          target = restaurant.uid
+          const target = restaurant.uid
             ? `/master-control/${restaurant.uid}`
             : '/master-control'
-        } else if (section) {
-          // Section-based routing — open AdminDashboard at the requested tab
-          target = `/admin/${restaurant.id}?section=${section}`
-        } else {
-          // base, admin, manager, employee — all render AdminDashboard
-          target = `/admin/${restaurant.id}`
+          navigate(target, { replace: true })
         }
-        navigate(target, { replace: true })
       })
       .catch(() => setNotFound(true))
-  }, [restaurantSlug, subPath, section, navigate])
+  }, [restaurantSlug, subPath, navigate])
 
   if (notFound) return <NotFound message={`Restaurant "${restaurantSlug}" not found`} />
   return <GlobalLoader />
+}
+
+// ── Slug-admin route — renders AdminDashboard in-place (no URL redirect) ───
+// Resolves :restaurantSlug → restaurant UUID, then renders AdminDashboard
+// directly so the address bar keeps the clean slug-based URL.
+//
+// Props:
+//   section — initial nav tab: "orders" | "tables" | "menu" |
+//             "analytics" | "dashboard"  (default: "orders")
+function SlugAdminRoute({ section }) {
+  const { restaurantSlug } = useParams()
+  const [restaurantId, setRestaurantId] = useState(null)
+  const [notFound, setNotFound] = useState(false)
+
+  useEffect(() => {
+    if (!restaurantSlug) { setNotFound(true); return }
+    getRestaurantBySlug(restaurantSlug)
+      .then(restaurant => {
+        if (!restaurant?.id) { setNotFound(true); return }
+        setRestaurantId(restaurant.id)
+      })
+      .catch(() => setNotFound(true))
+  }, [restaurantSlug])
+
+  if (notFound) return <NotFound message={`Restaurant "${restaurantSlug}" not found`} />
+  if (!restaurantId) return <GlobalLoader />
+  return <AdminDashboard restaurantId={restaurantId} initialSection={section} />
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -321,22 +324,22 @@ function DashboardApp() {
       <Route path="/auth" element={<Auth />} />
 
       {/* ── Section-based slug routes (/{slug}/{section}) ── */}
-      {/* Each resolves the slug to a restaurant UUID, then redirects to   */}
-      {/* /admin/:id?section=<section> so AdminDashboard opens the right tab */}
-      <Route path="/:restaurantSlug/dashboard"  element={<SlugResolver section="dashboard" />} />
-      <Route path="/:restaurantSlug/orders"     element={<SlugResolver section="orders" />} />
-      <Route path="/:restaurantSlug/tables"     element={<SlugResolver section="tables" />} />
-      <Route path="/:restaurantSlug/menu"       element={<SlugResolver section="menu" />} />
-      <Route path="/:restaurantSlug/analytics"  element={<SlugResolver section="analytics" />} />
+      {/* SlugAdminRoute renders AdminDashboard in-place — URL stays clean  */}
+      <Route path="/:restaurantSlug/dashboard"  element={<SlugAdminRoute section="dashboard" />} />
+      <Route path="/:restaurantSlug/orders"     element={<SlugAdminRoute section="orders" />} />
+      <Route path="/:restaurantSlug/tables"     element={<SlugAdminRoute section="tables" />} />
+      <Route path="/:restaurantSlug/menu"       element={<SlugAdminRoute section="menu" />} />
+      <Route path="/:restaurantSlug/analytics"  element={<SlugAdminRoute section="analytics" />} />
 
       {/* ── Role-based slug routes ── */}
-      <Route path="/:restaurantSlug/admin"     element={<SlugResolver subPath="admin" />} />
-      <Route path="/:restaurantSlug/manager"   element={<SlugResolver subPath="manager" />} />
-      <Route path="/:restaurantSlug/employee"  element={<SlugResolver subPath="employee" />} />
+      <Route path="/:restaurantSlug/admin"     element={<SlugAdminRoute />} />
+      <Route path="/:restaurantSlug/manager"   element={<SlugAdminRoute />} />
+      <Route path="/:restaurantSlug/employee"  element={<SlugAdminRoute />} />
+      {/* master still redirects to /master-control/:uid */}
       <Route path="/:restaurantSlug/master"    element={<SlugResolver subPath="master" />} />
 
       {/* ── Base slug route (no section/role) ── */}
-      <Route path="/:restaurantSlug" element={<SlugResolver />} />
+      <Route path="/:restaurantSlug" element={<SlugAdminRoute />} />
 
       {/* ── Internal routes — rendered after SlugResolver redirects ── */}
       <Route path="/admin/:id"           element={<AdminDashboard />} />
