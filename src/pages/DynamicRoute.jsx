@@ -634,12 +634,16 @@ function RouteCards({ state, setState, showDefaults, isDashboard }) {
 }
 
 function DashboardTab() {
-  const [prefix, setPrefix]         = useState('')
-  const [savedPrefix, setSavedPrefix] = useState('')
-  const [saving, setSaving]         = useState(false)
-  const [resetting, setResetting]   = useState(false)
-  const [loading, setLoading]       = useState(true)
-  const [toast, setToast]           = useState(null)
+  const [prefix, setPrefix]               = useState('')
+  const [savedPrefix, setSavedPrefix]       = useState('')
+  const [saving, setSaving]               = useState(false)
+  const [resetting, setResetting]         = useState(false)
+  const [loading, setLoading]             = useState(true)
+  const [toast, setToast]                 = useState(null)
+
+  const [logicText, setLogicText]         = useState('')
+  const [savedLogicText, setSavedLogicText] = useState('')
+  const [savingLogic, setSavingLogic]     = useState(false)
 
   function showToast(msg, type = 'success') {
     setToast({ msg, type })
@@ -647,15 +651,31 @@ function DashboardTab() {
   }
 
   useEffect(() => {
-    getRouteConfig('dashboard_route_prefix')
-      .then(val => {
-        const v = val || ''
-        setPrefix(v)
-        setSavedPrefix(v)
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false))
+    Promise.all([
+      getRouteConfig('dashboard_route_prefix').catch(() => ''),
+      getRouteConfig('dashboard_logic_description').catch(() => ''),
+    ]).then(([prefixVal, logicVal]) => {
+      const p = prefixVal || ''
+      setPrefix(p)
+      setSavedPrefix(p)
+      const l = logicVal || ''
+      setLogicText(l)
+      setSavedLogicText(l)
+    }).finally(() => setLoading(false))
   }, [])
+
+  async function handleSaveLogic() {
+    setSavingLogic(true)
+    try {
+      await setRouteConfig('dashboard_logic_description', logicText)
+      setSavedLogicText(logicText)
+      showToast('Route logic description saved')
+    } catch (err) {
+      showToast('Failed to save: ' + err.message, 'error')
+    } finally {
+      setSavingLogic(false)
+    }
+  }
 
   function handlePrefixChange(raw) {
     const sanitized = raw.toLowerCase().replace(/[^a-z0-9-]/g, '')
@@ -780,6 +800,37 @@ function DashboardTab() {
       {/* Card 2 — Dynamic Routing Logic */}
       <div style={cardStyle}>
         <div style={cardTitleStyle}>Add Dynamic Routing Logic</div>
+
+        {/* Route Logic Description */}
+        <div style={{ marginBottom: '18px' }}>
+          <label style={labelStyle}>Route Logic Description</label>
+          <textarea
+            style={{
+              ...inputStyle,
+              height: '110px',
+              resize: 'vertical',
+              fontFamily: 'inherit',
+              lineHeight: '1.6',
+              paddingTop: '10px',
+              borderColor: logicText !== savedLogicText ? 'rgba(232,50,26,0.4)' : 'rgba(255,255,255,0.08)',
+            }}
+            placeholder="Describe your dashboard routing logic here — e.g. how restaurant slugs map to dashboard URLs, role-based access rules, default fallbacks, etc."
+            value={logicText}
+            onChange={e => setLogicText(e.target.value)}
+          />
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '8px' }}>
+            <button
+              style={{ ...saveButtonStyle, opacity: savingLogic ? 0.65 : 1, cursor: savingLogic ? 'default' : 'pointer' }}
+              disabled={savingLogic}
+              onClick={handleSaveLogic}
+              onMouseEnter={e => { if (!savingLogic) { e.currentTarget.style.background = ACCENT; e.currentTarget.style.color = '#fff' } }}
+              onMouseLeave={e => { if (!savingLogic) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = ACCENT } }}
+            >
+              {savingLogic ? 'SAVING…' : 'SAVE DESCRIPTION'}
+            </button>
+          </div>
+        </div>
+
         <div style={{ marginBottom: '18px' }}>
           <label style={labelStyle}>Name of the Restaurant Connected with UID</label>
           <RestaurantSlugList />
