@@ -243,7 +243,10 @@ function SuperAdminApp() {
       <Route path="/master-control"      element={<MasterControl />} />
       <Route path="/master-control/:uid" element={<MasterControl />} />
 
-      {/* /admin/:id panel lives on dashboard.exzibo.online (DashboardApp) */}
+      {/* Admin panel — reached via Master Control navigation */}
+      <Route path="/admin/:id"           element={<AdminDashboard />} />
+      <Route path="/admin/:id/team"      element={<TeamMembers />} />
+      <Route path="/admin/:id/profile"   element={<ProfilePage />} />
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
