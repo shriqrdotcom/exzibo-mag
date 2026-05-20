@@ -265,28 +265,6 @@ export default function MasterControl() {
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <AdminHeader title="Master Control" showSearch={false} />
 
-        {/* Dashboard Route Info Bar */}
-        {dashRoutePrefix && (
-          <div style={{
-            background: 'rgba(232,50,26,0.06)',
-            borderBottom: '1px solid rgba(232,50,26,0.12)',
-            padding: '6px 20px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            fontSize: '11px',
-            fontWeight: 600,
-            color: '#aaa',
-            letterSpacing: '0.04em',
-            flexShrink: 0,
-          }}>
-            <span style={{ fontSize: '12px' }}>🌐</span>
-            <span>Dashboard Route:</span>
-            <span style={{ color: '#E8321A', fontFamily: 'monospace', fontWeight: 700 }}>
-              dashboard.exzibo.online/{dashRoutePrefix}/
-            </span>
-          </div>
-        )}
 
         <main style={{ flex: 1, overflowY: 'auto', padding: '32px', position: 'relative' }}>
           <div style={{ position: 'absolute', top: '24px', right: '32px', display: 'flex', alignItems: 'center', gap: '10px' }}>

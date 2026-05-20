@@ -994,30 +994,6 @@ export default function AdminDashboard({ restaurantId: restaurantIdProp, initial
         .nav-tab:hover { transform: scale(1.08); }
       `}</style>
 
-      {/* Dashboard Route Info Bar */}
-      {dashRoutePrefix && (
-        <div style={{
-          width: '100%',
-          background: 'rgba(232,50,26,0.06)',
-          borderBottom: '1px solid rgba(232,50,26,0.12)',
-          padding: '6px 20px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: '6px',
-          fontSize: '11px',
-          fontWeight: 600,
-          color: '#aaa',
-          letterSpacing: '0.04em',
-          flexShrink: 0,
-        }}>
-          <span style={{ fontSize: '12px' }}>🌐</span>
-          <span>Dashboard Route:</span>
-          <span style={{ color: '#E8321A', fontFamily: 'monospace', fontWeight: 700 }}>
-            dashboard.exzibo.online/{dashRoutePrefix}/
-          </span>
-        </div>
-      )}
 
       {/* Toast */}
       {notification && (
