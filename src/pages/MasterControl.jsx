@@ -4,7 +4,7 @@ import Sidebar from '../components/Sidebar'
 import AdminHeader from '../components/AdminHeader'
 import HelpRequestsDrawer from '../components/HelpRequestsDrawer'
 import { LogIn, ShieldCheck, X, ArrowRight, AlertCircle, BellRing } from 'lucide-react'
-import { supabase } from '../lib/supabase'
+import { supabase, isSupabaseConfigured } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { getRouteConfig } from '../lib/routeConfig'
 import { getSubdomain } from '../lib/subdomain'
@@ -28,6 +28,19 @@ async function resolveAdminTargetByUID(uid) {
       return { id: String(found.id), slug: found.slug || null }
     }
   } catch { /* noop */ }
+
+  // ── Guard: Supabase must be properly configured ───────────────────────────
+  // VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY are baked into the bundle at
+  // build time. If the secrets were not set when the deployment was built, all
+  // queries below will fail with a network error to the placeholder domain.
+  if (!isSupabaseConfigured) {
+    console.error(
+      '[MasterControl] Supabase is not configured in this build. ' +
+      'VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY must be set in Replit Secrets ' +
+      'BEFORE running npm run build / deploying. Redeploy after setting the secrets.'
+    )
+    throw new Error('Database not configured — please redeploy after setting the Supabase secrets.')
+  }
 
   // ── Supabase lookup — three strategies ───────────────────────────────────
   // Strategy 1: exact string match on the uid (TEXT) column
