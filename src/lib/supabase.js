@@ -35,3 +35,26 @@ export const supabase = createClient(
   supabaseUrl,
   supabaseAnonKey || PLACEHOLDER_KEY
 )
+
+// ── Session-free anon client ──────────────────────────────────────────────────
+// Uses the same URL/key as `supabase` but NEVER attaches a user session.
+// This means Supabase RLS evaluates requests as the `anon` role, not
+// `authenticated`. This is necessary for restaurant lookups in MasterControl
+// and AdminDashboard because the authenticated-user RLS policy restricts
+// SELECT to owned restaurants only, while the anon policy allows reading
+// any restaurant (required for public restaurant websites to work).
+export const supabaseAnon = createClient(
+  supabaseUrl,
+  supabaseAnonKey || PLACEHOLDER_KEY,
+  {
+    auth: {
+      persistSession:      false,
+      autoRefreshToken:    false,
+      detectSessionInUrl:  false,
+      // Use a distinct storage key so this client does not collide with the
+      // session-aware `supabase` client (avoids the "Multiple GoTrueClient
+      // instances" browser warning that appears when two clients share a key).
+      storageKey:          'exzibo-anon-no-session',
+    },
+  }
+)

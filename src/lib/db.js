@@ -1,4 +1,4 @@
-import { supabase } from './supabase'
+import { supabase, supabaseAnon } from './supabase'
 import { DISABLE_AUTH } from './env'
 
 // ── Soft-delete localStorage fallback helpers ─────────────────
@@ -376,6 +376,17 @@ export async function permanentDeleteRestaurant(restaurant) {
 }
 
 export async function getRestaurantBySlug(slug) {
+  // Try with the anon client first — it uses the `anon` RLS role which allows
+  // reading any restaurant. The authenticated client's RLS may restrict access
+  // to owned restaurants only, causing 404s for super-admin restaurant lookups.
+  const { data: anonData, error: anonError } = await supabaseAnon
+    .from('restaurants')
+    .select('*')
+    .eq('slug', slug)
+    .single()
+  if (!anonError && anonData) return anonData
+
+  // Fallback to the authenticated client in case anon SELECT is not permitted
   const { data, error } = await supabase
     .from('restaurants')
     .select('*')
@@ -386,6 +397,17 @@ export async function getRestaurantBySlug(slug) {
 }
 
 export async function getRestaurantById(id) {
+  // Try with the anon client first — it uses the `anon` RLS role which allows
+  // reading any restaurant. The authenticated client's RLS may restrict access
+  // to owned restaurants only, causing null returns for super-admin access.
+  const { data: anonData, error: anonError } = await supabaseAnon
+    .from('restaurants')
+    .select('*')
+    .eq('id', id)
+    .single()
+  if (!anonError && anonData) return anonData
+
+  // Fallback to the authenticated client
   const { data, error } = await supabase
     .from('restaurants')
     .select('*')
