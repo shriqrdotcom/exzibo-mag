@@ -473,7 +473,7 @@ function RouteCards({ state, setState, showDefaults, isDashboard }) {
           />
         </div>
         <div>
-          <label style={labelStyle}>Generated URL Preview</label>
+          <label style={labelStyle}>Dynamic Route Pattern</label>
           <input
             style={{ ...inputStyle, color: '#aaa', cursor: 'default' }}
             readOnly
@@ -751,7 +751,7 @@ function DashboardTab() {
         </div>
 
         <div style={{ marginBottom: '20px' }}>
-          <label style={labelStyle}>Generated URL Preview</label>
+          <label style={labelStyle}>Dynamic Route Pattern</label>
           <input
             style={{ ...inputStyle, color: '#aaa', cursor: 'default' }}
             readOnly
