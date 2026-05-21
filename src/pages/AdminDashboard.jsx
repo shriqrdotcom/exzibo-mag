@@ -206,6 +206,7 @@ export default function AdminDashboard({ restaurantId: restaurantIdProp, initial
   const { hasPermission, activeRole } = useRole()
 
   const [restaurant, setRestaurant] = useState(null)
+  const [notFound, setNotFound] = useState(false)
   const [orders, setOrders] = useState([])
   const [bookings, setBookings] = useState([])
   const [activeNav, setActiveNav] = useState(initialSection || 'orders')
@@ -355,7 +356,7 @@ export default function AdminDashboard({ restaurantId: restaurantIdProp, initial
         const all = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
         found = all.find(r => r.id === id)
       }
-      if (!found) { navigate('/restaurants'); return }
+      if (!found) { setNotFound(true); return }
       setRestaurant(found)
       // Load orders
       let orderRows = []
@@ -957,6 +958,33 @@ export default function AdminDashboard({ restaurantId: restaurantIdProp, initial
 
   const initials = displayName
     .split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase()
+
+  if (notFound) {
+    return (
+      <div style={{
+        minHeight: '100vh', background: '#0A0A0A',
+        display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center', gap: '16px',
+      }}>
+        <AlertCircle size={36} color="#EF4444" />
+        <div style={{ color: '#EF4444', fontSize: '15px', fontWeight: 600 }}>Restaurant not found</div>
+        <div style={{ color: '#666', fontSize: '13px' }}>
+          The panel for this ID could not be loaded. Check the UID or try again.
+        </div>
+        <button
+          onClick={() => navigate('/master-control')}
+          style={{
+            marginTop: '8px', padding: '10px 22px',
+            background: 'rgba(232,50,26,0.1)', border: '1px solid rgba(232,50,26,0.3)',
+            borderRadius: '10px', color: '#E8321A',
+            fontSize: '13px', fontWeight: 600, cursor: 'pointer',
+          }}
+        >
+          ← Back to Master Control
+        </button>
+      </div>
+    )
+  }
 
   return (
     <div style={{

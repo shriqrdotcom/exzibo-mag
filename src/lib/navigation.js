@@ -38,6 +38,13 @@ export function openRoleDashboard(navigate, restaurant, roleKey) {
     return
   }
 
+  // For 'master' role on non-superadmin domains, open the Master Control panel.
+  if (roleKey === 'master') {
+    const uid = restaurant?.uid || restaurant?.id
+    navigate(uid ? `/master-control/${uid}` : '/master-control')
+    return
+  }
+
   // Dev / Replit / single-domain: navigate within the current app.
   // DefaultApp (Replit preview) and DashboardApp both include /admin/:id routes.
   if (restaurant?.id) {
