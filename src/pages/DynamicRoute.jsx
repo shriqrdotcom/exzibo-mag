@@ -332,7 +332,7 @@ function MenuTab() {
         {savedSubdomain ? (
           <div style={{
             display: 'flex', alignItems: 'center', gap: '8px',
-            marginBottom: '18px', padding: '8px 12px',
+            marginBottom: '10px', padding: '8px 12px',
             background: 'rgba(21,128,61,0.12)',
             border: '1px solid rgba(21,128,61,0.25)',
             borderRadius: '8px',
@@ -346,25 +346,15 @@ function MenuTab() {
             </span>
           </div>
         ) : (
-          <div style={{ marginBottom: '18px', fontSize: '12px', color: '#555', fontStyle: 'italic' }}>
+          <div style={{ marginBottom: '10px', fontSize: '12px', color: '#555', fontStyle: 'italic' }}>
             No subdomain configured yet. Menu pages use the default domain.
           </div>
         )}
 
-        <div style={{ marginBottom: '6px' }}>
-          <label style={labelStyle}>Dynamic Route Pattern</label>
-          <input
-            style={inputStyle}
-            placeholder="e.g. menu.exzibo.online/{restaurantName}/{tableNumber}/menu"
-            value={routePattern}
-            onChange={e => setRoutePattern(e.target.value)}
-          />
-        </div>
-
         {/* Full URL preview */}
         {subdomain && (
           <div style={{
-            marginTop: '10px', marginBottom: '4px',
+            marginBottom: '18px',
             padding: '8px 12px',
             background: '#1a1a1a',
             border: '1px solid rgba(255,255,255,0.06)',
@@ -377,6 +367,16 @@ function MenuTab() {
             </span>
           </div>
         )}
+
+        <div style={{ marginBottom: '6px' }}>
+          <label style={labelStyle}>Dynamic Route Pattern</label>
+          <input
+            style={inputStyle}
+            placeholder="e.g. menu.exzibo.online/{restaurantName}/{tableNumber}/menu"
+            value={routePattern}
+            onChange={e => setRoutePattern(e.target.value)}
+          />
+        </div>
 
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginTop: '20px' }}>
           <button
