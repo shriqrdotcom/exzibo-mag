@@ -103,7 +103,7 @@ async function resolveAdminTargetByUID(uid) {
 export default function MasterControl() {
   const navigate = useNavigate()
   const { uid: uidParam } = useParams()
-  const { isSuperAdmin, loading: authLoading } = useAuth()
+  const { isSuperAdmin, loading: authLoading, user } = useAuth()
   const [allowed, setAllowed] = useState(null)
   const [showModal, setShowModal] = useState(false)
   const [showDrawer, setShowDrawer] = useState(false)
@@ -359,12 +359,67 @@ export default function MasterControl() {
               </div>
             </div>
 
+            {/* ── Pinned master account ── */}
+            <div style={{
+              background: '#111',
+              border: '1px solid rgba(232,50,26,0.18)',
+              borderRadius: '20px',
+              padding: '20px 28px',
+              marginTop: '32px',
+            }}>
+              <div style={{
+                fontSize: '10px',
+                fontWeight: 700,
+                letterSpacing: '0.12em',
+                color: '#555',
+                textTransform: 'uppercase',
+                marginBottom: '14px',
+              }}>
+                Your Account
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap' }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: '10px', fontWeight: 600, color: '#555', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '5px' }}>UID</div>
+                  <div style={{ fontSize: '13px', fontWeight: 700, color: '#ccc', fontFamily: 'monospace', letterSpacing: '0.03em', wordBreak: 'break-all' }}>
+                    {user?.id || '—'}
+                  </div>
+                </div>
+                <div style={{ flexShrink: 0 }}>
+                  <div style={{ fontSize: '10px', fontWeight: 600, color: '#555', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '5px' }}>Role</div>
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                    <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#E8321A', boxShadow: '0 0 8px rgba(232,50,26,0.7)', display: 'inline-block' }} />
+                    <span style={{ fontSize: '12px', fontWeight: 800, color: '#E8321A', letterSpacing: '0.08em' }}>MASTER</span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => !accessLoading && accessPanel(user?.id || '', setInlineError)}
+                  disabled={accessLoading || !user?.id}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '7px',
+                    background: '#E8321A', border: 'none', borderRadius: '10px',
+                    color: '#fff', padding: '11px 22px',
+                    fontSize: '12px', fontWeight: 700, letterSpacing: '0.06em',
+                    textTransform: 'uppercase', flexShrink: 0,
+                    cursor: (accessLoading || !user?.id) ? 'default' : 'pointer',
+                    opacity: (accessLoading || !user?.id) ? 0.5 : 1,
+                    transition: 'box-shadow 0.2s',
+                  }}
+                  onMouseEnter={e => { if (!accessLoading && user?.id) e.currentTarget.style.boxShadow = '0 0 22px rgba(232,50,26,0.5)' }}
+                  onMouseLeave={e => { e.currentTarget.style.boxShadow = 'none' }}
+                >
+                  <ArrowRight size={14} />
+                  VIEW
+                </button>
+              </div>
+            </div>
+
+            {/* ── Enter restaurant UID ── */}
             <div style={{
               background: '#111',
               border: '1px solid rgba(255,255,255,0.06)',
               borderRadius: '20px',
               padding: '32px',
-              marginTop: '32px',
+              marginTop: '16px',
             }}>
               <label style={{
                 display: 'block',
