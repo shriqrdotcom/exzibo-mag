@@ -1001,35 +1001,6 @@ function DashboardTab() {
         <div style={cardTitleStyle}>Add Dynamic Routing Logic</div>
 
         <div style={{ marginBottom: '18px' }}>
-          <label style={labelStyle}>Route Logic Description</label>
-          <textarea
-            style={{
-              ...inputStyle,
-              height: '110px',
-              resize: 'vertical',
-              fontFamily: 'inherit',
-              lineHeight: '1.6',
-              paddingTop: '10px',
-              borderColor: logicText !== savedLogicText ? 'rgba(232,50,26,0.4)' : 'rgba(255,255,255,0.08)',
-            }}
-            placeholder="Describe your dashboard routing logic here — e.g. how restaurant slugs map to dashboard URLs, role-based access rules, default fallbacks, etc."
-            value={logicText}
-            onChange={e => setLogicText(e.target.value)}
-          />
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '8px' }}>
-            <button
-              style={{ ...saveButtonStyle, opacity: savingLogic ? 0.65 : 1, cursor: savingLogic ? 'default' : 'pointer' }}
-              disabled={savingLogic}
-              onClick={handleSaveLogic}
-              onMouseEnter={e => { if (!savingLogic) { e.currentTarget.style.background = ACCENT; e.currentTarget.style.color = '#fff' } }}
-              onMouseLeave={e => { if (!savingLogic) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = ACCENT } }}
-            >
-              {savingLogic ? 'SAVING…' : 'SAVE DESCRIPTION'}
-            </button>
-          </div>
-        </div>
-
-        <div style={{ marginBottom: '18px' }}>
           <label style={labelStyle}>Name of the Restaurant Connected with UID</label>
           <RestaurantSlugList />
         </div>
