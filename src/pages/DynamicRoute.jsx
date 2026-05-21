@@ -633,17 +633,47 @@ function RouteCards({ state, setState, showDefaults, isDashboard }) {
   )
 }
 
-function DashboardTab() {
-  const [prefix, setPrefix]               = useState('')
-  const [savedPrefix, setSavedPrefix]       = useState('')
-  const [saving, setSaving]               = useState(false)
-  const [resetting, setResetting]         = useState(false)
-  const [loading, setLoading]             = useState(true)
-  const [toast, setToast]                 = useState(null)
+const DASHBOARD_DOMAIN = 'dashboard.exzibo.online'
+const DEFAULT_DASHBOARD_PATTERN = `${DASHBOARD_DOMAIN}/{restaurantName}/{page}`
+const VALID_TOKENS = ['{restaurantName}', '{page}', '{orders}', '{analytics}', '{tableNumber}']
 
-  const [logicText, setLogicText]         = useState('')
-  const [savedLogicText, setSavedLogicText] = useState('')
-  const [savingLogic, setSavingLogic]     = useState(false)
+function validateDashboardPattern(pattern) {
+  if (!pattern.trim()) return 'Pattern cannot be empty.'
+  if (pattern.includes(' ')) return 'Pattern cannot contain spaces.'
+  if (!pattern.startsWith(DASHBOARD_DOMAIN + '/')) return `Pattern must start with ${DASHBOARD_DOMAIN}/`
+  if (!pattern.includes('{restaurantName}')) return 'Pattern must include the {restaurantName} token.'
+  const tokens = pattern.match(/\{[^}]+\}/g) || []
+  const unknown = tokens.filter(t => !VALID_TOKENS.includes(t))
+  if (unknown.length > 0) return `Unknown token(s): ${unknown.join(', ')}. Valid: ${VALID_TOKENS.join(', ')}`
+  return ''
+}
+
+function previewDashboardPattern(pattern, restaurantSlug = 'kfc', page = 'orders') {
+  return pattern
+    .replace('{restaurantName}', restaurantSlug)
+    .replace('{page}', page)
+    .replace('{orders}', page)
+    .replace('{analytics}', 'analytics')
+    .replace('{tableNumber}', '5')
+    .replace(/\{[^}]+\}/g, page)
+}
+
+function DashboardTab() {
+  const [prefix, setPrefix]                     = useState('')
+  const [savedPrefix, setSavedPrefix]           = useState('')
+  const [saving, setSaving]                     = useState(false)
+  const [resetting, setResetting]               = useState(false)
+  const [loading, setLoading]                   = useState(true)
+  const [toast, setToast]                       = useState(null)
+
+  const [routePattern, setRoutePattern]         = useState('')
+  const [savedRoutePattern, setSavedRoutePattern] = useState('')
+  const [savingPattern, setSavingPattern]       = useState(false)
+  const [patternError, setPatternError]         = useState('')
+
+  const [logicText, setLogicText]               = useState('')
+  const [savedLogicText, setSavedLogicText]     = useState('')
+  const [savingLogic, setSavingLogic]           = useState(false)
 
   function showToast(msg, type = 'success') {
     setToast({ msg, type })
@@ -653,33 +683,29 @@ function DashboardTab() {
   useEffect(() => {
     Promise.all([
       getRouteConfig('dashboard_route_prefix').catch(() => ''),
+      getRouteConfig('dashboard_route_pattern').catch(() => ''),
       getRouteConfig('dashboard_logic_description').catch(() => ''),
-    ]).then(([prefixVal, logicVal]) => {
+    ]).then(([prefixVal, patternVal, logicVal]) => {
       const p = prefixVal || ''
       setPrefix(p)
       setSavedPrefix(p)
+      const pat = patternVal || DEFAULT_DASHBOARD_PATTERN
+      setRoutePattern(pat)
+      setSavedRoutePattern(pat)
       const l = logicVal || ''
       setLogicText(l)
       setSavedLogicText(l)
     }).finally(() => setLoading(false))
   }, [])
 
-  async function handleSaveLogic() {
-    setSavingLogic(true)
-    try {
-      await setRouteConfig('dashboard_logic_description', logicText)
-      setSavedLogicText(logicText)
-      showToast('Route logic description saved')
-    } catch (err) {
-      showToast('Failed to save: ' + err.message, 'error')
-    } finally {
-      setSavingLogic(false)
-    }
-  }
-
   function handlePrefixChange(raw) {
     const sanitized = raw.toLowerCase().replace(/[^a-z0-9-]/g, '')
     setPrefix(sanitized)
+  }
+
+  function handlePatternChange(val) {
+    setRoutePattern(val)
+    if (patternError) setPatternError(validateDashboardPattern(val))
   }
 
   async function handleSave() {
@@ -689,7 +715,7 @@ function DashboardTab() {
     try {
       await setRouteConfig('dashboard_route_prefix', val)
       setSavedPrefix(val)
-      showToast('Dashboard route prefix saved successfully')
+      showToast('Dashboard subdomain saved successfully')
     } catch (err) {
       showToast('Failed to save: ' + err.message, 'error')
     } finally {
@@ -711,9 +737,51 @@ function DashboardTab() {
     }
   }
 
-  const previewUrl = 'dashboard.exzibo.online'
+  async function handleSaveRoutePattern() {
+    const err = validateDashboardPattern(routePattern)
+    if (err) { setPatternError(err); return }
+    setPatternError('')
+    setSavingPattern(true)
+    try {
+      await setRouteConfig('dashboard_route_pattern', routePattern.trim())
+      setSavedRoutePattern(routePattern.trim())
+      showToast('Route pattern saved successfully')
+    } catch (err) {
+      showToast('Failed to save: ' + err.message, 'error')
+    } finally {
+      setSavingPattern(false)
+    }
+  }
 
-  const isDirty = prefix.trim() !== savedPrefix
+  async function handleDefaultPattern() {
+    setRoutePattern(DEFAULT_DASHBOARD_PATTERN)
+    setPatternError('')
+    try {
+      await setRouteConfig('dashboard_route_pattern', DEFAULT_DASHBOARD_PATTERN)
+      setSavedRoutePattern(DEFAULT_DASHBOARD_PATTERN)
+      showToast('Route pattern reset to default')
+    } catch (err) {
+      showToast('Failed to reset: ' + err.message, 'error')
+    }
+  }
+
+  async function handleSaveLogic() {
+    setSavingLogic(true)
+    try {
+      await setRouteConfig('dashboard_logic_description', logicText)
+      setSavedLogicText(logicText)
+      showToast('Route logic description saved')
+    } catch (err) {
+      showToast('Failed to save: ' + err.message, 'error')
+    } finally {
+      setSavingLogic(false)
+    }
+  }
+
+  const isDirty          = prefix.trim() !== savedPrefix
+  const isPatternDirty   = routePattern.trim() !== savedRoutePattern
+  const livePreview      = routePattern ? previewDashboardPattern(routePattern) : ''
+  const patternValid     = !validateDashboardPattern(routePattern)
 
   if (loading) {
     return <div style={{ color: '#555', fontSize: '14px', padding: '20px 0' }}>Loading…</div>
@@ -744,25 +812,17 @@ function DashboardTab() {
           <label style={labelStyle}>Subdomain Prefix</label>
           <input
             style={{ ...inputStyle, borderColor: isDirty ? 'rgba(232,50,26,0.4)' : 'rgba(255,255,255,0.08)' }}
-            placeholder="e.g. restaurant-name"
+            placeholder="e.g. dashboard"
             value={prefix}
             onChange={e => handlePrefixChange(e.target.value)}
           />
         </div>
 
-        <div style={{ marginBottom: '20px' }}>
-          <label style={labelStyle}>Dynamic Route Pattern</label>
-          <input
-            style={{ ...inputStyle, color: '#aaa', cursor: 'default' }}
-            readOnly
-            value={previewUrl}
-          />
-        </div>
-
-        {savedPrefix && (
+        {/* Currently active subdomain badge */}
+        {savedPrefix ? (
           <div style={{
             display: 'flex', alignItems: 'center', gap: '8px',
-            marginBottom: '18px', padding: '8px 12px',
+            marginBottom: '10px', padding: '8px 12px',
             background: 'rgba(21,128,61,0.12)',
             border: '1px solid rgba(21,128,61,0.25)',
             borderRadius: '8px',
@@ -770,7 +830,27 @@ function DashboardTab() {
             <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#22c55e', flexShrink: 0 }} />
             <span style={{ fontSize: '12px', color: '#86efac', fontWeight: 600 }}>Currently active:&nbsp;</span>
             <span style={{ fontSize: '12px', color: '#22c55e', fontFamily: 'monospace', fontWeight: 700 }}>
-              dashboard.exzibo.online/{savedPrefix}/
+              {DASHBOARD_DOMAIN}
+            </span>
+          </div>
+        ) : (
+          <div style={{ marginBottom: '10px', fontSize: '12px', color: '#555', fontStyle: 'italic' }}>
+            No subdomain configured yet.
+          </div>
+        )}
+
+        {/* Full URL */}
+        {prefix && (
+          <div style={{
+            marginBottom: '24px', padding: '8px 12px',
+            background: '#1a1a1a',
+            border: '1px solid rgba(255,255,255,0.06)',
+            borderRadius: '8px',
+            fontSize: '12px', color: '#888',
+          }}>
+            Full URL:&nbsp;
+            <span style={{ color: ACCENT, fontFamily: 'monospace', fontWeight: 600 }}>
+              https://{DASHBOARD_DOMAIN}
             </span>
           </div>
         )}
@@ -797,11 +877,129 @@ function DashboardTab() {
         </div>
       </div>
 
-      {/* Card 2 — Dynamic Routing Logic */}
+      {/* Card 2 — Dynamic Route Pattern */}
+      <div style={cardStyle}>
+        <div style={cardTitleStyle}>Dynamic Route Pattern</div>
+
+        {/* Editable pattern input */}
+        <div style={{ marginBottom: '6px' }}>
+          <label style={labelStyle}>Route Pattern Template</label>
+          <input
+            style={{
+              ...inputStyle,
+              borderColor: patternError
+                ? 'rgba(232,50,26,0.6)'
+                : isPatternDirty
+                  ? 'rgba(232,50,26,0.4)'
+                  : 'rgba(255,255,255,0.08)',
+              fontFamily: 'monospace',
+            }}
+            placeholder={`e.g. ${DEFAULT_DASHBOARD_PATTERN}`}
+            value={routePattern}
+            onChange={e => handlePatternChange(e.target.value)}
+          />
+        </div>
+
+        {/* Token hints */}
+        <div style={{ marginBottom: '14px', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+          {VALID_TOKENS.map(t => (
+            <span
+              key={t}
+              onClick={() => handlePatternChange(routePattern + t)}
+              style={{
+                fontSize: '11px', fontFamily: 'monospace',
+                color: '#888', background: '#1a1a1a',
+                border: '1px solid rgba(255,255,255,0.08)',
+                borderRadius: '5px', padding: '2px 8px',
+                cursor: 'pointer', userSelect: 'none',
+                transition: 'color 0.15s',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.color = ACCENT }}
+              onMouseLeave={e => { e.currentTarget.style.color = '#888' }}
+              title={`Click to append ${t}`}
+            >
+              {t}
+            </span>
+          ))}
+        </div>
+
+        {/* Validation error */}
+        {patternError && (
+          <div style={{
+            marginBottom: '12px', padding: '8px 12px',
+            background: 'rgba(185,28,28,0.1)',
+            border: '1px solid rgba(185,28,28,0.3)',
+            borderRadius: '8px',
+            fontSize: '12px', color: '#fca5a5',
+          }}>
+            ⚠ {patternError}
+          </div>
+        )}
+
+        {/* Live preview */}
+        {routePattern && patternValid && (
+          <div style={{ marginBottom: '14px' }}>
+            <label style={{ ...labelStyle, marginBottom: '6px' }}>Live Preview (example: kfc / orders)</label>
+            <div style={{
+              padding: '8px 12px',
+              background: '#1a1a1a',
+              border: '1px solid rgba(255,255,255,0.06)',
+              borderRadius: '8px',
+              fontSize: '12px', color: '#888',
+              fontFamily: 'monospace',
+              wordBreak: 'break-all',
+            }}>
+              <span style={{ color: ACCENT, fontWeight: 600 }}>
+                https://{livePreview}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* Currently active route pattern */}
+        {savedRoutePattern && savedRoutePattern !== DEFAULT_DASHBOARD_PATTERN && (
+          <div style={{
+            display: 'flex', alignItems: 'flex-start', gap: '8px',
+            marginBottom: '18px', padding: '8px 12px',
+            background: 'rgba(21,128,61,0.12)',
+            border: '1px solid rgba(21,128,61,0.25)',
+            borderRadius: '8px',
+          }}>
+            <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#22c55e', flexShrink: 0, marginTop: '3px' }} />
+            <div>
+              <span style={{ fontSize: '12px', color: '#86efac', fontWeight: 600 }}>Active route pattern:&nbsp;</span>
+              <span style={{ fontSize: '12px', color: '#22c55e', fontFamily: 'monospace', fontWeight: 700, wordBreak: 'break-all' }}>
+                {savedRoutePattern}
+              </span>
+            </div>
+          </div>
+        )}
+
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+          <button
+            style={{ ...ghostButtonStyle }}
+            onClick={handleDefaultPattern}
+            onMouseEnter={e => { e.currentTarget.style.background = ACCENT; e.currentTarget.style.color = '#fff' }}
+            onMouseLeave={e => { e.currentTarget.style.background = '#1a1a1a'; e.currentTarget.style.color = ACCENT }}
+          >
+            DEFAULT PATTERN
+          </button>
+          <button
+            style={{ ...saveButtonStyle, opacity: savingPattern ? 0.65 : 1, cursor: savingPattern ? 'default' : 'pointer' }}
+            disabled={savingPattern}
+            onClick={handleSaveRoutePattern}
+            onMouseEnter={e => { if (!savingPattern) { e.currentTarget.style.background = ACCENT; e.currentTarget.style.color = '#fff' } }}
+            onMouseLeave={e => { if (!savingPattern) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = ACCENT } }}
+          >
+            {savingPattern ? 'SAVING…' : 'SAVE ROUTE PATTERN'}
+          </button>
+        </div>
+      </div>
+
+      {/* Card 3 — Dynamic Routing Logic */}
       <div style={cardStyle}>
         <div style={cardTitleStyle}>Add Dynamic Routing Logic</div>
 
-        {/* Route Logic Description */}
         <div style={{ marginBottom: '18px' }}>
           <label style={labelStyle}>Route Logic Description</label>
           <textarea
@@ -837,16 +1035,21 @@ function DashboardTab() {
         </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
           {[
-            { label: 'DEFAULT MASTER' },
-            { label: 'DEFAULT OWNER' },
-            { label: 'DEFAULT ADMIN' },
-            { label: 'DEFAULT EMPLOYEE' },
-          ].map(({ label }) => (
+            { label: 'DEFAULT MASTER',   page: 'master' },
+            { label: 'DEFAULT OWNER',    page: 'owner' },
+            { label: 'DEFAULT ADMIN',    page: 'admin' },
+            { label: 'DEFAULT EMPLOYEE', page: 'employee' },
+          ].map(({ label, page }) => (
             <button
               key={label}
               style={whiteButtonStyle}
               onMouseEnter={e => { e.currentTarget.style.background = '#e0e0e0'; e.currentTarget.style.borderColor = '#e0e0e0' }}
               onMouseLeave={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.borderColor = '#fff' }}
+              onClick={() => {
+                const pattern = `${DASHBOARD_DOMAIN}/{restaurantName}/${page}`
+                setRoutePattern(pattern)
+                setPatternError('')
+              }}
             >
               {label}
             </button>

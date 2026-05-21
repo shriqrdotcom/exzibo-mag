@@ -78,3 +78,27 @@ export function buildMenuBaseUrl(subdomain) {
   const sd = subdomain || DEFAULT_MENU_SUBDOMAIN
   return `https://${sd}.exzibo.online`
 }
+
+export async function getDashboardRoutePattern() {
+  try {
+    const val = await getRouteConfig('dashboard_route_pattern')
+    return val || 'dashboard.exzibo.online/{restaurantName}/{page}'
+  } catch {
+    return 'dashboard.exzibo.online/{restaurantName}/{page}'
+  }
+}
+
+/**
+ * Builds a real dashboard URL from the saved pattern by replacing tokens.
+ * @param {string} pattern  e.g. "dashboard.exzibo.online/{restaurantName}/{page}"
+ * @param {string} restaurantSlug  e.g. "kfc"
+ * @param {string} page  e.g. "orders"
+ */
+export function buildDashboardUrl(pattern, restaurantSlug, page) {
+  return 'https://' + pattern
+    .replace('{restaurantName}', restaurantSlug || 'your-restaurant')
+    .replace('{page}', page || 'dashboard')
+    .replace('{orders}', page || 'orders')
+    .replace('{analytics}', page || 'analytics')
+    .replace(/\{[^}]+\}/g, page || 'dashboard')
+}

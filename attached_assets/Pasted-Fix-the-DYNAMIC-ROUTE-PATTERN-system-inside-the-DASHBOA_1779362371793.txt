@@ -1,0 +1,63 @@
+Fix the “DYNAMIC ROUTE PATTERN” system inside the “DASHBOARD ROUTE MAPPING” section.
+
+Current issue:
+The “DYNAMIC ROUTE PATTERN” input only displays text but does not work as the real dynamic routing logic.
+
+I need to convert this field into the main dashboard route configuration system.
+
+Required Logic:
+When I enter a route pattern like:
+
+dashboard.exzibo.online/{restaurantName}/{orders}
+
+and click “SAVE SUBDOMAIN”,
+
+the system must:
+
+1. Save this pattern permanently in database/settings
+2. Treat this pattern as the global dashboard routing template
+3. Automatically replace:
+   - {restaurantName} → restaurant slug/name
+   - {orders} → dashboard page/section
+4. Generate real working dynamic routes from this template
+5. Apply this routing logic to all restaurants automatically
+6. Use this as the main routing engine for dashboard.exzibo.online
+
+Example:
+If:
+- restaurantName = kfc
+- orders = live-orders
+
+Then generated route should become:
+
+dashboard.exzibo.online/kfc/live-orders
+
+More Requirements:
+- Add route validation before saving
+- Prevent invalid patterns
+- Save route config in persistent storage
+- Load saved route automatically after refresh/restart
+- Make routing reusable for all dashboard pages
+- Add fallback/default route handling
+- Keep routing scalable for future dashboard sections
+
+Technical Requirements:
+- Create centralized dynamic routing logic
+- Use clean reusable functions
+- Add proper state management
+- Make routing production-ready
+- Ensure compatibility with existing dashboard structure
+
+UI Requirements:
+- Show live route preview while typing
+- Show “Current Active Route”
+- Display validation errors if pattern format is invalid
+- Keep existing UI design unchanged
+
+Expected Supported Patterns:
+dashboard.exzibo.online/{restaurantName}/{page}
+dashboard.exzibo.online/{restaurantName}/{orders}
+dashboard.exzibo.online/{restaurantName}/{analytics}
+
+Goal:
+The “DYNAMIC ROUTE PATTERN” field should become the core logic controller for all dashboard dynamic routing.
