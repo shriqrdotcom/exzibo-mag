@@ -239,6 +239,12 @@ function SuperAdminApp() {
       <Route path="/dynamic-route"
         element={<SuperAdminRoute><DynamicRoute /></SuperAdminRoute>} />
 
+      {/* Menu Studio */}
+      <Route path="/master-control"
+        element={<SuperAdminRoute><MasterControl /></SuperAdminRoute>} />
+      <Route path="/master-control/:uid"
+        element={<SuperAdminRoute><MasterControl /></SuperAdminRoute>} />
+
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )
