@@ -2,7 +2,7 @@ import React, { useState, useEffect, useLayoutEffect, useCallback } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import Sidebar from '../components/Sidebar'
 import AdminHeader from '../components/AdminHeader'
-import { TrendingUp, Filter, Download, ChevronLeft, ChevronRight, Plus, Trash2, Clock, X, Pencil, Play, ExternalLink, LayoutDashboard, ShieldCheck, ImageDown, Upload, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react'
+import { TrendingUp, Filter, Download, ChevronLeft, ChevronRight, Plus, Trash2, Clock, X, Pencil, Play, ExternalLink, LayoutDashboard, ShieldCheck, ImageDown, Upload, ZoomIn, ZoomOut, RotateCcw, Save, CheckCircle, AlertTriangle, AlertCircle } from 'lucide-react'
 import { useRole } from '../context/RoleContext'
 import { getRestaurants, updateRestaurant, softDeleteRestaurant, getRestaurantsCreatedThisMonth } from '../lib/db'
 import { openRoleDashboard } from '../lib/navigation'
@@ -1225,6 +1225,21 @@ function DeleteBtn({ onClick }) {
   )
 }
 
+const IC_STORAGE_KEY = 'exzibo_img_compressor_limits'
+const IC_DEFAULTS = { minKB: 60, maxKB: 200 }
+
+function loadICLimits() {
+  try {
+    const raw = localStorage.getItem(IC_STORAGE_KEY)
+    if (!raw) return IC_DEFAULTS
+    const parsed = JSON.parse(raw)
+    const min = parseInt(parsed.minKB, 10)
+    const max = parseInt(parsed.maxKB, 10)
+    if (isNaN(min) || isNaN(max) || min < 1 || max < min) return IC_DEFAULTS
+    return { minKB: min, maxKB: max }
+  } catch { return IC_DEFAULTS }
+}
+
 function ImageCompressor() {
   const [original, setOriginal] = useState(null)   // { file, url, size, w, h }
   const [compressed, setCompressed] = useState(null) // { url, size, blob }
@@ -1233,6 +1248,33 @@ function ImageCompressor() {
   const [dragging, setDragging] = useState(false)
   const [processing, setProcessing] = useState(false)
   const canvasRef = React.useRef(null)
+
+  // ── KB Limit settings ──────────────────────────────────────────
+  const [savedLimits, setSavedLimits] = useState(() => loadICLimits())
+  const [pendingMin, setPendingMin] = useState(() => String(loadICLimits().minKB))
+  const [pendingMax, setPendingMax] = useState(() => String(loadICLimits().maxKB))
+  const [saveFlash, setSaveFlash] = useState(false) // "Saved!" feedback
+
+  const minKB = savedLimits.minKB
+  const maxKB = savedLimits.maxKB
+
+  function handleSaveLimits() {
+    const min = parseInt(pendingMin, 10)
+    const max = parseInt(pendingMax, 10)
+    if (isNaN(min) || isNaN(max) || min < 1 || max <= min) return
+    const limits = { minKB: min, maxKB: max }
+    localStorage.setItem(IC_STORAGE_KEY, JSON.stringify(limits))
+    setSavedLimits(limits)
+    setSaveFlash(true)
+    setTimeout(() => setSaveFlash(false), 2000)
+  }
+
+  const limitsChanged = parseInt(pendingMin, 10) !== minKB || parseInt(pendingMax, 10) !== maxKB
+  const limitsValid = (() => {
+    const mn = parseInt(pendingMin, 10)
+    const mx = parseInt(pendingMax, 10)
+    return !isNaN(mn) && !isNaN(mx) && mn >= 1 && mx > mn
+  })()
 
   function fmtSize(bytes) {
     if (bytes < 1024) return `${bytes} B`
@@ -1258,6 +1300,7 @@ function ImageCompressor() {
 
   function onInputChange(e) { loadFile(e.target.files[0]) }
 
+  // ── Smart compression: auto-adjusts quality to land in [minKB, maxKB] ──────
   const compress = useCallback(() => {
     if (!original) return
     setProcessing(true)
@@ -1268,24 +1311,89 @@ function ImageCompressor() {
       canvas.height = original.h
       const ctx = canvas.getContext('2d')
       ctx.clearRect(0, 0, canvas.width, canvas.height)
-      if (format === 'image/png') {
-        ctx.fillStyle = 'transparent'
-      }
       ctx.drawImage(img, 0, 0)
-      const q = format === 'image/png' ? undefined : quality / 100
-      canvas.toBlob(blob => {
-        if (!blob) { setProcessing(false); return }
-        const url = URL.createObjectURL(blob)
-        setCompressed({ url, size: blob.size, blob })
-        setProcessing(false)
-      }, format, q)
+
+      if (format === 'image/png') {
+        // PNG is lossless — just encode at current quality (quality not applicable)
+        canvas.toBlob(blob => {
+          if (!blob) { setProcessing(false); return }
+          setCompressed({ url: URL.createObjectURL(blob), size: blob.size, blob })
+          setProcessing(false)
+        }, 'image/png')
+        return
+      }
+
+      // For lossy formats: binary-search quality to land inside [minKB, maxKB]
+      const minBytes = minKB * 1024
+      const maxBytes = maxKB * 1024
+
+      // Start with the manual quality slider value
+      let lo = 1, hi = 100, q = quality
+      let iterations = 0
+      const maxIter = 12
+
+      function tryQuality(qVal, done) {
+        canvas.toBlob(blob => {
+          if (!blob) return done(qVal, Infinity)
+          done(qVal, blob.size, blob)
+        }, format, qVal / 100)
+      }
+
+      function iterate(qCur) {
+        if (iterations++ >= maxIter) {
+          // Use whatever we have at qCur
+          tryQuality(qCur, (_, sz, blob) => {
+            if (!blob) { setProcessing(false); return }
+            setCompressed({ url: URL.createObjectURL(blob), size: blob.size, blob })
+            setProcessing(false)
+          })
+          return
+        }
+
+        tryQuality(qCur, (_, sz, blob) => {
+          if (!blob) { setProcessing(false); return }
+
+          if (sz >= minBytes && sz <= maxBytes) {
+            // ✅ Within range — done
+            setCompressed({ url: URL.createObjectURL(blob), size: blob.size, blob })
+            setProcessing(false)
+          } else if (sz > maxBytes) {
+            // Too large — reduce quality
+            hi = qCur - 1
+            const next = Math.max(lo, Math.floor((lo + hi) / 2))
+            if (next === qCur || lo > hi) {
+              setCompressed({ url: URL.createObjectURL(blob), size: blob.size, blob })
+              setProcessing(false)
+            } else {
+              iterate(next)
+            }
+          } else {
+            // Too small — raise quality
+            lo = qCur + 1
+            const next = Math.min(hi, Math.ceil((lo + hi) / 2))
+            if (next === qCur || lo > hi) {
+              setCompressed({ url: URL.createObjectURL(blob), size: blob.size, blob })
+              setProcessing(false)
+            } else {
+              iterate(next)
+            }
+          }
+        })
+      }
+
+      iterate(q)
     }
     img.src = original.url
-  }, [original, quality, format])
+  }, [original, quality, format, minKB, maxKB])
 
   useEffect(() => {
     if (original) compress()
   }, [original, quality, format, compress])
+
+  // Re-compress when saved limits change while an image is loaded
+  useEffect(() => {
+    if (original) compress()
+  }, [savedLimits]) // eslint-disable-line react-hooks/exhaustive-deps
 
   function handleDownload() {
     if (!compressed) return
@@ -1300,6 +1408,20 @@ function ImageCompressor() {
 
   const saving = original && compressed ? Math.round((1 - compressed.size / original.size) * 100) : 0
 
+  // ── KB range status for the compressed result ─────────────────
+  const compressedKB = compressed ? compressed.size / 1024 : 0
+  const isInRange  = compressed && compressedKB >= minKB && compressedKB <= maxKB
+  const isTooSmall = compressed && compressedKB < minKB
+  const isTooLarge = compressed && compressedKB > maxKB
+
+  const rangeStatus = isInRange
+    ? { icon: <CheckCircle size={14} />, label: 'Within target range', color: '#22c55e', bg: 'rgba(34,197,94,0.08)', border: 'rgba(34,197,94,0.2)' }
+    : isTooSmall
+    ? { icon: <AlertTriangle size={14} />, label: `Below ${minKB} KB minimum`, color: '#f59e0b', bg: 'rgba(245,158,11,0.08)', border: 'rgba(245,158,11,0.2)' }
+    : isTooLarge
+    ? { icon: <AlertCircle size={14} />, label: `Exceeds ${maxKB} KB maximum`, color: '#E8321A', bg: 'rgba(232,50,26,0.08)', border: 'rgba(232,50,26,0.2)' }
+    : null
+
   const cardStyle = {
     background: '#111',
     border: '1px solid rgba(255,255,255,0.06)',
@@ -1307,11 +1429,25 @@ function ImageCompressor() {
     padding: '28px',
   }
 
+  const inputNumStyle = {
+    width: '90px',
+    padding: '9px 12px',
+    background: '#0A0A0A',
+    border: '1px solid rgba(255,255,255,0.1)',
+    borderRadius: '10px',
+    color: '#fff',
+    fontSize: '15px',
+    fontWeight: 700,
+    fontFamily: 'inherit',
+    outline: 'none',
+    textAlign: 'center',
+  }
+
   return (
     <div style={{ maxWidth: '960px', margin: '0 auto' }}>
       {/* Header */}
-      <div style={{ marginBottom: '32px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+      <div style={{ marginBottom: '28px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <div style={{
             width: '40px', height: '40px', borderRadius: '12px',
             background: 'rgba(232,50,26,0.12)', border: '1px solid rgba(232,50,26,0.2)',
@@ -1340,6 +1476,105 @@ function ImageCompressor() {
         </div>
       </div>
 
+      {/* ── KB Limit Settings Card ── */}
+      <div style={{
+        ...cardStyle,
+        marginBottom: '24px',
+        padding: '20px 28px',
+        background: '#0e0e0e',
+        border: '1px solid rgba(232,50,26,0.14)',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '24px', flexWrap: 'wrap' }}>
+          {/* Label */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', minWidth: '160px' }}>
+            <span style={{ fontSize: '13px', fontWeight: 700, color: '#fff' }}>Size Limits</span>
+            <span style={{ fontSize: '11px', color: '#555' }}>Auto-compress to stay within range</span>
+          </div>
+
+          {/* Min KB */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', alignItems: 'center' }}>
+            <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.1em', color: '#555', textTransform: 'uppercase' }}>Minimum (KB)</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <button onClick={() => setPendingMin(v => String(Math.max(1, parseInt(v||'0',10) - 5)))} style={{
+                width: '28px', height: '28px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.08)',
+                background: 'transparent', color: '#666', fontSize: '16px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>−</button>
+              <input
+                type="number" min={1} max={9999}
+                value={pendingMin}
+                onChange={e => setPendingMin(e.target.value)}
+                style={inputNumStyle}
+              />
+              <button onClick={() => setPendingMin(v => String(parseInt(v||'0',10) + 5))} style={{
+                width: '28px', height: '28px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.08)',
+                background: 'transparent', color: '#666', fontSize: '16px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>+</button>
+            </div>
+          </div>
+
+          {/* Arrow */}
+          <div style={{ color: '#333', fontSize: '20px', fontWeight: 700, paddingTop: '18px' }}>→</div>
+
+          {/* Max KB */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', alignItems: 'center' }}>
+            <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.1em', color: '#555', textTransform: 'uppercase' }}>Maximum (KB)</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <button onClick={() => setPendingMax(v => String(Math.max(1, parseInt(v||'0',10) - 5)))} style={{
+                width: '28px', height: '28px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.08)',
+                background: 'transparent', color: '#666', fontSize: '16px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>−</button>
+              <input
+                type="number" min={1} max={99999}
+                value={pendingMax}
+                onChange={e => setPendingMax(e.target.value)}
+                style={inputNumStyle}
+              />
+              <button onClick={() => setPendingMax(v => String(parseInt(v||'0',10) + 5))} style={{
+                width: '28px', height: '28px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.08)',
+                background: 'transparent', color: '#666', fontSize: '16px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>+</button>
+            </div>
+          </div>
+
+          {/* Active range badge */}
+          <div style={{
+            padding: '6px 14px', borderRadius: '50px',
+            background: 'rgba(232,50,26,0.08)', border: '1px solid rgba(232,50,26,0.2)',
+            fontSize: '12px', fontWeight: 700, color: '#E8321A',
+            whiteSpace: 'nowrap', paddingTop: '18px',
+          }}>
+            Active: {minKB} – {maxKB} KB
+          </div>
+
+          {/* Save button */}
+          <button
+            onClick={handleSaveLimits}
+            disabled={!limitsChanged || !limitsValid}
+            style={{
+              marginLeft: 'auto',
+              display: 'flex', alignItems: 'center', gap: '7px',
+              padding: '10px 22px', borderRadius: '50px',
+              background: saveFlash ? 'rgba(34,197,94,0.15)' : (limitsChanged && limitsValid) ? '#E8321A' : '#1a1a1a',
+              border: saveFlash ? '1px solid rgba(34,197,94,0.35)' : (limitsChanged && limitsValid) ? 'none' : '1px solid rgba(255,255,255,0.06)',
+              color: saveFlash ? '#22c55e' : (limitsChanged && limitsValid) ? '#fff' : '#444',
+              fontSize: '13px', fontWeight: 700,
+              cursor: (limitsChanged && limitsValid) ? 'pointer' : 'not-allowed',
+              transition: 'all 0.3s',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {saveFlash ? <><CheckCircle size={14} /> Saved!</> : <><Save size={14} /> Save Limits</>}
+          </button>
+        </div>
+
+        {/* Validation error */}
+        {!limitsValid && (pendingMin || pendingMax) && (
+          <div style={{ marginTop: '12px', fontSize: '12px', color: '#E8321A', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <AlertCircle size={13} /> Minimum must be at least 1 KB and less than Maximum
+          </div>
+        )}
+      </div>
+
       {/* Hidden canvas for compression */}
       <canvas ref={canvasRef} style={{ display: 'none' }} />
 
@@ -1353,7 +1588,7 @@ function ImageCompressor() {
             ...cardStyle,
             border: `2px dashed ${dragging ? '#E8321A' : 'rgba(255,255,255,0.1)'}`,
             background: dragging ? 'rgba(232,50,26,0.04)' : '#111',
-            minHeight: '320px',
+            minHeight: '280px',
             display: 'flex', flexDirection: 'column',
             alignItems: 'center', justifyContent: 'center',
             cursor: 'pointer',
@@ -1374,7 +1609,14 @@ function ImageCompressor() {
           <div style={{ fontSize: '16px', fontWeight: 700, color: dragging ? '#E8321A' : '#ccc', marginBottom: '8px' }}>
             {dragging ? 'Drop your image here' : 'Click or drag an image here'}
           </div>
-          <div style={{ fontSize: '13px', color: '#444' }}>Supports JPG, PNG, WebP — up to any size</div>
+          <div style={{ fontSize: '13px', color: '#444', marginBottom: '16px' }}>Supports JPG, PNG, WebP — up to any size</div>
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: '8px',
+            padding: '7px 16px', borderRadius: '50px',
+            background: 'rgba(232,50,26,0.07)', border: '1px solid rgba(232,50,26,0.15)',
+          }}>
+            <span style={{ fontSize: '11px', fontWeight: 700, color: '#E8321A' }}>Target: {minKB} – {maxKB} KB</span>
+          </div>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -1394,11 +1636,11 @@ function ImageCompressor() {
                 ))}
               </div>
             </div>
-            {/* Quality slider */}
+            {/* Quality slider — used as starting quality hint */}
             {format !== 'image/png' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1, minWidth: '200px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.1em', color: '#555', textTransform: 'uppercase' }}>Quality</span>
+                  <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.1em', color: '#555', textTransform: 'uppercase' }}>Quality Hint</span>
                   <span style={{ fontSize: '16px', fontWeight: 800, color: quality >= 70 ? '#22c55e' : quality >= 40 ? '#f59e0b' : '#E8321A' }}>{quality}%</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -1427,17 +1669,33 @@ function ImageCompressor() {
 
           {/* Stats row */}
           {compressed && (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '16px' }}>
               {[
                 { label: 'Original Size', value: fmtSize(original.size), accent: '#888' },
-                { label: 'Compressed Size', value: fmtSize(compressed.size), accent: '#22c55e' },
+                { label: 'Compressed Size', value: fmtSize(compressed.size), accent: isInRange ? '#22c55e' : isTooLarge ? '#E8321A' : '#f59e0b' },
                 { label: 'Size Saved', value: `${saving > 0 ? saving : 0}%`, accent: saving > 0 ? '#E8321A' : '#888' },
+                { label: 'Target Range', value: `${minKB}–${maxKB} KB`, accent: '#E8321A' },
               ].map(s => (
                 <div key={s.label} style={{ ...cardStyle, padding: '20px 24px', textAlign: 'center' }}>
                   <div style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.1em', color: '#555', textTransform: 'uppercase', marginBottom: '8px' }}>{s.label}</div>
-                  <div style={{ fontSize: '26px', fontWeight: 800, color: s.accent }}>{s.value}</div>
+                  <div style={{ fontSize: '22px', fontWeight: 800, color: s.accent }}>{s.value}</div>
                 </div>
               ))}
+            </div>
+          )}
+
+          {/* Range status banner */}
+          {rangeStatus && !processing && (
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: '10px',
+              padding: '12px 20px', borderRadius: '14px',
+              background: rangeStatus.bg, border: `1px solid ${rangeStatus.border}`,
+            }}>
+              <span style={{ color: rangeStatus.color }}>{rangeStatus.icon}</span>
+              <span style={{ fontSize: '13px', fontWeight: 700, color: rangeStatus.color }}>{rangeStatus.label}</span>
+              <span style={{ fontSize: '12px', color: '#555', marginLeft: '4px' }}>
+                · Compressed to {(compressedKB).toFixed(1)} KB (target {minKB}–{maxKB} KB)
+              </span>
             </div>
           )}
 
@@ -1454,17 +1712,29 @@ function ImageCompressor() {
               }} />
             </div>
             {/* Compressed */}
-            <div style={{ ...cardStyle }}>
-              <div style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.1em', color: compressed ? '#22c55e' : '#555', textTransform: 'uppercase', marginBottom: '14px' }}>
-                {compressed ? `Compressed · ${format.split('/')[1].toUpperCase()} · ${fmtSize(compressed.size)}` : 'Processing…'}
+            <div style={{ ...cardStyle, border: `1px solid ${isInRange ? 'rgba(34,197,94,0.15)' : isTooLarge ? 'rgba(232,50,26,0.15)' : isTooSmall ? 'rgba(245,158,11,0.15)' : 'rgba(255,255,255,0.06)'}` }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
+                <span style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.1em', color: compressed ? (isInRange ? '#22c55e' : isTooLarge ? '#E8321A' : '#f59e0b') : '#555', textTransform: 'uppercase' }}>
+                  {compressed ? `Compressed · ${format.split('/')[1].toUpperCase()} · ${fmtSize(compressed.size)}` : 'Processing…'}
+                </span>
+                {rangeStatus && !processing && (
+                  <span style={{
+                    fontSize: '10px', fontWeight: 700, padding: '2px 8px', borderRadius: '50px',
+                    background: rangeStatus.bg, color: rangeStatus.color, border: `1px solid ${rangeStatus.border}`,
+                    display: 'flex', alignItems: 'center', gap: '4px',
+                  }}>
+                    {rangeStatus.icon} {isInRange ? 'In Range' : isTooSmall ? 'Too Small' : 'Too Large'}
+                  </span>
+                )}
               </div>
               {processing ? (
-                <div style={{ width: '100%', height: '220px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ width: '100%', height: '220px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '14px' }}>
                   <div style={{
                     width: '36px', height: '36px', borderRadius: '50%',
                     border: '3px solid rgba(232,50,26,0.15)', borderTopColor: '#E8321A',
                     animation: 'spin 0.8s linear infinite',
                   }} />
+                  <span style={{ fontSize: '11px', color: '#444', fontWeight: 600 }}>Optimising to {minKB}–{maxKB} KB…</span>
                 </div>
               ) : compressed ? (
                 <img src={compressed.url} alt="compressed" style={{
