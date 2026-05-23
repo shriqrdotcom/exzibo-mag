@@ -1244,7 +1244,7 @@ function ImageCompressor() {
   const [original, setOriginal] = useState(null)   // { file, url, size, w, h }
   const [compressed, setCompressed] = useState(null) // { url, size, blob }
   const [quality, setQuality] = useState(80)
-  const [format, setFormat] = useState('image/jpeg')
+  const format = 'image/webp'
   const [dragging, setDragging] = useState(false)
   const [processing, setProcessing] = useState(false)
   const canvasRef = React.useRef(null)
@@ -1313,17 +1313,7 @@ function ImageCompressor() {
       ctx.clearRect(0, 0, canvas.width, canvas.height)
       ctx.drawImage(img, 0, 0)
 
-      if (format === 'image/png') {
-        // PNG is lossless — just encode at current quality (quality not applicable)
-        canvas.toBlob(blob => {
-          if (!blob) { setProcessing(false); return }
-          setCompressed({ url: URL.createObjectURL(blob), size: blob.size, blob })
-          setProcessing(false)
-        }, 'image/png')
-        return
-      }
-
-      // For lossy formats: binary-search quality to land inside [minKB, maxKB]
+      // Binary-search quality to land inside [minKB, maxKB]
       const minBytes = minKB * 1024
       const maxBytes = maxKB * 1024
 
@@ -1404,7 +1394,7 @@ function ImageCompressor() {
     a.click()
   }
 
-  function reset() { setOriginal(null); setCompressed(null); setQuality(80); setFormat('image/jpeg') }
+  function reset() { setOriginal(null); setCompressed(null); setQuality(80) }
 
   const saving = original && compressed ? Math.round((1 - compressed.size / original.size) * 100) : 0
 
@@ -1457,7 +1447,7 @@ function ImageCompressor() {
           </div>
           <div>
             <h2 style={{ margin: 0, fontSize: '22px', fontWeight: 800, color: '#fff' }}>Image Compressor</h2>
-            <p style={{ margin: 0, fontSize: '12px', color: '#555' }}>Compress JPG, PNG & WebP — fully in-browser, nothing uploaded</p>
+            <p style={{ margin: 0, fontSize: '12px', color: '#555' }}>Compress to WebP — fully in-browser, nothing uploaded</p>
           </div>
           {original && (
             <button onClick={reset} style={{
@@ -1609,7 +1599,7 @@ function ImageCompressor() {
           <div style={{ fontSize: '16px', fontWeight: 700, color: dragging ? '#E8321A' : '#ccc', marginBottom: '8px' }}>
             {dragging ? 'Drop your image here' : 'Click or drag an image here'}
           </div>
-          <div style={{ fontSize: '13px', color: '#444', marginBottom: '16px' }}>Supports JPG, PNG, WebP — up to any size</div>
+          <div style={{ fontSize: '13px', color: '#444', marginBottom: '16px' }}>Supports JPG, PNG, WebP → outputs as WebP</div>
           <div style={{
             display: 'flex', alignItems: 'center', gap: '8px',
             padding: '7px 16px', borderRadius: '50px',
@@ -1622,22 +1612,18 @@ function ImageCompressor() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           {/* Controls row */}
           <div style={{ ...cardStyle, display: 'flex', alignItems: 'center', gap: '32px', flexWrap: 'wrap', padding: '20px 28px' }}>
-            {/* Format */}
+            {/* Format badge — WebP only */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.1em', color: '#555', textTransform: 'uppercase' }}>Output Format</span>
-              <div style={{ display: 'flex', gap: '8px' }}>
-                {[['image/jpeg','JPG'], ['image/webp','WebP'], ['image/png','PNG']].map(([val, lbl]) => (
-                  <button key={val} onClick={() => setFormat(val)} style={{
-                    padding: '7px 16px', borderRadius: '8px', fontSize: '12px', fontWeight: 700,
-                    border: `1px solid ${format === val ? '#E8321A' : 'rgba(255,255,255,0.08)'}`,
-                    background: format === val ? 'rgba(232,50,26,0.15)' : 'transparent',
-                    color: format === val ? '#E8321A' : '#666', cursor: 'pointer', transition: 'all 0.2s',
-                  }}>{lbl}</button>
-                ))}
-              </div>
+              <div style={{
+                padding: '7px 16px', borderRadius: '8px', fontSize: '12px', fontWeight: 700,
+                border: '1px solid rgba(232,50,26,0.35)',
+                background: 'rgba(232,50,26,0.15)',
+                color: '#E8321A', display: 'inline-block',
+              }}>WebP</div>
             </div>
             {/* Quality slider — used as starting quality hint */}
-            {format !== 'image/png' && (
+            {(
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1, minWidth: '200px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.1em', color: '#555', textTransform: 'uppercase' }}>Quality Hint</span>
