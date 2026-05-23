@@ -1617,10 +1617,23 @@ function ImageCompressor() {
             alignItems: 'center', justifyContent: 'center',
             cursor: 'pointer',
             transition: 'all 0.2s',
+            position: 'relative',
           }}
           onClick={() => document.getElementById('img-file-input').click()}
         >
           <input id="img-file-input" type="file" accept="image/*" onChange={onInputChange} style={{ display: 'none' }} />
+          {/* UID stamp — top-left of drop zone */}
+          <span style={{
+            position: 'absolute', top: '14px', left: '16px',
+            display: 'inline-flex', alignItems: 'center',
+            padding: '3px 10px', borderRadius: '50px',
+            background: 'rgba(232,50,26,0.08)', border: '1px solid rgba(232,50,26,0.28)',
+            fontSize: '9px', fontWeight: 800, color: '#E8321A',
+            letterSpacing: '0.15em', fontFamily: 'monospace',
+            pointerEvents: 'none',
+          }}>
+            ◈ UID IQE01
+          </span>
           <div style={{
             width: '64px', height: '64px', borderRadius: '20px',
             background: dragging ? 'rgba(232,50,26,0.15)' : 'rgba(255,255,255,0.04)',
