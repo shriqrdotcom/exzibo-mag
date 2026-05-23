@@ -1456,6 +1456,19 @@ function ImageCompressor() {
 
   return (
     <div style={{ maxWidth: '960px', margin: '0 auto' }}>
+      {/* UID Badge */}
+      <div style={{ marginBottom: '16px' }}>
+        <span style={{
+          display: 'inline-flex', alignItems: 'center', gap: '6px',
+          padding: '4px 12px', borderRadius: '50px',
+          background: 'rgba(232,50,26,0.08)', border: '1px solid rgba(232,50,26,0.3)',
+          fontSize: '10px', fontWeight: 800, color: '#E8321A',
+          letterSpacing: '0.15em', fontFamily: 'monospace',
+        }}>
+          ◈ UID IQE01
+        </span>
+      </div>
+
       {/* Header */}
       <div style={{ marginBottom: '28px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>

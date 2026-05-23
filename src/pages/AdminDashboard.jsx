@@ -4374,6 +4374,17 @@ function ImageUploadField({ value, onChange, accentStart }) {
       )}
 
       {/* ── FIELD DISPLAY ── */}
+      <div style={{ marginBottom: '8px' }}>
+        <span style={{
+          display: 'inline-flex', alignItems: 'center',
+          padding: '3px 9px', borderRadius: '50px',
+          background: `${accentStart}10`, border: `1px solid ${accentStart}35`,
+          fontSize: '9px', fontWeight: 800, color: accentStart,
+          letterSpacing: '0.14em', fontFamily: 'monospace',
+        }}>
+          ◈ UID IQD01
+        </span>
+      </div>
       {value ? (
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <img
@@ -5533,7 +5544,16 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                 <div>
-                  <div style={{ fontSize: '10px', fontWeight: 800, letterSpacing: '0.1em', color: '#94A3B8', marginBottom: '8px' }}>CUSTOM IMAGE</div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                    <div style={{ fontSize: '10px', fontWeight: 800, letterSpacing: '0.1em', color: '#94A3B8' }}>CUSTOM IMAGE</div>
+                    <span style={{
+                      display: 'inline-flex', alignItems: 'center',
+                      padding: '2px 8px', borderRadius: '50px',
+                      background: `${accentStart}10`, border: `1px solid ${accentStart}35`,
+                      fontSize: '9px', fontWeight: 800, color: accentStart,
+                      letterSpacing: '0.14em', fontFamily: 'monospace',
+                    }}>◈ UID IQD01</span>
+                  </div>
                   {previewImage ? (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                       <img src={previewImage} alt="" style={{ width: '52px', height: '52px', borderRadius: '12px', objectFit: 'cover', border: '1.5px solid #e2e8f0', flexShrink: 0 }} />
@@ -5617,7 +5637,16 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
 
               {/* Image Upload */}
               <div>
-                <label style={{ fontSize: '10px', fontWeight: 800, letterSpacing: '0.1em', color: '#64748B', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>Filter Image (optional)</label>
+                <div style={{ marginBottom: '6px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <label style={{ fontSize: '10px', fontWeight: 800, letterSpacing: '0.1em', color: '#64748B', textTransform: 'uppercase' }}>Filter Image (optional)</label>
+                  <span style={{
+                    display: 'inline-flex', alignItems: 'center',
+                    padding: '2px 8px', borderRadius: '50px',
+                    background: `${accentStart}10`, border: `1px solid ${accentStart}35`,
+                    fontSize: '9px', fontWeight: 800, color: accentStart,
+                    letterSpacing: '0.14em', fontFamily: 'monospace',
+                  }}>◈ UID IQD01</span>
+                </div>
                 {newCat.image ? (
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                     <img src={newCat.image} alt="preview" style={{ width: '56px', height: '56px', borderRadius: '14px', objectFit: 'cover', border: '2px solid #e2e8f0', flexShrink: 0 }} />
