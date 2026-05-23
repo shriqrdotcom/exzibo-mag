@@ -245,6 +245,11 @@ function SuperAdminApp() {
       <Route path="/master-control/:uid"
         element={<SuperAdminRoute><MasterControl /></SuperAdminRoute>} />
 
+      {/* Restaurant admin panel — destination after ACCESS PANEL resolves a UID */}
+      <Route path="/admin/:id"         element={<SuperAdminRoute><AdminDashboard /></SuperAdminRoute>} />
+      <Route path="/admin/:id/team"    element={<SuperAdminRoute><TeamMembers /></SuperAdminRoute>} />
+      <Route path="/admin/:id/profile" element={<SuperAdminRoute><ProfilePage /></SuperAdminRoute>} />
+
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )
