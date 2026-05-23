@@ -195,7 +195,7 @@ export default function MasterControl() {
       localStorage.setItem(LAST_UID_KEY, trimmed)
       const dest = buildNavTarget(target)
       console.log('[MasterControl] Auto-navigating to:', dest)
-      navigate(dest, { replace: true })
+      goToDest(dest, { replace: true })
     }).catch(err => {
       console.error('[MasterControl] Auto-navigate failed:', err)
       setAutoLoading(false)
@@ -203,13 +203,40 @@ export default function MasterControl() {
     })
   }, [uidParam, allowed, navigate])
 
-  // Build the navigation target — prefer slug URL on dashboard subdomain
+  // Build the navigation target.
+  // Returns either a relative path (for same-subdomain React Router navigate)
+  // or an absolute URL (for cross-subdomain window.location.href redirect).
   function buildNavTarget(target) {
-    if (target.id === 'default') return '/admin/default?from=master'
-    if (target.slug && getSubdomain() === 'dashboard') {
+    const sub = getSubdomain()
+
+    // dashboard.exzibo.online — use clean slug URL
+    if (target.id !== 'default' && target.slug && sub === 'dashboard') {
       return `/${target.slug}?from=master`
     }
+
+    // superadmin.exzibo.online — AdminDashboard lives on dashboard subdomain,
+    // so we must do a full cross-subdomain redirect via window.location.href
+    if (sub === 'superadmin') {
+      const path = target.id === 'default'
+        ? '/admin/default'
+        : target.slug
+          ? `/${target.slug}`
+          : `/admin/${target.id}`
+      return `https://dashboard.exzibo.online${path}?from=master`
+    }
+
+    // Default (dev / Replit preview / bare domain)
+    if (target.id === 'default') return '/admin/default?from=master'
     return `/admin/${target.id}?from=master`
+  }
+
+  // Helper: navigate to a dest that may be absolute (cross-subdomain) or relative
+  function goToDest(dest, opts = {}) {
+    if (dest.startsWith('http://') || dest.startsWith('https://')) {
+      window.location.href = dest
+    } else {
+      navigate(dest, opts)
+    }
   }
 
   async function accessPanel(value, setErr) {
@@ -231,7 +258,7 @@ export default function MasterControl() {
       localStorage.setItem(LAST_UID_KEY, trimmed)
       const dest = buildNavTarget(target)
       console.log('[MasterControl] Navigating to:', dest)
-      navigate(dest)
+      goToDest(dest)
     } catch (err) {
       console.error('[MasterControl] accessPanel error:', err)
       if (!isSupabaseConfigured) {
