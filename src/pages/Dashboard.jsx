@@ -1226,6 +1226,7 @@ function DeleteBtn({ onClick }) {
 }
 
 const IC_STORAGE_KEY = 'exzibo_img_compressor_limits'
+const IC_QUALITY_KEY = 'exzibo_img_compressor_quality'
 const IC_DEFAULTS = { minKB: 60, maxKB: 200 }
 
 function loadICLimits() {
@@ -1240,10 +1241,18 @@ function loadICLimits() {
   } catch { return IC_DEFAULTS }
 }
 
+function loadICQuality() {
+  try {
+    const raw = localStorage.getItem(IC_QUALITY_KEY)
+    const q = parseInt(raw, 10)
+    return (!isNaN(q) && q >= 1 && q <= 100) ? q : 80
+  } catch { return 80 }
+}
+
 function ImageCompressor() {
   const [original, setOriginal] = useState(null)   // { file, url, size, w, h }
   const [compressed, setCompressed] = useState(null) // { url, size, blob }
-  const [quality, setQuality] = useState(80)
+  const [quality, setQuality] = useState(() => loadICQuality())
   const format = 'image/webp'
   const [dragging, setDragging] = useState(false)
   const [processing, setProcessing] = useState(false)
@@ -1253,7 +1262,19 @@ function ImageCompressor() {
   const [savedLimits, setSavedLimits] = useState(() => loadICLimits())
   const [pendingMin, setPendingMin] = useState(() => String(loadICLimits().minKB))
   const [pendingMax, setPendingMax] = useState(() => String(loadICLimits().maxKB))
-  const [saveFlash, setSaveFlash] = useState(false) // "Saved!" feedback
+  const [saveFlash, setSaveFlash] = useState(false)
+
+  // ── Quality save ───────────────────────────────────────────────
+  const [savedQuality, setSavedQuality] = useState(() => loadICQuality())
+  const [qualityFlash, setQualityFlash] = useState(false)
+  const qualityChanged = quality !== savedQuality
+
+  function handleSaveQuality() {
+    localStorage.setItem(IC_QUALITY_KEY, String(quality))
+    setSavedQuality(quality)
+    setQualityFlash(true)
+    setTimeout(() => setQualityFlash(false), 2000)
+  }
 
   const minKB = savedLimits.minKB
   const maxKB = savedLimits.maxKB
@@ -1637,19 +1658,23 @@ function ImageCompressor() {
                 </div>
               </div>
             )}
-            {/* Download */}
-            <button onClick={handleDownload} disabled={!compressed || processing} style={{
-              marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px',
-              padding: '11px 24px', borderRadius: '50px',
-              background: compressed && !processing ? '#E8321A' : '#222',
-              border: 'none', color: compressed && !processing ? '#fff' : '#555',
-              fontSize: '13px', fontWeight: 700, letterSpacing: '0.05em',
-              cursor: compressed && !processing ? 'pointer' : 'not-allowed',
-              boxShadow: compressed && !processing ? '0 0 20px rgba(232,50,26,0.35)' : 'none',
-              transition: 'all 0.2s',
-            }}>
-              <Download size={15} />
-              {processing ? 'Processing…' : 'Download'}
+            {/* Save Quality */}
+            <button
+              onClick={handleSaveQuality}
+              disabled={!qualityChanged}
+              style={{
+                marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '7px',
+                padding: '11px 24px', borderRadius: '50px',
+                background: qualityFlash ? 'rgba(34,197,94,0.15)' : qualityChanged ? '#E8321A' : '#1a1a1a',
+                border: qualityFlash ? '1px solid rgba(34,197,94,0.35)' : qualityChanged ? 'none' : '1px solid rgba(255,255,255,0.06)',
+                color: qualityFlash ? '#22c55e' : qualityChanged ? '#fff' : '#444',
+                fontSize: '13px', fontWeight: 700, letterSpacing: '0.05em',
+                cursor: qualityChanged ? 'pointer' : 'not-allowed',
+                boxShadow: qualityChanged && !qualityFlash ? '0 0 20px rgba(232,50,26,0.35)' : 'none',
+                transition: 'all 0.3s',
+              }}
+            >
+              {qualityFlash ? <><CheckCircle size={15} /> Saved!</> : <><Save size={15} /> Save Quality</>}
             </button>
           </div>
 
@@ -1723,10 +1748,26 @@ function ImageCompressor() {
                   <span style={{ fontSize: '11px', color: '#444', fontWeight: 600 }}>Optimising to {minKB}–{maxKB} KB…</span>
                 </div>
               ) : compressed ? (
-                <img src={compressed.url} alt="compressed" style={{
-                  width: '100%', height: '220px', objectFit: 'contain',
-                  borderRadius: '10px', background: 'rgba(255,255,255,0.03)',
-                }} />
+                <>
+                  <img src={compressed.url} alt="compressed" style={{
+                    width: '100%', height: '220px', objectFit: 'contain',
+                    borderRadius: '10px', background: 'rgba(255,255,255,0.03)',
+                  }} />
+                  <button onClick={handleDownload} style={{
+                    marginTop: '16px', width: '100%',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                    padding: '11px 0', borderRadius: '12px',
+                    background: '#E8321A', border: 'none',
+                    color: '#fff', fontSize: '13px', fontWeight: 700, letterSpacing: '0.05em',
+                    cursor: 'pointer', boxShadow: '0 0 20px rgba(232,50,26,0.3)',
+                    transition: 'opacity 0.2s',
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
+                  onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+                  >
+                    <Download size={15} /> Download WebP
+                  </button>
+                </>
               ) : null}
             </div>
           </div>
