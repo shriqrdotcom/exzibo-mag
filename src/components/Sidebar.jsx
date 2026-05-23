@@ -8,7 +8,7 @@ const navItems = [
   { icon: LayoutDashboard, label: 'Dashboard',      path: '/dashboard',       permission: 'dashboard' },
   { icon: Users,           label: 'Team Members',   path: '/team-members',    permission: 'teamManagement' },
   { icon: Table2,          label: 'Table',          path: '/table',           permission: 'dashboard' },
-  { icon: ShieldCheck,     label: 'Master Control', path: '/master-control',  permission: 'dashboard' },
+  { icon: ShieldCheck,     label: 'Menu Studio', path: '/master-control',  permission: 'dashboard' },
   { icon: Settings,        label: 'Settings',       path: '/settings',        permission: 'settings' },
 ]
 
