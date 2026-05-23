@@ -4202,6 +4202,7 @@ async function compressToLimit(dataUrl, maxKB) {
 }
 
 function ImageUploadField({ value, onChange, accentStart }) {
+  const navigate = useNavigate()
   const inputRef = React.useRef(null)
   const onChangeRef = React.useRef(onChange)
   React.useEffect(() => { onChangeRef.current = onChange }, [onChange])
@@ -4375,15 +4376,21 @@ function ImageUploadField({ value, onChange, accentStart }) {
 
       {/* ── FIELD DISPLAY ── */}
       <div style={{ marginBottom: '8px' }}>
-        <span style={{
-          display: 'inline-flex', alignItems: 'center',
-          padding: '3px 9px', borderRadius: '50px',
-          background: `${accentStart}10`, border: `1px solid ${accentStart}35`,
-          fontSize: '9px', fontWeight: 800, color: accentStart,
-          letterSpacing: '0.14em', fontFamily: 'monospace',
-        }}>
-          ◈ UID IQD01
-        </span>
+        <button
+          type="button"
+          onClick={e => { e.stopPropagation(); navigate('/dashboard?section=image-compressor') }}
+          title="Open Image Compressor — UID IQE01"
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: '5px',
+            padding: '3px 9px', borderRadius: '50px',
+            background: `${accentStart}10`, border: `1px solid ${accentStart}35`,
+            fontSize: '9px', fontWeight: 800, color: accentStart,
+            letterSpacing: '0.14em', fontFamily: 'monospace',
+            cursor: 'pointer', outline: 'none',
+          }}
+        >
+          ◈ UID IQE01 ↗
+        </button>
       </div>
       {value ? (
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -4476,6 +4483,7 @@ function ImageUploadField({ value, onChange, accentStart }) {
 }
 
 function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, showMenuSearch, menuSearch, setMenuSearch, menuSearchRef, onCloseSearch }) {
+  const navigate = useNavigate()
   const storageKey  = `exzibo_menu_${restaurantId}`
   const filtersKey  = `exzibo_menu_filters_${restaurantId}`
   const tabsKey     = `exzibo_tabs_${restaurantId}`
@@ -5546,13 +5554,19 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
                     <div style={{ fontSize: '10px', fontWeight: 800, letterSpacing: '0.1em', color: '#94A3B8' }}>CUSTOM IMAGE</div>
-                    <span style={{
-                      display: 'inline-flex', alignItems: 'center',
-                      padding: '2px 8px', borderRadius: '50px',
-                      background: `${accentStart}10`, border: `1px solid ${accentStart}35`,
-                      fontSize: '9px', fontWeight: 800, color: accentStart,
-                      letterSpacing: '0.14em', fontFamily: 'monospace',
-                    }}>◈ UID IQD01</span>
+                    <button
+                      type="button"
+                      onClick={e => { e.stopPropagation(); navigate('/dashboard?section=image-compressor') }}
+                      title="Open Image Compressor — UID IQE01"
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: '5px',
+                        padding: '2px 8px', borderRadius: '50px',
+                        background: `${accentStart}10`, border: `1px solid ${accentStart}35`,
+                        fontSize: '9px', fontWeight: 800, color: accentStart,
+                        letterSpacing: '0.14em', fontFamily: 'monospace',
+                        cursor: 'pointer', outline: 'none',
+                      }}
+                    >◈ UID IQE01 ↗</button>
                   </div>
                   {previewImage ? (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -5639,13 +5653,19 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
               <div>
                 <div style={{ marginBottom: '6px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <label style={{ fontSize: '10px', fontWeight: 800, letterSpacing: '0.1em', color: '#64748B', textTransform: 'uppercase' }}>Filter Image (optional)</label>
-                  <span style={{
-                    display: 'inline-flex', alignItems: 'center',
-                    padding: '2px 8px', borderRadius: '50px',
-                    background: `${accentStart}10`, border: `1px solid ${accentStart}35`,
-                    fontSize: '9px', fontWeight: 800, color: accentStart,
-                    letterSpacing: '0.14em', fontFamily: 'monospace',
-                  }}>◈ UID IQD01</span>
+                  <button
+                    type="button"
+                    onClick={e => { e.stopPropagation(); navigate('/dashboard?section=image-compressor') }}
+                    title="Open Image Compressor — UID IQE01"
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: '5px',
+                      padding: '2px 8px', borderRadius: '50px',
+                      background: `${accentStart}10`, border: `1px solid ${accentStart}35`,
+                      fontSize: '9px', fontWeight: 800, color: accentStart,
+                      letterSpacing: '0.14em', fontFamily: 'monospace',
+                      cursor: 'pointer', outline: 'none',
+                    }}
+                  >◈ UID IQE01 ↗</button>
                 </div>
                 {newCat.image ? (
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>

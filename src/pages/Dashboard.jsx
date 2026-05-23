@@ -1625,14 +1625,15 @@ function ImageCompressor() {
           {/* UID stamp — top-left of drop zone */}
           <span style={{
             position: 'absolute', top: '14px', left: '16px',
-            display: 'inline-flex', alignItems: 'center',
-            padding: '3px 10px', borderRadius: '50px',
-            background: 'rgba(232,50,26,0.08)', border: '1px solid rgba(232,50,26,0.28)',
+            display: 'inline-flex', alignItems: 'center', gap: '6px',
+            padding: '3px 12px', borderRadius: '50px',
+            background: 'rgba(232,50,26,0.1)', border: '1px solid rgba(232,50,26,0.35)',
             fontSize: '9px', fontWeight: 800, color: '#E8321A',
             letterSpacing: '0.15em', fontFamily: 'monospace',
             pointerEvents: 'none',
           }}>
             ◈ UID IQE01
+            <span style={{ opacity: 0.5, fontWeight: 600, letterSpacing: '0.05em', fontSize: '8px' }}>· QUALITY ENSURER</span>
           </span>
           <div style={{
             width: '64px', height: '64px', borderRadius: '20px',
