@@ -316,7 +316,7 @@ export default function MasterControl() {
     <div style={{ display: 'flex', height: '100vh', background: '#0A0A0A', overflow: 'hidden' }}>
       <Sidebar />
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        <AdminHeader title="Master Control" showSearch={false} />
+        <AdminHeader title="Menu Studio" showSearch={false} />
 
 
         <main style={{ flex: 1, overflowY: 'auto', padding: '32px', position: 'relative' }}>
@@ -431,7 +431,7 @@ export default function MasterControl() {
                   letterSpacing: '-0.02em',
                   color: '#fff',
                 }}>
-                  Master Control
+                  Menu Studio
                 </h1>
                 <p style={{ margin: '4px 0 0', color: '#777', fontSize: '13px' }}>
                   Universal restaurant admin loader
