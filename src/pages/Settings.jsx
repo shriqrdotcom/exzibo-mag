@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react'
 import Sidebar from '../components/Sidebar'
 import AdminHeader from '../components/AdminHeader'
-import { Lock, Shield, ChevronDown, Check, Share2, Globe, ClipboardPaste, Link, Search, User, Phone, Mail, Layers, DollarSign, Clock, Copy, Calendar, X } from 'lucide-react'
+import { Lock, Shield, ChevronDown, Check, Share2, Globe, ClipboardPaste, Link, Search, User, Phone, Mail, Layers, DollarSign, Clock, Copy, Calendar, X, Save, ImageDown } from 'lucide-react'
 import { FaFacebook, FaInstagram, FaTwitter, FaLinkedin, FaYoutube } from 'react-icons/fa'
+import { getCompressionLimits, saveCompressionLimits } from '../lib/imageCompressionSettings'
 
 const DEFAULTS = {
   profile: { name: 'Julian Vercetti', email: 'j.vercetti@exzibo.com', role: 'General Manager', company: 'Exzibo Group' },
@@ -53,6 +54,13 @@ export default function Settings() {
   const [selectedDate, setSelectedDate] = useState(null)
   const [datePickerOpen, setDatePickerOpen] = useState(false)
   const datePickerRef = useRef(null)
+
+  // ── Image Compressor limits ────────────────────────────────────────────
+  const [imgMinKB, setImgMinKB] = useState(60)
+  const [imgMaxKB, setImgMaxKB] = useState(200)
+  const [imgLimitsSaving, setImgLimitsSaving] = useState(false)
+  const [imgLimitsSaved,  setImgLimitsSaved]  = useState(false)
+  const imgSaveTimer = useRef(null)
 
   useEffect(() => {
     if (!datePickerOpen) return
@@ -570,6 +578,32 @@ export default function Settings() {
     setSaved(true)
     clearTimeout(saveTimer.current)
     saveTimer.current = setTimeout(() => setSaved(false), 2500)
+  }
+
+  // Load compression limits from Supabase on mount
+  useEffect(() => {
+    getCompressionLimits().then(({ minKB, maxKB }) => {
+      setImgMinKB(minKB)
+      setImgMaxKB(maxKB)
+    }).catch(() => {})
+  }, [])
+
+  const handleSaveImgLimits = async () => {
+    const min = Math.max(1,   Math.min(imgMinKB, imgMaxKB - 1))
+    const max = Math.max(min + 1, imgMaxKB)
+    setImgMinKB(min)
+    setImgMaxKB(max)
+    setImgLimitsSaving(true)
+    try {
+      await saveCompressionLimits(min, max)
+      setImgLimitsSaved(true)
+      clearTimeout(imgSaveTimer.current)
+      imgSaveTimer.current = setTimeout(() => setImgLimitsSaved(false), 2500)
+    } catch (e) {
+      console.error('[settings] Failed to save limits:', e)
+    } finally {
+      setImgLimitsSaving(false)
+    }
   }
 
   const socialFields = [
@@ -1109,6 +1143,123 @@ export default function Settings() {
                     )}
                   </tbody>
                 </table>
+              </div>
+            </Section>
+
+            {/* ── Image Compressor Settings ─────────────────────────────────── */}
+            <Section title="IMAGE COMPRESSOR" subtitle="Auto-compress every upload to WebP within this size range.">
+              <div style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                flexWrap: 'wrap', gap: '20px',
+              }}>
+                {/* Left: labels + controls */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '24px', flexWrap: 'wrap' }}>
+                  {/* Min KB */}
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', color: '#666', textTransform: 'uppercase' }}>
+                      Minimum (KB)
+                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <button
+                        onClick={() => setImgMinKB(v => Math.max(1, v - 10))}
+                        style={{ width: 28, height: 28, borderRadius: '6px', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)', color: '#aaa', fontSize: '16px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}
+                      >−</button>
+                      <input
+                        type="number"
+                        min={1}
+                        max={imgMaxKB - 1}
+                        value={imgMinKB}
+                        onChange={e => setImgMinKB(Math.max(1, parseInt(e.target.value) || 1))}
+                        style={{
+                          width: '64px', padding: '6px 0', textAlign: 'center',
+                          background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)',
+                          borderRadius: '8px', color: '#fff', fontSize: '15px', fontWeight: 700,
+                          outline: 'none', WebkitAppearance: 'none', MozAppearance: 'textfield',
+                        }}
+                      />
+                      <button
+                        onClick={() => setImgMinKB(v => Math.min(imgMaxKB - 1, v + 10))}
+                        style={{ width: 28, height: 28, borderRadius: '6px', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)', color: '#aaa', fontSize: '16px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}
+                      >+</button>
+                    </div>
+                  </div>
+
+                  {/* Arrow separator */}
+                  <span style={{ fontSize: '20px', color: '#444', marginTop: '20px' }}>→</span>
+
+                  {/* Max KB */}
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', color: '#666', textTransform: 'uppercase' }}>
+                      Maximum (KB)
+                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <button
+                        onClick={() => setImgMaxKB(v => Math.max(imgMinKB + 1, v - 10))}
+                        style={{ width: 28, height: 28, borderRadius: '6px', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)', color: '#aaa', fontSize: '16px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}
+                      >−</button>
+                      <input
+                        type="number"
+                        min={imgMinKB + 1}
+                        value={imgMaxKB}
+                        onChange={e => setImgMaxKB(Math.max(imgMinKB + 1, parseInt(e.target.value) || imgMinKB + 1))}
+                        style={{
+                          width: '64px', padding: '6px 0', textAlign: 'center',
+                          background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)',
+                          borderRadius: '8px', color: '#fff', fontSize: '15px', fontWeight: 700,
+                          outline: 'none', WebkitAppearance: 'none', MozAppearance: 'textfield',
+                        }}
+                      />
+                      <button
+                        onClick={() => setImgMaxKB(v => v + 10)}
+                        style={{ width: 28, height: 28, borderRadius: '6px', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)', color: '#aaa', fontSize: '16px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}
+                      >+</button>
+                    </div>
+                  </div>
+
+                  {/* Active badge */}
+                  <div style={{
+                    marginTop: '20px',
+                    padding: '6px 14px', borderRadius: '999px',
+                    background: 'rgba(232,50,26,0.15)', border: '1px solid rgba(232,50,26,0.35)',
+                    color: '#E8321A', fontSize: '12px', fontWeight: 700,
+                    whiteSpace: 'nowrap',
+                  }}>
+                    Active: {imgMinKB} – {imgMaxKB} KB
+                  </div>
+                </div>
+
+                {/* Right: Save button */}
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px' }}>
+                  <button
+                    onClick={handleSaveImgLimits}
+                    disabled={imgLimitsSaving}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: '7px',
+                      padding: '10px 22px',
+                      background: imgLimitsSaved
+                        ? 'rgba(34,197,94,0.15)'
+                        : 'rgba(255,255,255,0.07)',
+                      border: imgLimitsSaved
+                        ? '1px solid rgba(34,197,94,0.3)'
+                        : '1px solid rgba(255,255,255,0.12)',
+                      borderRadius: '10px',
+                      color: imgLimitsSaved ? '#4ade80' : '#bbb',
+                      fontSize: '12px', fontWeight: 700,
+                      letterSpacing: '0.06em', cursor: imgLimitsSaving ? 'wait' : 'pointer',
+                      transition: 'all 0.25s ease',
+                    }}
+                  >
+                    {imgLimitsSaved
+                      ? <><Check size={13} /> SAVED!</>
+                      : imgLimitsSaving
+                        ? 'SAVING…'
+                        : <><Save size={13} /> SAVE LIMITS</>
+                    }
+                  </button>
+                  <span style={{ fontSize: '10px', color: '#444' }}>
+                    All uploads auto-convert to WebP
+                  </span>
+                </div>
               </div>
             </Section>
 

@@ -1,5 +1,7 @@
 import { supabase, supabaseAnon } from './supabase'
 import { DISABLE_AUTH } from './env'
+import { compressFile, compressDataUrl } from './imageCompressor'
+import { getCompressionLimits } from './imageCompressionSettings'
 
 // ── Soft-delete localStorage fallback helpers ─────────────────
 // Used when the is_deleted column hasn't been migrated to Supabase yet.
@@ -448,29 +450,49 @@ export async function deleteMenuCategory(id) {
 // ── Storage Utilities ─────────────────────────────────────────
 
 // Upload a File object to any Supabase Storage bucket.
+// Automatically compresses and converts to WebP before uploading.
 // Returns the public URL.
 export async function uploadToStorage(file, bucket, pathPrefix) {
   const { data: { user }, error: authError } = await supabase.auth.getUser()
   if (authError || !user) throw new Error('Not authenticated')
-  const ext = (file.name?.split('.').pop() || file.type?.split('/')[1] || 'jpg').toLowerCase()
-  const filePath = `${pathPrefix}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+
+  // ── Auto-compress to WebP within the configured size limits ──────────────
+  let uploadFile = file
+  try {
+    const limits = await getCompressionLimits()
+    uploadFile = await compressFile(file, limits)
+  } catch (err) {
+    console.warn('[uploadToStorage] Compression skipped (non-blocking):', err.message)
+  }
+
+  const filePath = `${pathPrefix}/${Date.now()}-${Math.random().toString(36).slice(2)}.webp`
   const { error: uploadError } = await supabase.storage
     .from(bucket)
-    .upload(filePath, file, { cacheControl: '3600', upsert: false })
+    .upload(filePath, uploadFile, { cacheControl: '3600', upsert: false })
   if (uploadError) throw uploadError
   const { data: { publicUrl } } = supabase.storage.from(bucket).getPublicUrl(filePath)
   return publicUrl
 }
 
 // Upload a base64 data URL to any Supabase Storage bucket.
+// Automatically compresses and converts to WebP before uploading.
 // Returns the public URL.
 export async function uploadDataUrlToStorage(dataUrl, bucket, pathPrefix) {
   const { data: { user }, error: authError } = await supabase.auth.getUser()
   if (authError || !user) throw new Error('Not authenticated')
-  const res  = await fetch(dataUrl)
+
+  // ── Auto-compress to WebP within the configured size limits ──────────────
+  let compressedUrl = dataUrl
+  try {
+    const limits = await getCompressionLimits()
+    compressedUrl = await compressDataUrl(dataUrl, limits)
+  } catch (err) {
+    console.warn('[uploadDataUrlToStorage] Compression skipped (non-blocking):', err.message)
+  }
+
+  const res  = await fetch(compressedUrl)
   const blob = await res.blob()
-  const ext  = blob.type.split('/')[1] || 'jpg'
-  const filePath = `${pathPrefix}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+  const filePath = `${pathPrefix}/${Date.now()}-${Math.random().toString(36).slice(2)}.webp`
   const { error: uploadError } = await supabase.storage
     .from(bucket)
     .upload(filePath, blob, { cacheControl: '3600', upsert: false })
@@ -481,14 +503,25 @@ export async function uploadDataUrlToStorage(dataUrl, bucket, pathPrefix) {
 
 // ── Menu Image Upload ─────────────────────────────────────────
 
+// Upload a menu item image from a data URL.
+// Automatically compresses and converts to WebP before uploading.
+// Returns the public URL.
 export async function uploadMenuImage(dataUrl, restaurantId) {
   const { data: { user }, error: authError } = await supabase.auth.getUser()
   if (authError || !user) throw new Error('Not authenticated')
 
-  const res  = await fetch(dataUrl)
+  // ── Auto-compress to WebP within the configured size limits ──────────────
+  let compressedUrl = dataUrl
+  try {
+    const limits = await getCompressionLimits()
+    compressedUrl = await compressDataUrl(dataUrl, limits)
+  } catch (err) {
+    console.warn('[uploadMenuImage] Compression skipped (non-blocking):', err.message)
+  }
+
+  const res  = await fetch(compressedUrl)
   const blob = await res.blob()
-  const ext  = blob.type.split('/')[1] || 'jpg'
-  const filePath = `${user.id}/${restaurantId}/${Date.now()}.${ext}`
+  const filePath = `${user.id}/${restaurantId}/${Date.now()}.webp`
 
   const { error: uploadError } = await supabase.storage
     .from('menu-images')
