@@ -1018,3 +1018,28 @@ export async function upsertGlobalSetting(key, value) {
     .upsert({ key, value, updated_at: new Date().toISOString() }, { onConflict: 'key' })
   if (error) throw error
 }
+
+/**
+ * Subscribe to real-time NIE IQE1 limit changes.
+ * Fires onUpdate({ minKB, maxKB }) whenever the super-admin saves new limits
+ * in the Dashboard, updating every open panel without a page reload.
+ * Returns an unsubscribe function — call it in the useEffect cleanup.
+ */
+export function subscribeToNIELimits(onUpdate) {
+  const channel = supabase
+    .channel(`rt-nie-limits-${Date.now()}`)
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'global_settings', filter: 'key=eq.image_compression_limits' },
+      payload => {
+        const val = payload.new?.value
+        if (val?.minKB && val?.maxKB) {
+          const lim = { minKB: parseInt(val.minKB, 10), maxKB: parseInt(val.maxKB, 10) }
+          localStorage.setItem(_NIE_LS_KEY, JSON.stringify(lim))
+          onUpdate(lim)
+        }
+      }
+    )
+    .subscribe()
+  return () => { supabase.removeChannel(channel) }
+}

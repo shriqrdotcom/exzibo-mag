@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Loader2, CheckCircle2, AlertCircle, Camera, ChevronLeft, User } from 'lucide-react'
-import { updateRestaurant, uploadDataUrlToStorage, fetchNIELimits } from '../lib/db'
+import { updateRestaurant, uploadDataUrlToStorage, fetchNIELimits, subscribeToNIELimits } from '../lib/db'
 import { useRole } from '../context/RoleContext'
 
 const FONT = "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif"
@@ -106,10 +106,11 @@ export default function EditProfile() {
   const [compressPreview, setCompressPreview] = useState(null)
   const [compressing, setCompressing] = useState(false)
 
-  // NIE IQE1 — live limits fetched from Supabase on mount
+  // NIE IQE1 — seeded from Supabase on mount, kept live via Realtime push
   const [nieLimits, setNieLimits] = useState({ minKB: 60, maxKB: 200 })
   useEffect(() => {
     fetchNIELimits().then(setNieLimits).catch(() => {})
+    return subscribeToNIELimits(setNieLimits)
   }, [])
 
   useEffect(() => {

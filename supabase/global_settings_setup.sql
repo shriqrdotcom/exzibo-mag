@@ -1,7 +1,12 @@
 -- ── Global Settings table ────────────────────────────────────────────────────
 -- Stores cross-dashboard configuration as key/value rows.
 -- Currently used by: NIE IQE1 Image Compressor (image_compression_limits)
--- Run this once in Supabase Dashboard → SQL Editor.
+--
+-- !! Run this ONCE in Supabase Dashboard → SQL Editor !!
+-- After running, the Image Compressor's Save Limits button will persist to
+-- Supabase and all upload components will fetch the live value on mount AND
+-- receive real-time pushes whenever limits change.
+-- ─────────────────────────────────────────────────────────────────────────────
 
 create table if not exists public.global_settings (
   key        text        primary key,
@@ -9,29 +14,33 @@ create table if not exists public.global_settings (
   updated_at timestamptz not null default now()
 );
 
--- Enable RLS
+-- ── Row Level Security ────────────────────────────────────────────────────────
 alter table public.global_settings enable row level security;
 
--- Allow everyone (anon + authenticated) to read settings
+-- Anyone (anon + authenticated) can read — needed by all dashboards
 create policy "global_settings_select"
   on public.global_settings for select
   to anon, authenticated
   using (true);
 
--- Allow everyone (anon + authenticated) to insert/update settings
--- This app is admin-only (allowlist), so anon key access is acceptable here.
-create policy "global_settings_upsert"
+-- Anyone can insert (first-time seed from the app)
+create policy "global_settings_insert"
   on public.global_settings for insert
   to anon, authenticated
   with check (true);
 
+-- Anyone can update (super-admin saves new limits)
 create policy "global_settings_update"
   on public.global_settings for update
   to anon, authenticated
   using (true)
   with check (true);
 
--- Seed the default image compression limits (no-op if already present)
+-- ── Enable Postgres logical replication (Supabase Realtime) ───────────────────
+-- This lets all open dashboards receive live pushes when limits change.
+alter publication supabase_realtime add table public.global_settings;
+
+-- ── Seed defaults (no-op if row already exists) ───────────────────────────────
 insert into public.global_settings (key, value)
 values ('image_compression_limits', '{"minKB": 60, "maxKB": 200}'::jsonb)
 on conflict (key) do nothing;

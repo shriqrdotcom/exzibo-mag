@@ -3,7 +3,7 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { getRouteConfig } from '../lib/routeConfig'
 import { useAnalytics, notifyAnalyticsUpdate } from '../context/AnalyticsContext'
 import { useRole } from '../context/RoleContext'
-import { getRestaurantById, getRestaurants, getOrders, getBookings, updateOrderStatus, updateBookingStatus, getMenuCategories, getMenuItems, insertMenuItem, updateMenuItem, deleteMenuItem, upsertMenuCategory, deleteMenuCategory, upsertMenuItems, uploadMenuImage, updateRestaurant, uploadToStorage, uploadDataUrlToStorage, toggleMenuItemPublish, normalizeOrder, normalizeBooking, sendMessage, getLatestSmsNotification, upsertSmsNotification, fetchActiveNotification, publishActiveNotification, confirmActiveNotification, insertNotificationHistory, fetchNotificationHistory, fetchNIELimits } from '../lib/db'
+import { getRestaurantById, getRestaurants, getOrders, getBookings, updateOrderStatus, updateBookingStatus, getMenuCategories, getMenuItems, insertMenuItem, updateMenuItem, deleteMenuItem, upsertMenuCategory, deleteMenuCategory, upsertMenuItems, uploadMenuImage, updateRestaurant, uploadToStorage, uploadDataUrlToStorage, toggleMenuItemPublish, normalizeOrder, normalizeBooking, sendMessage, getLatestSmsNotification, upsertSmsNotification, fetchActiveNotification, publishActiveNotification, confirmActiveNotification, insertNotificationHistory, fetchNotificationHistory, fetchNIELimits, subscribeToNIELimits } from '../lib/db'
 import { supabase } from '../lib/supabase'
 import notificationIconImg from '@assets/image_1777373928129.png'
 import {
@@ -4231,16 +4231,16 @@ function ImageUploadField({ value, onChange, accentStart }) {
   const [compressing, setCompressing] = React.useState(false)
   const [compressedResult, setCompressedResult] = React.useState(null)
 
-  // Live NIE IQE1 limits — seeded from Supabase on mount, then kept warm via
-  // localStorage events so a Dashboard save propagates without a page reload.
+  // Live NIE IQE1 limits — seeded from Supabase on mount, kept in sync via
+  // Realtime push so any Dashboard "Save Limits" propagates to every open panel.
   const [nieLimits, setNieLimits] = React.useState(() => loadNIELimits())
   React.useEffect(() => {
-    // Fetch authoritative limits from Supabase and update localStorage cache
     fetchNIELimits().then(lim => setNieLimits(lim)).catch(() => {})
+    const unsubNIE = subscribeToNIELimits(lim => setNieLimits(lim))
     function sync() { setNieLimits(loadNIELimits()) }
     window.addEventListener('focus', sync)
     window.addEventListener('storage', sync)
-    return () => { window.removeEventListener('focus', sync); window.removeEventListener('storage', sync) }
+    return () => { unsubNIE(); window.removeEventListener('focus', sync); window.removeEventListener('storage', sync) }
   }, [])
 
   // Deliver the compressed image to the parent AFTER the modal has fully closed,

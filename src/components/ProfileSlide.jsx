@@ -12,7 +12,7 @@ import { FaFacebook, FaInstagram, FaLinkedinIn, FaYoutube } from 'react-icons/fa
 import { FaXTwitter } from 'react-icons/fa6'
 import AddMembersModal from './AddMembersModal'
 import RemainingDaysModal from './RemainingDaysModal'
-import { updateRestaurant, uploadDataUrlToStorage, getTeamMembers, getRestaurantById, fetchNIELimits } from '../lib/db'
+import { updateRestaurant, uploadDataUrlToStorage, getTeamMembers, getRestaurantById, fetchNIELimits, subscribeToNIELimits } from '../lib/db'
 
 const TEAM_ACCENT_START = '#6366F1'
 const TEAM_ACCENT_END   = '#8B5CF6'
@@ -196,10 +196,11 @@ export default function ProfileSlide({
   const [uploadSuccess, setUploadSuccess] = useState(false)
   const [previewUrl, setPreviewUrl] = useState(logoUrl || '')
 
-  // NIE IQE1 — live limits fetched from Supabase on mount
+  // NIE IQE1 — seeded from Supabase on mount, kept live via Realtime push
   const [nieLimits, setNieLimits] = useState({ minKB: 60, maxKB: 200 })
   useEffect(() => {
     fetchNIELimits().then(setNieLimits).catch(() => {})
+    return subscribeToNIELimits(setNieLimits)
   }, [])
 
   // Logo compression popup state
