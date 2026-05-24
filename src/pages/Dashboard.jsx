@@ -1465,7 +1465,7 @@ function ImageCompressor() {
           fontSize: '10px', fontWeight: 800, color: '#E8321A',
           letterSpacing: '0.15em', fontFamily: 'monospace',
         }}>
-          ◈ UID IQE01
+          ◈ NIE IQE1
         </span>
       </div>
 
@@ -1632,7 +1632,7 @@ function ImageCompressor() {
             letterSpacing: '0.15em', fontFamily: 'monospace',
             pointerEvents: 'none',
           }}>
-            ◈ UID IQE01
+            ◈ NIE IQE1
             <span style={{ opacity: 0.5, fontWeight: 600, letterSpacing: '0.05em', fontSize: '8px' }}>· QUALITY ENSURER</span>
           </span>
           <div style={{

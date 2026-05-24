@@ -4379,7 +4379,7 @@ function ImageUploadField({ value, onChange, accentStart }) {
         <button
           type="button"
           onClick={e => { e.stopPropagation(); navigate('/dashboard?section=image-compressor') }}
-          title="Open Image Compressor — UID IQE01"
+          title="Open Image Compressor — NIE IQE1"
           style={{
             display: 'inline-flex', alignItems: 'center', gap: '5px',
             padding: '3px 9px', borderRadius: '50px',
@@ -4389,7 +4389,7 @@ function ImageUploadField({ value, onChange, accentStart }) {
             cursor: 'pointer', outline: 'none',
           }}
         >
-          ◈ UID IQE01 ↗
+          ◈ NIE IQE1 ↗
         </button>
       </div>
       {value ? (
@@ -5557,7 +5557,7 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
                     <button
                       type="button"
                       onClick={e => { e.stopPropagation(); navigate('/dashboard?section=image-compressor') }}
-                      title="Open Image Compressor — UID IQE01"
+                      title="Open Image Compressor — NIE IQE1"
                       style={{
                         display: 'inline-flex', alignItems: 'center', gap: '5px',
                         padding: '2px 8px', borderRadius: '50px',
@@ -5566,7 +5566,7 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
                         letterSpacing: '0.14em', fontFamily: 'monospace',
                         cursor: 'pointer', outline: 'none',
                       }}
-                    >◈ UID IQE01 ↗</button>
+                    >◈ NIE IQE1 ↗</button>
                   </div>
                   {previewImage ? (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -5656,7 +5656,7 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
                   <button
                     type="button"
                     onClick={e => { e.stopPropagation(); navigate('/dashboard?section=image-compressor') }}
-                    title="Open Image Compressor — UID IQE01"
+                    title="Open Image Compressor — NIE IQE1"
                     style={{
                       display: 'inline-flex', alignItems: 'center', gap: '5px',
                       padding: '2px 8px', borderRadius: '50px',
@@ -5665,7 +5665,7 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
                       letterSpacing: '0.14em', fontFamily: 'monospace',
                       cursor: 'pointer', outline: 'none',
                     }}
-                  >◈ UID IQE01 ↗</button>
+                  >◈ NIE IQE1 ↗</button>
                 </div>
                 {newCat.image ? (
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
