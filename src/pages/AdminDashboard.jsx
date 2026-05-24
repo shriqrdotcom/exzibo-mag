@@ -3,7 +3,7 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { getRouteConfig } from '../lib/routeConfig'
 import { useAnalytics, notifyAnalyticsUpdate } from '../context/AnalyticsContext'
 import { useRole } from '../context/RoleContext'
-import { getRestaurantById, getRestaurants, getOrders, getBookings, updateOrderStatus, updateBookingStatus, getMenuCategories, getMenuItems, insertMenuItem, updateMenuItem, deleteMenuItem, upsertMenuCategory, deleteMenuCategory, upsertMenuItems, uploadMenuImage, updateRestaurant, uploadToStorage, uploadDataUrlToStorage, toggleMenuItemPublish, normalizeOrder, normalizeBooking, sendMessage, getLatestSmsNotification, upsertSmsNotification, fetchActiveNotification, publishActiveNotification, confirmActiveNotification, insertNotificationHistory, fetchNotificationHistory } from '../lib/db'
+import { getRestaurantById, getRestaurants, getOrders, getBookings, updateOrderStatus, updateBookingStatus, getMenuCategories, getMenuItems, insertMenuItem, updateMenuItem, deleteMenuItem, upsertMenuCategory, deleteMenuCategory, upsertMenuItems, uploadMenuImage, updateRestaurant, uploadToStorage, uploadDataUrlToStorage, toggleMenuItemPublish, normalizeOrder, normalizeBooking, sendMessage, getLatestSmsNotification, upsertSmsNotification, fetchActiveNotification, publishActiveNotification, confirmActiveNotification, insertNotificationHistory, fetchNotificationHistory, fetchNIELimits } from '../lib/db'
 import { supabase } from '../lib/supabase'
 import notificationIconImg from '@assets/image_1777373928129.png'
 import {
@@ -4231,9 +4231,12 @@ function ImageUploadField({ value, onChange, accentStart }) {
   const [compressing, setCompressing] = React.useState(false)
   const [compressedResult, setCompressedResult] = React.useState(null)
 
-  // Live NIE IQE1 limits — refreshed whenever the dashboard compressor saves new values
+  // Live NIE IQE1 limits — seeded from Supabase on mount, then kept warm via
+  // localStorage events so a Dashboard save propagates without a page reload.
   const [nieLimits, setNieLimits] = React.useState(() => loadNIELimits())
   React.useEffect(() => {
+    // Fetch authoritative limits from Supabase and update localStorage cache
+    fetchNIELimits().then(lim => setNieLimits(lim)).catch(() => {})
     function sync() { setNieLimits(loadNIELimits()) }
     window.addEventListener('focus', sync)
     window.addEventListener('storage', sync)
@@ -4966,11 +4969,11 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
     }
   }
 
-  function handleCatImageUpload(e) {
+  async function handleCatImageUpload(e) {
     const file = e.target.files?.[0]
     if (!file) return
     e.target.value = ''
-    const { minKB, maxKB } = loadNIELimits()
+    const { minKB, maxKB } = await fetchNIELimits()
     const sizeKB = file.size / 1024
     if (sizeKB < minKB) {
       showToast(`Image too small — NIE IQE1 minimum is ${minKB} KB.`)
@@ -5003,11 +5006,11 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
     clearTimeout(longPressTimer.current)
   }
 
-  function handleEditIconImageUpload(e) {
+  async function handleEditIconImageUpload(e) {
     const file = e.target.files?.[0]
     if (!file) return
     e.target.value = ''
-    const { minKB, maxKB } = loadNIELimits()
+    const { minKB, maxKB } = await fetchNIELimits()
     const sizeKB = file.size / 1024
     if (sizeKB < minKB) {
       showToast(`Image too small — NIE IQE1 minimum is ${minKB} KB.`)

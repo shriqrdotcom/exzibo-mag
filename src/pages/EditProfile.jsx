@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Loader2, CheckCircle2, AlertCircle, Camera, ChevronLeft, User } from 'lucide-react'
-import { updateRestaurant, uploadDataUrlToStorage } from '../lib/db'
+import { updateRestaurant, uploadDataUrlToStorage, fetchNIELimits } from '../lib/db'
 import { useRole } from '../context/RoleContext'
 
 const FONT = "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif"
@@ -106,6 +106,12 @@ export default function EditProfile() {
   const [compressPreview, setCompressPreview] = useState(null)
   const [compressing, setCompressing] = useState(false)
 
+  // NIE IQE1 — live limits fetched from Supabase on mount
+  const [nieLimits, setNieLimits] = useState({ minKB: 60, maxKB: 200 })
+  useEffect(() => {
+    fetchNIELimits().then(setNieLimits).catch(() => {})
+  }, [])
+
   useEffect(() => {
     setNameInput(loadCurrentName(restaurantId))
     setPreviewUrl(loadCurrentLogo(restaurantId))
@@ -123,14 +129,14 @@ export default function EditProfile() {
     }
     setImageError('')
     const sizeKB = file.size / 1024
-    if (sizeKB < 60) {
-      setImageError('Image quality too low. Please upload a better image (min 60 KB).')
+    if (sizeKB < nieLimits.minKB) {
+      setImageError(`Image quality too low. Please upload a better image (min ${nieLimits.minKB} KB).`)
       return
     }
     const reader = new FileReader()
     reader.onload = ev => {
       const src = ev.target.result
-      if (sizeKB > 200) {
+      if (sizeKB > nieLimits.maxKB) {
         setCompressSrc(src)
         setCompressPreview(src)
         setCompressModal(true)
@@ -146,7 +152,7 @@ export default function EditProfile() {
     if (!compressSrc) return
     setCompressing(true)
     try {
-      const result = await compressToLimit(compressSrc, 200)
+      const result = await compressToLimit(compressSrc, nieLimits.maxKB)
       if (result) {
         setPendingImageUrl(result)
         setPreviewUrl(result)

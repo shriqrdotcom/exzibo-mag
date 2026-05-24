@@ -4,7 +4,7 @@ import Sidebar from '../components/Sidebar'
 import AdminHeader from '../components/AdminHeader'
 import { TrendingUp, Filter, Download, ChevronLeft, ChevronRight, Plus, Trash2, Clock, X, Pencil, Play, ExternalLink, LayoutDashboard, ShieldCheck, ImageDown, Upload, ZoomIn, ZoomOut, RotateCcw, Save, CheckCircle, AlertTriangle, AlertCircle } from 'lucide-react'
 import { useRole } from '../context/RoleContext'
-import { getRestaurants, updateRestaurant, softDeleteRestaurant, getRestaurantsCreatedThisMonth } from '../lib/db'
+import { getRestaurants, updateRestaurant, softDeleteRestaurant, getRestaurantsCreatedThisMonth, upsertGlobalSetting } from '../lib/db'
 import { openRoleDashboard } from '../lib/navigation'
 
 function getAvatarFromName(name) {
@@ -1279,15 +1279,22 @@ function ImageCompressor() {
   const minKB = savedLimits.minKB
   const maxKB = savedLimits.maxKB
 
-  function handleSaveLimits() {
+  async function handleSaveLimits() {
     const min = parseInt(pendingMin, 10)
     const max = parseInt(pendingMax, 10)
     if (isNaN(min) || isNaN(max) || min < 1 || max <= min) return
     const limits = { minKB: min, maxKB: max }
+    // Update localStorage cache immediately so every upload component picks it up
     localStorage.setItem(IC_STORAGE_KEY, JSON.stringify(limits))
     setSavedLimits(limits)
     setSaveFlash(true)
     setTimeout(() => setSaveFlash(false), 2000)
+    // Persist to Supabase in the background (non-blocking)
+    try {
+      await upsertGlobalSetting('image_compression_limits', limits)
+    } catch (err) {
+      console.warn('[NIE IQE1] Supabase persist failed — limits saved to localStorage only:', err)
+    }
   }
 
   const limitsChanged = parseInt(pendingMin, 10) !== minKB || parseInt(pendingMax, 10) !== maxKB

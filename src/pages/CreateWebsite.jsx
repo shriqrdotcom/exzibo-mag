@@ -6,7 +6,7 @@ import {
   ChefHat, Users, Zap, Bell
 } from 'lucide-react'
 import PlanSelector from '../components/PlanSelector'
-import { createRestaurant, getRestaurants, updateRestaurant, generateRestaurantUID } from '../lib/db'
+import { createRestaurant, getRestaurants, updateRestaurant, generateRestaurantUID, fetchNIELimits } from '../lib/db'
 import { supabase } from '../lib/supabase'
 
 export default function CreateWebsite() {
@@ -45,6 +45,14 @@ export default function CreateWebsite() {
   const [submitError, setSubmitError] = useState('')
   const [logoDragging, setLogoDragging] = useState(false)
   const [imgDragging, setImgDragging] = useState(false)
+  const [logoSizeError, setLogoSizeError] = useState('')
+  const [imgSizeError, setImgSizeError] = useState('')
+
+  // NIE IQE1 — live limits fetched from Supabase on mount
+  const [nieLimits, setNieLimits] = useState({ minKB: 60, maxKB: 200 })
+  useEffect(() => {
+    fetchNIELimits().then(setNieLimits).catch(() => {})
+  }, [])
 
   const logoInputRef = useRef()
   const imgInputRef = useRef()
@@ -68,12 +76,34 @@ export default function CreateWebsite() {
 
   const handleLogoFile = file => {
     if (!file || !file.type.startsWith('image/')) return
+    setLogoSizeError('')
+    const sizeKB = file.size / 1024
+    if (sizeKB < nieLimits.minKB) {
+      setLogoSizeError(`Logo image too small — minimum ${nieLimits.minKB} KB required.`)
+      return
+    }
+    if (sizeKB > nieLimits.maxKB) {
+      setLogoSizeError(`Logo image too large — maximum ${nieLimits.maxKB} KB allowed. Please compress before uploading.`)
+      return
+    }
     const url = URL.createObjectURL(file)
     set('logo', { file, url })
   }
 
   const handleImgFiles = files => {
-    const valid = Array.from(files).filter(f => f.type.startsWith('image/'))
+    setImgSizeError('')
+    const { minKB, maxKB } = nieLimits
+    const valid = []
+    const skipped = []
+    Array.from(files).forEach(f => {
+      if (!f.type.startsWith('image/')) return
+      const sizeKB = f.size / 1024
+      if (sizeKB < minKB) { skipped.push(`${f.name} (too small)`); return }
+      if (sizeKB > maxKB) { skipped.push(`${f.name} (too large)`); return }
+      valid.push(f)
+    })
+    if (skipped.length) setImgSizeError(`Skipped ${skipped.length} image(s) outside ${minKB}–${maxKB} KB range.`)
+    if (!valid.length) return
     const mapped = valid.map(f => ({ file: f, url: URL.createObjectURL(f) }))
     set('uploadedImages', [...form.uploadedImages, ...mapped])
   }

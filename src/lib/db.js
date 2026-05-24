@@ -966,3 +966,55 @@ export async function updateHelpNotificationStatus(id, status) {
   if (error) throw error
   return data
 }
+
+// ── NIE IQE1 — Global image compression limits ───────────────────────────────
+// Persists min/max KB settings set in the Dashboard Image Compressor so every
+// upload component across all dashboards uses the same enforced range.
+
+const _NIE_DB_KEY = 'image_compression_limits'
+const _NIE_LS_KEY = 'exzibo_img_compressor_limits'
+const _NIE_DEFAULTS = { minKB: 60, maxKB: 200 }
+
+function _readNIECache() {
+  try {
+    const raw = localStorage.getItem(_NIE_LS_KEY)
+    if (!raw) return null
+    const p   = JSON.parse(raw)
+    const min = parseInt(p.minKB, 10)
+    const max = parseInt(p.maxKB, 10)
+    if (!isNaN(min) && !isNaN(max) && min >= 1 && max > min) return { minKB: min, maxKB: max }
+  } catch {}
+  return null
+}
+
+/**
+ * Fetch NIE IQE1 limits — tries Supabase first, falls back to localStorage
+ * cache, then hard defaults. Also updates the localStorage cache on success
+ * so subsequent synchronous reads are always warm.
+ */
+export async function fetchNIELimits() {
+  try {
+    const { data } = await supabase
+      .from('global_settings')
+      .select('value')
+      .eq('key', _NIE_DB_KEY)
+      .single()
+    if (data?.value?.minKB && data?.value?.maxKB) {
+      const lim = { minKB: parseInt(data.value.minKB, 10), maxKB: parseInt(data.value.maxKB, 10) }
+      localStorage.setItem(_NIE_LS_KEY, JSON.stringify(lim))
+      return lim
+    }
+  } catch {}
+  return _readNIECache() ?? _NIE_DEFAULTS
+}
+
+/**
+ * Persist a key/value pair to global_settings (upsert by key).
+ * Used by the Dashboard Image Compressor "Save Limits" button.
+ */
+export async function upsertGlobalSetting(key, value) {
+  const { error } = await supabase
+    .from('global_settings')
+    .upsert({ key, value, updated_at: new Date().toISOString() }, { onConflict: 'key' })
+  if (error) throw error
+}

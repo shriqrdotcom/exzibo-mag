@@ -12,7 +12,7 @@ import { FaFacebook, FaInstagram, FaLinkedinIn, FaYoutube } from 'react-icons/fa
 import { FaXTwitter } from 'react-icons/fa6'
 import AddMembersModal from './AddMembersModal'
 import RemainingDaysModal from './RemainingDaysModal'
-import { updateRestaurant, uploadDataUrlToStorage, getTeamMembers, getRestaurantById } from '../lib/db'
+import { updateRestaurant, uploadDataUrlToStorage, getTeamMembers, getRestaurantById, fetchNIELimits } from '../lib/db'
 
 const TEAM_ACCENT_START = '#6366F1'
 const TEAM_ACCENT_END   = '#8B5CF6'
@@ -195,6 +195,12 @@ export default function ProfileSlide({
   const [uploadError, setUploadError] = useState('')
   const [uploadSuccess, setUploadSuccess] = useState(false)
   const [previewUrl, setPreviewUrl] = useState(logoUrl || '')
+
+  // NIE IQE1 — live limits fetched from Supabase on mount
+  const [nieLimits, setNieLimits] = useState({ minKB: 60, maxKB: 200 })
+  useEffect(() => {
+    fetchNIELimits().then(setNieLimits).catch(() => {})
+  }, [])
 
   // Logo compression popup state
   const logoPendingSrcRef = useRef(null)
@@ -640,12 +646,12 @@ export default function ProfileSlide({
     setUploadError(''); setUploadSuccess(false)
 
     const sizeKB = file.size / 1024
-    if (sizeKB < 60) { setUploadError('Image quality too low. Please upload a better image (min 60 KB).'); return }
+    if (sizeKB < nieLimits.minKB) { setUploadError(`Image quality too low. Please upload a better image (min ${nieLimits.minKB} KB).`); return }
 
     const reader = new FileReader()
     reader.onload = ev => {
       const src = ev.target.result
-      if (sizeKB > 200) {
+      if (sizeKB > nieLimits.maxKB) {
         logoPendingSrcRef.current = src
         setLogoPendingPreview(src)
         setLogoCompressModal(true)
@@ -662,7 +668,7 @@ export default function ProfileSlide({
     setLogoCompressing(true)
     let result = null
     try {
-      result = await compressToLimit(src, 200)
+      result = await compressToLimit(src, nieLimits.maxKB)
     } catch {}
     logoPendingSrcRef.current = null
     setLogoPendingPreview(null)
