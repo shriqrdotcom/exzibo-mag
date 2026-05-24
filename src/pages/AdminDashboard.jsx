@@ -4150,6 +4150,23 @@ function fileToBase64(file) {
 // Single yield to keep the UI alive without adding loop overhead.
 const yieldFrame = () => new Promise(r => setTimeout(r, 0))
 
+// ── NIE IQE1 — reads the active size limits set in Dashboard › Image Compressor ──
+// Shared by every upload area in AdminDashboard so one settings change applies everywhere.
+const NIE_STORAGE_KEY = 'exzibo_img_compressor_limits'
+const NIE_DEFAULTS    = { minKB: 60, maxKB: 200 }
+
+function loadNIELimits() {
+  try {
+    const raw = localStorage.getItem(NIE_STORAGE_KEY)
+    if (!raw) return NIE_DEFAULTS
+    const p   = JSON.parse(raw)
+    const min = parseInt(p.minKB, 10)
+    const max = parseInt(p.maxKB, 10)
+    if (isNaN(min) || isNaN(max) || min < 1 || max <= min) return NIE_DEFAULTS
+    return { minKB: min, maxKB: max }
+  } catch { return NIE_DEFAULTS }
+}
+
 // Fast single-pass compression:
 // Pre-scales the canvas to ~130% of target size in one draw,
 // then tries 3 fixed quality values — no loop, no binary search.
@@ -4214,6 +4231,15 @@ function ImageUploadField({ value, onChange, accentStart }) {
   const [compressing, setCompressing] = React.useState(false)
   const [compressedResult, setCompressedResult] = React.useState(null)
 
+  // Live NIE IQE1 limits — refreshed whenever the dashboard compressor saves new values
+  const [nieLimits, setNieLimits] = React.useState(() => loadNIELimits())
+  React.useEffect(() => {
+    function sync() { setNieLimits(loadNIELimits()) }
+    window.addEventListener('focus', sync)
+    window.addEventListener('storage', sync)
+    return () => { window.removeEventListener('focus', sync); window.removeEventListener('storage', sync) }
+  }, [])
+
   // Deliver the compressed image to the parent AFTER the modal has fully closed,
   // so the parent state update never races with the modal's own state updates.
   React.useEffect(() => {
@@ -4229,16 +4255,17 @@ function ImageUploadField({ value, onChange, accentStart }) {
     e.target.value = ''
     if (!file.type.startsWith('image/')) return
     setSizeError('')
+    const { minKB, maxKB } = loadNIELimits()
 
     const sizeKB = file.size / 1024
-    if (sizeKB < 60) {
-      setSizeError('Image quality too low. Minimum size is 60 KB.')
+    if (sizeKB < minKB) {
+      setSizeError(`Image quality too low. Minimum size is ${minKB} KB.`)
       return
     }
 
     const reader = new FileReader()
     reader.onload = (ev) => {
-      if (sizeKB > 200) {
+      if (sizeKB > maxKB) {
         pendingSrcRef.current = ev.target.result
         setPendingPreview(ev.target.result)
         setCompressModal(true)
@@ -4254,8 +4281,9 @@ function ImageUploadField({ value, onChange, accentStart }) {
     if (!src) return
     setCompressing(true)
     let result = null
+    const { maxKB } = loadNIELimits()
     try {
-      result = await compressToLimit(src, 200)
+      result = await compressToLimit(src, maxKB)
     } catch (err) {
       console.error('Compression failed:', err)
     }
@@ -4316,7 +4344,7 @@ function ImageUploadField({ value, onChange, accentStart }) {
               Image Too Large
             </div>
             <div style={{ textAlign: 'center', fontSize: '13px', color: '#64748b', fontWeight: 500, lineHeight: 1.5, marginBottom: '24px' }}>
-              This image exceeds the 200 KB limit. Click Confirm to automatically compress it.
+              This image exceeds the {nieLimits.maxKB} KB limit set by NIE IQE1. Click Confirm to automatically compress it.
             </div>
 
             {/* Preview thumbnail */}
@@ -4473,7 +4501,7 @@ function ImageUploadField({ value, onChange, accentStart }) {
             </div>
           ) : (
             <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 500, textAlign: 'center', marginTop: '6px' }}>
-              Accepted image size: 60 KB – 200 KB
+              NIE IQE1 · Accepted: {nieLimits.minKB} KB – {nieLimits.maxKB} KB
             </div>
           )}
         </div>
@@ -4941,10 +4969,23 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
   function handleCatImageUpload(e) {
     const file = e.target.files?.[0]
     if (!file) return
-    const reader = new FileReader()
-    reader.onload = ev => setNewCat(p => ({ ...p, image: ev.target.result }))
-    reader.readAsDataURL(file)
     e.target.value = ''
+    const { minKB, maxKB } = loadNIELimits()
+    const sizeKB = file.size / 1024
+    if (sizeKB < minKB) {
+      showToast(`Image too small — NIE IQE1 minimum is ${minKB} KB.`)
+      return
+    }
+    const reader = new FileReader()
+    reader.onload = async ev => {
+      let dataUrl = ev.target.result
+      if (sizeKB > maxKB) {
+        const compressed = await compressToLimit(dataUrl, maxKB)
+        if (compressed) dataUrl = compressed
+      }
+      setNewCat(p => ({ ...p, image: dataUrl }))
+    }
+    reader.readAsDataURL(file)
   }
 
   function openEditIcon(catId) {
@@ -4965,10 +5006,23 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
   function handleEditIconImageUpload(e) {
     const file = e.target.files?.[0]
     if (!file) return
-    const reader = new FileReader()
-    reader.onload = ev => setEditIconDraft(p => ({ ...p, image: ev.target.result }))
-    reader.readAsDataURL(file)
     e.target.value = ''
+    const { minKB, maxKB } = loadNIELimits()
+    const sizeKB = file.size / 1024
+    if (sizeKB < minKB) {
+      showToast(`Image too small — NIE IQE1 minimum is ${minKB} KB.`)
+      return
+    }
+    const reader = new FileReader()
+    reader.onload = async ev => {
+      let dataUrl = ev.target.result
+      if (sizeKB > maxKB) {
+        const compressed = await compressToLimit(dataUrl, maxKB)
+        if (compressed) dataUrl = compressed
+      }
+      setEditIconDraft(p => ({ ...p, image: dataUrl }))
+    }
+    reader.readAsDataURL(file)
   }
 
   function saveEditIcon() {
