@@ -1455,7 +1455,15 @@ function ImageCompressor() {
   }
 
   return (
-    <div style={{ maxWidth: '960px', margin: '0 auto' }}>
+    <div
+      style={{ maxWidth: '960px', margin: '0 auto' }}
+      onDragOver={e => { e.preventDefault(); setDragging(true) }}
+      onDragLeave={e => { if (!e.currentTarget.contains(e.relatedTarget)) setDragging(false) }}
+      onDrop={onDrop}
+    >
+      {/* Hidden file input — always mounted */}
+      <input id="img-file-input" type="file" accept="image/*" onChange={onInputChange} style={{ display: 'none' }} />
+
       {/* UID Badge */}
       <div style={{ marginBottom: '16px' }}>
         <span style={{
@@ -1483,20 +1491,38 @@ function ImageCompressor() {
             <h2 style={{ margin: 0, fontSize: '22px', fontWeight: 800, color: '#fff' }}>Image Compressor</h2>
             <p style={{ margin: 0, fontSize: '12px', color: '#555' }}>Compress to WebP — fully in-browser, nothing uploaded</p>
           </div>
-          {original && (
-            <button onClick={reset} style={{
-              marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '6px',
-              padding: '8px 16px', borderRadius: '50px',
-              background: 'transparent', border: '1px solid rgba(255,255,255,0.1)',
-              color: '#888', fontSize: '12px', fontWeight: 600, cursor: 'pointer',
-              transition: 'all 0.2s',
-            }}
-            onMouseEnter={e => { e.currentTarget.style.borderColor = '#E8321A'; e.currentTarget.style.color = '#E8321A' }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; e.currentTarget.style.color = '#888' }}
+          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {/* Upload button — always visible */}
+            <button
+              onClick={() => document.getElementById('img-file-input').click()}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '6px',
+                padding: '8px 16px', borderRadius: '50px',
+                background: dragging ? 'rgba(232,50,26,0.15)' : 'rgba(232,50,26,0.08)',
+                border: `1px solid ${dragging ? '#E8321A' : 'rgba(232,50,26,0.3)'}`,
+                color: '#E8321A', fontSize: '12px', fontWeight: 700, cursor: 'pointer',
+                transition: 'all 0.2s',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(232,50,26,0.15)'; e.currentTarget.style.borderColor = '#E8321A' }}
+              onMouseLeave={e => { if (!dragging) { e.currentTarget.style.background = 'rgba(232,50,26,0.08)'; e.currentTarget.style.borderColor = 'rgba(232,50,26,0.3)' } }}
             >
-              <RotateCcw size={12} /> Reset
+              <Upload size={12} /> {original ? 'Change Image' : 'Upload Image'}
             </button>
-          )}
+            {original && (
+              <button onClick={reset} style={{
+                display: 'flex', alignItems: 'center', gap: '6px',
+                padding: '8px 16px', borderRadius: '50px',
+                background: 'transparent', border: '1px solid rgba(255,255,255,0.1)',
+                color: '#888', fontSize: '12px', fontWeight: 600, cursor: 'pointer',
+                transition: 'all 0.2s',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = '#E8321A'; e.currentTarget.style.color = '#E8321A' }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; e.currentTarget.style.color = '#888' }}
+              >
+                <RotateCcw size={12} /> Reset
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -1602,61 +1628,7 @@ function ImageCompressor() {
       {/* Hidden canvas for compression */}
       <canvas ref={canvasRef} style={{ display: 'none' }} />
 
-      {!original ? (
-        /* Drop zone */
-        <div
-          onDragOver={e => { e.preventDefault(); setDragging(true) }}
-          onDragLeave={() => setDragging(false)}
-          onDrop={onDrop}
-          style={{
-            ...cardStyle,
-            border: `2px dashed ${dragging ? '#E8321A' : 'rgba(255,255,255,0.1)'}`,
-            background: dragging ? 'rgba(232,50,26,0.04)' : '#111',
-            minHeight: '280px',
-            display: 'flex', flexDirection: 'column',
-            alignItems: 'center', justifyContent: 'center',
-            cursor: 'pointer',
-            transition: 'all 0.2s',
-            position: 'relative',
-          }}
-          onClick={() => document.getElementById('img-file-input').click()}
-        >
-          <input id="img-file-input" type="file" accept="image/*" onChange={onInputChange} style={{ display: 'none' }} />
-          {/* UID stamp — top-left of drop zone */}
-          <span style={{
-            position: 'absolute', top: '14px', left: '16px',
-            display: 'inline-flex', alignItems: 'center', gap: '6px',
-            padding: '3px 12px', borderRadius: '50px',
-            background: 'rgba(232,50,26,0.1)', border: '1px solid rgba(232,50,26,0.35)',
-            fontSize: '9px', fontWeight: 800, color: '#E8321A',
-            letterSpacing: '0.15em', fontFamily: 'monospace',
-            pointerEvents: 'none',
-          }}>
-            ◈ NIE IQE1
-            <span style={{ opacity: 0.5, fontWeight: 600, letterSpacing: '0.05em', fontSize: '8px' }}>· QUALITY ENSURER</span>
-          </span>
-          <div style={{
-            width: '64px', height: '64px', borderRadius: '20px',
-            background: dragging ? 'rgba(232,50,26,0.15)' : 'rgba(255,255,255,0.04)',
-            border: `2px dashed ${dragging ? '#E8321A' : 'rgba(255,255,255,0.12)'}`,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            marginBottom: '20px', transition: 'all 0.2s',
-          }}>
-            <Upload size={26} color={dragging ? '#E8321A' : '#555'} />
-          </div>
-          <div style={{ fontSize: '16px', fontWeight: 700, color: dragging ? '#E8321A' : '#ccc', marginBottom: '8px' }}>
-            {dragging ? 'Drop your image here' : 'Click or drag an image here'}
-          </div>
-          <div style={{ fontSize: '13px', color: '#444', marginBottom: '16px' }}>Supports JPG, PNG, WebP → outputs as WebP</div>
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: '8px',
-            padding: '7px 16px', borderRadius: '50px',
-            background: 'rgba(232,50,26,0.07)', border: '1px solid rgba(232,50,26,0.15)',
-          }}>
-            <span style={{ fontSize: '11px', fontWeight: 700, color: '#E8321A' }}>Target: {minKB} – {maxKB} KB</span>
-          </div>
-        </div>
-      ) : (
+      {original && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           {/* Controls row */}
           <div style={{ ...cardStyle, display: 'flex', alignItems: 'center', gap: '32px', flexWrap: 'wrap', padding: '20px 28px' }}>
