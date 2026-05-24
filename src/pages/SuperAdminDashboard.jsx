@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
+import { processImageFile, isAcceptedImageType } from '../lib/processImage'
 import { useNavigate } from 'react-router-dom'
 import {
   ArrowLeft, Plus, Pencil, Trash2, X, Check,
@@ -80,14 +81,6 @@ function uid() {
   return Math.random().toString(36).slice(2) + Date.now().toString(36)
 }
 
-function fileToBase64(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = e => resolve(e.target.result)
-    reader.onerror = reject
-    reader.readAsDataURL(file)
-  })
-}
 
 export default function SuperAdminDashboard() {
   const navigate = useNavigate()
@@ -381,10 +374,12 @@ function StaffForm({ section, member, onSave, onClose }) {
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
 
   async function handleAvatarUpload(file) {
-    const allowed = ['image/jpeg', 'image/png', 'image/webp']
-    if (!allowed.includes(file.type) || file.size > 3 * 1024 * 1024) return
+    if (!isAcceptedImageType(file)) return
     setUploadingAvatar(true)
-    try { setAvatar(await fileToBase64(file)) } catch {}
+    try {
+      const compressed = await processImageFile(file)
+      if (compressed) setAvatar(compressed)
+    } catch {}
     finally { setUploadingAvatar(false) }
   }
 
@@ -468,7 +463,7 @@ function StaffForm({ section, member, onSave, onClose }) {
                 {uploadingAvatar ? <Loader2 size={18} color="#fff" style={{ animation: 'spin 1s linear infinite' }} /> : <Camera size={18} color="#fff" />}
               </div>
             </div>
-            <input ref={avatarInputRef} type="file" accept="image/jpeg,image/png,image/webp" style={{ display: 'none' }}
+            <input ref={avatarInputRef} type="file" accept="image/*" style={{ display: 'none' }}
               onChange={e => { const f = e.target.files?.[0]; if (f) handleAvatarUpload(f); e.target.value = '' }} />
             <div style={{ fontSize: '11px', color: '#aaa', fontWeight: 600, marginTop: '6px' }}>Tap to upload photo</div>
           </div>

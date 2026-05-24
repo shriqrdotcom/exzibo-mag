@@ -1,0 +1,89 @@
+I need a global image upload system for my entire dashboard.
+
+Current Problem:
+Users upload images from many different "TAP TO UPLOAD PHOTO" sections like:
+- Food item images
+- Restaurant banners
+- Profile photos
+- Menu studio uploads
+- Dashboard uploads
+- Category images
+- Any other image uploader
+
+Right now, images are uploaded in different formats and sizes, which creates inconsistent storage and performance issues.
+
+I want ONE global image processing system that works automatically on ALL upload sections.
+
+Required Features:
+
+1. Accept Multiple Formats
+The uploader should accept:
+- JPG
+- JPEG
+- PNG
+- WEBP
+- HEIC (optional)
+
+2. Convert Everything to WEBP
+No matter what format the user uploads,
+the system must automatically:
+- Compress the image
+- Convert it to WEBP format only
+- Store only `.webp` images
+
+Example:
+- image.png → image.webp
+- photo.jpg → photo.webp
+
+3. Global Compression Rules
+I already have a GLOBAL IMAGE COMPRESSOR settings section.
+
+Example settings:
+- Minimum size = 60 KB
+- Maximum size = 200 KB
+
+Now apply these rules globally:
+
+A. If image is bigger than max limit:
+- Compress it automatically
+- Final output should stay near the max size
+
+B. If image is smaller than minimum limit:
+- Keep quality optimized
+- Avoid extremely low-quality tiny images
+
+C. If image size is already inside range:
+- Just optimize and convert to WEBP
+
+4. Apply Everywhere Automatically
+This logic must work on ALL "TAP TO UPLOAD PHOTO" components automatically.
+I do NOT want separate logic for each uploader.
+
+Create one reusable global upload/compression service used by the entire dashboard.
+
+5. Centralized Settings
+When admin changes:
+- Min KB
+- Max KB
+- WEBP quality
+- Width/height limit
+
+and clicks SAVE,
+those settings should instantly apply everywhere globally.
+
+6. Performance Requirements
+- Compression should happen before final upload if possible
+- Reduce storage usage
+- Keep food image quality visually clean
+- Avoid unnecessary server/database pressure
+- Fast upload experience
+
+7. Important Technical Requirement
+Please create:
+- Proper reusable architecture
+- Shared upload utility/service
+- Global config system
+- Simple maintainable structure
+- Error handling for unsupported/corrupted images
+
+Please solve this properly with clean scalable logic for a multi-restaurant dashboard platform.

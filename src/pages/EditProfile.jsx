@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Loader2, CheckCircle2, AlertCircle, Camera, ChevronLeft, User } from 'lucide-react'
-import { updateRestaurant, uploadDataUrlToStorage, fetchNIELimits, subscribeToNIELimits } from '../lib/db'
+import { updateRestaurant, uploadDataUrlToStorage } from '../lib/db'
+import { processImageFile, isAcceptedImageType } from '../lib/processImage'
 import { useRole } from '../context/RoleContext'
 
 const FONT = "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif"
@@ -9,47 +10,6 @@ const BLUE = '#3B6BE8'
 const LIGHT_BLUE = '#EAF1FD'
 const LIME = '#A8E63D'
 
-function fileToBase64(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = e => resolve(e.target.result)
-    reader.onerror = reject
-    reader.readAsDataURL(file)
-  })
-}
-
-function compressToLimit(dataUrl, maxKB) {
-  return new Promise(resolve => {
-    const img = new window.Image()
-    img.onload = async () => {
-      try {
-        const maxBytes = maxKB * 1024
-        const rawBytes = dataUrl.length * 0.75
-        const ratio = (maxBytes * 1.3) / rawBytes
-        let scale = Math.min(1, Math.sqrt(ratio))
-        scale = Math.max(0.03, scale)
-        const w = Math.max(1, Math.round(img.naturalWidth * scale))
-        const h = Math.max(1, Math.round(img.naturalHeight * scale))
-        await new Promise(r => setTimeout(r, 0))
-        const canvas = document.createElement('canvas')
-        canvas.width = w; canvas.height = h
-        const ctx = canvas.getContext('2d')
-        ctx.drawImage(img, 0, 0, w, h)
-        for (const q of [0.82, 0.60, 0.38]) {
-          const out = canvas.toDataURL('image/jpeg', q)
-          if (out.length * 0.75 <= maxBytes) return resolve(out)
-        }
-        await new Promise(r => setTimeout(r, 0))
-        canvas.width = Math.max(1, Math.round(w * 0.5))
-        canvas.height = Math.max(1, Math.round(h * 0.5))
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
-        resolve(canvas.toDataURL('image/jpeg', 0.72))
-      } catch { resolve(null) }
-    }
-    img.onerror = () => resolve(null)
-    img.src = dataUrl
-  })
-}
 
 function loadCurrentName(restaurantId) {
   if (!restaurantId || restaurantId === 'default') {
@@ -101,17 +61,7 @@ export default function EditProfile() {
   const [saveError, setSaveError] = useState('')
   const [saveSuccess, setSaveSuccess] = useState(false)
 
-  const [compressModal, setCompressModal] = useState(false)
-  const [compressSrc, setCompressSrc] = useState(null)
-  const [compressPreview, setCompressPreview] = useState(null)
   const [compressing, setCompressing] = useState(false)
-
-  // NIE IQE1 — seeded from Supabase on mount, kept live via Realtime push
-  const [nieLimits, setNieLimits] = useState({ minKB: 60, maxKB: 200 })
-  useEffect(() => {
-    fetchNIELimits().then(setNieLimits).catch(() => {})
-    return subscribeToNIELimits(setNieLimits)
-  }, [])
 
   useEffect(() => {
     setNameInput(loadCurrentName(restaurantId))
@@ -119,61 +69,27 @@ export default function EditProfile() {
     setPendingImageUrl(null)
   }, [restaurantId])
 
-  function handleFileChange(e) {
+  async function handleFileChange(e) {
     const file = e.target.files?.[0]
     e.target.value = ''
     if (!file) return
-    const allowed = ['image/jpeg', 'image/png', 'image/webp']
-    if (!allowed.includes(file.type)) {
-      setImageError('Only JPG, PNG, or WEBP images are allowed.')
+    if (!isAcceptedImageType(file)) {
+      setImageError('Please upload a valid image (JPG, PNG, WEBP, HEIC).')
       return
     }
     setImageError('')
-    const sizeKB = file.size / 1024
-    if (sizeKB < nieLimits.minKB) {
-      setImageError(`Image quality too low. Please upload a better image (min ${nieLimits.minKB} KB).`)
-      return
-    }
-    const reader = new FileReader()
-    reader.onload = ev => {
-      const src = ev.target.result
-      if (sizeKB > nieLimits.maxKB) {
-        setCompressSrc(src)
-        setCompressPreview(src)
-        setCompressModal(true)
-      } else {
-        setPendingImageUrl(src)
-        setPreviewUrl(src)
-      }
-    }
-    reader.readAsDataURL(file)
-  }
-
-  async function handleCompressConfirm() {
-    if (!compressSrc) return
     setCompressing(true)
     try {
-      const result = await compressToLimit(compressSrc, nieLimits.maxKB)
-      if (result) {
-        setPendingImageUrl(result)
-        setPreviewUrl(result)
-      } else {
-        setImageError('Compression failed. Please try a different image.')
+      const dataUrl = await processImageFile(file)
+      if (dataUrl) {
+        setPendingImageUrl(dataUrl)
+        setPreviewUrl(dataUrl)
       }
     } catch {
-      setImageError('Compression failed. Please try a different image.')
+      setImageError('Could not process image. Please try a different file.')
     } finally {
       setCompressing(false)
-      setCompressModal(false)
-      setCompressSrc(null)
-      setCompressPreview(null)
     }
-  }
-
-  function handleCompressCancel() {
-    setCompressModal(false)
-    setCompressSrc(null)
-    setCompressPreview(null)
   }
 
   async function handleSave() {
@@ -259,7 +175,7 @@ export default function EditProfile() {
         <input
           ref={fileInputRef}
           type="file"
-          accept="image/jpeg,image/png,image/webp"
+          accept="image/*"
           style={{ display: 'none' }}
           onChange={handleFileChange}
         />
@@ -495,67 +411,6 @@ export default function EditProfile() {
 
           </div>
         </div>
-
-        {/* ── Compress Confirm Modal ── */}
-        {compressModal && (
-          <div style={{
-            position: 'fixed', inset: 0, zIndex: 200,
-            background: 'rgba(0,0,0,0.5)',
-            display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
-          }}>
-            <div style={{
-              width: '100%', maxWidth: '390px',
-              background: '#fff', borderRadius: '24px 24px 0 0',
-              padding: '28px 24px 36px',
-            }}>
-              <div style={{ fontWeight: 800, fontSize: '17px', color: '#111', marginBottom: '8px' }}>
-                Compress Image?
-              </div>
-              <div style={{ fontSize: '13px', color: '#666', marginBottom: '20px', lineHeight: 1.5 }}>
-                This image is over 200 KB. Compress it before saving to keep things fast.
-              </div>
-              {compressPreview && (
-                <div style={{
-                  width: '80px', height: '80px', borderRadius: '16px',
-                  overflow: 'hidden', margin: '0 auto 20px', background: '#f1f5f9',
-                }}>
-                  <img src={compressPreview} alt="preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                </div>
-              )}
-              <div style={{ display: 'flex', gap: '10px' }}>
-                <button
-                  onClick={handleCompressCancel}
-                  disabled={compressing}
-                  style={{
-                    flex: 1, padding: '13px', borderRadius: '13px',
-                    background: '#F0F0F5', border: 'none',
-                    color: '#555', fontSize: '13px', fontWeight: 700,
-                    cursor: compressing ? 'not-allowed' : 'pointer',
-                    fontFamily: FONT,
-                  }}
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleCompressConfirm}
-                  disabled={compressing}
-                  style={{
-                    flex: 2, padding: '13px', borderRadius: '13px',
-                    background: compressing ? '#94a3b8' : LIME,
-                    border: 'none', color: '#111', fontSize: '13px', fontWeight: 800,
-                    cursor: compressing ? 'not-allowed' : 'pointer',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '7px',
-                    fontFamily: FONT,
-                  }}
-                >
-                  {compressing
-                    ? <><Loader2 size={14} style={{ animation: 'editSpin 1s linear infinite' }} /> Compressing…</>
-                    : 'Compress & Use'}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
 
         <style>{`
           @keyframes editSpin {

@@ -12,7 +12,8 @@ import { FaFacebook, FaInstagram, FaLinkedinIn, FaYoutube } from 'react-icons/fa
 import { FaXTwitter } from 'react-icons/fa6'
 import AddMembersModal from './AddMembersModal'
 import RemainingDaysModal from './RemainingDaysModal'
-import { updateRestaurant, uploadDataUrlToStorage, getTeamMembers, getRestaurantById, fetchNIELimits, subscribeToNIELimits } from '../lib/db'
+import { updateRestaurant, uploadDataUrlToStorage, getTeamMembers, getRestaurantById } from '../lib/db'
+import { processImageFile, isAcceptedImageType } from '../lib/processImage'
 
 const TEAM_ACCENT_START = '#6366F1'
 const TEAM_ACCENT_END   = '#8B5CF6'
@@ -93,67 +94,6 @@ function InlineMemberRow({ member, isLast }) {
 
 const LIME = '#A8E63D'
 
-function fileToBase64(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = e => resolve(e.target.result)
-    reader.onerror = reject
-    reader.readAsDataURL(file)
-  })
-}
-
-// Single yield to keep the UI alive without adding loop overhead.
-const yieldFrame = () => new Promise(r => setTimeout(r, 0))
-
-// Fast single-pass compression — no binary search loop.
-// Pre-scales the canvas so 2–3 fixed quality values cover every case.
-// Works instantly on any device including low-end phones.
-function compressToLimit(dataUrl, maxKB) {
-  return new Promise(resolve => {
-    const img = new window.Image()
-    img.onload = async () => {
-      try {
-        const maxBytes = maxKB * 1024
-        const rawBytes = dataUrl.length * 0.75
-
-        // Scale so the canvas is ~1.3× target — quality 0.82 almost always fits.
-        const ratio = (maxBytes * 1.3) / rawBytes
-        let scale = Math.min(1, Math.sqrt(ratio))
-        scale = Math.max(0.03, scale)
-
-        const w = Math.max(1, Math.round(img.naturalWidth  * scale))
-        const h = Math.max(1, Math.round(img.naturalHeight * scale))
-
-        // One yield before the heavy drawImage — page stays alive
-        await yieldFrame()
-
-        const canvas = document.createElement('canvas')
-        canvas.width = w; canvas.height = h
-        const ctx = canvas.getContext('2d')
-        ctx.drawImage(img, 0, 0, w, h)
-
-        // Try 3 fixed quality levels — instant, no loop
-        for (const q of [0.82, 0.60, 0.38]) {
-          const out = canvas.toDataURL('image/jpeg', q)
-          if (out.length * 0.75 <= maxBytes) return resolve(out)
-        }
-
-        // Rare fallback: halve canvas once and try again
-        await yieldFrame()
-        canvas.width  = Math.max(1, Math.round(w * 0.5))
-        canvas.height = Math.max(1, Math.round(h * 0.5))
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
-        resolve(canvas.toDataURL('image/jpeg', 0.72))
-      } catch (e) {
-        console.error('compress error', e)
-        resolve(null)
-      }
-    }
-    img.onerror = () => resolve(null)
-    img.src = dataUrl
-  })
-}
-
 const MAX_GALLERY = 10
 
 function loadContact(restaurantId) {
@@ -195,19 +135,6 @@ export default function ProfileSlide({
   const [uploadError, setUploadError] = useState('')
   const [uploadSuccess, setUploadSuccess] = useState(false)
   const [previewUrl, setPreviewUrl] = useState(logoUrl || '')
-
-  // NIE IQE1 — seeded from Supabase on mount, kept live via Realtime push
-  const [nieLimits, setNieLimits] = useState({ minKB: 60, maxKB: 200 })
-  useEffect(() => {
-    fetchNIELimits().then(setNieLimits).catch(() => {})
-    return subscribeToNIELimits(setNieLimits)
-  }, [])
-
-  // Logo compression popup state
-  const logoPendingSrcRef = useRef(null)
-  const [logoPendingPreview, setLogoPendingPreview] = useState(null)
-  const [logoCompressModal, setLogoCompressModal] = useState(false)
-  const [logoCompressing, setLogoCompressing] = useState(false)
 
   // Gallery state
   const [galleryError, setGalleryError] = useState('')
@@ -528,15 +455,7 @@ export default function ProfileSlide({
 
     setGalleryCompressing(true)
     try {
-      const results = await Promise.all(toProcess.map(async f => {
-        const src = await fileToBase64(f)
-        // Auto-compress anything over 200 KB; accept smaller images as-is
-        if (f.size / 1024 > 200) {
-          const compressed = await compressToLimit(src, 200)
-          return compressed || src
-        }
-        return src
-      }))
+      const results = await Promise.all(toProcess.map(f => processImageFile(f)))
 
       // Filter out any null/failed results
       const good = results.filter(Boolean)
@@ -640,48 +559,20 @@ export default function ProfileSlide({
   useEffect(() => { if (editingContact) setTimeout(() => phoneInputRef.current?.focus(), 60) }, [editingContact])
   useEffect(() => { if (editingLocation) setTimeout(() => addressRef.current?.focus(), 60) }, [editingLocation])
 
-  function handleLogoUpload(file) {
-    if (!file) return
-    const allowed = ['image/jpeg', 'image/png', 'image/webp']
-    if (!allowed.includes(file.type)) { setUploadError('Only JPG, PNG, or WEBP images are allowed.'); return }
-    setUploadError(''); setUploadSuccess(false)
-
-    const sizeKB = file.size / 1024
-    if (sizeKB < nieLimits.minKB) { setUploadError(`Image quality too low. Please upload a better image (min ${nieLimits.minKB} KB).`); return }
-
-    const reader = new FileReader()
-    reader.onload = ev => {
-      const src = ev.target.result
-      if (sizeKB > nieLimits.maxKB) {
-        logoPendingSrcRef.current = src
-        setLogoPendingPreview(src)
-        setLogoCompressModal(true)
-      } else {
-        saveLogo(src)
-      }
+  async function handleLogoUpload(file) {
+    if (!file || !isAcceptedImageType(file)) {
+      setUploadError('Please upload a valid image (JPG, PNG, WEBP, HEIC).')
+      return
     }
-    reader.readAsDataURL(file)
-  }
-
-  async function handleLogoCompressConfirm() {
-    const src = logoPendingSrcRef.current
-    if (!src) return
-    setLogoCompressing(true)
-    let result = null
+    setUploadError(''); setUploadSuccess(false); setLogoCompressing(true)
     try {
-      result = await compressToLimit(src, nieLimits.maxKB)
-    } catch {}
-    logoPendingSrcRef.current = null
-    setLogoPendingPreview(null)
-    setLogoCompressing(false)
-    setLogoCompressModal(false)
-    if (result) saveLogo(result)
-  }
-
-  function handleLogoCompressCancel() {
-    logoPendingSrcRef.current = null
-    setLogoPendingPreview(null)
-    setLogoCompressModal(false)
+      const dataUrl = await processImageFile(file)
+      if (dataUrl) await saveLogo(dataUrl)
+    } catch {
+      setUploadError('Could not process image. Please try a different file.')
+    } finally {
+      setLogoCompressing(false)
+    }
   }
 
   async function saveLogo(base64) {
@@ -893,7 +784,7 @@ export default function ProfileSlide({
 
     return (
       <>
-        <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp"
+        <input ref={fileInputRef} type="file" accept="image/*"
           style={{ display: 'none' }}
           onChange={e => { const f = e.target.files?.[0]; if (f) handleLogoUpload(f); e.target.value = '' }}
         />
@@ -1772,22 +1663,6 @@ export default function ProfileSlide({
           endDate={subscriptionInfo.endDate} daysLeft={subscriptionInfo.daysLeft} isActive={true}
         />
 
-        {logoCompressModal && (
-          <div style={{ position: 'fixed', inset: 0, zIndex: 2000, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-            <div style={{ background: '#fff', borderRadius: '22px', padding: '26px 24px', maxWidth: '340px', width: '100%', boxShadow: '0 24px 60px rgba(0,0,0,0.4)' }}>
-              {logoPendingPreview && <img src={logoPendingPreview} alt="preview" style={{ width: '80px', height: '80px', borderRadius: '12px', objectFit: 'cover', display: 'block', margin: '0 auto 16px', border: '2px solid #F0F0F8' }} />}
-              <div style={{ fontWeight: 800, fontSize: '16px', color: '#111', textAlign: 'center', marginBottom: '6px' }}>Image Too Large</div>
-              <div style={{ fontSize: '13px', color: '#666', textAlign: 'center', lineHeight: 1.5, marginBottom: '20px' }}>This image exceeds the 200 KB limit. Click Confirm to automatically compress it.</div>
-              <div style={{ display: 'flex', gap: '10px' }}>
-                <button onClick={handleLogoCompressCancel} disabled={logoCompressing} style={{ flex: 1, padding: '12px', borderRadius: '12px', background: '#F0F0F5', border: 'none', color: '#555', fontSize: '13px', fontWeight: 700, cursor: logoCompressing ? 'not-allowed' : 'pointer' }}>Cancel</button>
-                <button onClick={handleLogoCompressConfirm} disabled={logoCompressing} style={{ flex: 2, padding: '12px', borderRadius: '12px', background: logoCompressing ? '#94a3b8' : LIME, border: 'none', color: '#111', fontSize: '13px', fontWeight: 800, cursor: logoCompressing ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
-                  {logoCompressing ? <><Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> Compressing…</> : 'Confirm'}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
         {editingName && (
           <EditFieldModal title="Restaurant Name" icon={<Store size={22} strokeWidth={1.4} />} onClose={() => { setEditingName(false); setNameError(''); setNameInput(restaurantName || '') }}>
             <input ref={nameInputRef} value={nameInput} onChange={e => { setNameInput(e.target.value); setNameError('') }} onKeyDown={e => { if (e.key === 'Enter') handleSaveName(); if (e.key === 'Escape') { setEditingName(false); setNameError('') } }} placeholder="Enter restaurant name…" style={inputStyle(nameError)} onFocus={e => e.target.style.borderColor = LIME} onBlur={e => e.target.style.borderColor = nameError ? '#FECACA' : '#E0E0E8'} />
@@ -1953,7 +1828,7 @@ export default function ProfileSlide({
 
   return (
     <>
-      <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp"
+      <input ref={fileInputRef} type="file" accept="image/*"
         style={{ display: 'none' }}
         onChange={e => { const f = e.target.files?.[0]; if (f) handleLogoUpload(f); e.target.value = '' }}
       />
@@ -2394,64 +2269,6 @@ export default function ProfileSlide({
           </div>
         </div>,
         document.body
-      )}
-
-      {/* Logo compression modal */}
-      {logoCompressModal && (
-        <div style={{
-          position: 'fixed', inset: 0, zIndex: 2000,
-          background: 'rgba(0,0,0,0.5)',
-          backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          padding: '20px',
-        }}>
-          <div style={{
-            background: '#fff', borderRadius: '22px', padding: '26px 24px',
-            maxWidth: '340px', width: '100%',
-            boxShadow: '0 24px 60px rgba(0,0,0,0.4)',
-          }}>
-            {logoPendingPreview && (
-              <img src={logoPendingPreview} alt="preview" style={{
-                width: '80px', height: '80px', borderRadius: '12px',
-                objectFit: 'cover', display: 'block', margin: '0 auto 16px',
-                border: '2px solid #F0F0F8',
-              }} />
-            )}
-            <div style={{ fontWeight: 800, fontSize: '16px', color: '#111', textAlign: 'center', marginBottom: '6px' }}>
-              Image Too Large
-            </div>
-            <div style={{ fontSize: '13px', color: '#666', textAlign: 'center', lineHeight: 1.5, marginBottom: '20px' }}>
-              This image exceeds the 200 KB limit. Click Confirm to automatically compress it.
-            </div>
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <button
-                onClick={handleLogoCompressCancel}
-                disabled={logoCompressing}
-                style={{
-                  flex: 1, padding: '12px', borderRadius: '12px',
-                  background: '#F0F0F5', border: 'none',
-                  color: '#555', fontSize: '13px', fontWeight: 700,
-                  cursor: logoCompressing ? 'not-allowed' : 'pointer',
-                }}
-              >Cancel</button>
-              <button
-                onClick={handleLogoCompressConfirm}
-                disabled={logoCompressing}
-                style={{
-                  flex: 2, padding: '12px', borderRadius: '12px',
-                  background: logoCompressing ? '#94a3b8' : LIME,
-                  border: 'none', color: '#111', fontSize: '13px', fontWeight: 800,
-                  cursor: logoCompressing ? 'not-allowed' : 'pointer',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
-                }}
-              >
-                {logoCompressing
-                  ? <><Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> Compressing…</>
-                  : 'Confirm'}
-              </button>
-            </div>
-          </div>
-        </div>
       )}
 
       {/* RESTAURANT NAME modal */}

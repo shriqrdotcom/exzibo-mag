@@ -6,8 +6,8 @@ import {
   ChefHat, Users, Zap, Bell
 } from 'lucide-react'
 import PlanSelector from '../components/PlanSelector'
-import { createRestaurant, getRestaurants, updateRestaurant, generateRestaurantUID, fetchNIELimits } from '../lib/db'
-import { supabase } from '../lib/supabase'
+import { createRestaurant, getRestaurants, updateRestaurant, generateRestaurantUID, uploadToStorage } from '../lib/db'
+import { processImageFile, isAcceptedImageType } from '../lib/processImage'
 
 export default function CreateWebsite() {
   const navigate = useNavigate()
@@ -48,12 +48,6 @@ export default function CreateWebsite() {
   const [logoSizeError, setLogoSizeError] = useState('')
   const [imgSizeError, setImgSizeError] = useState('')
 
-  // NIE IQE1 — live limits fetched from Supabase on mount
-  const [nieLimits, setNieLimits] = useState({ minKB: 60, maxKB: 200 })
-  useEffect(() => {
-    fetchNIELimits().then(setNieLimits).catch(() => {})
-  }, [])
-
   const logoInputRef = useRef()
   const imgInputRef = useRef()
 
@@ -75,35 +69,15 @@ export default function CreateWebsite() {
   const removeTable = t => set('tableNumbers', form.tableNumbers.filter(x => x !== t))
 
   const handleLogoFile = file => {
-    if (!file || !file.type.startsWith('image/')) return
+    if (!file || !isAcceptedImageType(file)) return
     setLogoSizeError('')
-    const sizeKB = file.size / 1024
-    if (sizeKB < nieLimits.minKB) {
-      setLogoSizeError(`Logo image too small — minimum ${nieLimits.minKB} KB required.`)
-      return
-    }
-    if (sizeKB > nieLimits.maxKB) {
-      setLogoSizeError(`Logo image too large — maximum ${nieLimits.maxKB} KB allowed. Please compress before uploading.`)
-      return
-    }
-    const url = URL.createObjectURL(file)
-    set('logo', { file, url })
+    set('logo', { file, url: URL.createObjectURL(file) })
   }
 
   const handleImgFiles = files => {
     setImgSizeError('')
-    const { minKB, maxKB } = nieLimits
-    const valid = []
-    const skipped = []
-    Array.from(files).forEach(f => {
-      if (!f.type.startsWith('image/')) return
-      const sizeKB = f.size / 1024
-      if (sizeKB < minKB) { skipped.push(`${f.name} (too small)`); return }
-      if (sizeKB > maxKB) { skipped.push(`${f.name} (too large)`); return }
-      valid.push(f)
-    })
-    if (skipped.length) setImgSizeError(`Skipped ${skipped.length} image(s) outside ${minKB}–${maxKB} KB range.`)
-    if (!valid.length) return
+    const valid = Array.from(files).filter(f => isAcceptedImageType(f))
+    if (!valid.length) { setImgSizeError('No valid image files found.'); return }
     const mapped = valid.map(f => ({ file: f, url: URL.createObjectURL(f) }))
     set('uploadedImages', [...form.uploadedImages, ...mapped])
   }
@@ -139,24 +113,6 @@ export default function CreateWebsite() {
     return uid
   }
 
-  const fileToBase64 = (file) => new Promise((resolve) => {
-    const reader = new FileReader()
-    reader.onload = (e) => resolve(e.target.result)
-    reader.readAsDataURL(file)
-  })
-
-  const uploadImageToStorage = async (file, uid, name) => {
-    const ext = file.name?.split('.').pop() || 'jpg'
-    const path = `${uid}/${name}.${ext}`
-    const { error } = await supabase.storage
-      .from('restaurant-images')
-      .upload(path, file, { upsert: true })
-    if (error) throw error
-    const { data: { publicUrl } } = supabase.storage
-      .from('restaurant-images')
-      .getPublicUrl(path)
-    return publicUrl
-  }
 
   const handleGenerate = async () => {
     if (!validate()) return
@@ -221,14 +177,14 @@ export default function CreateWebsite() {
         for (let i = 0; i < form.uploadedImages.length; i++) {
           const img = form.uploadedImages[i]
           if (img.file) {
-            const url = await uploadImageToStorage(img.file, uid, `image-${i}`)
+            const url = await uploadToStorage(img.file, 'restaurant-images', `${uid}/image-${i}`)
             imageUrls.push(url)
           }
         }
 
         let logoUrl = null
         if (form.logo?.file) {
-          logoUrl = await uploadImageToStorage(form.logo.file, uid, 'logo')
+          logoUrl = await uploadToStorage(form.logo.file, 'restaurant-images', `${uid}/logo`)
         }
 
         if (imageUrls.length > 0 || logoUrl) {

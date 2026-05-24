@@ -4,6 +4,7 @@ import { getRouteConfig } from '../lib/routeConfig'
 import { useAnalytics, notifyAnalyticsUpdate } from '../context/AnalyticsContext'
 import { useRole } from '../context/RoleContext'
 import { getRestaurantById, getRestaurants, getOrders, getBookings, updateOrderStatus, updateBookingStatus, getMenuCategories, getMenuItems, insertMenuItem, updateMenuItem, deleteMenuItem, upsertMenuCategory, deleteMenuCategory, upsertMenuItems, uploadMenuImage, updateRestaurant, uploadToStorage, uploadDataUrlToStorage, toggleMenuItemPublish, normalizeOrder, normalizeBooking, sendMessage, getLatestSmsNotification, upsertSmsNotification, fetchActiveNotification, publishActiveNotification, confirmActiveNotification, insertNotificationHistory, fetchNotificationHistory, fetchNIELimits, subscribeToNIELimits } from '../lib/db'
+import { processImageFile, isAcceptedImageType } from '../lib/processImage'
 import { supabase } from '../lib/supabase'
 import notificationIconImg from '@assets/image_1777373928129.png'
 import {
@@ -3068,9 +3069,8 @@ function SettingsPanel({ draft, setDraft, accentStart, accentEnd, onSave, saved,
 
   async function handleCarouselFiles(files) {
     setGalleryError(''); setGallerySuccess(false)
-    const allowed = ['image/jpeg', 'image/png', 'image/webp']
-    const valid = Array.from(files).filter(f => allowed.includes(f.type))
-    if (!valid.length) { setGalleryError('Only JPG, PNG, or WEBP images are supported.'); return }
+    const valid = Array.from(files).filter(f => isAcceptedImageType(f))
+    if (!valid.length) { setGalleryError('Only image files are supported (JPG, PNG, WEBP, HEIC).'); return }
     const currentCount = carouselImages.length
     if (currentCount >= MAX_GALLERY) { setGalleryError(`Maximum ${MAX_GALLERY} images allowed.`); return }
     const canAdd = MAX_GALLERY - currentCount
@@ -3083,9 +3083,7 @@ function SettingsPanel({ draft, setDraft, accentStart, accentEnd, onSave, saved,
           try { return await uploadToStorage(f, 'restaurant-images', `${restaurantId}/carousel`) }
           catch (e) { console.warn('[carousel] Storage upload failed, using base64:', e.message) }
         }
-        const src = await fileToBase64(f)
-        if (f.size / 1024 > 200) { const compressed = await compressToLimit(src, 200); return compressed || src }
-        return src
+        return await processImageFile(f)
       }))
       const good = results.filter(Boolean)
       if (!good.length) { setGalleryError('Failed to process images.'); return }
@@ -3143,11 +3141,12 @@ function SettingsPanel({ draft, setDraft, accentStart, accentEnd, onSave, saved,
     } catch {}
   }, [restaurantId])
 
-  const handleImageFile = (file) => {
-    if (!file || !file.type.startsWith('image/')) return
-    const reader = new FileReader()
-    reader.onload = (e) => setAboutImage(e.target.result)
-    reader.readAsDataURL(file)
+  const handleImageFile = async (file) => {
+    if (!file || !isAcceptedImageType(file)) return
+    try {
+      const dataUrl = await processImageFile(file)
+      if (dataUrl) setAboutImage(dataUrl)
+    } catch { /* silently fall back — uploadDataUrlToStorage still compresses on save */ }
   }
   const [coupons, setCoupons] = useState(() => {
     try { return JSON.parse(localStorage.getItem(couponStorageKey) || '[]') } catch { return [] }
@@ -3236,7 +3235,7 @@ function SettingsPanel({ draft, setDraft, accentStart, accentEnd, onSave, saved,
       <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
 
         {/* Image Gallery */}
-        <input ref={carouselInputRef} type="file" accept="image/jpeg,image/png,image/webp" multiple style={{ display: 'none' }} onChange={e => { if (e.target.files?.length) handleCarouselFiles(e.target.files); e.target.value = '' }} />
+        <input ref={carouselInputRef} type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={e => { if (e.target.files?.length) handleCarouselFiles(e.target.files); e.target.value = '' }} />
         <div style={cardStyle}>
           <div style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#94a3b8', marginBottom: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span>Image Gallery ({carouselImages.length}/{MAX_GALLERY})</span>
@@ -4138,171 +4137,33 @@ const DEFAULT_CAT_FILTERS = {
   ],
 }
 
-function fileToBase64(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = e => resolve(e.target.result)
-    reader.onerror = reject
-    reader.readAsDataURL(file)
-  })
-}
-
-// Single yield to keep the UI alive without adding loop overhead.
-const yieldFrame = () => new Promise(r => setTimeout(r, 0))
-
-// ── NIE IQE1 — reads the active size limits set in Dashboard › Image Compressor ──
-// Shared by every upload area in AdminDashboard so one settings change applies everywhere.
-const NIE_STORAGE_KEY = 'exzibo_img_compressor_limits'
-const NIE_DEFAULTS    = { minKB: 60, maxKB: 200 }
-
-function loadNIELimits() {
-  try {
-    const raw = localStorage.getItem(NIE_STORAGE_KEY)
-    if (!raw) return NIE_DEFAULTS
-    const p   = JSON.parse(raw)
-    const min = parseInt(p.minKB, 10)
-    const max = parseInt(p.maxKB, 10)
-    if (isNaN(min) || isNaN(max) || min < 1 || max <= min) return NIE_DEFAULTS
-    return { minKB: min, maxKB: max }
-  } catch { return NIE_DEFAULTS }
-}
-
-// Fast single-pass compression:
-// Pre-scales the canvas to ~130% of target size in one draw,
-// then tries 3 fixed quality values — no loop, no binary search.
-// Completes in 2-4 toDataURL calls regardless of image size.
-async function compressToLimit(dataUrl, maxKB) {
-  return new Promise((resolve) => {
-    const img = new window.Image()
-    img.onload = async () => {
-      try {
-        const maxBytes = maxKB * 1024
-        const rawBytes = dataUrl.length * 0.75
-
-        // Scale dimensions so uncompressed canvas is ~1.3× target byte budget.
-        // The extra headroom means quality 0.82 will almost always land under limit.
-        const ratio = (maxBytes * 1.3) / rawBytes
-        let scale = Math.min(1, Math.sqrt(ratio))
-        scale = Math.max(0.03, scale)
-
-        const w = Math.max(1, Math.round(img.naturalWidth  * scale))
-        const h = Math.max(1, Math.round(img.naturalHeight * scale))
-
-        // One yield before the heavy draw — keeps page responsive
-        await yieldFrame()
-
-        const canvas = document.createElement('canvas')
-        canvas.width = w; canvas.height = h
-        const ctx = canvas.getContext('2d')
-        ctx.drawImage(img, 0, 0, w, h)
-
-        // Try 3 quality levels — no loop, instant on any device
-        for (const q of [0.82, 0.60, 0.38]) {
-          const out = canvas.toDataURL('image/jpeg', q)
-          if (out.length * 0.75 <= maxBytes) return resolve(out)
-        }
-
-        // Rare fallback: halve canvas and try once more
-        await yieldFrame()
-        canvas.width  = Math.max(1, Math.round(w * 0.5))
-        canvas.height = Math.max(1, Math.round(h * 0.5))
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
-        resolve(canvas.toDataURL('image/jpeg', 0.72))
-      } catch (e) {
-        console.error('compress error', e)
-        resolve(null)
-      }
-    }
-    img.onerror = () => resolve(null)
-    img.src = dataUrl
-  })
-}
-
 function ImageUploadField({ value, onChange, accentStart }) {
-  const navigate = useNavigate()
   const inputRef = React.useRef(null)
   const onChangeRef = React.useRef(onChange)
   React.useEffect(() => { onChangeRef.current = onChange }, [onChange])
 
-  const [sizeError, setSizeError] = React.useState('')
-  const [compressModal, setCompressModal] = React.useState(false)
-  const pendingSrcRef = React.useRef(null)
-  const [pendingPreview, setPendingPreview] = React.useState(null)
   const [compressing, setCompressing] = React.useState(false)
-  const [compressedResult, setCompressedResult] = React.useState(null)
+  const [uploadError, setUploadError] = React.useState('')
 
-  // Live NIE IQE1 limits — seeded from Supabase on mount, kept in sync via
-  // Realtime push so any Dashboard "Save Limits" propagates to every open panel.
-  const [nieLimits, setNieLimits] = React.useState(() => loadNIELimits())
-  React.useEffect(() => {
-    fetchNIELimits().then(lim => setNieLimits(lim)).catch(() => {})
-    const unsubNIE = subscribeToNIELimits(lim => setNieLimits(lim))
-    function sync() { setNieLimits(loadNIELimits()) }
-    window.addEventListener('focus', sync)
-    window.addEventListener('storage', sync)
-    return () => { unsubNIE(); window.removeEventListener('focus', sync); window.removeEventListener('storage', sync) }
-  }, [])
-
-  // Deliver the compressed image to the parent AFTER the modal has fully closed,
-  // so the parent state update never races with the modal's own state updates.
-  React.useEffect(() => {
-    if (compressedResult) {
-      onChangeRef.current(compressedResult)
-      setCompressedResult(null)
-    }
-  }, [compressedResult])
-
-  function handleFileSelect(e) {
+  async function handleFileSelect(e) {
     const file = e.target.files?.[0]
     if (!file) return
     e.target.value = ''
-    if (!file.type.startsWith('image/')) return
-    setSizeError('')
-    const { minKB, maxKB } = loadNIELimits()
-
-    const sizeKB = file.size / 1024
-    if (sizeKB < minKB) {
-      setSizeError(`Image quality too low. Minimum size is ${minKB} KB.`)
+    if (!isAcceptedImageType(file)) {
+      setUploadError('Please upload a valid image (JPG, PNG, WEBP, HEIC).')
       return
     }
-
-    const reader = new FileReader()
-    reader.onload = (ev) => {
-      if (sizeKB > maxKB) {
-        pendingSrcRef.current = ev.target.result
-        setPendingPreview(ev.target.result)
-        setCompressModal(true)
-      } else {
-        onChangeRef.current(ev.target.result)
-      }
-    }
-    reader.readAsDataURL(file)
-  }
-
-  async function handleCompressConfirm() {
-    const src = pendingSrcRef.current
-    if (!src) return
+    setUploadError('')
     setCompressing(true)
-    let result = null
-    const { maxKB } = loadNIELimits()
     try {
-      result = await compressToLimit(src, maxKB)
+      const dataUrl = await processImageFile(file)
+      if (dataUrl) onChangeRef.current(dataUrl)
     } catch (err) {
-      console.error('Compression failed:', err)
+      console.error('[ImageUploadField] compression error:', err)
+      setUploadError('Could not process image. Please try a different file.')
+    } finally {
+      setCompressing(false)
     }
-    // Always clear modal state first so the modal unmounts cleanly.
-    pendingSrcRef.current = null
-    setPendingPreview(null)
-    setCompressing(false)
-    setCompressModal(false)
-    // Deliver via effect so it fires after the modal-close render cycle.
-    if (result) setCompressedResult(result)
-  }
-
-  function handleCompressCancel() {
-    pendingSrcRef.current = null
-    setPendingPreview(null)
-    setCompressModal(false)
   }
 
   return (
@@ -4315,114 +4176,6 @@ function ImageUploadField({ value, onChange, accentStart }) {
         onChange={handleFileSelect}
       />
 
-      {/* ── IMAGE TOO LARGE MODAL ── */}
-      {compressModal && (
-        <div
-          style={{
-            position: 'fixed', inset: 0, zIndex: 2000,
-            backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
-            background: 'rgba(0,0,0,0.55)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            padding: '20px',
-          }}
-        >
-          <div style={{
-            background: '#fff', borderRadius: '22px',
-            width: '100%', maxWidth: '380px',
-            padding: '28px 24px',
-            boxShadow: '0 24px 64px rgba(0,0,0,0.3)',
-          }}>
-            {/* Icon */}
-            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
-              <div style={{
-                width: '56px', height: '56px', borderRadius: '16px',
-                background: '#FEF3C7',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: '26px',
-              }}>⚠️</div>
-            </div>
-
-            {/* Title */}
-            <div style={{ textAlign: 'center', fontSize: '17px', fontWeight: 900, color: '#0f172a', marginBottom: '8px' }}>
-              Image Too Large
-            </div>
-            <div style={{ textAlign: 'center', fontSize: '13px', color: '#64748b', fontWeight: 500, lineHeight: 1.5, marginBottom: '24px' }}>
-              This image exceeds the {nieLimits.maxKB} KB limit set by NIE IQE1. Click Confirm to automatically compress it.
-            </div>
-
-            {/* Preview thumbnail */}
-            {pendingPreview && (
-              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '20px' }}>
-                <img
-                  src={pendingPreview}
-                  alt="preview"
-                  style={{
-                    width: '80px', height: '80px', borderRadius: '14px',
-                    objectFit: 'cover', border: '2px solid #e2e8f0',
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                  }}
-                />
-              </div>
-            )}
-
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <button
-                type="button"
-                onClick={handleCompressCancel}
-                disabled={compressing}
-                style={{
-                  flex: 1, padding: '13px',
-                  background: '#f1f5f9', border: 'none',
-                  borderRadius: '13px', color: '#374151',
-                  fontSize: '13px', fontWeight: 700,
-                  cursor: compressing ? 'not-allowed' : 'pointer',
-                  fontFamily: 'inherit', opacity: compressing ? 0.6 : 1,
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleCompressConfirm}
-                disabled={compressing}
-                style={{
-                  flex: 2, padding: '13px',
-                  background: compressing
-                    ? '#94a3b8'
-                    : `linear-gradient(135deg, ${accentStart}, ${accentStart}cc)`,
-                  border: 'none', borderRadius: '13px',
-                  color: '#fff', fontSize: '13px', fontWeight: 800,
-                  cursor: compressing ? 'not-allowed' : 'pointer',
-                  fontFamily: 'inherit',
-                  boxShadow: compressing ? 'none' : `0 6px 20px ${accentStart}40`,
-                  letterSpacing: '0.01em',
-                }}
-              >
-                {compressing ? 'Compressing…' : 'Confirm'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── FIELD DISPLAY ── */}
-      <div style={{ marginBottom: '8px' }}>
-        <button
-          type="button"
-          onClick={e => { e.stopPropagation(); navigate('/dashboard?section=image-compressor') }}
-          title="Open Image Compressor — NIE IQE1"
-          style={{
-            display: 'inline-flex', alignItems: 'center', gap: '5px',
-            padding: '3px 9px', borderRadius: '50px',
-            background: `${accentStart}10`, border: `1px solid ${accentStart}35`,
-            fontSize: '9px', fontWeight: 800, color: accentStart,
-            letterSpacing: '0.14em', fontFamily: 'monospace',
-            cursor: 'pointer', outline: 'none',
-          }}
-        >
-          ◈ NIE IQE1 ↗
-        </button>
-      </div>
       {value ? (
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <img
@@ -4439,21 +4192,22 @@ function ImageUploadField({ value, onChange, accentStart }) {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1 }}>
             <button
               type="button"
-              onClick={() => { setSizeError(''); inputRef.current?.click() }}
+              onClick={() => { setUploadError(''); inputRef.current?.click() }}
+              disabled={compressing}
               style={{
                 padding: '8px 14px',
                 background: `${accentStart}12`,
                 border: `1.5px solid ${accentStart}30`,
-                borderRadius: '50px', cursor: 'pointer',
+                borderRadius: '50px', cursor: compressing ? 'wait' : 'pointer',
                 fontSize: '11px', fontWeight: 800, color: accentStart,
                 letterSpacing: '0.06em',
               }}
             >
-              CHANGE PHOTO
+              {compressing ? 'PROCESSING…' : 'CHANGE PHOTO'}
             </button>
             <button
               type="button"
-              onClick={() => { onChange(null); setSizeError('') }}
+              onClick={() => { onChange(null); setUploadError('') }}
               style={{
                 padding: '6px 14px',
                 background: 'transparent',
@@ -4470,41 +4224,38 @@ function ImageUploadField({ value, onChange, accentStart }) {
         <div>
           <button
             type="button"
-            onClick={() => { setSizeError(''); inputRef.current?.click() }}
+            onClick={() => { setUploadError(''); inputRef.current?.click() }}
+            disabled={compressing}
             style={{
               width: '100%', padding: '18px',
-              background: sizeError ? '#FEF2F2' : 'rgba(248,250,252,0.9)',
-              border: `1.5px dashed ${sizeError ? '#FECACA' : '#CBD5E1'}`,
-              borderRadius: '14px', cursor: 'pointer',
+              background: uploadError ? '#FEF2F2' : 'rgba(248,250,252,0.9)',
+              border: `1.5px dashed ${uploadError ? '#FECACA' : '#CBD5E1'}`,
+              borderRadius: '14px', cursor: compressing ? 'wait' : 'pointer',
               display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px',
               transition: 'border-color 0.2s, background 0.2s',
             }}
             onMouseEnter={e => {
-              if (!sizeError) {
+              if (!uploadError && !compressing) {
                 e.currentTarget.style.borderColor = accentStart
                 e.currentTarget.style.background = `${accentStart}08`
               }
             }}
             onMouseLeave={e => {
-              e.currentTarget.style.borderColor = sizeError ? '#FECACA' : '#CBD5E1'
-              e.currentTarget.style.background = sizeError ? '#FEF2F2' : 'rgba(248,250,252,0.9)'
+              e.currentTarget.style.borderColor = uploadError ? '#FECACA' : '#CBD5E1'
+              e.currentTarget.style.background = uploadError ? '#FEF2F2' : 'rgba(248,250,252,0.9)'
             }}
           >
-            <span style={{ fontSize: '24px' }}>📷</span>
-            <span style={{ fontSize: '12px', fontWeight: 700, color: sizeError ? '#EF4444' : '#64748B', letterSpacing: '0.04em' }}>
-              TAP TO UPLOAD PHOTO
+            <span style={{ fontSize: '24px' }}>{compressing ? '⏳' : '📷'}</span>
+            <span style={{ fontSize: '12px', fontWeight: 700, color: uploadError ? '#EF4444' : '#64748B', letterSpacing: '0.04em' }}>
+              {compressing ? 'COMPRESSING…' : 'TAP TO UPLOAD PHOTO'}
             </span>
             <span style={{ fontSize: '10px', color: '#94A3B8', fontWeight: 500 }}>
               JPG, PNG, WEBP supported
             </span>
           </button>
-          {sizeError ? (
+          {uploadError && (
             <div style={{ fontSize: '11px', color: '#EF4444', fontWeight: 600, textAlign: 'center', marginTop: '6px' }}>
-              ⚠ {sizeError}
-            </div>
-          ) : (
-            <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 500, textAlign: 'center', marginTop: '6px' }}>
-              NIE IQE1 · Accepted: {nieLimits.minKB} KB – {nieLimits.maxKB} KB
+              ⚠ {uploadError}
             </div>
           )}
         </div>
@@ -4973,22 +4724,11 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
     const file = e.target.files?.[0]
     if (!file) return
     e.target.value = ''
-    const { minKB, maxKB } = await fetchNIELimits()
-    const sizeKB = file.size / 1024
-    if (sizeKB < minKB) {
-      showToast(`Image too small — NIE IQE1 minimum is ${minKB} KB.`)
-      return
-    }
-    const reader = new FileReader()
-    reader.onload = async ev => {
-      let dataUrl = ev.target.result
-      if (sizeKB > maxKB) {
-        const compressed = await compressToLimit(dataUrl, maxKB)
-        if (compressed) dataUrl = compressed
-      }
-      setNewCat(p => ({ ...p, image: dataUrl }))
-    }
-    reader.readAsDataURL(file)
+    if (!isAcceptedImageType(file)) { showToast('Please upload a valid image (JPG, PNG, WEBP).'); return }
+    try {
+      const dataUrl = await processImageFile(file)
+      if (dataUrl) setNewCat(p => ({ ...p, image: dataUrl }))
+    } catch { showToast('Could not process image. Please try another file.') }
   }
 
   function openEditIcon(catId) {
@@ -5010,22 +4750,11 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
     const file = e.target.files?.[0]
     if (!file) return
     e.target.value = ''
-    const { minKB, maxKB } = await fetchNIELimits()
-    const sizeKB = file.size / 1024
-    if (sizeKB < minKB) {
-      showToast(`Image too small — NIE IQE1 minimum is ${minKB} KB.`)
-      return
-    }
-    const reader = new FileReader()
-    reader.onload = async ev => {
-      let dataUrl = ev.target.result
-      if (sizeKB > maxKB) {
-        const compressed = await compressToLimit(dataUrl, maxKB)
-        if (compressed) dataUrl = compressed
-      }
-      setEditIconDraft(p => ({ ...p, image: dataUrl }))
-    }
-    reader.readAsDataURL(file)
+    if (!isAcceptedImageType(file)) { showToast('Please upload a valid image (JPG, PNG, WEBP).'); return }
+    try {
+      const dataUrl = await processImageFile(file)
+      if (dataUrl) setEditIconDraft(p => ({ ...p, image: dataUrl }))
+    } catch { showToast('Could not process image. Please try another file.') }
   }
 
   function saveEditIcon() {
