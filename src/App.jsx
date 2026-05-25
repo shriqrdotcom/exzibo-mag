@@ -27,6 +27,7 @@ import NotificationsPage    from './pages/NotificationsPage'
 import InformationPage      from './pages/InformationPage'
 import DeletedRestaurants   from './pages/DeletedRestaurants'
 import DynamicRoute         from './pages/DynamicRoute'
+import AddRolePage          from './pages/AddRolePage'
 
 // ── Full-screen loader ──────────────────────────────────────────────────────
 function GlobalLoader() {
@@ -238,6 +239,8 @@ function SuperAdminApp() {
         element={<SuperAdminRoute><EditProfile /></SuperAdminRoute>} />
       <Route path="/dynamic-route"
         element={<SuperAdminRoute><DynamicRoute /></SuperAdminRoute>} />
+      <Route path="/add-role"
+        element={<SuperAdminRoute><AddRolePage /></SuperAdminRoute>} />
 
       {/* Menu Studio */}
       <Route path="/master-control"
@@ -425,6 +428,7 @@ function DefaultApp() {
       <Route path="/information"             element={<ProtectedRoute><InformationPage /></ProtectedRoute>} />
       <Route path="/deleted-restaurants"     element={<ProtectedRoute><DeletedRestaurants /></ProtectedRoute>} />
       <Route path="/dynamic-route"           element={<ProtectedRoute><DynamicRoute /></ProtectedRoute>} />
+      <Route path="/add-role"               element={<ProtectedRoute><AddRolePage /></ProtectedRoute>} />
 
       {/* Catch-all */}
       <Route path="*" element={<Navigate to="/" replace />} />
