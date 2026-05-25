@@ -49,3 +49,42 @@ export function extractRoleFromUID(uid) {
 export function hasRoleSuffix(uid) {
   return ROLE_SUFFIX_RE.test(String(uid || '').trim())
 }
+
+/**
+ * Role code map — canonical single source of truth.
+ * key  = internal role key used in RoleContext / team_members.role
+ * code = 3-letter suffix used in generated role UIDs
+ */
+const ROLE_CODE_MAP = {
+  owner:      'OWN',
+  admin:      'ADM',
+  staff:      'STF',
+  menuStudio: 'MNU',
+}
+
+/**
+ * Generate a role-specific UID from a base restaurant UID.
+ *
+ *   generateRoleUID('8910934784', 'owner', 1)  →  '8910934784-OWN-001'
+ *   generateRoleUID('8910934784', 'admin')      →  '8910934784-ADM-001'
+ *   generateRoleUID('8910934784', 'staff', 3)   →  '8910934784-STF-003'
+ *
+ * @param {string|number} mainUID   - The 10-digit restaurant UID
+ * @param {string}        roleKey   - Internal role key ('owner' | 'admin' | 'staff' | 'menuStudio')
+ * @param {number}        [seq=1]   - Sequence number for multiple members of the same role
+ * @returns {string}
+ */
+export function generateRoleUID(mainUID, roleKey, seq = 1) {
+  const base = stripRoleSuffix(String(mainUID || ''))
+  const code = ROLE_CODE_MAP[roleKey] ?? roleKey.toUpperCase().slice(0, 3)
+  const num  = String(Math.max(1, Math.floor(seq))).padStart(3, '0')
+  return `${base}-${code}-${num}`
+}
+
+/**
+ * Return the 3-letter role code for a given internal role key.
+ * Used when you need just the code without building a full UID.
+ */
+export function getRoleCode(roleKey) {
+  return ROLE_CODE_MAP[roleKey] ?? roleKey.toUpperCase().slice(0, 3)
+}

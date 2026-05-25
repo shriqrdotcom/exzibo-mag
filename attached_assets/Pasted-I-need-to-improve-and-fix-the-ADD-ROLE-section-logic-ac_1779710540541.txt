@@ -1,0 +1,139 @@
+I need to improve and fix the "ADD ROLE" section logic across all dashboards.
+
+Current dashboards:
+
+- Owner Dashboard
+- Admin Dashboard
+- Staff Dashboard
+- Menu Studio Dashboard
+
+---
+
+Current Problem:
+
+When I search a restaurant UID in the "ADD ROLE" section,
+example:
+8910934784
+
+the system currently does NOT properly show the default role UIDs inside each role card.
+
+I need the system to automatically generate and display the default role UID for every role type.
+
+---
+
+Required Behavior:
+
+When I search:
+8910934784
+
+The system should automatically display:
+
+OWNER CARD:
+8910934784-OWN-001
+
+ADMIN CARD:
+8910934784-ADM-001
+
+STAFF CARD:
+8910934784-STF-001
+
+These role UIDs should appear visually inside their respective role sections/cards.
+
+---
+
+Important Rules:
+
+1. This display logic should work in ALL dashboards:
+   
+   - Owner Dashboard
+   - Admin Dashboard
+   - Staff Dashboard
+   - Menu Studio
+
+2. The role UID generation must happen dynamically after searching the main restaurant UID.
+
+3. The system should:
+   
+   - take the main UID
+   - append role suffix automatically
+   - display role-specific UID in correct card
+
+4. Role format rules:
+   
+   - OWNER = OWN
+   - ADMIN = ADM
+   - STAFF = STF
+
+5. Default structure:
+   [MAIN_UID]-[ROLE]-001
+
+Example:
+8910934784-OWN-001
+
+---
+
+Frontend Requirements:
+
+Inside each role card:
+
+- show generated role UID
+- show role name
+- show role permissions
+- show Add Role button
+- show View Dashboard button
+
+Example:
+Owner Card:
+Role UID: 8910934784-OWN-001
+
+Admin Card:
+Role UID: 8910934784-ADM-001
+
+Staff Card:
+Role UID: 8910934784-STF-001
+
+---
+
+Backend Requirements:
+
+1. Create automatic UID formatter function.
+
+Example:
+generateRoleUID(mainUID, roleCode)
+
+2. The function should generate:
+   
+   - OWN
+   - ADM
+   - STF
+
+3. Use centralized role mapping logic.
+
+4. Avoid hardcoding role UIDs in frontend.
+
+5. The system should support future multiple staff/admin IDs:
+   Example:
+   
+   - 8910934784-STF-002
+   - 8910934784-STF-003
+
+6. Keep the restaurant connected under the same parent UID.
+
+---
+
+Important:
+
+This role UID display should ONLY appear inside the "ADD ROLE" section.
+
+Outside of this section:
+
+- only show the main 10-digit restaurant UID
+- hide full role UID from profile/UI/public sections
+
+The full role UID should remain internal for:
+
+- authentication
+- permission management
+- backend role identification
+
+Please rebuild the ADD ROLE section logic professionally and dynamically without breaking existing dashboards.

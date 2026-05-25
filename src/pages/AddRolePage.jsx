@@ -6,7 +6,7 @@ import AdminHeader from '../components/AdminHeader'
 import { supabase } from '../lib/supabase'
 import { useRole } from '../context/RoleContext'
 import { openRoleDashboard } from '../lib/navigation'
-import { stripRoleSuffix } from '../lib/uid'
+import { stripRoleSuffix, generateRoleUID } from '../lib/uid'
 
 const ACCENT   = '#E8321A'
 const BG_MAIN  = '#0A0A0A'
@@ -359,8 +359,33 @@ function AssignRoleSection() {
                 </div>
 
                 {/* Description */}
-                <div style={{ fontSize: '12px', color: role.textColor, opacity: 0.7, lineHeight: 1.45, marginBottom: '18px', flex: 1 }}>
+                <div style={{ fontSize: '12px', color: role.textColor, opacity: 0.7, lineHeight: 1.45, marginBottom: '12px', flex: 1 }}>
                   {role.description}
+                </div>
+
+                {/* Role UID pill — only shown inside this section, never outside */}
+                <div style={{
+                  display: 'inline-flex', alignItems: 'center', gap: '6px',
+                  background: 'rgba(0,0,0,0.18)',
+                  border: '1px solid rgba(0,0,0,0.22)',
+                  borderRadius: '8px',
+                  padding: '5px 10px',
+                  marginBottom: '14px',
+                  alignSelf: 'flex-start',
+                }}>
+                  <span style={{
+                    fontSize: '9px', fontWeight: 800, letterSpacing: '0.12em',
+                    color: role.textColor, opacity: 0.55, textTransform: 'uppercase',
+                    whiteSpace: 'nowrap',
+                  }}>
+                    Role UID
+                  </span>
+                  <span style={{
+                    fontSize: '11px', fontWeight: 700, fontFamily: 'monospace',
+                    color: role.textColor, letterSpacing: '0.04em', whiteSpace: 'nowrap',
+                  }}>
+                    {generateRoleUID(restaurant.uid, role.key)}
+                  </span>
                 </div>
 
                 {/* Assigned badge */}
