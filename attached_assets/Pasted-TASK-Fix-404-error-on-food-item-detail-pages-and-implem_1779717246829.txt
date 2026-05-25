@@ -1,0 +1,77 @@
+TASK: Fix 404 error on food item detail pages and implement proper URL routing for the menu system.
+
+---
+
+PROBLEM STATEMENT:
+When a user clicks on any food item in the menu, it throws a 404 error instead of navigating to the food detail page. The detail page is not connected to the backend and the URL routing is not defined.
+
+---
+
+REQUIRED URL STRUCTURE:
+menu.exzibo.online/{restaurant-slug}/{table-number-slug}/{page-slug}/
+
+Real example:
+menu.exzibo.online/flip-flop/4/details
+
+Where:
+- {restaurant-slug} = unique slug for the restaurant (e.g., "flip-flop")
+- {table-number-slug} = table number or slug (e.g., "4")
+- {page-slug} = the food item or page identifier (e.g., "details")
+
+---
+
+WHAT TO BUILD / FIX:
+
+1. ROUTING FIX
+   - Define a new route that matches the pattern: /:restaurantSlug/:tableSlug/:pageSlug
+   - This route must render the FoodDetailPage (or equivalent component)
+   - Ensure the route is registered in the main router file (e.g., App.jsx / routes.jsx)
+   - Do NOT remove or break any existing routes
+
+2. FOOD ITEM CLICK NAVIGATION
+   - When a user clicks on a food item card in the menu listing, navigate to the correct URL using the above pattern
+   - Use the restaurant slug from context/props/URL params already available on the menu page
+   - Use the table number already available from the current session or URL
+   - Use the food item's slug (or ID converted to slug) as the {page-slug}
+   - Use React Router's useNavigate or <Link> — do not use window.location.href
+
+3. FOOD DETAIL PAGE — BACKEND CONNECTION
+   - On the FoodDetailPage, extract all three params using useParams():
+     const { restaurantSlug, tableSlug, pageSlug } = useParams();
+   - Use restaurantSlug to fetch the restaurant record from Supabase
+   - Use pageSlug to fetch the specific food item details from Supabase
+   - Display: food name, description, price, image, category, availability status
+   - Show a loading state while fetching
+   - Show a proper "Item not found" message if the Supabase query returns null
+   - Do NOT hardcode any data
+
+4. SUPABASE QUERIES (use existing Supabase client — do not reinitialise)
+   - Fetch restaurant by slug:
+     supabase.from('restaurants').select('*').eq('slug', restaurantSlug).single()
+   - Fetch food item by its slug or identifier:
+     supabase.from('menu_items').select('*').eq('slug', pageSlug).eq('restaurant_id', restaurant.id).single()
+   - Adjust table/column names to match the existing Supabase schema exactly
+
+5. PRESERVE ALL EXISTING FUNCTIONALITY
+   - Do NOT modify any existing working routes
+   - Do NOT change any existing Supabase queries elsewhere in the project
+   - Do NOT alter the menu listing page logic — only add the click navigation
+   - Do NOT rename or restructure existing components
+   - Only add new code or extend existing files minimally
+
+---
+
+CONSTRAINTS:
+- Use the existing Supabase client instance already configured in the project
+- Use the existing React Router setup — do not reinstall or reconfigure it
+- Match all Supabase table and column names exactly as they exist in the project
+- All navigation must be client-side (SPA routing, no full page reloads)
+- The URL must update correctly in the browser address bar on navigation
+
+---
+
+EXPECTED OUTPUT:
+- Clicking a food item on the menu page navigates to: menu.exzibo.online/flip-flop/4/details
+- The detail page loads, fetches from Supabase, and displays the food item data
+- No 404 error occurs on direct URL access or on click navigation
+- All previously working pages remain unaffected

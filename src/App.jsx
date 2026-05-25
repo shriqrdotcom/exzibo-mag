@@ -258,6 +258,20 @@ function SuperAdminApp() {
   )
 }
 
+// ── Menu route resolver — distinguishes food detail pages from nav tabs ──────
+// When /:slug/:tableNumber/:page is matched, page can be either a nav tab name
+// ('home', 'menu', 'orders', 'booking', 'cart') or a food item name.
+// If it's not a known nav tab, render the FoodDetail page.
+const MENU_VALID_PAGES = ['home', 'menu', 'orders', 'booking', 'cart']
+
+function MenuRouteResolver() {
+  const { page } = useParams()
+  if (page && !MENU_VALID_PAGES.includes(page)) {
+    return <FoodDetail />
+  }
+  return <RestaurantWebsite />
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // MENU SUBDOMAIN APP   menu.exzibo.online
 //
@@ -265,16 +279,18 @@ function SuperAdminApp() {
 //
 // Routes:
 //   /:restaurantSlug              → public restaurant website / menu
-//   /:restaurantSlug/:pageSlug    → sub-page (e.g. food detail)
+//   /:restaurantSlug/:tableNumber → restaurant website with table context
+//   /:restaurantSlug/:tableNumber/:page → nav tab OR food detail page
+//   /:restaurantSlug/food/:itemName    → food detail (legacy/direct URL)
 //   *                             → 404
 // ═══════════════════════════════════════════════════════════════════════════
 function MenuApp() {
   return (
     <Routes>
-      {/* Literal segment must come before dynamic :tableNumber to win specificity */}
+      {/* Legacy food detail path — kept for backward compatibility */}
       <Route path="/:slug/food/:itemName"            element={<FoodDetail />} />
-      {/* /:slug/:tableNumber/:page — e.g. /the-taj/5/menu */}
-      <Route path="/:slug/:tableNumber/:page"        element={<RestaurantWebsite />} />
+      {/* /:slug/:tableNumber/:page — nav tab or food item (resolved by MenuRouteResolver) */}
+      <Route path="/:slug/:tableNumber/:page"        element={<MenuRouteResolver />} />
       {/* /:slug/:tableNumber — e.g. /the-taj/5 */}
       <Route path="/:slug/:tableNumber"              element={<RestaurantWebsite />} />
       {/* bare slug — e.g. /the-taj */}

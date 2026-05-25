@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { useMenuSubdomainRedirect } from '../lib/routeConfig'
+import { getRestaurantBySlug } from '../lib/db'
+import { supabase } from '../lib/supabase'
 import { ArrowLeft, Share2, Heart, Search, Star, ChevronRight, ChevronDown, Flame } from 'lucide-react'
 
 const FALLBACK_IMG = '/menu/wagyu-ribeye.png'
@@ -39,11 +41,15 @@ function getAllItems(menuData) {
 }
 
 export default function FoodDetail() {
-  const { slug, itemName } = useParams()
+  // Support two URL patterns:
+  //   /:slug/food/:itemName         (classic pattern)
+  //   /:slug/:tableNumber/:page     (table-context pattern, page = item name)
+  const { slug, itemName, tableNumber, page } = useParams()
+  const effectiveItemName = itemName || page
   const navigate = useNavigate()
   const location = useLocation()
 
-  // Redirect to configured menu subdomain in production
+  // Redirect to configured menu subdomain in production (only for classic pattern)
   useMenuSubdomainRedirect(slug && itemName ? `/${slug}/food/${itemName}` : null)
 
   const [item, setItem] = useState(location.state?.item ? injectOldPrice(location.state.item) : null)
@@ -51,41 +57,115 @@ export default function FoodDetail() {
   const [menuData, setMenuData] = useState({ starters: [], mains: [], drinks: [] })
   const [restaurant, setRestaurant] = useState(null)
   const [loading, setLoading] = useState(!location.state?.item)
+  const [itemNotFound, setItemNotFound] = useState(false)
   const [liked, setLiked] = useState(false)
   const [imgLoaded, setImgLoaded] = useState(false)
   const [detailsOpen, setDetailsOpen] = useState(false)
   const [heartBounce, setHeartBounce] = useState(false)
 
-  const themeColor = location.state?.themeColor || restaurant?.primaryColor || '#E8321A'
+  const themeColor = location.state?.themeColor || restaurant?.accent_color || '#E8321A'
+
+  // ── Back navigation — returns to the right URL depending on context ────────
+  function goBack() {
+    if (tableNumber) {
+      navigate(`/${slug}/${tableNumber}`, { state: { activeNav: returnTab } })
+    } else {
+      navigate(`/restaurant/${slug}`, { state: { activeNav: returnTab } })
+    }
+  }
 
   useEffect(() => {
-    let menu = MENU_FALLBACK
-    let rest = null
-    if (slug !== 'demo') {
-      const restaurants = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
-      const found = restaurants.find(r => r.slug === slug || r.id === slug)
-      if (found) {
-        rest = found
-        const saved = localStorage.getItem(`exzibo_menu_${found.id}`)
-        if (saved) {
-          const parsed = JSON.parse(saved)
-          menu = {
-            starters: parsed.starters?.length ? parsed.starters.map(injectOldPrice) : MENU_FALLBACK.starters,
-            mains: parsed.mains?.length ? parsed.mains.map(injectOldPrice) : MENU_FALLBACK.mains,
-            drinks: parsed.drinks?.length ? parsed.drinks.map(injectOldPrice) : MENU_FALLBACK.drinks,
+    if (!slug || !effectiveItemName) return
+    const decoded = decodeURIComponent(effectiveItemName)
+    let cancelled = false
+
+    async function loadItem() {
+      // ── 1. Try Supabase first ─────────────────────────────────────────────
+      try {
+        const rest = await getRestaurantBySlug(slug)
+        if (!cancelled && rest) {
+          setRestaurant(rest)
+
+          // Fetch the specific menu item from Supabase by name
+          const { data: dbItem, error } = await supabase
+            .from('menu_items')
+            .select('*')
+            .eq('restaurant_id', rest.id)
+            .ilike('name', decoded)
+            .maybeSingle()
+
+          if (!error && dbItem && !cancelled) {
+            setItem(injectOldPrice({
+              ...dbItem,
+              img: dbItem.image || null,
+            }))
+            setLoading(false)
+            setItemNotFound(false)
+
+            // Also fetch all published items for suggestions
+            const { data: allItems } = await supabase
+              .from('menu_items')
+              .select('*')
+              .eq('restaurant_id', rest.id)
+              .eq('is_published', true)
+              .order('created_at')
+
+            if (!cancelled && allItems) {
+              // Group into tabs shape for suggestions
+              const allMapped = allItems.map(it => injectOldPrice({ ...it, img: it.image || null }))
+              setMenuData({
+                starters: allMapped.filter((_, i) => i % 3 === 0),
+                mains:    allMapped.filter((_, i) => i % 3 === 1),
+                drinks:   allMapped.filter((_, i) => i % 3 === 2),
+              })
+            }
+            return
           }
         }
+      } catch {}
+
+      // ── 2. Fall back to localStorage ──────────────────────────────────────
+      if (cancelled) return
+      let menu = MENU_FALLBACK
+      let rest = null
+      if (slug !== 'demo') {
+        try {
+          const restaurants = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
+          const found = restaurants.find(r => r.slug === slug || r.id === slug)
+          if (found) {
+            rest = found
+            const saved = localStorage.getItem(`exzibo_menu_${found.id}`)
+            if (saved) {
+              const parsed = JSON.parse(saved)
+              menu = {
+                starters: parsed.starters?.length ? parsed.starters.map(injectOldPrice) : MENU_FALLBACK.starters,
+                mains:    parsed.mains?.length    ? parsed.mains.map(injectOldPrice)    : MENU_FALLBACK.mains,
+                drinks:   parsed.drinks?.length   ? parsed.drinks.map(injectOldPrice)   : MENU_FALLBACK.drinks,
+              }
+            }
+          }
+        } catch {}
+      }
+
+      if (!cancelled) {
+        setMenuData(menu)
+        if (!item) {
+          const found = getAllItems(menu).find(i => i.name === decoded)
+          if (found) {
+            setItem(injectOldPrice(found))
+            setItemNotFound(false)
+          } else {
+            setItemNotFound(true)
+          }
+        }
+        if (rest && !restaurant) setRestaurant(rest)
+        setTimeout(() => { if (!cancelled) setLoading(false) }, 400)
       }
     }
-    setMenuData(menu)
-    setRestaurant(rest)
-    if (!item) {
-      const decoded = decodeURIComponent(itemName)
-      const found = getAllItems(menu).find(i => i.name === decoded)
-      if (found) setItem(injectOldPrice(found))
-    }
-    setTimeout(() => setLoading(false), 400)
-  }, [slug, itemName])
+
+    loadItem()
+    return () => { cancelled = true }
+  }, [slug, effectiveItemName])
 
   const suggestions = getAllItems(menuData).filter(i => i.name !== item?.name).slice(0, 8)
   const isOutOfStock = item?.outOfStock === true
@@ -108,7 +188,10 @@ export default function FoodDetail() {
   }
 
   function handleSuggestionClick(sug) {
-    navigate(`/restaurant/${slug}/food/${encodeURIComponent(sug.name)}`, {
+    const path = tableNumber
+      ? `/${slug}/${tableNumber}/${encodeURIComponent(sug.name)}`
+      : `/restaurant/${slug}/food/${encodeURIComponent(sug.name)}`
+    navigate(path, {
       state: { item: sug, returnTab, themeColor },
       replace: true,
     })
@@ -182,7 +265,7 @@ export default function FoodDetail() {
           {/* Back */}
           <button
             className="icon-btn"
-            onClick={() => navigate(`/restaurant/${slug}`, { state: { activeNav: returnTab } })}
+            onClick={goBack}
             style={{
               width: '38px', height: '38px', borderRadius: '50%',
               background: 'rgba(30,30,30,0.85)',
