@@ -41,12 +41,32 @@ function isValidEmail(email) {
 }
 
 const ROLE_COLUMNS = [
-  { key: 'owner',   label: 'OWNER',   icon: Crown,          accent: '#D97706', accentBg: 'rgba(217,119,6,0.12)' },
-  { key: 'manager', label: 'MANAGER', icon: Shield,         accent: '#3B82F6', accentBg: 'rgba(59,130,246,0.12)' },
-  { key: 'staff',   label: 'STAFF',   icon: UtensilsCrossed, accent: '#10B981', accentBg: 'rgba(16,185,129,0.12)' },
+  { key: 'menuStudio', label: 'MENU STUDIO', icon: Shield,          accent: '#A855F7', accentBg: 'rgba(168,85,247,0.12)' },
+  { key: 'owner',      label: 'OWNER',       icon: Crown,           accent: '#D97706', accentBg: 'rgba(217,119,6,0.12)' },
+  { key: 'admin',      label: 'ADMIN',       icon: Shield,          accent: '#3B82F6', accentBg: 'rgba(59,130,246,0.12)' },
+  { key: 'staff',      label: 'STAFF',       icon: UtensilsCrossed, accent: '#10B981', accentBg: 'rgba(16,185,129,0.12)' },
 ]
 
 const DEFAULT_ROLES = [
+  {
+    key: 'menuStudio',
+    label: 'MENU STUDIO',
+    badge: 'Menu Only',
+    badgeColor: '#A855F7',
+    badgeBg: 'rgba(168,85,247,0.18)',
+    icon: Shield,
+    accent: '#A855F7',
+    accentBg: 'rgba(168,85,247,0.08)',
+    borderColor: 'rgba(168,85,247,0.2)',
+    description: 'Menu editing access only:',
+    permissions: [
+      { label: 'Dashboard', granted: true },
+      { label: 'Menu Edit', granted: true },
+      { label: 'Orders', granted: false },
+      { label: 'Settings', granted: false },
+      { label: 'Team Management', granted: false },
+    ],
+  },
   {
     key: 'owner',
     label: 'OWNER',
@@ -68,8 +88,8 @@ const DEFAULT_ROLES = [
     ],
   },
   {
-    key: 'manager',
-    label: 'MANAGER',
+    key: 'admin',
+    label: 'ADMIN',
     badge: 'Specific Control',
     badgeColor: '#3B82F6',
     badgeBg: 'rgba(59,130,246,0.18)',
@@ -88,7 +108,7 @@ const DEFAULT_ROLES = [
   },
   {
     key: 'staff',
-    label: 'EMPLOYEE',
+    label: 'STAFF',
     badge: 'Limited Access',
     badgeColor: '#10B981',
     badgeBg: 'rgba(16,185,129,0.18)',
@@ -580,9 +600,9 @@ function DefaultRolesSection() {
     openRoleDashboard(navigate, null, 'owner')
   }
 
-  function openManagerDashboard() {
-    activateRole('manager')
-    openRoleDashboard(navigate, null, 'manager')
+  function openAdminDashboard() {
+    activateRole('admin')
+    openRoleDashboard(navigate, null, 'admin')
   }
 
   function openStaffDashboard() {
@@ -618,8 +638,8 @@ function DefaultRolesSection() {
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <div
-                    onClick={role.key === 'owner' ? openDefaultAdmin : role.key === 'manager' ? openManagerDashboard : openStaffDashboard}
-                    title={role.key === 'owner' ? 'Open Admin Panel' : role.key === 'manager' ? 'Open Manager Dashboard' : 'Open Staff Dashboard'}
+                    onClick={role.key === 'owner' ? openDefaultAdmin : role.key === 'admin' ? openAdminDashboard : role.key === 'menuStudio' ? openAdminDashboard : openStaffDashboard}
+                    title={role.key === 'owner' ? 'Open Admin Panel' : role.key === 'admin' ? 'Open Admin Dashboard' : role.key === 'menuStudio' ? 'Open Menu Studio' : 'Open Staff Dashboard'}
                     style={{
                       width: '36px', height: '36px', borderRadius: '10px',
                       background: role.accentBg,
@@ -690,9 +710,9 @@ function DefaultRolesSection() {
                   OPEN ADMIN
                 </button>
               )}
-              {role.key === 'manager' && (
+              {role.key === 'admin' && (
                 <button
-                  onClick={openManagerDashboard}
+                  onClick={openAdminDashboard}
                   style={{
                     display: 'flex', alignItems: 'center', gap: '7px',
                     background: 'rgba(255,255,255,0.1)',

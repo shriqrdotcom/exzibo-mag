@@ -6,7 +6,7 @@ const SESSION_POPUP_KEY  = 'exzibo_popup_shown_session'
 
 const TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000
 
-export const NOTIFY_ROLES = ['admin', 'manager', 'staff']
+export const NOTIFY_ROLES = ['admin', 'staff']
 
 function uid() {
   return 'n_' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36)

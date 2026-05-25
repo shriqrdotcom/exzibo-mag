@@ -29,7 +29,7 @@ function roleColor(role) {
   const r = (role || '').toLowerCase()
   if (r.includes('super') || r.includes('master')) return { bg: 'rgba(232,50,26,0.12)', text: '#E8321A', border: 'rgba(232,50,26,0.25)' }
   if (r.includes('admin') || r.includes('owner'))  return { bg: 'rgba(99,102,241,0.12)', text: '#818CF8', border: 'rgba(99,102,241,0.25)' }
-  if (r.includes('manager'))                        return { bg: 'rgba(245,158,11,0.12)', text: '#FCD34D', border: 'rgba(245,158,11,0.25)' }
+  if (r.includes('menuStudio') || r.includes('menu')) return { bg: 'rgba(168,85,247,0.12)', text: '#C084FC', border: 'rgba(168,85,247,0.25)' }
   return { bg: 'rgba(34,197,94,0.12)', text: '#4ADE80', border: 'rgba(34,197,94,0.25)' }
 }
 

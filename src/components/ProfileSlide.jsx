@@ -27,7 +27,7 @@ const TEAM_STATUS_CONFIG = {
 const TEAM_DEMO_MEMBERS = [
   { id: 'demo1', name: 'Donna Hicks',    role: 'Admin',    group: 'Admin',    department: 'Finance & Admin', avatar: 'https://i.pravatar.cc/150?img=47', status: 'active' },
   { id: 'demo2', name: 'Kathleen Harper', role: 'Admin',   group: 'Admin',    department: 'Management',      avatar: 'https://i.pravatar.cc/150?img=44', status: 'active' },
-  { id: 'demo3', name: 'Mary Long',      role: 'Manager',  group: 'Manager',  department: 'Marketing',       avatar: 'https://i.pravatar.cc/150?img=32', status: 'active' },
+  { id: 'demo3', name: 'Mary Long',      role: 'Admin',    group: 'Admin',    department: 'Marketing',       avatar: 'https://i.pravatar.cc/150?img=32', status: 'active' },
 ]
 
 const SUPPORT_MEMBERS = [
@@ -198,7 +198,7 @@ export default function ProfileSlide({
   const [restaurantUID, setRestaurantUID] = useState('')
   const [uidCopied, setUidCopied] = useState(false)
 
-  const [activeTab, setActiveTab] = useState(() => activeRole === 'manager' ? 'TEAM' : 'PROFILE')
+  const [activeTab, setActiveTab] = useState(() => activeRole === 'admin' ? 'TEAM' : 'PROFILE')
   const [teamMembers, setTeamMembers] = useState([])
 
   useEffect(() => {
@@ -1284,7 +1284,7 @@ export default function ProfileSlide({
           {/* Tab Switcher + Tab Contents — hidden for staff role */}
           {activeRole !== 'staff' && (<>
           <div style={{ display: 'flex', background: TAB_BG, borderRadius: '14px', margin: '0 16px 16px', padding: '4px' }}>
-            {(activeRole === 'manager' ? ['TEAM', 'REMAINING DAY'] : ['PROFILE', 'TEAM', 'REMAINING DAY']).map(tab => (
+            {(activeRole === 'admin' ? ['TEAM', 'REMAINING DAY'] : ['PROFILE', 'TEAM', 'REMAINING DAY']).map(tab => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -1302,7 +1302,7 @@ export default function ProfileSlide({
           </div>
 
           {/* PROFILE Tab */}
-          {activeTab === 'PROFILE' && activeRole !== 'manager' && (
+          {activeTab === 'PROFILE' && activeRole !== 'admin' && (
             <div style={{ background: '#fff', borderRadius: '16px', margin: '0 16px', overflow: 'hidden', boxShadow: '0 1px 8px rgba(0,0,0,0.07)' }}>
               {settingsRows.map((row, idx, arr) => (
                 <React.Fragment key={row.title}>

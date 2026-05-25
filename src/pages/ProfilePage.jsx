@@ -57,7 +57,7 @@ export default function ProfilePage() {
   function resolveUserRole() {
     const role = urlRole || activeRole
     if (isSuperAdmin && !role) return 'Super Admin'
-    if (role === 'manager') return 'Manager'
+    if (role === 'admin') return 'Admin'
     if (role === 'staff')   return 'Employee'
     if (role === 'owner')   return 'Admin'
     if (isMasterView)       return 'Admin'

@@ -13,12 +13,13 @@ const DASHBOARD_DOMAIN = 'dashboard.exzibo.online'
  *
  * @param {Function} navigate     React Router navigate()
  * @param {Object|null} restaurant  Restaurant object (needs .id and .slug)
- * @param {string} roleKey        'owner'|'admin'|'manager'|'staff'|'employee'|'master'
+ * @param {string} roleKey        'menuStudio'|'owner'|'admin'|'staff'|'employee'|'master'
  */
 
 const ROLE_TO_PATH = {
+  menuStudio: 'admin',
   owner: 'admin', admin: 'admin',
-  manager: 'manager',
+  manager: 'admin', // legacy alias — kept for backward compat
   staff: 'employee', employee: 'employee',
   master: 'master',
 }

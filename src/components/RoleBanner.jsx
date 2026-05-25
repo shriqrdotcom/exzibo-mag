@@ -13,14 +13,23 @@ const ROLE_CONFIG = {
     border: 'rgba(217,119,6,0.25)',
     glow: 'rgba(217,119,6,0.15)',
   },
-  manager: {
+  admin: {
     icon: Shield,
-    label: 'Manager View',
+    label: 'Admin View',
     sub: 'Specific Access — Profile & Team hidden',
     color: '#3B82F6',
     bg: 'rgba(59,130,246,0.1)',
     border: 'rgba(59,130,246,0.25)',
     glow: 'rgba(59,130,246,0.15)',
+  },
+  menuStudio: {
+    icon: Shield,
+    label: 'Menu Studio View',
+    sub: 'Menu editing access only',
+    color: '#A855F7',
+    bg: 'rgba(168,85,247,0.1)',
+    border: 'rgba(168,85,247,0.25)',
+    glow: 'rgba(168,85,247,0.15)',
   },
   staff: {
     icon: UtensilsCrossed,

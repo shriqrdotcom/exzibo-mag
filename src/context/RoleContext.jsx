@@ -1,9 +1,10 @@
 import React, { createContext, useContext, useState } from 'react'
 
 const PERMISSIONS = {
-  owner:   ['dashboard', 'menuEdit', 'settings', 'profile', 'teamManagement', 'orders', 'bookings', 'analytics'],
-  manager: ['dashboard', 'orders', 'bookings', 'menuEdit', 'analytics', 'settings', 'profile'],
-  staff:   ['orders', 'bookings', 'profile'],
+  menuStudio: ['dashboard', 'menuEdit'],
+  owner:      ['dashboard', 'menuEdit', 'settings', 'profile', 'teamManagement', 'orders', 'bookings', 'analytics'],
+  admin:      ['dashboard', 'orders', 'bookings', 'menuEdit', 'analytics', 'settings', 'profile'],
+  staff:      ['orders', 'bookings', 'profile'],
 }
 
 const RoleContext = createContext(null)

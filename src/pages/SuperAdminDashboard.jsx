@@ -43,9 +43,9 @@ const SECTIONS = [
     gradEnd: '#EA580C',
   },
   {
-    id: 'manager',
-    label: 'Managers',
-    description: 'Floor and operations managers',
+    id: 'admin',
+    label: 'Admins',
+    description: 'Floor and operations admins',
     icon: Shield,
     roles: MANAGER_ROLES,
     accentBg: '#DBEAFE',

@@ -224,7 +224,7 @@ export default function AdminDashboard({ restaurantId: restaurantIdProp, initial
   const [masterMsgOpen, setMasterMsgOpen] = useState(false)
   const [masterMsgTopic, setMasterMsgTopic] = useState('')
   const [masterMsgBody, setMasterMsgBody]   = useState('')
-  const [masterMsgTargets, setMasterMsgTargets] = useState(['admin', 'manager', 'staff'])
+  const [masterMsgTargets, setMasterMsgTargets] = useState(['admin', 'staff'])
   const [masterMsgSending, setMasterMsgSending] = useState(false)
 
   const [activePopup, setActivePopup] = useState(null)
@@ -849,7 +849,7 @@ export default function AdminDashboard({ restaurantId: restaurantIdProp, initial
     setMasterMsgOpen(false)
     setMasterMsgTopic('')
     setMasterMsgBody('')
-    setMasterMsgTargets(['admin', 'manager', 'staff'])
+    setMasterMsgTargets(['admin', 'staff'])
     setMasterMsgSending(false)
     showToast('✅ Message sent to all devices')
   }
@@ -1297,7 +1297,7 @@ export default function AdminDashboard({ restaurantId: restaurantIdProp, initial
               <button
                 type="button"
                 aria-label="Send message"
-                onClick={() => { setMasterMsgTopic(''); setMasterMsgBody(''); setMasterMsgTargets(['admin','manager','staff']); setMasterMsgOpen(true) }}
+                onClick={() => { setMasterMsgTopic(''); setMasterMsgBody(''); setMasterMsgTargets(['admin','staff']); setMasterMsgOpen(true) }}
                 style={{
                   width: '52px', height: '32px', borderRadius: '10px',
                   background: '#0A0A0A',
@@ -1370,7 +1370,7 @@ export default function AdminDashboard({ restaurantId: restaurantIdProp, initial
                 Orders
               </h1>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                {activeRole !== 'manager' && activeRole !== 'staff' && (
+                {activeRole !== 'admin' && activeRole !== 'staff' && (
                   <button
                     ref={orderSettingsBtnRef}
                     onClick={() => setShowOrderSettings(p => !p)}
@@ -1463,7 +1463,7 @@ export default function AdminDashboard({ restaurantId: restaurantIdProp, initial
                 borderRadius: '18px',
                 border: '1px dashed rgba(148,163,184,0.4)',
               }}>
-                Live orders are hidden in Master Control. They remain visible in Admin, Manager and Staff panels.
+                Live orders are hidden in Master Control. They remain visible in Owner, Admin and Staff panels.
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -1511,7 +1511,7 @@ export default function AdminDashboard({ restaurantId: restaurantIdProp, initial
                 Bookings
               </h1>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                {activeRole !== 'manager' && activeRole !== 'staff' && (
+                {activeRole !== 'admin' && activeRole !== 'staff' && (
                   <button
                     ref={bookingSettingsBtnRef}
                     onClick={() => setShowBookingSettings(p => !p)}
@@ -1644,7 +1644,7 @@ export default function AdminDashboard({ restaurantId: restaurantIdProp, initial
                 borderRadius: '18px',
                 border: '1px dashed rgba(148,163,184,0.4)',
               }}>
-                Table confirmations are hidden in Master Control. They remain visible in Admin, Manager and Staff panels.
+                Table confirmations are hidden in Master Control. They remain visible in Owner, Admin and Staff panels.
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -2365,9 +2365,8 @@ function NotificationCenter({ items, onClose, accentStart, accentEnd, role }) {
 
 function MasterMessageModal({ topic, body, targets = [], onTopicChange, onBodyChange, onTargetsChange, onSend, onClose, accentStart, accentEnd }) {
   const ROLE_OPTIONS = [
-    { key: 'admin',   label: 'Admin' },
-    { key: 'manager', label: 'Manager' },
-    { key: 'staff',   label: 'Staff' },
+    { key: 'admin', label: 'Admin' },
+    { key: 'staff', label: 'Staff' },
   ]
   const toggleRole = (role) => {
     if (!onTargetsChange) return

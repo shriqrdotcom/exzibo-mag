@@ -23,6 +23,14 @@ const ALL_PERMISSIONS = [
 
 const DEFAULT_ROLES = [
   {
+    id: 'menuStudio',
+    name: 'Menu Studio',
+    description: 'Full access to menu creation and studio editing tools',
+    permissions: ['dashboard', 'menuEdit'],
+    color: '#A855F7',
+    isDefault: true,
+  },
+  {
     id: 'owner',
     name: 'Owner',
     description: 'Full access to all features and settings',
@@ -31,8 +39,8 @@ const DEFAULT_ROLES = [
     isDefault: true,
   },
   {
-    id: 'manager',
-    name: 'Manager',
+    id: 'admin',
+    name: 'Admin',
     description: 'Can manage operations but not team or billing',
     permissions: ['dashboard', 'orders', 'bookings', 'menuEdit', 'analytics', 'settings', 'profile'],
     color: '#3B82F6',

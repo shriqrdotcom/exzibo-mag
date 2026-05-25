@@ -148,7 +148,7 @@ function GoogleIcon() {
 export default function AddMembersModal({ open, onClose, restaurantId }) {
   const storageBase = restaurantId || 'default'
 
-  const managerStorageKey = `exzibo_invite_managers_${storageBase}`
+  const managerStorageKey = `exzibo_invite_admins_${storageBase}`
   const staffStorageKey = `exzibo_invite_staff_${storageBase}`
 
   const initManagerCount = () => Math.min(parseInt(localStorage.getItem(managerStorageKey) || '0'), MAX_MANAGERS)
@@ -219,9 +219,9 @@ export default function AddMembersModal({ open, onClose, restaurantId }) {
           </div>
 
           <InviteSection
-            key={`manager-${storageBase}`}
+            key={`admin-${storageBase}`}
             icon={Briefcase}
-            label="Add Manager"
+            label="Add Admin"
             current={initManagerCount()}
             max={MAX_MANAGERS}
             storageKey={managerStorageKey}
