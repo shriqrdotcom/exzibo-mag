@@ -88,7 +88,7 @@ function RestaurantSlugList() {
   useEffect(() => {
     supabase
       .from('restaurants')
-      .select('id, name')
+      .select('id, name, uid')
       .order('name')
       .then(({ data }) => { setRestaurants(data || []); setLoading(false) })
       .catch(() => setLoading(false))
@@ -105,7 +105,7 @@ function RestaurantSlugList() {
   if (!restaurants.length) {
     return (
       <div style={{ ...inputStyle, color: '#555', fontStyle: 'italic', cursor: 'default' }}>
-        /your-restaurant-name/
+        No restaurants found
       </div>
     )
   }
@@ -122,11 +122,8 @@ function RestaurantSlugList() {
           alignItems: 'center',
           gap: '10px',
         }}>
-          <span style={{ fontSize: '11px', fontWeight: 600, color: '#555', letterSpacing: '0.05em', flexShrink: 0 }}>
-            CONNECTED WITH UID
-          </span>
-          <span style={{ color: ACCENT, fontFamily: 'monospace', fontWeight: 700, fontSize: '13px' }}>
-            /{slugify(r.name)}/
+          <span style={{ color: ACCENT, fontFamily: 'monospace', fontWeight: 700, fontSize: '13px', letterSpacing: '0.04em' }}>
+            {r.uid || r.id}
           </span>
           <span style={{ marginLeft: 'auto', fontSize: '11px', color: '#444', fontWeight: 500, whiteSpace: 'nowrap' }}>
             {r.name}
@@ -412,7 +409,7 @@ function MenuTab() {
       <div style={cardStyle}>
         <div style={cardTitleStyle}>Add Dynamic Routing Logic</div>
         <div style={{ marginBottom: '18px' }}>
-          <label style={labelStyle}>NAME OF THE RESTAURANT CONNECTED WITH UID</label>
+          <label style={labelStyle}>RESTAURANT UID</label>
           <RestaurantSlugList />
         </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
@@ -529,7 +526,7 @@ function RouteCards({ state, setState, showDefaults, isDashboard }) {
       <div style={cardStyle}>
         <div style={cardTitleStyle}>Add Dynamic Routing Logic</div>
         <div style={{ marginBottom: '18px' }}>
-          <label style={labelStyle}>NAME OF THE RESTAURANT CONNECTED WITH UID</label>
+          <label style={labelStyle}>RESTAURANT UID</label>
           <RestaurantSlugList />
         </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
