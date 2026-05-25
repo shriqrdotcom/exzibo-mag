@@ -232,7 +232,36 @@ export default function FoodDetail() {
         .detail-toggle:active { background: rgba(255,255,255,0.04) !important; }
       `}</style>
 
+      {/* ── ITEM NOT FOUND ── */}
+      {!loading && !item && (
+        <div style={{
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+          minHeight: '80vh', padding: '32px 24px', gap: '16px',
+        }}>
+          <div style={{ fontSize: '56px' }}>🍽️</div>
+          <div style={{ fontSize: '20px', fontWeight: 800, color: '#fff', textAlign: 'center' }}>
+            Item not found
+          </div>
+          <div style={{ fontSize: '14px', color: 'rgba(255,255,255,0.45)', textAlign: 'center', maxWidth: '240px', lineHeight: 1.6 }}>
+            This menu item may have been removed or is no longer available.
+          </div>
+          <button
+            onClick={goBack}
+            style={{
+              marginTop: '8px', padding: '12px 28px',
+              background: themeColor, color: '#fff',
+              border: 'none', borderRadius: '100px',
+              fontSize: '14px', fontWeight: 700,
+              cursor: 'pointer',
+            }}
+          >
+            Back to menu
+          </button>
+        </div>
+      )}
+
       {/* ── HERO IMAGE ── */}
+      {(loading || item) && (
       <div style={{ position: 'relative', width: '100%', height: '300px', background: '#1a1a1a' }}>
         {/* Shimmer */}
         {(loading || !imgLoaded) && (
@@ -302,7 +331,13 @@ export default function FoodDetail() {
             </button>
             <button
               className="icon-btn"
-              onClick={() => navigate(`/restaurant/${slug}`, { state: { activeNav: returnTab, openSearch: true } })}
+              onClick={() => {
+                if (tableNumber) {
+                  navigate(`/${slug}/${tableNumber}`, { state: { activeNav: returnTab, openSearch: true } })
+                } else {
+                  navigate(`/restaurant/${slug}`, { state: { activeNav: returnTab, openSearch: true } })
+                }
+              }}
               style={{
                 width: '38px', height: '38px', borderRadius: '50%',
                 background: 'rgba(30,30,30,0.85)',
@@ -331,6 +366,7 @@ export default function FoodDetail() {
           </div>
         </div>
       </div>
+      )}
 
       {/* ── PRODUCT INFO CARD ── */}
       <div className="fd-content" style={{ margin: '10px 10px 0' }}>
