@@ -420,6 +420,7 @@ function DefaultApp() {
       <Route path="/restaurant/:slug/:tableNumber/:page"        element={<RestaurantWebsite />} />
       <Route path="/restaurant/:slug/:tableNumber"              element={<RestaurantWebsite />} />
       <Route path="/restaurant/:slug"                           element={<RestaurantWebsite />} />
+      <Route path="/:slug/food/:foodSlug"                       element={<FoodDetail />} />
       <Route path="/r/:slug"                                    element={<RestaurantWebsite />} />
       <Route path="/table"                           element={<TablePage />} />
       <Route path="/menu/:linkName/:tableNumber"     element={<MenuLinkRoute />} />

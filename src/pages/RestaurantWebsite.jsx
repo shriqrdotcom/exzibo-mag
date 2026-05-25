@@ -4,6 +4,7 @@ import { notifyAnalyticsUpdate } from '../context/AnalyticsContext'
 import { getRestaurantBySlug, getMenuCategories, getMenuItems, getPublishedMenuItems } from '../lib/db'
 import { supabase } from '../lib/supabase'
 import { useMenuSubdomainRedirect } from '../lib/routeConfig'
+import { toSlug } from '../lib/slug'
 import {
   Star, MapPin, Bell, ShoppingCart, Home,
   UtensilsCrossed, ClipboardList, CalendarDays,
@@ -214,6 +215,8 @@ export default function RestaurantWebsite() {
   // Table number: URL param (:tableNumber) wins, then ?table= query string
   const searchParams = new URLSearchParams(location.search)
   const tableNumber = tableParam || searchParams.get('table') || null
+  // True when served from the menu subdomain (path is /{slug}/...) vs main domain (/restaurant/{slug}/...)
+  const isMenuPath = !location.pathname.startsWith('/restaurant/')
 
   const [restaurant, setRestaurant] = useState(null)
   const [aboutData, setAboutData] = useState({ description: '', image: '' })
@@ -1548,8 +1551,10 @@ export default function RestaurantWebsite() {
               <div key={i}
                 onClick={() => navigate(
                   tableNumber
-                    ? `/${slug}/${tableNumber}/${encodeURIComponent(item.name)}`
-                    : `/restaurant/${slug}/food/${encodeURIComponent(item.name)}`,
+                    ? `/${slug}/${tableNumber}/${toSlug(item.name)}`
+                    : isMenuPath
+                      ? `/${slug}/food/${toSlug(item.name)}`
+                      : `/restaurant/${slug}/food/${encodeURIComponent(item.name)}`,
                   { state: { item, returnTab: activeNav, darkMode, themeColor: restaurant?.primaryColor || '#E8321A' } }
                 )}
                 style={{
@@ -1730,8 +1735,10 @@ export default function RestaurantWebsite() {
                   }}
                   onClick={() => navigate(
                     tableNumber
-                      ? `/${slug}/${tableNumber}/${encodeURIComponent(item.name)}`
-                      : `/restaurant/${slug}/food/${encodeURIComponent(item.name)}`,
+                      ? `/${slug}/${tableNumber}/${toSlug(item.name)}`
+                      : isMenuPath
+                        ? `/${slug}/food/${toSlug(item.name)}`
+                        : `/restaurant/${slug}/food/${encodeURIComponent(item.name)}`,
                     { state: { item, returnTab: 'home', darkMode, themeColor: restaurant?.primaryColor || '#E8321A' } }
                   )}
                 >
@@ -1931,8 +1938,10 @@ export default function RestaurantWebsite() {
                   cartQty={inCart ? inCart.qty : 0}
                   onPress={() => navigate(
                     tableNumber
-                      ? `/${slug}/${tableNumber}/${encodeURIComponent(item.name)}`
-                      : `/restaurant/${slug}/food/${encodeURIComponent(item.name)}`,
+                      ? `/${slug}/${tableNumber}/${toSlug(item.name)}`
+                      : isMenuPath
+                        ? `/${slug}/food/${toSlug(item.name)}`
+                        : `/restaurant/${slug}/food/${encodeURIComponent(item.name)}`,
                     { state: { item, returnTab: activeNav, darkMode, themeColor: restaurant?.primaryColor || '#E8321A' } }
                   )}
                 />

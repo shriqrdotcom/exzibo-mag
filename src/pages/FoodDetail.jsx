@@ -3,6 +3,7 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { useMenuSubdomainRedirect } from '../lib/routeConfig'
 import { getRestaurantBySlug } from '../lib/db'
 import { supabase } from '../lib/supabase'
+import { toSlug, findBySlug } from '../lib/slug'
 import { ArrowLeft, Share2, Heart, Search, Star, ChevronRight, ChevronDown, Flame } from 'lucide-react'
 
 const FALLBACK_IMG = '/menu/wagyu-ribeye.png'
@@ -49,8 +50,9 @@ export default function FoodDetail() {
   const navigate = useNavigate()
   const location = useLocation()
 
-  // Redirect to configured menu subdomain in production (only for classic pattern)
-  useMenuSubdomainRedirect(slug && itemName ? `/${slug}/food/${itemName}` : null)
+  // Redirect to configured menu subdomain in production (only for classic /restaurant/ pattern)
+  // Use slug-based URL so the redirect lands on the clean canonical path
+  useMenuSubdomainRedirect(slug && itemName ? `/${slug}/food/${toSlug(decodeURIComponent(itemName))}` : null)
 
   const [item, setItem] = useState(location.state?.item ? injectOldPrice(location.state.item) : null)
   const returnTab = location.state?.returnTab || 'menu'
@@ -86,15 +88,17 @@ export default function FoodDetail() {
         if (!cancelled && rest) {
           setRestaurant(rest)
 
-          // Fetch the specific menu item from Supabase by name
-          const { data: dbItem, error } = await supabase
+          // Fetch all items for this restaurant — used for both lookup and suggestions.
+          // Slug match (new URLs) and exact name match (legacy URL-encoded) are both handled.
+          const { data: allItems, error } = await supabase
             .from('menu_items')
             .select('*')
             .eq('restaurant_id', rest.id)
-            .ilike('name', decoded)
-            .maybeSingle()
 
-          if (!error && dbItem && !cancelled) {
+          // decoded can be a slug like 'chicken-malai-tikka' OR a raw name like 'Chicken Malai Tikka'
+          const dbItem = !error && allItems ? findBySlug(allItems, decoded) : null
+
+          if (dbItem && !cancelled) {
             setItem(injectOldPrice({
               ...dbItem,
               img: dbItem.image || null,
@@ -102,17 +106,12 @@ export default function FoodDetail() {
             setLoading(false)
             setItemNotFound(false)
 
-            // Also fetch all published items for suggestions
-            const { data: allItems } = await supabase
-              .from('menu_items')
-              .select('*')
-              .eq('restaurant_id', rest.id)
-              .eq('is_published', true)
-              .order('created_at')
+            // Build suggestions from remaining published items
+            const allMapped = (allItems || [])
+              .filter(it => it.is_published !== false && it.id !== dbItem.id)
+              .map(it => injectOldPrice({ ...it, img: it.image || null }))
 
-            if (!cancelled && allItems) {
-              // Group into tabs shape for suggestions
-              const allMapped = allItems.map(it => injectOldPrice({ ...it, img: it.image || null }))
+            if (!cancelled) {
               setMenuData({
                 starters: allMapped.filter((_, i) => i % 3 === 0),
                 mains:    allMapped.filter((_, i) => i % 3 === 1),

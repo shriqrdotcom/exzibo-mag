@@ -1,0 +1,104 @@
+I have a routing problem in my SaaS restaurant website builder project.
+
+Current Stack:
+
+* Frontend deployed on Vercel
+* Backend on Supabase
+* Dynamic restaurant menu URL format:
+  `/[restaurant-slug]`
+  Example:
+  `https://menu.exzibo.online/flip-flap`
+
+Problem:
+Inside the restaurant menu page, every food item has its own details page.
+Example route:
+`/restaurant/[restaurant-slug]/food/[food-name]`
+
+In Replit preview mode, the food details page opens correctly.
+But after deployment on Vercel, clicking any food item opens:
+`404 - Page not found`
+
+Example broken URL:
+`https://menu.exzibo.online/restaurant/flip-flap/food/Chicken%20Malai%20Tikka`
+
+I want ALL food detail pages to work correctly on production using the SAME restaurant domain structure.
+
+Required Final URL Structure:
+
+* Restaurant menu:
+  `/flip-flap`
+* Food details:
+  `/flip-flap/food/chicken-malai-tikka`
+
+NOT:
+
+* `/restaurant/flip-flap/food/...`
+
+Fix Requirements:
+
+1. Create proper dynamic nested routing for:
+   `[restaurantSlug]/food/[foodSlug]`
+
+2. Make routing fully compatible with Vercel production deployment.
+
+3. Ensure page refresh on food details page does NOT return 404.
+
+4. Use slug-based URLs instead of raw food names.
+   Example:
+   `Chicken Malai Tikka`
+   →
+   `chicken-malai-tikka`
+
+5. When clicking a food card image or “View Details” button:
+
+   * Navigate correctly to the food detail page.
+   * Pass restaurant slug + food slug properly.
+
+6. Fix all frontend route links and router navigation methods.
+
+7. Ensure Supabase query fetches food item using:
+
+   * restaurant slug
+   * food slug
+
+8. Add proper fallback handling:
+
+   * show loading state
+   * show “Food Not Found” instead of Vercel 404
+
+9. Configure Vercel SPA rewrite/redirect settings if needed.
+   Make sure dynamic routes work directly in browser refresh.
+
+10. Keep all existing restaurant pages working.
+    Do NOT break:
+
+* menu page
+* category tabs
+* cart
+* admin panel
+
+11. Generate production-ready code for:
+
+* route structure
+* router configuration
+* slug generator utility
+* dynamic page fetching
+* Vercel configuration
+
+Important:
+The restaurant website builder is multi-tenant.
+Every restaurant has its own slug-based public URL.
+
+Expected final working example:
+
+* Menu:
+  `https://menu.exzibo.online/flip-flap`
+* Food details:
+  `https://menu.exzibo.online/flip-flap/food/chicken-malai-tikka`
+
+The food details page must work:
+
+* on click
+* on browser refresh
+* after deployment on Vercel
+* for all restaurants dynamically.
