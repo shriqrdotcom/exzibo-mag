@@ -415,10 +415,6 @@ function MenuTab() {
           <label style={labelStyle}>NAME OF THE RESTAURANT CONNECTED WITH UID</label>
           <RestaurantSlugList />
         </div>
-        <div style={{ marginBottom: '18px' }}>
-          <label style={labelStyle}>TABLE NUMBER LOGIC</label>
-          <TableNumberList />
-        </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
           <button
             style={ghostButtonStyle}
@@ -535,10 +531,6 @@ function RouteCards({ state, setState, showDefaults, isDashboard }) {
         <div style={{ marginBottom: '18px' }}>
           <label style={labelStyle}>NAME OF THE RESTAURANT CONNECTED WITH UID</label>
           <RestaurantSlugList />
-        </div>
-        <div style={{ marginBottom: '18px' }}>
-          <label style={labelStyle}>TABLE NUMBER LOGIC</label>
-          <TableNumberList />
         </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
           {showDefaults && (
