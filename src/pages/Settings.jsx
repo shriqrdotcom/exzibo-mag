@@ -4,6 +4,7 @@ import AdminHeader from '../components/AdminHeader'
 import { Lock, Shield, ChevronDown, Check, Share2, Globe, ClipboardPaste, Link, Search, User, Phone, Mail, Layers, DollarSign, Clock, Copy, Calendar, X, Save, ImageDown } from 'lucide-react'
 import { FaFacebook, FaInstagram, FaTwitter, FaLinkedin, FaYoutube } from 'react-icons/fa'
 import { getCompressionLimits, saveCompressionLimits } from '../lib/imageCompressionSettings'
+import { stripRoleSuffix } from '../lib/uid'
 
 const DEFAULTS = {
   profile: { name: 'Julian Vercetti', email: 'j.vercetti@exzibo.com', role: 'General Manager', company: 'Exzibo Group' },
@@ -458,9 +459,10 @@ export default function Settings() {
     const status = seed % 2 === 0 ? 'RECEIVED' : 'PENDING'
     const dateObj = r.createdAt ? new Date(r.createdAt) : new Date()
     const date = dateObj.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
-    const amount = entryTotal(paymentData[r.uid])
+    const baseUid = stripRoleSuffix(r.uid || '')
+    const amount = entryTotal(paymentData[baseUid] ?? paymentData[r.uid])
     return {
-      uid: r.uid || '—',
+      uid: baseUid || '—',
       name: r.name || 'Untitled',
       amount,
       status,

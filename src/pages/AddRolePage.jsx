@@ -6,6 +6,7 @@ import AdminHeader from '../components/AdminHeader'
 import { supabase } from '../lib/supabase'
 import { useRole } from '../context/RoleContext'
 import { openRoleDashboard } from '../lib/navigation'
+import { stripRoleSuffix } from '../lib/uid'
 
 const ACCENT   = '#E8321A'
 const BG_MAIN  = '#0A0A0A'
@@ -180,7 +181,7 @@ function AssignRoleSection() {
   }
 
   async function handleSearch() {
-    const trimmed = uid.trim()
+    const trimmed = stripRoleSuffix(uid.trim())
     if (!trimmed) return
     setLoading(true)
     setRestaurant(null)

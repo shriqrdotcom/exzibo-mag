@@ -1,0 +1,116 @@
+I need to fix my multi-role dashboard UID system and routing structure properly.
+
+Current system:
+All dashboards are redirected to:
+dashboard.exzibo.online
+
+Restaurant UID structure:
+
+- 8910934784-OWN-001
+- 8910934784-ADM-001
+- 8910934784-EMP-001
+- 8910934784-EMP-002
+- 8910934784-EMP-003
+
+Problem 1:
+I previously connected all dashboards separately based on specific role UIDs, and now the dashboards may break because the logic is too role-dependent.
+
+I need a proper centralized system.
+
+Required Solution:
+
+1. Use only the main 10-digit restaurant UID as the parent identifier:
+   Example:
+   8910934784
+
+2. All roles must stay connected under the same restaurant UID.
+
+3. Role detection must happen dynamically from the database/dashboard roles system, NOT from separate dashboard routing logic.
+
+4. The role part:
+   
+   - OWN
+   - ADM
+   - EMP
+   
+   should only define permissions and access control.
+
+5. Dashboard loading should work from:
+   dashboard.exzibo.online
+
+6. After login, the backend should:
+   
+   - detect the full UID
+   - identify the role
+   - load permissions accordingly
+   - connect the user to the same restaurant database/workspace
+
+7. Do NOT create separate dashboard systems for OWNER, ADMIN, EMPLOYEE.
+   Only use ONE dashboard architecture with role-based permissions.
+
+---
+
+Problem 2:
+I do NOT want full role UIDs visible in the frontend/profile/dashboard.
+
+Example:
+Do NOT show:
+8910934784-EMP-003
+
+Instead only show:
+8910934784
+
+Requirements:
+
+1. Full UID should stay hidden internally in backend/database.
+
+2. Frontend/profile section should only display the main 10-digit restaurant UID.
+
+3. Role suffixes should never appear in:
+   
+   - URL
+   - profile section
+   - public frontend
+   - dashboard UI
+
+4. URLs must stay clean.
+   Example:
+   dashboard.exzibo.online/profile
+
+NOT:
+dashboard.exzibo.online/8910934784-EMP-003/profile
+
+---
+
+Important Technical Requirements:
+
+1. Create a centralized authentication middleware.
+
+2. Create role-based access control (RBAC).
+
+3. Keep one shared restaurant workspace/database for all roles.
+
+4. Separate:
+   
+   - Authentication
+   - Restaurant UID
+   - Role permissions
+
+5. Avoid dashboard duplication.
+
+6. Prevent dashboard breaking after role changes.
+
+7. Make the system scalable for:
+   
+   - future franchises
+   - multiple employees
+   - multiple admins
+   - future enterprise structure
+
+8. Use secure session handling.
+
+9. Keep routing independent from role UID strings.
+
+10. Refactor old role-specific logic safely without breaking existing data.
+
+Please analyze my current architecture carefully and rebuild the UID + role system professionally and scalably.

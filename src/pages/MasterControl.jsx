@@ -8,12 +8,14 @@ import { supabase, supabaseAnon, isSupabaseConfigured } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { getRouteConfig } from '../lib/routeConfig'
 import { getSubdomain } from '../lib/subdomain'
+import { stripRoleSuffix } from '../lib/uid'
 
 const LAST_UID_KEY = 'exzibo_master_last_uid'
 const DEFAULT_SUPER_ADMIN_UID = '0000000001'
 
 async function resolveAdminTargetByUID(uid) {
-  const trimmed = String(uid || '').trim()
+  // Strip any role suffix (e.g. 8910934784-OWN-001 → 8910934784) before all lookups
+  const trimmed = stripRoleSuffix(String(uid || '').trim())
   if (!trimmed) return null
 
   // Super-admin shortcut

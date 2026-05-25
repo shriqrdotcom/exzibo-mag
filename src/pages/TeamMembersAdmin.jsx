@@ -9,6 +9,7 @@ import AdminHeader from '../components/AdminHeader'
 import { useRole } from '../context/RoleContext'
 import { getRestaurants, getTeamMembers, createTeamMember, deleteTeamMember, updateTeamMember } from '../lib/db'
 import { openRoleDashboard } from '../lib/navigation'
+import { stripRoleSuffix } from '../lib/uid'
 
 const TEAM_KEY = id => `exzibo_team_admin_${id}`
 
@@ -139,9 +140,9 @@ export default function TeamMembersAdmin() {
   const [activeUidFilter, setActiveUidFilter] = useState('')
 
   function matchesUid(r, q) {
-    const needle = q.trim().toLowerCase()
+    const needle = stripRoleSuffix(q.trim()).toLowerCase()
     if (!needle) return true
-    const ruid = String(r.uid || '').trim().toLowerCase()
+    const ruid = stripRoleSuffix(String(r.uid || '')).trim().toLowerCase()
     const rid  = String(r.id  || '').trim().toLowerCase()
     return ruid.includes(needle) || rid.includes(needle)
   }
@@ -401,7 +402,7 @@ export default function TeamMembersAdmin() {
                                 </div>
                                 <div>
                                   <div style={{ fontSize: '12px', fontWeight: 700, color: '#ccc' }}>
-                                    {r.uid || r.id}
+                                    {stripRoleSuffix(r.uid || r.id)}
                                   </div>
                                   <div style={{ fontSize: '11px', color: '#555', marginTop: '2px' }}>
                                     {r.name?.toUpperCase()}

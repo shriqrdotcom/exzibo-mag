@@ -6,6 +6,7 @@ import { TrendingUp, Filter, Download, ChevronLeft, ChevronRight, Plus, Trash2, 
 import { useRole } from '../context/RoleContext'
 import { getRestaurants, updateRestaurant, softDeleteRestaurant, getRestaurantsCreatedThisMonth, upsertGlobalSetting } from '../lib/db'
 import { openRoleDashboard } from '../lib/navigation'
+import { stripRoleSuffix } from '../lib/uid'
 
 function getAvatarFromName(name) {
   return name.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase()
@@ -143,7 +144,7 @@ function mapRow(r) {
   const endDate   = r.end_date   || (() => { const d = new Date(startDate); d.setDate(d.getDate() + 30); return d.toISOString() })()
   return {
     id:        r.id,
-    uid:       r.uid || r.id,
+    uid:       stripRoleSuffix(r.uid || r.id),
     name:      (r.name || '').toUpperCase(),
     slug:      r.slug || '',
     status:    r.status === 'paused' ? 'PAUSED' : r.status === 'demo' ? 'DEMO' : 'RUNNING',
