@@ -1,0 +1,98 @@
+I need you to update the existing Roles Management page in my project. 
+DO NOT remove or break any existing functionality. Only ADD the new 
+section described below.
+
+─────────────────────────────────────────
+SECTION TO ADD: "ASSIGN ROLE BY RESTAURANT UID"
+─────────────────────────────────────────
+
+At the TOP of the Roles page (above the "ALL ROLES (4)" list), add a 
+new card/panel section with the following:
+
+1. A text input field labeled "Paste Restaurant UID" — placeholder text: 
+   "e.g. REST-XXXXXXXX"
+2. An "ENTER" button (styled in green or accent color to match the 
+   existing dark theme) placed to the right of the input field.
+3. When the ENTER button is clicked (or Enter key is pressed), search 
+   the Supabase database for the restaurant matching that UID.
+
+─────────────────────────────────────────
+SEARCH RESULT DISPLAY (show only after UID is entered and matched):
+─────────────────────────────────────────
+
+Below the search bar, display THREE role cards side by side 
+(or stacked on mobile) — one for each assignable role:
+
+CARD 1 — OWNER
+- Background: Yellow (#F5A623 or similar warm yellow)
+- Title: "Owner"
+- Description: "Full access to all features and settings"
+- Two buttons at the bottom:
+    → "Add Role" (dark/black button)
+    → "View Dashboard" (outlined/ghost button)
+
+CARD 2 — ADMIN
+- Background: Pink (#E91E8C or similar vibrant pink)
+- Title: "Admin"
+- Description: "Can manage operations but not team or billing"
+- Two buttons at the bottom:
+    → "Add Role" (dark/black button)
+    → "View Dashboard" (outlined/ghost button)
+
+CARD 3 — STAFF
+- Background: White (#FFFFFF) with dark text
+- Title: "Staff"
+- Description: "Front-of-house access only"
+- Two buttons at the bottom:
+    → "Add Role" (dark/black button)
+    → "View Dashboard" (outlined/ghost button)
+
+─────────────────────────────────────────
+BUTTON BEHAVIOUR:
+─────────────────────────────────────────
+
+- "Add Role" button: Assigns that specific role (Owner / Admin / Staff) 
+  to the restaurant found by the entered UID. Save this to the Supabase 
+  database under the correct restaurant record. Show a success toast 
+  notification: "Role assigned successfully."
+
+- "View Dashboard" button: Navigates to that restaurant's dashboard 
+  using its UID and the assigned role's route prefix. Open in a new tab 
+  if possible.
+
+─────────────────────────────────────────
+IF UID IS NOT FOUND:
+─────────────────────────────────────────
+
+Show an inline error message below the input field:
+"No restaurant found with this UID. Please check and try again."
+The three role cards should NOT appear in this case.
+
+─────────────────────────────────────────
+DESIGN RULES:
+─────────────────────────────────────────
+
+- Keep the overall page background dark (matching existing theme: #0D0D0D 
+  or #111111).
+- All text on the Yellow and Pink cards should be dark (#1A1A1A) for 
+  readability.
+- All text on the White card should also be dark (#1A1A1A).
+- Cards should have rounded corners (border-radius: 12px) and 
+  subtle box-shadow.
+- The search input and ENTER button row should be inside a 
+  dark card container with a label: "ASSIGN ROLE BY UID" at the top 
+  in small uppercase tracking-widest style.
+- Do NOT change any existing role cards shown below in the 
+  "ALL ROLES (4)" section. Leave them exactly as they are.
+
+─────────────────────────────────────────
+IMPORTANT CONSTRAINTS:
+─────────────────────────────────────────
+
+- Do NOT delete or modify any existing code unrelated to this new section.
+- Do NOT change existing role data, Supabase table structure, or 
+  routing logic already in place.
+- Only add new UI + new query logic for the UID search and role 
+  assignment feature.
+- Ensure the page still loads and renders correctly if no UID 
+  has been entered yet (hide the three cards by default).
