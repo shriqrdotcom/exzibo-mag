@@ -5,6 +5,7 @@ import Sidebar from '../components/Sidebar'
 import AdminHeader from '../components/AdminHeader'
 import { supabase } from '../lib/supabase'
 import { useRole } from '../context/RoleContext'
+import { openRoleDashboard } from '../lib/navigation'
 
 const ACCENT   = '#E8321A'
 const BG_MAIN  = '#0A0A0A'
@@ -220,8 +221,7 @@ function AssignRoleSection() {
   function handleViewDashboard(roleKey) {
     if (!restaurant) return
     activateRole(roleKey)
-    const url = `/admin/${restaurant.id}`
-    window.open(url, '_blank', 'noopener,noreferrer')
+    openRoleDashboard(navigate, restaurant, roleKey)
   }
 
   return (
