@@ -1576,7 +1576,7 @@ export default function RestaurantWebsite() {
                   tableNumber
                     ? `/${slug}/${tableNumber}/${toSlug(item.name)}`
                     : isMenuPath
-                      ? `/${slug}/food/${toSlug(item.name)}`
+                      ? `/${slug}/${activeNav}/${toSlug(item.name)}`
                       : `/restaurant/${slug}/food/${encodeURIComponent(item.name)}`,
                   { state: { item, returnTab: activeNav, darkMode, themeColor: restaurant?.primaryColor || '#E8321A' } }
                 )}
@@ -1760,9 +1760,9 @@ export default function RestaurantWebsite() {
                     tableNumber
                       ? `/${slug}/${tableNumber}/${toSlug(item.name)}`
                       : isMenuPath
-                        ? `/${slug}/food/${toSlug(item.name)}`
+                        ? `/${slug}/${activeNav}/${toSlug(item.name)}`
                         : `/restaurant/${slug}/food/${encodeURIComponent(item.name)}`,
-                    { state: { item, returnTab: 'home', darkMode, themeColor: restaurant?.primaryColor || '#E8321A' } }
+                    { state: { item, returnTab: activeNav, darkMode, themeColor: restaurant?.primaryColor || '#E8321A' } }
                   )}
                 >
                   {/* Full-bleed image */}
@@ -1963,7 +1963,7 @@ export default function RestaurantWebsite() {
                     tableNumber
                       ? `/${slug}/${tableNumber}/${toSlug(item.name)}`
                       : isMenuPath
-                        ? `/${slug}/food/${toSlug(item.name)}`
+                        ? `/${slug}/${activeNav}/${toSlug(item.name)}`
                         : `/restaurant/${slug}/food/${encodeURIComponent(item.name)}`,
                     { state: { item, returnTab: activeNav, darkMode, themeColor: restaurant?.primaryColor || '#E8321A' } }
                   )}
