@@ -211,6 +211,30 @@ export default function AdminDashboard({ restaurantId: restaurantIdProp, initial
   const [orders, setOrders] = useState([])
   const [bookings, setBookings] = useState([])
   const [activeNav, setActiveNav] = useState(initialSection || 'orders')
+
+  // Maps internal section IDs → the URL slug used on dashboard.exzibo.online
+  const SECTION_TO_URL = {
+    orders:    'orders',
+    bookings:  'booking',
+    menu:      'menu',
+    customers: 'analytics',
+    settings:  'settings',
+    profile:   'profile',
+  }
+  const isDashboardSubdomain =
+    typeof window !== 'undefined' &&
+    window.location.hostname === 'dashboard.exzibo.online'
+
+  // Switch to a section and keep the browser URL in sync.
+  // On dashboard.exzibo.online the URL becomes /{restaurantSlug}/{section}.
+  // On other domains (dev / superadmin) only React state changes.
+  function navigateSection(sectionId) {
+    setActiveNav(sectionId)
+    if (isDashboardSubdomain && restaurant?.slug) {
+      const urlSegment = SECTION_TO_URL[sectionId] || sectionId
+      navigate(`/${restaurant.slug}/${urlSegment}`, { replace: true })
+    }
+  }
   const [uidCopied, setUidCopied] = useState(false)
   const [orderView, setOrderView] = useState('orders')
   const [showOrderSettings, setShowOrderSettings] = useState(false)
@@ -1801,7 +1825,7 @@ export default function AdminDashboard({ restaurantId: restaurantIdProp, initial
             <button
               key={item.id}
               className="nav-tab"
-              onClick={() => setActiveNav(item.id)}
+              onClick={() => navigateSection(item.id)}
               title={item.label}
               style={{
                 width: '48px', height: '48px', borderRadius: '18px',

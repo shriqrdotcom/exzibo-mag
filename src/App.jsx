@@ -146,6 +146,21 @@ function SlugResolver({ subPath }) {
 // Props:
 //   section — initial nav tab: "orders" | "tables" | "menu" |
 //             "analytics" | "dashboard"  (default: "orders")
+// Maps the URL path segment (e.g. "booking") to the AdminDashboard section ID
+// (e.g. "bookings").  All dashboard.exzibo.online URL slugs go through this.
+const SLUG_TO_SECTION = {
+  orders:    'orders',
+  booking:   'bookings',
+  bookings:  'bookings',
+  menu:      'menu',
+  analytics: 'customers',
+  customers: 'customers',
+  settings:  'settings',
+  profile:   'profile',
+  dashboard: 'orders',
+  tables:    'orders',
+}
+
 function SlugAdminRoute({ section }) {
   const { restaurantSlug } = useParams()
   const [restaurantId, setRestaurantId] = useState(null)
@@ -163,7 +178,9 @@ function SlugAdminRoute({ section }) {
 
   if (notFound) return <NotFound message={`Restaurant "${restaurantSlug}" not found`} />
   if (!restaurantId) return <GlobalLoader />
-  return <AdminDashboard restaurantId={restaurantId} initialSection={section} />
+  // Resolve URL slug → internal section ID (e.g. "booking" → "bookings")
+  const resolvedSection = SLUG_TO_SECTION[section] || section || 'orders'
+  return <AdminDashboard restaurantId={restaurantId} initialSection={resolvedSection} />
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -368,6 +385,9 @@ function DashboardApp() {
       <Route path="/:restaurantSlug/tables"     element={<SlugAdminRoute section="tables" />} />
       <Route path="/:restaurantSlug/menu"       element={<SlugAdminRoute section="menu" />} />
       <Route path="/:restaurantSlug/analytics"  element={<SlugAdminRoute section="analytics" />} />
+      <Route path="/:restaurantSlug/booking"    element={<SlugAdminRoute section="booking" />} />
+      <Route path="/:restaurantSlug/settings"   element={<SlugAdminRoute section="settings" />} />
+      <Route path="/:restaurantSlug/profile"    element={<SlugAdminRoute section="profile" />} />
 
       {/* ── Role-based slug routes ── */}
       <Route path="/:restaurantSlug/admin"     element={<SlugAdminRoute />} />
