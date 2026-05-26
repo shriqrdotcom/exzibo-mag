@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { useParams, Navigate } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import { getMenuSubdomain, buildMenuBaseUrl } from '../lib/routeConfig'
 
 const PRODUCTION_DOMAIN = 'exzibo.online'
@@ -94,6 +94,11 @@ export default function MenuLinkRoute() {
   }
 
   const slug = match.slug || match.id
-  const qs = tableNumber ? `?table=${encodeURIComponent(tableNumber)}` : ''
-  return <Navigate to={`/restaurant/${slug}${qs}`} replace />
+  // Redirect to the canonical customer URL on the menu subdomain.
+  // Table number goes into the path: /{slug}/{tableNumber}/home
+  const target = tableNumber
+    ? `https://menu.exzibo.online/${slug}/${tableNumber}/home`
+    : `https://menu.exzibo.online/${slug}/home`
+  useEffect(() => { window.location.replace(target) }, [target])
+  return null
 }

@@ -290,7 +290,7 @@ export default function Restaurants() {
                   key={r.id}
                   restaurant={r}
                   isLast={i === filtered.length - 1}
-                  onCustomer={() => navigate(`/restaurant/${r.slug || r.id}`)}
+                  onCustomer={() => window.open(`https://menu.exzibo.online/${r.slug || r.id}/home`, '_blank', 'noopener,noreferrer')}
                   onAdmin={() => openRoleDashboard(navigate, r, 'owner')}
                 />
               ))

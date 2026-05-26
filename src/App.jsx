@@ -6,6 +6,17 @@ import { RoleProvider } from './context/RoleContext'
 import { getSubdomain } from './lib/subdomain'
 import { getRestaurantBySlug } from './lib/db'
 
+// ── Menu subdomain redirect — used by SuperAdminApp for /restaurant/* routes ─
+// Instead of rendering the restaurant website inside superadmin, redirect the
+// browser hard to the canonical menu.exzibo.online/{slug}/home URL.
+function MenuRedirect() {
+  const { slug } = useParams()
+  useEffect(() => {
+    if (slug) window.location.replace(`https://menu.exzibo.online/${slug}/home`)
+  }, [slug])
+  return <GlobalLoader />
+}
+
 import Landing              from './pages/Landing'
 import Auth                 from './pages/Auth'
 import Dashboard            from './pages/Dashboard'
@@ -203,9 +214,9 @@ function SuperAdminApp() {
       <Route path="/"    element={<Landing />} />
       <Route path="/auth" element={<Auth />} />
 
-      {/* Public customer-facing pages (restaurant preview / demo / themes) */}
-      <Route path="/restaurant/:slug"                element={<RestaurantWebsite />} />
-      <Route path="/restaurant/:slug/food/:itemName" element={<FoodDetail />} />
+      {/* Customer-facing pages: redirect to menu.exzibo.online/{slug}/home */}
+      <Route path="/restaurant/:slug"                element={<MenuRedirect />} />
+      <Route path="/restaurant/:slug/food/:itemName" element={<MenuRedirect />} />
       <Route path="/r/:slug"                         element={<RestaurantWebsite />} />
 
       {/* ── Superadmin-protected routes ── */}

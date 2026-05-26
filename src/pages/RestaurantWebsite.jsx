@@ -203,18 +203,27 @@ export default function RestaurantWebsite() {
   const navigate = useNavigate()
   const location = useLocation()
 
+  // Valid customer nav pages — these can appear as the :tableNumber URL segment
+  // when the URL is /{slug}/{page} (no table context), e.g. menu.exzibo.online/thetaj/menu
+  const VALID_NAV_PAGES = ['home', 'menu', 'orders', 'booking', 'cart']
+  const isTableParamAPage = !!(tableParam && VALID_NAV_PAGES.includes(tableParam))
+
   // Build the canonical path for this page on the menu subdomain:
-  //   /{slug}  |  /{slug}/{tableNumber}  |  /{slug}/{tableNumber}/{page}
+  //   /{slug}/{page}  |  /{slug}/{tableNumber}  |  /{slug}/{tableNumber}/{page}
   const menuSubdomainPath = slug
     ? (tableParam
-        ? (pageParam ? `/${slug}/${tableParam}/${pageParam}` : `/${slug}/${tableParam}`)
+        ? (isTableParamAPage
+            ? `/${slug}/${tableParam}`
+            : pageParam ? `/${slug}/${tableParam}/${pageParam}` : `/${slug}/${tableParam}`)
         : `/${slug}`)
     : null
   useMenuSubdomainRedirect(menuSubdomainPath)
 
-  // Table number: URL param (:tableNumber) wins, then ?table= query string
+  // Table number: only when tableParam is NOT a nav page name
   const searchParams = new URLSearchParams(location.search)
-  const tableNumber = tableParam || searchParams.get('table') || null
+  const tableNumber = isTableParamAPage
+    ? (searchParams.get('table') || null)
+    : (tableParam || searchParams.get('table') || null)
   // True when served from the menu subdomain (path is /{slug}/...) vs main domain (/restaurant/{slug}/...)
   const isMenuPath = !location.pathname.startsWith('/restaurant/')
 
@@ -224,11 +233,12 @@ export default function RestaurantWebsite() {
   const [menuTabs, setMenuTabs] = useState(MENU_TABS)
   const [menuData, setMenuData] = useState(() => Object.fromEntries(MENU_TABS.map(t => [t.id, []])))
 
-  // Initial tab: URL page segment (:page) wins, then router state, then 'home'
-  const VALID_NAV_PAGES = ['home', 'menu', 'orders', 'booking', 'cart']
-  const [activeNav, setActiveNav] = useState(
-    (pageParam && VALID_NAV_PAGES.includes(pageParam)) ? pageParam : (location.state?.activeNav || 'home')
-  )
+  // Initial tab: tableParam-as-page wins, then :page segment, then router state, then 'home'
+  const [activeNav, setActiveNav] = useState(() => {
+    if (isTableParamAPage) return tableParam
+    if (pageParam && VALID_NAV_PAGES.includes(pageParam)) return pageParam
+    return location.state?.activeNav || 'home'
+  })
   const [activeMenuTab, setActiveMenuTab] = useState('starters')
   const [darkMode, setDarkMode] = useState(() => {
     try { return JSON.parse(localStorage.getItem('exzibo_darkmode') || 'false') } catch { return false }

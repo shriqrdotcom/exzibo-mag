@@ -210,7 +210,7 @@ export default function CreateWebsite() {
   }
 
   if (success) {
-    const websiteUrl = `/restaurant/${createdSlug}`
+    const websiteUrl = `https://menu.exzibo.online/${createdSlug}/home`
     return (
       <div style={{
         minHeight: '100vh', background: '#0B0B0B',

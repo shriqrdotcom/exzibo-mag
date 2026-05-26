@@ -158,7 +158,7 @@ export default function TablePage() {
   }
 
   function getRestaurantUrl(r) {
-    return `${window.location.origin}/restaurant/${r.slug || r.id}`
+    return `https://menu.exzibo.online/${r.slug || r.id}/home`
   }
 
   function handleCopyLink(r) {
