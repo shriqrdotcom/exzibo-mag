@@ -193,8 +193,8 @@ export default function FoodDetail() {
 
   function handleSuggestionClick(sug) {
     const path = tableNumber
-      ? `/${slug}/${tableNumber}/${encodeURIComponent(sug.name)}`
-      : `${restaurantBasePath}/food/${encodeURIComponent(sug.name)}`
+      ? `/${slug}/${tableNumber}/${toSlug(sug.name)}`
+      : `${restaurantBasePath}/food/${toSlug(sug.name)}`
     navigate(path, {
       state: { item: sug, returnTab, themeColor },
       replace: true,

@@ -5,6 +5,7 @@ import { useAnalytics, notifyAnalyticsUpdate } from '../context/AnalyticsContext
 import { useRole } from '../context/RoleContext'
 import { getRestaurantById, getRestaurants, getOrders, getBookings, updateOrderStatus, updateBookingStatus, getMenuCategories, getMenuItems, insertMenuItem, updateMenuItem, deleteMenuItem, upsertMenuCategory, deleteMenuCategory, upsertMenuItems, uploadMenuImage, updateRestaurant, uploadToStorage, uploadDataUrlToStorage, toggleMenuItemPublish, normalizeOrder, normalizeBooking, sendMessage, getLatestSmsNotification, upsertSmsNotification, fetchActiveNotification, publishActiveNotification, confirmActiveNotification, insertNotificationHistory, fetchNotificationHistory, fetchNIELimits, subscribeToNIELimits } from '../lib/db'
 import { processImageFile, isAcceptedImageType } from '../lib/processImage'
+import { toSlug } from '../lib/slug'
 import { supabase } from '../lib/supabase'
 import notificationIconImg from '@assets/image_1777373928129.png'
 import {
@@ -5663,6 +5664,12 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
               onFocus={e => e.target.style.borderColor = accentStart}
               onBlur={e => e.target.style.borderColor = '#e2e8f0'}
             />
+            {addDraft.name.trim() && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '5px 10px', background: 'rgba(0,0,0,0.03)', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                <span style={{ fontSize: '10px', fontWeight: 700, color: '#94A3B8', letterSpacing: '0.08em', textTransform: 'uppercase', flexShrink: 0 }}>URL slug</span>
+                <span style={{ fontSize: '11px', fontWeight: 600, color: accentStart, fontFamily: 'monospace', wordBreak: 'break-all' }}>{toSlug(addDraft.name)}</span>
+              </div>
+            )}
             <textarea
               value={addDraft.desc} onChange={e => setAddDraft(d => ({ ...d, desc: e.target.value }))}
               placeholder="Description" rows={2}
@@ -5800,6 +5807,12 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
                     onFocus={e => e.target.style.borderColor = accentStart}
                     onBlur={e => e.target.style.borderColor = '#e2e8f0'}
                   />
+                  {editDraft.name.trim() && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '5px 10px', background: 'rgba(0,0,0,0.03)', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                      <span style={{ fontSize: '10px', fontWeight: 700, color: '#94A3B8', letterSpacing: '0.08em', textTransform: 'uppercase', flexShrink: 0 }}>URL slug</span>
+                      <span style={{ fontSize: '11px', fontWeight: 600, color: accentStart, fontFamily: 'monospace', wordBreak: 'break-all' }}>{toSlug(editDraft.name)}</span>
+                    </div>
+                  )}
                   <textarea
                     value={editDraft.desc} onChange={e => setEditDraft(d => ({ ...d, desc: e.target.value }))}
                     rows={2} style={{ ...inputSt, resize: 'vertical' }}
