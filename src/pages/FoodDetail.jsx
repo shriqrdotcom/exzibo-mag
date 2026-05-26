@@ -66,7 +66,10 @@ export default function FoodDetail() {
   const [detailsOpen, setDetailsOpen] = useState(false)
   const [heartBounce, setHeartBounce] = useState(false)
 
-  const themeColor = location.state?.themeColor || restaurant?.accent_color || '#E8321A'
+  const BRAND_CRIMSON = '#E8321A'
+  const themeColor = location.state?.themeColor ||
+    (restaurant?.accent_color && restaurant.accent_color !== '#6366F1' ? restaurant.accent_color : null) ||
+    BRAND_CRIMSON
 
   // On menu.exzibo.online the restaurant base path is /:slug (no /restaurant/ prefix)
   const isMenuSubdomain = getSubdomain() === 'menu'
@@ -226,8 +229,10 @@ export default function FoodDetail() {
         @keyframes detailsIn { from { opacity: 0; } to { opacity: 1; } }
         .shimmer { background-size: 400px 100%; animation: shimmer 1.4s infinite linear; }
         .fd-content { animation: fadeUp 0.35s ease both; }
-        .icon-btn { transition: transform 0.12s ease; }
+        .icon-btn { transition: transform 0.12s ease; outline: none; -webkit-tap-highlight-color: transparent; }
         .icon-btn:active { transform: scale(0.88); }
+        .icon-btn:focus { outline: none; }
+        .icon-btn:focus-visible { outline: none; }
         .sug-card { transition: transform 0.16s ease; cursor: pointer; }
         .sug-card:active { transform: scale(0.96); }
         .brand-row { transition: background 0.15s ease; cursor: pointer; }
@@ -306,6 +311,7 @@ export default function FoodDetail() {
               border: '1px solid rgba(255,255,255,0.1)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               cursor: 'pointer', color: '#fff',
+              outline: 'none', WebkitTapHighlightColor: 'transparent',
             }}
           >
             <ArrowLeft size={17} strokeWidth={2.5} />
@@ -323,6 +329,7 @@ export default function FoodDetail() {
                 border: `1px solid ${liked ? themeColor + '50' : 'rgba(255,255,255,0.1)'}`,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 cursor: 'pointer',
+                outline: 'none', WebkitTapHighlightColor: 'transparent',
               }}
             >
               <Heart
@@ -349,6 +356,7 @@ export default function FoodDetail() {
                 border: '1px solid rgba(255,255,255,0.1)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 cursor: 'pointer', color: '#fff',
+                outline: 'none', WebkitTapHighlightColor: 'transparent',
               }}
             >
               <Search size={16} strokeWidth={2} />
@@ -363,6 +371,7 @@ export default function FoodDetail() {
                 border: '1px solid rgba(255,255,255,0.1)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 cursor: 'pointer', color: '#fff',
+                outline: 'none', WebkitTapHighlightColor: 'transparent',
               }}
             >
               <Share2 size={16} strokeWidth={2} />
