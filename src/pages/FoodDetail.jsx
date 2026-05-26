@@ -4,6 +4,7 @@ import { useMenuSubdomainRedirect } from '../lib/routeConfig'
 import { getRestaurantBySlug } from '../lib/db'
 import { supabase } from '../lib/supabase'
 import { toSlug, findBySlug } from '../lib/slug'
+import { getSubdomain } from '../lib/subdomain'
 import { ArrowLeft, Share2, Heart, Search, Star, ChevronRight, ChevronDown, Flame } from 'lucide-react'
 
 const FALLBACK_IMG = '/menu/wagyu-ribeye.png'
@@ -67,12 +68,16 @@ export default function FoodDetail() {
 
   const themeColor = location.state?.themeColor || restaurant?.accent_color || '#E8321A'
 
+  // On menu.exzibo.online the restaurant base path is /:slug (no /restaurant/ prefix)
+  const isMenuSubdomain = getSubdomain() === 'menu'
+  const restaurantBasePath = isMenuSubdomain ? `/${slug}` : `/restaurant/${slug}`
+
   // ── Back navigation — returns to the right URL depending on context ────────
   function goBack() {
     if (tableNumber) {
       navigate(`/${slug}/${tableNumber}`, { state: { activeNav: returnTab } })
     } else {
-      navigate(`/restaurant/${slug}`, { state: { activeNav: returnTab } })
+      navigate(restaurantBasePath, { state: { activeNav: returnTab } })
     }
   }
 
@@ -189,7 +194,7 @@ export default function FoodDetail() {
   function handleSuggestionClick(sug) {
     const path = tableNumber
       ? `/${slug}/${tableNumber}/${encodeURIComponent(sug.name)}`
-      : `/restaurant/${slug}/food/${encodeURIComponent(sug.name)}`
+      : `${restaurantBasePath}/food/${encodeURIComponent(sug.name)}`
     navigate(path, {
       state: { item: sug, returnTab, themeColor },
       replace: true,
@@ -334,7 +339,7 @@ export default function FoodDetail() {
                 if (tableNumber) {
                   navigate(`/${slug}/${tableNumber}`, { state: { activeNav: returnTab, openSearch: true } })
                 } else {
-                  navigate(`/restaurant/${slug}`, { state: { activeNav: returnTab, openSearch: true } })
+                  navigate(restaurantBasePath, { state: { activeNav: returnTab, openSearch: true } })
                 }
               }}
               style={{
@@ -508,7 +513,7 @@ export default function FoodDetail() {
       <div style={{ margin: '10px 10px 0' }}>
         <div
           className="brand-row"
-          onClick={() => navigate(`/restaurant/${slug}`, { state: { activeNav: 'home' } })}
+          onClick={() => navigate(restaurantBasePath, { state: { activeNav: 'home' } })}
           style={{
             background: '#1C1E22',
             borderRadius: '16px',
