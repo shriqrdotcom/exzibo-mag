@@ -227,6 +227,19 @@ export default function RestaurantWebsite() {
   // True when served from the menu subdomain (path is /{slug}/...) vs main domain (/restaurant/{slug}/...)
   const isMenuPath = !location.pathname.startsWith('/restaurant/')
 
+  // Navigate to a customer page tab and update the browser URL.
+  // On menu.exzibo.online:  /{slug}/{page}  or  /{slug}/{tableNumber}/{page}
+  // In dev / DefaultApp:    just update React state (route has no :page segment)
+  function navigateToPage(page) {
+    setActiveNav(page)
+    if (isMenuPath && slug) {
+      const path = tableNumber
+        ? `/${slug}/${tableNumber}/${page}`
+        : `/${slug}/${page}`
+      navigate(path, { replace: true })
+    }
+  }
+
   const [restaurant, setRestaurant] = useState(null)
   const [aboutData, setAboutData] = useState({ description: '', image: '' })
   const [notFound, setNotFound] = useState(false)
@@ -702,7 +715,7 @@ export default function RestaurantWebsite() {
 
     setTimeout(() => {
       setShowSuccessPopup(false)
-      setActiveNav('orders')
+      navigateToPage('orders')
     }, 2500)
   }
 
@@ -1260,7 +1273,7 @@ export default function RestaurantWebsite() {
 
   function onCartBtnClick(e) {
     if (cartDragRef.current.moved) { cartDragRef.current.moved = false; return }
-    setActiveNav('cart')
+    navigateToPage('cart')
   }
 
   if (notFound) {
@@ -1678,7 +1691,7 @@ export default function RestaurantWebsite() {
             {/* Left: booking icon square button */}
             <button
               className="action-btn"
-              onClick={() => setActiveNav('booking')}
+              onClick={() => navigateToPage('booking')}
               style={{
                 width: '48px', height: '48px', flexShrink: 0,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -1703,7 +1716,7 @@ export default function RestaurantWebsite() {
             {/* Right: View menu pill */}
             <button
               className="action-btn"
-              onClick={() => setActiveNav('menu')}
+              onClick={() => navigateToPage('menu')}
               style={{
                 flex: 1, height: '48px',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -1726,7 +1739,7 @@ export default function RestaurantWebsite() {
               <div style={{ fontSize: '13px', fontWeight: 900, color: theme.sectionTitle, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
                 Best Selling Food
               </div>
-              <button onClick={() => setActiveNav('menu')} style={{ display: 'flex', alignItems: 'center', gap: '3px', background: 'none', border: 'none', color: '#E8321A', fontSize: '12px', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+              <button onClick={() => navigateToPage('menu')} style={{ display: 'flex', alignItems: 'center', gap: '3px', background: 'none', border: 'none', color: '#E8321A', fontSize: '12px', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
                 See all <ChevronRight size={13} />
               </button>
             </div>
@@ -2004,7 +2017,7 @@ export default function RestaurantWebsite() {
               <div style={{ fontSize: '16px', fontWeight: 800, color: theme.color }}>Your cart is empty</div>
               <div style={{ fontSize: '13px', color: theme.locationColor, textAlign: 'center', lineHeight: 1.6, maxWidth: '220px' }}>Browse the menu and add your favourite dishes!</div>
               <button
-                onClick={() => setActiveNav('menu')}
+                onClick={() => navigateToPage('menu')}
                 style={{ marginTop: '8px', background: '#E8321A', color: '#fff', border: 'none', borderRadius: '14px', padding: '12px 28px', fontSize: '13px', fontWeight: 700, cursor: 'pointer', boxShadow: '0 6px 20px rgba(232,50,26,0.35)' }}
               >
                 Browse Menu
@@ -2349,7 +2362,7 @@ export default function RestaurantWebsite() {
                 ))}
               </div>
               {/* Reorder */}
-              <button className="reorder-btn" onClick={() => { setCartItems(viewingHistoryOrder.items.map(i => ({ ...i }))); setViewingHistoryOrder(null); setActiveNav('cart') }} style={{ width: '100%', background: 'linear-gradient(135deg, #1c1c1c, #2a2a2a)', color: '#fff', border: '1px solid rgba(255,255,255,0.10)', borderRadius: '16px', padding: '15px', fontSize: '14px', fontWeight: 700, cursor: 'pointer', letterSpacing: '0.04em', boxShadow: '0 4px 16px rgba(0,0,0,0.25)', marginBottom: '10px' }}>
+              <button className="reorder-btn" onClick={() => { setCartItems(viewingHistoryOrder.items.map(i => ({ ...i }))); setViewingHistoryOrder(null); navigateToPage('cart') }} style={{ width: '100%', background: 'linear-gradient(135deg, #1c1c1c, #2a2a2a)', color: '#fff', border: '1px solid rgba(255,255,255,0.10)', borderRadius: '16px', padding: '15px', fontSize: '14px', fontWeight: 700, cursor: 'pointer', letterSpacing: '0.04em', boxShadow: '0 4px 16px rgba(0,0,0,0.25)', marginBottom: '10px' }}>
                 ↺  Reorder Same Items
               </button>
               {/* Cancel this order */}
@@ -2375,7 +2388,7 @@ export default function RestaurantWebsite() {
               </div>
               <div style={{ fontSize: '16px', fontWeight: 800, color: theme.color }}>No active orders.</div>
               <div style={{ fontSize: '13px', color: theme.locationColor, textAlign: 'center', lineHeight: 1.6, maxWidth: '220px' }}>Place an order from the cart to track it here</div>
-              <button onClick={() => setActiveNav('menu')} style={{ marginTop: '8px', background: '#E8321A', color: '#fff', border: 'none', borderRadius: '14px', padding: '12px 28px', fontSize: '13px', fontWeight: 700, cursor: 'pointer', boxShadow: '0 6px 20px rgba(232,50,26,0.35)' }}>
+              <button onClick={() => navigateToPage('menu')} style={{ marginTop: '8px', background: '#E8321A', color: '#fff', border: 'none', borderRadius: '14px', padding: '12px 28px', fontSize: '13px', fontWeight: 700, cursor: 'pointer', boxShadow: '0 6px 20px rgba(232,50,26,0.35)' }}>
                 Browse Menu
               </button>
             </div>
@@ -2387,7 +2400,7 @@ export default function RestaurantWebsite() {
 
               {/* Back + Title */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '18px' }}>
-                <button onClick={() => setActiveNav('home')} style={{ width: '36px', height: '36px', borderRadius: '18px', background: theme.cardBg, border: `1px solid ${theme.cardBorder}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 2px 10px rgba(0,0,0,0.10)', flexShrink: 0 }}>
+                <button onClick={() => navigateToPage('home')} style={{ width: '36px', height: '36px', borderRadius: '18px', background: theme.cardBg, border: `1px solid ${theme.cardBorder}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 2px 10px rgba(0,0,0,0.10)', flexShrink: 0 }}>
                   <ArrowLeft size={16} color={theme.color} />
                 </button>
                 <div style={{ fontSize: '20px', fontWeight: 900, color: theme.color, letterSpacing: '-0.01em' }}>Your Order</div>
@@ -2421,7 +2434,7 @@ export default function RestaurantWebsite() {
                     </div>
                   </div>
                   {/* Menu button */}
-                  <button onClick={() => setActiveNav('menu')} style={{ flexShrink: 0, background: '#E8321A', color: '#fff', border: 'none', borderRadius: '10px', padding: '8px 16px', fontSize: '12px', fontWeight: 800, cursor: 'pointer', letterSpacing: '0.06em', fontFamily: 'inherit', boxShadow: '0 4px 14px rgba(232,50,26,0.40)' }}>
+                  <button onClick={() => navigateToPage('menu')} style={{ flexShrink: 0, background: '#E8321A', color: '#fff', border: 'none', borderRadius: '10px', padding: '8px 16px', fontSize: '12px', fontWeight: 800, cursor: 'pointer', letterSpacing: '0.06em', fontFamily: 'inherit', boxShadow: '0 4px 14px rgba(232,50,26,0.40)' }}>
                     MENU
                   </button>
                 </div>
@@ -2599,7 +2612,7 @@ export default function RestaurantWebsite() {
                 onClick={() => {
                   if (currentOrder) {
                     setCartItems(currentOrder.items.map(i => ({ ...i })))
-                    setActiveNav('cart')
+                    navigateToPage('cart')
                   }
                 }}
                 style={{ width: '100%', background: 'linear-gradient(135deg, #1c1c1c, #2a2a2a)', color: '#fff', border: '1px solid rgba(255,255,255,0.10)', borderRadius: '16px', padding: '15px', fontSize: '14px', fontWeight: 700, cursor: 'pointer', letterSpacing: '0.04em', boxShadow: '0 4px 16px rgba(0,0,0,0.25)', marginBottom: '10px' }}
@@ -2995,7 +3008,7 @@ export default function RestaurantWebsite() {
             {cartCount} {cartCount === 1 ? 'item' : 'items'} | ₹{subtotal.toLocaleString('en-IN')}
           </span>
           <button
-            onClick={() => setActiveNav('cart')}
+            onClick={() => navigateToPage('cart')}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -3054,7 +3067,7 @@ export default function RestaurantWebsite() {
           return (
             <button
               key={id}
-              onClick={() => setActiveNav(id)}
+              onClick={() => navigateToPage(id)}
               style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 border: 'none', cursor: 'pointer', background: 'none',
