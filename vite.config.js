@@ -303,6 +303,96 @@ function restaurantDbPlugin() {
   }
 }
 
+function tableValidationPlugin() {
+  // In-memory TTL cache: avoids hitting Supabase on every request (60s TTL)
+  const cache    = new Map()
+  const CACHE_TTL = 60_000
+
+  const MENU_PAGES = new Set(['home', 'menu', 'orders', 'booking', 'cart'])
+  const SKIP_SEGS  = new Set([
+    'restaurant', 'admin', 'r', 'table', 'api', 'auth',
+    'dashboard', 'super-admin', 'master-control', 'team-members',
+    'settings', 'create-website', 'restaurants',
+  ])
+
+  function extractParams(urlPath) {
+    const pathname = (urlPath || '/').split('?')[0]
+    const parts = pathname.split('/').filter(Boolean)
+    if (!parts.length) return null
+    if (SKIP_SEGS.has(parts[0])) return null
+    if (parts.length >= 3 && MENU_PAGES.has(parts[1])) {
+      return { slug: parts[0], tableNumber: parts[2] }
+    }
+    if (parts.length >= 4 && parts[1] === 'item') {
+      return { slug: parts[0], tableNumber: parts[3] }
+    }
+    return null
+  }
+
+  async function isValid(slug, tableNumber) {
+    if (slug === 'demo') return true
+    const tn = parseInt(tableNumber, 10)
+    if (!Number.isFinite(tn) || tn < 1) return false
+
+    const cacheKey = `${slug}:${tn}`
+    const hit = cache.get(cacheKey)
+    if (hit && hit.exp > Date.now()) return hit.valid
+
+    const supabaseUrl = process.env.VITE_SUPABASE_URL
+    const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY
+    if (!supabaseUrl || !supabaseKey) return true // no credentials → fail open
+
+    try {
+      const ctrl  = new AbortController()
+      const timer = setTimeout(() => ctrl.abort(), 3000)
+      const res = await fetch(
+        `${supabaseUrl}/rest/v1/restaurants?slug=eq.${encodeURIComponent(slug)}&select=table_numbers,tables&limit=1`,
+        {
+          headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}` },
+          signal: ctrl.signal,
+        }
+      )
+      clearTimeout(timer)
+      if (!res.ok) return true
+      const rows = await res.json()
+      if (!rows?.length) return true // restaurant unknown → fail open
+
+      const row = rows[0]
+      let valid
+      if (Array.isArray(row.table_numbers) && row.table_numbers.length > 0) {
+        valid = row.table_numbers.map(String).includes(String(tn))
+      } else {
+        const count = parseInt(row.tables, 10)
+        valid = !Number.isFinite(count) || count <= 0 || (tn >= 1 && tn <= count)
+      }
+      cache.set(cacheKey, { valid, exp: Date.now() + CACHE_TTL })
+      return valid
+    } catch {
+      return true // timeout / network error → fail open
+    }
+  }
+
+  return {
+    name: 'table-validation',
+    configureServer(server) {
+      // POST-hook: runs after Vite's own middleware but before spaFallbackPlugin.
+      return () => {
+        server.middlewares.use(async (req, res, next) => {
+          if (req.method !== 'GET') return next()
+          const params = extractParams(req.url || '/')
+          if (!params) return next()
+          const valid = await isValid(params.slug, params.tableNumber)
+          if (!valid) {
+            req.socket.destroy()
+            return
+          }
+          next()
+        })
+      }
+    },
+  }
+}
+
 function spaFallbackPlugin() {
   return {
     name: 'spa-fallback',
@@ -342,7 +432,7 @@ function spaFallbackPlugin() {
 }
 
 export default defineConfig({
-  plugins: [react(), previewAuthPlugin(), restaurantDbPlugin(), spaFallbackPlugin()],
+  plugins: [react(), previewAuthPlugin(), restaurantDbPlugin(), tableValidationPlugin(), spaFallbackPlugin()],
   appType: 'spa',
   resolve: {
     alias: {

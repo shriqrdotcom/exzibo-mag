@@ -198,64 +198,6 @@ function loadMenuFromStorage(id, tabs) {
   } catch { return null }
 }
 
-// ── Table number validation helper (pure, no component state) ─────────────────
-// Returns true if the table number is valid for this restaurant, false if not.
-// Falls back to "allow all" if no table config is stored (backward compat).
-function checkTableValid(restaurantData, tableNum) {
-  if (!restaurantData || restaurantData.id === 'demo') return true
-  if (!tableNum || tableNum === 'undefined') return true
-  // Array-based check (most precise — set by TablePage link system)
-  const tableNums = restaurantData.table_numbers || restaurantData.tableNumbers
-  if (Array.isArray(tableNums) && tableNums.length > 0) {
-    return tableNums.map(String).includes(String(tableNum))
-  }
-  // Count-based fallback: restaurant.tables = "20" → allow 1..20
-  const count = parseInt(restaurantData.tables, 10)
-  if (!Number.isFinite(count) || count <= 0) return true
-  const n = parseInt(tableNum, 10)
-  return Number.isFinite(n) && n >= 1 && n <= count
-}
-
-// ── Invalid table 404-style page ───────────────────────────────────────────────
-function InvalidTablePage({ tableNumber }) {
-  return (
-    <div style={{
-      minHeight: '100vh', background: '#0A0A0A',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      flexDirection: 'column', fontFamily: "'Inter', sans-serif",
-      padding: '32px 24px', gap: '0',
-    }}>
-      <div style={{
-        width: '80px', height: '80px', borderRadius: '50%',
-        background: 'rgba(232,50,26,0.08)',
-        border: '1px solid rgba(232,50,26,0.2)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontSize: '36px', marginBottom: '24px',
-      }}>🚫</div>
-      <div style={{ fontSize: '13px', fontWeight: 700, color: '#E8321A', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '10px' }}>
-        Invalid Table
-      </div>
-      <div style={{ fontSize: '28px', fontWeight: 900, color: '#fff', marginBottom: '12px', letterSpacing: '-0.5px' }}>
-        Table #{tableNumber}
-      </div>
-      <div style={{ fontSize: '14px', color: 'rgba(255,255,255,0.38)', lineHeight: 1.7, textAlign: 'center', maxWidth: '300px', marginBottom: '32px' }}>
-        This table doesn't exist at this restaurant. Please scan the correct QR code at your table or ask a staff member for help.
-      </div>
-      <div style={{
-        padding: '12px 20px',
-        background: 'rgba(232,50,26,0.06)',
-        border: '1px solid rgba(232,50,26,0.15)',
-        borderRadius: '12px',
-        fontSize: '12px', color: '#666', letterSpacing: '0.04em',
-        display: 'flex', alignItems: 'center', gap: '8px',
-      }}>
-        <span style={{ color: '#E8321A', fontWeight: 700 }}>⚠</span>
-        URL tampering detected — access denied
-      </div>
-    </div>
-  )
-}
-
 export default function RestaurantWebsite() {
   const { slug, page, tableNumber: tableParam } = useParams()
   const navigate = useNavigate()
@@ -288,8 +230,6 @@ export default function RestaurantWebsite() {
   const [restaurant, setRestaurant] = useState(null)
   const [aboutData, setAboutData] = useState({ description: '', image: '' })
   const [notFound, setNotFound] = useState(false)
-  // null = still loading, true = valid table, false = invalid table number
-  const [tableValid, setTableValid] = useState(null)
   const [menuTabs, setMenuTabs] = useState(MENU_TABS)
   const [menuData, setMenuData] = useState(() => Object.fromEntries(MENU_TABS.map(t => [t.id, []])))
 
@@ -823,8 +763,6 @@ export default function RestaurantWebsite() {
       const tabs = loadMenuTabs(found.id)
       setMenuTabs(tabs)
       setRestaurant(found)
-      // Optimistically validate from localStorage; Supabase fetch below may override
-      setTableValid(checkTableValid(found, tableNumber))
       setMenuData(loadMenuFromStorage(found.id, tabs) || Object.fromEntries(tabs.map(t => [t.id, []])))
       setDynamicCategories(loadFiltersFromStorage(found.id))
       try { const fe = localStorage.getItem(`exzibo_filters_enabled_${found.id}`); if (fe) setFiltersEnabled(JSON.parse(fe)) } catch {}
@@ -869,7 +807,6 @@ export default function RestaurantWebsite() {
           status:          dbRow.status,
         }
         setRestaurant(r)
-        setTableValid(checkTableValid(r, tableNumber))
         setCustomerOrders(loadAndFilterCustomerOrders(r.id))
 
         // Load menu from Supabase — public page shows only published items
@@ -1338,11 +1275,6 @@ export default function RestaurantWebsite() {
         <a href="/" style={{ fontSize: '12px', color: '#aaa', textDecoration: 'none', fontWeight: 600 }}>← Back to Home</a>
       </div>
     )
-  }
-
-  // Table number is definitively invalid — block the page
-  if (tableValid === false) {
-    return <InvalidTablePage tableNumber={tableNumber} />
   }
 
   if (!restaurant) {

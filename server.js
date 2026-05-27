@@ -9,7 +9,94 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const app = express()
 const PORT = process.env.PORT || 5000
 
+// ── Table number validation (server-side) ─────────────────────────────────────
+// In-memory TTL cache so Supabase is only queried once per 60s per table slot.
+const _tableCache = new Map()
+const _CACHE_TTL  = 60_000
+
+const _MENU_PAGES = new Set(['home', 'menu', 'orders', 'booking', 'cart'])
+const _SKIP_SEGS  = new Set([
+  'restaurant', 'admin', 'r', 'table', 'api', 'auth',
+  'dashboard', 'super-admin', 'master-control', 'team-members',
+  'settings', 'create-website', 'restaurants',
+])
+
+function _extractTableParams(urlPath) {
+  const pathname = (urlPath || '/').split('?')[0]
+  const parts = pathname.split('/').filter(Boolean)
+  if (!parts.length) return null
+  if (_SKIP_SEGS.has(parts[0])) return null
+  // /:slug/:navPage/:tableNumber
+  if (parts.length >= 3 && _MENU_PAGES.has(parts[1])) {
+    return { slug: parts[0], tableNumber: parts[2] }
+  }
+  // /:slug/item/:itemName/:tableNumber
+  if (parts.length >= 4 && parts[1] === 'item') {
+    return { slug: parts[0], tableNumber: parts[3] }
+  }
+  return null
+}
+
+async function _isTableValid(slug, tableNumber) {
+  if (slug === 'demo') return true
+  const tn = parseInt(tableNumber, 10)
+  if (!Number.isFinite(tn) || tn < 1) return false
+
+  const cacheKey = `${slug}:${tn}`
+  const hit = _tableCache.get(cacheKey)
+  if (hit && hit.exp > Date.now()) return hit.valid
+
+  const supabaseUrl = process.env.VITE_SUPABASE_URL
+  const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY
+  if (!supabaseUrl || !supabaseKey) return true // no credentials → fail open
+
+  try {
+    const ctrl = new AbortController()
+    const timer = setTimeout(() => ctrl.abort(), 3000)
+    const res = await fetch(
+      `${supabaseUrl}/rest/v1/restaurants?slug=eq.${encodeURIComponent(slug)}&select=table_numbers,tables&limit=1`,
+      {
+        headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}` },
+        signal: ctrl.signal,
+      }
+    )
+    clearTimeout(timer)
+    if (!res.ok) return true
+    const rows = await res.json()
+    if (!rows?.length) return true // restaurant unknown → fail open
+
+    const row = rows[0]
+    let valid
+    if (Array.isArray(row.table_numbers) && row.table_numbers.length > 0) {
+      valid = row.table_numbers.map(String).includes(String(tn))
+    } else {
+      const count = parseInt(row.tables, 10)
+      valid = !Number.isFinite(count) || count <= 0 || (tn >= 1 && tn <= count)
+    }
+    _tableCache.set(cacheKey, { valid, exp: Date.now() + _CACHE_TTL })
+    return valid
+  } catch {
+    return true // timeout / network error → fail open
+  }
+}
+
 app.use(express.json())
+
+// Table validation middleware — runs BEFORE static serving so the HTML is
+// never sent for invalid table numbers. Destroys the socket silently,
+// giving the browser a connection-reset (ERR_CONNECTION_RESET) with no UI.
+app.use(async (req, res, next) => {
+  if (req.method !== 'GET') return next()
+  const params = _extractTableParams(req.url)
+  if (!params) return next()
+  const valid = await _isTableValid(params.slug, params.tableNumber)
+  if (!valid) {
+    req.socket.destroy()
+    return
+  }
+  next()
+})
+
 app.use(express.static(path.resolve(__dirname, 'dist')))
 
 // ── Preview Auth ──────────────────────────────────────────────────────────────
