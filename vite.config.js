@@ -303,8 +303,91 @@ function restaurantDbPlugin() {
   }
 }
 
+function tableNotFoundHtml(slug, tableNumber) {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Table Not Found — Exzibo</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      min-height: 100vh;
+      background: #0A0A0A;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      color: #fff;
+    }
+    .card {
+      text-align: center;
+      padding: 48px 32px;
+      max-width: 420px;
+    }
+    .code {
+      font-size: 72px;
+      font-weight: 900;
+      color: #1a1a1a;
+      letter-spacing: -4px;
+      line-height: 1;
+      margin-bottom: 8px;
+    }
+    .icon {
+      font-size: 40px;
+      margin-bottom: 20px;
+    }
+    h1 {
+      font-size: 20px;
+      font-weight: 700;
+      color: #E8321A;
+      margin-bottom: 10px;
+      letter-spacing: 0.02em;
+    }
+    p {
+      font-size: 14px;
+      color: #555;
+      line-height: 1.6;
+    }
+    .table-badge {
+      display: inline-block;
+      margin-top: 20px;
+      padding: 6px 16px;
+      border-radius: 999px;
+      border: 1px solid #222;
+      font-size: 12px;
+      color: #444;
+      letter-spacing: 0.08em;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+    .powered {
+      margin-top: 40px;
+      font-size: 11px;
+      color: #2a2a2a;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="code">404</div>
+    <div class="icon">🪑</div>
+    <h1>Table Not Found</h1>
+    <p>Table <strong style="color:#fff">#${tableNumber}</strong> does not exist for this restaurant.<br />Please scan the correct QR code on your table.</p>
+    <div class="table-badge">Invalid Table — ${slug}</div>
+    <div class="powered">Powered by Exzibo</div>
+  </div>
+</body>
+</html>`
+}
+
 function tableValidationPlugin() {
   // In-memory TTL cache: avoids hitting Supabase on every request (60s TTL)
+  // Both valid AND invalid results are cached so repeated bad requests
+  // don't hammer the database.
   const cache    = new Map()
   const CACHE_TTL = 60_000
 
@@ -329,6 +412,21 @@ function tableValidationPlugin() {
     return null
   }
 
+  // ── Core validation logic ───────────────────────────────────────────────────
+  // Source of truth: the `table_numbers` JSONB array in the restaurants table.
+  // Only tables explicitly created by the admin (stored in that array) are valid.
+  //
+  // Fail-closed rules:
+  //   • No Supabase credentials      → INVALID (misconfigured server)
+  //   • Supabase returned HTTP error → INVALID
+  //   • Restaurant not found in DB   → INVALID
+  //   • table_numbers is empty/null  → INVALID (no tables created yet)
+  //   • tableNumber not in array     → INVALID
+  //
+  // Fail-open rule (only genuine network errors):
+  //   • Supabase unreachable/timeout → OPEN  (prevents lockout during outage)
+  //     This window lasts at most 60 s before the next live check.
+  //
   async function isValid(slug, tableNumber) {
     if (slug === 'demo') return true
     const tn = parseInt(tableNumber, 10)
@@ -340,55 +438,71 @@ function tableValidationPlugin() {
 
     const supabaseUrl = process.env.VITE_SUPABASE_URL
     const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY
-    if (!supabaseUrl || !supabaseKey) return true // no credentials → fail open
+
+    // No credentials → server misconfigured; deny access
+    if (!supabaseUrl || !supabaseKey) return false
+
+    const store = (valid) => {
+      cache.set(cacheKey, { valid, exp: Date.now() + CACHE_TTL })
+      return valid
+    }
 
     try {
       const ctrl  = new AbortController()
-      const timer = setTimeout(() => ctrl.abort(), 3000)
+      const timer = setTimeout(() => ctrl.abort(), 4000)
       const res = await fetch(
-        `${supabaseUrl}/rest/v1/restaurants?slug=eq.${encodeURIComponent(slug)}&select=table_numbers,tables&limit=1`,
+        `${supabaseUrl}/rest/v1/restaurants?slug=eq.${encodeURIComponent(slug)}&select=table_numbers&limit=1`,
         {
           headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}` },
           signal: ctrl.signal,
         }
       )
       clearTimeout(timer)
-      if (!res.ok) return true
-      const rows = await res.json()
-      if (!rows?.length) return true // restaurant unknown → fail open
 
-      const row = rows[0]
-      let valid
-      if (Array.isArray(row.table_numbers) && row.table_numbers.length > 0) {
-        valid = row.table_numbers.map(String).includes(String(tn))
-      } else {
-        const count = parseInt(row.tables, 10)
-        valid = !Number.isFinite(count) || count <= 0 || (tn >= 1 && tn <= count)
-      }
-      cache.set(cacheKey, { valid, exp: Date.now() + CACHE_TTL })
-      return valid
+      // Supabase returned an error status → deny access (fail closed)
+      if (!res.ok) return store(false)
+
+      const rows = await res.json()
+
+      // Restaurant not found → deny access (fail closed)
+      if (!rows?.length) return store(false)
+
+      const tableNumbers = rows[0].table_numbers
+
+      // No tables created yet → deny access (fail closed)
+      if (!Array.isArray(tableNumbers) || tableNumbers.length === 0) return store(false)
+
+      // Only allow if the exact table number exists in the array
+      return store(tableNumbers.map(String).includes(String(tn)))
+
     } catch {
-      return true // timeout / network error → fail open
+      // Genuine network error / timeout → fail open temporarily (do NOT cache)
+      // The next request will re-check Supabase once connectivity is restored.
+      console.warn(`[table-validation] Supabase unreachable for ${slug}:${tn} — failing open`)
+      return true
     }
   }
 
   return {
     name: 'table-validation',
     configureServer(server) {
-      // POST-hook: runs after Vite's own middleware but before spaFallbackPlugin.
-      return () => {
-        server.middlewares.use(async (req, res, next) => {
-          if (req.method !== 'GET') return next()
-          const params = extractParams(req.url || '/')
-          if (!params) return next()
-          const valid = await isValid(params.slug, params.tableNumber)
-          if (!valid) {
-            req.socket.destroy()
-            return
-          }
-          next()
-        })
-      }
+      // Use a direct (pre-hook) middleware registration so it runs before Vite's
+      // internal SPA transforms and static serving — not as a post-hook.
+      // This guarantees the validation fires before index.html can be served.
+      server.middlewares.use(async (req, res, next) => {
+        if (req.method !== 'GET') return next()
+        const params = extractParams(req.url || '/')
+        if (!params) return next()
+        const valid = await isValid(params.slug, params.tableNumber)
+        if (!valid) {
+          const html = tableNotFoundHtml(params.slug, params.tableNumber)
+          res.statusCode = 404
+          res.setHeader('Content-Type', 'text/html; charset=utf-8')
+          res.end(html)
+          return
+        }
+        next()
+      })
     },
   }
 }
@@ -443,6 +557,10 @@ export default defineConfig({
     host: '0.0.0.0',
     port: 5000,
     allowedHosts: true,
-    historyApiFallback: true,
+    // historyApiFallback is intentionally NOT set here.
+    // Vite's built-in historyApiFallback middleware runs BEFORE post-hook plugins,
+    // which would bypass the tableValidationPlugin and serve index.html for invalid
+    // table numbers. The spaFallbackPlugin (a post-hook) handles SPA routing instead,
+    // so it always runs AFTER table validation has had a chance to block bad URLs.
   }
 })
