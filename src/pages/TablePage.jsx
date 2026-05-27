@@ -3,7 +3,7 @@ import Sidebar from '../components/Sidebar'
 import AdminHeader from '../components/AdminHeader'
 import { X, Check, Copy, ExternalLink, Plus, Lock, Loader, AlertCircle, CheckCircle, Sparkles } from 'lucide-react'
 import { getMenuSubdomain, buildMenuBaseUrl } from '../lib/routeConfig'
-import { checkLinkNameTakenInDB } from '../lib/db'
+import { checkLinkNameTakenInDB, updateRestaurant } from '../lib/db'
 
 function getAvatar(name) {
   return (name || '?').split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase()
@@ -331,7 +331,7 @@ export default function TablePage() {
     }
   }
 
-  function handleAddMoreTables() {
+  async function handleAddMoreTables() {
     if (!linksTarget) return
     const n = parseInt(addTablesInput, 10)
     if (!Number.isFinite(n) || n <= 0) {
@@ -345,6 +345,21 @@ export default function TablePage() {
     setShowAddTables(false)
     setAddTablesInput('')
     showToast(`✅ ${n} tables added successfully. Total: ${newTotal} tables.`)
+
+    // Sync updated table list to Supabase
+    const restaurantId = linksTarget.id
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(restaurantId)
+    if (isUUID) {
+      const tableNumbers = Array.from({ length: newTotal }, (_, i) => String(i + 1))
+      try {
+        await updateRestaurant(restaurantId, {
+          tables: String(newTotal),
+          table_numbers: tableNumbers,
+        })
+      } catch (e) {
+        console.warn('[TablePage] Failed to sync table config to Supabase:', e.message)
+      }
+    }
   }
 
   async function handleRequestCreate() {
@@ -375,7 +390,7 @@ export default function TablePage() {
     setShowConfirm(true)
   }
 
-  function handleConfirmCreate() {
+  async function handleConfirmCreate() {
     if (!linksTarget) return
     const uid = linksTarget.uid || linksTarget.id
     const cleaned = sanitizeLinkName(linkNameInput)
@@ -389,6 +404,21 @@ export default function TablePage() {
     setShowConfirm(false)
     setLinkStep(3)
     showToast('✅ Links created successfully')
+
+    // Sync valid table list to Supabase so every device can validate URLs
+    const restaurantId = linksTarget.id
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(restaurantId)
+    if (isUUID) {
+      const tableNumbers = Array.from({ length: count }, (_, i) => String(i + 1))
+      try {
+        await updateRestaurant(restaurantId, {
+          tables: String(count),
+          table_numbers: tableNumbers,
+        })
+      } catch (e) {
+        console.warn('[TablePage] Failed to sync table config to Supabase:', e.message)
+      }
+    }
   }
 
   function handleCopyTableUrl(url) {
