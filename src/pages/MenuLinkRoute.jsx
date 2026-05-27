@@ -95,10 +95,10 @@ export default function MenuLinkRoute() {
 
   const slug = match.slug || match.id
   // Redirect to the canonical customer URL on the menu subdomain.
-  // Table number goes into the path: /{slug}/{tableNumber}/home
+  // New route structure: /{slug}/{page}/{tableNumber}
   const target = tableNumber
-    ? `https://menu.exzibo.online/${slug}/${tableNumber}/home`
-    : `https://menu.exzibo.online/${slug}/home`
+    ? `https://menu.exzibo.online/${slug}/home/${tableNumber}`
+    : `https://menu.exzibo.online/${slug}/home/1`
   useEffect(() => { window.location.replace(target) }, [target])
   return null
 }

@@ -43,17 +43,19 @@ function getAllItems(menuData) {
 }
 
 export default function FoodDetail() {
-  // Support two URL patterns:
-  //   /:slug/food/:itemName         (classic pattern)
-  //   /:slug/:tableNumber/:page     (table-context pattern, page = item name)
-  const { slug, itemName, tableNumber, page } = useParams()
-  const effectiveItemName = itemName || page
+  // New URL pattern: /:slug/item/:itemName/:tableNumber
+  // Legacy pattern:  /:slug/food/:itemName  (no table context)
+  const { slug, itemName, tableNumber } = useParams()
+  const effectiveItemName = itemName
   const navigate = useNavigate()
   const location = useLocation()
 
-  // Redirect to configured menu subdomain in production (only for classic /restaurant/ pattern)
-  // Use slug-based URL so the redirect lands on the clean canonical path
-  useMenuSubdomainRedirect(slug && itemName ? `/${slug}/food/${toSlug(decodeURIComponent(itemName))}` : null)
+  // Redirect to configured menu subdomain in production
+  useMenuSubdomainRedirect(
+    slug && itemName
+      ? `/${slug}/item/${toSlug(decodeURIComponent(itemName))}/${tableNumber || '1'}`
+      : null
+  )
 
   const [item, setItem] = useState(location.state?.item ? injectOldPrice(location.state.item) : null)
   const returnTab = location.state?.returnTab || 'menu'
@@ -78,7 +80,7 @@ export default function FoodDetail() {
   // ── Back navigation — returns to the right URL depending on context ────────
   function goBack() {
     if (tableNumber) {
-      navigate(`/${slug}/${tableNumber}`, { state: { activeNav: returnTab } })
+      navigate(`/${slug}/${returnTab}/${tableNumber}`, { state: { activeNav: returnTab } })
     } else {
       navigate(restaurantBasePath, { state: { activeNav: returnTab } })
     }
@@ -196,7 +198,7 @@ export default function FoodDetail() {
 
   function handleSuggestionClick(sug) {
     const path = tableNumber
-      ? `/${slug}/${tableNumber}/${toSlug(sug.name)}`
+      ? `/${slug}/item/${toSlug(sug.name)}/${tableNumber}`
       : `${restaurantBasePath}/food/${toSlug(sug.name)}`
     navigate(path, {
       state: { item: sug, returnTab, themeColor },
@@ -344,7 +346,7 @@ export default function FoodDetail() {
               className="icon-btn"
               onClick={() => {
                 if (tableNumber) {
-                  navigate(`/${slug}/${tableNumber}`, { state: { activeNav: returnTab, openSearch: true } })
+                  navigate(`/${slug}/${returnTab}/${tableNumber}`, { state: { activeNav: returnTab, openSearch: true } })
                 } else {
                   navigate(restaurantBasePath, { state: { activeNav: returnTab, openSearch: true } })
                 }
@@ -522,7 +524,12 @@ export default function FoodDetail() {
       <div style={{ margin: '10px 10px 0' }}>
         <div
           className="brand-row"
-          onClick={() => navigate(restaurantBasePath, { state: { activeNav: 'home' } })}
+          onClick={() => navigate(
+            isMenuSubdomain && tableNumber
+              ? `/${slug}/home/${tableNumber}`
+              : restaurantBasePath,
+            { state: { activeNav: 'home' } }
+          )}
           style={{
             background: '#1C1E22',
             borderRadius: '16px',

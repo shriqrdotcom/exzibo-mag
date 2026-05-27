@@ -286,18 +286,17 @@ function SuperAdminApp() {
   )
 }
 
-// ── Menu route resolver — distinguishes food detail pages from nav tabs ──────
-// When /:slug/:tableNumber/:page is matched, page can be either a nav tab name
-// ('home', 'menu', 'orders', 'booking', 'cart') or a food item name.
-// If it's not a known nav tab, render the FoodDetail page.
-const MENU_VALID_PAGES = ['home', 'menu', 'orders', 'booking', 'cart']
+// ── Redirect helpers for MenuApp ─────────────────────────────────────────────
+// /:slug/:page (no table) → /:slug/:page/1  (default to table 1)
+function MenuPageRedirect() {
+  const { slug, page } = useParams()
+  return <Navigate to={`/${slug}/${page}/1`} replace />
+}
 
-function MenuRouteResolver() {
-  const { page } = useParams()
-  if (page && !MENU_VALID_PAGES.includes(page)) {
-    return <FoodDetail />
-  }
-  return <RestaurantWebsite />
+// /:slug (no page, no table) → /:slug/home/1
+function MenuSlugRedirect() {
+  const { slug } = useParams()
+  return <Navigate to={`/${slug}/home/1`} replace />
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -305,25 +304,31 @@ function MenuRouteResolver() {
 //
 // Fully public — no auth required.
 //
-// Routes:
-//   /:restaurantSlug              → public restaurant website / menu
-//   /:restaurantSlug/:tableNumber → restaurant website with table context
-//   /:restaurantSlug/:tableNumber/:page → nav tab OR food detail page
-//   /:restaurantSlug/food/:itemName    → food detail (legacy/direct URL)
-//   *                             → 404
+// Route structure:  /:slug/:page/:tableNumber
+//   /:slug/home/:tableNumber       → RestaurantWebsite (home tab)
+//   /:slug/menu/:tableNumber       → RestaurantWebsite (menu tab)
+//   /:slug/cart/:tableNumber       → RestaurantWebsite (cart tab)
+//   /:slug/orders/:tableNumber     → RestaurantWebsite (orders tab)
+//   /:slug/booking/:tableNumber    → RestaurantWebsite (booking tab)
+//   /:slug/item/:itemName/:tableNumber → FoodDetail
+//   /:slug/:page                   → redirect to /:slug/:page/1
+//   /:slug                         → redirect to /:slug/home/1
+//   *                              → 404
 // ═══════════════════════════════════════════════════════════════════════════
 function MenuApp() {
   return (
     <Routes>
-      {/* Legacy food detail path — kept for backward compatibility */}
-      <Route path="/:slug/food/:itemName"            element={<FoodDetail />} />
-      {/* /:slug/:tableNumber/:page — nav tab or food item (resolved by MenuRouteResolver) */}
-      <Route path="/:slug/:tableNumber/:page"        element={<MenuRouteResolver />} />
-      {/* /:slug/:tableNumber — e.g. /the-taj/5 */}
-      <Route path="/:slug/:tableNumber"              element={<RestaurantWebsite />} />
-      {/* bare slug — e.g. /the-taj */}
-      <Route path="/:slug"                           element={<RestaurantWebsite />} />
-      <Route path="*"                                element={<NotFound />} />
+      {/* Food item detail — always has /item/ prefix and table number */}
+      <Route path="/:slug/item/:itemName/:tableNumber" element={<FoodDetail />} />
+      {/* Legacy food detail path — backward compatibility */}
+      <Route path="/:slug/food/:itemName"             element={<FoodDetail />} />
+      {/* Nav pages with table number: /:slug/:page/:tableNumber */}
+      <Route path="/:slug/:page/:tableNumber"         element={<RestaurantWebsite />} />
+      {/* Nav page without table — redirect to table 1 */}
+      <Route path="/:slug/:page"                      element={<MenuPageRedirect />} />
+      {/* Bare slug — go to home tab, table 1 */}
+      <Route path="/:slug"                            element={<MenuSlugRedirect />} />
+      <Route path="*"                                 element={<NotFound />} />
     </Routes>
   )
 }
@@ -451,7 +456,10 @@ function DefaultApp() {
       <Route path="/restaurant/:slug/:tableNumber/:page"        element={<RestaurantWebsite />} />
       <Route path="/restaurant/:slug/:tableNumber"              element={<RestaurantWebsite />} />
       <Route path="/restaurant/:slug"                           element={<RestaurantWebsite />} />
-      <Route path="/:slug/food/:foodSlug"                       element={<FoodDetail />} />
+      {/* New table-in-path structure (dev/preview): /:slug/:page/:tableNumber */}
+      <Route path="/:slug/item/:itemName/:tableNumber"          element={<FoodDetail />} />
+      <Route path="/:slug/food/:itemName"                       element={<FoodDetail />} />
+      <Route path="/:slug/:page/:tableNumber"                   element={<RestaurantWebsite />} />
       <Route path="/r/:slug"                                    element={<RestaurantWebsite />} />
       <Route path="/table"                           element={<TablePage />} />
       <Route path="/menu/:linkName/:tableNumber"     element={<MenuLinkRoute />} />

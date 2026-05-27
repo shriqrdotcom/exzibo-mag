@@ -199,44 +199,31 @@ function loadMenuFromStorage(id, tabs) {
 }
 
 export default function RestaurantWebsite() {
-  const { slug, tableNumber: tableParam, page: pageParam } = useParams()
+  const { slug, page, tableNumber: tableParam } = useParams()
   const navigate = useNavigate()
   const location = useLocation()
 
-  // Valid customer nav pages — these can appear as the :tableNumber URL segment
-  // when the URL is /{slug}/{page} (no table context), e.g. menu.exzibo.online/thetaj/menu
   const VALID_NAV_PAGES = ['home', 'menu', 'orders', 'booking', 'cart']
-  const isTableParamAPage = !!(tableParam && VALID_NAV_PAGES.includes(tableParam))
+
+  // Table number — always present in new route structure /:slug/:page/:tableNumber.
+  // Default to '1' when missing (covers legacy routes or direct dev access).
+  const tableNumber = tableParam || '1'
 
   // Build the canonical path for this page on the menu subdomain:
-  //   /{slug}/{page}  |  /{slug}/{tableNumber}  |  /{slug}/{tableNumber}/{page}
-  const menuSubdomainPath = slug
-    ? (tableParam
-        ? (isTableParamAPage
-            ? `/${slug}/${tableParam}`
-            : pageParam ? `/${slug}/${tableParam}/${pageParam}` : `/${slug}/${tableParam}`)
-        : `/${slug}`)
-    : null
+  //   /{slug}/{page}/{tableNumber}
+  const menuSubdomainPath = slug ? `/${slug}/${page || 'home'}/${tableNumber}` : null
   useMenuSubdomainRedirect(menuSubdomainPath)
 
-  // Table number: only when tableParam is NOT a nav page name
-  const searchParams = new URLSearchParams(location.search)
-  const tableNumber = isTableParamAPage
-    ? (searchParams.get('table') || null)
-    : (tableParam || searchParams.get('table') || null)
   // True when served from the menu subdomain (path is /{slug}/...) vs main domain (/restaurant/{slug}/...)
   const isMenuPath = !location.pathname.startsWith('/restaurant/')
 
   // Navigate to a customer page tab and update the browser URL.
-  // On menu.exzibo.online:  /{slug}/{page}  or  /{slug}/{tableNumber}/{page}
+  // On menu.exzibo.online:  /{slug}/{targetPage}/{tableNumber}
   // In dev / DefaultApp:    just update React state (route has no :page segment)
-  function navigateToPage(page) {
-    setActiveNav(page)
+  function navigateToPage(targetPage) {
+    setActiveNav(targetPage)
     if (isMenuPath && slug) {
-      const path = tableNumber
-        ? `/${slug}/${tableNumber}/${page}`
-        : `/${slug}/${page}`
-      navigate(path, { replace: true })
+      navigate(`/${slug}/${targetPage}/${tableNumber}`, { replace: true })
     }
   }
 
@@ -246,10 +233,9 @@ export default function RestaurantWebsite() {
   const [menuTabs, setMenuTabs] = useState(MENU_TABS)
   const [menuData, setMenuData] = useState(() => Object.fromEntries(MENU_TABS.map(t => [t.id, []])))
 
-  // Initial tab: tableParam-as-page wins, then :page segment, then router state, then 'home'
+  // Initial tab: :page URL segment wins, then router state, then 'home'
   const [activeNav, setActiveNav] = useState(() => {
-    if (isTableParamAPage) return tableParam
-    if (pageParam && VALID_NAV_PAGES.includes(pageParam)) return pageParam
+    if (page && VALID_NAV_PAGES.includes(page)) return page
     return location.state?.activeNav || 'home'
   })
   const [activeMenuTab, setActiveMenuTab] = useState('starters')
@@ -1573,11 +1559,9 @@ export default function RestaurantWebsite() {
             {searchFilteredAll.map((item, i) => (
               <div key={i}
                 onClick={() => navigate(
-                  tableNumber
-                    ? `/${slug}/${tableNumber}/${toSlug(item.name)}`
-                    : isMenuPath
-                      ? `/${slug}/${activeNav}/${toSlug(item.name)}`
-                      : `/restaurant/${slug}/food/${encodeURIComponent(item.name)}`,
+                  isMenuPath
+                    ? `/${slug}/item/${toSlug(item.name)}/${tableNumber}`
+                    : `/restaurant/${slug}/food/${encodeURIComponent(item.name)}`,
                   { state: { item, returnTab: activeNav, darkMode, themeColor: restaurant?.primaryColor || '#E8321A' } }
                 )}
                 style={{
@@ -1757,11 +1741,9 @@ export default function RestaurantWebsite() {
                     scrollSnapAlign: 'start',
                   }}
                   onClick={() => navigate(
-                    tableNumber
-                      ? `/${slug}/${tableNumber}/${toSlug(item.name)}`
-                      : isMenuPath
-                        ? `/${slug}/${activeNav}/${toSlug(item.name)}`
-                        : `/restaurant/${slug}/food/${encodeURIComponent(item.name)}`,
+                    isMenuPath
+                      ? `/${slug}/item/${toSlug(item.name)}/${tableNumber}`
+                      : `/restaurant/${slug}/food/${encodeURIComponent(item.name)}`,
                     { state: { item, returnTab: activeNav, darkMode, themeColor: restaurant?.primaryColor || '#E8321A' } }
                   )}
                 >
@@ -1960,11 +1942,9 @@ export default function RestaurantWebsite() {
                   onAddToCart={addToCart}
                   cartQty={inCart ? inCart.qty : 0}
                   onPress={() => navigate(
-                    tableNumber
-                      ? `/${slug}/${tableNumber}/${toSlug(item.name)}`
-                      : isMenuPath
-                        ? `/${slug}/${activeNav}/${toSlug(item.name)}`
-                        : `/restaurant/${slug}/food/${encodeURIComponent(item.name)}`,
+                    isMenuPath
+                      ? `/${slug}/item/${toSlug(item.name)}/${tableNumber}`
+                      : `/restaurant/${slug}/food/${encodeURIComponent(item.name)}`,
                     { state: { item, returnTab: activeNav, darkMode, themeColor: restaurant?.primaryColor || '#E8321A' } }
                   )}
                 />
