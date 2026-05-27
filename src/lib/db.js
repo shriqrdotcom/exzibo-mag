@@ -226,7 +226,7 @@ export async function createRestaurant(payload) {
   console.log('[createRestaurant] payload keys:', Object.keys(payload))
   const { data, error } = await supabase
     .from('restaurants')
-    .insert({ ...payload, owner_id: user.id })
+    .insert({ ...payload, owner_id: user.id, table_numbers: payload.table_numbers ?? [1] })
     .select()
     .single()
   if (error) {

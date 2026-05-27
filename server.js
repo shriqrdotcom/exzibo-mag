@@ -23,88 +23,6 @@ const _SKIP_SEGS  = new Set([
   'settings', 'create-website', 'restaurants',
 ])
 
-// Minimal 404 HTML returned for invalid table numbers.
-// Keeps the dark theme consistent with the app.
-function _tableNotFoundHtml(slug, tableNumber) {
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Table Not Found — Exzibo</title>
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      min-height: 100vh;
-      background: #0A0A0A;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      color: #fff;
-    }
-    .card {
-      text-align: center;
-      padding: 48px 32px;
-      max-width: 420px;
-    }
-    .code {
-      font-size: 72px;
-      font-weight: 900;
-      color: #1a1a1a;
-      letter-spacing: -4px;
-      line-height: 1;
-      margin-bottom: 8px;
-    }
-    .icon {
-      font-size: 40px;
-      margin-bottom: 20px;
-    }
-    h1 {
-      font-size: 20px;
-      font-weight: 700;
-      color: #E8321A;
-      margin-bottom: 10px;
-      letter-spacing: 0.02em;
-    }
-    p {
-      font-size: 14px;
-      color: #555;
-      line-height: 1.6;
-    }
-    .table-badge {
-      display: inline-block;
-      margin-top: 20px;
-      padding: 6px 16px;
-      border-radius: 999px;
-      border: 1px solid #222;
-      font-size: 12px;
-      color: #444;
-      letter-spacing: 0.08em;
-      font-weight: 600;
-      text-transform: uppercase;
-    }
-    .powered {
-      margin-top: 40px;
-      font-size: 11px;
-      color: #2a2a2a;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-    }
-  </style>
-</head>
-<body>
-  <div class="card">
-    <div class="code">404</div>
-    <div class="icon">🪑</div>
-    <h1>Table Not Found</h1>
-    <p>Table <strong style="color:#fff">#${tableNumber}</strong> does not exist for this restaurant.<br />Please scan the correct QR code on your table.</p>
-    <div class="table-badge">Invalid Table — ${slug}</div>
-    <div class="powered">Powered by Exzibo</div>
-  </div>
-</body>
-</html>`
-}
 
 function _extractTableParams(urlPath) {
   const pathname = (urlPath || '/').split('?')[0]
@@ -208,8 +126,7 @@ app.use(async (req, res, next) => {
   if (!params) return next()
   const valid = await _isTableValid(params.slug, params.tableNumber)
   if (!valid) {
-    const html = _tableNotFoundHtml(params.slug, params.tableNumber)
-    res.status(404).setHeader('Content-Type', 'text/html; charset=utf-8').end(html)
+    res.status(404).end()
     return
   }
   next()
