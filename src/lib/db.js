@@ -377,6 +377,26 @@ export async function permanentDeleteRestaurant(restaurant) {
   removeSoftDeletedId(id)
 }
 
+/**
+ * Check whether a slug or link name is already taken in Supabase.
+ * Queries the restaurants table for any row where slug = name.
+ * Returns true if the name is already taken, false if available.
+ */
+export async function checkLinkNameTakenInDB(name) {
+  if (!name) return false
+  try {
+    const { data, error } = await supabaseAnon
+      .from('restaurants')
+      .select('id')
+      .eq('slug', name)
+      .maybeSingle()
+    if (error) return false
+    return !!data
+  } catch {
+    return false
+  }
+}
+
 export async function getRestaurantBySlug(slug) {
   // Try with the anon client first — it uses the `anon` RLS role which allows
   // reading any restaurant. The authenticated client's RLS may restrict access

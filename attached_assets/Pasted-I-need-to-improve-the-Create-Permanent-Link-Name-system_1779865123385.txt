@@ -1,0 +1,79 @@
+I need to improve the "Create Permanent Link Name" system for restaurants in my restaurant SaaS platform.
+
+Current system:
+When creating a restaurant, I manually create a permanent restaurant slug/link.
+
+Example:
+the-taj
+
+Now I need proper backend logic for duplicate restaurant slug handling and UID display.
+
+Requirements:
+
+1. Show Restaurant UID
+- In the "Create Permanent Link Name" section, also display the unique restaurant UID.
+- Example:
+  UID: 8910934786
+  Permanent Link: the-taj
+
+2. Unique Slug Validation
+- Every restaurant permanent link/slug must be unique.
+- If the same slug already exists, the system should automatically generate an alternative unique slug.
+
+Example:
+Existing:
+- the-taj
+
+If admin tries to create:
+- the taj
+or
+- the-taj
+
+Then automatically generate:
+- the-tajj
+or
+- thee-taj
+or
+- the-taj
+or another readable variation.
+
+3. Important Logic
+- Do NOT always add the extra character at the end.
+- The duplicate handling should intelligently place the extra character in different positions.
+- The generated slug must remain readable and SEO-friendly.
+- Replace spaces with hyphens automatically.
+- Convert all characters to lowercase automatically.
+
+4. Required Backend Rules
+- Before saving a slug, check database for existing slugs.
+- If slug already exists:
+   - Automatically generate another available unique slug.
+- Continue checking until a unique slug is found.
+- Save only unique slugs in database.
+
+5. Example Cases
+
+Input:
+"The Taj"
+
+Possible outputs:
+- the-taj
+- the-tajj
+- thee-taj
+- the-taaj
+
+Input:
+"Royal Palace"
+
+Possible outputs:
+- royal-palace
+- royall-palace
+- royal-pallace
+
+6. Production Requirements
+- Must work for thousands of restaurants.
+- Must prevent duplicate slugs completely.
+- Must work in backend/database level, not frontend only.
+- Must integrate with my existing restaurant creation system.
+
+Please implement a scalable and production-ready unique slug generation system.

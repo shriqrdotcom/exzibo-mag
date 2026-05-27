@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react'
 import Sidebar from '../components/Sidebar'
 import AdminHeader from '../components/AdminHeader'
-import { X, Check, Copy, ExternalLink, Plus, Lock } from 'lucide-react'
+import { X, Check, Copy, ExternalLink, Plus, Lock, Loader, AlertCircle, CheckCircle, Sparkles } from 'lucide-react'
 import { getMenuSubdomain, buildMenuBaseUrl } from '../lib/routeConfig'
+import { checkLinkNameTakenInDB } from '../lib/db'
 
 function getAvatar(name) {
   return (name || '?').split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase()
@@ -65,6 +66,71 @@ function sanitizeLinkName(value) {
     .replace(/-+/g, '-')
 }
 
+/**
+ * Generates readable slug variants by intelligently placing an extra character
+ * at different positions — not always at the end.
+ * e.g. "the-taj" → ["the-tajj", "the-taaj", "thee-taj", "thhe-taj", "the-taj-2"]
+ */
+function generateSlugVariants(slug) {
+  const VOWELS = 'aeiou'
+  const parts = slug.split('-')
+  const variants = []
+  const lastPart = parts[parts.length - 1]
+  const firstPart = parts[0]
+
+  // 1. Double the last letter of the last word: the-taj → the-tajj
+  if (lastPart.length > 0) {
+    variants.push([...parts.slice(0, -1), lastPart + lastPart[lastPart.length - 1]].join('-'))
+  }
+
+  // 2. Double the rightmost vowel in the last word: the-taj → the-taaj
+  for (let i = lastPart.length - 1; i >= 0; i--) {
+    if (VOWELS.includes(lastPart[i])) {
+      const d = lastPart.slice(0, i + 1) + lastPart[i] + lastPart.slice(i + 1)
+      variants.push([...parts.slice(0, -1), d].join('-'))
+      break
+    }
+  }
+
+  // 3. Double the rightmost vowel in the first word: the-taj → thee-taj
+  if (parts.length > 1) {
+    for (let i = firstPart.length - 1; i >= 0; i--) {
+      if (VOWELS.includes(firstPart[i])) {
+        const d = firstPart.slice(0, i + 1) + firstPart[i] + firstPart.slice(i + 1)
+        variants.push([d, ...parts.slice(1)].join('-'))
+        break
+      }
+    }
+  }
+
+  // 4. Double the last letter of the first word: the-taj → thhe-taj / royal-palace → royall-palace
+  if (firstPart.length > 0) {
+    const d = firstPart + firstPart[firstPart.length - 1]
+    variants.push(parts.length > 1 ? [d, ...parts.slice(1)].join('-') : d)
+  }
+
+  // 5. Double the rightmost vowel in a middle word (for 3+ part slugs)
+  if (parts.length > 2) {
+    const midIdx = Math.floor(parts.length / 2)
+    const midPart = parts[midIdx]
+    for (let i = midPart.length - 1; i >= 0; i--) {
+      if (VOWELS.includes(midPart[i])) {
+        const d = midPart.slice(0, i + 1) + midPart[i] + midPart.slice(i + 1)
+        const newParts = [...parts]
+        newParts[midIdx] = d
+        variants.push(newParts.join('-'))
+        break
+      }
+    }
+  }
+
+  // 6. Numeric suffix (last resort)
+  variants.push(slug + '-2')
+  variants.push(slug + '-3')
+
+  return [...new Set(variants)].filter(v => v !== slug && /^[a-z0-9][a-z0-9-]*[a-z0-9]$/.test(v))
+}
+
 function getRestaurantTables(restaurant) {
   if (Array.isArray(restaurant.tableNumbers) && restaurant.tableNumbers.length > 0) {
     return restaurant.tableNumbers.map(String)
@@ -99,8 +165,11 @@ export default function TablePage() {
   const [addTablesInput, setAddTablesInput] = useState('')
   const [copiedTableUrl, setCopiedTableUrl] = useState(null)
   const [linkBaseUrl, setLinkBaseUrl] = useState(FALLBACK_LINK_BASE_URL)
+  const [slugStatus, setSlugStatus] = useState(null)
+  const [slugSuggestion, setSlugSuggestion] = useState(null)
   const inputRef = useRef(null)
   const toastTimer = useRef(null)
+  const slugCheckTimer = useRef(null)
 
   function loadRestaurants() {
     const saved = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
@@ -189,6 +258,7 @@ export default function TablePage() {
 
   function closeLinks() {
     setLinksOpen(false)
+    if (slugCheckTimer.current) clearTimeout(slugCheckTimer.current)
     setTimeout(() => {
       setLinksTarget(null)
       setLinkStep(1)
@@ -202,7 +272,63 @@ export default function TablePage() {
       setShowAddTables(false)
       setAddTablesInput('')
       setCopiedTableUrl(null)
+      setSlugStatus(null)
+      setSlugSuggestion(null)
     }, 320)
+  }
+
+  async function isLinkNameTaken(name, currentUid) {
+    const localTaken = restaurants.some(r => {
+      const otherUid = r.uid || r.id
+      if (otherUid === currentUid) return false
+      return loadLinkName(otherUid) === name
+    })
+    if (localTaken) return true
+    try {
+      return await checkLinkNameTakenInDB(name)
+    } catch {
+      return false
+    }
+  }
+
+  async function checkAndSuggest(name) {
+    if (!name || !linksTarget) { setSlugStatus(null); setSlugSuggestion(null); return }
+    setSlugStatus('checking')
+    const uid = linksTarget.uid || linksTarget.id
+    const taken = await isLinkNameTaken(name, uid)
+    if (!taken) {
+      setSlugStatus('available')
+      setSlugSuggestion(null)
+      return
+    }
+    const variants = generateSlugVariants(name)
+    let suggestion = null
+    for (const v of variants) {
+      const vTaken = await isLinkNameTaken(v, uid)
+      if (!vTaken) { suggestion = v; break }
+    }
+    if (!suggestion) {
+      let n = 2
+      while (n < 50) {
+        const candidate = `${name}-${n}`
+        const cTaken = await isLinkNameTaken(candidate, uid)
+        if (!cTaken) { suggestion = candidate; break }
+        n++
+      }
+    }
+    setSlugStatus('taken')
+    setSlugSuggestion(suggestion)
+  }
+
+  function handleLinkNameChange(e) {
+    const cleaned = sanitizeLinkName(e.target.value)
+    setLinkNameInput(cleaned)
+    setSlugStatus(null)
+    setSlugSuggestion(null)
+    if (slugCheckTimer.current) clearTimeout(slugCheckTimer.current)
+    if (cleaned) {
+      slugCheckTimer.current = setTimeout(() => checkAndSuggest(cleaned), 500)
+    }
   }
 
   function handleAddMoreTables() {
@@ -221,27 +347,30 @@ export default function TablePage() {
     showToast(`✅ ${n} tables added successfully. Total: ${newTotal} tables.`)
   }
 
-  function handleRequestCreate() {
+  async function handleRequestCreate() {
     if (!linksTarget) return
-    const cleaned = sanitizeLinkName(linkNameInput)
     const count = parseInt(linkTableCountInput, 10)
-    if (!cleaned) {
-      showToast('⚠️ Enter a valid link name')
-      return
-    }
     if (!Number.isFinite(count) || count <= 0) {
       showToast('⚠️ Enter a valid table count')
       return
     }
-    const uid = linksTarget.uid || linksTarget.id
-    const taken = restaurants.some(r => {
-      const otherUid = r.uid || r.id
-      if (otherUid === uid) return false
-      return loadLinkName(otherUid) === cleaned
-    })
-    if (taken) {
-      showToast('⚠️ This link name is already taken')
+    let finalSlug = sanitizeLinkName(linkNameInput)
+    if (!finalSlug) {
+      showToast('⚠️ Enter a valid link name')
       return
+    }
+    if (slugStatus === 'taken' && slugSuggestion) {
+      finalSlug = slugSuggestion
+      setLinkNameInput(slugSuggestion)
+      setSlugStatus('available')
+      setSlugSuggestion(null)
+    } else if (slugStatus !== 'available') {
+      const uid = linksTarget.uid || linksTarget.id
+      const taken = await isLinkNameTaken(finalSlug, uid)
+      if (taken) {
+        showToast('⚠️ This link name is already taken')
+        return
+      }
     }
     setShowConfirm(true)
   }
@@ -684,28 +813,136 @@ export default function TablePage() {
                     Step 2 — Create Link & Set Tables
                   </div>
 
+                  {/* ── Restaurant UID display ── */}
+                  {linksTarget && (
+                    <div style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      padding: '12px 14px',
+                      background: 'rgba(255,255,255,0.03)',
+                      border: '1px solid rgba(255,255,255,0.07)',
+                      borderRadius: '10px',
+                      marginBottom: '18px',
+                    }}>
+                      <div>
+                        <div style={{ fontSize: '10px', fontWeight: 700, color: '#555', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '3px' }}>
+                          Restaurant UID
+                        </div>
+                        <div style={{ fontSize: '13px', fontWeight: 800, color: '#fffc00', fontFamily: 'monospace', letterSpacing: '0.06em' }}>
+                          {linksTarget.uid || linksTarget.id}
+                        </div>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontSize: '10px', fontWeight: 700, color: '#555', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '3px' }}>
+                          Restaurant
+                        </div>
+                        <div style={{ fontSize: '12px', fontWeight: 700, color: '#ccc' }}>
+                          {linksTarget.name || linksTarget.slug}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ── Create Permanent Link Name ── */}
                   <div style={{ marginBottom: '20px' }}>
                     <div style={{ fontSize: '11px', fontWeight: 700, color: '#aaa', letterSpacing: '0.06em', marginBottom: '8px' }}>
                       CREATE PERMANENT LINK NAME
                     </div>
-                    <input
-                      type="text"
-                      autoFocus
-                      value={linkNameInput}
-                      onChange={e => setLinkNameInput(sanitizeLinkName(e.target.value))}
-                      placeholder="e.g. spice-garden"
-                      style={{
-                        width: '100%', padding: '12px 14px',
-                        background: 'rgba(255,255,255,0.05)',
-                        border: '1px solid rgba(255,255,255,0.1)',
-                        borderRadius: '10px',
-                        color: '#fff', fontSize: '14px', fontWeight: 500,
-                        outline: 'none', boxSizing: 'border-box', marginBottom: '8px',
-                      }}
-                    />
+                    <div style={{ position: 'relative' }}>
+                      <input
+                        type="text"
+                        autoFocus
+                        value={linkNameInput}
+                        onChange={handleLinkNameChange}
+                        placeholder="e.g. spice-garden"
+                        style={{
+                          width: '100%', padding: '12px 44px 12px 14px',
+                          background: slugStatus === 'available'
+                            ? 'rgba(74,222,128,0.05)'
+                            : slugStatus === 'taken'
+                              ? 'rgba(232,50,26,0.05)'
+                              : 'rgba(255,255,255,0.05)',
+                          border: `1px solid ${
+                            slugStatus === 'available' ? 'rgba(74,222,128,0.35)' :
+                            slugStatus === 'taken' ? 'rgba(232,50,26,0.35)' :
+                            'rgba(255,255,255,0.1)'
+                          }`,
+                          borderRadius: '10px',
+                          color: '#fff', fontSize: '14px', fontWeight: 500,
+                          outline: 'none', boxSizing: 'border-box',
+                          transition: 'border-color 0.2s, background 0.2s',
+                        }}
+                      />
+                      {/* Status icon */}
+                      <div style={{
+                        position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)',
+                        display: 'flex', alignItems: 'center',
+                      }}>
+                        {slugStatus === 'checking' && (
+                          <div style={{
+                            width: '16px', height: '16px', borderRadius: '50%',
+                            border: '2px solid rgba(255,255,255,0.15)',
+                            borderTopColor: '#888',
+                            animation: 'spin 0.7s linear infinite',
+                          }} />
+                        )}
+                        {slugStatus === 'available' && <CheckCircle size={16} color="#4ade80" />}
+                        {slugStatus === 'taken' && <AlertCircle size={16} color="#E8321A" />}
+                      </div>
+                    </div>
+
+                    {/* Status message */}
+                    {slugStatus === 'available' && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginTop: '6px' }}>
+                        <CheckCircle size={11} color="#4ade80" />
+                        <span style={{ fontSize: '11px', color: '#4ade80', fontWeight: 600 }}>
+                          This link name is available
+                        </span>
+                      </div>
+                    )}
+                    {slugStatus === 'taken' && (
+                      <div style={{ marginTop: '8px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '6px' }}>
+                          <AlertCircle size={11} color="#E8321A" />
+                          <span style={{ fontSize: '11px', color: '#E8321A', fontWeight: 600 }}>
+                            This link name is already taken
+                          </span>
+                        </div>
+                        {slugSuggestion && (
+                          <div style={{
+                            display: 'flex', alignItems: 'center', gap: '8px',
+                            padding: '8px 12px',
+                            background: 'rgba(255,252,0,0.05)',
+                            border: '1px solid rgba(255,252,0,0.18)',
+                            borderRadius: '8px',
+                          }}>
+                            <Sparkles size={12} color="#fffc00" style={{ flexShrink: 0 }} />
+                            <span style={{ fontSize: '12px', color: '#fffc00', fontFamily: 'monospace', fontWeight: 700, flex: 1 }}>
+                              {slugSuggestion}
+                            </span>
+                            <button
+                              onClick={() => {
+                                setLinkNameInput(slugSuggestion)
+                                setSlugStatus('available')
+                                setSlugSuggestion(null)
+                              }}
+                              style={{
+                                padding: '4px 10px',
+                                background: '#fffc00', border: 'none', borderRadius: '6px',
+                                color: '#000', fontSize: '10px', fontWeight: 800,
+                                letterSpacing: '0.06em', cursor: 'pointer', flexShrink: 0,
+                              }}
+                            >
+                              USE THIS
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* URL preview */}
                     <div style={{
-                      fontSize: '11px', color: '#666', fontFamily: 'monospace',
-                      padding: '8px 10px',
+                      fontSize: '11px', color: '#555', fontFamily: 'monospace',
+                      padding: '8px 10px', marginTop: '8px',
                       background: 'rgba(255,255,255,0.02)',
                       border: '1px dashed rgba(255,255,255,0.07)',
                       borderRadius: '8px',
@@ -715,6 +952,7 @@ export default function TablePage() {
                     </div>
                   </div>
 
+                  {/* ── Table count ── */}
                   <div style={{ marginBottom: '20px' }}>
                     <div style={{ fontSize: '11px', fontWeight: 700, color: '#aaa', letterSpacing: '0.06em', marginBottom: '8px' }}>
                       ENTER TOTAL NUMBER OF TABLES
@@ -741,19 +979,19 @@ export default function TablePage() {
 
                   <button
                     onClick={handleRequestCreate}
-                    disabled={!linkNameInput || !linkTableCountInput}
+                    disabled={!linkNameInput || !linkTableCountInput || slugStatus === 'checking'}
                     style={{
                       width: '100%', padding: '13px',
-                      background: (linkNameInput && linkTableCountInput) ? '#E8321A' : 'rgba(255,255,255,0.05)',
-                      border: (linkNameInput && linkTableCountInput) ? 'none' : '1px solid rgba(255,255,255,0.08)',
+                      background: (linkNameInput && linkTableCountInput && slugStatus !== 'checking') ? '#E8321A' : 'rgba(255,255,255,0.05)',
+                      border: (linkNameInput && linkTableCountInput && slugStatus !== 'checking') ? 'none' : '1px solid rgba(255,255,255,0.08)',
                       borderRadius: '10px',
-                      color: (linkNameInput && linkTableCountInput) ? '#fff' : '#555',
+                      color: (linkNameInput && linkTableCountInput && slugStatus !== 'checking') ? '#fff' : '#555',
                       fontSize: '13px', fontWeight: 800, letterSpacing: '0.06em',
-                      cursor: (linkNameInput && linkTableCountInput) ? 'pointer' : 'default',
-                      boxShadow: (linkNameInput && linkTableCountInput) ? '0 0 20px rgba(232,50,26,0.35)' : 'none',
+                      cursor: (linkNameInput && linkTableCountInput && slugStatus !== 'checking') ? 'pointer' : 'default',
+                      boxShadow: (linkNameInput && linkTableCountInput && slugStatus !== 'checking') ? '0 0 20px rgba(232,50,26,0.35)' : 'none',
                     }}
                   >
-                    Create Links
+                    {slugStatus === 'taken' && slugSuggestion ? `Create with "${slugSuggestion}"` : 'Create Links'}
                   </button>
                 </div>
               )}
