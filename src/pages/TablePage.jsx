@@ -823,6 +823,13 @@ export default function TablePage() {
                   <button
                     onClick={() => {
                       setLinkTableCountInput(String(linkPendingCount))
+                      const prefill = sanitizeLinkName(linksTarget?.slug || savedLinkName || '')
+                      if (prefill) {
+                        setLinkNameInput(prefill)
+                        if (slugCheckTimer.current) clearTimeout(slugCheckTimer.current)
+                        const uid = linksTarget?.uid || linksTarget?.id
+                        slugCheckTimer.current = setTimeout(() => checkAndSuggest(prefill, uid), 400)
+                      }
                       setLinkStep(2)
                     }}
                     style={{
