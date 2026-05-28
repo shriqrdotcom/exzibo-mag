@@ -9,6 +9,39 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const app = express()
 const PORT = process.env.PORT || 5000
 
+const INVALID_TABLE_HTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Invalid Table | Exzibo</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{background:#0a0a0a;color:#fff;font-family:'Inter',system-ui,sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center}
+    .wrap{text-align:center;padding:40px 24px;max-width:420px}
+    .badge{display:inline-flex;align-items:center;gap:6px;background:rgba(232,50,26,0.15);border:1px solid rgba(232,50,26,0.35);color:#e8321a;font-size:11px;font-weight:700;letter-spacing:.1em;padding:5px 14px;border-radius:100px;margin-bottom:32px;text-transform:uppercase}
+    .dot{width:7px;height:7px;border-radius:50%;background:#e8321a;animation:pulse 1.4s ease-in-out infinite}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+    .num{font-size:88px;font-weight:900;color:#1c1c1c;line-height:1;letter-spacing:-.04em}
+    .title{font-size:22px;font-weight:700;color:#fff;margin:12px 0 10px;letter-spacing:.02em}
+    .sub{font-size:14px;color:#555;line-height:1.65}
+    .sub strong{color:#888}
+    .divider{width:40px;height:2px;background:rgba(232,50,26,0.4);margin:28px auto}
+    .hint{font-size:12px;color:#333;letter-spacing:.06em;text-transform:uppercase;font-weight:600}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="badge"><span class="dot"></span>Table Validation Failed</div>
+    <div class="num">404</div>
+    <div class="title">Invalid Table Number</div>
+    <div class="sub">This table number does not exist for this restaurant.<br><strong>Please scan the QR code at your table.</strong></div>
+    <div class="divider"></div>
+    <div class="hint">Exzibo &middot; Secure Table Access</div>
+  </div>
+</body>
+</html>`
+
 // ── Table number validation (server-side) ─────────────────────────────────────
 // In-memory TTL cache so Supabase is only queried once per 60s per table slot.
 // Cache stores: { valid: bool, exp: timestamp }
@@ -108,10 +141,10 @@ async function _isTableValid(slug, tableNumber) {
     return cache(valid)
 
   } catch {
-    // Genuine network error / timeout → fail open temporarily (do NOT cache)
-    // The next request will re-check Supabase once connectivity is restored.
-    console.warn(`[table-validation] Supabase unreachable for ${slug}:${tn} — failing open`)
-    return true
+    // Any error (network, parse, timeout) → fail CLOSED for security.
+    // An invalid table number must never reach the menu page.
+    console.warn(`[table-validation] Supabase error for ${slug}:${tn} — failing closed`)
+    return cache(false)
   }
 }
 
@@ -126,7 +159,7 @@ app.use(async (req, res, next) => {
   if (!params) return next()
   const valid = await _isTableValid(params.slug, params.tableNumber)
   if (!valid) {
-    res.status(404).end()
+    res.status(404).type('html').send(INVALID_TABLE_HTML)
     return
   }
   next()

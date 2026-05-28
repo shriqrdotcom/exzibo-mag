@@ -230,6 +230,7 @@ export default function RestaurantWebsite() {
   const [restaurant, setRestaurant] = useState(null)
   const [aboutData, setAboutData] = useState({ description: '', image: '' })
   const [notFound, setNotFound] = useState(false)
+  const [invalidTable, setInvalidTable] = useState(false)
   const [menuTabs, setMenuTabs] = useState(MENU_TABS)
   const [menuData, setMenuData] = useState(() => Object.fromEntries(MENU_TABS.map(t => [t.id, []])))
 
@@ -1261,6 +1262,36 @@ export default function RestaurantWebsite() {
   function onCartBtnClick(e) {
     if (cartDragRef.current.moved) { cartDragRef.current.moved = false; return }
     navigateToPage('cart')
+  }
+
+  useEffect(() => {
+    if (!restaurant || slug === 'demo' || !tableParam) return
+    const tableNums = restaurant.table_numbers
+    if (!Array.isArray(tableNums) || tableNums.length === 0) return
+    const tn = parseInt(tableParam, 10)
+    if (!Number.isFinite(tn) || !tableNums.map(String).includes(String(tn))) {
+      setInvalidTable(true)
+    }
+  }, [restaurant, tableParam, slug])
+
+  if (invalidTable) {
+    return (
+      <div style={{ minHeight: '100vh', background: '#0a0a0a', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', fontFamily: "'Inter', sans-serif", padding: '24px', textAlign: 'center' }}>
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'rgba(232,50,26,0.12)', border: '1px solid rgba(232,50,26,0.3)', color: '#e8321a', fontSize: '11px', fontWeight: 700, letterSpacing: '0.1em', padding: '5px 14px', borderRadius: '100px', marginBottom: '28px', textTransform: 'uppercase' }}>
+          <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#e8321a', display: 'inline-block', animation: 'tblPulse 1.4s ease-in-out infinite' }} />
+          Table Validation Failed
+        </div>
+        <div style={{ fontSize: '88px', fontWeight: 900, color: '#1c1c1c', lineHeight: 1, letterSpacing: '-0.04em' }}>404</div>
+        <div style={{ fontSize: '22px', fontWeight: 700, color: '#fff', margin: '10px 0 10px', letterSpacing: '0.02em' }}>Invalid Table Number</div>
+        <div style={{ fontSize: '14px', color: '#555', lineHeight: 1.65, maxWidth: '300px' }}>
+          Table <strong style={{ color: '#888' }}>#{tableParam}</strong> does not exist for this restaurant.<br />
+          Please scan the QR code at your table.
+        </div>
+        <div style={{ width: '40px', height: '2px', background: 'rgba(232,50,26,0.4)', margin: '28px auto' }} />
+        <div style={{ fontSize: '12px', color: '#333', letterSpacing: '0.06em', textTransform: 'uppercase', fontWeight: 600 }}>Exzibo · Secure Table Access</div>
+        <style>{`@keyframes tblPulse{0%,100%{opacity:1}50%{opacity:.3}}`}</style>
+      </div>
+    )
   }
 
   if (notFound) {
