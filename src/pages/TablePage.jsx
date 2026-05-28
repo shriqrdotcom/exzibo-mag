@@ -875,7 +875,7 @@ export default function TablePage() {
                   {/* ── Create Permanent Link Name ── */}
                   <div style={{ marginBottom: '20px' }}>
                     <div style={{ fontSize: '11px', fontWeight: 700, color: '#aaa', letterSpacing: '0.06em', marginBottom: '8px' }}>
-                      CREATE PERMANENT LINK NAME
+                      PERMANENT LINK
                     </div>
                     <div style={{ position: 'relative' }}>
                       <input
