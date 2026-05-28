@@ -1,0 +1,85 @@
+TASK: Add “PERMANENT LINK” locked display section logic in restaurant creation form.
+
+CURRENT FLOW:
+- User types of restaurant names in “ESTABLISHMENT IDENTITY”
+- System auto-generates slug in “PERMANENT LINK NAME”
+Example:
+Restaurant Name = "The Taj"
+Generated Slug = "the-taj"
+
+NEW REQUIRED FEATURE:
+After the slug/permanent link name is successfully created for the FIRST TIME:
+- Show the final locked permanent link inside the “PERMANENT LINK” section.
+- Example display:
+  🔐 /the-taj
+
+IMPORTANT LOGIC:
+1. The “PERMANENT LINK” section must ONLY display the FINAL created slug.
+2. The displayed link must appear LOCKED (read-only).
+3. Users should NOT edit the “PERMANENT LINK” field directly.
+4. The lock icon 🔐 must visually indicate:
+   - permanent
+   - fixed
+   - non-editable
+5. Once the slug is saved successfully:
+   - Auto-populate the locked section instantly.
+6. Before creation:
+   - Show empty state or placeholder.
+7. After successful creation:
+   - Display:
+     🔐 /the-taj
+8. If slug changes before saving:
+   - Update preview dynamically.
+9. If restaurant already exists:
+   - Load saved permanent link automatically.
+10. Keep slug format clean:
+   - lowercase only
+   - hyphen-separated
+   - no spaces
+   - no special characters
+
+UI REQUIREMENTS:
+SECTION TITLE:
+PERMANENT LINK
+
+DISPLAY STYLE:
+- Dark theme matching current UI
+- Read-only container
+- Lock icon at left side
+- White text
+- Slight border glow
+- Professional SaaS style
+
+EXAMPLE:
+🔐 /the-taj
+
+FUNCTIONAL REQUIREMENTS:
+- Real-time update
+- Persistent after save
+- Non-editable after final creation
+- Sync with generated public URL
+
+PUBLIC URL PREVIEW:
+https://menu.exzibo.online/the-taj/home/1
+
+BACKEND REQUIREMENTS:
+- Save permanentLink/slug in database
+- Prevent future modification after final save
+- Ensure uniqueness validation still works
+
+EDGE CASES:
+- If slug already exists:
+  Show:
+  “This link name is already taken”
+- If available:
+  Show:
+  “This link name is available”
+- If saved successfully:
+  Lock the permanent link section automatically
+
+IMPLEMENTATION GOAL:
+Create a professional permanent URL identity system similar to:
+- Shopify store handles
+- Notion workspace links
+- GitHub usernames
+- SaaS tenant slugs

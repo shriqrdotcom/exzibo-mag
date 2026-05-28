@@ -549,51 +549,65 @@ function LeftSection({ form, set, errors, addTable, removeTable, logoInputRef, l
             fontSize: '9px', fontWeight: 700, letterSpacing: '0.18em',
             color: '#555', textTransform: 'uppercase', marginBottom: '8px',
           }}>
-            Permanent Link Name
+            Permanent Link
           </div>
-          <input
-            className="forge-input"
-            placeholder="e.g. spice-garden"
-            value={linkName}
-            onChange={e => {
-              const val = slugify(e.target.value) || e.target.value.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
-              setLinkName(val)
-              setLinkNameManual(true)
-            }}
-            style={{ fontSize: '13px', borderColor: inputBorderColor, transition: 'border-color 0.2s' }}
-          />
 
-          {/* Availability status indicator */}
+          {/* Locked slug display */}
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: '10px',
+            padding: '11px 14px',
+            background: 'rgba(255,255,255,0.03)',
+            border: `1px solid ${
+              linkStatus === 'available' ? 'rgba(74,222,128,0.35)' :
+              linkStatus === 'taken'     ? 'rgba(239,68,68,0.35)'  :
+              'rgba(255,255,255,0.07)'
+            }`,
+            borderRadius: '10px',
+            boxShadow: linkStatus === 'available'
+              ? '0 0 12px rgba(74,222,128,0.06)'
+              : linkStatus === 'taken'
+              ? '0 0 12px rgba(239,68,68,0.06)'
+              : 'none',
+            transition: 'border-color 0.25s, box-shadow 0.25s',
+            minHeight: '44px',
+          }}>
+            <span style={{ fontSize: '14px', flexShrink: 0, lineHeight: 1 }}>🔐</span>
+            <span style={{
+              fontFamily: 'monospace', fontSize: '13px', fontWeight: 700,
+              color: linkName ? '#fff' : '#3a3a3a',
+              letterSpacing: '0.02em',
+              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+              flex: 1,
+            }}>
+              {linkName ? `/${linkName}` : '/[linkname]'}
+            </span>
+            {linkStatus === 'checking' && (
+              <span style={{
+                width: '10px', height: '10px', borderRadius: '50%', flexShrink: 0,
+                border: '1.5px solid rgba(255,255,255,0.15)',
+                borderTopColor: '#666',
+                animation: 'spin 0.7s linear infinite',
+                display: 'inline-block',
+              }} />
+            )}
+            {linkStatus === 'available' && (
+              <span style={{ color: '#4ade80', fontSize: '12px', fontWeight: 800, flexShrink: 0 }}>✔</span>
+            )}
+            {linkStatus === 'taken' && (
+              <span style={{ color: '#EF4444', fontSize: '12px', fontWeight: 800, flexShrink: 0 }}>✖</span>
+            )}
+          </div>
+
+          {/* Availability status text */}
           {linkName && linkStatus !== 'idle' && (
             <div style={{
-              marginTop: '7px',
-              display: 'flex', alignItems: 'center', gap: '6px',
-              fontSize: '11px', fontWeight: 700, letterSpacing: '0.04em',
+              marginTop: '6px',
+              display: 'flex', alignItems: 'center', gap: '5px',
+              fontSize: '11px', fontWeight: 700, letterSpacing: '0.03em',
             }}>
-              {linkStatus === 'checking' && (
-                <>
-                  <span style={{
-                    width: '10px', height: '10px', borderRadius: '50%',
-                    border: '1.5px solid rgba(255,255,255,0.2)',
-                    borderTopColor: '#aaa',
-                    animation: 'spin 0.7s linear infinite',
-                    display: 'inline-block', flexShrink: 0,
-                  }} />
-                  <span style={{ color: '#666' }}>Checking availability…</span>
-                </>
-              )}
-              {linkStatus === 'available' && (
-                <>
-                  <span style={{ color: '#4ade80', fontSize: '13px', lineHeight: 1 }}>✔</span>
-                  <span style={{ color: '#fff' }}>This link name is available</span>
-                </>
-              )}
-              {linkStatus === 'taken' && (
-                <>
-                  <span style={{ color: '#EF4444', fontSize: '13px', lineHeight: 1 }}>✖</span>
-                  <span style={{ color: '#fff' }}>This link name is already taken</span>
-                </>
-              )}
+              {linkStatus === 'checking' && <span style={{ color: '#555' }}>Checking availability…</span>}
+              {linkStatus === 'available' && <span style={{ color: '#4ade80' }}>✔ This link name is available</span>}
+              {linkStatus === 'taken' && <span style={{ color: '#EF4444' }}>✖ This link name is already taken</span>}
             </div>
           )}
 
@@ -601,8 +615,8 @@ function LeftSection({ form, set, errors, addTable, removeTable, logoInputRef, l
           <div style={{
             marginTop: '8px',
             padding: '9px 13px',
-            background: 'rgba(255,255,255,0.03)',
-            border: '1px solid rgba(255,255,255,0.06)',
+            background: 'rgba(255,255,255,0.02)',
+            border: '1px solid rgba(255,255,255,0.05)',
             borderRadius: '10px',
             display: 'flex', alignItems: 'center', gap: '8px',
             overflow: 'hidden',
