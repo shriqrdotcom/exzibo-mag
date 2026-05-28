@@ -95,10 +95,11 @@ export default function MenuLinkRoute() {
 
   const slug = match.slug || match.id
   // Redirect to the canonical customer URL on the menu subdomain.
-  // New route structure: /{slug}/{page}/{tableNumber}
-  const target = tableNumber
-    ? `https://menu.exzibo.online/${slug}/home/${tableNumber}`
-    : `https://menu.exzibo.online/${slug}/home/1`
+  // New route structure: /{slug}/home/{tableNumber}
+  // Strip legacy "table-" prefix if present (e.g. "table-10" → "10")
+  const rawTable = tableNumber ? String(tableNumber).replace(/^table-/i, '') : null
+  const cleanTable = rawTable && /^\d+$/.test(rawTable) ? rawTable : '1'
+  const target = `https://menu.exzibo.online/${slug}/home/${cleanTable}`
   useEffect(() => { window.location.replace(target) }, [target])
   return null
 }

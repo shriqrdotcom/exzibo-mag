@@ -1887,7 +1887,7 @@ function DemoWebsitesPanel({ restaurants, onEdit, onDelete }) {
                       <td style={{ padding: '16px 28px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                           {[
-                            { label: 'VIEW',   color: '#22c55e', onClick: () => r.slug ? window.open(`https://menu.exzibo.online/${r.slug}/home`, '_blank', 'noopener,noreferrer') : null },
+                            { label: 'VIEW',   color: '#22c55e', onClick: () => r.slug ? window.open(`https://menu.exzibo.online/${r.slug}/home/1`, '_blank', 'noopener,noreferrer') : null },
                             { label: 'ADMIN',  color: '#3B82F6', onClick: () => openRoleDashboard(navigate, r, 'owner') },
                             { label: 'MASTER', color: '#A855F7', onClick: () => openRoleDashboard(navigate, r, 'master') },
                           ].map(({ label, color, onClick }) => (

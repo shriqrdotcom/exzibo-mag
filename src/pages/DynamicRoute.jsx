@@ -369,7 +369,7 @@ function MenuTab() {
           <label style={labelStyle}>Dynamic Route Pattern</label>
           <input
             style={inputStyle}
-            placeholder="e.g. menu.exzibo.online/{restaurantName}/{tableNumber}/menu"
+            placeholder="e.g. menu.exzibo.online/{restaurantName}/home/{tableNumber}"
             value={routePattern}
             onChange={e => setRoutePattern(e.target.value)}
           />

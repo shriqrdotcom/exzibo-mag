@@ -12,7 +12,7 @@ import { getRestaurantBySlug } from './lib/db'
 function MenuRedirect() {
   const { slug } = useParams()
   useEffect(() => {
-    if (slug) window.location.replace(`https://menu.exzibo.online/${slug}/home`)
+    if (slug) window.location.replace(`https://menu.exzibo.online/${slug}/home/1`)
   }, [slug])
   return <GlobalLoader />
 }

@@ -227,7 +227,7 @@ export default function TablePage() {
   }
 
   function getRestaurantUrl(r) {
-    return `https://menu.exzibo.online/${r.slug || r.id}/home`
+    return `https://menu.exzibo.online/${r.slug || r.id}/home/1`
   }
 
   function handleCopyLink(r) {
@@ -429,7 +429,7 @@ export default function TablePage() {
   }
 
   function getTableUrl(slug, tableNumber) {
-    return `${linkBaseUrl}/${slug}/${tableNumber}`
+    return `${linkBaseUrl}/${slug}/home/${tableNumber}`
   }
 
   return (
@@ -978,7 +978,7 @@ export default function TablePage() {
                       borderRadius: '8px',
                       overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                     }}>
-                      {linkBaseUrl}/menu/{linkNameInput || '[linkname]'}/table-1
+                      {linkBaseUrl}/{linkNameInput || '[linkname]'}/home/1
                     </div>
                   </div>
 

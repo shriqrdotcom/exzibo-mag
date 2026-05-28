@@ -4,16 +4,23 @@ const MENU_HOST = 'menu.exzibo.online'
  * Builds the canonical customer-facing URL for a restaurant page.
  * Always targets menu.exzibo.online.
  *
- * @param {string} slug         - Restaurant slug (e.g. "thetaj")
+ * URL format: https://menu.exzibo.online/{slug}/home/{tableNumber}
+ *
+ * @param {string} slug         - Restaurant slug (e.g. "the-taj")
  * @param {string} [page]       - Nav page: "home" | "menu" | "booking" | "orders" | "cart"
- * @param {string} [tableNumber]- Optional table number (e.g. "5")
+ * @param {string|number} [tableNumber] - Table number (e.g. 5). Defaults to 1 when omitted.
  */
 export function getMenuUrl(slug, page = 'home', tableNumber = null) {
   if (!slug) return `https://${MENU_HOST}`
-  if (tableNumber) {
-    return `https://${MENU_HOST}/${slug}/${tableNumber}/${page}`
-  }
-  return `https://${MENU_HOST}/${slug}/${page}`
+  const table = tableNumber != null ? tableNumber : 1
+  return `https://${MENU_HOST}/${slug}/${page}/${table}`
+}
+
+/**
+ * Builds a table-specific URL: https://menu.exzibo.online/{slug}/home/{tableNumber}
+ */
+export function getTableMenuUrl(slug, tableNumber) {
+  return `https://${MENU_HOST}/${slug}/home/${tableNumber}`
 }
 
 /**
