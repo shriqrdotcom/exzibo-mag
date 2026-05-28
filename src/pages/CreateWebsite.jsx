@@ -38,6 +38,9 @@ export default function CreateWebsite() {
     },
   })
 
+  const [linkName, setLinkName] = useState('')
+  const [linkNameManual, setLinkNameManual] = useState(false)
+
   const [errors, setErrors] = useState({})
   const [submitting, setSubmitting] = useState(false)
   const [success, setSuccess] = useState(false)
@@ -50,6 +53,15 @@ export default function CreateWebsite() {
 
   const logoInputRef = useRef()
   const imgInputRef = useRef()
+
+  const slugify = (str) =>
+    str.toLowerCase().trim().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '').replace(/-+/g, '-').replace(/^-|-$/g, '')
+
+  useEffect(() => {
+    if (!linkNameManual) {
+      setLinkName(slugify(form.restaurantName))
+    }
+  }, [form.restaurantName, linkNameManual])
 
   useEffect(() => {
     const handleKey = e => { if (e.key === 'Escape') navigate(-1) }
@@ -130,7 +142,8 @@ export default function CreateWebsite() {
         existingUIDs  = rows.map(r => r.uid).filter(Boolean)
       } catch { /* first restaurant — no existing rows */ }
 
-      const slug = generateSlug(form.restaurantName, existingSlugs)
+      const baseSlug = linkName && linkName.trim() ? linkName.trim() : slugify(form.restaurantName)
+      const slug = generateSlug(baseSlug, existingSlugs)
       // UID is generated server-side: globally unique, 10 digits, starts 6-9
       const uid = await generateRestaurantUID()
 
@@ -365,6 +378,10 @@ export default function CreateWebsite() {
               logoInputRef={logoInputRef}
               logoDragging={logoDragging} setLogoDragging={setLogoDragging}
               handleLogoFile={handleLogoFile}
+              linkName={linkName}
+              setLinkName={setLinkName}
+              setLinkNameManual={setLinkNameManual}
+              slugify={slugify}
             />
             <RightSection
               form={form} set={set} errors={errors}
@@ -481,7 +498,10 @@ function FormHeader({ onBack }) {
   )
 }
 
-function LeftSection({ form, set, errors, addTable, removeTable, logoInputRef, logoDragging, setLogoDragging, handleLogoFile }) {
+function LeftSection({ form, set, errors, addTable, removeTable, logoInputRef, logoDragging, setLogoDragging, handleLogoFile, linkName, setLinkName, setLinkNameManual, slugify }) {
+  const displayLink = linkName || '[linkname]'
+  const previewUrl = `https://menu.exzibo.online/${displayLink}/home/1`
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       <SectionBlock label="Establishment Identity">
@@ -493,6 +513,48 @@ function LeftSection({ form, set, errors, addTable, removeTable, logoInputRef, l
           style={{ fontSize: '15px' }}
         />
         {errors.restaurantName && <div className="error-msg">{errors.restaurantName}</div>}
+
+        <div style={{ marginTop: '14px' }}>
+          <div style={{
+            fontSize: '9px', fontWeight: 700, letterSpacing: '0.18em',
+            color: '#555', textTransform: 'uppercase', marginBottom: '8px',
+          }}>
+            Permanent Link Name
+          </div>
+          <input
+            className="forge-input"
+            placeholder="e.g. spice-garden"
+            value={linkName}
+            onChange={e => {
+              const val = slugify(e.target.value) || e.target.value.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
+              setLinkName(val)
+              setLinkNameManual(true)
+            }}
+            style={{ fontSize: '13px' }}
+          />
+          <div style={{
+            marginTop: '8px',
+            padding: '9px 13px',
+            background: 'rgba(255,255,255,0.03)',
+            border: '1px solid rgba(255,255,255,0.06)',
+            borderRadius: '10px',
+            display: 'flex', alignItems: 'center', gap: '8px',
+            overflow: 'hidden',
+          }}>
+            <Globe size={12} style={{ color: '#444', flexShrink: 0 }} />
+            <span style={{
+              fontSize: '11px', color: '#444',
+              fontFamily: 'monospace', letterSpacing: '0.02em',
+              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            }}>
+              <span style={{ color: '#555' }}>https://menu.exzibo.online/</span>
+              <span style={{ color: linkName ? '#FF3B30' : '#3a3a3a', fontWeight: 700 }}>
+                {linkName || '[linkname]'}
+              </span>
+              <span style={{ color: '#555' }}>/home/1</span>
+            </span>
+          </div>
+        </div>
       </SectionBlock>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
