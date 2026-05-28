@@ -1,0 +1,61 @@
+TASK: Add unique “Permanent Link Name” validation logic to the restaurant creation form.
+
+CURRENT BEHAVIOR:
+- When user types a restaurant name in “ESTABLISHMENT IDENTITY”, the same value auto-fills into “PERMANENT LINK NAME”.
+- Example:
+  Establishment Identity = "The Taj"
+  Permanent Link Name = "the-taj"
+
+NEW REQUIRED LOGIC:
+1. The “PERMANENT LINK NAME” must be UNIQUE across all restaurants.
+2. When user types or edits the permanent link:
+   - Check the database in real-time.
+   - Compare with existing restaurant link names/slugs.
+3. If the link already exists:
+   - Show message:
+     “This link name is already taken”
+   - Message color = WHITE
+   - Add invalid state to input
+   - Disable submit/create button
+4. If the link does NOT exist:
+   - Show message:
+     “This link name is available”
+   - Show success/check icon
+   - Allow form submission
+5. Convert link automatically into URL-safe slug format:
+   Example:
+   "The Taj Restaurant" → "the-taj-restaurant"
+6. Validation must ignore current restaurant ID while editing existing restaurant data.
+7. Add debounce (300–500ms) before database checking to avoid excessive API calls.
+8. Validation must work both:
+   - While auto-generated from establishment name
+   - While manually editing permanent link name
+9. Prevent duplicate creation at backend level also:
+   - Add UNIQUE constraint/index in database for permanentLinkName/slug field.
+10. If two users try creating same slug simultaneously:
+   - Backend should reject duplicate entry safely.
+   - Show frontend error:
+     “This link name is already taken”
+
+TECHNICAL REQUIREMENTS:
+- Real-time async validation
+- Case-insensitive comparison
+- Trim spaces before checking
+- Replace spaces with hyphens
+- Remove special characters
+- Use clean slug generation logic
+
+EXPECTED EXAMPLES:
+"The Taj" → "the-taj"
+"THE TAJ" → Duplicate of "the-taj"
+" The Taj " → Duplicate of "the-taj"
+
+UI REQUIREMENTS:
+AVAILABLE:
+✔ This link name is available
+
+TAKEN:
+✖ This link name is already taken
+
+Also make sure the generated public URL updates live:
+https://menu.exzibo.online/the-taj/home/1

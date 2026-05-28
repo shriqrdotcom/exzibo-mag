@@ -6,7 +6,7 @@ import {
   ChefHat, Users, Zap, Bell
 } from 'lucide-react'
 import PlanSelector from '../components/PlanSelector'
-import { createRestaurant, getRestaurants, updateRestaurant, generateRestaurantUID, uploadToStorage } from '../lib/db'
+import { createRestaurant, getRestaurants, updateRestaurant, generateRestaurantUID, uploadToStorage, checkLinkNameTakenInDB } from '../lib/db'
 import { processImageFile, isAcceptedImageType } from '../lib/processImage'
 
 export default function CreateWebsite() {
@@ -40,6 +40,7 @@ export default function CreateWebsite() {
 
   const [linkName, setLinkName] = useState('')
   const [linkNameManual, setLinkNameManual] = useState(false)
+  const [linkStatus, setLinkStatus] = useState('idle') // 'idle' | 'checking' | 'available' | 'taken'
 
   const [errors, setErrors] = useState({})
   const [submitting, setSubmitting] = useState(false)
@@ -53,6 +54,7 @@ export default function CreateWebsite() {
 
   const logoInputRef = useRef()
   const imgInputRef = useRef()
+  const linkDebounceRef = useRef(null)
 
   const slugify = (str) =>
     str.toLowerCase().trim().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '').replace(/-+/g, '-').replace(/^-|-$/g, '')
@@ -62,6 +64,25 @@ export default function CreateWebsite() {
       setLinkName(slugify(form.restaurantName))
     }
   }, [form.restaurantName, linkNameManual])
+
+  // Debounced real-time slug availability check
+  useEffect(() => {
+    if (linkDebounceRef.current) clearTimeout(linkDebounceRef.current)
+    if (!linkName || !linkName.trim()) {
+      setLinkStatus('idle')
+      return
+    }
+    setLinkStatus('checking')
+    linkDebounceRef.current = setTimeout(async () => {
+      try {
+        const taken = await checkLinkNameTakenInDB(linkName.trim())
+        setLinkStatus(taken ? 'taken' : 'available')
+      } catch {
+        setLinkStatus('idle')
+      }
+    }, 400)
+    return () => clearTimeout(linkDebounceRef.current)
+  }, [linkName])
 
   useEffect(() => {
     const handleKey = e => { if (e.key === 'Escape') navigate(-1) }
@@ -128,6 +149,10 @@ export default function CreateWebsite() {
 
   const handleGenerate = async () => {
     if (!validate()) return
+    if (linkStatus === 'taken') {
+      setSubmitError('This link name is already taken. Please choose a different one.')
+      return
+    }
     setSubmitting(true)
     setSubmitError('')
     try {
@@ -382,6 +407,7 @@ export default function CreateWebsite() {
               setLinkName={setLinkName}
               setLinkNameManual={setLinkNameManual}
               slugify={slugify}
+              linkStatus={linkStatus}
             />
             <RightSection
               form={form} set={set} errors={errors}
@@ -450,7 +476,7 @@ export default function CreateWebsite() {
             </div>
           </div>
         )}
-        <FooterCTA onGenerate={handleGenerate} submitting={submitting} />
+        <FooterCTA onGenerate={handleGenerate} submitting={submitting} linkStatus={linkStatus} />
       </div>
     </div>
   )
@@ -498,9 +524,13 @@ function FormHeader({ onBack }) {
   )
 }
 
-function LeftSection({ form, set, errors, addTable, removeTable, logoInputRef, logoDragging, setLogoDragging, handleLogoFile, linkName, setLinkName, setLinkNameManual, slugify }) {
+function LeftSection({ form, set, errors, addTable, removeTable, logoInputRef, logoDragging, setLogoDragging, handleLogoFile, linkName, setLinkName, setLinkNameManual, slugify, linkStatus }) {
   const displayLink = linkName || '[linkname]'
-  const previewUrl = `https://menu.exzibo.online/${displayLink}/home/1`
+
+  const inputBorderColor =
+    linkStatus === 'available' ? 'rgba(74,222,128,0.5)' :
+    linkStatus === 'taken'     ? 'rgba(239,68,68,0.5)'  :
+    'rgba(255,255,255,0.08)'
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
@@ -530,8 +560,44 @@ function LeftSection({ form, set, errors, addTable, removeTable, logoInputRef, l
               setLinkName(val)
               setLinkNameManual(true)
             }}
-            style={{ fontSize: '13px' }}
+            style={{ fontSize: '13px', borderColor: inputBorderColor, transition: 'border-color 0.2s' }}
           />
+
+          {/* Availability status indicator */}
+          {linkName && linkStatus !== 'idle' && (
+            <div style={{
+              marginTop: '7px',
+              display: 'flex', alignItems: 'center', gap: '6px',
+              fontSize: '11px', fontWeight: 700, letterSpacing: '0.04em',
+            }}>
+              {linkStatus === 'checking' && (
+                <>
+                  <span style={{
+                    width: '10px', height: '10px', borderRadius: '50%',
+                    border: '1.5px solid rgba(255,255,255,0.2)',
+                    borderTopColor: '#aaa',
+                    animation: 'spin 0.7s linear infinite',
+                    display: 'inline-block', flexShrink: 0,
+                  }} />
+                  <span style={{ color: '#666' }}>Checking availability…</span>
+                </>
+              )}
+              {linkStatus === 'available' && (
+                <>
+                  <span style={{ color: '#4ade80', fontSize: '13px', lineHeight: 1 }}>✔</span>
+                  <span style={{ color: '#fff' }}>This link name is available</span>
+                </>
+              )}
+              {linkStatus === 'taken' && (
+                <>
+                  <span style={{ color: '#EF4444', fontSize: '13px', lineHeight: 1 }}>✖</span>
+                  <span style={{ color: '#fff' }}>This link name is already taken</span>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* Live URL preview */}
           <div style={{
             marginTop: '8px',
             padding: '9px 13px',
@@ -851,8 +917,9 @@ function AdditionalSection({ form, set }) {
   )
 }
 
-function FooterCTA({ onGenerate, submitting }) {
+function FooterCTA({ onGenerate, submitting, linkStatus }) {
   const [hovered, setHovered] = useState(false)
+  const blocked = submitting || linkStatus === 'taken' || linkStatus === 'checking'
   return (
     <div style={{
       position: 'fixed',
@@ -865,19 +932,19 @@ function FooterCTA({ onGenerate, submitting }) {
     }}>
       <button
         onClick={onGenerate}
-        disabled={submitting}
+        disabled={blocked}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
         style={{
           display: 'flex', alignItems: 'center', gap: '10px',
           padding: '18px 56px',
-          background: submitting ? 'rgba(255,59,48,0.5)' : '#FF3B30',
-          border: '2px solid #FF3B30',
+          background: blocked ? 'rgba(255,59,48,0.4)' : '#FF3B30',
+          border: `2px solid ${linkStatus === 'taken' ? 'rgba(239,68,68,0.5)' : '#FF3B30'}`,
           borderRadius: '50px',
-          color: '#fff',
+          color: blocked ? 'rgba(255,255,255,0.5)' : '#fff',
           fontSize: '14px', fontWeight: 800, letterSpacing: '0.12em',
-          cursor: submitting ? 'default' : 'pointer',
-          boxShadow: hovered && !submitting ? '0 0 50px rgba(255,59,48,0.55)' : '0 0 30px rgba(255,59,48,0.3)',
+          cursor: blocked ? 'not-allowed' : 'pointer',
+          boxShadow: hovered && !blocked ? '0 0 50px rgba(255,59,48,0.55)' : '0 0 30px rgba(255,59,48,0.3)',
           transition: 'all 0.25s',
           textTransform: 'uppercase',
         }}
@@ -891,6 +958,21 @@ function FooterCTA({ onGenerate, submitting }) {
               animation: 'spin 0.8s linear infinite', display: 'inline-block',
             }} />
             GENERATING...
+          </>
+        ) : linkStatus === 'taken' ? (
+          <>
+            <span style={{ fontSize: '16px', lineHeight: 1 }}>✖</span>
+            LINK NAME TAKEN
+          </>
+        ) : linkStatus === 'checking' ? (
+          <>
+            <span style={{
+              width: '16px', height: '16px',
+              border: '2px solid rgba(255,255,255,0.2)',
+              borderTopColor: 'rgba(255,255,255,0.6)', borderRadius: '50%',
+              animation: 'spin 0.8s linear infinite', display: 'inline-block',
+            }} />
+            CHECKING...
           </>
         ) : (
           <>
