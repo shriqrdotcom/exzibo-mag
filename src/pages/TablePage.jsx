@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import Sidebar from '../components/Sidebar'
 import AdminHeader from '../components/AdminHeader'
-import { X, Check, Copy, ExternalLink, Plus, Lock, Loader, AlertCircle, CheckCircle, Sparkles } from 'lucide-react'
+import { X, Check, Copy, ExternalLink, Plus, Lock, Loader, AlertCircle, CheckCircle, Sparkles, Trash2 } from 'lucide-react'
 import { getMenuSubdomain, buildMenuBaseUrl } from '../lib/routeConfig'
 import { checkLinkNameTakenInDB, updateRestaurant } from '../lib/db'
 
@@ -54,6 +54,16 @@ function loadLinkTableCount(uid) {
 
 function saveLinkTableCount(uid, count) {
   localStorage.setItem(`exzibo_link_table_count_${uid}`, String(count))
+}
+
+function loadDeletedTables(uid) {
+  try {
+    return new Set(JSON.parse(localStorage.getItem(`exzibo_deleted_tables_${uid}`) || '[]'))
+  } catch { return new Set() }
+}
+
+function saveDeletedTables(uid, set) {
+  localStorage.setItem(`exzibo_deleted_tables_${uid}`, JSON.stringify([...set]))
 }
 
 const FALLBACK_LINK_BASE_URL = 'https://menu.exzibo.online'
@@ -167,6 +177,11 @@ export default function TablePage() {
   const [linkBaseUrl, setLinkBaseUrl] = useState(FALLBACK_LINK_BASE_URL)
   const [slugStatus, setSlugStatus] = useState(null)
   const [slugSuggestion, setSlugSuggestion] = useState(null)
+  const [deletedTables, setDeletedTables] = useState(new Set())
+  const [deleteTarget, setDeleteTarget] = useState(null)
+  const [deleteUidInput, setDeleteUidInput] = useState('')
+  const [deleteUidError, setDeleteUidError] = useState('')
+  const [deleteProcessing, setDeleteProcessing] = useState(false)
   const inputRef = useRef(null)
   const toastTimer = useRef(null)
   const slugCheckTimer = useRef(null)
@@ -251,6 +266,7 @@ export default function TablePage() {
     setLinkNameInput('')
     setLinkTableCountInput('')
     setShowConfirm(false)
+    setDeletedTables(loadDeletedTables(uid))
     if (existing && created) setLinkStep(3)
     else setLinkStep(1)
     setLinksOpen(true)
@@ -274,7 +290,48 @@ export default function TablePage() {
       setCopiedTableUrl(null)
       setSlugStatus(null)
       setSlugSuggestion(null)
+      setDeletedTables(new Set())
+      setDeleteTarget(null)
+      setDeleteUidInput('')
+      setDeleteUidError('')
+      setDeleteProcessing(false)
     }, 320)
+  }
+
+  async function handleDeleteTable() {
+    if (!deleteTarget || !linksTarget) return
+    const correctUid = String(linksTarget.uid || linksTarget.id)
+    if (deleteUidInput.trim() !== correctUid) {
+      setDeleteUidError('Invalid Restaurant UID')
+      return
+    }
+    setDeleteProcessing(true)
+    try {
+      const uid = linksTarget.uid || linksTarget.id
+      const newDeleted = new Set(deletedTables)
+      newDeleted.add(deleteTarget)
+      saveDeletedTables(uid, newDeleted)
+      setDeletedTables(newDeleted)
+
+      const restaurantId = linksTarget.id
+      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(restaurantId)
+      if (isUUID) {
+        const remaining = Array.from({ length: savedTableCount }, (_, i) => String(i + 1))
+          .filter(t => !newDeleted.has(t))
+        await updateRestaurant(restaurantId, {
+          tables: String(remaining.length),
+          table_numbers: remaining,
+        })
+      }
+      setDeleteTarget(null)
+      setDeleteUidInput('')
+      setDeleteUidError('')
+      showToast('✅ Table link deleted successfully')
+    } catch {
+      setDeleteUidError('Deletion failed. Please try again.')
+    } finally {
+      setDeleteProcessing(false)
+    }
   }
 
   async function isLinkNameTaken(name, currentUid) {
@@ -1051,12 +1108,14 @@ export default function TablePage() {
                   </div>
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    {Array.from({ length: savedTableCount }, (_, i) => String(i + 1)).map((t) => {
+                    {Array.from({ length: savedTableCount }, (_, i) => String(i + 1))
+                      .filter(t => !deletedTables.has(t))
+                      .map((t) => {
                       const url = getTableUrl(linksTarget?.slug || linksTarget?.id || savedLinkName, t)
                       const isCopied = copiedTableUrl === url
                       return (
                         <div key={t} style={{
-                          display: 'flex', alignItems: 'center', gap: '10px',
+                          display: 'flex', alignItems: 'center', gap: '8px',
                           padding: '12px 14px',
                           background: 'rgba(255,255,255,0.03)',
                           border: '1px solid rgba(255,255,255,0.07)',
@@ -1091,6 +1150,25 @@ export default function TablePage() {
                           >
                             {isCopied ? <Check size={12} /> : <Copy size={12} />}
                             {isCopied ? 'COPIED' : 'COPY'}
+                          </button>
+                          <button
+                            onClick={() => { setDeleteTarget(t); setDeleteUidInput(''); setDeleteUidError('') }}
+                            style={{
+                              padding: '8px 10px',
+                              background: 'rgba(255,255,255,0.06)',
+                              border: '1px solid rgba(255,255,255,0.1)',
+                              borderRadius: '8px',
+                              color: '#fff',
+                              fontSize: '11px', fontWeight: 800, letterSpacing: '0.06em',
+                              cursor: 'pointer',
+                              display: 'flex', alignItems: 'center', gap: '5px',
+                              flexShrink: 0,
+                              transition: 'background 0.18s, border-color 0.18s, color 0.18s',
+                            }}
+                            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.14)'; e.currentTarget.style.borderColor = 'rgba(239,68,68,0.45)'; e.currentTarget.style.color = '#EF4444' }}
+                            onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; e.currentTarget.style.color = '#fff' }}
+                          >
+                            <Trash2 size={11} />
                           </button>
                         </div>
                       )
@@ -1208,6 +1286,156 @@ export default function TablePage() {
                 }}
               >
                 Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {deleteTarget && linksTarget && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 1200,
+          background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          padding: '24px',
+          animation: 'fadeOverlay 0.18s ease',
+        }}>
+          <div style={{
+            width: '100%', maxWidth: '400px',
+            background: '#111',
+            border: '1px solid rgba(239,68,68,0.25)',
+            borderRadius: '18px',
+            padding: '28px 26px',
+            boxShadow: '0 24px 64px rgba(0,0,0,0.8), 0 0 0 1px rgba(239,68,68,0.08)',
+            animation: 'slideInRight 0.22s ease',
+          }}>
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{
+                  width: '32px', height: '32px', borderRadius: '9px',
+                  background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.25)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <Trash2 size={15} color="#EF4444" />
+                </div>
+                <div style={{ fontSize: '15px', fontWeight: 800, color: '#fff' }}>Delete Table Link</div>
+              </div>
+              <button
+                onClick={() => { setDeleteTarget(null); setDeleteUidInput(''); setDeleteUidError('') }}
+                style={{
+                  width: '28px', height: '28px', borderRadius: '8px',
+                  background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)',
+                  color: '#666', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}
+              >
+                <X size={13} />
+              </button>
+            </div>
+
+            {/* Table being deleted */}
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: '10px',
+              padding: '10px 13px', marginBottom: '18px',
+              background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.15)',
+              borderRadius: '10px',
+            }}>
+              <div style={{
+                width: '28px', height: '28px', borderRadius: '7px',
+                background: 'rgba(232,50,26,0.18)', border: '1px solid rgba(232,50,26,0.3)',
+                color: '#E8321A', fontSize: '11px', fontWeight: 800,
+                display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+              }}>{deleteTarget}</div>
+              <span style={{ fontSize: '11px', color: '#888', fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {getTableUrl(linksTarget?.slug || linksTarget?.id || savedLinkName, deleteTarget)}
+              </span>
+            </div>
+
+            {/* Warning */}
+            <div style={{
+              padding: '11px 13px', marginBottom: '18px',
+              background: 'rgba(239,68,68,0.05)', border: '1px dashed rgba(239,68,68,0.2)',
+              borderRadius: '10px',
+              fontSize: '12px', color: '#aaa', lineHeight: 1.6,
+            }}>
+              ⚠️ This action will <span style={{ color: '#EF4444', fontWeight: 700 }}>permanently delete</span> this table link.
+            </div>
+
+            {/* UID input */}
+            <div style={{ marginBottom: '6px', fontSize: '11px', fontWeight: 700, color: '#555', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+              Enter Restaurant UID to confirm
+            </div>
+            <input
+              autoFocus
+              type="text"
+              value={deleteUidInput}
+              onChange={e => { setDeleteUidInput(e.target.value); setDeleteUidError('') }}
+              onKeyDown={e => { if (e.key === 'Enter' && deleteUidInput.trim()) handleDeleteTable() }}
+              placeholder="Enter Restaurant UID"
+              style={{
+                width: '100%', padding: '11px 13px', marginBottom: '8px',
+                background: deleteUidError ? 'rgba(239,68,68,0.06)' : 'rgba(255,255,255,0.05)',
+                border: `1px solid ${deleteUidError ? 'rgba(239,68,68,0.4)' : 'rgba(255,255,255,0.1)'}`,
+                borderRadius: '10px',
+                color: '#fff', fontSize: '13px', fontWeight: 500,
+                outline: 'none', boxSizing: 'border-box',
+                transition: 'border-color 0.2s',
+                fontFamily: 'monospace',
+              }}
+            />
+            {deleteUidError && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '12px' }}>
+                <AlertCircle size={11} color="#EF4444" />
+                <span style={{ fontSize: '11px', color: '#EF4444', fontWeight: 600 }}>{deleteUidError}</span>
+              </div>
+            )}
+
+            {/* Action buttons */}
+            <div style={{ display: 'flex', gap: '10px', marginTop: deleteUidError ? '4px' : '14px' }}>
+              <button
+                onClick={() => { setDeleteTarget(null); setDeleteUidInput(''); setDeleteUidError('') }}
+                disabled={deleteProcessing}
+                style={{
+                  flex: 1, padding: '12px',
+                  background: 'rgba(255,255,255,0.05)',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  borderRadius: '10px',
+                  color: '#ccc', fontSize: '13px', fontWeight: 700,
+                  letterSpacing: '0.04em', cursor: 'pointer',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteTable}
+                disabled={!deleteUidInput.trim() || deleteProcessing}
+                style={{
+                  flex: 1, padding: '12px',
+                  background: (deleteUidInput.trim() && !deleteProcessing) ? '#EF4444' : 'rgba(239,68,68,0.2)',
+                  border: 'none', borderRadius: '10px',
+                  color: (deleteUidInput.trim() && !deleteProcessing) ? '#fff' : 'rgba(255,255,255,0.3)',
+                  fontSize: '13px', fontWeight: 800,
+                  letterSpacing: '0.04em',
+                  cursor: (deleteUidInput.trim() && !deleteProcessing) ? 'pointer' : 'default',
+                  boxShadow: (deleteUidInput.trim() && !deleteProcessing) ? '0 0 20px rgba(239,68,68,0.4)' : 'none',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '7px',
+                  transition: 'all 0.2s',
+                }}
+              >
+                {deleteProcessing ? (
+                  <>
+                    <span style={{
+                      width: '13px', height: '13px', borderRadius: '50%',
+                      border: '2px solid rgba(255,255,255,0.2)',
+                      borderTopColor: '#fff',
+                      animation: 'spin 0.7s linear infinite', display: 'inline-block',
+                    }} />
+                    Deleting…
+                  </>
+                ) : (
+                  <><Trash2 size={13} /> DELETE</>
+                )}
               </button>
             </div>
           </div>

@@ -1,0 +1,81 @@
+TASK: Add secure “DELETE TABLE LINK” feature in STEP 3 — TABLE LINKS section.
+
+CURRENT BEHAVIOR:
+- Every created table link appears in the list.
+- Each row currently has:
+  - Table Number
+  - Generated URL
+  - COPY button
+
+NEW REQUIRED FEATURE:
+Add a WHITE “DELETE” button beside the COPY button for every table link row.
+
+UI EXAMPLE:
+[ COPY ]   [ DELETE ]
+
+DELETE BUTTON STYLE:
+- White button
+- Minimal dark-theme compatible UI
+- Red hover effect
+- Trash/Delete icon optional
+- Same height as COPY button
+
+DELETE FLOW LOGIC:
+1. When user clicks DELETE on any table row:
+   - Open a secure confirmation section/modal/popup.
+2. Inside popup show:
+   Title:
+   “Delete Table Link”
+3. Show warning text:
+   “This action will permanently delete this table link.”
+4. Show an input field:
+   Placeholder:
+   “Enter Restaurant UID”
+5. User must enter the correct restaurant UID to continue deletion.
+6. Validation:
+   - If entered UID matches current restaurant UID:
+       Allow deletion
+   - If UID is incorrect:
+       Show error:
+       “Invalid Restaurant UID”
+7. Add final DELETE CONFIRM button.
+8. After successful deletion:
+   - Remove table row instantly from UI
+   - Remove from database/backend
+   - Re-index table list if required
+   - Show success toast:
+     “Table link deleted successfully”
+
+SECURITY REQUIREMENTS:
+- UID verification required before deletion
+- Backend must validate UID again
+- Prevent unauthorized table deletion
+- Soft delete or permanent delete based on current architecture
+
+BACKEND REQUIREMENTS:
+- Delete specific table by:
+   restaurantId + tableId/tableNumber
+- Ensure database sync
+- Refresh UI after deletion
+
+UI/UX REQUIREMENTS:
+- Smooth modal animation
+- Dark theme matching existing UI
+- Disable delete button while processing
+- Add loading state during deletion
+
+EDGE CASES:
+- Wrong UID → show error
+- Empty UID → disable confirm delete
+- Network failure → show retry message
+- Last table deleted → update UI properly
+
+IMPORTANT:
+Do NOT affect existing COPY functionality.
+Only extend current table link card system with secure DELETE functionality.
+
+GOAL:
+Create a professional and secure table management system similar to:
+- SaaS dashboard controls
+- Admin management panels
+- POS/table management systems
