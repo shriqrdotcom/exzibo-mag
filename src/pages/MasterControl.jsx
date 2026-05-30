@@ -208,12 +208,17 @@ export default function MasterControl() {
   // Build the navigation target.
   // Returns either a relative path (for same-subdomain React Router navigate)
   // or an absolute URL (for cross-subdomain window.location.href redirect).
+  //
+  // All slug-based URLs include ?role=menu_studio so RestaurantDashboard
+  // activates the correct role on load (instead of inheriting whatever was
+  // previously stored in localStorage).
   function buildNavTarget(target) {
     const sub = getSubdomain()
 
-    // dashboard.exzibo.online — use clean slug URL
+    // dashboard.exzibo.online — navigate directly to the canonical orders page
+    // with the menu_studio role param so RestaurantDashboard picks it up
     if (target.id !== 'default' && target.slug && sub === 'dashboard') {
-      return `/${target.slug}?from=master`
+      return `/${target.slug}/orders?role=menu_studio`
     }
 
     // superadmin.exzibo.online — AdminDashboard lives on dashboard subdomain,
@@ -222,12 +227,15 @@ export default function MasterControl() {
       const path = target.id === 'default'
         ? '/admin/default'
         : target.slug
-          ? `/${target.slug}`
+          ? `/${target.slug}/orders?role=menu_studio`
           : `/admin/${target.id}`
-      return `https://dashboard.exzibo.online${path}?from=master`
+      return `https://dashboard.exzibo.online${path}`
     }
 
     // Default (dev / Replit preview / bare domain)
+    // VITE_DISABLE_AUTH=true forces menu_studio in dev; pre-set localStorage
+    // for the case where auth is enabled on a bare-domain deploy.
+    try { localStorage.setItem('exzibo_active_role', 'menu_studio') } catch {}
     if (target.id === 'default') return '/admin/default?from=master'
     return `/admin/${target.id}?from=master`
   }

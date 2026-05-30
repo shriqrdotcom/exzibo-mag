@@ -9,11 +9,13 @@
  */
 
 import React, { useEffect, useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { useRole } from '../context/RoleContext'
 import { useRestaurantRole } from '../hooks/useRestaurantRole'
 import { getRestaurantBySlug } from '../lib/db'
 import AdminDashboard from './AdminDashboard'
+
+const VALID_ROLES = new Set(['menu_studio', 'owner', 'admin', 'staff'])
 
 // ── Access control matrix ─────────────────────────────────────────────────
 const PAGE_ACCESS = {
@@ -270,14 +272,30 @@ function NotFoundPage({ slug }) {
 export default function RestaurantDashboard() {
   const { restaurantSlug, pageSlug = 'orders' } = useParams()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const { activateRole } = useRole()
 
-  const [restaurant, setRestaurant]         = useState(null)
-  const [restaurantLoading, setRestaurantLoading] = useState(true)
-  const [notFound, setNotFound]             = useState(false)
-  const [showPicker, setShowPicker]         = useState(false)
+  // ── 0. Read ?role= URL param synchronously at init ─────────────
+  // navigation.js injects ?role=<normalizedRole> when opening a
+  // role-specific link (e.g. Menu Studio → ?role=menu_studio).
+  // We pre-populate the global localStorage key immediately so that
+  // useRestaurantRole() returns the correct role on its very first call,
+  // before the restaurant row has even loaded.
+  const [urlRoleParam] = useState(() => {
+    const p = searchParams.get('role')
+    if (p && VALID_ROLES.has(p)) {
+      try { localStorage.setItem('exzibo_active_role', p) } catch {}
+      return p
+    }
+    return null
+  })
 
-  // ── 1. Resolve restaurant slug ─────────────────────────────────
+  const [restaurant, setRestaurant]             = useState(null)
+  const [restaurantLoading, setRestaurantLoading] = useState(true)
+  const [notFound, setNotFound]                 = useState(false)
+  const [showPicker, setShowPicker]             = useState(false)
+
+  // ── 1. Resolve restaurant slug → row ───────────────────────────
   useEffect(() => {
     if (!restaurantSlug) { setNotFound(true); setRestaurantLoading(false); return }
     setRestaurantLoading(true)
@@ -292,22 +310,35 @@ export default function RestaurantDashboard() {
       .finally(() => setRestaurantLoading(false))
   }, [restaurantSlug])
 
-  // ── 2. Get role from localStorage ─────────────────────────────
+  // ── 2. Get / set role via localStorage ─────────────────────────
   const { role, setRole } = useRestaurantRole(restaurant?.id)
 
-  // ── 3. Activate role in RoleContext (AdminDashboard reads it) ──
+  // ── 3. Persist URL role param once restaurant.id is known ──────
+  // Saves the per-restaurant key in addition to the global fallback
+  // already set in the useState initializer, then cleans the URL.
+  useEffect(() => {
+    if (urlRoleParam && restaurant?.id) {
+      setRole(urlRoleParam)                         // saves per-restaurant + global key
+      // Strip the ?role= param so the canonical clean URL is what the user sees
+      navigate(`/${restaurantSlug}/${pageSlug}`, { replace: true })
+    }
+  // Only run when restaurant.id first becomes available
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [restaurant?.id])
+
+  // ── 4. Activate role in RoleContext (AdminDashboard reads it) ──
   useEffect(() => {
     if (role) activateRole(role)
   }, [role, activateRole])
 
-  // ── 4. Show picker when no role is stored yet ─────────────────
+  // ── 5. Show picker when no role is stored at all ───────────────
   useEffect(() => {
     if (!restaurantLoading && restaurant && !role) {
       setShowPicker(true)
     }
   }, [restaurantLoading, restaurant, role])
 
-  // ── 5. Enforce access matrix ───────────────────────────────────
+  // ── 6. Enforce access matrix ───────────────────────────────────
   useEffect(() => {
     if (!role || !pageSlug) return
     const allowed = PAGE_ACCESS[pageSlug]
@@ -316,7 +347,7 @@ export default function RestaurantDashboard() {
     }
   }, [role, pageSlug, restaurantSlug, navigate])
 
-  // ── 6. /roles → redirect to /admin/:id/team ───────────────────
+  // ── 7. /roles → redirect to /admin/:id/team ───────────────────
   useEffect(() => {
     if (restaurant && role && pageSlug === 'roles') {
       navigate(`/admin/${restaurant.id}/team`, { replace: true })
@@ -334,8 +365,8 @@ export default function RestaurantDashboard() {
   if (notFound) return <NotFoundPage slug={restaurantSlug} />
   if (pageSlug === 'roles' && restaurant && role) return <FullPageLoader />
 
-  // Show role picker overlay (on top of a light background while loading)
-  if (showPicker || (!role && restaurant)) {
+  // Show role picker when no role is set and no URL param provided it
+  if (showPicker || (!role && !urlRoleParam && restaurant)) {
     return (
       <>
         <div style={{ minHeight: '100vh', background: '#f8f9fa' }} />
@@ -347,6 +378,7 @@ export default function RestaurantDashboard() {
     )
   }
 
+  // Still waiting for the URL role param to be persisted
   if (!role) return <FullPageLoader />
 
   const section = PAGE_TO_SECTION[pageSlug] || 'orders'
