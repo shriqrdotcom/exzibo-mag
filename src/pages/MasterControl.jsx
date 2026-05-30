@@ -215,19 +215,22 @@ export default function MasterControl() {
   function buildNavTarget(target) {
     const sub = getSubdomain()
 
-    // dashboard.exzibo.online — open AdminDashboard directly (same as dev/preview)
+    // dashboard.exzibo.online — use canonical slug URL with from=master so
+    // RestaurantDashboard activates menu_studio role AND passes fromMaster to AdminDashboard
     if (sub === 'dashboard') {
-      return target.id === 'default'
-        ? '/admin/default?from=master'
+      if (target.id === 'default') return '/admin/default?from=master'
+      return target.slug
+        ? `/${target.slug}/orders?role=menu_studio&from=master`
         : `/admin/${target.id}?from=master`
     }
 
-    // superadmin.exzibo.online — AdminDashboard lives on dashboard subdomain,
-    // so we must do a full cross-subdomain redirect via window.location.href
+    // superadmin.exzibo.online — cross-subdomain redirect to dashboard subdomain
     if (sub === 'superadmin') {
       const path = target.id === 'default'
         ? '/admin/default?from=master'
-        : `/admin/${target.id}?from=master`
+        : target.slug
+          ? `/${target.slug}/orders?role=menu_studio&from=master`
+          : `/admin/${target.id}?from=master`
       return `https://dashboard.exzibo.online${path}`
     }
 

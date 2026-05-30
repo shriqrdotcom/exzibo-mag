@@ -275,12 +275,16 @@ export default function RestaurantDashboard() {
   const [searchParams] = useSearchParams()
   const { activateRole } = useRole()
 
-  // ── 0. Read ?role= URL param synchronously at init ─────────────
+  // ── 0. Read ?role= and ?from=master URL params synchronously at init ────
   // navigation.js injects ?role=<normalizedRole> when opening a
   // role-specific link (e.g. Menu Studio → ?role=menu_studio).
   // We pre-populate the global localStorage key immediately so that
   // useRestaurantRole() returns the correct role on its very first call,
   // before the restaurant row has even loaded.
+  // ?from=master is captured here and passed as a prop to AdminDashboard
+  // so the Menu Studio special features (send button, live orders toggle)
+  // are shown even after the URL is cleaned to the canonical slug form.
+  const [fromMaster] = useState(() => searchParams.get('from') === 'master')
   const [urlRoleParam] = useState(() => {
     const p = searchParams.get('role')
     if (p && VALID_ROLES.has(p)) {
@@ -387,6 +391,7 @@ export default function RestaurantDashboard() {
     <AdminDashboard
       restaurantId={restaurant.id}
       initialSection={section}
+      fromMaster={fromMaster}
     />
   )
 }
