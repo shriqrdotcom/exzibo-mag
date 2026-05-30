@@ -362,19 +362,25 @@ function MenuApp() {
 //   /master-control/:uid              → Master Control for a specific restaurant
 // ═══════════════════════════════════════════════════════════════════════════
 function DashboardApp() {
-  // Dashboard is publicly accessible — no auth gate on routing.
-  // Role is resolved from localStorage inside each RestaurantDashboard render.
+  // Dashboard is publicly accessible — no login required.
+  // Role is stored in localStorage and resolved inside RestaurantDashboard.
+  // Any /:slug URL that uses a role name as the page segment (owner, staff,
+  // admin, menu_studio) is caught here and redirected to /:slug/orders.
 
   return (
     <Routes>
-      {/* Auth */}
+      {/* Auth page (still accessible for super-admin / internal use) */}
       <Route path="/auth"  element={<Auth />} />
       <Route path="/login" element={<Navigate to="/auth" replace />} />
 
-      {/* ── New role-based slug routes via RestaurantDashboard ── */}
-      {/* All /:restaurantSlug/:pageSlug routes use the RBAC layer.  */}
-      {/* Role is fetched from Supabase on every load; the access    */}
-      {/* matrix enforces which pages each role may visit.           */}
+      {/* ── Internal / direct-id routes (unchanged) ── */}
+      <Route path="/admin/:id"           element={<AdminDashboard />} />
+      <Route path="/admin/:id/team"      element={<TeamMembers />} />
+      <Route path="/admin/:id/profile"   element={<ProfilePage />} />
+      <Route path="/master-control"      element={<MasterControl />} />
+      <Route path="/master-control/:uid" element={<MasterControl />} />
+
+      {/* ── Canonical dashboard pages ── */}
       <Route path="/:restaurantSlug/orders"       element={<RestaurantDashboard />} />
       <Route path="/:restaurantSlug/bookings"     element={<RestaurantDashboard />} />
       <Route path="/:restaurantSlug/booking"      element={<RestaurantDashboard />} />
@@ -385,35 +391,36 @@ function DashboardApp() {
       <Route path="/:restaurantSlug/profile"      element={<RestaurantDashboard />} />
       <Route path="/:restaurantSlug/roles"        element={<RestaurantDashboard />} />
       <Route path="/:restaurantSlug/subscription" element={<RestaurantDashboard />} />
-      <Route path="/:restaurantSlug/dashboard"    element={<RestaurantDashboard />} />
 
-      {/* ── Legacy role-path aliases ── */}
-      <Route path="/:restaurantSlug/admin"    element={<RestaurantDashboard />} />
-      <Route path="/:restaurantSlug/manager"  element={<RestaurantDashboard />} />
-      <Route path="/:restaurantSlug/employee" element={<RestaurantDashboard />} />
-      {/* master still redirects to /master-control/:uid */}
-      <Route path="/:restaurantSlug/master"   element={<SlugResolver subPath="master" />} />
+      {/* ── Role-name-as-page-slug redirects → /orders ── */}
+      {/* Handles old links like /danab/owner, /danab/staff, /danab/admin, */}
+      {/* /danab/menu_studio, /danab/manager, /danab/employee, /danab/dashboard */}
+      <Route path="/:restaurantSlug/owner"        element={<RoleSlugRedirect />} />
+      <Route path="/:restaurantSlug/staff"        element={<RoleSlugRedirect />} />
+      <Route path="/:restaurantSlug/menu_studio"  element={<RoleSlugRedirect />} />
+      <Route path="/:restaurantSlug/admin"        element={<RoleSlugRedirect />} />
+      <Route path="/:restaurantSlug/manager"      element={<RoleSlugRedirect />} />
+      <Route path="/:restaurantSlug/employee"     element={<RoleSlugRedirect />} />
+      <Route path="/:restaurantSlug/dashboard"    element={<RoleSlugRedirect />} />
+      {/* master still goes to master-control */}
+      <Route path="/:restaurantSlug/master"       element={<SlugResolver subPath="master" />} />
 
-      {/* ── Base slug (no page segment) → defaults to orders inside RestaurantDashboard ── */}
-      <Route path="/:restaurantSlug" element={<RestaurantDashboard />} />
-
-      {/* ── Internal / legacy routes ── */}
-      <Route path="/admin/:id"           element={<AdminDashboard />} />
-      <Route path="/admin/:id/team"      element={<TeamMembers />} />
-      <Route path="/admin/:id/profile"   element={<ProfilePage />} />
-      <Route path="/master-control"      element={<MasterControl />} />
-      <Route path="/master-control/:uid" element={<MasterControl />} />
+      {/* ── Base slug (no page) → redirect to /orders ── */}
+      <Route path="/:restaurantSlug" element={<RoleSlugRedirect />} />
 
       {/* Root */}
-      <Route path="/" element={
-        user
-          ? <NotFound message="Please open a restaurant link, e.g. dashboard.exzibo.online/your-restaurant" />
-          : <Navigate to="/auth" replace />
-      } />
+      <Route path="/" element={<Navigate to="/auth" replace />} />
 
       <Route path="*" element={<NotFound />} />
     </Routes>
   )
+}
+
+// Redirects any role-name URL or base slug URL to the canonical /orders page.
+// Also strips query params like ?from=master so the URL stays clean.
+function RoleSlugRedirect() {
+  const { restaurantSlug } = useParams()
+  return <Navigate to={`/${restaurantSlug}/orders`} replace />
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
