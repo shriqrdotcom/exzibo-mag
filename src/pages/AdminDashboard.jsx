@@ -978,9 +978,7 @@ export default function AdminDashboard({ restaurantId: restaurantIdProp, initial
     showToast('✅ Settings saved — applies to all restaurants!')
   }
 
-  const displayName = fromMaster
-    ? 'Master Control'
-    : (overrideName || (isDefault ? globalConfig.adminTitle : (restaurant?.name || 'Admin')))
+  const displayName = overrideName || (isDefault ? globalConfig.adminTitle : (restaurant?.name || 'Admin'))
 
   const initials = displayName
     .split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase()
@@ -1239,7 +1237,7 @@ export default function AdminDashboard({ restaurantId: restaurantIdProp, initial
                 )}
               </div>
               <div style={{ fontSize: '11px', fontWeight: 700, color: accentStart, letterSpacing: '0.1em' }}>
-                {activeRole ? (activeRole === 'staff' ? 'EMPLOYEE' : activeRole.toUpperCase()) : 'ADMIN'}
+                {fromMaster ? 'MENU STUDIO' : (activeRole ? (activeRole === 'staff' ? 'EMPLOYEE' : activeRole.toUpperCase()) : 'ADMIN')}
               </div>
             </div>
           </div>
