@@ -21,11 +21,14 @@ A full-stack restaurant management SaaS platform. Features a cinematic dark them
 
 ## Environment Variables (Secrets)
 All secrets are stored in Replit Secrets (never in code):
-- `VITE_SUPABASE_URL` — Supabase project URL
-- `VITE_SUPABASE_ANON_KEY` — Supabase anonymous/public key
+- `VITE_SUPABASE_URL` — Supabase project URL (used by Vite/browser bundle)
+- `VITE_SUPABASE_ANON_KEY` — Supabase anonymous/public key (used by Vite/browser bundle)
+- `DATABASE_URL` — Replit PostgreSQL connection string (auto-provisioned)
 - `PREVIEW_EMAIL` — (optional) Email for dev preview login bypass
 - `PREVIEW_PASSWORD_HASH` — (optional) bcrypt hash of preview password
 - `PREVIEW_SECRET` — (optional) HMAC secret for preview session tokens
+
+Note: `server.js` (production) reads `SUPABASE_URL`/`SUPABASE_ANON_KEY` first, falling back to `VITE_SUPABASE_URL`/`VITE_SUPABASE_ANON_KEY`. Since both are set as Replit Secrets, the fallback covers production.
 
 ## Running
 - Dev server: `npm run dev` (uses locally installed vite, port 5000, host 0.0.0.0)

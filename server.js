@@ -100,8 +100,8 @@ async function _isTableValid(slug, tableNumber) {
   const hit = _tableCache.get(cacheKey)
   if (hit && hit.exp > Date.now()) return hit.valid
 
-  const supabaseUrl = process.env.VITE_SUPABASE_URL
-  const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY
+  const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
+  const supabaseKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY
 
   // No credentials → server misconfigured; deny access
   if (!supabaseUrl || !supabaseKey) return false
