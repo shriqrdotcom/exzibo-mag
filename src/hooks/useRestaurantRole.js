@@ -1,101 +1,78 @@
-import { useState, useEffect, useRef } from 'react'
-import { supabase } from '../lib/supabase'
+import { useState, useEffect, useCallback } from 'react'
 import { DISABLE_AUTH } from '../lib/env'
 
-// In-memory session cache: restaurantId → { role, ts }
-const _cache = new Map()
-const CACHE_TTL_MS = 5 * 60 * 1000  // 5 minutes
+// localStorage key patterns
+const LS_PREFIX  = 'exzibo_role_'    // per-restaurant: exzibo_role_<restaurantId>
+const LS_GLOBAL  = 'exzibo_active_role'  // global fallback
+
+const VALID_ROLES = new Set(['menu_studio', 'owner', 'admin', 'staff'])
+
+function readStoredRole(restaurantId) {
+  if (DISABLE_AUTH) return 'menu_studio'
+  try {
+    if (restaurantId) {
+      const perRestaurant = localStorage.getItem(`${LS_PREFIX}${restaurantId}`)
+      if (perRestaurant && VALID_ROLES.has(perRestaurant)) return perRestaurant
+    }
+    const global = localStorage.getItem(LS_GLOBAL)
+    if (global && VALID_ROLES.has(global)) return global
+  } catch {}
+  return null
+}
 
 /**
  * useRestaurantRole(restaurantId)
  *
- * Returns { role, loading, error } for the currently authenticated user
- * at the given restaurant.
+ * Returns { role, loading, error, setRole } for the current session.
  *
- * Role priority (handled server-side by get_my_role_for_restaurant RPC):
- *   1. user_roles table direct assignment
- *   2. restaurants.owner_id match → 'owner'
- *   3. team_members legacy fallback
+ * Role resolution order (no Supabase auth required):
+ *  1. DISABLE_AUTH=true → always 'menu_studio'
+ *  2. localStorage key `exzibo_role_<restaurantId>`
+ *  3. localStorage key `exzibo_active_role` (global fallback)
+ *  4. null → caller must show a role picker
  *
- * In DISABLE_AUTH dev mode, always returns 'menu_studio' (full access).
+ * setRole(newRole) persists the selection to localStorage for the restaurant
+ * and updates React state immediately.
  *
- * The result is cached per-session for CACHE_TTL_MS to avoid re-fetching on
- * every navigation within the same dashboard session. Call invalidateRoleCache()
- * after a role assignment change.
+ * invalidateRoleCache(restaurantId?) exported as a module-level helper so
+ * external callers (e.g. after a role assignment change) can trigger a re-read.
  */
 export function useRestaurantRole(restaurantId) {
-  const [role, setRole]       = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError]     = useState(null)
-  const abortRef = useRef(false)
+  const [role, setRoleState] = useState(() => readStoredRole(restaurantId))
+  const [loading]            = useState(false)
+  const [error]              = useState(null)
 
+  // Re-read from storage when restaurantId changes
   useEffect(() => {
-    abortRef.current = false
-
-    if (!restaurantId) {
-      setRole(null)
-      setLoading(false)
-      setError(null)
-      return
-    }
-
-    // Dev bypass — full access without Supabase
-    if (DISABLE_AUTH) {
-      setRole('menu_studio')
-      setLoading(false)
-      setError(null)
-      return
-    }
-
-    // Warm cache hit
-    const cached = _cache.get(restaurantId)
-    if (cached && cached.ts > Date.now() - CACHE_TTL_MS) {
-      setRole(cached.role)
-      setLoading(false)
-      setError(null)
-      return
-    }
-
-    setLoading(true)
-    setError(null)
-
-    supabase
-      .rpc('get_my_role_for_restaurant', { p_restaurant_id: restaurantId })
-      .then(({ data, error: rpcErr }) => {
-        if (abortRef.current) return
-        if (rpcErr) {
-          console.warn('[useRestaurantRole] RPC error:', rpcErr.message)
-          setError(rpcErr)
-          setRole(null)
-        } else {
-          const resolved = data || null
-          _cache.set(restaurantId, { role: resolved, ts: Date.now() })
-          setRole(resolved)
-        }
-        setLoading(false)
-      })
-      .catch(err => {
-        if (abortRef.current) return
-        console.warn('[useRestaurantRole] unexpected error:', err)
-        setError(err)
-        setRole(null)
-        setLoading(false)
-      })
-
-    return () => { abortRef.current = true }
+    setRoleState(readStoredRole(restaurantId))
   }, [restaurantId])
 
-  return { role, loading, error }
+  const setRole = useCallback((newRole) => {
+    if (!VALID_ROLES.has(newRole)) return
+    try {
+      if (restaurantId) localStorage.setItem(`${LS_PREFIX}${restaurantId}`, newRole)
+      localStorage.setItem(LS_GLOBAL, newRole)
+    } catch {}
+    setRoleState(newRole)
+  }, [restaurantId])
+
+  return { role, loading, error, setRole }
 }
 
 /**
- * Invalidate the role cache for a specific restaurant (or all restaurants).
- * Call after assigning / changing a role so the next navigation re-fetches.
+ * Clear the stored role for a restaurant (or all restaurants).
+ * Useful when logging out or resetting the role picker.
  */
 export function invalidateRoleCache(restaurantId) {
-  if (restaurantId) {
-    _cache.delete(restaurantId)
-  } else {
-    _cache.clear()
-  }
+  try {
+    if (restaurantId) {
+      localStorage.removeItem(`${LS_PREFIX}${restaurantId}`)
+    } else {
+      // Clear all per-restaurant role keys
+      Object.keys(localStorage)
+        .filter(k => k.startsWith(LS_PREFIX))
+        .forEach(k => localStorage.removeItem(k))
+    }
+    localStorage.removeItem(LS_GLOBAL)
+  } catch {}
 }

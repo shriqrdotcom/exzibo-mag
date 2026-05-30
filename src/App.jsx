@@ -362,22 +362,8 @@ function MenuApp() {
 //   /master-control/:uid              → Master Control for a specific restaurant
 // ═══════════════════════════════════════════════════════════════════════════
 function DashboardApp() {
-  const { loading, user } = useAuth()
-  const navigate = useNavigate()
-
-  // After login, restore the original intended destination
-  useEffect(() => {
-    if (!loading && user) {
-      const saved = localStorage.getItem('auth_redirect')
-      if (saved) {
-        localStorage.removeItem('auth_redirect')
-        const safe = saved.startsWith('/') && !saved.startsWith('//') && !saved.startsWith('/auth')
-        if (safe) navigate(saved, { replace: true })
-      }
-    }
-  }, [loading, user, navigate])
-
-  if (loading) return <GlobalLoader />
+  // Dashboard is publicly accessible — no auth gate on routing.
+  // Role is resolved from localStorage inside each RestaurantDashboard render.
 
   return (
     <Routes>

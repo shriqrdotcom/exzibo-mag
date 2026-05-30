@@ -1,0 +1,124 @@
+CURRENT PROBLEM TO FIX:
+
+Right now when any user visits a dashboard URL such as 
+https://dashboard.exzibo.online/danab/orders
+the application is redirecting them to a login page before allowing access.
+
+This behavior must be completely removed. There should be NO login page, NO 
+authentication redirect, and NO protected route guard that blocks access to 
+any dashboard URL.
+
+---
+
+WHAT YOU MUST DO:
+
+Remove all authentication checks, protected route wrappers, and login redirects 
+from the dashboard routing system entirely. Every dashboard URL must be directly 
+accessible by simply visiting the URL in the browser with no login required and 
+no redirect of any kind.
+
+---
+
+URL STRUCTURE REMINDER — THIS HAS NOT CHANGED:
+
+There is ONE domain for ALL dashboards: dashboard.exzibo.online
+The URL pattern is always: dashboard.exzibo.online/{restaurant-slug}/{page-slug}
+
+Example: https://dashboard.exzibo.online/danab/orders
+
+This single URL must work and load the dashboard directly without any 
+authentication step, login form, or session check blocking it.
+
+All four dashboard roles — menu_studio, owner, admin, staff — are accessed 
+through this same URL pattern. The URL does NOT change per role. The URL 
+does NOT include the role name anywhere in the path.
+
+---
+
+WHAT DIRECT ACCESS MEANS TECHNICALLY:
+
+1. There must be NO PrivateRoute, ProtectedRoute, AuthGuard, RequireAuth, or 
+   any equivalent wrapper component sitting around the dashboard routes in 
+   React Router. If any such wrapper exists in the current codebase, remove it 
+   from the dashboard route definitions entirely.
+
+2. There must be NO useEffect or logic inside any dashboard page component or 
+   layout component that checks for an authenticated session and redirects to 
+   /login if no session is found. If such logic exists, remove it.
+
+3. There must be NO middleware, loader function, or route-level guard that 
+   validates a token or session cookie before rendering the dashboard. If such 
+   logic exists, remove it.
+
+4. The React Router configuration for the dashboard must look structurally like this:
+
+   <Route path="/:restaurantSlug/:pageSlug" element={<DashboardLayout />} />
+
+   There must be no authentication wrapper around this route. Visiting the URL 
+   must immediately render the DashboardLayout and the correct page component 
+   without any conditional check that sends the user elsewhere.
+
+5. If the application currently checks Supabase Auth session state before 
+   rendering the dashboard, that specific check must be removed or bypassed for 
+   all routes under dashboard.exzibo.online. The Supabase client can still be 
+   used for reading and writing restaurant data, but it must NOT be used as 
+   an access gate on route rendering.
+
+---
+
+ROLE CONTEXT WITHOUT LOGIN:
+
+Since there is no login, the role for the current session must be determined 
+without relying on an authenticated Supabase user object. 
+
+Use one of the following approaches, whichever is already closer to the 
+current implementation:
+
+OPTION A — Role stored in localStorage:
+On first visit or when role is not yet set, show a simple role selector UI 
+inside the dashboard itself (not a login page, not a separate route) that 
+lets the user pick their role: menu_studio, owner, admin, or staff. 
+Store the selected role in localStorage under the key "exzibo_active_role". 
+Read this value on every page render using the useRestaurantRole() hook. 
+If the value exists, render the dashboard immediately in that role mode.
+
+OPTION B — Role passed as a URL query parameter:
+The URL can include a role query parameter like:
+https://dashboard.exzibo.online/danab/orders?role=owner
+The application reads the role from the URL query string and uses it to 
+control what the user sees. If no role query parameter is present, default 
+to rendering the staff role view as the most restricted fallback.
+
+OPTION C — Role selector inside the dashboard header or sidebar:
+Add a visible role switcher dropdown in the dashboard UI (header or sidebar) 
+that lets the user switch between menu_studio, owner, admin, and staff views 
+in real time without navigating away or logging in. This is suitable for 
+development and demonstration purposes.
+
+Pick whichever option is easiest to implement given the current codebase 
+structure. The important thing is that the role is determined WITHOUT a 
+login step and WITHOUT blocking access to the dashboard URL.
+
+---
+
+WHAT MUST NOT HAPPEN AFTER THIS FIX:
+
+- Visiting https://dashboard.exzibo.online/danab/orders must NOT redirect 
+  to any login page under any circumstance
+- Visiting https://dashboard.exzibo.online/danab/menu must NOT redirect 
+  to any login page under any circumstance
+- Visiting https://dashboard.exzibo.online/danab/settings must NOT redirect 
+  to any login page under any circumstance
+- No dashboard page should ever show a "you must be logged in" message
+- No dashboard page should ever show a blank white screen caused by an 
+  auth check failing silently
+
+---
+
+SUMMARY OF THE CHANGE IN ONE SENTENCE:
+
+Remove every authentication gate and login redirect from the dashboard routing 
+system so that any URL following the pattern 
+https://dashboard.exzibo.online/{restaurant-slug}/{page-slug} 
+loads the dashboard immediately and directly, with role context handled 
+inside the dashboard UI itself rather than through a login flow.
