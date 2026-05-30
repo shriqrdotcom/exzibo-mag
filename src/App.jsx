@@ -26,6 +26,7 @@ import Restaurants          from './pages/Restaurants'
 import RestaurantWebsite    from './pages/RestaurantWebsite'
 import FoodDetail           from './pages/FoodDetail'
 import AdminDashboard       from './pages/AdminDashboard'
+import RestaurantDashboard  from './pages/RestaurantDashboard'
 import TeamMembers          from './pages/TeamMembers'
 import SuperAdminDashboard  from './pages/SuperAdminDashboard'
 import TeamMembersAdmin     from './pages/TeamMembersAdmin'
@@ -381,30 +382,36 @@ function DashboardApp() {
   return (
     <Routes>
       {/* Auth */}
-      <Route path="/auth" element={<Auth />} />
+      <Route path="/auth"  element={<Auth />} />
+      <Route path="/login" element={<Navigate to="/auth" replace />} />
 
-      {/* ── Section-based slug routes (/{slug}/{section}) ── */}
-      {/* SlugAdminRoute renders AdminDashboard in-place — URL stays clean  */}
-      <Route path="/:restaurantSlug/dashboard"  element={<SlugAdminRoute section="dashboard" />} />
-      <Route path="/:restaurantSlug/orders"     element={<SlugAdminRoute section="orders" />} />
-      <Route path="/:restaurantSlug/tables"     element={<SlugAdminRoute section="tables" />} />
-      <Route path="/:restaurantSlug/menu"       element={<SlugAdminRoute section="menu" />} />
-      <Route path="/:restaurantSlug/analytics"  element={<SlugAdminRoute section="analytics" />} />
-      <Route path="/:restaurantSlug/booking"    element={<SlugAdminRoute section="booking" />} />
-      <Route path="/:restaurantSlug/settings"   element={<SlugAdminRoute section="settings" />} />
-      <Route path="/:restaurantSlug/profile"    element={<SlugAdminRoute section="profile" />} />
+      {/* ── New role-based slug routes via RestaurantDashboard ── */}
+      {/* All /:restaurantSlug/:pageSlug routes use the RBAC layer.  */}
+      {/* Role is fetched from Supabase on every load; the access    */}
+      {/* matrix enforces which pages each role may visit.           */}
+      <Route path="/:restaurantSlug/orders"       element={<RestaurantDashboard />} />
+      <Route path="/:restaurantSlug/bookings"     element={<RestaurantDashboard />} />
+      <Route path="/:restaurantSlug/booking"      element={<RestaurantDashboard />} />
+      <Route path="/:restaurantSlug/menu"         element={<RestaurantDashboard />} />
+      <Route path="/:restaurantSlug/tables"       element={<RestaurantDashboard />} />
+      <Route path="/:restaurantSlug/analytics"    element={<RestaurantDashboard />} />
+      <Route path="/:restaurantSlug/settings"     element={<RestaurantDashboard />} />
+      <Route path="/:restaurantSlug/profile"      element={<RestaurantDashboard />} />
+      <Route path="/:restaurantSlug/roles"        element={<RestaurantDashboard />} />
+      <Route path="/:restaurantSlug/subscription" element={<RestaurantDashboard />} />
+      <Route path="/:restaurantSlug/dashboard"    element={<RestaurantDashboard />} />
 
-      {/* ── Role-based slug routes ── */}
-      <Route path="/:restaurantSlug/admin"     element={<SlugAdminRoute />} />
-      <Route path="/:restaurantSlug/manager"   element={<SlugAdminRoute />} />
-      <Route path="/:restaurantSlug/employee"  element={<SlugAdminRoute />} />
+      {/* ── Legacy role-path aliases ── */}
+      <Route path="/:restaurantSlug/admin"    element={<RestaurantDashboard />} />
+      <Route path="/:restaurantSlug/manager"  element={<RestaurantDashboard />} />
+      <Route path="/:restaurantSlug/employee" element={<RestaurantDashboard />} />
       {/* master still redirects to /master-control/:uid */}
-      <Route path="/:restaurantSlug/master"    element={<SlugResolver subPath="master" />} />
+      <Route path="/:restaurantSlug/master"   element={<SlugResolver subPath="master" />} />
 
-      {/* ── Base slug route (no section/role) ── */}
-      <Route path="/:restaurantSlug" element={<SlugAdminRoute />} />
+      {/* ── Base slug (no page segment) → defaults to orders inside RestaurantDashboard ── */}
+      <Route path="/:restaurantSlug" element={<RestaurantDashboard />} />
 
-      {/* ── Internal routes — rendered after SlugResolver redirects ── */}
+      {/* ── Internal / legacy routes ── */}
       <Route path="/admin/:id"           element={<AdminDashboard />} />
       <Route path="/admin/:id/team"      element={<TeamMembers />} />
       <Route path="/admin/:id/profile"   element={<ProfilePage />} />

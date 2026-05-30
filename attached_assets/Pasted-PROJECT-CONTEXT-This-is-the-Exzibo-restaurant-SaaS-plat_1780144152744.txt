@@ -1,0 +1,225 @@
+PROJECT CONTEXT:
+This is the Exzibo restaurant SaaS platform built in React with Supabase as the backend 
+and hosted on Vercel. The platform serves multiple roles across a single unified dashboard 
+domain: dashboard.exzibo.online
+
+---
+
+CORE ARCHITECTURAL RULE — READ THIS FIRST:
+
+There is ONE domain for ALL dashboards: dashboard.exzibo.online
+There is NO role-based subdomain or path prefix like /owner/ or /admin/ or /staff/ in the URL.
+The URL structure is ALWAYS: dashboard.exzibo.online/{restaurant-slug}/{page-slug}
+
+Example: dashboard.exzibo.online/danab/orders
+
+The SAME URL renders DIFFERENT UI and DIFFERENT functionality depending solely on 
+the logged-in user's assigned role for that restaurant. The URL itself never changes 
+by role. The role is fetched from Supabase after authentication and controls what 
+the user sees and can do on that page.
+
+---
+
+ROLE DEFINITIONS:
+
+There are exactly 4 roles in this system. Every authenticated user has one role 
+assigned per restaurant. The roles are:
+
+ROLE 1 — menu_studio
+This is the internal master control role. It belongs to the Exzibo team only.
+Users with this role can see and control everything including:
+- All restaurant data and configuration
+- All contractual information (subscription plan, billing, payment history)
+- Platform-level controls such as activating or deactivating a restaurant account
+- All the same controls that an owner has, plus the extra administrative and 
+  contractual layer that only Exzibo staff should access
+- No restaurant can assign this role to their own users
+
+ROLE 2 — owner
+This is the highest role a restaurant user can hold.
+Users with this role have full control over their restaurant including:
+- All restaurant profile and information fields are editable
+- Full access to all critical settings including billing contact, ownership details, 
+  and legal restaurant information
+- Can assign and remove roles for other users (admin, staff) within their restaurant
+- Can view all analytics, orders, bookings, menus, tables, and settings pages
+
+ROLE 3 — admin
+This role has broad restaurant management access but is intentionally restricted 
+from touching identity-critical and legal-critical fields. Specifically:
+- Cannot edit the restaurant's legal name, ownership name, ownership contact, 
+  or any field that is marked as owner-only in Supabase
+- Cannot access or modify billing and subscription settings
+- Cannot modify or reassign the owner role account
+- Everything else including orders, bookings, menu management, table management, 
+  staff management, and operational analytics is fully accessible and editable
+
+ROLE 4 — staff
+This is the most restricted operational role. Staff users have access only to:
+- Incoming orders page: can view and update order status
+- Incoming bookings page: can view and update booking status
+- Their own profile page: can VIEW their profile information but CANNOT edit 
+  any field on their profile. The profile page for staff renders in a read-only 
+  display mode, not an editable form. Staff see a simplified profile view that 
+  does not expose restaurant-level settings or other users
+
+---
+
+URL AND ROUTING STRUCTURE:
+
+The React Router configuration must follow this exact pattern:
+
+Base route: dashboard.exzibo.online/:restaurantSlug/:pageSlug
+
+The :restaurantSlug is a unique identifier slug for the restaurant stored in Supabase 
+(for example "danab" or "the-spice-room"). This slug is fetched and validated 
+against the authenticated user's restaurant assignment in Supabase on every 
+route load.
+
+The :pageSlug is the specific page being accessed. Examples:
+- orders
+- bookings
+- menu
+- tables
+- analytics
+- settings
+- profile
+- roles
+- subscription (menu_studio and owner only)
+
+When a user navigates to dashboard.exzibo.online/danab/orders the application must:
+1. Authenticate the user via Supabase Auth
+2. Fetch the user's assigned role for the restaurant with slug "danab" from Supabase
+3. Confirm the user is permitted to access the "orders" page for their role
+4. Render the orders page UI in the correct role-restricted mode
+
+---
+
+ACCESS CONTROL MATRIX — ENFORCE THIS WITHOUT EXCEPTION:
+
+Each page must check the user's role before rendering. The rules are:
+
+Page: orders
+- menu_studio: full access, can see all orders with admin override controls
+- owner: full access
+- admin: full access
+- staff: full access, read and status-update only
+
+Page: bookings
+- menu_studio: full access
+- owner: full access
+- admin: full access
+- staff: full access, read and status-update only
+
+Page: menu
+- menu_studio: full access
+- owner: full access
+- admin: full access
+- staff: NO ACCESS — redirect to /orders
+
+Page: tables
+- menu_studio: full access
+- owner: full access
+- admin: full access
+- staff: NO ACCESS — redirect to /orders
+
+Page: analytics
+- menu_studio: full access
+- owner: full access
+- admin: full access
+- staff: NO ACCESS — redirect to /orders
+
+Page: settings
+- menu_studio: full access including contractual controls
+- owner: full access to all restaurant settings
+- admin: partial access — owner-critical fields are rendered as read-only display 
+  text, not editable inputs. Fields locked for admin include: legal restaurant name, 
+  owner name, owner phone, owner email, billing contact
+- staff: NO ACCESS — redirect to /orders
+
+Page: roles
+- menu_studio: full access
+- owner: full access
+- admin: can manage staff users only, cannot touch owner or other admin accounts
+- staff: NO ACCESS — redirect to /orders
+
+Page: subscription
+- menu_studio: full access
+- owner: read-only view of their current plan
+- admin: NO ACCESS — redirect to /orders
+- staff: NO ACCESS — redirect to /orders
+
+Page: profile
+- menu_studio: full access
+- owner: full access
+- admin: full access
+- staff: read-only display mode. Render profile as a card layout with static text. 
+  Do not render any input fields, edit buttons, or save actions on this page for staff
+
+---
+
+REDIRECT AND ERROR RULES:
+
+If an unauthenticated user visits any dashboard URL, redirect them to 
+dashboard.exzibo.online/login
+
+If an authenticated user visits a page their role does not permit, redirect them 
+silently to dashboard.exzibo.online/:restaurantSlug/orders without showing an 
+error message
+
+If a user's restaurant slug in the URL does not match any restaurant assigned to 
+their account in Supabase, show a full-page "Restaurant Not Found" error and do 
+not render any dashboard content
+
+If a user has no role assigned for a restaurant, treat them as unauthorized and 
+redirect to login
+
+---
+
+SUPABASE DATA REQUIREMENTS:
+
+The following fields must exist or be confirmed in Supabase to support this system:
+
+Table: user_roles (or equivalent)
+- user_id (references auth.users)
+- restaurant_id (references restaurants table)
+- role (enum or text: menu_studio, owner, admin, staff)
+
+Table: restaurants
+- id
+- slug (unique, URL-safe string)
+- legal_name
+- owner_name
+- owner_phone
+- owner_email
+- billing_contact
+- [other restaurant fields]
+
+On every protected page load, the app must query user_roles to confirm the 
+authenticated user has a valid role for the restaurant matching the slug in the URL. 
+This check must happen server-side or via a Supabase RLS policy and must not be 
+skippable by modifying the URL manually.
+
+---
+
+IMPLEMENTATION NOTES FOR THE AGENT:
+
+Do not create separate route trees or separate React applications for each role. 
+All roles share the same route tree. Role-based rendering is handled inside each 
+page component using a role context or hook that reads the current user's role 
+from Supabase.
+
+Create a single custom hook called useRestaurantRole() that returns the current 
+user's role for the active restaurant slug. Every page component must call this 
+hook at the top and use its return value to conditionally render controls, lock 
+fields, or redirect as specified in the access control matrix above.
+
+Do not use role information from localStorage or any client-side-only storage 
+as the source of truth. Always derive the role from the Supabase query result 
+on each session load.
+
+The sidebar navigation must dynamically show or hide menu items based on the 
+role returned by useRestaurantRole(). Staff should only see Orders, Bookings, 
+and Profile in the sidebar. Admin should see everything except Subscription. 
+Owner should see everything except the contractual controls inside Subscription. 
+Menu Studio should see everything with no restrictions.

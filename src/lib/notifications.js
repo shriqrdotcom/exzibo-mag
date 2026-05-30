@@ -22,7 +22,7 @@ export function getBrowserId() {
 }
 
 export function effectiveRole(activeRole) {
-  if (!activeRole || activeRole === 'owner') return 'admin'
+  if (!activeRole || activeRole === 'owner' || activeRole === 'menu_studio') return 'admin'
   return activeRole
 }
 

@@ -1,16 +1,45 @@
 import React, { createContext, useContext, useState } from 'react'
 
+// ── Permission definitions ─────────────────────────────────────────────────
+// Each role maps to an array of permission keys checked by hasPermission().
+// Roles that can be set:
+//   menu_studio — platform super-user; unrestricted access
+//   owner       — full restaurant access (all pages, all fields)
+//   admin       — operational access; subscription / owner-critical fields locked
+//   staff       — limited to orders, bookings, own profile
+//
+// Legacy alias 'menuStudio' kept for backward compatibility with any existing
+// activateRole('menuStudio') calls.
+
 const PERMISSIONS = {
-  menuStudio: ['dashboard', 'menuEdit'],
-  owner:      ['dashboard', 'menuEdit', 'settings', 'profile', 'teamManagement', 'orders', 'bookings', 'analytics'],
-  admin:      ['dashboard', 'orders', 'bookings', 'menuEdit', 'analytics', 'settings', 'profile'],
-  staff:      ['orders', 'bookings', 'profile'],
+  menu_studio: [
+    'dashboard', 'menuEdit', 'settings', 'profile',
+    'teamManagement', 'orders', 'bookings', 'analytics',
+    'subscription', 'roles',
+  ],
+  menuStudio: [   // legacy alias — same as menu_studio
+    'dashboard', 'menuEdit', 'settings', 'profile',
+    'teamManagement', 'orders', 'bookings', 'analytics',
+    'subscription', 'roles',
+  ],
+  owner: [
+    'dashboard', 'menuEdit', 'settings', 'profile',
+    'teamManagement', 'orders', 'bookings', 'analytics',
+    'subscription', 'roles',
+  ],
+  admin: [
+    'dashboard', 'orders', 'bookings', 'menuEdit',
+    'analytics', 'settings', 'profile', 'roles',
+  ],
+  staff: [
+    'orders', 'bookings', 'profile',
+  ],
 }
 
 const RoleContext = createContext(null)
 
 export function RoleProvider({ children }) {
-  const [activeRole, setActiveRole] = useState(null)
+  const [activeRole, setActiveRole]           = useState(null)
   const [menuEditAllowed, setMenuEditAllowed] = useState(false)
 
   function activateRole(role, opts = {}) {
