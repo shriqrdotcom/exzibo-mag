@@ -215,26 +215,23 @@ export default function MasterControl() {
   function buildNavTarget(target) {
     const sub = getSubdomain()
 
-    // dashboard.exzibo.online — navigate directly to the canonical orders page
-    // with the menu_studio role param so RestaurantDashboard picks it up
-    if (target.id !== 'default' && target.slug && sub === 'dashboard') {
-      return `/${target.slug}/orders?role=menu_studio`
+    // dashboard.exzibo.online — open AdminDashboard directly (same as dev/preview)
+    if (sub === 'dashboard') {
+      return target.id === 'default'
+        ? '/admin/default?from=master'
+        : `/admin/${target.id}?from=master`
     }
 
     // superadmin.exzibo.online — AdminDashboard lives on dashboard subdomain,
     // so we must do a full cross-subdomain redirect via window.location.href
     if (sub === 'superadmin') {
       const path = target.id === 'default'
-        ? '/admin/default'
-        : target.slug
-          ? `/${target.slug}/orders?role=menu_studio`
-          : `/admin/${target.id}`
+        ? '/admin/default?from=master'
+        : `/admin/${target.id}?from=master`
       return `https://dashboard.exzibo.online${path}`
     }
 
     // Default (dev / Replit preview / bare domain)
-    // VITE_DISABLE_AUTH=true forces menu_studio in dev; pre-set localStorage
-    // for the case where auth is enabled on a bare-domain deploy.
     try { localStorage.setItem('exzibo_active_role', 'menu_studio') } catch {}
     if (target.id === 'default') return '/admin/default?from=master'
     return `/admin/${target.id}?from=master`
