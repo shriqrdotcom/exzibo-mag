@@ -387,11 +387,15 @@ export default function RestaurantDashboard() {
 
   const section = PAGE_TO_SECTION[pageSlug] || 'orders'
 
+  // menu_studio role always gets the full Master Control view — send button,
+  // Show Live Orders toggle, MENU STUDIO label — regardless of how they arrived.
+  const effectiveFromMaster = fromMaster || role === 'menu_studio'
+
   return (
     <AdminDashboard
       restaurantId={restaurant.id}
       initialSection={section}
-      fromMaster={fromMaster}
+      fromMaster={effectiveFromMaster}
     />
   )
 }
