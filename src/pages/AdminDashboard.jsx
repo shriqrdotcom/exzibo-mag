@@ -6083,23 +6083,16 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
 // Each entry: { label, nextStatus, style: 'primary'|'danger'|'secondary' }
 const ORDER_ACTIONS = {
   pending:   [
-    { label: 'CONFIRM',  nextStatus: 'confirmed', style: 'primary'   },
+    { label: 'CONFIRM',  nextStatus: 'completed', style: 'primary'   },
     { label: 'REJECT',   nextStatus: 'rejected',  style: 'danger'    },
   ],
-  confirmed: [
-    { label: 'PREPARING', nextStatus: 'preparing', style: 'primary'  },
-    { label: 'CANCEL',    nextStatus: 'cancelled', style: 'danger'   },
-  ],
-  preparing: [
-    { label: 'READY',    nextStatus: 'ready',     style: 'primary'   },
-  ],
-  ready: [
-    { label: 'COMPLETE', nextStatus: 'completed', style: 'primary'   },
-  ],
   // Terminal statuses — no actions
-  completed: [],
-  cancelled: [],
-  rejected:  [],
+  confirmed:  [],
+  preparing:  [],
+  ready:      [],
+  completed:  [],
+  cancelled:  [],
+  rejected:   [],
 }
 
 /* ─── Order Card ─── */
