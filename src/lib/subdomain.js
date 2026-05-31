@@ -19,9 +19,9 @@ const KNOWN_SUBDOMAINS = ['superadmin', 'dashboard', 'menu']
 export function getSubdomain() {
   const hostname = window.location.hostname
 
-  // ── Replit / local dev → simulate dashboard subdomain ───────────────────
-  // This makes Preview and Production run the IDENTICAL code path (DashboardApp),
-  // so any change tested in Replit preview behaves the same after deployment.
+  // ── Replit / local dev → use DefaultApp (full route tree) ──────────────
+  // DefaultApp has all routes properly defined including /dashboard, /auth,
+  // /master-control etc. — the right landing experience in the Replit preview.
   if (
     hostname === 'localhost' ||
     hostname === '127.0.0.1' ||
@@ -29,7 +29,7 @@ export function getSubdomain() {
     hostname.endsWith('.replit.app') ||
     hostname.endsWith('.repl.co')
   ) {
-    return 'dashboard'
+    return null
   }
 
   // ── Real hostname detection on *.exzibo.online ───────────────────────────
