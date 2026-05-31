@@ -1173,12 +1173,16 @@ export default function AdminDashboard({ restaurantId: restaurantIdProp, initial
             <div
               onClick={() => {
                 if (!hasPermission('profile')) return
-                const base = `/admin/${id || 'default'}/profile`
-                const params = new URLSearchParams()
-                if (fromMaster) params.set('from', 'master')
-                if (activeRole) params.set('role', activeRole)
-                const qs = params.toString()
-                navigate(qs ? `${base}?${qs}` : base)
+                if (isDashboardSubdomain && restaurant?.slug) {
+                  navigate(`/${restaurant.slug}/profile`)
+                } else {
+                  const base = `/admin/${id || 'default'}/profile`
+                  const params = new URLSearchParams()
+                  if (fromMaster) params.set('from', 'master')
+                  if (activeRole) params.set('role', activeRole)
+                  const qs = params.toString()
+                  navigate(qs ? `${base}?${qs}` : base)
+                }
               }}
               style={{
                 width: '44px', height: '44px', borderRadius: '14px',
