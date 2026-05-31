@@ -213,6 +213,12 @@ export default function AdminDashboard({ restaurantId: restaurantIdProp, initial
   const [bookings, setBookings] = useState([])
   const [activeNav, setActiveNav] = useState(initialSection || 'orders')
 
+  // Sync activeNav when initialSection prop changes (slug-based SPA navigation:
+  // URL changes but AdminDashboard is not remounted, so useState won't re-run)
+  useEffect(() => {
+    if (initialSection) setActiveNav(initialSection)
+  }, [initialSection])
+
   // Maps internal section IDs → the URL slug used on dashboard.exzibo.online
   const SECTION_TO_URL = {
     orders:    'orders',
@@ -1174,6 +1180,7 @@ export default function AdminDashboard({ restaurantId: restaurantIdProp, initial
               onClick={() => {
                 if (!hasPermission('profile')) return
                 if (isDashboardSubdomain && restaurant?.slug) {
+                  setActiveNav('profile')
                   navigate(`/${restaurant.slug}/profile`)
                 } else {
                   const base = `/admin/${id || 'default'}/profile`
