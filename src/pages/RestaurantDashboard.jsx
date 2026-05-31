@@ -9,7 +9,7 @@
  */
 
 import React, { useEffect, useState } from 'react'
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
+import { useParams, useNavigate, useSearchParams, Navigate } from 'react-router-dom'
 import { useRole } from '../context/RoleContext'
 import { useRestaurantRole } from '../hooks/useRestaurantRole'
 import { getRestaurantBySlug } from '../lib/db'
@@ -17,6 +17,12 @@ import AdminDashboard from './AdminDashboard'
 import ProfilePage from './ProfilePage'
 
 const VALID_ROLES = new Set(['menu_studio', 'owner', 'admin', 'staff'])
+
+// Page slugs that are actually role names — redirect them to /orders.
+// These arrive when the dynamic /:restaurantSlug/:pageSlug route catches URLs
+// like /danab/owner or /danab/menu_studio that were previously handled by
+// RoleSlugRedirect static routes.
+const ROLE_SLUG_PAGES = new Set(['owner', 'admin', 'staff', 'menu_studio', 'manager', 'employee', 'dashboard'])
 
 // ── Access control matrix ─────────────────────────────────────────────────
 const PAGE_ACCESS = {
@@ -366,6 +372,13 @@ export default function RestaurantDashboard() {
   }
 
   // ── Render ─────────────────────────────────────────────────────
+
+  // Role-name page slugs (e.g. /danab/owner) → redirect to /orders.
+  // The dynamic /:restaurantSlug/:pageSlug route catches these now.
+  if (ROLE_SLUG_PAGES.has(pageSlug)) {
+    return <Navigate to={`/${restaurantSlug}/orders`} replace />
+  }
+
   if (restaurantLoading) return <FullPageLoader />
   if (notFound) return <NotFoundPage slug={restaurantSlug} />
   if (pageSlug === 'roles' && restaurant && role) return <FullPageLoader />

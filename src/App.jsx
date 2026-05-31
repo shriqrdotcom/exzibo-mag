@@ -3,7 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation, usePa
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { AnalyticsProvider } from './context/AnalyticsContext'
 import { RoleProvider } from './context/RoleContext'
-import { getSubdomain } from './lib/subdomain'
+import { ACTIVE_SUBDOMAIN } from './lib/subdomain'
 import { getRestaurantBySlug } from './lib/db'
 
 // ── Menu subdomain redirect — used by SuperAdminApp for /restaurant/* routes ─
@@ -379,32 +379,14 @@ function DashboardApp() {
       <Route path="/master-control"      element={<MasterControl />} />
       <Route path="/master-control/:uid" element={<MasterControl />} />
 
-      {/* ── Canonical dashboard pages ── */}
-      <Route path="/:restaurantSlug/orders"       element={<RestaurantDashboard />} />
-      <Route path="/:restaurantSlug/bookings"     element={<RestaurantDashboard />} />
-      <Route path="/:restaurantSlug/booking"      element={<RestaurantDashboard />} />
-      <Route path="/:restaurantSlug/menu"         element={<RestaurantDashboard />} />
-      <Route path="/:restaurantSlug/tables"       element={<RestaurantDashboard />} />
-      <Route path="/:restaurantSlug/analytics"    element={<RestaurantDashboard />} />
-      <Route path="/:restaurantSlug/settings"     element={<RestaurantDashboard />} />
-      <Route path="/:restaurantSlug/profile"      element={<RestaurantDashboard />} />
-      <Route path="/:restaurantSlug/roles"        element={<RestaurantDashboard />} />
-      <Route path="/:restaurantSlug/subscription" element={<RestaurantDashboard />} />
+      {/* ── Dynamic slug + page route — single source of truth ── */}
+      {/* /:restaurantSlug/:pageSlug exposes BOTH params via useParams() so  */}
+      {/* RestaurantDashboard always knows which section to display.          */}
+      {/* "master" is intercepted first because it needs a different handler. */}
+      <Route path="/:restaurantSlug/master"  element={<SlugResolver subPath="master" />} />
+      <Route path="/:restaurantSlug/:pageSlug" element={<RestaurantDashboard />} />
 
-      {/* ── Role-name-as-page-slug redirects → /orders ── */}
-      {/* Handles old links like /danab/owner, /danab/staff, /danab/admin, */}
-      {/* /danab/menu_studio, /danab/manager, /danab/employee, /danab/dashboard */}
-      <Route path="/:restaurantSlug/owner"        element={<RoleSlugRedirect />} />
-      <Route path="/:restaurantSlug/staff"        element={<RoleSlugRedirect />} />
-      <Route path="/:restaurantSlug/menu_studio"  element={<RoleSlugRedirect />} />
-      <Route path="/:restaurantSlug/admin"        element={<RoleSlugRedirect />} />
-      <Route path="/:restaurantSlug/manager"      element={<RoleSlugRedirect />} />
-      <Route path="/:restaurantSlug/employee"     element={<RoleSlugRedirect />} />
-      <Route path="/:restaurantSlug/dashboard"    element={<RoleSlugRedirect />} />
-      {/* master still goes to master-control */}
-      <Route path="/:restaurantSlug/master"       element={<SlugResolver subPath="master" />} />
-
-      {/* ── Base slug (no page) → redirect to /orders ── */}
+      {/* ── Base slug (no page) → default to /orders ── */}
       <Route path="/:restaurantSlug" element={<RoleSlugRedirect />} />
 
       {/* Root */}
@@ -492,12 +474,17 @@ function DefaultApp() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// SUBDOMAIN ROUTER — picks the right app tree based on hostname
-// Evaluated once at module load; subdomains only apply on exzibo.online.
-// Dev / Replit / localhost always falls through to DefaultApp.
+// SUBDOMAIN ROUTER — picks the right app tree based on ACTIVE_SUBDOMAIN.
+//
+// ACTIVE_SUBDOMAIN is resolved by getSubdomain() in src/lib/subdomain.js:
+//   • Replit preview / localhost  → "dashboard"  (matches dashboard.exzibo.online)
+//   • dashboard.exzibo.online     → "dashboard"
+//   • superadmin.exzibo.online    → "superadmin"
+//   • menu.exzibo.online          → "menu"
+//   • exzibo.online (bare)        → null → DefaultApp
+//
+// Preview and Production always run the SAME app tree — no environment forks.
 // ═══════════════════════════════════════════════════════════════════════════
-const ACTIVE_SUBDOMAIN = getSubdomain()
-
 function SubdomainRouter() {
   if (ACTIVE_SUBDOMAIN === 'superadmin') return <SuperAdminApp />
   if (ACTIVE_SUBDOMAIN === 'dashboard')  return <DashboardApp />

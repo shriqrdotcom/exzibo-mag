@@ -1,0 +1,72 @@
+TASK: Permanently unify Preview and Production environments.
+
+Current Problem:
+- The Preview version of the application works correctly.
+- The Production version behaves differently and shows different routes, components, layouts, and functionality.
+- Any changes made in development should be reflected identically in Production after deployment.
+- There must not be separate application logic, routing logic, dashboard versions, or UI versions between Preview and Production unless explicitly required by environment variables.
+
+Required Investigation:
+1. Analyze the entire project structure.
+2. Compare Preview runtime and Production runtime.
+3. Identify all environment-specific conditions:
+   - process.env checks
+   - NODE_ENV conditions
+   - deployment-specific routing
+   - conditional imports
+   - feature flags
+   - build-time configuration
+   - deployment rewrites
+   - domain-based logic
+   - role-based URL generation differences
+4. Find any duplicate dashboard implementations, duplicate route trees, duplicate menu studio implementations, or duplicate layouts.
+5. Verify that Production is building from the exact same source code used by Preview.
+
+Required Fix:
+1. Create a single source of truth for:
+   - Routing
+   - Navigation
+   - Dashboard rendering
+   - Menu Studio
+   - User profile pages
+   - Role-based access control
+
+2. Remove any logic that causes:
+   - Preview to load one component
+   - Production to load a different component
+
+3. Ensure all routes are generated from the same routing configuration.
+
+4. Ensure Production and Preview use the same:
+   - Components
+   - Layouts
+   - Route handlers
+   - Navigation system
+   - URL generation logic
+
+5. Verify that every dashboard (menu_studio, owner, admin, staff) resolves to the same route architecture in both Preview and Production.
+
+6. Check deployment configuration and fix any:
+   - Replit deployment settings
+   - Build settings
+   - Static route rewrites
+   - Reverse proxy rules
+   - Domain-based routing rules
+
+Validation Required:
+- Compare Preview URL structure and Production URL structure.
+- Compare loaded React/Vue components in both environments.
+- Compare route trees in both environments.
+- Compare generated navigation links in both environments.
+
+Expected Result:
+- Preview and Production become identical.
+- One codebase.
+- One routing system.
+- One dashboard system.
+- No environment-specific UI differences.
+- Any future code change automatically appears in Production after deployment.
+- Provide a detailed report of every root cause found and every file modified before completing the task.
+
+DO NOT create temporary fixes, redirects, or workarounds.
+Find the actual root cause and permanently unify Preview and Production behavior.

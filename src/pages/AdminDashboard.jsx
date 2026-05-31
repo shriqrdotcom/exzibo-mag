@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { ACTIVE_SUBDOMAIN } from '../lib/subdomain'
 import { getRouteConfig } from '../lib/routeConfig'
 import { useAnalytics, notifyAnalyticsUpdate } from '../context/AnalyticsContext'
 import { useRole } from '../context/RoleContext'
@@ -228,9 +229,7 @@ export default function AdminDashboard({ restaurantId: restaurantIdProp, initial
     settings:  'settings',
     profile:   'profile',
   }
-  const isDashboardSubdomain =
-    typeof window !== 'undefined' &&
-    window.location.hostname === 'dashboard.exzibo.online'
+  const isDashboardSubdomain = ACTIVE_SUBDOMAIN === 'dashboard'
 
   // Switch to a section and keep the browser URL in sync.
   // On dashboard.exzibo.online the URL becomes /{restaurantSlug}/{section}.

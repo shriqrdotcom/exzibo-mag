@@ -1,1 +1,2 @@
 - [RBAC routing layer](rbac-routing.md) — RestaurantDashboard.jsx is the role-based routing layer for /:restaurantSlug/:pageSlug; delegates to AdminDashboard after role enforcement.
+- [DashboardApp pageSlug param](dashboard-pageslug.md) — static routes like /:slug/profile don't expose :pageSlug; must use a single dynamic /:slug/:pageSlug route instead.
