@@ -1,0 +1,87 @@
+TASK: Fix order status synchronization between Menu Website and Dashboard.
+
+CURRENT WORKING FLOW:
+
+1. Customer places an order from:
+   menu.exzibo.online/{restaurant-slug}/{page-slug}/{table-number}
+
+2. The order is successfully sent to:
+   dashboard.exzibo.online/{restaurant-slug}/{page-slug}
+
+3. Restaurant staff can see the order with the correct table information.
+
+CURRENT PROBLEM:
+
+The communication only works in one direction.
+
+Menu Website → Dashboard = Working
+
+Dashboard → Menu Website = Not Working
+
+When restaurant staff performs any action on an order from the dashboard, the menu website does not receive the updated status.
+
+Examples:
+- Dashboard confirms order → Customer does not see "Confirmed"
+- Dashboard rejects order → Customer does not see "Rejected"
+- Dashboard marks order as preparing → Customer does not see "Preparing"
+- Dashboard marks order as ready → Customer does not see "Ready"
+- Dashboard completes order → Customer does not see "Completed"
+
+EXPECTED BEHAVIOR:
+
+The order status must be synchronized in both directions.
+
+Flow:
+
+Customer places order
+↓
+Order appears in Dashboard
+↓
+Restaurant updates order status
+↓
+Order status is saved to database
+↓
+Menu Website automatically receives latest status
+↓
+Customer sees updated status
+
+REQUIRED INVESTIGATION:
+
+1. Check how order status is stored in the database.
+
+2. Verify that dashboard actions are actually updating the database.
+
+3. Verify that the menu website is reading the latest order status from the database.
+
+4. Check for:
+   - Missing API updates
+   - Broken database updates
+   - Missing status fields
+   - Incorrect order queries
+   - Cache issues
+   - State management issues
+   - Real-time update issues
+
+5. Confirm that every status change is persisted and retrievable.
+
+ORDER STATUS FLOW MUST SUPPORT:
+
+- Pending
+- Confirmed
+- Rejected
+- Preparing
+- Ready
+- Completed
+- Cancelled
+
+EXPECTED RESULT:
+
+- Dashboard and Menu Website use the same order record.
+- Any dashboard status change updates the database immediately.
+- The menu website always displays the latest order status.
+- Refreshing either side still shows the correct status.
+- No duplicate order records.
+- No local-only state.
+- Database must be the single source of truth.
+
+Before making changes, identify the exact point where the synchronization breaks and provide a report of the root cause and modified files.

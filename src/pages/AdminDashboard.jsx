@@ -55,9 +55,11 @@ const CURRENCY_OPTIONS = ['INR', 'USD', 'EUR', 'GBP', 'AED']
 const STATUS_CONFIG = {
   pending:   { label: 'Pending',   color: '#F59E0B', bg: '#FFFBEB', border: '#FDE68A' },
   confirmed: { label: 'Confirmed', color: '#10B981', bg: '#ECFDF5', border: '#A7F3D0' },
-  preparing: { label: 'Preparing', color: '#10B981', bg: '#ECFDF5', border: '#A7F3D0' },
+  preparing: { label: 'Preparing', color: '#3B82F6', bg: '#EFF6FF', border: '#BFDBFE' },
+  ready:     { label: 'Ready',     color: '#8B5CF6', bg: '#F5F3FF', border: '#DDD6FE' },
   completed: { label: 'Completed', color: '#94A3B8', bg: '#F8FAFC', border: '#E2E8F0' },
   cancelled: { label: 'Cancelled', color: '#EF4444', bg: '#FEF2F2', border: '#FECACA' },
+  rejected:  { label: 'Rejected',  color: '#EF4444', bg: '#FEF2F2', border: '#FECACA' },
 }
 
 const NAV_ITEMS = [
@@ -942,34 +944,29 @@ export default function AdminDashboard({ restaurantId: restaurantIdProp, initial
     // so we only fire one UPDATE per action instead of looping every order.
   }
 
-  function confirmOrder(orderId) {
+  function handleOrderStatus(orderId, newStatus) {
+    const toastMap = {
+      confirmed:  '✅ Order Confirmed!',
+      rejected:   '❌ Order Rejected',
+      preparing:  '🍳 Order is Preparing',
+      ready:      '✅ Order Ready for Pickup!',
+      completed:  '🎉 Order Completed!',
+      cancelled:  '❌ Order Cancelled',
+    }
     setOrders(prev => {
-      const updated = prev.map(o => {
-        if (o.id !== orderId) return o
-        const next = o.status === 'pending' ? 'confirmed' : o.status === 'preparing' ? 'confirmed' : o.status
-        showToast('✅ Order Confirmed!')
-        return { ...o, status: next }
-      })
+      const updated = prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o)
       persistOrders(updated)
-      // Write ONLY the changed order's status to Supabase so the realtime
-      // UPDATE event fires and the customer page reflects the change instantly.
-      if (!isDefault) {
-        const changedOrder = updated.find(o => o.id === orderId)
-        if (changedOrder) updateOrderStatus(orderId, changedOrder.status).catch(() => {})
-      }
+      // Write status to Supabase — this fires the realtime UPDATE event so
+      // the customer page (RestaurantWebsite) reflects the change instantly.
+      if (!isDefault) updateOrderStatus(orderId, newStatus).catch(() => {})
       return updated
     })
+    showToast(toastMap[newStatus] || '✅ Updated')
   }
 
+  // Keep cancelOrder as a named alias so the existing cancel-confirm dialog still works
   function cancelOrder(orderId) {
-    setOrders(prev => {
-      const updated = prev.map(o => o.id === orderId ? { ...o, status: 'cancelled' } : o)
-      persistOrders(updated)
-      // Write ONLY the cancelled order to Supabase so the realtime event fires.
-      if (!isDefault) updateOrderStatus(orderId, 'cancelled').catch(() => {})
-      return updated
-    })
-    showToast('❌ Order Cancelled')
+    handleOrderStatus(orderId, 'cancelled')
   }
 
   function showToast(msg) {
@@ -1516,8 +1513,10 @@ export default function AdminDashboard({ restaurantId: restaurantIdProp, initial
                     index={i}
                     accentStart={accentStart}
                     currency={globalConfig.currency}
-                    onConfirm={() => confirmOrder(order.id)}
-                    onCancel={() => setCancelTarget(order.id)}
+                    onStatusChange={(newStatus) => {
+                      if (newStatus === 'cancelled') setCancelTarget(order.id)
+                      else handleOrderStatus(order.id, newStatus)
+                    }}
                     orderSettings={orderSettings}
                   />
                 ))}
@@ -6044,13 +6043,37 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
   )
 }
 
+// Status → next action buttons to show
+// Each entry: { label, nextStatus, style: 'primary'|'danger'|'secondary' }
+const ORDER_ACTIONS = {
+  pending:   [
+    { label: 'CONFIRM',  nextStatus: 'confirmed', style: 'primary'   },
+    { label: 'REJECT',   nextStatus: 'rejected',  style: 'danger'    },
+  ],
+  confirmed: [
+    { label: 'PREPARING', nextStatus: 'preparing', style: 'primary'  },
+    { label: 'CANCEL',    nextStatus: 'cancelled', style: 'danger'   },
+  ],
+  preparing: [
+    { label: 'READY',    nextStatus: 'ready',     style: 'primary'   },
+  ],
+  ready: [
+    { label: 'COMPLETE', nextStatus: 'completed', style: 'primary'   },
+  ],
+  // Terminal statuses — no actions
+  completed: [],
+  cancelled: [],
+  rejected:  [],
+}
+
 /* ─── Order Card ─── */
-function OrderCard({ order, index, accentStart, currency, onConfirm, onCancel, orderSettings = {} }) {
+function OrderCard({ order, index, accentStart, currency, onStatusChange, orderSettings = {} }) {
   const subtotal = order.grandTotal != null
     ? order.grandTotal
     : order.items.reduce((s, it) => s + (it.price * (it.qty || 1)), 0)
   const cfg = STATUS_CONFIG[order.status] || STATUS_CONFIG.pending
-  const isDone = order.status === 'confirmed' || order.status === 'completed' || order.status === 'cancelled'
+  const actions = ORDER_ACTIONS[order.status] || []
+  const isTerminal = actions.length === 0
   const showCustomerDetails = orderSettings.showName || orderSettings.showPhone || orderSettings.showLocation
 
   return (
@@ -6153,43 +6176,7 @@ function OrderCard({ order, index, accentStart, currency, onConfirm, onCancel, o
         ))}
       </div>
 
-      {!isDone ? (
-        <div style={{ display: 'flex', gap: '10px' }}>
-          <button
-            className="action-btn"
-            onClick={onConfirm}
-            style={{
-              flex: 1, padding: '12px',
-              background: 'linear-gradient(135deg, #10B981, #059669)',
-              border: 'none', borderRadius: '50px',
-              color: '#fff', fontSize: '13px', fontWeight: 800,
-              letterSpacing: '0.06em', cursor: 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '7px',
-              boxShadow: '0 4px 16px rgba(16,185,129,0.35)',
-            }}
-          >
-            <CheckCircle size={15} />
-            CONFIRM
-          </button>
-          <button
-            className="action-btn"
-            onClick={onCancel}
-            style={{
-              flex: 1, padding: '12px',
-              background: 'rgba(254,242,242,0.9)',
-              border: '1.5px solid #FECACA',
-              borderRadius: '50px',
-              color: '#EF4444', fontSize: '13px', fontWeight: 800,
-              letterSpacing: '0.06em', cursor: 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '7px',
-              boxShadow: '0 4px 12px rgba(239,68,68,0.12)',
-            }}
-          >
-            <XCircle size={15} />
-            CANCEL
-          </button>
-        </div>
-      ) : (
+      {isTerminal ? (
         <div style={{
           textAlign: 'center', padding: '10px',
           background: cfg.bg, borderRadius: '50px',
@@ -6198,6 +6185,42 @@ function OrderCard({ order, index, accentStart, currency, onConfirm, onCancel, o
           color: cfg.color, letterSpacing: '0.08em',
         }}>
           {cfg.label.toUpperCase()}
+        </div>
+      ) : (
+        <div style={{ display: 'flex', gap: '10px' }}>
+          {actions.map(({ label, nextStatus, style }) => {
+            const isPrimary = style === 'primary'
+            const isDanger  = style === 'danger'
+            return (
+              <button
+                key={nextStatus}
+                className="action-btn"
+                onClick={() => onStatusChange(nextStatus)}
+                style={{
+                  flex: 1, padding: '12px',
+                  background: isPrimary
+                    ? 'linear-gradient(135deg, #10B981, #059669)'
+                    : isDanger
+                      ? 'rgba(254,242,242,0.9)'
+                      : 'rgba(248,250,252,0.9)',
+                  border: isPrimary ? 'none' : isDanger ? '1.5px solid #FECACA' : '1.5px solid #E2E8F0',
+                  borderRadius: '50px',
+                  color: isPrimary ? '#fff' : isDanger ? '#EF4444' : '#64748B',
+                  fontSize: '13px', fontWeight: 800,
+                  letterSpacing: '0.06em', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '7px',
+                  boxShadow: isPrimary
+                    ? '0 4px 16px rgba(16,185,129,0.35)'
+                    : isDanger
+                      ? '0 4px 12px rgba(239,68,68,0.12)'
+                      : '0 2px 8px rgba(0,0,0,0.06)',
+                }}
+              >
+                {isPrimary ? <CheckCircle size={15} /> : isDanger ? <XCircle size={15} /> : null}
+                {label}
+              </button>
+            )
+          })}
         </div>
       )}
     </div>

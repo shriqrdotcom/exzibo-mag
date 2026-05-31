@@ -941,8 +941,8 @@ export default function RestaurantWebsite() {
             if (changed) {
               const restaurantId = rid
               persistCustomerOrders(restaurantId, next)
-              if (status === 'confirmed' || status === 'preparing' || status === 'completed') setOrderStatus(1)
-              else if (status === 'cancelled') setOrderStatus(-1)
+              if (status === 'confirmed' || status === 'preparing' || status === 'ready' || status === 'completed') setOrderStatus(1)
+              else if (status === 'cancelled' || status === 'rejected') setOrderStatus(-1)
             }
             return changed ? next : prev
           })
@@ -985,8 +985,8 @@ export default function RestaurantWebsite() {
           if (changed) persistCustomerOrders(restaurantId, next)
           return changed ? next : prev
         })
-        if (status === 'confirmed' || status === 'preparing' || status === 'completed') setOrderStatus(1)
-        else if (status === 'cancelled') setOrderStatus(-1)
+        if (status === 'confirmed' || status === 'preparing' || status === 'ready' || status === 'completed') setOrderStatus(1)
+        else if (status === 'cancelled' || status === 'rejected') setOrderStatus(-1)
         else setOrderStatus(0)
       } catch {}
     }
@@ -1033,10 +1033,10 @@ export default function RestaurantWebsite() {
           if (changed) persistCustomerOrders(restaurantId, updated)
           const firstAdmin = adminOrders.find(o => o.id === (updated[0]?.id))
           if (firstAdmin) {
-            const ADVANCED = ['confirmed', 'preparing', 'completed', 'cancelled']
+            const ADVANCED = ['confirmed', 'preparing', 'ready', 'completed', 'cancelled', 'rejected']
             const currentStatus = updated[0]?.status
-            if (firstAdmin.status === 'preparing' || firstAdmin.status === 'completed' || firstAdmin.status === 'confirmed') setOrderStatus(1)
-            else if (firstAdmin.status === 'cancelled') setOrderStatus(-1)
+            if (firstAdmin.status === 'confirmed' || firstAdmin.status === 'preparing' || firstAdmin.status === 'ready' || firstAdmin.status === 'completed') setOrderStatus(1)
+            else if (firstAdmin.status === 'cancelled' || firstAdmin.status === 'rejected') setOrderStatus(-1)
             else if (!ADVANCED.includes(currentStatus)) setOrderStatus(0)
           }
           return changed ? updated : prev
@@ -2453,17 +2453,53 @@ export default function RestaurantWebsite() {
 
                 {/* ── STATUS TRACKER ── */}
                 {(() => {
-                  const cancelled = orderStatus === -1
-                  const confirmed = !cancelled && orderStatus >= 1
-                  const steps = cancelled
-                    ? [{ label: 'PLACED', done: true }, { label: 'CANCELLED', done: true, red: true }]
-                    : [{ label: 'PLACED', done: true }, { label: 'CONFIRMED', done: confirmed }]
+                  const st = currentOrder?.status || 'pending'
+                  const isNegative = st === 'cancelled' || st === 'rejected'
+
+                  // Full progression steps for positive path
+                  const PROGRESSION = ['pending', 'confirmed', 'preparing', 'ready', 'completed']
+                  const currentIdx = PROGRESSION.indexOf(st)
+
+                  // Build step list
+                  let steps
+                  if (isNegative) {
+                    steps = [
+                      { label: 'PLACED', done: true },
+                      { label: st === 'rejected' ? 'REJECTED' : 'CANCELLED', done: true, red: true },
+                    ]
+                  } else {
+                    steps = [
+                      { label: 'PLACED',     done: currentIdx >= 0 },
+                      { label: 'CONFIRMED',  done: currentIdx >= 1 },
+                      { label: 'PREPARING',  done: currentIdx >= 2 },
+                      { label: 'READY',      done: currentIdx >= 3 },
+                      { label: 'COMPLETED',  done: currentIdx >= 4 },
+                    ]
+                  }
+
+                  // Progress bar fill %
+                  const fillPct = isNegative ? 100
+                    : currentIdx <= 0 ? 0
+                    : Math.round((currentIdx / (PROGRESSION.length - 1)) * 100)
+
+                  // Status message config
+                  const msgMap = {
+                    pending:   { icon: '⏳', color: '#FFA000', title: 'Order Received!',           body: "We've received your request and are waiting for the restaurant to confirm. This usually only takes a moment." },
+                    confirmed: { icon: '✅', color: '#22c55e', title: 'Order Confirmed!',           body: 'Great news! Your order has been confirmed and will start preparing soon.' },
+                    preparing: { icon: '🍳', color: '#3B82F6', title: 'Being Prepared!',            body: 'The kitchen is working on your order right now. Hang tight!' },
+                    ready:     { icon: '🔔', color: '#8B5CF6', title: 'Order Ready!',              body: 'Your order is ready! Please collect it or your server will bring it to you shortly.' },
+                    completed: { icon: '🎉', color: '#22c55e', title: 'Order Completed!',           body: 'Thank you for dining with us. We hope you enjoyed your meal!' },
+                    cancelled: { icon: '❌', color: '#ef4444', title: 'Order Cancelled',            body: 'Your order has been cancelled by the restaurant. Please contact staff if you need assistance.' },
+                    rejected:  { icon: '❌', color: '#ef4444', title: 'Order Could Not Be Placed',  body: 'Unfortunately your order was not accepted. Please speak to a staff member or try again.' },
+                  }
+                  const msg = msgMap[st] || msgMap.pending
+
                   return (
                     <div>
                       <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
                         {/* Progress track */}
                         <div style={{ position: 'absolute', top: '14px', left: '14px', right: '14px', height: '3px', background: darkMode ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.08)', borderRadius: '2px', zIndex: 0 }}>
-                          <div style={{ height: '100%', borderRadius: '2px', background: cancelled ? '#ef4444' : '#E8321A', width: (confirmed || cancelled) ? '100%' : '0%', transition: 'width 0.8s ease' }} />
+                          <div style={{ height: '100%', borderRadius: '2px', background: isNegative ? '#ef4444' : '#E8321A', width: `${fillPct}%`, transition: 'width 0.8s ease' }} />
                         </div>
                         {steps.map((step, i) => {
                           const dotColor = step.red ? '#ef4444' : '#E8321A'
@@ -2495,71 +2531,23 @@ export default function RestaurantWebsite() {
                         ))}
                       </div>
 
-                      {/* ── CANCELLED MESSAGE ── */}
-                      {cancelled && (
-                        <div style={{
-                          marginTop: '16px',
-                          background: darkMode ? 'rgba(239,68,68,0.08)' : 'rgba(239,68,68,0.06)',
-                          border: '1px solid rgba(239,68,68,0.30)',
-                          borderRadius: '14px',
-                          padding: '14px 16px',
-                          display: 'flex',
-                          alignItems: 'flex-start',
-                          gap: '10px',
-                        }}>
-                          <div style={{ fontSize: '22px', lineHeight: 1, flexShrink: 0 }}>❌</div>
-                          <div>
-                            <div style={{ fontSize: '13px', fontWeight: 800, color: '#ef4444', marginBottom: '4px' }}>Order Cancelled</div>
-                            <div style={{ fontSize: '12px', lineHeight: 1.6, color: theme.locationColor }}>
-                              Your order has been cancelled by the restaurant. Please contact staff if you need assistance.
-                            </div>
-                          </div>
+                      {/* ── STATUS MESSAGE ── */}
+                      <div style={{
+                        marginTop: '16px',
+                        background: darkMode ? `${msg.color}14` : `${msg.color}12`,
+                        border: `1px solid ${msg.color}4D`,
+                        borderRadius: '14px',
+                        padding: '14px 16px',
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        gap: '10px',
+                      }}>
+                        <div style={{ fontSize: '22px', lineHeight: 1, flexShrink: 0 }}>{msg.icon}</div>
+                        <div>
+                          <div style={{ fontSize: '13px', fontWeight: 800, color: msg.color, marginBottom: '4px' }}>{msg.title}</div>
+                          <div style={{ fontSize: '12px', lineHeight: 1.6, color: theme.locationColor }}>{msg.body}</div>
                         </div>
-                      )}
-
-                      {/* ── WAITING MESSAGE (shown when placed, not yet confirmed) ── */}
-                      {!confirmed && !cancelled && (
-                        <div style={{
-                          marginTop: '16px',
-                          background: darkMode ? 'rgba(255,160,0,0.10)' : '#FFF8E1',
-                          border: '1px solid rgba(255,160,0,0.35)',
-                          borderRadius: '14px',
-                          padding: '14px 16px',
-                          display: 'flex',
-                          alignItems: 'flex-start',
-                          gap: '10px',
-                        }}>
-                          <div style={{ fontSize: '22px', lineHeight: 1, flexShrink: 0 }}>⏳</div>
-                          <div>
-                            <div style={{ fontSize: '13px', fontWeight: 800, color: '#FFA000', marginBottom: '4px' }}>Order Received!</div>
-                            <div style={{ fontSize: '12px', lineHeight: 1.6, color: theme.locationColor }}>
-                              Thanks for ordering! We've received your request and are waiting for the restaurant to confirm. This usually only takes a moment.
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* ── THANK YOU MESSAGE (shown when confirmed) ── */}
-                      {confirmed && (
-                        <div style={{
-                          marginTop: '16px',
-                          background: darkMode ? 'rgba(34,197,94,0.08)' : 'rgba(34,197,94,0.07)',
-                          border: '1px solid rgba(34,197,94,0.25)',
-                          borderRadius: '14px',
-                          padding: '14px 16px',
-                          display: 'flex',
-                          alignItems: 'flex-start',
-                          gap: '10px',
-                        }}>
-                          <div style={{ fontSize: '22px', lineHeight: 1, flexShrink: 0 }}>🙏</div>
-                          <div>
-                            <div style={{ fontSize: '13px', fontWeight: 800, color: '#22c55e', marginBottom: '4px' }}>Thank you for your order!</div>
-                            <div style={{ fontSize: '12px', lineHeight: 1.6, color: theme.locationColor }}>
-                              Please wait a moment — your order is being prepared with care and will be with you right on time.
-                            </div>
-                          </div>
-                        </div>
-                      )}
+                      </div>
                     </div>
                   )
                 })()}
@@ -2579,7 +2567,7 @@ export default function RestaurantWebsite() {
                   { label: 'DATE', value: currentOrder.date },
                   { label: 'Total Items', value: `${currentOrder.itemCount}  ITEMS` },
                   { label: 'Grand Total', value: `₹${currentOrder.grandTotal.toLocaleString('en-IN')}  INR` },
-                  { label: 'STATUS', value: orderStatus === -1 ? 'CANCELLED' : orderStatus >= 1 ? 'CONFIRMED' : 'PLACED', highlight: orderStatus >= 1, red: orderStatus === -1 },
+                  { label: 'STATUS', value: (currentOrder?.status || 'pending').toUpperCase(), highlight: orderStatus >= 1, red: orderStatus === -1 },
                 ].map(({ label, value, highlight, red }, i, arr) => (
                   <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 16px', borderBottom: i < arr.length - 1 ? `1px solid ${theme.cardBorder}` : 'none' }}>
                     <span style={{ fontSize: '13px', color: theme.locationColor, fontWeight: 500 }}>{label}</span>
