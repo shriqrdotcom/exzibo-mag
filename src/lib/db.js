@@ -469,12 +469,20 @@ export async function deleteMenuCategory(id) {
 
 // ── Storage Utilities ─────────────────────────────────────────
 
+// Resolve the Supabase user ID, falling back to 'dev' when DISABLE_AUTH is
+// active (no real session) so storage uploads still work in development.
+async function resolveUserId() {
+  if (DISABLE_AUTH) return 'dev'
+  const { data: { user }, error } = await supabase.auth.getUser()
+  if (error || !user) throw new Error('Not authenticated')
+  return user.id
+}
+
 // Upload a File object to any Supabase Storage bucket.
 // Automatically compresses and converts to WebP before uploading.
 // Returns the public URL.
 export async function uploadToStorage(file, bucket, pathPrefix) {
-  const { data: { user }, error: authError } = await supabase.auth.getUser()
-  if (authError || !user) throw new Error('Not authenticated')
+  await resolveUserId() // ensures auth in production, no-op in dev
 
   // ── Auto-compress to WebP within the configured size limits ──────────────
   let uploadFile = file
@@ -498,8 +506,7 @@ export async function uploadToStorage(file, bucket, pathPrefix) {
 // Automatically compresses and converts to WebP before uploading.
 // Returns the public URL.
 export async function uploadDataUrlToStorage(dataUrl, bucket, pathPrefix) {
-  const { data: { user }, error: authError } = await supabase.auth.getUser()
-  if (authError || !user) throw new Error('Not authenticated')
+  await resolveUserId() // ensures auth in production, no-op in dev
 
   // ── Auto-compress to WebP within the configured size limits ──────────────
   let compressedUrl = dataUrl
@@ -526,9 +533,10 @@ export async function uploadDataUrlToStorage(dataUrl, bucket, pathPrefix) {
 // Upload a menu item image from a data URL.
 // Automatically compresses and converts to WebP before uploading.
 // Returns the public URL.
+// In DISABLE_AUTH dev mode, uploads under "dev/{restaurantId}/..." so the
+// auth check is skipped while the storage call itself still runs normally.
 export async function uploadMenuImage(dataUrl, restaurantId) {
-  const { data: { user }, error: authError } = await supabase.auth.getUser()
-  if (authError || !user) throw new Error('Not authenticated')
+  const userId = await resolveUserId()
 
   // ── Auto-compress to WebP within the configured size limits ──────────────
   let compressedUrl = dataUrl
@@ -541,7 +549,7 @@ export async function uploadMenuImage(dataUrl, restaurantId) {
 
   const res  = await fetch(compressedUrl)
   const blob = await res.blob()
-  const filePath = `${user.id}/${restaurantId}/${Date.now()}.webp`
+  const filePath = `${userId}/${restaurantId}/${Date.now()}.webp`
 
   const { error: uploadError } = await supabase.storage
     .from('menu-images')

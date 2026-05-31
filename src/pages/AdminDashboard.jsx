@@ -4039,7 +4039,7 @@ const CATEGORY_TABS = [
   { key: 'drinks',   label: 'Drinks',   emoji: '🍹' },
 ]
 
-const BLANK_ITEM = { name: '', desc: '', price: '', tags: [], img: null, veg: false }
+const BLANK_ITEM = { name: '', desc: '', price: '', tags: [], img: null, veg: false, addOns: [], available: true, is_published: false }
 
 const DEFAULT_CAT_FILTERS = {
   starters: [
@@ -4394,9 +4394,35 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
           })
         )
       )
-      if (allItems.length > 0) await upsertMenuItems(restaurantId, allItems)
+      if (allItems.length > 0) {
+        const saved = await upsertMenuItems(restaurantId, allItems)
+        // Update local menu state with real DB ids returned from upsert so that
+        // subsequent saves update existing rows instead of inserting duplicates.
+        if (saved && saved.length > 0) {
+          const idMap = new Map()
+          // Match by name+price+category since local items may not have dbId yet
+          saved.forEach(row => {
+            const key = `${row.category_id}|${row.name}|${row.price}`
+            idMap.set(key, row.id)
+          })
+          setMenu(prev => {
+            const next = { ...prev }
+            updatedTabs.forEach(tab => {
+              if (!next[tab.key]) return
+              next[tab.key] = next[tab.key].map(item => {
+                if (item.dbId) return item
+                const key = `${tab.dbId}|${item.name}|${item.price}`
+                const realId = idMap.get(key)
+                return realId ? { ...item, id: realId, dbId: realId } : item
+              })
+            })
+            return next
+          })
+        }
+      }
     } catch (e) {
       console.error('Supabase sync error:', e)
+      showToast('⚠️ Menu saved locally — database sync failed')
     }
   }
 
@@ -4559,6 +4585,7 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
     saveAllTimer.current = setTimeout(() => setSavedAll(false), 2500)
     const dbId = updatedItem.dbId
     if (dbId) {
+      const currentTab = categoryTabs.find(t => t.key === activeCategory)
       try {
         await updateMenuItem(String(dbId), {
           name: updatedItem.name,
@@ -4570,8 +4597,12 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
           is_published: updatedItem.is_published === true,
           tags: updatedItem.tags || [],
           add_ons: updatedItem.addOns || [],
+          category_id: currentTab?.dbId || null,
         })
-      } catch (e) { console.error('Failed to update item in Supabase:', e) }
+      } catch (e) {
+        console.error('Failed to update item in Supabase:', e)
+        showToast('⚠️ Changes saved locally — database sync failed')
+      }
     }
   }
 
@@ -4587,8 +4618,11 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
       name: addDraft.name.trim(),
       desc: addDraft.desc.trim(),
       price: parseFloat(addDraft.price) || 0,
-      tags: addDraft.tags,
+      tags: addDraft.tags || [],
       veg: addDraft.veg || false,
+      addOns: addDraft.addOns || [],
+      available: true,
+      is_published: false,
     }
     const currentTab = categoryTabs.find(t => t.key === activeCategory)
     const categoryId = currentTab?.dbId || null
@@ -4600,14 +4634,16 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
         image: resolvedImg,
         veg: item.veg,
         tags: item.tags,
-        available: true,
-        is_published: false,
+        add_ons: item.addOns,
+        available: item.available,
+        is_published: item.is_published,
         category_id: categoryId,
       })
       item.dbId = saved.id
       item.id = saved.id
     } catch (e) {
       console.error('Failed to save item to Supabase:', e)
+      showToast('⚠️ Item saved locally — database sync failed')
     }
     const updated = { ...menu, [activeCategory]: [...(menu[activeCategory] || []), item] }
     saveMenu(updated)

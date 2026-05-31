@@ -1,0 +1,126 @@
+TASK: Fix food item creation, editing, image upload, and save functionality.
+
+CURRENT PROBLEM:
+
+The Food Item Management system is broken.
+
+When I create or edit a food item and click "Save Changes", the data is not being saved properly.
+
+Examples:
+- Food name is not saved
+- Food description is not saved
+- Food price is not saved
+- Food category is not saved
+- Food image is not saved
+- Changes disappear after refresh
+- Some data may appear temporarily but is not stored permanently
+
+EXPECTED BEHAVIOR:
+
+When I click "Save Changes":
+
+1. All food item data must be validated.
+2. Data must be sent to the backend successfully.
+3. Data must be stored in the database successfully.
+4. Images must be uploaded successfully.
+5. Saved data must remain after page refresh.
+6. Saved data must immediately appear on the menu website.
+
+REQUIRED INVESTIGATION:
+
+1. Audit the complete save flow:
+   - Frontend form
+   - Save button action
+   - API request
+   - Backend endpoint
+   - Database write operation
+   - Database update operation
+   - Data retrieval operation
+
+2. Identify where the save process fails:
+   - Form submission
+   - Validation
+   - API request
+   - Backend logic
+   - Database connection
+   - Database query
+   - Storage upload
+   - State management
+
+3. Check browser console errors.
+
+4. Check server logs.
+
+5. Check network requests.
+
+6. Verify that successful save operations actually create or update records in the database.
+
+IMAGE UPLOAD REQUIREMENTS:
+
+1. Every uploaded food image must be stored permanently.
+
+2. Every uploaded image must automatically:
+   - Convert to WEBP format
+   - Be optimized for web performance
+   - Generate a valid image URL
+   - Remain accessible after refresh and deployment
+
+3. Verify:
+   - Upload process
+   - Image conversion process
+   - Storage process
+   - Retrieval process
+   - Display process
+
+DATABASE REQUIREMENTS:
+
+The database must be the single source of truth.
+
+After saving:
+- Refresh page
+- Log out
+- Log in again
+- Open another browser
+
+The same food item data must still exist.
+
+TEST CASES:
+
+Test creating a new food item:
+- Name
+- Description
+- Price
+- Category
+- Image
+
+Click Save Changes.
+
+Verify:
+- Database record created
+- Image uploaded
+- Image converted to WEBP
+- Data persists after refresh
+- Data appears on menu website
+
+Test editing an existing food item:
+- Modify details
+- Change image
+- Save Changes
+
+Verify:
+- Database record updated
+- New image saved
+- Changes visible everywhere
+
+EXPECTED RESULT:
+
+- Save Changes works reliably.
+- Food items are stored permanently.
+- Food images are stored permanently.
+- Images are converted to WEBP automatically.
+- Data persists after refresh.
+- Dashboard and menu website show the same data.
+- No local-only storage.
+- No temporary state being used as permanent storage.
+
+Before making changes, identify the root cause of the failed save operation and provide a report of all issues found and all files modified.
