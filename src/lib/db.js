@@ -452,6 +452,13 @@ export async function getMenuCategories(restaurantId) {
 }
 
 export async function upsertMenuCategory(restaurantId, category) {
+  // Dev mode: return synthetic category — no auth session for DB writes
+  if (DISABLE_AUTH) {
+    const id = category.id || (typeof crypto !== 'undefined' && crypto.randomUUID
+      ? crypto.randomUUID()
+      : `local-cat-${Date.now()}`)
+    return { ...category, id, restaurant_id: restaurantId }
+  }
   const payload = { ...category, restaurant_id: restaurantId }
   const { data, error } = await supabase
     .from('menu_categories')
@@ -463,6 +470,7 @@ export async function upsertMenuCategory(restaurantId, category) {
 }
 
 export async function deleteMenuCategory(id) {
+  if (DISABLE_AUTH) return // dev mode: localStorage handles deletion
   const { error } = await supabase.from('menu_categories').delete().eq('id', id)
   if (error) throw error
 }
@@ -531,11 +539,28 @@ export async function uploadDataUrlToStorage(dataUrl, bucket, pathPrefix) {
 // ── Menu Image Upload ─────────────────────────────────────────
 
 // Upload a menu item image from a data URL.
-// Automatically compresses and converts to WebP before uploading.
-// Returns the public URL.
-// In DISABLE_AUTH dev mode, uploads under "dev/{restaurantId}/..." so the
-// auth check is skipped while the storage call itself still runs normally.
+// • Dev mode (DISABLE_AUTH=true): compresses to WebP and returns a data URL —
+//   no Supabase session is available so the storage upload is skipped entirely.
+//   Images are stored as base64 in localStorage and render correctly.
+// • Production: compresses to WebP, uploads to the `menu-images` bucket, and
+//   returns the Supabase public URL.
 export async function uploadMenuImage(dataUrl, restaurantId) {
+  // ── Dev mode (DISABLE_AUTH): compress to WebP and return data URL. ────────
+  // Supabase storage INSERT requires auth.role() = 'authenticated'.
+  // In dev mode there is no real session, so we skip the upload entirely and
+  // keep the compressed WebP data URL — images render correctly from base64.
+  if (DISABLE_AUTH) {
+    let compressedUrl = dataUrl
+    try {
+      const limits = await getCompressionLimits()
+      compressedUrl = await compressDataUrl(dataUrl, limits)
+    } catch (err) {
+      console.warn('[uploadMenuImage] Compression skipped (non-blocking):', err.message)
+    }
+    console.log('[uploadMenuImage] Dev mode — returning compressed data URL (no storage upload)')
+    return compressedUrl
+  }
+
   const userId = await resolveUserId()
 
   // ── Auto-compress to WebP within the configured size limits ──────────────
@@ -599,6 +624,14 @@ export async function toggleMenuItemPublish(id, isPublished) {
 }
 
 export async function insertMenuItem(restaurantId, item) {
+  // Dev mode: no auth session → return synthetic row with a generated UUID so
+  // the item gets a real dbId and localStorage stays consistent across reloads.
+  if (DISABLE_AUTH) {
+    const id = (typeof crypto !== 'undefined' && crypto.randomUUID)
+      ? crypto.randomUUID()
+      : `local-${Date.now()}-${Math.random().toString(36).slice(2)}`
+    return { id, restaurant_id: restaurantId, ...item, created_at: new Date().toISOString() }
+  }
   const { data, error } = await supabase
     .from('menu_items')
     .insert({ ...item, restaurant_id: restaurantId })
@@ -609,6 +642,10 @@ export async function insertMenuItem(restaurantId, item) {
 }
 
 export async function updateMenuItem(id, patch) {
+  // Dev mode: return the patched item immediately — no Supabase session available
+  if (DISABLE_AUTH) {
+    return { id, ...patch, updated_at: new Date().toISOString() }
+  }
   const { data, error } = await supabase
     .from('menu_items')
     .update(patch)
@@ -620,6 +657,16 @@ export async function updateMenuItem(id, patch) {
 }
 
 export async function upsertMenuItems(restaurantId, items) {
+  // Dev mode: assign IDs to any items that lack them and return immediately
+  if (DISABLE_AUTH) {
+    return items.map(item => ({
+      ...item,
+      id: item.id || (typeof crypto !== 'undefined' && crypto.randomUUID
+        ? crypto.randomUUID()
+        : `local-${Date.now()}-${Math.random().toString(36).slice(2)}`),
+      restaurant_id: restaurantId,
+    }))
+  }
   const { data, error } = await supabase
     .from('menu_items')
     .upsert(
@@ -632,6 +679,7 @@ export async function upsertMenuItems(restaurantId, items) {
 }
 
 export async function deleteMenuItem(id) {
+  if (DISABLE_AUTH) return // dev mode: localStorage handles deletion
   const { error } = await supabase.from('menu_items').delete().eq('id', id)
   if (error) throw error
 }
