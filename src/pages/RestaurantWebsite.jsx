@@ -2460,7 +2460,7 @@ export default function RestaurantWebsite() {
                   const PROGRESSION = ['pending', 'confirmed', 'preparing', 'ready', 'completed']
                   const currentIdx = PROGRESSION.indexOf(st)
 
-                  // Build step list
+                  // Build step list — only PLACED + CONFIRMED shown to customer
                   let steps
                   if (isNegative) {
                     steps = [
@@ -2468,19 +2468,16 @@ export default function RestaurantWebsite() {
                       { label: st === 'rejected' ? 'REJECTED' : 'CANCELLED', done: true, red: true },
                     ]
                   } else {
+                    const isConfirmed = currentIdx >= 1
                     steps = [
-                      { label: 'PLACED',     done: currentIdx >= 0 },
-                      { label: 'CONFIRMED',  done: currentIdx >= 1 },
-                      { label: 'PREPARING',  done: currentIdx >= 2 },
-                      { label: 'READY',      done: currentIdx >= 3 },
-                      { label: 'COMPLETED',  done: currentIdx >= 4 },
+                      { label: 'PLACED',    done: true },
+                      { label: 'CONFIRMED', done: isConfirmed },
                     ]
                   }
 
-                  // Progress bar fill %
-                  const fillPct = isNegative ? 100
-                    : currentIdx <= 0 ? 0
-                    : Math.round((currentIdx / (PROGRESSION.length - 1)) * 100)
+                  // Progress bar fill % — 0% until confirmed, 100% once confirmed or beyond
+                  const isConfirmedOrBeyond = currentIdx >= 1
+                  const fillPct = isNegative ? 100 : isConfirmedOrBeyond ? 100 : 0
 
                   // Status message config
                   const msgMap = {
