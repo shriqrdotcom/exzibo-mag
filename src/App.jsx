@@ -376,7 +376,6 @@ function DashboardApp() {
       {/* ── Internal / direct-id routes (unchanged) ── */}
       <Route path="/admin/:id"           element={<AdminDashboard />} />
       <Route path="/admin/:id/team"      element={<TeamMembers />} />
-      <Route path="/admin/:id/profile"   element={<ProfilePage />} />
       <Route path="/master-control"      element={<MasterControl />} />
       <Route path="/master-control/:uid" element={<MasterControl />} />
 

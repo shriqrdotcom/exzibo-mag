@@ -324,6 +324,8 @@ export default function AdminDashboard({ restaurantId: restaurantIdProp, initial
   const visibleNavItems = NAV_ITEMS.filter(item => hasPermission(item.permission))
 
   useEffect(() => {
+    // 'profile' is a valid section that is NOT in NAV_ITEMS — never auto-reset it
+    if (activeNav === 'profile') return
     if (visibleNavItems.length > 0 && !visibleNavItems.find(item => item.id === activeNav)) {
       setActiveNav(visibleNavItems[0].id)
     }
