@@ -14,6 +14,7 @@ import { useRole } from '../context/RoleContext'
 import { useRestaurantRole } from '../hooks/useRestaurantRole'
 import { getRestaurantBySlug } from '../lib/db'
 import AdminDashboard from './AdminDashboard'
+import ProfilePage from './ProfilePage'
 
 const VALID_ROLES = new Set(['menu_studio', 'owner', 'admin', 'staff'])
 
@@ -384,6 +385,11 @@ export default function RestaurantDashboard() {
 
   // Still waiting for the URL role param to be persisted
   if (!role) return <FullPageLoader />
+
+  // Profile is a full-page component, not a section inside AdminDashboard
+  if (pageSlug === 'profile') {
+    return <ProfilePage restaurantId={restaurant.id} />
+  }
 
   const section = PAGE_TO_SECTION[pageSlug] || 'orders'
 

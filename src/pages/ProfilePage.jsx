@@ -38,11 +38,11 @@ function loadLogoUrl(restaurantId) {
   } catch { return '' }
 }
 
-export default function ProfilePage() {
+export default function ProfilePage({ restaurantId: propRestaurantId } = {}) {
   const navigate = useNavigate()
   const { id } = useParams()
   const [searchParams] = useSearchParams()
-  const restaurantId = id || 'default'
+  const restaurantId = propRestaurantId || id || 'default'
   const isMasterView = searchParams.get('from') === 'master'
 
   const { isSuperAdmin } = useAuth()
