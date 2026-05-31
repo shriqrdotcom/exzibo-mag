@@ -919,37 +919,52 @@ export default function RestaurantWebsite() {
   }, [restaurant?.id])
 
   // ── Realtime: order status updates → customer page reflects instantly ────
+  // Uses BOTH a direct broadcast channel (instant, no RLS dependency) and
+  // postgres_changes (fallback DB-level subscription). The broadcast fires
+  // the moment admin confirms at dashboard.exzibo.online, so the customer at
+  // menu.exzibo.online sees it without any polling delay or RLS issues.
   useEffect(() => {
     const rid = restaurant?.id
     if (!rid || rid === 'demo' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(rid)) return
 
+    function applyStatusUpdate(orderId, status) {
+      if (!orderId || !status) return
+      const oid = String(orderId)
+      setCustomerOrders(prev => {
+        let changed = false
+        const next = prev.map(co => {
+          if (co.id !== oid) return co
+          if (co.status === status) return co
+          changed = true
+          return { ...co, status }
+        })
+        if (changed) {
+          persistCustomerOrders(rid, next)
+          if (status === 'confirmed' || status === 'preparing' || status === 'ready' || status === 'completed') setOrderStatus(1)
+          else if (status === 'cancelled' || status === 'rejected') setOrderStatus(-1)
+        }
+        return changed ? next : prev
+      })
+    }
+
     const channel = supabase
-      .channel(`rt-order-status-${rid}`)
+      .channel(`order-updates-${rid}`, { config: { broadcast: { ack: false } } })
+      // ── Primary: direct broadcast from admin dashboard (cross-origin, instant) ──
+      .on('broadcast', { event: 'order_status_changed' }, ({ payload }) => {
+        const { orderId, status } = payload || {}
+        console.log('[order-broadcast] status update received:', orderId, status)
+        applyStatusUpdate(orderId, status)
+      })
+      // ── Fallback: postgres_changes (requires public_read_orders RLS policy) ──
       .on('postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'orders' },
+        { event: 'UPDATE', schema: 'public', table: 'orders', filter: `restaurant_id=eq.${rid}` },
         (payload) => {
-          if (payload.new?.restaurant_id !== rid) return
-          const { id: orderId, status } = payload.new
-          if (!orderId || !status) return
-          setCustomerOrders(prev => {
-            let changed = false
-            const next = prev.map(co => {
-              if (co.id !== String(orderId)) return co
-              changed = true
-              return { ...co, status }
-            })
-            if (changed) {
-              const restaurantId = rid
-              persistCustomerOrders(restaurantId, next)
-              if (status === 'confirmed' || status === 'preparing' || status === 'ready' || status === 'completed') setOrderStatus(1)
-              else if (status === 'cancelled' || status === 'rejected') setOrderStatus(-1)
-            }
-            return changed ? next : prev
-          })
+          const { id: orderId, status } = payload.new || {}
+          applyStatusUpdate(orderId, status)
         }
       )
       .subscribe((status) => {
-        if (status === 'SUBSCRIBED') console.log('[rt] order-status subscribed:', rid)
+        if (status === 'SUBSCRIBED') console.log('[rt] order-updates subscribed:', rid)
       })
 
     return () => { supabase.removeChannel(channel) }

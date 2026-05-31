@@ -295,6 +295,7 @@ export default function AdminDashboard({ restaurantId: restaurantIdProp, initial
   const bookingSettingsPanelRef = useRef(null)
   const broadcastChannelRef = useRef(null)
   const lastLiveNotifRef    = useRef(null) // { key, shownAt } — dedup guard
+  const orderBroadcastRef   = useRef(null) // per-restaurant order-status broadcast channel
   // These refs mirror the state values so the broadcast handler never has stale closures
   const fromMasterRef  = useRef(fromMaster)
   const activeRoleRef  = useRef(activeRole)
@@ -697,6 +698,27 @@ export default function AdminDashboard({ restaurantId: restaurantIdProp, initial
     }
   }, []) // ← empty deps: subscribe once, stay connected for the component's lifetime
 
+  // ── Order-status broadcast: push status changes to menu.exzibo.online instantly ──
+  // Uses a per-restaurant Supabase broadcast channel so the customer's orders page
+  // reflects confirmation the moment it happens — no RLS, no polling delay.
+  useEffect(() => {
+    if (isDefault || !id) return
+    const ch = supabase
+      .channel(`order-updates-${id}`, { config: { broadcast: { ack: false } } })
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          orderBroadcastRef.current = ch
+          console.log('[order-broadcast] ready ✓', id)
+        } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          orderBroadcastRef.current = null
+        }
+      })
+    return () => {
+      orderBroadcastRef.current = null
+      supabase.removeChannel(ch)
+    }
+  }, [id, isDefault])
+
   // ── Messages Realtime subscription (non-master only, DB-backed fallback) ────
   useEffect(() => {
     if (fromMaster) return
@@ -956,9 +978,18 @@ export default function AdminDashboard({ restaurantId: restaurantIdProp, initial
     setOrders(prev => {
       const updated = prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o)
       persistOrders(updated)
-      // Write status to Supabase — this fires the realtime UPDATE event so
-      // the customer page (RestaurantWebsite) reflects the change instantly.
-      if (!isDefault) updateOrderStatus(orderId, newStatus).catch(() => {})
+      if (!isDefault) {
+        // 1. Write to Supabase DB (fires postgres_changes Realtime event)
+        updateOrderStatus(orderId, newStatus).catch(() => {})
+        // 2. Broadcast directly on the per-restaurant channel so the customer's
+        //    orders page at menu.exzibo.online gets the update instantly —
+        //    no RLS dependency, no polling delay, works cross-origin.
+        orderBroadcastRef.current?.send({
+          type: 'broadcast',
+          event: 'order_status_changed',
+          payload: { orderId, status: newStatus },
+        }).catch(() => {})
+      }
       return updated
     })
     showToast(toastMap[newStatus] || '✅ Updated')
