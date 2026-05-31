@@ -6088,10 +6088,10 @@ function OrderCard({ order, index, accentStart, currency, onStatusChange, orderS
         border: '1px solid rgba(255,255,255,0.7)',
         boxShadow: '0 4px 24px rgba(0,0,0,0.07), inset 0 1px 0 rgba(255,255,255,0.8)',
         transition: 'box-shadow 0.25s ease, transform 0.25s ease',
-        opacity: isDone ? 0.7 : 1,
+        opacity: isTerminal ? 0.7 : 1,
       }}
       onMouseEnter={e => {
-        if (!isDone) {
+        if (!isTerminal) {
           e.currentTarget.style.boxShadow = '0 12px 36px rgba(0,0,0,0.11), inset 0 1px 0 rgba(255,255,255,0.8)'
           e.currentTarget.style.transform = 'translateY(-2px)'
         }
