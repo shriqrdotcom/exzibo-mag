@@ -4392,16 +4392,19 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
       const updatedTabs = [...categoryTabs]
       for (let i = 0; i < updatedTabs.length; i++) {
         const tab = updatedTabs[i]
+        const originalKey = tab.key  // preserve original key to look up menu items later
         const payload = { name: tab.label, emoji: tab.emoji || '🍽️', position: i }
         if (tab.dbId) payload.id = tab.dbId
         const saved = await upsertMenuCategory(restaurantId, payload)
-        updatedTabs[i] = { ...tab, dbId: saved.id, key: tab.dbId ? tab.key : saved.id }
+        updatedTabs[i] = { ...tab, originalKey, dbId: saved.id, key: tab.dbId ? tab.key : saved.id }
       }
       setCategoryTabs(updatedTabs)
       // Resolve any base64 images to Storage URLs before bulk upsert
       const allItems = await Promise.all(
         updatedTabs.flatMap(tab =>
-          (menuToSave[tab.key] || []).map(async item => {
+          // Use originalKey to find items under their pre-upsert key in case the
+          // key changed from a string (e.g. 'starters') to a Supabase UUID.
+          (menuToSave[tab.originalKey] || menuToSave[tab.key] || []).map(async item => {
             let imgUrl = item.img || null
             if (imgUrl && imgUrl.startsWith('data:')) {
               try { imgUrl = await uploadMenuImage(imgUrl, restaurantId) }
@@ -4606,7 +4609,7 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
 
     if (dbId) {
       try {
-        await updateMenuItem(String(dbId), {
+        const patch = {
           name: updatedItem.name,
           description: updatedItem.desc || '',
           price: updatedItem.price,
@@ -4616,8 +4619,12 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
           is_published: updatedItem.is_published === true,
           tags: updatedItem.tags || [],
           add_ons: updatedItem.addOns || [],
-          category_id: currentTab?.dbId || null,
-        })
+        }
+        // Only update category_id if we have a real Supabase UUID — never
+        // overwrite an existing category_id with null (would hide the item
+        // on the restaurant website).
+        if (currentTab?.dbId) patch.category_id = currentTab.dbId
+        await updateMenuItem(String(dbId), patch)
       } catch (e) {
         console.error('[saveEdit] Failed to update item in database:', e)
         showToast('❌ Failed to save changes — please try again')
@@ -4647,7 +4654,26 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
     if (!addDraft.name.trim()) return
 
     const currentTab = categoryTabs.find(t => t.key === activeCategory)
-    const categoryId = currentTab?.dbId || null
+    let categoryId = currentTab?.dbId || null
+
+    // If this category hasn't been saved to Supabase yet, save it now so the
+    // inserted item gets a real UUID category_id (null category_id makes items
+    // invisible on the restaurant website).
+    if (!categoryId && currentTab && restaurantId && restaurantId !== 'demo') {
+      try {
+        const saved = await upsertMenuCategory(restaurantId, {
+          name: currentTab.label,
+          emoji: currentTab.emoji || '🍽️',
+          position: categoryTabs.findIndex(t => t.key === activeCategory),
+        })
+        categoryId = saved.id
+        setCategoryTabs(tabs => tabs.map(t =>
+          t.key === activeCategory ? { ...t, dbId: saved.id } : t
+        ))
+      } catch (e) {
+        console.error('[addItem] Failed to auto-save category:', e)
+      }
+    }
 
     let resolvedImg = null
     try {
@@ -4669,7 +4695,7 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
         tags: addDraft.tags || [],
         add_ons: addDraft.addOns || [],
         available: true,
-        is_published: false,
+        is_published: true,
         category_id: categoryId,
       })
     } catch (e) {
