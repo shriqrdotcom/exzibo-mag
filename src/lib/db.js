@@ -537,33 +537,13 @@ export async function uploadDataUrlToStorage(dataUrl, bucket, pathPrefix) {
 }
 
 // ── Menu Image Upload ─────────────────────────────────────────
-
-// Upload a menu item image from a data URL.
-// • Dev mode (DISABLE_AUTH=true): compresses to WebP and returns a data URL —
-//   no Supabase session is available so the storage upload is skipped entirely.
-//   Images are stored as base64 in localStorage and render correctly.
-// • Production: compresses to WebP, uploads to the `menu-images` bucket, and
-//   returns the Supabase public URL.
+//
+// Compresses the image to WebP then sends it to the server-side
+// /api/menu/upload-image endpoint which uses the SUPABASE_SERVICE_ROLE_KEY
+// to upload to Supabase Storage — no client auth session required.
+// This is the same code path in both dev preview and production.
 export async function uploadMenuImage(dataUrl, restaurantId) {
-  // ── Dev mode (DISABLE_AUTH): compress to WebP and return data URL. ────────
-  // Supabase storage INSERT requires auth.role() = 'authenticated'.
-  // In dev mode there is no real session, so we skip the upload entirely and
-  // keep the compressed WebP data URL — images render correctly from base64.
-  if (DISABLE_AUTH) {
-    let compressedUrl = dataUrl
-    try {
-      const limits = await getCompressionLimits()
-      compressedUrl = await compressDataUrl(dataUrl, limits)
-    } catch (err) {
-      console.warn('[uploadMenuImage] Compression skipped (non-blocking):', err.message)
-    }
-    console.log('[uploadMenuImage] Dev mode — returning compressed data URL (no storage upload)')
-    return compressedUrl
-  }
-
-  const userId = await resolveUserId()
-
-  // ── Auto-compress to WebP within the configured size limits ──────────────
+  // Compress first (client-side) to reduce payload size
   let compressedUrl = dataUrl
   try {
     const limits = await getCompressionLimits()
@@ -572,19 +552,20 @@ export async function uploadMenuImage(dataUrl, restaurantId) {
     console.warn('[uploadMenuImage] Compression skipped (non-blocking):', err.message)
   }
 
-  const res  = await fetch(compressedUrl)
-  const blob = await res.blob()
-  const filePath = `${userId}/${restaurantId}/${Date.now()}.webp`
+  const res = await fetch('/api/menu/upload-image', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ dataUrl: compressedUrl, restaurantId }),
+  })
 
-  const { error: uploadError } = await supabase.storage
-    .from('menu-images')
-    .upload(filePath, blob, { cacheControl: '3600', upsert: false })
-  if (uploadError) throw uploadError
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }))
+    throw new Error(err.error || 'Image upload failed')
+  }
 
-  const { data: { publicUrl } } = supabase.storage
-    .from('menu-images')
-    .getPublicUrl(filePath)
-  return publicUrl
+  const { url } = await res.json()
+  console.log('[uploadMenuImage] Stored at:', url)
+  return url
 }
 
 // ── Menu Items ───────────────────────────────────────────────
@@ -623,65 +604,59 @@ export async function toggleMenuItemPublish(id, isPublished) {
   return data
 }
 
+// Insert a new menu item via the server-side API (service role — no client auth needed).
 export async function insertMenuItem(restaurantId, item) {
-  // Dev mode: no auth session → return synthetic row with a generated UUID so
-  // the item gets a real dbId and localStorage stays consistent across reloads.
-  if (DISABLE_AUTH) {
-    const id = (typeof crypto !== 'undefined' && crypto.randomUUID)
-      ? crypto.randomUUID()
-      : `local-${Date.now()}-${Math.random().toString(36).slice(2)}`
-    return { id, restaurant_id: restaurantId, ...item, created_at: new Date().toISOString() }
+  const res = await fetch('/api/menu/items', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ restaurantId, ...item }),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }))
+    throw new Error(JSON.stringify(err.error || err))
   }
-  const { data, error } = await supabase
-    .from('menu_items')
-    .insert({ ...item, restaurant_id: restaurantId })
-    .select()
-    .single()
-  if (error) throw error
-  return data
+  return res.json()
 }
 
+// Update an existing menu item via the server-side API.
 export async function updateMenuItem(id, patch) {
-  // Dev mode: return the patched item immediately — no Supabase session available
-  if (DISABLE_AUTH) {
-    return { id, ...patch, updated_at: new Date().toISOString() }
+  const res = await fetch('/api/menu/item-patch', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id, ...patch }),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }))
+    throw new Error(JSON.stringify(err.error || err))
   }
-  const { data, error } = await supabase
-    .from('menu_items')
-    .update(patch)
-    .eq('id', id)
-    .select()
-    .single()
-  if (error) throw error
-  return data
+  return res.json()
 }
 
+// Upsert multiple menu items via the server-side API.
 export async function upsertMenuItems(restaurantId, items) {
-  // Dev mode: assign IDs to any items that lack them and return immediately
-  if (DISABLE_AUTH) {
-    return items.map(item => ({
-      ...item,
-      id: item.id || (typeof crypto !== 'undefined' && crypto.randomUUID
-        ? crypto.randomUUID()
-        : `local-${Date.now()}-${Math.random().toString(36).slice(2)}`),
-      restaurant_id: restaurantId,
-    }))
+  const res = await fetch('/api/menu/items/upsert', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ restaurantId, items }),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }))
+    throw new Error(JSON.stringify(err.error || err))
   }
-  const { data, error } = await supabase
-    .from('menu_items')
-    .upsert(
-      items.map(item => ({ ...item, restaurant_id: restaurantId })),
-      { onConflict: 'id' }
-    )
-    .select()
-  if (error) throw error
-  return data
+  return res.json()
 }
 
+// Delete a menu item via the server-side API.
 export async function deleteMenuItem(id) {
-  if (DISABLE_AUTH) return // dev mode: localStorage handles deletion
-  const { error } = await supabase.from('menu_items').delete().eq('id', id)
-  if (error) throw error
+  const res = await fetch('/api/menu/item-delete', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id }),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }))
+    throw new Error(JSON.stringify(err.error || err))
+  }
 }
 
 // ── Field normalizers (DB snake_case → JS camelCase) ─────────

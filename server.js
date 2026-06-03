@@ -364,6 +364,156 @@ app.get('/api/restaurant-db/list', async (req, res) => {
   }
 })
 
+// ── Menu API (service-role, bypasses RLS) ────────────────────────────────────
+// All menu CRUD goes through these server endpoints so the same code path works
+// in both dev preview (no client session) and production (authenticated users).
+// The SUPABASE_SERVICE_ROLE_KEY never leaves the server.
+
+function getSupabaseServiceHeaders() {
+  const raw = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!raw || !key) throw new Error('Supabase service role not configured on server')
+  // Strip any trailing path components that may have been included in the secret
+  // (e.g. VITE_SUPABASE_URL sometimes stored as https://xxx.supabase.co/rest/v1/)
+  const url = raw.trim().replace(/\/+$/, '').replace(/\/(rest\/v1|graphql\/v1|auth\/v1|storage\/v1)(\/.*)?$/, '')
+  return { url, headers: { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json', Prefer: 'return=representation' } }
+}
+
+// POST /api/menu/upload-image
+// Body: { dataUrl: string, restaurantId: string }
+// Returns: { url: string }
+app.post('/api/menu/upload-image', async (req, res) => {
+  try {
+    const { dataUrl, restaurantId } = req.body
+    if (!dataUrl || !restaurantId) return res.status(400).json({ error: 'dataUrl and restaurantId required' })
+
+    const { url: supabaseUrl, headers } = getSupabaseServiceHeaders()
+
+    // Convert data URL to binary buffer
+    const base64 = dataUrl.replace(/^data:[^;]+;base64,/, '')
+    const buf    = Buffer.from(base64, 'base64')
+
+    const filePath = `public/${restaurantId}/${Date.now()}.webp`
+
+    const uploadRes = await fetch(
+      `${supabaseUrl}/storage/v1/object/menu-images/${filePath}`,
+      {
+        method: 'POST',
+        headers: { ...headers, 'Content-Type': 'image/webp', 'x-upsert': 'true' },
+        body: buf,
+      }
+    )
+
+    if (!uploadRes.ok) {
+      const err = await uploadRes.text()
+      console.error('[menu/upload-image] Storage error:', err)
+      return res.status(500).json({ error: `Storage upload failed: ${err}` })
+    }
+
+    const publicUrl = `${supabaseUrl}/storage/v1/object/public/menu-images/${filePath}`
+    console.log('[menu/upload-image] Uploaded:', publicUrl)
+    return res.json({ url: publicUrl })
+  } catch (err) {
+    console.error('[menu/upload-image] Error:', err.message)
+    return res.status(500).json({ error: err.message })
+  }
+})
+
+// POST /api/menu/items
+// Body: { restaurantId, name, description, price, image, veg, tags, add_ons, available, is_published, category_id }
+// Returns: the inserted row
+app.post('/api/menu/items', async (req, res) => {
+  try {
+    const { restaurantId, ...item } = req.body
+    if (!restaurantId) return res.status(400).json({ error: 'restaurantId required' })
+
+    const { url: supabaseUrl, headers } = getSupabaseServiceHeaders()
+    const body = JSON.stringify({ ...item, restaurant_id: restaurantId })
+
+    const r = await fetch(`${supabaseUrl}/rest/v1/menu_items`, {
+      method: 'POST',
+      headers: { ...headers, Prefer: 'return=representation' },
+      body,
+    })
+
+    const json = await r.json()
+    if (!r.ok) return res.status(r.status).json({ error: json })
+    return res.json(Array.isArray(json) ? json[0] : json)
+  } catch (err) {
+    console.error('[menu/items POST] Error:', err.message)
+    return res.status(500).json({ error: err.message })
+  }
+})
+
+// PATCH /api/menu/items/:id
+// Body: patch object
+app.patch('/api/menu/items/:id', async (req, res) => {
+  try {
+    const { id } = req.params
+    const { url: supabaseUrl, headers } = getSupabaseServiceHeaders()
+
+    const r = await fetch(`${supabaseUrl}/rest/v1/menu_items?id=eq.${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      headers: { ...headers, Prefer: 'return=representation' },
+      body: JSON.stringify(req.body),
+    })
+
+    const json = await r.json()
+    if (!r.ok) return res.status(r.status).json({ error: json })
+    return res.json(Array.isArray(json) ? json[0] : json)
+  } catch (err) {
+    console.error('[menu/items PATCH] Error:', err.message)
+    return res.status(500).json({ error: err.message })
+  }
+})
+
+// DELETE /api/menu/items/:id
+app.delete('/api/menu/items/:id', async (req, res) => {
+  try {
+    const { id } = req.params
+    const { url: supabaseUrl, headers } = getSupabaseServiceHeaders()
+
+    const r = await fetch(`${supabaseUrl}/rest/v1/menu_items?id=eq.${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+      headers,
+    })
+
+    if (!r.ok) {
+      const err = await r.text()
+      return res.status(r.status).json({ error: err })
+    }
+    return res.json({ success: true })
+  } catch (err) {
+    console.error('[menu/items DELETE] Error:', err.message)
+    return res.status(500).json({ error: err.message })
+  }
+})
+
+// POST /api/menu/items/upsert
+// Body: { restaurantId, items: [...] }
+app.post('/api/menu/items/upsert', async (req, res) => {
+  try {
+    const { restaurantId, items } = req.body
+    if (!restaurantId || !Array.isArray(items)) return res.status(400).json({ error: 'restaurantId and items array required' })
+
+    const { url: supabaseUrl, headers } = getSupabaseServiceHeaders()
+    const rows = items.map(item => ({ ...item, restaurant_id: restaurantId }))
+
+    const r = await fetch(`${supabaseUrl}/rest/v1/menu_items?on_conflict=id`, {
+      method: 'POST',
+      headers: { ...headers, Prefer: 'resolution=merge-duplicates,return=representation' },
+      body: JSON.stringify(rows),
+    })
+
+    const json = await r.json()
+    if (!r.ok) return res.status(r.status).json({ error: json })
+    return res.json(json)
+  } catch (err) {
+    console.error('[menu/items/upsert] Error:', err.message)
+    return res.status(500).json({ error: err.message })
+  }
+})
+
 // ── SPA fallback — must be last ───────────────────────────────────────────────
 app.get('*', (req, res) => {
   res.sendFile(path.resolve(__dirname, 'dist', 'index.html'))

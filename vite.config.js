@@ -86,6 +86,133 @@ function previewAuthPlugin() {
   }
 }
 
+function menuApiPlugin() {
+  return {
+    name: 'menu-api',
+    configureServer(server) {
+
+      function getServiceHeaders() {
+        const raw = process.env.VITE_SUPABASE_URL
+        const key = process.env.SUPABASE_SERVICE_ROLE_KEY
+        if (!raw || !key) throw new Error('Supabase service role not configured')
+        // Strip any trailing path components (e.g. /rest/v1/) that may be in the secret
+        const url = raw.trim().replace(/\/+$/, '').replace(/\/(rest\/v1|graphql\/v1|auth\/v1|storage\/v1)(\/.*)?$/, '')
+        return { url, headers: { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json', Prefer: 'return=representation' } }
+      }
+
+      function readBody(req) {
+        return new Promise((resolve, reject) => {
+          let data = ''
+          req.on('data', c => { data += c })
+          req.on('end', () => { try { resolve(JSON.parse(data)) } catch (e) { reject(e) } })
+        })
+      }
+
+      function json(res, status, body) {
+        res.statusCode = status
+        res.setHeader('Content-Type', 'application/json')
+        res.end(JSON.stringify(body))
+      }
+
+      // POST /api/menu/upload-image
+      server.middlewares.use('/api/menu/upload-image', async (req, res, next) => {
+        if (req.method !== 'POST') return next()
+        try {
+          const { dataUrl, restaurantId } = await readBody(req)
+          if (!dataUrl || !restaurantId) return json(res, 400, { error: 'dataUrl and restaurantId required' })
+          const { url: supabaseUrl, headers } = getServiceHeaders()
+          const base64 = dataUrl.replace(/^data:[^;]+;base64,/, '')
+          const buf = Buffer.from(base64, 'base64')
+          const filePath = `public/${restaurantId}/${Date.now()}.webp`
+          const r = await fetch(`${supabaseUrl}/storage/v1/object/menu-images/${filePath}`, {
+            method: 'POST',
+            headers: { ...headers, 'Content-Type': 'image/webp', 'x-upsert': 'true' },
+            body: buf,
+          })
+          if (!r.ok) { const e = await r.text(); return json(res, 500, { error: `Storage upload failed: ${e}` }) }
+          const publicUrl = `${supabaseUrl}/storage/v1/object/public/menu-images/${filePath}`
+          console.log('[menu/upload-image] Uploaded:', publicUrl)
+          return json(res, 200, { url: publicUrl })
+        } catch (e) { return json(res, 500, { error: e.message }) }
+      })
+
+      // Route all /api/menu/* requests through a single dispatcher to avoid
+      // Connect middleware prefix-matching issues (e.g. /api/menu/items matching /api/menu/items/upsert).
+      server.middlewares.use('/api/menu', async (req, res, next) => {
+        if (req.method !== 'POST') return next()
+        const pathname = (req.url || '/').split('?')[0].replace(/\/$/, '')
+
+        try {
+          // POST /api/menu/upload-image — already handled above, skip
+          if (pathname === '/upload-image') return next()
+
+          // POST /api/menu/items/upsert — must be checked before /items
+          if (pathname === '/items/upsert') {
+            const { restaurantId, items } = await readBody(req)
+            if (!restaurantId || !Array.isArray(items)) return json(res, 400, { error: 'restaurantId and items[] required' })
+            const { url: supabaseUrl, headers } = getServiceHeaders()
+            const rows = items.map(item => ({ ...item, restaurant_id: restaurantId }))
+            const r = await fetch(`${supabaseUrl}/rest/v1/menu_items?on_conflict=id`, {
+              method: 'POST',
+              headers: { ...headers, Prefer: 'resolution=merge-duplicates,return=representation' },
+              body: JSON.stringify(rows),
+            })
+            const data = await r.json()
+            if (!r.ok) return json(res, r.status, { error: data })
+            return json(res, 200, data)
+          }
+
+          // POST /api/menu/items — insert new item
+          if (pathname === '/items') {
+            const { restaurantId, ...item } = await readBody(req)
+            if (!restaurantId) return json(res, 400, { error: 'restaurantId required' })
+            const { url: supabaseUrl, headers } = getServiceHeaders()
+            const r = await fetch(`${supabaseUrl}/rest/v1/menu_items`, {
+              method: 'POST',
+              headers: { ...headers, Prefer: 'return=representation' },
+              body: JSON.stringify({ ...item, restaurant_id: restaurantId }),
+            })
+            const data = await r.json()
+            if (!r.ok) return json(res, r.status, { error: data })
+            return json(res, 200, Array.isArray(data) ? data[0] : data)
+          }
+
+          // POST /api/menu/item-patch — update existing item
+          if (pathname === '/item-patch') {
+            const { id, ...patch } = await readBody(req)
+            if (!id) return json(res, 400, { error: 'id required' })
+            const { url: supabaseUrl, headers } = getServiceHeaders()
+            const r = await fetch(`${supabaseUrl}/rest/v1/menu_items?id=eq.${encodeURIComponent(id)}`, {
+              method: 'PATCH',
+              headers: { ...headers, Prefer: 'return=representation' },
+              body: JSON.stringify(patch),
+            })
+            const data = await r.json()
+            if (!r.ok) return json(res, r.status, { error: data })
+            return json(res, 200, Array.isArray(data) ? data[0] : data)
+          }
+
+          // POST /api/menu/item-delete
+          if (pathname === '/item-delete') {
+            const { id } = await readBody(req)
+            if (!id) return json(res, 400, { error: 'id required' })
+            const { url: supabaseUrl, headers } = getServiceHeaders()
+            const r = await fetch(`${supabaseUrl}/rest/v1/menu_items?id=eq.${encodeURIComponent(id)}`, {
+              method: 'DELETE',
+              headers,
+            })
+            if (!r.ok) { const e = await r.text(); return json(res, r.status, { error: e }) }
+            return json(res, 200, { success: true })
+          }
+
+          return next()
+        } catch (e) { return json(res, 500, { error: e.message }) }
+      })
+
+    },
+  }
+}
+
 function restaurantDbPlugin() {
   return {
     name: 'restaurant-db',
@@ -498,7 +625,7 @@ function spaFallbackPlugin() {
 }
 
 export default defineConfig({
-  plugins: [react(), previewAuthPlugin(), restaurantDbPlugin(), tableValidationPlugin(), spaFallbackPlugin()],
+  plugins: [react(), previewAuthPlugin(), menuApiPlugin(), restaurantDbPlugin(), tableValidationPlugin(), spaFallbackPlugin()],
   appType: 'spa',
   resolve: {
     alias: {

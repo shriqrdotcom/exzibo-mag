@@ -4582,21 +4582,48 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
   // Supabase Storage public URL. Falls back to null if upload fails.
   async function resolveMenuImage(img) {
     if (!img) return null
-    if (!img.startsWith('data:')) return img   // already a URL
-    try {
-      return await uploadMenuImage(img, restaurantId)
-    } catch (e) {
-      console.warn('[menu] Image upload to storage failed:', e.message)
-      return null
-    }
+    if (!img.startsWith('data:')) return img   // already a storage URL
+    // Upload via server-side API (throws on failure — caller must handle)
+    return await uploadMenuImage(img, restaurantId)
   }
 
   async function saveEdit() {
     if (!editDraft || editingId === null) return
 
     // Resolve image to storage URL before saving
-    const resolvedImg = await resolveMenuImage(editDraft.img)
+    let resolvedImg
+    try {
+      resolvedImg = await resolveMenuImage(editDraft.img)
+    } catch (e) {
+      console.error('[saveEdit] Image upload failed:', e)
+      showToast('❌ Image upload failed — please try again')
+      return
+    }
+
     const updatedItem = { ...editDraft, img: resolvedImg, price: parseFloat(editDraft.price) || 0 }
+    const currentTab = categoryTabs.find(t => t.key === activeCategory)
+    const dbId = updatedItem.dbId
+
+    if (dbId) {
+      try {
+        await updateMenuItem(String(dbId), {
+          name: updatedItem.name,
+          description: updatedItem.desc || '',
+          price: updatedItem.price,
+          image: resolvedImg,
+          veg: updatedItem.veg !== false,
+          available: updatedItem.available !== false,
+          is_published: updatedItem.is_published === true,
+          tags: updatedItem.tags || [],
+          add_ons: updatedItem.addOns || [],
+          category_id: currentTab?.dbId || null,
+        })
+      } catch (e) {
+        console.error('[saveEdit] Failed to update item in database:', e)
+        showToast('❌ Failed to save changes — please try again')
+        return
+      }
+    }
 
     const updated = {
       ...menu,
@@ -4614,76 +4641,64 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
     showToast('✅ Item saved successfully ✓')
     clearTimeout(saveAllTimer.current)
     saveAllTimer.current = setTimeout(() => setSavedAll(false), 2500)
-    const dbId = updatedItem.dbId
-    if (dbId) {
-      const currentTab = categoryTabs.find(t => t.key === activeCategory)
-      try {
-        await updateMenuItem(String(dbId), {
-          name: updatedItem.name,
-          description: updatedItem.desc || '',
-          price: updatedItem.price,
-          image: resolvedImg,
-          veg: updatedItem.veg !== false,
-          available: updatedItem.available !== false,
-          is_published: updatedItem.is_published === true,
-          tags: updatedItem.tags || [],
-          add_ons: updatedItem.addOns || [],
-          category_id: currentTab?.dbId || null,
-        })
-      } catch (e) {
-        console.error('Failed to update item in Supabase:', e)
-        showToast('⚠️ Changes saved locally — database sync failed')
-      }
-    }
   }
 
   async function addItem() {
     if (!addDraft.name.trim()) return
 
-    // Resolve image to storage URL before inserting
-    const resolvedImg = await resolveMenuImage(addDraft.img)
-
-    const item = {
-      id: Date.now(),
-      img: resolvedImg,
-      name: addDraft.name.trim(),
-      desc: addDraft.desc.trim(),
-      price: parseFloat(addDraft.price) || 0,
-      tags: addDraft.tags || [],
-      veg: addDraft.veg || false,
-      addOns: addDraft.addOns || [],
-      available: true,
-      is_published: false,
-    }
     const currentTab = categoryTabs.find(t => t.key === activeCategory)
     const categoryId = currentTab?.dbId || null
+
+    let resolvedImg = null
     try {
-      const saved = await insertMenuItem(restaurantId, {
-        name: item.name,
-        description: item.desc,
-        price: item.price,
+      resolvedImg = await resolveMenuImage(addDraft.img)
+    } catch (e) {
+      console.error('[addItem] Image upload failed:', e)
+      showToast('❌ Image upload failed — please try again')
+      return
+    }
+
+    let savedRow
+    try {
+      savedRow = await insertMenuItem(restaurantId, {
+        name: addDraft.name.trim(),
+        description: addDraft.desc.trim(),
+        price: parseFloat(addDraft.price) || 0,
         image: resolvedImg,
-        veg: item.veg,
-        tags: item.tags,
-        add_ons: item.addOns,
-        available: item.available,
-        is_published: item.is_published,
+        veg: addDraft.veg || false,
+        tags: addDraft.tags || [],
+        add_ons: addDraft.addOns || [],
+        available: true,
+        is_published: false,
         category_id: categoryId,
       })
-      item.dbId = saved.id
-      item.id = saved.id
     } catch (e) {
-      console.error('Failed to save item to Supabase:', e)
-      showToast('⚠️ Item saved locally — database sync failed')
+      console.error('[addItem] Database insert failed:', e)
+      showToast('❌ Failed to save item — please try again')
+      return
     }
+
+    const item = {
+      id: savedRow.id,
+      dbId: savedRow.id,
+      img: resolvedImg,
+      name: savedRow.name,
+      desc: savedRow.description || '',
+      price: parseFloat(savedRow.price) || 0,
+      tags: savedRow.tags || [],
+      veg: savedRow.veg ?? false,
+      addOns: savedRow.add_ons || [],
+      available: savedRow.available !== false,
+      is_published: savedRow.is_published === true,
+    }
+
     const updated = { ...menu, [activeCategory]: [...(menu[activeCategory] || []), item] }
     saveMenu(updated)
-    // Write-through to localStorage so the customer page (same device) sees the
-    // new item immediately via the storage event, without waiting for Save Changes.
     localStorage.setItem(storageKey, JSON.stringify(updated))
     window.dispatchEvent(new StorageEvent('storage', { key: storageKey, newValue: JSON.stringify(updated) }))
     setAddDraft(BLANK_ITEM)
     setShowAdd(false)
+    showToast('✅ Item added to menu!')
   }
 
   function toggleTag(draft, setDraft, tag) {
