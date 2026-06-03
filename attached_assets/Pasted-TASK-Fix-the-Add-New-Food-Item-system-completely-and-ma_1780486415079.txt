@@ -1,0 +1,121 @@
+TASK: Fix the "Add New Food Item" system completely and make it work in Production.
+
+CURRENT PROBLEM:
+
+The "Tap To Upload Photo" section and the "ADD TO MENU" button are not working correctly in the Production application.
+
+Preview Environment:
+- Image upload works.
+- Form appears to function.
+
+Production Environment:
+- Image upload does not work correctly.
+- Food item is not created.
+- Food item image is not saved.
+- Food item details are not saved.
+- Clicking "ADD TO MENU" does not successfully create the menu item.
+
+This issue has already been investigated multiple times but the root cause has not been fixed.
+
+MY ASSUMPTION:
+
+The frontend form is likely not properly connected to the backend API, database, storage system, or production deployment configuration.
+
+REQUIRED INVESTIGATION:
+
+1. Compare Preview and Production environments.
+
+2. Find out why Preview works but Production does not.
+
+3. Verify the complete flow:
+
+Food Item Form
+→ Image Upload
+→ API Request
+→ Backend Endpoint
+→ Database Save
+→ Storage Save
+→ Response
+→ Menu Refresh
+
+4. Check all browser network requests when:
+   - Uploading an image
+   - Clicking ADD TO MENU
+
+5. Check:
+   - Failed API requests
+   - 404 errors
+   - 500 errors
+   - CORS errors
+   - Authentication errors
+   - Missing environment variables
+   - Production build errors
+   - Storage permission issues
+   - Database connection issues
+
+6. Verify that the ADD TO MENU button actually triggers:
+   - Form validation
+   - Image upload
+   - Database insert
+   - Success response
+
+IMAGE REQUIREMENTS:
+
+When a user uploads an image:
+
+- Upload must succeed.
+- Image must be stored permanently.
+- Image must be converted to WEBP format.
+- Image URL must be saved in the database.
+- Image must remain available after refresh.
+- Image must appear on the live menu website.
+
+MENU ITEM REQUIREMENTS:
+
+When a user clicks ADD TO MENU:
+
+Save:
+- Item Name
+- Description
+- Price
+- Tags
+- Veg/Non-Veg status
+- Image URL
+
+The menu item must immediately appear:
+- In Dashboard
+- On menu.exzibo.online
+
+PRODUCTION REQUIREMENT:
+
+Do not create separate Preview logic and Production logic.
+
+Use one backend system.
+Use one database.
+Use one storage system.
+Use one API flow.
+
+If Preview and Production are using different code paths, identify them and merge them so both environments use the same implementation.
+
+EXPECTED RESULT:
+
+- Tap To Upload Photo works.
+- Image uploads successfully.
+- Image converts to WEBP.
+- ADD TO MENU works.
+- Food item is stored in database.
+- Food item remains after refresh.
+- Food item appears on the live menu website.
+- Preview and Production use the same save logic.
+- No temporary fixes or mock data.
+
+IMPORTANT:
+
+Before changing code, identify the exact root cause.
+
+Provide a report showing:
+1. Why Preview works.
+2. Why Production fails.
+3. Which files caused the issue.
+4. Which files were modified.
+5. How the permanent fix was implemented.
