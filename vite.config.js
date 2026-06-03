@@ -205,6 +205,35 @@ function menuApiPlugin() {
             return json(res, 200, { success: true })
           }
 
+          // POST /api/menu/categories/upsert — insert or update a menu category
+          if (pathname === '/categories/upsert') {
+            const { restaurantId, ...category } = await readBody(req)
+            if (!restaurantId) return json(res, 400, { error: 'restaurantId required' })
+            const { url: supabaseUrl, headers } = getServiceHeaders()
+            const payload = { ...category, restaurant_id: restaurantId }
+            const r = await fetch(`${supabaseUrl}/rest/v1/menu_categories?on_conflict=id`, {
+              method: 'POST',
+              headers: { ...headers, Prefer: 'resolution=merge-duplicates,return=representation' },
+              body: JSON.stringify(payload),
+            })
+            const data = await r.json()
+            if (!r.ok) return json(res, r.status, { error: data })
+            return json(res, 200, Array.isArray(data) ? data[0] : data)
+          }
+
+          // POST /api/menu/categories/delete — delete a menu category by id
+          if (pathname === '/categories/delete') {
+            const { id } = await readBody(req)
+            if (!id) return json(res, 400, { error: 'id required' })
+            const { url: supabaseUrl, headers } = getServiceHeaders()
+            const r = await fetch(`${supabaseUrl}/rest/v1/menu_categories?id=eq.${encodeURIComponent(id)}`, {
+              method: 'DELETE',
+              headers,
+            })
+            if (!r.ok) { const e = await r.text(); return json(res, r.status, { error: e }) }
+            return json(res, 200, { success: true })
+          }
+
           return next()
         } catch (e) { return json(res, 500, { error: e.message }) }
       })

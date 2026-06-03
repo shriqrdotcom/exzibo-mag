@@ -452,27 +452,28 @@ export async function getMenuCategories(restaurantId) {
 }
 
 export async function upsertMenuCategory(restaurantId, category) {
-  // Dev mode: return synthetic category — no auth session for DB writes
-  if (DISABLE_AUTH) {
-    const id = category.id || (typeof crypto !== 'undefined' && crypto.randomUUID
-      ? crypto.randomUUID()
-      : `local-cat-${Date.now()}`)
-    return { ...category, id, restaurant_id: restaurantId }
+  const res = await fetch('/api/menu/categories/upsert', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ restaurantId, ...category }),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }))
+    throw new Error(JSON.stringify(err.error || err))
   }
-  const payload = { ...category, restaurant_id: restaurantId }
-  const { data, error } = await supabase
-    .from('menu_categories')
-    .upsert(payload, { onConflict: 'id' })
-    .select()
-    .single()
-  if (error) throw error
-  return data
+  return res.json()
 }
 
 export async function deleteMenuCategory(id) {
-  if (DISABLE_AUTH) return // dev mode: localStorage handles deletion
-  const { error } = await supabase.from('menu_categories').delete().eq('id', id)
-  if (error) throw error
+  const res = await fetch('/api/menu/categories/delete', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id }),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }))
+    throw new Error(JSON.stringify(err.error || err))
+  }
 }
 
 // ── Storage Utilities ─────────────────────────────────────────
@@ -594,14 +595,16 @@ export async function getPublishedMenuItems(restaurantId) {
 
 // Instantly publish or unpublish a single item (saves immediately, no draft)
 export async function toggleMenuItemPublish(id, isPublished) {
-  const { data, error } = await supabase
-    .from('menu_items')
-    .update({ is_published: isPublished })
-    .eq('id', id)
-    .select()
-    .single()
-  if (error) throw error
-  return data
+  const res = await fetch('/api/menu/item-patch', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id, is_published: isPublished }),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }))
+    throw new Error(JSON.stringify(err.error || err))
+  }
+  return res.json()
 }
 
 // Insert a new menu item via the server-side API (service role — no client auth needed).

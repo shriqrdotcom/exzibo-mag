@@ -489,6 +489,87 @@ app.delete('/api/menu/items/:id', async (req, res) => {
   }
 })
 
+// POST /api/menu/item-patch (mirrors vite.config.js dev route)
+// Body: { id, ...patch }
+app.post('/api/menu/item-patch', async (req, res) => {
+  try {
+    const { id, ...patch } = req.body
+    if (!id) return res.status(400).json({ error: 'id required' })
+    const { url: supabaseUrl, headers } = getSupabaseServiceHeaders()
+    const r = await fetch(`${supabaseUrl}/rest/v1/menu_items?id=eq.${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      headers: { ...headers, Prefer: 'return=representation' },
+      body: JSON.stringify(patch),
+    })
+    const json = await r.json()
+    if (!r.ok) return res.status(r.status).json({ error: json })
+    return res.json(Array.isArray(json) ? json[0] : json)
+  } catch (err) {
+    console.error('[menu/item-patch] Error:', err.message)
+    return res.status(500).json({ error: err.message })
+  }
+})
+
+// POST /api/menu/item-delete (mirrors vite.config.js dev route)
+// Body: { id }
+app.post('/api/menu/item-delete', async (req, res) => {
+  try {
+    const { id } = req.body
+    if (!id) return res.status(400).json({ error: 'id required' })
+    const { url: supabaseUrl, headers } = getSupabaseServiceHeaders()
+    const r = await fetch(`${supabaseUrl}/rest/v1/menu_items?id=eq.${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+      headers,
+    })
+    if (!r.ok) { const err = await r.text(); return res.status(r.status).json({ error: err }) }
+    return res.json({ success: true })
+  } catch (err) {
+    console.error('[menu/item-delete] Error:', err.message)
+    return res.status(500).json({ error: err.message })
+  }
+})
+
+// POST /api/menu/categories/upsert
+// Body: { restaurantId, name, emoji, position, id? }
+app.post('/api/menu/categories/upsert', async (req, res) => {
+  try {
+    const { restaurantId, ...category } = req.body
+    if (!restaurantId) return res.status(400).json({ error: 'restaurantId required' })
+    const { url: supabaseUrl, headers } = getSupabaseServiceHeaders()
+    const payload = { ...category, restaurant_id: restaurantId }
+    const r = await fetch(`${supabaseUrl}/rest/v1/menu_categories?on_conflict=id`, {
+      method: 'POST',
+      headers: { ...headers, Prefer: 'resolution=merge-duplicates,return=representation' },
+      body: JSON.stringify(payload),
+    })
+    const json = await r.json()
+    if (!r.ok) return res.status(r.status).json({ error: json })
+    return res.json(Array.isArray(json) ? json[0] : json)
+  } catch (err) {
+    console.error('[menu/categories/upsert] Error:', err.message)
+    return res.status(500).json({ error: err.message })
+  }
+})
+
+// POST /api/menu/categories/delete
+// Body: { id }
+app.post('/api/menu/categories/delete', async (req, res) => {
+  try {
+    const { id } = req.body
+    if (!id) return res.status(400).json({ error: 'id required' })
+    const { url: supabaseUrl, headers } = getSupabaseServiceHeaders()
+    const r = await fetch(`${supabaseUrl}/rest/v1/menu_categories?id=eq.${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+      headers,
+    })
+    if (!r.ok) { const err = await r.text(); return res.status(r.status).json({ error: err }) }
+    return res.json({ success: true })
+  } catch (err) {
+    console.error('[menu/categories/delete] Error:', err.message)
+    return res.status(500).json({ error: err.message })
+  }
+})
+
 // POST /api/menu/items/upsert
 // Body: { restaurantId, items: [...] }
 app.post('/api/menu/items/upsert', async (req, res) => {
