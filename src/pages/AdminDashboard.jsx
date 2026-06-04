@@ -4235,16 +4235,37 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
   // the 20-second poll or relying on Supabase Realtime DELETE events (which require
   // REPLICA IDENTITY FULL on the table to be delivered through column-level filters).
   const menuBroadcastRef = useRef(null)
+  const menuChannelReadyRef = useRef(false)
   useEffect(() => {
     if (!restaurantId || restaurantId === 'demo') return
     const ch = supabase
       .channel(`menu-updates-${restaurantId}`, { config: { broadcast: { ack: false } } })
       .subscribe((status) => {
-        if (status === 'SUBSCRIBED') menuBroadcastRef.current = ch
-        else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') menuBroadcastRef.current = null
+        if (status === 'SUBSCRIBED') { menuBroadcastRef.current = ch; menuChannelReadyRef.current = true }
+        else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') { menuBroadcastRef.current = null; menuChannelReadyRef.current = false }
       })
-    return () => { menuBroadcastRef.current = null; supabase.removeChannel(ch) }
+    // Store the channel ref immediately so sends can be queued/retried even
+    // if the SUBSCRIBED callback hasn't fired yet.
+    menuBroadcastRef.current = ch
+    return () => { menuBroadcastRef.current = null; menuChannelReadyRef.current = false; supabase.removeChannel(ch) }
   }, [restaurantId])
+
+  // Reliably fire a menu-refresh broadcast. Retries once after 2 s if the
+  // channel has not yet subscribed (covers the race where the admin acts
+  // immediately after the panel mounts and the WS handshake is still pending).
+  async function sendMenuRefresh(payload = {}) {
+    const ch = menuBroadcastRef.current
+    if (!ch) return
+    try {
+      const result = await ch.send({ type: 'broadcast', event: 'menu-refresh', payload })
+      if (result !== 'ok') {
+        // Not yet joined — retry after the channel finishes subscribing
+        setTimeout(() => {
+          menuBroadcastRef.current?.send({ type: 'broadcast', event: 'menu-refresh', payload })
+        }, 2000)
+      }
+    } catch {}
+  }
 
   function loadTabs() {
     try {
@@ -4377,7 +4398,11 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
     setHasDraftChanges(true)
   }
 
+  const isSavingAllRef = useRef(false)
   async function handleSaveAll() {
+    // Prevent concurrent saves that could cause duplicate DB inserts
+    if (isSavingAllRef.current) return
+    isSavingAllRef.current = true
     let menuToSave = menu
     if (editingId !== null && editDraft !== null) {
       menuToSave = {
@@ -4509,11 +4534,13 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
           })
         }
         // Notify all open customer menu pages of the bulk save
-        menuBroadcastRef.current?.send({ type: 'broadcast', event: 'menu-refresh', payload: {} })
+        sendMenuRefresh()
       }
     } catch (e) {
       console.error('Supabase sync error:', e)
       showToast('⚠️ Menu saved locally — database sync failed')
+    } finally {
+      isSavingAllRef.current = false
     }
   }
 
@@ -4574,17 +4601,26 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
     saveMenu(updated)
     // Persist removal to localStorage so the menu page never shows stale cached data
     localStorage.setItem(storageKey, JSON.stringify(updated))
-    const dbId = item?.dbId
+
+    // Resolve the Supabase row id.  Prefer item.dbId (always set after DB load),
+    // but fall back to item.id when it's a UUID (covers the window between mount
+    // and the async DB fetch completing, where only localStorage-sourced items
+    // without an explicit dbId are present).
+    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+    const dbId = item?.dbId || (UUID_RE.test(String(item?.id || '')) ? item.id : null)
+
     if (dbId) {
       try {
         await deleteMenuItem(String(dbId))
         // Push instant notification to all open customer menu pages.
         // Supabase Realtime DELETE events are not reliably delivered without
         // REPLICA IDENTITY FULL on the table, so we use a broadcast channel instead.
-        menuBroadcastRef.current?.send({ type: 'broadcast', event: 'menu-refresh', payload: { deleted: dbId } })
+        await sendMenuRefresh({ deleted: dbId })
       } catch (e) {
         console.error('Failed to delete item from Supabase:', e)
       }
+    } else {
+      console.warn('[deleteItem] Item has no Supabase id — removed locally only:', item?.name)
     }
   }
 
@@ -4716,11 +4752,14 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
     clearTimeout(saveAllTimer.current)
     saveAllTimer.current = setTimeout(() => setSavedAll(false), 2500)
     // Notify customer menu pages of the update
-    menuBroadcastRef.current?.send({ type: 'broadcast', event: 'menu-refresh', payload: {} })
+    sendMenuRefresh()
   }
 
+  const isAddingItemRef = useRef(false)
   async function addItem() {
+    if (isAddingItemRef.current) return   // prevent duplicate inserts from rapid clicks
     if (!addDraft.name.trim()) return
+    isAddingItemRef.current = true
 
     const currentTab = categoryTabs.find(t => t.key === activeCategory)
     let categoryId = currentTab?.dbId || null
@@ -4744,58 +4783,62 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
       }
     }
 
-    let resolvedImg = null
     try {
-      resolvedImg = await resolveMenuImage(addDraft.img)
-    } catch (e) {
-      console.error('[addItem] Image upload failed:', e)
-      showToast('❌ Image upload failed — please try again')
-      return
-    }
+      let resolvedImg = null
+      try {
+        resolvedImg = await resolveMenuImage(addDraft.img)
+      } catch (e) {
+        console.error('[addItem] Image upload failed:', e)
+        showToast('❌ Image upload failed — please try again')
+        return
+      }
 
-    let savedRow
-    try {
-      savedRow = await insertMenuItem(restaurantId, {
-        name: addDraft.name.trim(),
-        description: addDraft.desc.trim(),
-        price: parseFloat(addDraft.price) || 0,
-        image: resolvedImg,
-        veg: addDraft.veg || false,
-        tags: addDraft.tags || [],
-        add_ons: addDraft.addOns || [],
-        available: true,
-        is_published: true,
-        category_id: categoryId,
-      })
-    } catch (e) {
-      console.error('[addItem] Database insert failed:', e)
-      showToast('❌ Failed to save item — please try again')
-      return
-    }
+      let savedRow
+      try {
+        savedRow = await insertMenuItem(restaurantId, {
+          name: addDraft.name.trim(),
+          description: addDraft.desc.trim(),
+          price: parseFloat(addDraft.price) || 0,
+          image: resolvedImg,
+          veg: addDraft.veg || false,
+          tags: addDraft.tags || [],
+          add_ons: addDraft.addOns || [],
+          available: true,
+          is_published: true,
+          category_id: categoryId,
+        })
+      } catch (e) {
+        console.error('[addItem] Database insert failed:', e)
+        showToast('❌ Failed to save item — please try again')
+        return
+      }
 
-    const item = {
-      id: savedRow.id,
-      dbId: savedRow.id,
-      img: resolvedImg,
-      name: savedRow.name,
-      desc: savedRow.description || '',
-      price: parseFloat(savedRow.price) || 0,
-      tags: savedRow.tags || [],
-      veg: savedRow.veg ?? false,
-      addOns: savedRow.add_ons || [],
-      available: savedRow.available !== false,
-      is_published: savedRow.is_published === true,
-    }
+      const item = {
+        id: savedRow.id,
+        dbId: savedRow.id,
+        img: resolvedImg,
+        name: savedRow.name,
+        desc: savedRow.description || '',
+        price: parseFloat(savedRow.price) || 0,
+        tags: savedRow.tags || [],
+        veg: savedRow.veg ?? false,
+        addOns: savedRow.add_ons || [],
+        available: savedRow.available !== false,
+        is_published: savedRow.is_published === true,
+      }
 
-    const updated = { ...menu, [activeCategory]: [...(menu[activeCategory] || []), item] }
-    saveMenu(updated)
-    localStorage.setItem(storageKey, JSON.stringify(updated))
-    window.dispatchEvent(new StorageEvent('storage', { key: storageKey, newValue: JSON.stringify(updated) }))
-    setAddDraft(BLANK_ITEM)
-    setShowAdd(false)
-    showToast('✅ Item added to menu!')
-    // Notify customer menu pages of the new item
-    menuBroadcastRef.current?.send({ type: 'broadcast', event: 'menu-refresh', payload: {} })
+      const updated = { ...menu, [activeCategory]: [...(menu[activeCategory] || []), item] }
+      saveMenu(updated)
+      localStorage.setItem(storageKey, JSON.stringify(updated))
+      window.dispatchEvent(new StorageEvent('storage', { key: storageKey, newValue: JSON.stringify(updated) }))
+      setAddDraft(BLANK_ITEM)
+      setShowAdd(false)
+      showToast('✅ Item added to menu!')
+      // Notify customer menu pages of the new item
+      sendMenuRefresh()
+    } finally {
+      isAddingItemRef.current = false
+    }
   }
 
   function toggleTag(draft, setDraft, tag) {
