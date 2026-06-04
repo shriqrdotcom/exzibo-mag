@@ -627,6 +627,57 @@ app.post('/api/menu/items/upsert', async (req, res) => {
   }
 })
 
+// GET /api/menu/categories/:restaurantId
+// Returns all categories for a restaurant (service role — no RLS dependency)
+app.get('/api/menu/categories/:restaurantId', async (req, res) => {
+  try {
+    const { restaurantId } = req.params
+    if (!restaurantId) return res.status(400).json({ error: 'restaurantId required' })
+    const { url: supabaseUrl, headers } = getSupabaseServiceHeaders()
+    const r = await fetch(`${supabaseUrl}/rest/v1/menu_categories?restaurant_id=eq.${encodeURIComponent(restaurantId)}&order=position`, { headers })
+    const data = await r.json()
+    if (!r.ok) return res.status(r.status).json({ error: data })
+    return res.json(data)
+  } catch (err) {
+    console.error('[menu/categories/get] Error:', err.message)
+    return res.status(500).json({ error: err.message })
+  }
+})
+
+// GET /api/menu/items/:restaurantId/published
+// Returns published items for a restaurant (service role — no RLS dependency)
+app.get('/api/menu/items/:restaurantId/published', async (req, res) => {
+  try {
+    const { restaurantId } = req.params
+    if (!restaurantId) return res.status(400).json({ error: 'restaurantId required' })
+    const { url: supabaseUrl, headers } = getSupabaseServiceHeaders()
+    const r = await fetch(`${supabaseUrl}/rest/v1/menu_items?restaurant_id=eq.${encodeURIComponent(restaurantId)}&is_published=eq.true&order=created_at`, { headers })
+    const data = await r.json()
+    if (!r.ok) return res.status(r.status).json({ error: data })
+    return res.json(data)
+  } catch (err) {
+    console.error('[menu/items/published/get] Error:', err.message)
+    return res.status(500).json({ error: err.message })
+  }
+})
+
+// GET /api/menu/items/:restaurantId
+// Returns all items for a restaurant (service role — for admin panel)
+app.get('/api/menu/items/:restaurantId', async (req, res) => {
+  try {
+    const { restaurantId } = req.params
+    if (!restaurantId) return res.status(400).json({ error: 'restaurantId required' })
+    const { url: supabaseUrl, headers } = getSupabaseServiceHeaders()
+    const r = await fetch(`${supabaseUrl}/rest/v1/menu_items?restaurant_id=eq.${encodeURIComponent(restaurantId)}&order=created_at`, { headers })
+    const data = await r.json()
+    if (!r.ok) return res.status(r.status).json({ error: data })
+    return res.json(data)
+  } catch (err) {
+    console.error('[menu/items/get] Error:', err.message)
+    return res.status(500).json({ error: err.message })
+  }
+})
+
 // ── SPA fallback — must be last ───────────────────────────────────────────────
 app.get('*', (req, res) => {
   res.sendFile(path.resolve(__dirname, 'dist', 'index.html'))

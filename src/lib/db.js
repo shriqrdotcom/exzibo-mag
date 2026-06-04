@@ -442,13 +442,12 @@ export async function getRestaurantById(id) {
 // ── Menu Categories ───────────────────────────────────────────
 
 export async function getMenuCategories(restaurantId) {
-  const { data, error } = await supabase
-    .from('menu_categories')
-    .select('*')
-    .eq('restaurant_id', restaurantId)
-    .order('position')
-  if (error) throw error
-  return data
+  const res = await fetch(`/api/menu/categories/${encodeURIComponent(restaurantId)}`)
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }))
+    throw new Error(JSON.stringify(err.error || err))
+  }
+  return res.json()
 }
 
 export async function upsertMenuCategory(restaurantId, category) {
@@ -572,42 +571,23 @@ export async function uploadMenuImage(dataUrl, restaurantId) {
 // ── Menu Items ───────────────────────────────────────────────
 
 export async function getMenuItems(restaurantId) {
-  const { data, error } = await supabase
-    .from('menu_items')
-    .select('*')
-    .eq('restaurant_id', restaurantId)
-    .order('created_at')
-  if (error) throw error
-  return data
+  const res = await fetch(`/api/menu/items/${encodeURIComponent(restaurantId)}`)
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }))
+    throw new Error(JSON.stringify(err.error || err))
+  }
+  return res.json()
 }
 
 // Public-facing version — only returns items the admin has published.
-// Falls back to all available items if is_published column hasn't been migrated yet.
+// Routes through server API (service role key) so RLS never blocks it.
 export async function getPublishedMenuItems(restaurantId) {
-  const { data, error } = await supabase
-    .from('menu_items')
-    .select('*')
-    .eq('restaurant_id', restaurantId)
-    .eq('is_published', true)
-    .order('created_at')
-
-  if (error) {
-    // PostgreSQL 42703 = undefined column — is_published migration hasn't been run yet.
-    // Fall back to showing all available items so the menu still works.
-    if (error.code === '42703') {
-      console.warn('[getPublishedMenuItems] is_published column not found — showing all available items. Run uid_and_publish_setup.sql in Supabase to enable draft/publish control.')
-      const { data: all, error: e2 } = await supabase
-        .from('menu_items')
-        .select('*')
-        .eq('restaurant_id', restaurantId)
-        .eq('available', true)
-        .order('created_at')
-      if (e2) throw e2
-      return all ?? []
-    }
-    throw error
+  const res = await fetch(`/api/menu/items/${encodeURIComponent(restaurantId)}/published`)
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }))
+    throw new Error(JSON.stringify(err.error || err))
   }
-  return data ?? []
+  return res.json()
 }
 
 // Instantly publish or unpublish a single item (saves immediately, no draft)

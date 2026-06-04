@@ -139,8 +139,44 @@ function menuApiPlugin() {
       // Route all /api/menu/* requests through a single dispatcher to avoid
       // Connect middleware prefix-matching issues (e.g. /api/menu/items matching /api/menu/items/upsert).
       server.middlewares.use('/api/menu', async (req, res, next) => {
-        if (req.method !== 'POST') return next()
         const pathname = (req.url || '/').split('?')[0].replace(/\/$/, '')
+
+        // ── GET routes (service role reads — no RLS dependency) ─────────────
+        if (req.method === 'GET') {
+          try {
+            const { url: supabaseUrl, headers } = getServiceHeaders()
+
+            // GET /api/menu/categories/:restaurantId
+            const catMatch = pathname.match(/^\/categories\/([^/]+)$/)
+            if (catMatch) {
+              const restaurantId = catMatch[1]
+              const r = await fetch(`${supabaseUrl}/rest/v1/menu_categories?restaurant_id=eq.${encodeURIComponent(restaurantId)}&order=position`, { headers })
+              const data = await r.json()
+              return json(res, r.ok ? 200 : r.status, data)
+            }
+
+            // GET /api/menu/items/:restaurantId/published — must come before /items/:id
+            const pubMatch = pathname.match(/^\/items\/([^/]+)\/published$/)
+            if (pubMatch) {
+              const restaurantId = pubMatch[1]
+              const r = await fetch(`${supabaseUrl}/rest/v1/menu_items?restaurant_id=eq.${encodeURIComponent(restaurantId)}&is_published=eq.true&order=created_at`, { headers })
+              const data = await r.json()
+              return json(res, r.ok ? 200 : r.status, data)
+            }
+
+            // GET /api/menu/items/:restaurantId
+            const itemsMatch = pathname.match(/^\/items\/([^/]+)$/)
+            if (itemsMatch) {
+              const restaurantId = itemsMatch[1]
+              const r = await fetch(`${supabaseUrl}/rest/v1/menu_items?restaurant_id=eq.${encodeURIComponent(restaurantId)}&order=created_at`, { headers })
+              const data = await r.json()
+              return json(res, r.ok ? 200 : r.status, data)
+            }
+          } catch (e) { return json(res, 500, { error: e.message }) }
+          return next()
+        }
+
+        if (req.method !== 'POST') return next()
 
         try {
           // POST /api/menu/upload-image — already handled above, skip
