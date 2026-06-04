@@ -912,10 +912,22 @@ export default function RestaurantWebsite() {
         if (status === 'SUBSCRIBED') console.log('[rt] menu subscribed:', rid)
       })
 
+    // Broadcast channel — receives instant push notifications from dashboard
+    // when menu items are added, edited, or deleted (bypasses realtime RLS limits
+    // that can block DELETE events when REPLICA IDENTITY FULL is not set).
+    const broadcastCh = supabase
+      .channel(`menu-updates-${rid}`, { config: { broadcast: { ack: false } } })
+      .on('broadcast', { event: 'menu-refresh' }, () => refetchMenu())
+      .subscribe()
+
     // Fallback poll — refetch every 20 s
     const poll = setInterval(refetchMenu, 20_000)
 
-    return () => { supabase.removeChannel(channel); clearInterval(poll) }
+    return () => {
+      supabase.removeChannel(channel)
+      supabase.removeChannel(broadcastCh)
+      clearInterval(poll)
+    }
   }, [restaurant?.id])
 
   // ── Realtime: order status updates → customer page reflects instantly ────

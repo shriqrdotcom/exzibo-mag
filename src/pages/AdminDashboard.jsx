@@ -4230,6 +4230,22 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
   const tabsKey     = `exzibo_tabs_${restaurantId}`
   const enabledKey  = `exzibo_filters_enabled_${restaurantId}`
 
+  // Persistent broadcast channel — sends instant push notifications to menu.exzibo.online
+  // so customer pages reflect item additions, edits, and deletions without waiting for
+  // the 20-second poll or relying on Supabase Realtime DELETE events (which require
+  // REPLICA IDENTITY FULL on the table to be delivered through column-level filters).
+  const menuBroadcastRef = useRef(null)
+  useEffect(() => {
+    if (!restaurantId || restaurantId === 'demo') return
+    const ch = supabase
+      .channel(`menu-updates-${restaurantId}`, { config: { broadcast: { ack: false } } })
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') menuBroadcastRef.current = ch
+        else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') menuBroadcastRef.current = null
+      })
+    return () => { menuBroadcastRef.current = null; supabase.removeChannel(ch) }
+  }, [restaurantId])
+
   function loadTabs() {
     try {
       const saved = JSON.parse(localStorage.getItem(tabsKey))
@@ -4399,6 +4415,23 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
         updatedTabs[i] = { ...tab, originalKey, dbId: saved.id, key: tab.dbId ? tab.key : saved.id }
       }
       setCategoryTabs(updatedTabs)
+      // Pre-fetch all existing DB items to build a name+category → id map.
+      // This prevents duplicate rows when items loaded from localStorage don't
+      // have dbId set yet (e.g. items created before the Supabase integration or
+      // when the component mounted from cache before the async DB load finished).
+      let existingIdMap = new Map()
+      try {
+        const existingItems = await getMenuItems(restaurantId)
+        if (existingItems) {
+          existingItems.forEach(it => {
+            const key = `${it.category_id}|${String(it.name).toLowerCase().trim()}`
+            if (!existingIdMap.has(key)) existingIdMap.set(key, it.id)
+          })
+        }
+      } catch (e) {
+        console.warn('[saveAll] Could not prefetch existing items for dedup:', e.message)
+      }
+
       // Resolve any base64 images to Storage URLs before bulk upsert
       const allItems = await Promise.all(
         updatedTabs.flatMap(tab =>
@@ -4423,7 +4456,11 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
               tags: item.tags || [],
               add_ons: item.addOns || [],
             }
-            if (item.dbId) row.id = item.dbId
+            // Use dbId if available; otherwise look up by name+category to prevent
+            // duplicate inserts for items that exist in the DB but lack a local dbId.
+            const matchKey = `${tab.dbId}|${String(item.name).toLowerCase().trim()}`
+            const resolvedId = item.dbId || existingIdMap.get(matchKey)
+            if (resolvedId) row.id = resolvedId
             return row
           })
         )
@@ -4453,6 +4490,8 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
             return next
           })
         }
+        // Notify all open customer menu pages of the bulk save
+        menuBroadcastRef.current?.send({ type: 'broadcast', event: 'menu-refresh', payload: {} })
       }
     } catch (e) {
       console.error('Supabase sync error:', e)
@@ -4515,9 +4554,19 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
     const item = (menu[activeCategory] || []).find(i => i.id === id)
     const updated = { ...menu, [activeCategory]: menu[activeCategory].filter(i => i.id !== id) }
     saveMenu(updated)
+    // Persist removal to localStorage so the menu page never shows stale cached data
+    localStorage.setItem(storageKey, JSON.stringify(updated))
     const dbId = item?.dbId
     if (dbId) {
-      try { await deleteMenuItem(String(dbId)) } catch (e) { console.error('Failed to delete item from Supabase:', e) }
+      try {
+        await deleteMenuItem(String(dbId))
+        // Push instant notification to all open customer menu pages.
+        // Supabase Realtime DELETE events are not reliably delivered without
+        // REPLICA IDENTITY FULL on the table, so we use a broadcast channel instead.
+        menuBroadcastRef.current?.send({ type: 'broadcast', event: 'menu-refresh', payload: { deleted: dbId } })
+      } catch (e) {
+        console.error('Failed to delete item from Supabase:', e)
+      }
     }
   }
 
@@ -4648,6 +4697,8 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
     showToast('✅ Item saved successfully ✓')
     clearTimeout(saveAllTimer.current)
     saveAllTimer.current = setTimeout(() => setSavedAll(false), 2500)
+    // Notify customer menu pages of the update
+    menuBroadcastRef.current?.send({ type: 'broadcast', event: 'menu-refresh', payload: {} })
   }
 
   async function addItem() {
@@ -4725,6 +4776,8 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
     setAddDraft(BLANK_ITEM)
     setShowAdd(false)
     showToast('✅ Item added to menu!')
+    // Notify customer menu pages of the new item
+    menuBroadcastRef.current?.send({ type: 'broadcast', event: 'menu-refresh', payload: {} })
   }
 
   function toggleTag(draft, setDraft, tag) {
