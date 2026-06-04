@@ -982,15 +982,27 @@ export default function RestaurantWebsite() {
     return () => { supabase.removeChannel(channel) }
   }, [restaurant?.id])
 
-  // ── Polling fallback: fetch order status from Supabase every 5 s ─────────
+  // ── Polling fallback: fetch order status from Supabase every 15 s ────────
   // Works even when Supabase Realtime is not configured — the customer page
   // simply re-reads the order row directly and updates its state.
+  //
+  // Smart-merge guard: never regress a status that has already moved forward.
+  // The broadcast from the admin fires instantly; the DB PATCH may still be
+  // in-flight when the poll runs. Allowing the poll to overwrite "confirmed"
+  // with a stale "pending" causes the visible flicker the user reports.
+  //
+  // Status progression: pending → confirmed → preparing → ready → completed
+  //   cancelled / rejected are terminal in their own track.
+  // Rule: if local is already past "pending", ignore a DB result of "pending".
   useEffect(() => {
     const orderId     = currentOrder?.id
     const restaurantId = currentOrder?._restaurantId || restaurant?.id
     const isRealRestaurant = restaurantId && restaurantId !== 'demo' &&
       /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(restaurantId)
     if (!orderId || !isRealRestaurant) return
+
+    // Statuses that represent forward progress beyond "placed/pending"
+    const FORWARD = new Set(['confirmed', 'preparing', 'ready', 'completed', 'cancelled', 'rejected'])
 
     async function pollStatus() {
       try {
@@ -1000,26 +1012,29 @@ export default function RestaurantWebsite() {
           .eq('id', orderId)
           .maybeSingle()
         if (!data) return
-        const { status } = data
+        const dbStatus = data.status
         setCustomerOrders(prev => {
           let changed = false
           const next = prev.map(co => {
             if (co.id !== orderId) return co
-            if (co.status === status) return co
+            // Never let the poll regress a forward status back to pending —
+            // this is the DB lagging behind the optimistic broadcast update.
+            if (FORWARD.has(co.status) && dbStatus === 'pending') return co
+            if (co.status === dbStatus) return co
             changed = true
-            return { ...co, status }
+            return { ...co, status: dbStatus }
           })
           if (changed) persistCustomerOrders(restaurantId, next)
           return changed ? next : prev
         })
-        if (status === 'confirmed' || status === 'preparing' || status === 'ready' || status === 'completed') setOrderStatus(1)
-        else if (status === 'cancelled' || status === 'rejected') setOrderStatus(-1)
-        else setOrderStatus(0)
+        if (dbStatus === 'confirmed' || dbStatus === 'preparing' || dbStatus === 'ready' || dbStatus === 'completed') setOrderStatus(1)
+        else if (dbStatus === 'cancelled' || dbStatus === 'rejected') setOrderStatus(-1)
+        // Don't call setOrderStatus(0) on a stale "pending" — keep whatever is shown
       } catch {}
     }
 
     pollStatus()
-    const timer = setInterval(pollStatus, 5000)
+    const timer = setInterval(pollStatus, 15_000)
     return () => clearInterval(timer)
   }, [currentOrder?.id, restaurant?.id])
 
