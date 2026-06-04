@@ -4405,14 +4405,32 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
     saveAllTimer.current = setTimeout(() => setSavedAll(false), 2500)
     // Sync to Supabase in background
     try {
+      // Pre-fetch existing DB categories to build a name → id map.
+      // This prevents duplicate category rows when tabs loaded from localStorage
+      // don't have dbId set yet (e.g. default starters/mains/drinks tabs, or after
+      // a hard refresh before the async DB load completes).
+      let existingCatIdMap = new Map()
+      try {
+        const existingCats = await getMenuCategories(restaurantId)
+        if (existingCats) {
+          existingCats.forEach(c => {
+            existingCatIdMap.set(String(c.name).toLowerCase().trim(), c.id)
+          })
+        }
+      } catch (e) {
+        console.warn('[saveAll] Could not prefetch existing categories for dedup:', e.message)
+      }
       const updatedTabs = [...categoryTabs]
       for (let i = 0; i < updatedTabs.length; i++) {
         const tab = updatedTabs[i]
         const originalKey = tab.key  // preserve original key to look up menu items later
         const payload = { name: tab.label, emoji: tab.emoji || '🍽️', position: i }
-        if (tab.dbId) payload.id = tab.dbId
+        // Use existing DB id (from tab.dbId or name-matched pre-fetch) to avoid inserting
+        // a duplicate category row on every Save All when dbId is not yet known locally.
+        const resolvedCatId = tab.dbId || existingCatIdMap.get(String(tab.label).toLowerCase().trim())
+        if (resolvedCatId) payload.id = resolvedCatId
         const saved = await upsertMenuCategory(restaurantId, payload)
-        updatedTabs[i] = { ...tab, originalKey, dbId: saved.id, key: tab.dbId ? tab.key : saved.id }
+        updatedTabs[i] = { ...tab, originalKey, dbId: saved.id, key: resolvedCatId ? tab.key : saved.id }
       }
       setCategoryTabs(updatedTabs)
       // Pre-fetch all existing DB items to build a name+category → id map.

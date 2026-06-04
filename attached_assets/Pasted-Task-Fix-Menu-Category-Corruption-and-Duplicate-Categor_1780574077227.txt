@@ -1,0 +1,64 @@
+Task: Fix Menu Category Corruption and Duplicate Category Generation
+
+Problem Description:
+
+Restaurant Dashboard:
+- Food items are managed from: dashboard.exzibo.online/{restaurant-name}/home
+
+Customer Menu:
+- Menu is displayed on: menu.exzibo.online/{restaurant-name}/menu/1/
+
+Expected Menu Categories:
+- STARTERS
+- MAINS
+- DRINKS
+
+Current Issue:
+
+When I add, edit, or delete food items from the Dashboard, the menu synchronization process is incorrectly modifying the menu structure.
+
+Example:
+- The menu should display only 3 categories:
+  STARTERS, MAINS, DRINKS
+
+- After deleting or updating food items, the menu automatically creates duplicate categories such as:
+  STARTERS, MAINS, MAINS, MAINS, DRINKS, DRINKS, DRINKS
+
+- Category tabs become duplicated even though only one category exists in the dashboard.
+
+- Menu UI structure changes unexpectedly after food item synchronization.
+
+Required Fix:
+
+1. Categories must be created only once.
+2. Menu categories must always match the categories stored in the Dashboard.
+3. Adding a food item must not create a new category if that category already exists.
+4. Deleting a food item must not affect or duplicate category records.
+5. Updating a food item must not rebuild or duplicate menu categories.
+6. The menu should always show:
+   - STARTERS (1 tab)
+   - MAINS (1 tab)
+   - DRINKS (1 tab)
+   unless additional categories are intentionally created in the Dashboard.
+7. Category synchronization should be based on unique category IDs, not category names or repeated insert operations.
+8. Prevent duplicate category creation in database, API, and frontend rendering.
+9. Check for:
+   - Duplicate insert queries
+   - Multiple sync triggers
+   - Repeated API calls
+   - Frontend rendering loops
+   - Missing unique constraints
+10. Ensure menu UI remains stable when food items are added, updated, or deleted.
+
+Please investigate:
+- Dashboard → Menu sync logic
+- Category creation logic
+- Food item deletion logic
+- Database relationships
+- Frontend category rendering
+
+Deliverables:
+- Root cause of duplicate category generation.
+- Files and functions causing the issue.
+- Exact fixes implemented.
+- Confirmation that categories remain unique after add, edit, and delete operations.
