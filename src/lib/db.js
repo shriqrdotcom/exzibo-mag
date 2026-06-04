@@ -445,11 +445,13 @@ export async function getMenuCategories(restaurantId) {
   // Try the server-side API first (works when Express server is running).
   // Falls back to a direct Supabase query when the API route isn't available
   // (e.g. Vercel static deployment of menu.exzibo.online).
+  // NOTE: must `await res.json()` inside the try so JSON parse errors
+  // (e.g. Vercel returning index.html as SPA fallback) are also caught.
   try {
     const res = await fetch(`/api/menu/categories/${encodeURIComponent(restaurantId)}`)
-    if (res.ok) return res.json()
+    if (res.ok) return await res.json()
   } catch {
-    // fetch failed (no server) — fall through to Supabase
+    // fetch failed, non-ok, or JSON parse error — fall through to Supabase
   }
   const { data, error } = await supabaseAnon
     .from('menu_categories')
@@ -596,9 +598,9 @@ export async function getMenuItems(restaurantId) {
 export async function getPublishedMenuItems(restaurantId) {
   try {
     const res = await fetch(`/api/menu/items/${encodeURIComponent(restaurantId)}/published`)
-    if (res.ok) return res.json()
+    if (res.ok) return await res.json()
   } catch {
-    // fetch failed (no server) — fall through to Supabase
+    // fetch failed, non-ok, or JSON parse error — fall through to Supabase
   }
   const { data, error } = await supabaseAnon
     .from('menu_items')
