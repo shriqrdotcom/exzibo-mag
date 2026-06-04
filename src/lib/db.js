@@ -442,12 +442,22 @@ export async function getRestaurantById(id) {
 // ── Menu Categories ───────────────────────────────────────────
 
 export async function getMenuCategories(restaurantId) {
-  const res = await fetch(`/api/menu/categories/${encodeURIComponent(restaurantId)}`)
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: res.statusText }))
-    throw new Error(JSON.stringify(err.error || err))
+  // Try the server-side API first (works when Express server is running).
+  // Falls back to a direct Supabase query when the API route isn't available
+  // (e.g. Vercel static deployment of menu.exzibo.online).
+  try {
+    const res = await fetch(`/api/menu/categories/${encodeURIComponent(restaurantId)}`)
+    if (res.ok) return res.json()
+  } catch {
+    // fetch failed (no server) — fall through to Supabase
   }
-  return res.json()
+  const { data, error } = await supabaseAnon
+    .from('menu_categories')
+    .select('*')
+    .eq('restaurant_id', restaurantId)
+    .order('position')
+  if (error) throw new Error(error.message)
+  return data || []
 }
 
 export async function upsertMenuCategory(restaurantId, category) {
@@ -580,14 +590,24 @@ export async function getMenuItems(restaurantId) {
 }
 
 // Public-facing version — only returns items the admin has published.
-// Routes through server API (service role key) so RLS never blocks it.
+// Tries the server API first (service role, bypasses RLS), then falls back
+// to a direct Supabase anon query (works on Vercel static deployments where
+// no Express server is available — e.g. menu.exzibo.online on Vercel).
 export async function getPublishedMenuItems(restaurantId) {
-  const res = await fetch(`/api/menu/items/${encodeURIComponent(restaurantId)}/published`)
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: res.statusText }))
-    throw new Error(JSON.stringify(err.error || err))
+  try {
+    const res = await fetch(`/api/menu/items/${encodeURIComponent(restaurantId)}/published`)
+    if (res.ok) return res.json()
+  } catch {
+    // fetch failed (no server) — fall through to Supabase
   }
-  return res.json()
+  const { data, error } = await supabaseAnon
+    .from('menu_items')
+    .select('*')
+    .eq('restaurant_id', restaurantId)
+    .eq('is_published', true)
+    .order('created_at')
+  if (error) throw new Error(error.message)
+  return data || []
 }
 
 // Instantly publish or unpublish a single item (saves immediately, no draft)
