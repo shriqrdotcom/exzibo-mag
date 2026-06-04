@@ -627,6 +627,31 @@ app.post('/api/menu/items/upsert', async (req, res) => {
   }
 })
 
+// POST /api/orders/update-status
+// Body: { orderId, status }
+// Uses the service-role key so RLS never blocks a legitimate status change.
+app.post('/api/orders/update-status', async (req, res) => {
+  try {
+    const { orderId, status } = req.body
+    if (!orderId || !status) return res.status(400).json({ error: 'orderId and status required' })
+    const { url: supabaseUrl, headers } = getSupabaseServiceHeaders()
+    const r = await fetch(
+      `${supabaseUrl}/rest/v1/orders?id=eq.${encodeURIComponent(orderId)}`,
+      {
+        method: 'PATCH',
+        headers: { ...headers, Prefer: 'return=representation' },
+        body: JSON.stringify({ status }),
+      }
+    )
+    const data = await r.json()
+    if (!r.ok) return res.status(r.status).json({ error: data })
+    return res.json(Array.isArray(data) ? (data[0] ?? {}) : data)
+  } catch (err) {
+    console.error('[orders/update-status] Error:', err.message)
+    return res.status(500).json({ error: err.message })
+  }
+})
+
 // GET /api/menu/categories/:restaurantId
 // Returns all categories for a restaurant (service role — no RLS dependency)
 app.get('/api/menu/categories/:restaurantId', async (req, res) => {

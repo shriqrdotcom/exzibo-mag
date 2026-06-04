@@ -802,9 +802,23 @@ export async function createOrder(restaurantId, order) {
 }
 
 export async function updateOrderStatus(orderId, status) {
-  // Use maybeSingle() so we don't throw when the order doesn't exist in Supabase
-  // (e.g. legacy localStorage-only orders). The UPDATE still fires the realtime
-  // event for rows that do exist, which is all that matters for cross-device sync.
+  // Route through the server-side API (service role key) so RLS on the
+  // `orders` table never silently blocks a legitimate status change.
+  // Falls back to a direct anon-key write for legacy localStorage-only orders.
+  try {
+    const res = await fetch('/api/orders/update-status', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ orderId, status }),
+    })
+    if (res.ok) return await res.json()
+    // Non-2xx → fall through to direct write below
+    const err = await res.json().catch(() => ({}))
+    console.warn('[updateOrderStatus] server route failed:', err)
+  } catch (e) {
+    console.warn('[updateOrderStatus] server route unreachable:', e.message)
+  }
+  // Direct Supabase write as last-resort fallback (anon key — may be blocked by RLS)
   const { data, error } = await supabase
     .from('orders')
     .update({ status })

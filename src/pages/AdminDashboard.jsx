@@ -457,15 +457,34 @@ export default function AdminDashboard({ restaurantId: restaurantIdProp, initial
         if (status === 'SUBSCRIBED') console.log('[rt] orders subscribed:', id)
       })
 
-    // Fallback poll — refetch every 10 s in case realtime misses an event
+    // Fallback poll — refetch every 30 s in case realtime misses an event.
+    // Uses a MERGE strategy: DB is the source of truth for existing rows, but
+    // any optimistic update that is already in a "terminal" state (confirmed /
+    // cancelled / rejected / completed) is preserved so the UI never reverts
+    // between the optimistic write and the Supabase round-trip completing.
+    const TERMINAL = new Set(['confirmed', 'cancelled', 'rejected', 'completed', 'ready'])
     const poll = setInterval(async () => {
       try {
         const data = await getOrders(id)
-        setOrders(data)
-        try { localStorage.setItem(`exzibo_orders_${id}`, JSON.stringify(data)) } catch {}
-        notifyAnalyticsUpdate()
+        setOrders(prev => {
+          const prevMap = new Map(prev.map(o => [o.id, o]))
+          // For each order returned from DB, keep the optimistic terminal status
+          // if the DB hasn't yet reflected the change (avoids the visible "revert"
+          // flash while the PATCH round-trip is still in flight).
+          const merged = data.map(o => {
+            const local = prevMap.get(o.id)
+            if (local && TERMINAL.has(local.status) && o.status !== local.status) {
+              // Local is already terminal; DB may lag — trust local until they agree
+              return { ...o, status: local.status }
+            }
+            return o
+          })
+          try { localStorage.setItem(`exzibo_orders_${id}`, JSON.stringify(merged)) } catch {}
+          notifyAnalyticsUpdate()
+          return merged
+        })
       } catch { /* noop */ }
-    }, 10_000)
+    }, 30_000)
 
     return () => { supabase.removeChannel(channel); clearInterval(poll) }
   }, [id, isDefault])
@@ -975,24 +994,31 @@ export default function AdminDashboard({ restaurantId: restaurantIdProp, initial
       completed:  '🎉 Order Completed!',
       cancelled:  '❌ Order Cancelled',
     }
+
+    // ── Optimistic UI update (pure — no side effects inside the updater) ──────
+    // React 18 Concurrent Mode / StrictMode can call updater functions more
+    // than once.  Putting async API calls inside an updater causes duplicate
+    // DB writes and race conditions.  Always keep updaters pure.
     setOrders(prev => {
       const updated = prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o)
       persistOrders(updated)
-      if (!isDefault) {
-        // 1. Write to Supabase DB (fires postgres_changes Realtime event)
-        updateOrderStatus(orderId, newStatus).catch(() => {})
-        // 2. Broadcast directly on the per-restaurant channel so the customer's
-        //    orders page at menu.exzibo.online gets the update instantly —
-        //    no RLS dependency, no polling delay, works cross-origin.
-        orderBroadcastRef.current?.send({
-          type: 'broadcast',
-          event: 'order_status_changed',
-          payload: { orderId, status: newStatus },
-        }).catch(() => {})
-      }
       return updated
     })
     showToast(toastMap[newStatus] || '✅ Updated')
+
+    if (isDefault) return
+
+    // ── Side effects run AFTER the state update, outside the updater ─────────
+    // 1. Persist to Supabase (service role → never blocked by RLS)
+    updateOrderStatus(orderId, newStatus).catch(e => {
+      console.error('[handleOrderStatus] DB write failed:', e.message)
+    })
+    // 2. Broadcast to the customer menu page instantly
+    orderBroadcastRef.current?.send({
+      type: 'broadcast',
+      event: 'order_status_changed',
+      payload: { orderId, status: newStatus },
+    })
   }
 
   // Keep cancelOrder as a named alias so the existing cancel-confirm dialog still works

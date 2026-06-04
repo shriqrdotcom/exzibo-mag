@@ -297,6 +297,28 @@ function menuApiPlugin() {
         } catch (e) { return json(res, 500, { error: e.message }) }
       })
 
+      // POST /api/orders/update-status — service-role PATCH on orders, bypasses RLS
+      server.middlewares.use('/api/orders/update-status', async (req, res) => {
+        if (req.method === 'OPTIONS') return json(res, 200, {})
+        if (req.method !== 'POST') return json(res, 405, { error: 'Method not allowed' })
+        try {
+          const { orderId, status } = await readBody(req)
+          if (!orderId || !status) return json(res, 400, { error: 'orderId and status required' })
+          const { url: supabaseUrl, headers } = getServiceHeaders()
+          const r = await fetch(
+            `${supabaseUrl}/rest/v1/orders?id=eq.${encodeURIComponent(orderId)}`,
+            {
+              method: 'PATCH',
+              headers: { ...headers, Prefer: 'return=representation' },
+              body: JSON.stringify({ status }),
+            }
+          )
+          const data = await r.json()
+          if (!r.ok) return json(res, r.status, { error: data })
+          return json(res, 200, Array.isArray(data) ? (data[0] ?? {}) : data)
+        } catch (e) { return json(res, 500, { error: e.message }) }
+      })
+
     },
   }
 }
