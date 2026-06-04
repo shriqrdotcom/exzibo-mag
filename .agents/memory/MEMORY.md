@@ -2,3 +2,4 @@
 - [DashboardApp pageSlug param](dashboard-pageslug.md) — static routes like /:slug/profile don't expose :pageSlug; must use a single dynamic /:slug/:pageSlug route instead.
 - [Replit subdomain routing fix](replit-subdomain.md) — On Replit/localhost, getSubdomain() must return null (not "dashboard") so DefaultApp loads with the full route tree including /dashboard, /auth, etc.
 - [Menu system RLS fix](menu-rls-fix.md) — anon key reads of menu_categories/menu_items are blocked by RLS; fixed by routing all reads through server-side API (service role key, bypasses RLS entirely).
+- [Replit migration setup](replit-migration.md) — Supabase stays as-is (auth + data + realtime); Replit PostgreSQL (DATABASE_URL) used for per-restaurant schemas; VITE_DISABLE_AUTH=true is dev-only via [userenv.development] in .replit.
