@@ -369,6 +369,40 @@ app.get('/api/restaurant-db/list', async (req, res) => {
 // in both dev preview (no client session) and production (authenticated users).
 // The SUPABASE_SERVICE_ROLE_KEY never leaves the server.
 
+// Helper: fetch with automatic single-column retry on PostgreSQL 42703 errors.
+// PostgREST returns 42703 when the JSON body contains a key that isn't a column
+// in the target table. This lets the app survive an un-migrated schema gracefully.
+async function supabaseFetch(url, options) {
+  const r = await fetch(url, options)
+  if (r.ok) return { ok: true, status: r.status, data: await r.json() }
+
+  let errData
+  try { errData = await r.json() } catch { errData = { error: r.statusText } }
+
+  if (errData?.code === '42703' && options.body) {
+    const badCol = (errData.message || '').match(/column "([\w]+)"/)?.[1]
+    if (badCol) {
+      try {
+        const body = JSON.parse(options.body)
+        if (badCol in body) {
+          const stripped = { ...body }
+          delete stripped[badCol]
+          console.warn(`[menu] Column "${badCol}" missing in Supabase schema — retrying without it. Run uid_and_publish_setup.sql to add it.`)
+          const r2 = await fetch(url, { ...options, body: JSON.stringify(stripped) })
+          const data2 = r2.ok
+            ? await r2.json()
+            : await r2.json().catch(() => ({ error: r2.statusText }))
+          if (!r2.ok) console.error(`[menu] Retry also failed (${r2.status}):`, data2)
+          return { ok: r2.ok, status: r2.status, data: data2 }
+        }
+      } catch { /* JSON parse failed — fall through */ }
+    }
+  }
+
+  console.error(`[menu] Supabase ${options.method || 'GET'} → ${r.status}:`, errData)
+  return { ok: false, status: r.status, data: errData }
+}
+
 function getSupabaseServiceHeaders() {
   const raw = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -428,17 +462,14 @@ app.post('/api/menu/items', async (req, res) => {
     if (!restaurantId) return res.status(400).json({ error: 'restaurantId required' })
 
     const { url: supabaseUrl, headers } = getSupabaseServiceHeaders()
-    const body = JSON.stringify({ ...item, restaurant_id: restaurantId })
-
-    const r = await fetch(`${supabaseUrl}/rest/v1/menu_items`, {
+    const { ok, status, data } = await supabaseFetch(`${supabaseUrl}/rest/v1/menu_items`, {
       method: 'POST',
       headers: { ...headers, Prefer: 'return=representation' },
-      body,
+      body: JSON.stringify({ ...item, restaurant_id: restaurantId }),
     })
 
-    const json = await r.json()
-    if (!r.ok) return res.status(r.status).json({ error: json })
-    return res.json(Array.isArray(json) ? json[0] : json)
+    if (!ok) return res.status(status).json({ error: data })
+    return res.json(Array.isArray(data) ? data[0] : data)
   } catch (err) {
     console.error('[menu/items POST] Error:', err.message)
     return res.status(500).json({ error: err.message })
@@ -496,14 +527,16 @@ app.post('/api/menu/item-patch', async (req, res) => {
     const { id, ...patch } = req.body
     if (!id) return res.status(400).json({ error: 'id required' })
     const { url: supabaseUrl, headers } = getSupabaseServiceHeaders()
-    const r = await fetch(`${supabaseUrl}/rest/v1/menu_items?id=eq.${encodeURIComponent(id)}`, {
-      method: 'PATCH',
-      headers: { ...headers, Prefer: 'return=representation' },
-      body: JSON.stringify(patch),
-    })
-    const json = await r.json()
-    if (!r.ok) return res.status(r.status).json({ error: json })
-    return res.json(Array.isArray(json) ? json[0] : json)
+    const { ok, status, data } = await supabaseFetch(
+      `${supabaseUrl}/rest/v1/menu_items?id=eq.${encodeURIComponent(id)}`,
+      {
+        method: 'PATCH',
+        headers: { ...headers, Prefer: 'return=representation' },
+        body: JSON.stringify(patch),
+      }
+    )
+    if (!ok) return res.status(status).json({ error: data })
+    return res.json(Array.isArray(data) ? data[0] : data)
   } catch (err) {
     console.error('[menu/item-patch] Error:', err.message)
     return res.status(500).json({ error: err.message })
@@ -580,15 +613,14 @@ app.post('/api/menu/items/upsert', async (req, res) => {
     const { url: supabaseUrl, headers } = getSupabaseServiceHeaders()
     const rows = items.map(item => ({ ...item, restaurant_id: restaurantId }))
 
-    const r = await fetch(`${supabaseUrl}/rest/v1/menu_items?on_conflict=id`, {
+    const { ok, status, data } = await supabaseFetch(`${supabaseUrl}/rest/v1/menu_items?on_conflict=id`, {
       method: 'POST',
       headers: { ...headers, Prefer: 'resolution=merge-duplicates,return=representation' },
       body: JSON.stringify(rows),
     })
 
-    const json = await r.json()
-    if (!r.ok) return res.status(r.status).json({ error: json })
-    return res.json(json)
+    if (!ok) return res.status(status).json({ error: data })
+    return res.json(data)
   } catch (err) {
     console.error('[menu/items/upsert] Error:', err.message)
     return res.status(500).json({ error: err.message })

@@ -146,19 +146,44 @@ function menuApiPlugin() {
           // POST /api/menu/upload-image — already handled above, skip
           if (pathname === '/upload-image') return next()
 
+          // Shared helper: fetch Supabase, auto-retry stripping any 42703 column.
+          async function sbFetch(url, opts) {
+            const r = await fetch(url, opts)
+            if (r.ok) return { ok: true, status: r.status, data: await r.json() }
+            let errData
+            try { errData = await r.json() } catch { errData = { error: r.statusText } }
+            if (errData?.code === '42703' && opts.body) {
+              const badCol = (errData.message || '').match(/column "([\w]+)"/)?.[1]
+              if (badCol) {
+                try {
+                  const b = JSON.parse(opts.body)
+                  if (badCol in b) {
+                    const stripped = { ...b }
+                    delete stripped[badCol]
+                    console.warn(`[menu] Column "${badCol}" missing in Supabase schema — retrying without it. Run uid_and_publish_setup.sql to add it.`)
+                    const r2 = await fetch(url, { ...opts, body: JSON.stringify(stripped) })
+                    const d2 = r2.ok ? await r2.json() : await r2.json().catch(() => ({ error: r2.statusText }))
+                    return { ok: r2.ok, status: r2.status, data: d2 }
+                  }
+                } catch {}
+              }
+            }
+            console.error(`[menu] Supabase ${opts.method} → ${r.status}:`, errData)
+            return { ok: false, status: r.status, data: errData }
+          }
+
           // POST /api/menu/items/upsert — must be checked before /items
           if (pathname === '/items/upsert') {
             const { restaurantId, items } = await readBody(req)
             if (!restaurantId || !Array.isArray(items)) return json(res, 400, { error: 'restaurantId and items[] required' })
             const { url: supabaseUrl, headers } = getServiceHeaders()
             const rows = items.map(item => ({ ...item, restaurant_id: restaurantId }))
-            const r = await fetch(`${supabaseUrl}/rest/v1/menu_items?on_conflict=id`, {
+            const { ok, status, data } = await sbFetch(`${supabaseUrl}/rest/v1/menu_items?on_conflict=id`, {
               method: 'POST',
               headers: { ...headers, Prefer: 'resolution=merge-duplicates,return=representation' },
               body: JSON.stringify(rows),
             })
-            const data = await r.json()
-            if (!r.ok) return json(res, r.status, { error: data })
+            if (!ok) return json(res, status, { error: data })
             return json(res, 200, data)
           }
 
@@ -167,13 +192,12 @@ function menuApiPlugin() {
             const { restaurantId, ...item } = await readBody(req)
             if (!restaurantId) return json(res, 400, { error: 'restaurantId required' })
             const { url: supabaseUrl, headers } = getServiceHeaders()
-            const r = await fetch(`${supabaseUrl}/rest/v1/menu_items`, {
+            const { ok, status, data } = await sbFetch(`${supabaseUrl}/rest/v1/menu_items`, {
               method: 'POST',
               headers: { ...headers, Prefer: 'return=representation' },
               body: JSON.stringify({ ...item, restaurant_id: restaurantId }),
             })
-            const data = await r.json()
-            if (!r.ok) return json(res, r.status, { error: data })
+            if (!ok) return json(res, status, { error: data })
             return json(res, 200, Array.isArray(data) ? data[0] : data)
           }
 
@@ -182,13 +206,12 @@ function menuApiPlugin() {
             const { id, ...patch } = await readBody(req)
             if (!id) return json(res, 400, { error: 'id required' })
             const { url: supabaseUrl, headers } = getServiceHeaders()
-            const r = await fetch(`${supabaseUrl}/rest/v1/menu_items?id=eq.${encodeURIComponent(id)}`, {
+            const { ok, status, data } = await sbFetch(`${supabaseUrl}/rest/v1/menu_items?id=eq.${encodeURIComponent(id)}`, {
               method: 'PATCH',
               headers: { ...headers, Prefer: 'return=representation' },
               body: JSON.stringify(patch),
             })
-            const data = await r.json()
-            if (!r.ok) return json(res, r.status, { error: data })
+            if (!ok) return json(res, status, { error: data })
             return json(res, 200, Array.isArray(data) ? data[0] : data)
           }
 

@@ -63,6 +63,7 @@ CREATE TABLE IF NOT EXISTS menu_items (
   veg           BOOLEAN DEFAULT true,
   tags          JSONB DEFAULT '[]',
   add_ons       JSONB DEFAULT '[]',
+  is_published  BOOLEAN NOT NULL DEFAULT false,
   created_at    TIMESTAMPTZ DEFAULT NOW()
 );
 
