@@ -5,6 +5,7 @@ import { AnalyticsProvider } from './context/AnalyticsContext'
 import { RoleProvider } from './context/RoleContext'
 import { ACTIVE_SUBDOMAIN } from './lib/subdomain'
 import { getRestaurantBySlug } from './lib/db'
+import { runOrderAutoCleanupIfDue } from './lib/orderCleanup'
 
 // ── Menu subdomain redirect — used by SuperAdminApp for /restaurant/* routes ─
 // Instead of rendering the restaurant website inside superadmin, redirect the
@@ -499,12 +500,22 @@ function SubdomainRouter() {
 // ═══════════════════════════════════════════════════════════════════════════
 // ROOT — providers wrap everything
 // ═══════════════════════════════════════════════════════════════════════════
+function CleanupWorker() {
+  useEffect(() => {
+    runOrderAutoCleanupIfDue()
+    const id = setInterval(runOrderAutoCleanupIfDue, 5 * 60 * 1000)
+    return () => clearInterval(id)
+  }, [])
+  return null
+}
+
 export default function App() {
   return (
     <AuthProvider>
       <RoleProvider>
         <AnalyticsProvider>
           <BrowserRouter>
+            <CleanupWorker />
             <SubdomainRouter />
           </BrowserRouter>
         </AnalyticsProvider>

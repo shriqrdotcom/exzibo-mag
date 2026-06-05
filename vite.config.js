@@ -319,6 +319,39 @@ function menuApiPlugin() {
         } catch (e) { return json(res, 500, { error: e.message }) }
       })
 
+      // POST /api/orders/auto-cleanup — delete stale completed/rejected orders (service role)
+      server.middlewares.use('/api/orders/auto-cleanup', async (req, res) => {
+        if (req.method === 'OPTIONS') return json(res, 200, {})
+        if (req.method !== 'POST') return json(res, 405, { error: 'Method not allowed' })
+        try {
+          const {
+            confirmedDeleteHours  = 12,
+            rejectedDeleteMinutes = 10,
+          } = await readBody(req)
+          const { url: supabaseUrl, headers } = getServiceHeaders()
+          const now = Date.now()
+          const confirmedCutoff = new Date(now - confirmedDeleteHours  * 60 * 60 * 1000).toISOString()
+          const rejectedCutoff  = new Date(now - rejectedDeleteMinutes * 60        * 1000).toISOString()
+
+          const r1 = await fetch(
+            `${supabaseUrl}/rest/v1/orders?status=in.(completed,confirmed)&created_at=lt.${confirmedCutoff}`,
+            { method: 'DELETE', headers: { ...headers, Prefer: 'return=representation' } }
+          )
+          const d1 = r1.ok ? await r1.json().catch(() => []) : []
+
+          const r2 = await fetch(
+            `${supabaseUrl}/rest/v1/orders?status=in.(rejected,cancelled,failed)&created_at=lt.${rejectedCutoff}`,
+            { method: 'DELETE', headers: { ...headers, Prefer: 'return=representation' } }
+          )
+          const d2 = r2.ok ? await r2.json().catch(() => []) : []
+
+          const deletedConfirmed = Array.isArray(d1) ? d1.length : 0
+          const deletedRejected  = Array.isArray(d2) ? d2.length : 0
+          console.log(`[auto-cleanup] Removed ${deletedConfirmed} completed + ${deletedRejected} rejected orders`)
+          return json(res, 200, { success: true, deletedConfirmed, deletedRejected })
+        } catch (e) { return json(res, 500, { error: e.message }) }
+      })
+
     },
   }
 }

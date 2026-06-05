@@ -703,6 +703,48 @@ app.get('/api/menu/items/:restaurantId', async (req, res) => {
   }
 })
 
+// POST /api/orders/auto-cleanup
+// Body: { confirmedDeleteHours, rejectedDeleteMinutes }
+// Deletes completed/confirmed orders older than `confirmedDeleteHours` and
+// rejected/cancelled/failed orders older than `rejectedDeleteMinutes`.
+app.post('/api/orders/auto-cleanup', async (req, res) => {
+  try {
+    const {
+      confirmedDeleteHours  = 12,
+      rejectedDeleteMinutes = 10,
+    } = req.body || {}
+
+    const { url: supabaseUrl, headers } = getSupabaseServiceHeaders()
+    const now = Date.now()
+
+    const confirmedCutoff = new Date(now - confirmedDeleteHours  * 60 * 60 * 1000).toISOString()
+    const rejectedCutoff  = new Date(now - rejectedDeleteMinutes * 60        * 1000).toISOString()
+
+    // Delete completed / confirmed orders older than the window
+    const r1 = await fetch(
+      `${supabaseUrl}/rest/v1/orders?status=in.(completed,confirmed)&created_at=lt.${confirmedCutoff}`,
+      { method: 'DELETE', headers: { ...headers, Prefer: 'return=representation' } }
+    )
+    const d1 = r1.ok ? await r1.json().catch(() => []) : []
+
+    // Delete rejected / cancelled / failed orders older than the window
+    const r2 = await fetch(
+      `${supabaseUrl}/rest/v1/orders?status=in.(rejected,cancelled,failed)&created_at=lt.${rejectedCutoff}`,
+      { method: 'DELETE', headers: { ...headers, Prefer: 'return=representation' } }
+    )
+    const d2 = r2.ok ? await r2.json().catch(() => []) : []
+
+    const deletedConfirmed = Array.isArray(d1) ? d1.length : 0
+    const deletedRejected  = Array.isArray(d2) ? d2.length : 0
+
+    console.log(`[auto-cleanup] Removed ${deletedConfirmed} completed + ${deletedRejected} rejected orders`)
+    return res.json({ success: true, deletedConfirmed, deletedRejected })
+  } catch (err) {
+    console.error('[auto-cleanup] Error:', err.message)
+    return res.status(500).json({ error: err.message })
+  }
+})
+
 // ── SPA fallback — must be last ───────────────────────────────────────────────
 app.get('*', (req, res) => {
   res.sendFile(path.resolve(__dirname, 'dist', 'index.html'))
