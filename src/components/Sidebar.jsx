@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom'
-import { LayoutDashboard, Settings, Zap, Users, Table2, ShieldCheck, Bell, Info, Trash2, Play, ImageDown, Route, ShieldPlus } from 'lucide-react'
+import { LayoutDashboard, Settings, Zap, Users, Table2, ShieldCheck, Bell, Info, Trash2, Play, ImageDown, Route, ShieldPlus, Clock } from 'lucide-react'
 import PermissionGate from './PermissionGate'
 import { supabase } from '../lib/supabase'
 
@@ -391,6 +391,49 @@ export default function Sidebar() {
             >
               <ShieldPlus size={18} />
               Add Role
+            </button>
+          )
+        })()}
+
+        {/* Order Time nav item */}
+        {(() => {
+          const isActive = location.pathname === '/order-time'
+          return (
+            <button
+              onClick={() => navigate('/order-time')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                padding: '12px 16px',
+                borderRadius: '12px',
+                background: isActive ? '#E8321A' : 'transparent',
+                border: isActive ? 'none' : '1px solid rgba(255,255,255,0.06)',
+                color: isActive ? '#fff' : '#888',
+                fontSize: '14px',
+                fontWeight: isActive ? 600 : 500,
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                textAlign: 'left',
+                width: '100%',
+              }}
+              onMouseEnter={e => {
+                if (!isActive) {
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.04)'
+                  e.currentTarget.style.color = '#fff'
+                  e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'
+                }
+              }}
+              onMouseLeave={e => {
+                if (!isActive) {
+                  e.currentTarget.style.background = 'transparent'
+                  e.currentTarget.style.color = '#888'
+                  e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)'
+                }
+              }}
+            >
+              <Clock size={18} />
+              Order Time
             </button>
           )
         })()}

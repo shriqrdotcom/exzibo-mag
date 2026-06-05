@@ -40,6 +40,7 @@ import InformationPage      from './pages/InformationPage'
 import DeletedRestaurants   from './pages/DeletedRestaurants'
 import DynamicRoute         from './pages/DynamicRoute'
 import AddRolePage          from './pages/AddRolePage'
+import OrderTimePage        from './pages/OrderTimePage'
 
 // ── Full-screen loader ──────────────────────────────────────────────────────
 function GlobalLoader() {
@@ -270,6 +271,8 @@ function SuperAdminApp() {
         element={<SuperAdminRoute><DynamicRoute /></SuperAdminRoute>} />
       <Route path="/add-role"
         element={<SuperAdminRoute><AddRolePage /></SuperAdminRoute>} />
+      <Route path="/order-time"
+        element={<SuperAdminRoute><OrderTimePage /></SuperAdminRoute>} />
 
       {/* Menu Studio */}
       <Route path="/master-control"
@@ -466,6 +469,7 @@ function DefaultApp() {
       <Route path="/deleted-restaurants"     element={<ProtectedRoute><DeletedRestaurants /></ProtectedRoute>} />
       <Route path="/dynamic-route"           element={<ProtectedRoute><DynamicRoute /></ProtectedRoute>} />
       <Route path="/add-role"               element={<ProtectedRoute><AddRolePage /></ProtectedRoute>} />
+      <Route path="/order-time"             element={<ProtectedRoute><OrderTimePage /></ProtectedRoute>} />
 
       {/* Catch-all */}
       <Route path="*" element={<Navigate to="/" replace />} />
