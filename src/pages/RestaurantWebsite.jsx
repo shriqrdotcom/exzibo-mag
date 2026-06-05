@@ -3094,7 +3094,7 @@ export default function RestaurantWebsite() {
 
       <nav style={{
         position: 'fixed', bottom: '16px', left: '50%', transform: 'translateX(-50%)',
-        width: 'calc(100% - 32px)', maxWidth: '440px', zIndex: 100,
+        width: 'calc(100% - 32px)', maxWidth: '440px', zIndex: 1100,
         background: theme.navBg,
         backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
         borderRadius: '22px',
@@ -3159,8 +3159,8 @@ export default function RestaurantWebsite() {
         <div
           onClick={() => setShowQuickBookModal(false)}
           style={{
-            position: 'fixed', inset: 0, zIndex: 500,
-            background: '#f0f0f0',
+            position: 'fixed', inset: 0, zIndex: 1050,
+            background: '#f2f2f2',
             display: 'flex', flexDirection: 'column',
             alignItems: 'center', justifyContent: 'center',
             overflowY: 'auto',
@@ -3172,56 +3172,56 @@ export default function RestaurantWebsite() {
               background: #ebebeb;
               border: none;
               border-radius: 18px;
-              padding: 18px 20px;
+              padding: 17px 20px;
               font-size: 15px;
               color: #333;
               font-family: inherit;
               outline: none;
               box-sizing: border-box;
-              box-shadow: 6px 6px 14px rgba(0,0,0,0.10), -4px -4px 10px rgba(255,255,255,0.88);
+              box-shadow: 5px 5px 12px rgba(0,0,0,0.09), -4px -4px 10px rgba(255,255,255,0.90);
               appearance: none;
             }
-            .qb-input::placeholder { color: #aaa; }
-            .qb-input:focus { box-shadow: 6px 6px 14px rgba(0,0,0,0.12), -4px -4px 10px rgba(255,255,255,0.90), inset 0 0 0 1.5px #2979ff44; }
-            .qb-input-err { box-shadow: 6px 6px 14px rgba(0,0,0,0.10), -4px -4px 10px rgba(255,255,255,0.88), inset 0 0 0 1.5px #E8321A88 !important; }
+            .qb-input::placeholder { color: #bbb; font-size: 14px; }
+            .qb-input:focus { box-shadow: 5px 5px 12px rgba(0,0,0,0.11), -4px -4px 10px rgba(255,255,255,0.92), inset 0 0 0 1.5px rgba(41,121,255,0.30); }
+            .qb-input-err { box-shadow: 5px 5px 12px rgba(0,0,0,0.09), -4px -4px 10px rgba(255,255,255,0.90), inset 0 0 0 1.5px rgba(232,50,26,0.50) !important; }
           `}</style>
 
           <div
             onClick={e => e.stopPropagation()}
-            style={{ width: '100%', maxWidth: '400px', padding: '0 20px 40px', boxSizing: 'border-box' }}
+            style={{ width: '100%', maxWidth: '390px', padding: '0 22px 100px', boxSizing: 'border-box' }}
           >
             {/* Drag handle */}
-            <div style={{ display: 'flex', justifyContent: 'center', paddingBottom: '28px' }}>
-              <div style={{ width: '40px', height: '5px', borderRadius: '3px', background: 'rgba(0,0,0,0.18)' }} />
+            <div style={{ display: 'flex', justifyContent: 'center', paddingBottom: '32px' }}>
+              <div style={{ width: '36px', height: '4px', borderRadius: '2px', background: 'rgba(0,0,0,0.16)' }} />
             </div>
 
             {/* ── Stacked card area ── */}
-            <div style={{ position: 'relative', marginBottom: '28px' }}>
+            <div style={{ position: 'relative', marginBottom: '30px' }}>
 
-              {/* Rear card — visible behind+right of main card */}
+              {/* Rear card: brown/tan, tilted, peeking right */}
               <div style={{
                 position: 'absolute',
-                top: '12px',
-                left: '8px',
-                right: '-14px',
-                bottom: '-10px',
-                background: '#b5a89a',
-                borderRadius: '26px',
-                boxShadow: '0 12px 40px rgba(0,0,0,0.14)',
-                transform: 'rotate(3.5deg)',
+                top: '10px',
+                left: '14px',
+                right: '-18px',
+                bottom: '-8px',
+                background: 'linear-gradient(145deg, #c4a98a, #a8896a)',
+                borderRadius: '28px',
+                boxShadow: '0 8px 30px rgba(0,0,0,0.18)',
+                transform: 'rotate(4deg)',
                 zIndex: 0,
               }} />
 
-              {/* Main card */}
+              {/* Main white card */}
               <div style={{
                 position: 'relative', zIndex: 1,
                 background: '#fff',
                 borderRadius: '24px',
-                overflow: 'hidden',
-                boxShadow: '0 16px 48px rgba(0,0,0,0.16)',
+                overflow: 'visible',
+                boxShadow: '0 12px 40px rgba(0,0,0,0.14)',
               }}>
-                {/* Restaurant image — 65% of card height */}
-                <div style={{ width: '100%', height: '240px', overflow: 'hidden', position: 'relative' }}>
+                {/* Image section */}
+                <div style={{ width: '100%', height: '230px', overflow: 'hidden', borderRadius: '24px 24px 0 0', position: 'relative' }}>
                   <img
                     src={
                       (customCarouselImages && customCarouselImages.length > 0)
@@ -3234,23 +3234,23 @@ export default function RestaurantWebsite() {
                   />
                 </div>
 
-                {/* Floating info panel inside card */}
+                {/* Info panel: floating white box overlapping image bottom */}
                 <div style={{
-                  margin: '0 12px',
-                  marginTop: '-22px',
+                  margin: '0 14px',
+                  marginTop: '-28px',
                   position: 'relative', zIndex: 2,
                   background: '#fff',
-                  borderRadius: '18px',
-                  padding: '16px 18px 18px',
-                  boxShadow: '0 4px 24px rgba(0,0,0,0.10)',
-                  marginBottom: '12px',
+                  borderRadius: '20px',
+                  padding: '18px 18px 20px',
+                  boxShadow: '0 6px 28px rgba(0,0,0,0.12)',
+                  marginBottom: '14px',
                 }}>
-                  <div style={{ fontSize: '22px', fontWeight: 800, color: '#111', letterSpacing: '-0.02em', marginBottom: '10px' }}>
+                  <div style={{ fontSize: '22px', fontWeight: 800, color: '#111', letterSpacing: '-0.02em', lineHeight: 1.2 }}>
                     {restaurant?.name || 'Restaurant'}
                   </div>
-                  <div style={{ height: '1px', background: '#efefef', marginBottom: '10px' }} />
-                  <div style={{ fontSize: '13px', color: '#888', marginBottom: '8px', lineHeight: 1.5 }}>
-                    {[restaurant?.place, restaurant?.description ? restaurant.description.split(/\s+/).slice(0, 4).join(' ') : null, 'Table booking']
+                  <div style={{ height: '1px', background: '#ededed', margin: '12px 0' }} />
+                  <div style={{ fontSize: '13px', color: '#888', marginBottom: '10px', lineHeight: 1.5 }}>
+                    {[restaurant?.place, restaurant?.description ? restaurant.description.split(/\s+/).slice(0, 3).join(' ') : null, 'Table booking']
                       .filter(Boolean).join(' • ')}
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
@@ -3262,8 +3262,8 @@ export default function RestaurantWebsite() {
             </div>
 
             {/* ── Neumorphic inputs ── */}
-            <div style={{ width: '90%', margin: '0 auto' }}>
-              <div style={{ marginBottom: '18px' }}>
+            <div style={{ width: '88%', margin: '0 auto' }}>
+              <div style={{ marginBottom: '16px' }}>
                 <input
                   className={`qb-input${quickBookErrors.name ? ' qb-input-err' : ''}`}
                   type="text"
@@ -3272,7 +3272,7 @@ export default function RestaurantWebsite() {
                   onChange={e => { setQuickBookName(e.target.value); setQuickBookErrors(p => ({ ...p, name: '' })) }}
                 />
                 {quickBookErrors.name && (
-                  <div style={{ fontSize: '11px', color: '#E8321A', marginTop: '5px', paddingLeft: '6px' }}>Name is required</div>
+                  <div style={{ fontSize: '11px', color: '#E8321A', marginTop: '5px', paddingLeft: '4px' }}>Name is required</div>
                 )}
               </div>
 
@@ -3285,22 +3285,22 @@ export default function RestaurantWebsite() {
                   onChange={e => { setQuickBookPhone(e.target.value); setQuickBookErrors(p => ({ ...p, phone: '' })) }}
                 />
                 {quickBookErrors.phone && (
-                  <div style={{ fontSize: '11px', color: '#E8321A', marginTop: '5px', paddingLeft: '6px' }}>Phone is required</div>
+                  <div style={{ fontSize: '11px', color: '#E8321A', marginTop: '5px', paddingLeft: '4px' }}>Phone is required</div>
                 )}
               </div>
 
               {/* ── Buttons ── */}
-              <div style={{ display: 'flex', gap: '20px' }}>
+              <div style={{ display: 'flex', gap: '18px' }}>
                 <button
                   onClick={() => setShowQuickBookModal(false)}
                   style={{
-                    flex: 1, padding: '17px 0', borderRadius: '18px',
+                    flex: 1, padding: '18px 0', borderRadius: '20px',
                     background: '#fff',
                     border: '1.5px solid #2979ff',
                     color: '#2979ff', fontSize: '14px', fontWeight: 800,
                     cursor: 'pointer', fontFamily: 'inherit',
-                    letterSpacing: '0.06em',
-                    boxShadow: '0 4px 16px rgba(0,0,0,0.08)',
+                    letterSpacing: '0.07em',
+                    boxShadow: '0 4px 18px rgba(0,0,0,0.08)',
                   }}
                 >
                   CANCEL
@@ -3308,13 +3308,13 @@ export default function RestaurantWebsite() {
                 <button
                   onClick={handleQuickBookConfirm}
                   style={{
-                    flex: 1, padding: '17px 0', borderRadius: '18px',
+                    flex: 1, padding: '18px 0', borderRadius: '20px',
                     background: '#2979ff',
                     border: 'none',
                     color: '#fff', fontSize: '14px', fontWeight: 800,
                     cursor: 'pointer', fontFamily: 'inherit',
-                    letterSpacing: '0.06em',
-                    boxShadow: '0 6px 20px rgba(41,121,255,0.40)',
+                    letterSpacing: '0.07em',
+                    boxShadow: '0 8px 24px rgba(41,121,255,0.45)',
                   }}
                 >
                   BOOK
