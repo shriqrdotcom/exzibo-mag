@@ -3127,7 +3127,10 @@ export default function RestaurantWebsite() {
           return (
             <button
               key={id}
-              onClick={() => id === 'booking' ? handleOpenBooking() : navigateToPage(id)}
+              onClick={() => {
+                if (id === 'booking') { handleOpenBooking() }
+                else { setShowQuickBookModal(false); navigateToPage(id) }
+              }}
               style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 border: 'none', cursor: 'pointer', background: 'none',
