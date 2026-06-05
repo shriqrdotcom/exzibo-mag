@@ -1,0 +1,105 @@
+IMPORTANT: Recreate the UI from the provided reference image EXACTLY. Do not redesign, modernize, improve, simplify, or use your own interpretation. Match the visual structure, spacing, proportions, shadows, layering, and alignment as closely as possible.
+
+BOOKING PAGE - FIRST SCREEN UI SPECIFICATION
+
+LAYOUT:
+- Single centered vertical layout.
+- Entire page uses a very light grey/off-white background (#F5F5F5 style).
+- All elements aligned in the center.
+- Large amount of white space around the card section.
+
+TOP CARD SECTION:
+- Create a stacked-card effect.
+- Main card is centered.
+- Second card is partially visible behind the main card on the right side.
+- Rear card should be offset slightly right and slightly behind the main card.
+- Both cards must have large rounded corners (20px-28px radius).
+- Cards must use soft shadows, not hard shadows.
+- Main card occupies approximately 75-80% of mobile screen width.
+
+CARD IMAGE:
+- Image fills the upper portion of the card.
+- Image corners follow the card radius.
+- Image height is approximately 65-70% of the card.
+- No extra borders.
+- Cover mode only.
+
+BOTTOM INFORMATION PANEL:
+- Floating white panel attached inside the bottom area of the card.
+- Large rounded corners.
+- Positioned slightly above the bottom edge of the image.
+- Soft elevation shadow.
+- Width approximately 90% of card width.
+- Internal padding generous and identical to reference.
+- Keep exact spacing ratios from the image.
+
+FORM SECTION:
+- Positioned below the card with a noticeable gap.
+- Two input fields stacked vertically.
+- Input fields are centered.
+- Width approximately 78-82% of screen width.
+- Height approximately 54-58px.
+- Border radius approximately 16-20px.
+- Neumorphic style:
+  - Light background.
+  - Very subtle outer shadow.
+  - Very subtle highlight.
+- No dark borders.
+- Large spacing between first and second field.
+
+BUTTON SECTION:
+- Two buttons displayed horizontally.
+- Equal width.
+- Equal height.
+- Large rounded corners (16px-20px).
+- Gap between buttons approximately 20px.
+
+LEFT BUTTON:
+- White background.
+- Thin blue outline.
+- Soft shadow.
+- Same dimensions as reference.
+- Center aligned content.
+
+RIGHT BUTTON:
+- Solid blue background.
+- Slight gradient allowed only if it matches the image.
+- White content.
+- Same dimensions as reference.
+- Soft shadow.
+- Center aligned content.
+
+SPACING:
+- Match the exact vertical rhythm from the reference.
+- Card → Inputs → Buttons spacing must feel identical.
+- Do not compress the layout.
+- Maintain generous breathing space.
+
+SHADOWS:
+- Use soft premium shadows only.
+- No strong black shadows.
+- Shadow blur should be large and subtle.
+
+ANIMATION:
+- No animation.
+- No hover effects.
+- No floating effects.
+- Static UI identical to the reference image.
+
+RESPONSIVE:
+- Mobile-first design.
+- Pixel-perfect reproduction of the reference.
+- Use the uploaded image as the visual source of truth.
+- If anything conflicts with this prompt, follow the uploaded image exactly.
+
+DO NOT:
+- Change layout.
+- Change proportions.
+- Add icons.
+- Add extra containers.
+- Add glassmorphism.
+- Add custom styling decisions.
+- Create a different modern design.
+
+GOAL:
+Create a near 1:1 visual clone of the uploaded booking screen UI.

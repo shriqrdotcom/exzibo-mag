@@ -3160,70 +3160,68 @@ export default function RestaurantWebsite() {
           onClick={() => setShowQuickBookModal(false)}
           style={{
             position: 'fixed', inset: 0, zIndex: 500,
-            background: 'rgba(0,0,0,0.45)',
-            backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
-            display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
-            animation: 'fadeIn 0.2s ease',
+            background: '#f0f0f0',
+            display: 'flex', flexDirection: 'column',
+            alignItems: 'center', justifyContent: 'center',
+            overflowY: 'auto',
           }}
         >
           <style>{`
-            @keyframes quickBookSlideUp {
-              from { transform: translateY(100%); opacity: 0; }
-              to   { transform: translateY(0);    opacity: 1; }
-            }
             .qb-input {
               width: 100%;
-              background: #fff;
-              border: 1.5px solid #e8e8e8;
-              border-radius: 14px;
-              padding: 15px 16px;
+              background: #ebebeb;
+              border: none;
+              border-radius: 18px;
+              padding: 18px 20px;
               font-size: 15px;
-              color: #111;
+              color: #333;
               font-family: inherit;
               outline: none;
               box-sizing: border-box;
-              transition: border-color 0.2s;
+              box-shadow: 6px 6px 14px rgba(0,0,0,0.10), -4px -4px 10px rgba(255,255,255,0.88);
+              appearance: none;
             }
-            .qb-input::placeholder { color: #bbb; }
-            .qb-input:focus { border-color: #2979ff; }
-            .qb-input-err { border-color: #E8321A !important; }
+            .qb-input::placeholder { color: #aaa; }
+            .qb-input:focus { box-shadow: 6px 6px 14px rgba(0,0,0,0.12), -4px -4px 10px rgba(255,255,255,0.90), inset 0 0 0 1.5px #2979ff44; }
+            .qb-input-err { box-shadow: 6px 6px 14px rgba(0,0,0,0.10), -4px -4px 10px rgba(255,255,255,0.88), inset 0 0 0 1.5px #E8321A88 !important; }
           `}</style>
+
           <div
             onClick={e => e.stopPropagation()}
-            style={{
-              width: '100%', maxWidth: '420px',
-              background: '#f4f4f4',
-              borderRadius: '28px 28px 0 0',
-              padding: '0 0 32px',
-              animation: 'quickBookSlideUp 0.38s cubic-bezier(0.34,1.1,0.64,1) both',
-              overflow: 'hidden',
-            }}
+            style={{ width: '100%', maxWidth: '400px', padding: '0 20px 40px', boxSizing: 'border-box' }}
           >
             {/* Drag handle */}
-            <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0 0' }}>
-              <div style={{ width: '38px', height: '4px', borderRadius: '2px', background: 'rgba(0,0,0,0.14)' }} />
+            <div style={{ display: 'flex', justifyContent: 'center', paddingBottom: '28px' }}>
+              <div style={{ width: '40px', height: '5px', borderRadius: '3px', background: 'rgba(0,0,0,0.18)' }} />
             </div>
 
-            {/* ── Stacked restaurant card ── */}
-            <div style={{ padding: '14px 20px 0', position: 'relative' }}>
-              {/* Shadow/stacked card behind */}
+            {/* ── Stacked card area ── */}
+            <div style={{ position: 'relative', marginBottom: '28px' }}>
+
+              {/* Rear card — visible behind+right of main card */}
               <div style={{
-                position: 'absolute', top: '24px', right: '14px',
-                width: 'calc(100% - 40px)', height: '220px',
-                background: '#c9c0b8', borderRadius: '22px',
-                transform: 'rotate(3deg) translateX(10px)',
+                position: 'absolute',
+                top: '12px',
+                left: '8px',
+                right: '-14px',
+                bottom: '-10px',
+                background: '#b5a89a',
+                borderRadius: '26px',
+                boxShadow: '0 12px 40px rgba(0,0,0,0.14)',
+                transform: 'rotate(3.5deg)',
                 zIndex: 0,
               }} />
+
               {/* Main card */}
               <div style={{
                 position: 'relative', zIndex: 1,
                 background: '#fff',
-                borderRadius: '20px',
+                borderRadius: '24px',
                 overflow: 'hidden',
-                boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
+                boxShadow: '0 16px 48px rgba(0,0,0,0.16)',
               }}>
-                {/* Restaurant image */}
-                <div style={{ width: '100%', height: '200px', overflow: 'hidden', position: 'relative' }}>
+                {/* Restaurant image — 65% of card height */}
+                <div style={{ width: '100%', height: '240px', overflow: 'hidden', position: 'relative' }}>
                   <img
                     src={
                       (customCarouselImages && customCarouselImages.length > 0)
@@ -3231,37 +3229,41 @@ export default function RestaurantWebsite() {
                         : restaurant?.logo || '/menu/wagyu-ribeye.png'
                     }
                     alt={restaurant?.name || 'Restaurant'}
-                    style={{
-                      width: '100%', height: '100%',
-                      objectFit: 'cover', objectPosition: 'center',
-                      display: 'block',
-                    }}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center', display: 'block' }}
                     onError={e => { e.target.src = '/menu/wagyu-ribeye.png' }}
                   />
                 </div>
-                {/* Info section inside card */}
-                <div style={{ padding: '14px 16px 16px', background: '#fff' }}>
-                  {/* Divider */}
-                  <div style={{ height: '1px', background: '#f0ede9', marginBottom: '10px' }} />
-                  <div style={{ fontSize: '20px', fontWeight: 800, color: '#111', letterSpacing: '-0.01em', marginBottom: '6px' }}>
+
+                {/* Floating info panel inside card */}
+                <div style={{
+                  margin: '0 12px',
+                  marginTop: '-22px',
+                  position: 'relative', zIndex: 2,
+                  background: '#fff',
+                  borderRadius: '18px',
+                  padding: '16px 18px 18px',
+                  boxShadow: '0 4px 24px rgba(0,0,0,0.10)',
+                  marginBottom: '12px',
+                }}>
+                  <div style={{ fontSize: '22px', fontWeight: 800, color: '#111', letterSpacing: '-0.02em', marginBottom: '10px' }}>
                     {restaurant?.name || 'Restaurant'}
                   </div>
-                  <div style={{ fontSize: '13px', color: '#777', marginBottom: '8px', lineHeight: 1.4 }}>
-                    {[restaurant?.place, restaurant?.description ? restaurant.description.split(' ').slice(0, 3).join(' ') : 'Fine Dining', 'Table booking']
+                  <div style={{ height: '1px', background: '#efefef', marginBottom: '10px' }} />
+                  <div style={{ fontSize: '13px', color: '#888', marginBottom: '8px', lineHeight: 1.5 }}>
+                    {[restaurant?.place, restaurant?.description ? restaurant.description.split(/\s+/).slice(0, 4).join(' ') : null, 'Table booking']
                       .filter(Boolean).join(' • ')}
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#E8321A', flexShrink: 0 }} />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
+                    <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#E8321A', flexShrink: 0 }} />
                     <span style={{ fontSize: '13px', fontWeight: 700, color: '#E8321A' }}>Flat 50% off on pre-booking</span>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* ── Form fields ── */}
-            <div style={{ padding: '20px 20px 0' }}>
-              {/* Full Name */}
-              <div style={{ marginBottom: '12px' }}>
+            {/* ── Neumorphic inputs ── */}
+            <div style={{ width: '90%', margin: '0 auto' }}>
+              <div style={{ marginBottom: '18px' }}>
                 <input
                   className={`qb-input${quickBookErrors.name ? ' qb-input-err' : ''}`}
                   type="text"
@@ -3270,12 +3272,11 @@ export default function RestaurantWebsite() {
                   onChange={e => { setQuickBookName(e.target.value); setQuickBookErrors(p => ({ ...p, name: '' })) }}
                 />
                 {quickBookErrors.name && (
-                  <div style={{ fontSize: '11px', color: '#E8321A', marginTop: '4px', paddingLeft: '4px' }}>Name is required</div>
+                  <div style={{ fontSize: '11px', color: '#E8321A', marginTop: '5px', paddingLeft: '6px' }}>Name is required</div>
                 )}
               </div>
 
-              {/* Phone Number */}
-              <div style={{ marginBottom: '20px' }}>
+              <div style={{ marginBottom: '28px' }}>
                 <input
                   className={`qb-input${quickBookErrors.phone ? ' qb-input-err' : ''}`}
                   type="tel"
@@ -3284,22 +3285,22 @@ export default function RestaurantWebsite() {
                   onChange={e => { setQuickBookPhone(e.target.value); setQuickBookErrors(p => ({ ...p, phone: '' })) }}
                 />
                 {quickBookErrors.phone && (
-                  <div style={{ fontSize: '11px', color: '#E8321A', marginTop: '4px', paddingLeft: '4px' }}>Phone is required</div>
+                  <div style={{ fontSize: '11px', color: '#E8321A', marginTop: '5px', paddingLeft: '6px' }}>Phone is required</div>
                 )}
               </div>
 
-              {/* Buttons */}
-              <div style={{ display: 'flex', gap: '12px' }}>
+              {/* ── Buttons ── */}
+              <div style={{ display: 'flex', gap: '20px' }}>
                 <button
                   onClick={() => setShowQuickBookModal(false)}
                   style={{
-                    flex: 1, padding: '15px 0', borderRadius: '16px',
-                    background: 'transparent',
-                    border: '2px solid #2979ff',
-                    color: '#2979ff', fontSize: '15px', fontWeight: 800,
+                    flex: 1, padding: '17px 0', borderRadius: '18px',
+                    background: '#fff',
+                    border: '1.5px solid #2979ff',
+                    color: '#2979ff', fontSize: '14px', fontWeight: 800,
                     cursor: 'pointer', fontFamily: 'inherit',
-                    letterSpacing: '0.04em',
-                    transition: 'background 0.15s ease',
+                    letterSpacing: '0.06em',
+                    boxShadow: '0 4px 16px rgba(0,0,0,0.08)',
                   }}
                 >
                   CANCEL
@@ -3307,14 +3308,13 @@ export default function RestaurantWebsite() {
                 <button
                   onClick={handleQuickBookConfirm}
                   style={{
-                    flex: 1, padding: '15px 0', borderRadius: '16px',
+                    flex: 1, padding: '17px 0', borderRadius: '18px',
                     background: '#2979ff',
                     border: 'none',
-                    color: '#fff', fontSize: '15px', fontWeight: 800,
+                    color: '#fff', fontSize: '14px', fontWeight: 800,
                     cursor: 'pointer', fontFamily: 'inherit',
-                    letterSpacing: '0.04em',
-                    boxShadow: '0 6px 20px rgba(41,121,255,0.38)',
-                    transition: 'transform 0.15s ease, box-shadow 0.15s ease',
+                    letterSpacing: '0.06em',
+                    boxShadow: '0 6px 20px rgba(41,121,255,0.40)',
                   }}
                 >
                   BOOK
