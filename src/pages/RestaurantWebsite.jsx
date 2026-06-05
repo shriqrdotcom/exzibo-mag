@@ -411,6 +411,27 @@ export default function RestaurantWebsite() {
   const [bookingForm, setBookingForm] = useState({ name: '', phone: '', email: '', date: '', time: '19:00', guests: 2, occasion: 'Casual Dining', seating: 'Indoor', notes: '' })
   const [bookingSubmitted, setBookingSubmitted] = useState(false)
   const [bookingErrors, setBookingErrors] = useState({})
+  const [showQuickBookModal, setShowQuickBookModal] = useState(false)
+  const [quickBookName, setQuickBookName] = useState('')
+  const [quickBookPhone, setQuickBookPhone] = useState('')
+  const [quickBookErrors, setQuickBookErrors] = useState({})
+
+  function handleOpenBooking() {
+    setQuickBookName('')
+    setQuickBookPhone('')
+    setQuickBookErrors({})
+    setShowQuickBookModal(true)
+  }
+
+  function handleQuickBookConfirm() {
+    const errs = {}
+    if (!quickBookName.trim()) errs.name = 'Required'
+    if (!quickBookPhone.trim()) errs.phone = 'Required'
+    if (Object.keys(errs).length) { setQuickBookErrors(errs); return }
+    setBookingForm(prev => ({ ...prev, name: quickBookName.trim(), phone: quickBookPhone.trim() }))
+    setShowQuickBookModal(false)
+    navigateToPage('booking')
+  }
 
   function handleBookingChange(field, value) {
     setBookingForm(prev => ({ ...prev, [field]: value }))
@@ -1749,7 +1770,7 @@ export default function RestaurantWebsite() {
             {/* Left: booking icon square button */}
             <button
               className="action-btn"
-              onClick={() => navigateToPage('booking')}
+              onClick={() => handleOpenBooking()}
               style={{
                 width: '48px', height: '48px', flexShrink: 0,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -3106,7 +3127,7 @@ export default function RestaurantWebsite() {
           return (
             <button
               key={id}
-              onClick={() => navigateToPage(id)}
+              onClick={() => id === 'booking' ? handleOpenBooking() : navigateToPage(id)}
               style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 border: 'none', cursor: 'pointer', background: 'none',
@@ -3132,6 +3153,177 @@ export default function RestaurantWebsite() {
           )
         })}
       </nav>
+
+      {/* ── QUICK BOOK MODAL ── */}
+      {showQuickBookModal && (
+        <div
+          onClick={() => setShowQuickBookModal(false)}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 500,
+            background: 'rgba(0,0,0,0.45)',
+            backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
+            display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+            animation: 'fadeIn 0.2s ease',
+          }}
+        >
+          <style>{`
+            @keyframes quickBookSlideUp {
+              from { transform: translateY(100%); opacity: 0; }
+              to   { transform: translateY(0);    opacity: 1; }
+            }
+            .qb-input {
+              width: 100%;
+              background: #fff;
+              border: 1.5px solid #e8e8e8;
+              border-radius: 14px;
+              padding: 15px 16px;
+              font-size: 15px;
+              color: #111;
+              font-family: inherit;
+              outline: none;
+              box-sizing: border-box;
+              transition: border-color 0.2s;
+            }
+            .qb-input::placeholder { color: #bbb; }
+            .qb-input:focus { border-color: #2979ff; }
+            .qb-input-err { border-color: #E8321A !important; }
+          `}</style>
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              width: '100%', maxWidth: '420px',
+              background: '#f4f4f4',
+              borderRadius: '28px 28px 0 0',
+              padding: '0 0 32px',
+              animation: 'quickBookSlideUp 0.38s cubic-bezier(0.34,1.1,0.64,1) both',
+              overflow: 'hidden',
+            }}
+          >
+            {/* Drag handle */}
+            <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0 0' }}>
+              <div style={{ width: '38px', height: '4px', borderRadius: '2px', background: 'rgba(0,0,0,0.14)' }} />
+            </div>
+
+            {/* ── Stacked restaurant card ── */}
+            <div style={{ padding: '14px 20px 0', position: 'relative' }}>
+              {/* Shadow/stacked card behind */}
+              <div style={{
+                position: 'absolute', top: '24px', right: '14px',
+                width: 'calc(100% - 40px)', height: '220px',
+                background: '#c9c0b8', borderRadius: '22px',
+                transform: 'rotate(3deg) translateX(10px)',
+                zIndex: 0,
+              }} />
+              {/* Main card */}
+              <div style={{
+                position: 'relative', zIndex: 1,
+                background: '#fff',
+                borderRadius: '20px',
+                overflow: 'hidden',
+                boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
+              }}>
+                {/* Restaurant image */}
+                <div style={{ width: '100%', height: '200px', overflow: 'hidden', position: 'relative' }}>
+                  <img
+                    src={
+                      (customCarouselImages && customCarouselImages.length > 0)
+                        ? customCarouselImages[0]
+                        : restaurant?.logo || '/menu/wagyu-ribeye.png'
+                    }
+                    alt={restaurant?.name || 'Restaurant'}
+                    style={{
+                      width: '100%', height: '100%',
+                      objectFit: 'cover', objectPosition: 'center',
+                      display: 'block',
+                    }}
+                    onError={e => { e.target.src = '/menu/wagyu-ribeye.png' }}
+                  />
+                </div>
+                {/* Info section inside card */}
+                <div style={{ padding: '14px 16px 16px', background: '#fff' }}>
+                  {/* Divider */}
+                  <div style={{ height: '1px', background: '#f0ede9', marginBottom: '10px' }} />
+                  <div style={{ fontSize: '20px', fontWeight: 800, color: '#111', letterSpacing: '-0.01em', marginBottom: '6px' }}>
+                    {restaurant?.name || 'Restaurant'}
+                  </div>
+                  <div style={{ fontSize: '13px', color: '#777', marginBottom: '8px', lineHeight: 1.4 }}>
+                    {[restaurant?.place, restaurant?.description ? restaurant.description.split(' ').slice(0, 3).join(' ') : 'Fine Dining', 'Table booking']
+                      .filter(Boolean).join(' • ')}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#E8321A', flexShrink: 0 }} />
+                    <span style={{ fontSize: '13px', fontWeight: 700, color: '#E8321A' }}>Flat 50% off on pre-booking</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* ── Form fields ── */}
+            <div style={{ padding: '20px 20px 0' }}>
+              {/* Full Name */}
+              <div style={{ marginBottom: '12px' }}>
+                <input
+                  className={`qb-input${quickBookErrors.name ? ' qb-input-err' : ''}`}
+                  type="text"
+                  placeholder="Full Name"
+                  value={quickBookName}
+                  onChange={e => { setQuickBookName(e.target.value); setQuickBookErrors(p => ({ ...p, name: '' })) }}
+                />
+                {quickBookErrors.name && (
+                  <div style={{ fontSize: '11px', color: '#E8321A', marginTop: '4px', paddingLeft: '4px' }}>Name is required</div>
+                )}
+              </div>
+
+              {/* Phone Number */}
+              <div style={{ marginBottom: '20px' }}>
+                <input
+                  className={`qb-input${quickBookErrors.phone ? ' qb-input-err' : ''}`}
+                  type="tel"
+                  placeholder="Phone Number"
+                  value={quickBookPhone}
+                  onChange={e => { setQuickBookPhone(e.target.value); setQuickBookErrors(p => ({ ...p, phone: '' })) }}
+                />
+                {quickBookErrors.phone && (
+                  <div style={{ fontSize: '11px', color: '#E8321A', marginTop: '4px', paddingLeft: '4px' }}>Phone is required</div>
+                )}
+              </div>
+
+              {/* Buttons */}
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <button
+                  onClick={() => setShowQuickBookModal(false)}
+                  style={{
+                    flex: 1, padding: '15px 0', borderRadius: '16px',
+                    background: 'transparent',
+                    border: '2px solid #2979ff',
+                    color: '#2979ff', fontSize: '15px', fontWeight: 800,
+                    cursor: 'pointer', fontFamily: 'inherit',
+                    letterSpacing: '0.04em',
+                    transition: 'background 0.15s ease',
+                  }}
+                >
+                  CANCEL
+                </button>
+                <button
+                  onClick={handleQuickBookConfirm}
+                  style={{
+                    flex: 1, padding: '15px 0', borderRadius: '16px',
+                    background: '#2979ff',
+                    border: 'none',
+                    color: '#fff', fontSize: '15px', fontWeight: 800,
+                    cursor: 'pointer', fontFamily: 'inherit',
+                    letterSpacing: '0.04em',
+                    boxShadow: '0 6px 20px rgba(41,121,255,0.38)',
+                    transition: 'transform 0.15s ease, box-shadow 0.15s ease',
+                  }}
+                >
+                  BOOK
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
