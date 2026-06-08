@@ -1593,6 +1593,59 @@ export default function RestaurantWebsite() {
       {/* ── HEADER SPACER — pushes content below fixed header on non-home tabs ── */}
       {activeNav !== 'home' && <div style={{ height: '64px' }} />}
 
+      {/* ── MENU TAB STRIP: STARTERS / MAIN COURSE / DRINKS ── */}
+      {activeNav === 'menu' && (
+        <div style={{
+          position: 'sticky',
+          top: '64px',
+          zIndex: 90,
+          background: darkMode ? '#0a0a0a' : '#f2f2f2',
+          padding: '10px 14px',
+          transition: 'background 0.3s ease',
+        }}>
+          <div style={{
+            display: 'flex',
+            gap: '6px',
+            background: darkMode ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)',
+            borderRadius: '14px',
+            padding: '5px',
+            overflowX: 'auto',
+            scrollbarWidth: 'none',
+            msOverflowStyle: 'none',
+          }}>
+            {menuTabs.map(tab => {
+              const isActive = activeMenuTab === tab.id
+              const themeColor = restaurant?.primaryColor || '#E8321A'
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => { setActiveMenuTab(tab.id); setActiveCategory('all') }}
+                  style={{
+                    flex: 1,
+                    minWidth: '80px',
+                    padding: '9px 12px',
+                    borderRadius: '10px',
+                    border: 'none',
+                    background: isActive ? themeColor : 'transparent',
+                    color: isActive ? '#fff' : (darkMode ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.45)'),
+                    fontSize: '12px',
+                    fontWeight: 800,
+                    letterSpacing: '0.07em',
+                    cursor: 'pointer',
+                    fontFamily: 'inherit',
+                    whiteSpace: 'nowrap',
+                    boxShadow: isActive ? `0 4px 14px ${themeColor}55` : 'none',
+                    transition: 'background 0.25s ease, color 0.25s ease, box-shadow 0.25s ease',
+                  }}
+                >
+                  {tab.label}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
       {/* ── CATEGORY FILTER STRIP — standalone, outside header ── */}
       {activeNav === 'menu' && filtersEnabled[activeMenuTab] !== false && (
         <div style={{ padding: '14px 16px 0' }}>
