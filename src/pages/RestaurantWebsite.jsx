@@ -1409,10 +1409,10 @@ export default function RestaurantWebsite() {
         .reveal-2 { animation-delay: 80ms; }
         .reveal-3 { animation-delay: 160ms; }
         .reveal-4 { animation-delay: 240ms; }
-        .float-header-search::placeholder { color: rgba(255,255,255,0.5); }
-        .float-header-search-solid::placeholder { color: rgba(120,120,120,0.7); }
-        .float-header-search:focus { outline: none; }
-        .float-header-search-solid:focus { outline: none; }
+        .float-search-dark::placeholder { color: rgba(255,255,255,0.4); }
+        .float-search-light::placeholder { color: rgba(0,0,0,0.38); }
+        .float-search-dark:focus { outline: none; }
+        .float-search-light:focus { outline: none; }
         @keyframes headerFadeIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
       `}</style>
 
@@ -1497,43 +1497,38 @@ export default function RestaurantWebsite() {
                 {/* Search icon */}
                 <svg
                   width="16" height="16" viewBox="0 0 24 24" fill="none"
-                  stroke={isCollapsed
-                    ? (darkMode ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.38)')
-                    : 'rgba(255,255,255,0.65)'}
+                  stroke={darkMode ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.35)'}
                   strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
-                  style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', transition: 'stroke 0.3s ease' }}
+                  style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}
                 >
                   <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
                 </svg>
                 <input
-                  className={isCollapsed ? 'float-header-search-solid' : 'float-header-search'}
+                  className={darkMode ? 'float-search-dark' : 'float-search-light'}
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
                   placeholder='Search dishes, drinks…'
                   style={{
                     width: '100%',
-                    background: isCollapsed
-                      ? (darkMode ? 'rgba(255,255,255,0.09)' : 'rgba(0,0,0,0.07)')
-                      : 'rgba(255,255,255,0.16)',
-                    border: isCollapsed
-                      ? `1.5px solid ${darkMode ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.10)'}`
-                      : '1.5px solid rgba(255,255,255,0.28)',
+                    background: darkMode ? '#1c1c1c' : '#ffffff',
+                    border: `1.5px solid ${darkMode ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.10)'}`,
                     borderRadius: '14px',
                     padding: '11px 38px 11px 40px',
                     fontSize: '14px',
-                    color: isCollapsed ? (darkMode ? '#fff' : '#111') : '#fff',
+                    color: darkMode ? '#fff' : '#111',
                     fontFamily: 'inherit',
-                    backdropFilter: 'blur(10px)',
-                    WebkitBackdropFilter: 'blur(10px)',
-                    transition: 'background 0.35s ease, border-color 0.3s ease, color 0.3s ease',
+                    boxShadow: darkMode
+                      ? '0 2px 12px rgba(0,0,0,0.45)'
+                      : '0 2px 12px rgba(0,0,0,0.12)',
+                    transition: 'background 0.35s ease, border-color 0.3s ease',
                   }}
                 />
-                {/* Mic icon */}
+                {/* Mic icon — always theme color */}
                 <svg
                   width="16" height="16" viewBox="0 0 24 24" fill="none"
-                  stroke={isCollapsed ? themeColor : 'rgba(255,255,255,0.7)'}
+                  stroke={themeColor}
                   strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-                  style={{ position: 'absolute', right: searchQuery ? '34px' : '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', transition: 'stroke 0.3s ease, right 0.2s ease' }}
+                  style={{ position: 'absolute', right: searchQuery ? '34px' : '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', transition: 'right 0.2s ease' }}
                 >
                   <path d="M12 2a3 3 0 0 1 3 3v7a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3z"/>
                   <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
@@ -1545,9 +1540,10 @@ export default function RestaurantWebsite() {
                     onClick={() => setSearchQuery('')}
                     style={{
                       position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)',
-                      background: 'rgba(255,255,255,0.18)', border: 'none', borderRadius: '50%',
+                      background: darkMode ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)',
+                      border: 'none', borderRadius: '50%',
                       width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      color: isCollapsed ? (darkMode ? '#fff' : '#333') : '#fff',
+                      color: darkMode ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.5)',
                       cursor: 'pointer', fontSize: '13px', lineHeight: 1,
                     }}
                   >×</button>
