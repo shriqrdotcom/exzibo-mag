@@ -1,0 +1,127 @@
+ 
+
+
+
+> ** Now create a modern transparent floating header for the restaurant website inspired by Zomato/Swiggy style UX.** 
+
+>
+
+> ### Header Design
+
+>
+
+> * Add a transparent header overlay on top of the hero/banner image.
+
+> * The header should be positioned `fixed/sticky` at the top.
+
+> * No solid background initially; use a subtle glassmorphism effect (`backdrop-blur`) only if needed.
+
+> * The hero/banner image must remain visible behind the header.
+
+> * Smooth premium appearance with no layout shifts.
+
+>
+
+> ### Header Layout (Expanded State)
+
+>
+
+> **Top Row**
+
+>
+
+> * Restaurant Name (bold)
+
+> * Restaurant Location / Address (smaller text below the name)
+
+> * Optional dropdown icon beside restaurant name
+
+>
+
+> **Second Row**
+
+>
+
+> * Full-width search bar
+
+> * Search icon on the left
+
+> * Voice search icon on the right
+
+> * Veg/Non-Veg toggle on the right side of the search section
+
+>
+
+> ### Scroll Behavior
+
+>
+
+> Implement smooth shrinking header behavior:
+
+>
+
+> **When page is at the top:**
+
+>
+
+> * Show restaurant name and location.
+
+> * Header height should be larger.
+
+> * Transparent overlay on the hero image.
+
+>
+
+> **When user scrolls down:**
+
+>
+
+> * Restaurant name and location smoothly fade out and slide upward.
+
+> * Header height reduces smoothly.
+
+> * Search bar moves upward and becomes the primary visible element.
+
+> * No flickering, jumping, or layout glitches.
+
+> * Use CSS transitions/animations (300–400ms).
+
+> * Maintain sticky positioning.
+
+>
+
+> **Collapsed State**
+
+>
+
+> * Only the compact search bar and veg toggle remain visible.
+
+> * Header becomes much smaller in height.
+
+> * Search bar stays fixed at the top while scrolling.
+
+>
+
+> ### Additional Requirements
+
+>
+
+> * Mobile-first responsive design.
+
+> * Smooth animations at 60fps.
+
+> * No content overlap.
+
+> * Hero/banner image should remain visible behind the transparent header.
+
+> * Keep the restaurant theme colors.
+
+> * Add proper z-index handling.
+
+> * Ensure all pages use the same header component.
+
+> * Write clean reusable React/Next.js components and CSS.
+
+>
+
+> **Goal:** Create a premium transparent floating header that starts large over the banner image and automatically shrinks into a compact sticky search header when the user scrolls.

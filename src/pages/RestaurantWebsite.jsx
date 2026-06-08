@@ -222,6 +222,7 @@ export default function RestaurantWebsite() {
   // In dev / DefaultApp:    just update React state (route has no :page segment)
   function navigateToPage(targetPage) {
     setActiveNav(targetPage)
+    window.scrollTo({ top: 0, behavior: 'instant' })
     if (isMenuPath && slug) {
       navigate(`/${slug}/${targetPage}/${tableNumber}`, { replace: true })
     }
@@ -366,44 +367,19 @@ export default function RestaurantWebsite() {
   const [searchQuery, setSearchQuery] = useState('')
   const [activeCategory, setActiveCategory] = useState('all')
   const [vegMode, setVegMode] = useState(false)
-  const [searchHidden, setSearchHidden] = useState(false)
-  const lastScrollYRef = useRef(0)
-  const tickingRef = useRef(false)
-  const isHiddenRef = useRef(false)
-  const hiddenAtYRef = useRef(null)
+  const [scrollY, setScrollY] = useState(0)
+  const scrollTickRef = useRef(false)
   const cartIconRef = useRef(null)
 
   useEffect(() => {
-    const MIN_SCROLL = 80      // don't hide until scrolled past this point
-    const SHOW_DISTANCE = 120  // must scroll up THIS far from where bar was hidden
-
     function onScroll() {
-      if (tickingRef.current) return
-      tickingRef.current = true
+      if (scrollTickRef.current) return
+      scrollTickRef.current = true
       requestAnimationFrame(() => {
-        const currentY = Math.max(0, window.scrollY)
-        const diff = currentY - lastScrollYRef.current
-
-        if (diff > 0 && currentY > MIN_SCROLL && !isHiddenRef.current) {
-          // Scrolling down past safe zone → hide and record position
-          setSearchHidden(true)
-          isHiddenRef.current = true
-          hiddenAtYRef.current = currentY
-        } else if (diff < 0 && isHiddenRef.current) {
-          // Scrolling up → only reveal if scrolled SHOW_DISTANCE above hide point
-          // This prevents momentum bounce and bottom-overscroll glitches
-          if (hiddenAtYRef.current - currentY >= SHOW_DISTANCE) {
-            setSearchHidden(false)
-            isHiddenRef.current = false
-            hiddenAtYRef.current = null
-          }
-        }
-
-        lastScrollYRef.current = currentY
-        tickingRef.current = false
+        setScrollY(Math.max(0, window.scrollY))
+        scrollTickRef.current = false
       })
     }
-
     window.addEventListener('scroll', onScroll, { passive: true })
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
@@ -1433,7 +1409,189 @@ export default function RestaurantWebsite() {
         .reveal-2 { animation-delay: 80ms; }
         .reveal-3 { animation-delay: 160ms; }
         .reveal-4 { animation-delay: 240ms; }
+        .float-header-search::placeholder { color: rgba(255,255,255,0.5); }
+        .float-header-search-solid::placeholder { color: rgba(120,120,120,0.7); }
+        .float-header-search:focus { outline: none; }
+        .float-header-search-solid:focus { outline: none; }
+        @keyframes headerFadeIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
       `}</style>
+
+      {/* ══════════════════════════════════════════════════════
+          FLOATING HEADER — transparent over hero, shrinks on scroll
+          ══════════════════════════════════════════════════════ */}
+      {(() => {
+        const isCollapsed = scrollY > 80 || activeNav !== 'home'
+        const themeColor = restaurant?.primaryColor || '#E8321A'
+        return (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            width: '100%',
+            maxWidth: '480px',
+            zIndex: 100,
+            transition: 'background 0.38s cubic-bezier(0.4,0,0.2,1), box-shadow 0.38s ease, backdrop-filter 0.38s ease',
+            background: isCollapsed
+              ? (darkMode ? 'rgba(10,10,10,0.96)' : 'rgba(255,255,255,0.97)')
+              : 'linear-gradient(to bottom, rgba(0,0,0,0.62) 0%, rgba(0,0,0,0.18) 72%, rgba(0,0,0,0) 100%)',
+            backdropFilter: isCollapsed ? 'blur(20px)' : 'none',
+            WebkitBackdropFilter: isCollapsed ? 'blur(20px)' : 'none',
+            boxShadow: isCollapsed ? '0 2px 24px rgba(0,0,0,0.22)' : 'none',
+          }}>
+
+            {/* ── Row 1: Name + Location (fades out + slides up when collapsed) ── */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: isCollapsed ? '0 16px' : '14px 16px 0',
+              maxHeight: isCollapsed ? '0' : '64px',
+              opacity: isCollapsed ? 0 : 1,
+              overflow: 'hidden',
+              transform: isCollapsed ? 'translateY(-10px)' : 'translateY(0)',
+              transition: 'max-height 0.38s cubic-bezier(0.4,0,0.2,1), opacity 0.28s ease, transform 0.35s ease, padding 0.38s ease',
+              pointerEvents: isCollapsed ? 'none' : 'auto',
+            }}>
+              <MapPin size={12} color={themeColor} style={{ flexShrink: 0, marginTop: '1px' }} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{
+                  fontSize: '15px', fontWeight: 800, color: '#fff',
+                  letterSpacing: '-0.01em', lineHeight: 1.2,
+                  whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                }}>
+                  {restaurant.name}
+                </div>
+                <div style={{
+                  fontSize: '11px', color: 'rgba(255,255,255,0.6)', fontWeight: 500,
+                  marginTop: '1px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                }}>
+                  {restaurant.location || 'Fine Dining'}
+                </div>
+              </div>
+              {/* Theme toggle */}
+              <button
+                onClick={() => setDarkMode(d => !d)}
+                style={{
+                  flexShrink: 0, width: '34px', height: '34px', borderRadius: '11px',
+                  background: 'rgba(255,255,255,0.14)',
+                  border: '1px solid rgba(255,255,255,0.22)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  cursor: 'pointer',
+                }}
+              >
+                {darkMode
+                  ? <Sun size={14} color="#FFD700" />
+                  : <Moon size={14} color="rgba(255,255,255,0.9)" />}
+              </button>
+            </div>
+
+            {/* ── Row 2: Search bar + Veg toggle (always visible) ── */}
+            <div style={{
+              display: 'flex', gap: '10px', alignItems: 'center',
+              padding: isCollapsed ? '10px 12px' : '10px 16px 14px',
+              transition: 'padding 0.38s cubic-bezier(0.4,0,0.2,1)',
+            }}>
+              {/* Search input */}
+              <div style={{ flex: 1, position: 'relative' }}>
+                {/* Search icon */}
+                <svg
+                  width="16" height="16" viewBox="0 0 24 24" fill="none"
+                  stroke={isCollapsed
+                    ? (darkMode ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.38)')
+                    : 'rgba(255,255,255,0.65)'}
+                  strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+                  style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', transition: 'stroke 0.3s ease' }}
+                >
+                  <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+                </svg>
+                <input
+                  className={isCollapsed ? 'float-header-search-solid' : 'float-header-search'}
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  placeholder='Search dishes, drinks…'
+                  style={{
+                    width: '100%',
+                    background: isCollapsed
+                      ? (darkMode ? 'rgba(255,255,255,0.09)' : 'rgba(0,0,0,0.07)')
+                      : 'rgba(255,255,255,0.16)',
+                    border: isCollapsed
+                      ? `1.5px solid ${darkMode ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.10)'}`
+                      : '1.5px solid rgba(255,255,255,0.28)',
+                    borderRadius: '14px',
+                    padding: '11px 38px 11px 40px',
+                    fontSize: '14px',
+                    color: isCollapsed ? (darkMode ? '#fff' : '#111') : '#fff',
+                    fontFamily: 'inherit',
+                    backdropFilter: 'blur(10px)',
+                    WebkitBackdropFilter: 'blur(10px)',
+                    transition: 'background 0.35s ease, border-color 0.3s ease, color 0.3s ease',
+                  }}
+                />
+                {/* Mic icon */}
+                <svg
+                  width="16" height="16" viewBox="0 0 24 24" fill="none"
+                  stroke={isCollapsed ? themeColor : 'rgba(255,255,255,0.7)'}
+                  strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                  style={{ position: 'absolute', right: searchQuery ? '34px' : '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', transition: 'stroke 0.3s ease, right 0.2s ease' }}
+                >
+                  <path d="M12 2a3 3 0 0 1 3 3v7a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3z"/>
+                  <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                  <line x1="12" y1="19" x2="12" y2="22"/>
+                </svg>
+                {/* Clear × */}
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    style={{
+                      position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)',
+                      background: 'rgba(255,255,255,0.18)', border: 'none', borderRadius: '50%',
+                      width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      color: isCollapsed ? (darkMode ? '#fff' : '#333') : '#fff',
+                      cursor: 'pointer', fontSize: '13px', lineHeight: 1,
+                    }}
+                  >×</button>
+                )}
+              </div>
+
+              {/* VEG toggle */}
+              <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}>
+                <span style={{
+                  fontSize: '9px', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase',
+                  color: isCollapsed
+                    ? (darkMode ? 'rgba(255,255,255,0.55)' : 'rgba(0,0,0,0.45)')
+                    : 'rgba(255,255,255,0.75)',
+                  transition: 'color 0.3s ease',
+                }}>VEG</span>
+                <button
+                  onClick={() => setVegMode(v => !v)}
+                  style={{
+                    width: '44px', height: '24px', borderRadius: '12px',
+                    background: vegMode ? '#22c55e' : (isCollapsed
+                      ? (darkMode ? 'rgba(255,255,255,0.14)' : 'rgba(0,0,0,0.12)')
+                      : 'rgba(255,255,255,0.22)'),
+                    border: vegMode ? 'none' : `1.5px solid ${isCollapsed ? (darkMode ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.18)') : 'rgba(255,255,255,0.35)'}`,
+                    cursor: 'pointer', position: 'relative',
+                    transition: 'background 0.28s ease, border-color 0.28s ease',
+                  }}
+                >
+                  <div style={{
+                    position: 'absolute', top: '3px',
+                    left: vegMode ? 'calc(100% - 21px)' : '3px',
+                    width: '16px', height: '16px', borderRadius: '8px',
+                    background: '#fff',
+                    boxShadow: '0 1px 4px rgba(0,0,0,0.3)',
+                    transition: 'left 0.25s cubic-bezier(0.4,0,0.2,1)',
+                  }} />
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
+
+      {/* ── HEADER SPACER — pushes content below fixed header on non-home tabs ── */}
+      {activeNav !== 'home' && <div style={{ height: '64px' }} />}
 
       {/* ── CATEGORY FILTER STRIP — standalone, outside header ── */}
       {activeNav === 'menu' && filtersEnabled[activeMenuTab] !== false && (
@@ -1496,7 +1654,7 @@ export default function RestaurantWebsite() {
           position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
           background: theme.pageBg,
           zIndex: 40, overflowY: 'auto', paddingBottom: '100px',
-          paddingTop: '16px',
+          paddingTop: '76px',
           animation: 'fadeIn 0.2s ease',
         }}>
           {/* Header */}
@@ -1598,9 +1756,9 @@ export default function RestaurantWebsite() {
       {activeNav === 'home' && (
         <div style={{ animation: 'fadeIn 0.3s ease' }}>
 
-          {/* Hero Carousel */}
-          <section className="reveal reveal-1" style={{ position: 'relative', height: '300px', overflow: 'hidden', margin: '14px 14px 0' }}>
-            <div style={{ position: 'relative', height: '100%', borderRadius: '20px', overflow: 'hidden' }}>
+          {/* Hero Carousel — starts at y:0, floating header overlays the top */}
+          <section className="reveal reveal-1" style={{ position: 'relative', height: '300px', overflow: 'hidden', margin: '0' }}>
+            <div style={{ position: 'relative', height: '100%', borderRadius: '0 0 20px 20px', overflow: 'hidden' }}>
               {carouselImages.map((src, i) => (
                 <div key={i} style={{ position: 'absolute', inset: 0, backgroundImage: `url(${src})`, backgroundSize: 'cover', backgroundPosition: 'center', opacity: i === carouselIdx ? 1 : 0, transition: 'opacity 1s ease' }} />
               ))}
