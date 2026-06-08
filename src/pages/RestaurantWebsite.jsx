@@ -1433,136 +1433,7 @@ export default function RestaurantWebsite() {
         .reveal-2 { animation-delay: 80ms; }
         .reveal-3 { animation-delay: 160ms; }
         .reveal-4 { animation-delay: 240ms; }
-        .restaurant-header input::placeholder { color: ${darkMode ? 'rgba(0,0,0,0.35)' : 'rgba(255,255,255,0.45)'} !important; }
-
       `}</style>
-
-      {/* ── STICKY HEADER CARD — inverted from page theme ── */}
-      {/* Light mode → dark header | Dark mode → light header */}
-      <header className="restaurant-header" style={{
-        padding: '18px 20px',
-        background: darkMode ? '#ffffff' : '#111111',
-        boxShadow: darkMode ? '0 8px 25px rgba(0,0,0,0.15)' : '0 8px 25px rgba(0,0,0,0.5)',
-        cursor: searchHidden ? 'pointer' : 'default',
-      }} onClick={() => {
-        if (isHiddenRef.current) {
-          setSearchHidden(false)
-          isHiddenRef.current = false
-          hiddenAtYRef.current = null
-        }
-      }}>
-        {/* Row 1: Logo + Name/Location + Buttons — ALWAYS VISIBLE */}
-        <div className="header-top-row" style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-          {/* Logo avatar */}
-          <div style={{
-            width: '60px', height: '60px', borderRadius: '16px', flexShrink: 0,
-            background: 'linear-gradient(135deg, #E8321A 0%, #ff6b35 100%)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: 'none',
-            overflow: 'hidden',
-          }}>
-            {(restaurant.logo || carouselImages[0]) ? (
-              <img src={restaurant.logo || carouselImages[0]} alt={restaurant.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            ) : (
-              <UtensilsCrossed size={26} color="#fff" />
-            )}
-          </div>
-          {/* Name + Location */}
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: '18px', fontWeight: 800, color: darkMode ? '#111' : '#fff', letterSpacing: '-0.01em', lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', transition: 'color 0.3s ease' }}>
-              {restaurant.name}
-            </div>
-            <div style={{ fontSize: '12px', color: darkMode ? '#777' : 'rgba(255,255,255,0.5)', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px', transition: 'color 0.3s ease' }}>
-              <MapPin size={11} color="#E8321A" />
-              {restaurant.location || 'Fine Dining'}
-            </div>
-          </div>
-          {/* Theme toggle only */}
-          <button className="toggle-btn" onClick={() => setDarkMode(d => !d)} style={{
-            flexShrink: 0,
-            width: '46px', height: '46px', borderRadius: '14px',
-            background: darkMode ? '#f0f0f0' : 'rgba(255,255,255,0.10)',
-            border: darkMode ? '1px solid rgba(0,0,0,0.08)' : '1px solid rgba(255,255,255,0.14)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
-            transition: 'background 0.3s ease',
-          }}>
-            {darkMode ? <Sun size={18} color="#FFB800" /> : <Moon size={18} color="rgba(255,255,255,0.85)" />}
-          </button>
-        </div>
-
-        {/* Row 2: search bar — only on home & menu pages */}
-        {(activeNav === 'home' || activeNav === 'menu') && (
-          <div className={`search-wrapper${searchHidden ? ' search-hidden' : ''}`}>
-            <div className="header-search-row">
-              <div style={{ display: 'flex', gap: '8px', alignItems: 'center', width: '100%' }}>
-                <div style={{ flex: 1, position: 'relative' }}>
-                  <input
-                    value={searchQuery}
-                    onChange={e => setSearchQuery(e.target.value)}
-                    placeholder="Search dishes, drinks..."
-                    style={{
-                      width: '100%', boxSizing: 'border-box',
-                      background: darkMode ? '#f5f5f5' : 'rgba(255,255,255,0.10)',
-                      border: darkMode ? '1.5px solid rgba(0,0,0,0.08)' : '1.5px solid rgba(255,255,255,0.12)',
-                      borderRadius: '16px', padding: '14px 16px 14px 46px',
-                      fontSize: '14px', color: darkMode ? '#111' : '#fff', fontFamily: 'inherit', outline: 'none',
-                      transition: 'border-color 0.2s ease, background 0.2s ease, color 0.3s ease',
-                    }}
-                    onFocus={e => { e.target.style.borderColor = '#E8321A'; e.target.style.background = darkMode ? '#f0f0f0' : 'rgba(255,255,255,0.15)' }}
-                    onBlur={e => { e.target.style.borderColor = darkMode ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.12)'; e.target.style.background = darkMode ? '#f5f5f5' : 'rgba(255,255,255,0.10)' }}
-                  />
-                  <svg style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={darkMode ? 'rgba(0,0,0,0.35)' : 'rgba(255,255,255,0.5)'} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-                  {searchQuery && (
-                    <button onClick={() => setSearchQuery('')} style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: darkMode ? 'rgba(0,0,0,0.4)' : 'rgba(255,255,255,0.5)', cursor: 'pointer', fontSize: '16px', lineHeight: 1, padding: '0' }}>×</button>
-                  )}
-                </div>
-                <button
-                  onClick={() => setVegMode(v => !v)}
-                  title={vegMode ? 'Show all items' : 'Show veg items first'}
-                  style={{
-                    flexShrink: 0, width: '50px', height: '50px', borderRadius: '16px',
-                    background: vegMode ? '#22c55e' : '#E8321A',
-                    border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    cursor: 'pointer',
-                    boxShadow: vegMode ? '0 4px 14px rgba(34,197,94,0.45)' : '0 4px 14px rgba(232,50,26,0.4)',
-                    transition: 'background 0.2s ease, box-shadow 0.2s ease',
-                  }}
-                >
-                  {vegMode
-                    ? <Leaf width="17" height="17" color="#fff" strokeWidth={2.5} />
-                    : <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/></svg>
-                  }
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Row 3: Menu category tabs — only visible when on the menu tab */}
-        {activeNav === 'menu' && (
-          <div style={{ paddingTop: '12px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', background: darkMode ? 'rgba(0,0,0,0.07)' : 'rgba(255,255,255,0.09)', borderRadius: '16px', padding: '5px' }}>
-              {menuTabs.map(tab => {
-                const active = activeMenuTab === tab.id
-                return (
-                  <button key={tab.id} className="tab-pill" onClick={() => setActiveMenuTab(tab.id)} style={{
-                    flex: 1, padding: '9px 8px', borderRadius: '12px', border: 'none',
-                    background: active ? '#E8321A' : 'transparent',
-                    color: active ? '#fff' : darkMode ? '#666' : 'rgba(255,255,255,0.55)',
-                    fontSize: '11px', fontWeight: 800, cursor: 'pointer',
-                    letterSpacing: '0.05em', whiteSpace: 'nowrap', textAlign: 'center',
-                    boxShadow: active ? '0 4px 14px rgba(232,50,26,0.35)' : 'none',
-                    fontFamily: 'inherit',
-                  }}>
-                    {tab.label}
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-        )}
-
-      </header>
 
       {/* ── CATEGORY FILTER STRIP — standalone, outside header ── */}
       {activeNav === 'menu' && filtersEnabled[activeMenuTab] !== false && (
@@ -1625,7 +1496,7 @@ export default function RestaurantWebsite() {
           position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
           background: theme.pageBg,
           zIndex: 40, overflowY: 'auto', paddingBottom: '100px',
-          paddingTop: '148px',
+          paddingTop: '16px',
           animation: 'fadeIn 0.2s ease',
         }}>
           {/* Header */}
