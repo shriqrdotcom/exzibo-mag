@@ -1,0 +1,69 @@
+Find the HELP button in the app. Currently when clicked, it opens a 
+bottom sheet or top slider — REMOVE that behavior completely.
+
+Instead, implement the following:
+
+─────────────────────────────────────────
+BEHAVIOR:
+─────────────────────────────────────────
+When the HELP button is clicked, show a small compact banner/card 
+that animates in FROM THE BOTTOM and stops in the MIDDLE of the screen 
+(not full screen, not a bottom sheet that covers navigation).
+
+It should feel like a floating card that appears in the center-bottom 
+area of the screen — similar to a snackbar but larger and interactive.
+
+The card should NOT cover the bottom navigation bar.
+The card should NOT be full screen.
+It should overlay the current screen content at roughly 
+vertical center or slightly below center.
+
+─────────────────────────────────────────
+CARD STRUCTURE (exactly as shown):
+─────────────────────────────────────────
+
+┌─────────────────────────────────────────┐
+│ NEED HELP                           [X] │
+│                                         │
+│  [  EMAIL US  ]     [  CALL US  ]       │
+└─────────────────────────────────────────┘
+
+- Card has a dark/black background
+- "NEED HELP" text: white, bold, uppercase, left-aligned
+- [X] close button: top-right corner, closes the card on click
+- Two buttons side by side, equal width:
+
+  Button 1 — "EMAIL US"
+  • Background: black (or very dark)
+  • Text: white, bold, uppercase
+  • Border: subtle white/gray border
+  • Rounded corners
+
+  Button 2 — "CALL US"
+  • Background: #bdd6ff (light blue)
+  • Text: black or dark navy, bold, uppercase
+  • Rounded corners
+
+─────────────────────────────────────────
+ANIMATION:
+─────────────────────────────────────────
+- Card slides UP from the bottom and settles in the 
+  middle/center of the screen
+- Smooth ease-in animation (200–300ms)
+- Clicking [X] slides it back DOWN and removes it
+
+─────────────────────────────────────────
+ACTIONS:
+─────────────────────────────────────────
+- EMAIL US → opens default email client
+- CALL US  → triggers phone call (tel: link)
+- [X]      → dismisses and hides the card
+
+─────────────────────────────────────────
+IMPORTANT RULES:
+─────────────────────────────────────────
+- Do NOT use a bottom sheet
+- Do NOT use a full-screen modal
+- Do NOT hide or overlap the bottom navigation bar
+- Card width should be 90% of screen width, centered horizontally
+- Card should have rounded corners and a subtle shadow

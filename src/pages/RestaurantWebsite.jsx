@@ -250,6 +250,7 @@ export default function RestaurantWebsite() {
   const [restaurantLiked, setRestaurantLiked] = useState(false)
   const [showHeaderMenu, setShowHeaderMenu] = useState(false)
   const [showHelpSheet, setShowHelpSheet] = useState(false)
+  const [helpDismissing, setHelpDismissing] = useState(false)
   const [cartItems, setCartItems] = useState([])
   const [cartBounce, setCartBounce] = useState(false)
   const [cartBtnXY, setCartBtnXY] = useState(null)
@@ -1657,89 +1658,6 @@ export default function RestaurantWebsite() {
       {/* ── HEADER SPACER — pushes content below fixed header on non-home tabs ── */}
       {activeNav !== 'home' && <div style={{ height: '64px' }} />}
 
-      {/* ── INLINE HELP SECTION ── */}
-      {showHelpSheet && (
-        <div style={{
-          marginTop: activeNav === 'home' ? '128px' : '0',
-          background: darkMode ? '#111' : '#f8f8f8',
-          borderBottom: `1px solid ${darkMode ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)'}`,
-          padding: '18px 16px 20px',
-        }}>
-          {/* Heading row */}
-          <div style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            marginBottom: '14px',
-          }}>
-            <span style={{
-              fontSize: '13px', fontWeight: 800,
-              color: darkMode ? '#fff' : '#111',
-              letterSpacing: '0.09em',
-              textTransform: 'uppercase',
-            }}>
-              Need Help
-            </span>
-            <button
-              onClick={() => setShowHelpSheet(false)}
-              style={{
-                width: '26px', height: '26px',
-                background: darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)',
-                border: 'none', borderRadius: '50%',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                cursor: 'pointer', flexShrink: 0,
-                color: darkMode ? 'rgba(255,255,255,0.7)' : '#555',
-                fontSize: '14px', lineHeight: 1,
-              }}
-            >
-              ✕
-            </button>
-          </div>
-
-          {/* Two action buttons side by side */}
-          <div style={{ display: 'flex', gap: '10px' }}>
-            {/* Email Us */}
-            <a
-              href={`mailto:${restaurant?.email || 'support@exzibo.com'}`}
-              style={{
-                flex: 1,
-                height: '44px',
-                borderRadius: '10px',
-                background: '#000',
-                color: '#fff',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: '12px', fontWeight: 700,
-                letterSpacing: '0.07em',
-                textDecoration: 'none',
-                textTransform: 'uppercase',
-              }}
-              onClick={() => setShowHelpSheet(false)}
-            >
-              Email Us
-            </a>
-
-            {/* Call Us */}
-            <a
-              href={`tel:${restaurant?.phone || ''}`}
-              style={{
-                flex: 1,
-                height: '44px',
-                borderRadius: '10px',
-                background: '#bdd6ff',
-                color: '#0d1f3c',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: '12px', fontWeight: 700,
-                letterSpacing: '0.07em',
-                textDecoration: 'none',
-                textTransform: 'uppercase',
-                opacity: restaurant?.phone ? 1 : 0.55,
-                pointerEvents: restaurant?.phone ? 'auto' : 'none',
-              }}
-              onClick={() => setShowHelpSheet(false)}
-            >
-              Call Us
-            </a>
-          </div>
-        </div>
-      )}
 
       {/* ── MENU TAB STRIP: STARTERS / MAIN COURSE / DRINKS ── */}
       {activeNav === 'menu' && (
@@ -3352,7 +3270,117 @@ export default function RestaurantWebsite() {
         </>
       )}
 
-      {/* ── HELP INLINE BANNER (replaces bottom sheet) ── */}
+      {/* ── HELP FLOATING CARD ── */}
+      {showHelpSheet && (
+        <>
+          <style>{`
+            @keyframes helpCardUp {
+              from { transform: translate(-50%, 40px); opacity: 0; }
+              to   { transform: translate(-50%, 0);    opacity: 1; }
+            }
+            @keyframes helpCardDown {
+              from { transform: translate(-50%, 0);    opacity: 1; }
+              to   { transform: translate(-50%, 40px); opacity: 0; }
+            }
+          `}</style>
+          {/* Tap-outside to dismiss */}
+          <div
+            style={{ position: 'fixed', inset: 0, zIndex: 490 }}
+            onClick={() => {
+              setHelpDismissing(true)
+              setTimeout(() => { setShowHelpSheet(false); setHelpDismissing(false) }, 260)
+            }}
+          />
+          {/* Floating card */}
+          <div style={{
+            position: 'fixed',
+            bottom: '96px',
+            left: '50%',
+            width: '90%',
+            maxWidth: '440px',
+            zIndex: 491,
+            background: '#141414',
+            borderRadius: '16px',
+            padding: '18px 16px 16px',
+            boxShadow: '0 8px 36px rgba(0,0,0,0.65)',
+            animation: helpDismissing
+              ? 'helpCardDown 240ms ease-in forwards'
+              : 'helpCardUp 260ms ease-out forwards',
+          }}>
+            {/* Header row */}
+            <div style={{
+              display: 'flex', alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: '14px',
+            }}>
+              <span style={{
+                fontSize: '13px', fontWeight: 800,
+                color: '#fff',
+                letterSpacing: '0.1em',
+                textTransform: 'uppercase',
+              }}>
+                Need Help
+              </span>
+              <button
+                onClick={() => {
+                  setHelpDismissing(true)
+                  setTimeout(() => { setShowHelpSheet(false); setHelpDismissing(false) }, 260)
+                }}
+                style={{
+                  width: '26px', height: '26px',
+                  background: 'rgba(255,255,255,0.10)',
+                  border: 'none', borderRadius: '50%',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  cursor: 'pointer', flexShrink: 0,
+                  color: 'rgba(255,255,255,0.75)',
+                  fontSize: '13px', lineHeight: 1,
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Action buttons */}
+            <div style={{ display: 'flex', gap: '10px' }}>
+              {/* Email Us */}
+              <a
+                href={`mailto:${restaurant?.email || 'support@exzibo.com'}`}
+                style={{
+                  flex: 1, height: '44px', borderRadius: '10px',
+                  background: '#000',
+                  border: '1px solid rgba(255,255,255,0.18)',
+                  color: '#fff',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: '12px', fontWeight: 700,
+                  letterSpacing: '0.07em',
+                  textDecoration: 'none',
+                  textTransform: 'uppercase',
+                }}
+              >
+                Email Us
+              </a>
+              {/* Call Us */}
+              <a
+                href={`tel:${restaurant?.phone || ''}`}
+                style={{
+                  flex: 1, height: '44px', borderRadius: '10px',
+                  background: '#bdd6ff',
+                  color: '#0d1f3c',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: '12px', fontWeight: 700,
+                  letterSpacing: '0.07em',
+                  textDecoration: 'none',
+                  textTransform: 'uppercase',
+                  opacity: restaurant?.phone ? 1 : 0.5,
+                  pointerEvents: restaurant?.phone ? 'auto' : 'none',
+                }}
+              >
+                Call Us
+              </a>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* ── FLOATING CART SUMMARY BAR ── */}
       {cartCount > 0 && activeNav !== 'cart' && (
