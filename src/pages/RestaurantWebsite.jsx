@@ -1538,7 +1538,7 @@ export default function RestaurantWebsite() {
                     background: darkMode ? '#1c1c1c' : '#ffffff',
                     border: `1.5px solid ${darkMode ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.10)'}`,
                     borderRadius: '14px',
-                    padding: '11px 38px 11px 40px',
+                    padding: '11px 36px 11px 40px',
                     fontSize: '14px',
                     color: darkMode ? '#fff' : '#111',
                     fontFamily: 'inherit',
@@ -1548,17 +1548,6 @@ export default function RestaurantWebsite() {
                     transition: 'background 0.35s ease, border-color 0.3s ease',
                   }}
                 />
-                {/* Mic icon — always theme color */}
-                <svg
-                  width="16" height="16" viewBox="0 0 24 24" fill="none"
-                  stroke={themeColor}
-                  strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-                  style={{ position: 'absolute', right: searchQuery ? '34px' : '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', transition: 'right 0.2s ease' }}
-                >
-                  <path d="M12 2a3 3 0 0 1 3 3v7a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3z"/>
-                  <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-                  <line x1="12" y1="19" x2="12" y2="22"/>
-                </svg>
                 {/* Clear × */}
                 {searchQuery && (
                   <button
