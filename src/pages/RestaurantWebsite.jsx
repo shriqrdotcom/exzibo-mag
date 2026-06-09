@@ -12,7 +12,7 @@ import {
   Phone, Mail, Flame, Award, Clock, Users, AtSign,
   Share2, MessageCircle, Globe, Leaf, ExternalLink,
   Trash2, Minus, Plus, Tag, CheckCircle, ShoppingBag,
-  Copy, PhoneCall, ArrowLeft
+  Copy, PhoneCall, ArrowLeft, MoreVertical
 } from 'lucide-react'
 import { FaInstagram, FaFacebook, FaWhatsapp, FaLinkedinIn, FaYoutube } from 'react-icons/fa'
 import { FaXTwitter, FaHouse, FaUtensils, FaCartShopping, FaClipboardList, FaCalendarDays, FaStore } from 'react-icons/fa6'
@@ -247,6 +247,8 @@ export default function RestaurantWebsite() {
   const [carouselIdx, setCarouselIdx] = useState(0)
   const [customCarouselImages, setCustomCarouselImages] = useState(null)
   const [liked, setLiked] = useState({})
+  const [restaurantLiked, setRestaurantLiked] = useState(false)
+  const [showHeaderMenu, setShowHeaderMenu] = useState(false)
   const [cartItems, setCartItems] = useState([])
   const [cartBounce, setCartBounce] = useState(false)
   const [cartBtnXY, setCartBtnXY] = useState(null)
@@ -1507,6 +1509,86 @@ export default function RestaurantWebsite() {
                   }}>
                     {restaurant.location || 'Fine Dining'}
                   </div>
+                </div>
+              </div>
+
+              {/* ── Heart + 3-dot icons ── */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                {/* Heart / Love button */}
+                <button
+                  onClick={() => setRestaurantLiked(v => !v)}
+                  style={{
+                    width: '36px', height: '36px', borderRadius: '50%',
+                    background: '#111',
+                    border: restaurantLiked ? `1.5px solid ${themeColor}` : '1.5px solid rgba(255,255,255,0.18)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    cursor: 'pointer', flexShrink: 0,
+                    transition: 'border-color 0.2s ease, transform 0.15s ease',
+                    boxShadow: restaurantLiked ? `0 0 0 3px ${themeColor}22` : 'none',
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.1)'}
+                  onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+                >
+                  <Heart
+                    size={15}
+                    color={restaurantLiked ? themeColor : '#fff'}
+                    fill={restaurantLiked ? themeColor : 'none'}
+                    strokeWidth={restaurantLiked ? 0 : 2}
+                  />
+                </button>
+
+                {/* Three-dot vertical menu */}
+                <div style={{ position: 'relative' }}>
+                  <button
+                    onClick={() => setShowHeaderMenu(v => !v)}
+                    style={{
+                      width: '36px', height: '36px', borderRadius: '50%',
+                      background: '#111',
+                      border: '1.5px solid rgba(255,255,255,0.18)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      cursor: 'pointer', flexShrink: 0,
+                    }}
+                  >
+                    <MoreVertical size={15} color="rgba(255,255,255,0.8)" />
+                  </button>
+                  {showHeaderMenu && (
+                    <>
+                      <div
+                        style={{ position: 'fixed', inset: 0, zIndex: 100 }}
+                        onClick={() => setShowHeaderMenu(false)}
+                      />
+                      <div style={{
+                        position: 'absolute', top: '42px', right: 0, zIndex: 101,
+                        background: darkMode ? '#1e1e1e' : '#fff',
+                        border: `1px solid ${darkMode ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.10)'}`,
+                        borderRadius: '14px',
+                        minWidth: '160px',
+                        boxShadow: '0 8px 32px rgba(0,0,0,0.45)',
+                        overflow: 'hidden',
+                      }}>
+                        {['Share Menu', 'Call Restaurant', 'Report Issue'].map(label => (
+                          <button
+                            key={label}
+                            onClick={() => setShowHeaderMenu(false)}
+                            style={{
+                              width: '100%', padding: '12px 16px',
+                              background: 'none', border: 'none',
+                              color: label === 'Report Issue'
+                                ? themeColor
+                                : (darkMode ? 'rgba(255,255,255,0.85)' : '#111'),
+                              fontSize: '13px', fontWeight: 500,
+                              textAlign: 'left', cursor: 'pointer',
+                              display: 'block',
+                            }}
+                            onMouseEnter={e => e.currentTarget.style.background = darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)'}
+                            onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                          >
+                            {label}
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
