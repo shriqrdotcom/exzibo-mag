@@ -3270,115 +3270,91 @@ export default function RestaurantWebsite() {
         </>
       )}
 
-      {/* ── HELP FLOATING CARD ── */}
+      {/* ── HELP BOTTOM SHEET ── */}
       {showHelpSheet && (
         <>
-          <style>{`
-            @keyframes helpCardUp {
-              from { transform: translate(-50%, 40px); opacity: 0; }
-              to   { transform: translate(-50%, 0);    opacity: 1; }
-            }
-            @keyframes helpCardDown {
-              from { transform: translate(-50%, 0);    opacity: 1; }
-              to   { transform: translate(-50%, 40px); opacity: 0; }
-            }
-          `}</style>
-          {/* Tap-outside to dismiss */}
+          {/* Backdrop */}
           <div
-            style={{ position: 'fixed', inset: 0, zIndex: 490 }}
-            onClick={() => {
-              setHelpDismissing(true)
-              setTimeout(() => { setShowHelpSheet(false); setHelpDismissing(false) }, 260)
+            onClick={() => setShowHelpSheet(false)}
+            style={{
+              position: 'fixed', inset: 0, zIndex: 1000,
+              background: 'rgba(0,0,0,0.5)',
+              backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)',
             }}
           />
-          {/* Floating card */}
+          {/* Sheet */}
           <div style={{
-            position: 'fixed',
-            bottom: '96px',
-            left: '50%',
-            width: '90%',
-            maxWidth: '440px',
-            zIndex: 491,
-            background: '#141414',
-            borderRadius: '16px',
-            padding: '18px 16px 16px',
-            boxShadow: '0 8px 36px rgba(0,0,0,0.65)',
-            animation: helpDismissing
-              ? 'helpCardDown 240ms ease-in forwards'
-              : 'helpCardUp 260ms ease-out forwards',
+            position: 'fixed', bottom: 0, left: 0, right: 0,
+            zIndex: 1001,
+            background: darkMode ? '#1E1E1E' : '#fff',
+            borderRadius: '20px 20px 0 0',
+            paddingBottom: 'calc(80px + env(safe-area-inset-bottom))',
+            animation: 'helpSheetUp 250ms ease-out both',
           }}>
-            {/* Header row */}
-            <div style={{
-              display: 'flex', alignItems: 'center',
-              justifyContent: 'space-between',
-              marginBottom: '14px',
-            }}>
-              <span style={{
-                fontSize: '13px', fontWeight: 800,
-                color: '#fff',
-                letterSpacing: '0.1em',
-                textTransform: 'uppercase',
-              }}>
-                Need Help
-              </span>
-              <button
-                onClick={() => {
-                  setHelpDismissing(true)
-                  setTimeout(() => { setShowHelpSheet(false); setHelpDismissing(false) }, 260)
-                }}
-                style={{
-                  width: '26px', height: '26px',
-                  background: 'rgba(255,255,255,0.10)',
-                  border: 'none', borderRadius: '50%',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  cursor: 'pointer', flexShrink: 0,
-                  color: 'rgba(255,255,255,0.75)',
-                  fontSize: '13px', lineHeight: 1,
-                }}
-              >
-                ✕
-              </button>
+            {/* Drag handle */}
+            <div style={{ display: 'flex', justifyContent: 'center', paddingTop: '12px', paddingBottom: '4px' }}>
+              <div style={{ width: '40px', height: '4px', borderRadius: '2px', background: '#CCCCCC' }} />
             </div>
 
-            {/* Action buttons */}
-            <div style={{ display: 'flex', gap: '10px' }}>
+            {/* Content */}
+            <div style={{ padding: '16px 20px 0' }}>
+              <div style={{
+                fontSize: '18px', fontWeight: 700,
+                color: darkMode ? '#fff' : '#111',
+                textAlign: 'center', marginBottom: '8px',
+              }}>
+                Need Help?
+              </div>
+              <div style={{
+                fontSize: '13px', color: darkMode ? 'rgba(255,255,255,0.5)' : '#888',
+                textAlign: 'center', marginBottom: '24px',
+              }}>
+                Choose how you'd like to reach us
+              </div>
+
               {/* Email Us */}
               <a
                 href={`mailto:${restaurant?.email || 'support@exzibo.com'}`}
                 style={{
-                  flex: 1, height: '44px', borderRadius: '10px',
-                  background: '#000',
-                  border: '1px solid rgba(255,255,255,0.18)',
-                  color: '#fff',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: '12px', fontWeight: 700,
-                  letterSpacing: '0.07em',
-                  textDecoration: 'none',
-                  textTransform: 'uppercase',
+                  width: '100%', height: '52px', borderRadius: '12px',
+                  background: 'transparent',
+                  border: '2px solid #2E7D32',
+                  color: '#2E7D32', fontSize: '15px', fontWeight: 600,
+                  textDecoration: 'none', marginBottom: '12px',
+                  gap: '8px',
                 }}
+                onClick={() => setShowHelpSheet(false)}
               >
-                Email Us
+                ✉ Email Us
               </a>
+
               {/* Call Us */}
               <a
                 href={`tel:${restaurant?.phone || ''}`}
                 style={{
-                  flex: 1, height: '44px', borderRadius: '10px',
-                  background: '#bdd6ff',
-                  color: '#0d1f3c',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: '12px', fontWeight: 700,
-                  letterSpacing: '0.07em',
+                  width: '100%', height: '52px', borderRadius: '12px',
+                  background: '#2E7D32',
+                  color: '#fff', fontSize: '15px', fontWeight: 600,
                   textDecoration: 'none',
-                  textTransform: 'uppercase',
+                  gap: '8px',
                   opacity: restaurant?.phone ? 1 : 0.5,
                   pointerEvents: restaurant?.phone ? 'auto' : 'none',
                 }}
+                onClick={() => setShowHelpSheet(false)}
               >
-                Call Us
+                📞 Call Us
               </a>
             </div>
           </div>
+
+          <style>{`
+            @keyframes helpSheetUp {
+              from { transform: translateY(100%); }
+              to   { transform: translateY(0); }
+            }
+          `}</style>
         </>
       )}
 
