@@ -8,7 +8,7 @@ import { toSlug } from '../lib/slug'
 import {
   Star, MapPin, Bell, ShoppingCart, Home,
   UtensilsCrossed, ClipboardList, CalendarDays,
-  Heart, Moon, Sun, ChevronRight, ChevronLeft,
+  Heart, ChevronRight, ChevronLeft,
   Phone, Mail, Flame, Award, Clock, Users, AtSign,
   Share2, MessageCircle, Globe, Leaf, ExternalLink,
   Trash2, Minus, Plus, Tag, CheckCircle, ShoppingBag,
@@ -241,9 +241,9 @@ export default function RestaurantWebsite() {
     return location.state?.activeNav || 'home'
   })
   const [activeMenuTab, setActiveMenuTab] = useState('starters')
-  const [darkMode, setDarkMode] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('exzibo_darkmode') || 'false') } catch { return false }
-  })
+  const [darkMode, setDarkMode] = useState(() =>
+    window.matchMedia('(prefers-color-scheme: dark)').matches
+  )
   const [carouselIdx, setCarouselIdx] = useState(0)
   const [customCarouselImages, setCustomCarouselImages] = useState(null)
   const [liked, setLiked] = useState({})
@@ -353,7 +353,6 @@ export default function RestaurantWebsite() {
   }, [showCouponModal])
 
   useEffect(() => {
-    localStorage.setItem('exzibo_darkmode', JSON.stringify(darkMode))
     document.body.style.background = darkMode ? '#0a0a0a' : '#f2f2f2'
     document.documentElement.style.background = darkMode ? '#0a0a0a' : '#f2f2f2'
     return () => {
@@ -361,6 +360,13 @@ export default function RestaurantWebsite() {
       document.documentElement.style.background = ''
     }
   }, [darkMode])
+
+  useEffect(() => {
+    const mq = window.matchMedia('(prefers-color-scheme: dark)')
+    const handler = (e) => setDarkMode(e.matches)
+    mq.addEventListener('change', handler)
+    return () => mq.removeEventListener('change', handler)
+  }, [])
 
   const [dynamicCategories, setDynamicCategories] = useState(DEFAULT_CATEGORY_FILTERS)
   const [filtersEnabled, setFiltersEnabled] = useState({ starters: true, mains: true, drinks: true })
@@ -1503,21 +1509,6 @@ export default function RestaurantWebsite() {
                   </div>
                 </div>
               </div>
-              {/* Theme toggle */}
-              <button
-                onClick={() => setDarkMode(d => !d)}
-                style={{
-                  flexShrink: 0, width: '34px', height: '34px', borderRadius: '11px',
-                  background: 'rgba(255,255,255,0.14)',
-                  border: '1px solid rgba(255,255,255,0.22)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  cursor: 'pointer',
-                }}
-              >
-                {darkMode
-                  ? <Sun size={14} color="#FFD700" />
-                  : <Moon size={14} color="rgba(255,255,255,0.9)" />}
-              </button>
             </div>
 
             {/* ── Row 2: Search bar + Veg toggle (always visible) ── */}
