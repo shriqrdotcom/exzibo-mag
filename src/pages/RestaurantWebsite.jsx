@@ -1550,89 +1550,19 @@ export default function RestaurantWebsite() {
                   />
                 </button>
 
-                {/* Three-dot vertical menu */}
-                <div style={{ position: 'relative' }}>
-                  <button
-                    onClick={() => setShowHeaderMenu(v => !v)}
-                    style={{
-                      width: '36px', height: '36px', borderRadius: '50%',
-                      background: '#111',
-                      border: '1.5px solid rgba(255,255,255,0.18)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      cursor: 'pointer', flexShrink: 0,
-                    }}
-                  >
-                    <MoreVertical size={15} color="rgba(255,255,255,0.8)" />
-                  </button>
-                  {showHeaderMenu && (
-                    <>
-                      {/* Backdrop to close dropdown */}
-                      <div
-                        style={{ position: 'fixed', inset: 0, zIndex: 998 }}
-                        onClick={() => setShowHeaderMenu(false)}
-                      />
-                      {/* Dropdown */}
-                      <div style={{
-                        position: 'absolute', top: '42px', right: 0, zIndex: 999,
-                        background: darkMode ? '#1E1E1E' : '#fff',
-                        borderRadius: '12px',
-                        width: '160px',
-                        maxWidth: '50vw',
-                        boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
-                        overflow: 'hidden',
-                      }}>
-                        {/* Rate Us */}
-                        <button
-                          onClick={() => {
-                            setShowHeaderMenu(false)
-                            const name = restaurant?.name || ''
-                            const placeId = restaurant?.google_place_id
-                            if (placeId) {
-                              window.open(`https://search.google.com/local/writereview?placeid=${placeId}`, '_blank')
-                            } else {
-                              window.open(`https://www.google.com/search?q=${encodeURIComponent(name + ' reviews')}`, '_blank')
-                            }
-                          }}
-                          style={{
-                            width: '100%', height: '48px',
-                            padding: '0 16px',
-                            background: 'none', border: 'none',
-                            color: darkMode ? 'rgba(255,255,255,0.85)' : '#111',
-                            fontSize: '15px', fontWeight: 500,
-                            textAlign: 'left', cursor: 'pointer',
-                            display: 'flex', alignItems: 'center', gap: '8px',
-                          }}
-                          onMouseEnter={e => e.currentTarget.style.background = darkMode ? '#2A2A2A' : '#F5F5F5'}
-                          onMouseLeave={e => e.currentTarget.style.background = 'none'}
-                        >
-                          <span>⭐</span> Rate Us
-                        </button>
-                        {/* Divider */}
-                        <div style={{ height: '1px', background: darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)', margin: '0 12px' }} />
-                        {/* Help */}
-                        <button
-                          onClick={() => {
-                            setShowHeaderMenu(false)
-                            setShowHelpSheet(true)
-                          }}
-                          style={{
-                            width: '100%', height: '48px',
-                            padding: '0 16px',
-                            background: 'none', border: 'none',
-                            color: darkMode ? 'rgba(255,255,255,0.85)' : '#111',
-                            fontSize: '15px', fontWeight: 500,
-                            textAlign: 'left', cursor: 'pointer',
-                            display: 'flex', alignItems: 'center', gap: '8px',
-                          }}
-                          onMouseEnter={e => e.currentTarget.style.background = darkMode ? '#2A2A2A' : '#F5F5F5'}
-                          onMouseLeave={e => e.currentTarget.style.background = 'none'}
-                        >
-                          <span>❓</span> Help
-                        </button>
-                      </div>
-                    </>
-                  )}
-                </div>
+                {/* Three-dot vertical menu — dropdown is rendered as a fixed portal below */}
+                <button
+                  onClick={() => setShowHeaderMenu(v => !v)}
+                  style={{
+                    width: '36px', height: '36px', borderRadius: '50%',
+                    background: '#111',
+                    border: '1.5px solid rgba(255,255,255,0.18)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    cursor: 'pointer', flexShrink: 0,
+                  }}
+                >
+                  <MoreVertical size={15} color="rgba(255,255,255,0.8)" />
+                </button>
               </div>
             </div>
 
@@ -3253,6 +3183,73 @@ export default function RestaurantWebsite() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* ── THREE-DOT DROPDOWN (fixed portal — avoids overflow:hidden clipping) ── */}
+      {showHeaderMenu && (
+        <>
+          <div
+            style={{ position: 'fixed', inset: 0, zIndex: 998 }}
+            onClick={() => setShowHeaderMenu(false)}
+          />
+          <div style={{
+            position: 'fixed', top: '60px', right: '16px', zIndex: 999,
+            background: darkMode ? '#1E1E1E' : '#fff',
+            borderRadius: '12px',
+            width: '160px',
+            maxWidth: '50vw',
+            boxShadow: '0 4px 20px rgba(0,0,0,0.20)',
+            overflow: 'hidden',
+          }}>
+            {/* Rate Us */}
+            <button
+              onClick={() => {
+                setShowHeaderMenu(false)
+                const name = restaurant?.name || ''
+                const placeId = restaurant?.google_place_id
+                if (placeId) {
+                  window.open(`https://search.google.com/local/writereview?placeid=${placeId}`, '_blank')
+                } else {
+                  window.open(`https://www.google.com/search?q=${encodeURIComponent(name + ' reviews')}`, '_blank')
+                }
+              }}
+              style={{
+                width: '100%', height: '48px',
+                padding: '0 16px',
+                background: 'none', border: 'none',
+                color: darkMode ? 'rgba(255,255,255,0.85)' : '#111',
+                fontSize: '15px', fontWeight: 500,
+                textAlign: 'left', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', gap: '8px',
+              }}
+              onMouseEnter={e => e.currentTarget.style.background = darkMode ? '#2A2A2A' : '#F5F5F5'}
+              onMouseLeave={e => e.currentTarget.style.background = 'none'}
+            >
+              <span>⭐</span> Rate Us
+            </button>
+            <div style={{ height: '1px', background: darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)', margin: '0 12px' }} />
+            {/* Help */}
+            <button
+              onClick={() => {
+                setShowHeaderMenu(false)
+                setShowHelpSheet(true)
+              }}
+              style={{
+                width: '100%', height: '48px',
+                padding: '0 16px',
+                background: 'none', border: 'none',
+                color: darkMode ? 'rgba(255,255,255,0.85)' : '#111',
+                fontSize: '15px', fontWeight: 500,
+                textAlign: 'left', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', gap: '8px',
+              }}
+              onMouseEnter={e => e.currentTarget.style.background = darkMode ? '#2A2A2A' : '#F5F5F5'}
+              onMouseLeave={e => e.currentTarget.style.background = 'none'}
+            >
+              <span>❓</span> Help
+            </button>
+          </div>
+        </>
       )}
 
       {/* ── HELP BOTTOM SHEET ── */}
