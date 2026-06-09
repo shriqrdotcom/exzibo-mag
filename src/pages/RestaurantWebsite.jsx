@@ -269,7 +269,7 @@ export default function RestaurantWebsite() {
   const [orderStatus, setOrderStatus] = useState(1)
   const [viewingHistoryOrder, setViewingHistoryOrder] = useState(null)
   const [showOrderConfirm, setShowOrderConfirm] = useState(false)
-  useEffect(() => { setShowOrderConfirm(false) }, [activeNav])
+  useEffect(() => { setShowOrderConfirm(false); setShowHelpSheet(false) }, [activeNav])
   const [openingHours, setOpeningHours] = useState(null)
   const [heroBadge, setHeroBadge] = useState('')
   const [heroText, setHeroText] = useState('')
