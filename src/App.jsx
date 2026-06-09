@@ -42,6 +42,9 @@ import DeletedRestaurants   from './pages/DeletedRestaurants'
 import DynamicRoute         from './pages/DynamicRoute'
 import AddRolePage          from './pages/AddRolePage'
 import OrderTimePage        from './pages/OrderTimePage'
+import RestaurantListing    from './pages/RestaurantListing'
+import Favourites           from './pages/Favourites'
+import { FavouritesProvider } from './context/FavouritesContext'
 
 // ── Full-screen loader ──────────────────────────────────────────────────────
 function GlobalLoader() {
@@ -449,6 +452,8 @@ function DefaultApp() {
       <Route path="/table"                           element={<TablePage />} />
       <Route path="/menu/:linkName/:tableNumber"     element={<MenuLinkRoute />} />
       <Route path="/menu/:linkName"                  element={<MenuLinkRoute />} />
+      <Route path="/explore"                         element={<RestaurantListing />} />
+      <Route path="/favourites"                      element={<Favourites />} />
 
       {/* Protected — require valid session */}
       <Route path="/dashboard"               element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
@@ -514,10 +519,12 @@ export default function App() {
     <AuthProvider>
       <RoleProvider>
         <AnalyticsProvider>
-          <BrowserRouter>
-            <CleanupWorker />
-            <SubdomainRouter />
-          </BrowserRouter>
+          <FavouritesProvider>
+            <BrowserRouter>
+              <CleanupWorker />
+              <SubdomainRouter />
+            </BrowserRouter>
+          </FavouritesProvider>
         </AnalyticsProvider>
       </RoleProvider>
     </AuthProvider>
