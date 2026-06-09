@@ -1,0 +1,33 @@
+Fix the order confirmation bottom sheet / modal with these exact changes:
+
+1. Z-INDEX — The confirmation sheet is appearing BEHIND the bottom navigation bar.
+   - Give the modal/bottom sheet a z-index higher than the navbar (e.g. z-index: 1000, navbar should be z-index: 100)
+   - Make sure the overlay/backdrop also has z-index: 999 so it covers the navbar too
+   - The modal must appear ON TOP of everything including the bottom nav
+
+2. PAGE PERSISTENCE — The confirmation modal is staying visible when the user switches tabs/pages. Fix this:
+   - The modal open/visible state must be LOCAL to the cart/order flow only
+   - When the user navigates to any other tab (Home, Menu, Orders, Store), immediately close/dismiss the modal
+   - Add a useEffect (or equivalent) that listens to route/tab changes and resets the modal state to closed
+   - Example: useEffect(() => { closeModal(); }, [currentRoute]);
+
+3. MODAL DESIGN — Replace the current bottom sheet with a centered modal with blurred background:
+   - Position: centered on screen (both vertically and horizontally)
+     position: fixed, top: 50%, left: 50%, transform: translate(-50%, -50%)
+   - Backdrop: full screen overlay with backdrop-filter: blur(8px) and background: rgba(0,0,0,0.5)
+   - Modal card: background matching theme (dark: #1E1E1E, light: #FFFFFF)
+   - Border radius: 20px
+   - Padding: 28px 24px
+   - Width: 85% of screen, max-width: 360px
+   - Keep the existing content: icon, "Confirm your order?" title, item count, price, Cancel and Confirm Order buttons
+   - Confirm button: red background #E63B2E, full width, border-radius 12px, height 48px
+   - Cancel button: ghost style (transparent background, border), same size
+
+4. BACKDROP TAP — Tapping the blurred backdrop outside the modal should dismiss it (call cancel/close handler)
+
+5. ANIMATION — Add a simple scale-in animation when modal appears:
+   - keyframes: from { opacity: 0; transform: translate(-50%, -50%) scale(0.9) }
+   - to { opacity: 1; transform: translate(-50%, -50%) scale(1) }
+   - duration: 180ms ease-out
+
+6. Do NOT change any order logic, confirmation API calls, or button handlers — only fix the display, layering, and lifecycle of the modal.

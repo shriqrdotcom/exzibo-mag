@@ -267,6 +267,7 @@ export default function RestaurantWebsite() {
   const [orderStatus, setOrderStatus] = useState(1)
   const [viewingHistoryOrder, setViewingHistoryOrder] = useState(null)
   const [showOrderConfirm, setShowOrderConfirm] = useState(false)
+  useEffect(() => { setShowOrderConfirm(false) }, [activeNav])
   const [openingHours, setOpeningHours] = useState(null)
   const [heroBadge, setHeroBadge] = useState('')
   const [heroText, setHeroText] = useState('')
@@ -1412,6 +1413,7 @@ export default function RestaurantWebsite() {
         .stat-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.12) !important; }
         @keyframes slideUp { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes cartIconBounce { 0% { transform: scale(1); } 30% { transform: scale(1.38); } 60% { transform: scale(0.92); } 80% { transform: scale(1.12); } 100% { transform: scale(1); } }
+        @keyframes confirmScaleIn { from { opacity: 0; transform: translate(-50%, -50%) scale(0.9); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
         .reveal { animation: slideUp 0.45s ease both; }
         .reveal-1 { animation-delay: 0ms; }
         .reveal-2 { animation-delay: 80ms; }
@@ -3110,31 +3112,30 @@ export default function RestaurantWebsite() {
       {showOrderConfirm && (
         <div
           style={{
-            position: 'fixed', inset: 0, zIndex: 210,
-            background: 'rgba(0,0,0,0.65)',
-            backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)',
-            display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
-            animation: 'fadeIn 0.2s ease',
+            position: 'fixed', inset: 0, zIndex: 1200,
+            background: 'rgba(0,0,0,0.55)',
+            backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
+            animation: 'fadeIn 0.18s ease',
           }}
           onClick={() => setShowOrderConfirm(false)}
         >
           <div
             style={{
-              background: darkMode ? '#1a1a1a' : '#fff',
+              position: 'fixed',
+              top: '50%', left: '50%',
+              transform: 'translate(-50%, -50%)',
+              width: '85%', maxWidth: '360px',
+              background: darkMode ? '#1E1E1E' : '#FFFFFF',
               border: `1px solid ${darkMode ? 'rgba(255,255,255,0.09)' : 'rgba(0,0,0,0.07)'}`,
-              borderRadius: '28px 28px 0 0',
-              padding: '28px 24px 36px',
-              width: '100%',
-              maxWidth: '480px',
-              boxShadow: '0 -12px 48px rgba(0,0,0,0.3)',
-              animation: 'slideUp 0.3s cubic-bezier(0.34,1.1,0.64,1) both',
+              borderRadius: '20px',
+              padding: '28px 24px',
+              boxShadow: '0 24px 64px rgba(0,0,0,0.45)',
+              animation: 'confirmScaleIn 0.18s ease-out both',
             }}
             onClick={e => e.stopPropagation()}
           >
-            {/* Handle bar */}
-            <div style={{ width: '40px', height: '4px', borderRadius: '2px', background: darkMode ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.12)', margin: '0 auto 24px' }} />
             {/* Icon */}
-            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '18px' }}>
               <div style={{ width: '56px', height: '56px', borderRadius: '28px', background: 'rgba(232,50,26,0.10)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <ShoppingBag size={26} color="#E8321A" />
               </div>
@@ -3153,9 +3154,9 @@ export default function RestaurantWebsite() {
               <button
                 onClick={() => setShowOrderConfirm(false)}
                 style={{
-                  flex: 1, padding: '14px', borderRadius: '16px',
-                  background: darkMode ? 'rgba(255,255,255,0.07)' : '#f2f2f2',
-                  border: `1.5px solid ${darkMode ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.08)'}`,
+                  flex: 1, height: '48px', borderRadius: '12px',
+                  background: 'transparent',
+                  border: `1.5px solid ${darkMode ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.14)'}`,
                   color: theme.color, fontSize: '14px', fontWeight: 700,
                   cursor: 'pointer', fontFamily: 'inherit',
                 }}
@@ -3165,11 +3166,11 @@ export default function RestaurantWebsite() {
               <button
                 onClick={() => { setShowOrderConfirm(false); handlePlaceOrder() }}
                 style={{
-                  flex: 2, padding: '14px', borderRadius: '16px',
-                  background: '#E8321A', border: 'none',
+                  flex: 2, height: '48px', borderRadius: '12px',
+                  background: '#E63B2E', border: 'none',
                   color: '#fff', fontSize: '14px', fontWeight: 800,
                   cursor: 'pointer', fontFamily: 'inherit',
-                  boxShadow: '0 6px 20px rgba(232,50,26,0.40)',
+                  boxShadow: '0 6px 20px rgba(232,50,26,0.38)',
                   letterSpacing: '0.01em',
                 }}
               >
