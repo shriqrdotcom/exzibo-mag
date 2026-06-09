@@ -3188,18 +3188,30 @@ export default function RestaurantWebsite() {
       {/* ── THREE-DOT DROPDOWN (fixed portal — avoids overflow:hidden clipping) ── */}
       {showHeaderMenu && (
         <>
+          <style>{`
+            @keyframes exzMenuFade {
+              from { opacity: 0; }
+              to   { opacity: 1; }
+            }
+          `}</style>
+          {/* Tap-outside backdrop */}
           <div
-            style={{ position: 'fixed', inset: 0, zIndex: 998 }}
+            style={{ position: 'fixed', inset: 0, zIndex: 1200 }}
             onClick={() => setShowHeaderMenu(false)}
           />
+          {/* Menu card */}
           <div style={{
-            position: 'fixed', top: '60px', right: '16px', zIndex: 999,
-            background: darkMode ? '#1E1E1E' : '#fff',
-            borderRadius: '12px',
-            width: '160px',
-            maxWidth: '50vw',
-            boxShadow: '0 4px 20px rgba(0,0,0,0.20)',
+            position: 'fixed',
+            top: '54px',
+            right: '12px',
+            zIndex: 1201,
+            background: '#181818',
+            borderRadius: '14px',
+            width: '152px',
+            boxShadow: '0 6px 24px rgba(0,0,0,0.55)',
+            border: '1px solid rgba(255,255,255,0.07)',
             overflow: 'hidden',
+            animation: 'exzMenuFade 150ms ease-out forwards',
           }}>
             {/* Rate Us */}
             <button
@@ -3214,20 +3226,23 @@ export default function RestaurantWebsite() {
                 }
               }}
               style={{
-                width: '100%', height: '48px',
-                padding: '0 16px',
+                width: '100%',
+                padding: '13px 16px',
                 background: 'none', border: 'none',
-                color: darkMode ? 'rgba(255,255,255,0.85)' : '#111',
+                color: '#fff',
                 fontSize: '15px', fontWeight: 500,
+                letterSpacing: '-0.01em',
                 textAlign: 'left', cursor: 'pointer',
-                display: 'flex', alignItems: 'center', gap: '8px',
+                display: 'flex', alignItems: 'center', gap: '10px',
+                lineHeight: 1,
               }}
-              onMouseEnter={e => e.currentTarget.style.background = darkMode ? '#2A2A2A' : '#F5F5F5'}
+              onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
               onMouseLeave={e => e.currentTarget.style.background = 'none'}
             >
-              <span>⭐</span> Rate Us
+              <span style={{ fontSize: '16px', lineHeight: 1 }}>⭐</span>
+              <span>Rate Us</span>
             </button>
-            <div style={{ height: '1px', background: darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)', margin: '0 12px' }} />
+            <div style={{ height: '1px', background: 'rgba(255,255,255,0.07)', margin: '0' }} />
             {/* Help */}
             <button
               onClick={() => {
@@ -3235,18 +3250,21 @@ export default function RestaurantWebsite() {
                 setShowHelpSheet(true)
               }}
               style={{
-                width: '100%', height: '48px',
-                padding: '0 16px',
+                width: '100%',
+                padding: '13px 16px',
                 background: 'none', border: 'none',
-                color: darkMode ? 'rgba(255,255,255,0.85)' : '#111',
+                color: '#fff',
                 fontSize: '15px', fontWeight: 500,
+                letterSpacing: '-0.01em',
                 textAlign: 'left', cursor: 'pointer',
-                display: 'flex', alignItems: 'center', gap: '8px',
+                display: 'flex', alignItems: 'center', gap: '10px',
+                lineHeight: 1,
               }}
-              onMouseEnter={e => e.currentTarget.style.background = darkMode ? '#2A2A2A' : '#F5F5F5'}
+              onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
               onMouseLeave={e => e.currentTarget.style.background = 'none'}
             >
-              <span>❓</span> Help
+              <span style={{ fontSize: '16px', lineHeight: 1 }}>❓</span>
+              <span>Help</span>
             </button>
           </div>
         </>
