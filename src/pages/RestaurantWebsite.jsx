@@ -1440,20 +1440,48 @@ export default function RestaurantWebsite() {
             boxShadow: isCollapsed ? '0 2px 24px rgba(0,0,0,0.22)' : 'none',
           }}>
 
-            {/* ── Row 1: Name + Location (fades out + slides up when collapsed) ── */}
+            {/* ── Row 1: Logo + Name + Location (fades out + slides up when collapsed) ── */}
             <div style={{
               display: 'flex',
               alignItems: 'center',
-              gap: '8px',
-              padding: isCollapsed ? '0 16px' : '14px 16px 0',
-              maxHeight: isCollapsed ? '0' : '64px',
+              gap: '10px',
+              padding: isCollapsed ? '0 16px' : '12px 16px 0',
+              maxHeight: isCollapsed ? '0' : '70px',
               opacity: isCollapsed ? 0 : 1,
               overflow: 'hidden',
               transform: isCollapsed ? 'translateY(-10px)' : 'translateY(0)',
               transition: 'max-height 0.38s cubic-bezier(0.4,0,0.2,1), opacity 0.28s ease, transform 0.35s ease, padding 0.38s ease',
               pointerEvents: isCollapsed ? 'none' : 'auto',
             }}>
-              <MapPin size={12} color={themeColor} style={{ flexShrink: 0, marginTop: '1px' }} />
+              {/* Restaurant logo */}
+              <div style={{ flexShrink: 0, width: '44px', height: '44px' }}>
+                {restaurant.logo ? (
+                  <img
+                    src={restaurant.logo}
+                    alt={restaurant.name}
+                    style={{
+                      width: '44px', height: '44px', borderRadius: '50%',
+                      objectFit: 'cover',
+                      border: '2px solid rgba(255,255,255,0.25)',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.35)',
+                      display: 'block',
+                    }}
+                  />
+                ) : (
+                  <div style={{
+                    width: '44px', height: '44px', borderRadius: '50%',
+                    background: `linear-gradient(135deg, ${themeColor}cc, ${themeColor}66)`,
+                    border: '2px solid rgba(255,255,255,0.25)',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.35)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: '18px', fontWeight: 900, color: '#fff',
+                    letterSpacing: '-0.02em',
+                  }}>
+                    {(restaurant.name || '?').charAt(0).toUpperCase()}
+                  </div>
+                )}
+              </div>
+              {/* Name + location stack */}
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{
                   fontSize: '15px', fontWeight: 800, color: '#fff',
@@ -1463,10 +1491,16 @@ export default function RestaurantWebsite() {
                   {restaurant.name}
                 </div>
                 <div style={{
-                  fontSize: '11px', color: 'rgba(255,255,255,0.6)', fontWeight: 500,
-                  marginTop: '1px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                  display: 'flex', alignItems: 'center', gap: '3px',
+                  marginTop: '2px',
                 }}>
-                  {restaurant.location || 'Fine Dining'}
+                  <MapPin size={12} color={themeColor} style={{ flexShrink: 0 }} />
+                  <div style={{
+                    fontSize: '11px', color: 'rgba(255,255,255,0.6)', fontWeight: 500,
+                    whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                  }}>
+                    {restaurant.location || 'Fine Dining'}
+                  </div>
                 </div>
               </div>
               {/* Theme toggle */}
