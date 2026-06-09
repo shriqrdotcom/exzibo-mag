@@ -3227,22 +3227,21 @@ export default function RestaurantWebsite() {
               }}
               style={{
                 width: '100%',
-                padding: '13px 16px',
+                padding: '14px 18px',
                 background: 'none', border: 'none',
-                color: '#fff',
-                fontSize: '15px', fontWeight: 500,
-                letterSpacing: '-0.01em',
+                color: 'rgba(255,255,255,0.92)',
+                fontSize: '15px', fontWeight: 400,
+                letterSpacing: '0',
                 textAlign: 'left', cursor: 'pointer',
-                display: 'flex', alignItems: 'center', gap: '10px',
-                lineHeight: 1,
+                display: 'block',
+                lineHeight: 1.2,
               }}
               onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
               onMouseLeave={e => e.currentTarget.style.background = 'none'}
             >
-              <span style={{ fontSize: '16px', lineHeight: 1 }}>⭐</span>
-              <span>Rate Us</span>
+              Rate Us
             </button>
-            <div style={{ height: '1px', background: 'rgba(255,255,255,0.07)', margin: '0' }} />
+            <div style={{ height: '1px', background: 'rgba(255,255,255,0.07)' }} />
             {/* Help */}
             <button
               onClick={() => {
@@ -3251,20 +3250,19 @@ export default function RestaurantWebsite() {
               }}
               style={{
                 width: '100%',
-                padding: '13px 16px',
+                padding: '14px 18px',
                 background: 'none', border: 'none',
-                color: '#fff',
-                fontSize: '15px', fontWeight: 500,
-                letterSpacing: '-0.01em',
+                color: 'rgba(255,255,255,0.92)',
+                fontSize: '15px', fontWeight: 400,
+                letterSpacing: '0',
                 textAlign: 'left', cursor: 'pointer',
-                display: 'flex', alignItems: 'center', gap: '10px',
-                lineHeight: 1,
+                display: 'block',
+                lineHeight: 1.2,
               }}
               onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
               onMouseLeave={e => e.currentTarget.style.background = 'none'}
             >
-              <span style={{ fontSize: '16px', lineHeight: 1 }}>❓</span>
-              <span>Help</span>
+              Help
             </button>
           </div>
         </>
