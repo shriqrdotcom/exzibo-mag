@@ -1657,6 +1657,90 @@ export default function RestaurantWebsite() {
       {/* ── HEADER SPACER — pushes content below fixed header on non-home tabs ── */}
       {activeNav !== 'home' && <div style={{ height: '64px' }} />}
 
+      {/* ── INLINE HELP SECTION ── */}
+      {showHelpSheet && (
+        <div style={{
+          marginTop: activeNav === 'home' ? '128px' : '0',
+          background: darkMode ? '#111' : '#f8f8f8',
+          borderBottom: `1px solid ${darkMode ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)'}`,
+          padding: '18px 16px 20px',
+        }}>
+          {/* Heading row */}
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            marginBottom: '14px',
+          }}>
+            <span style={{
+              fontSize: '13px', fontWeight: 800,
+              color: darkMode ? '#fff' : '#111',
+              letterSpacing: '0.09em',
+              textTransform: 'uppercase',
+            }}>
+              Need Help
+            </span>
+            <button
+              onClick={() => setShowHelpSheet(false)}
+              style={{
+                width: '26px', height: '26px',
+                background: darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)',
+                border: 'none', borderRadius: '50%',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer', flexShrink: 0,
+                color: darkMode ? 'rgba(255,255,255,0.7)' : '#555',
+                fontSize: '14px', lineHeight: 1,
+              }}
+            >
+              ✕
+            </button>
+          </div>
+
+          {/* Two action buttons side by side */}
+          <div style={{ display: 'flex', gap: '10px' }}>
+            {/* Email Us */}
+            <a
+              href={`mailto:${restaurant?.email || 'support@exzibo.com'}`}
+              style={{
+                flex: 1,
+                height: '44px',
+                borderRadius: '10px',
+                background: '#000',
+                color: '#fff',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '12px', fontWeight: 700,
+                letterSpacing: '0.07em',
+                textDecoration: 'none',
+                textTransform: 'uppercase',
+              }}
+              onClick={() => setShowHelpSheet(false)}
+            >
+              Email Us
+            </a>
+
+            {/* Call Us */}
+            <a
+              href={`tel:${restaurant?.phone || ''}`}
+              style={{
+                flex: 1,
+                height: '44px',
+                borderRadius: '10px',
+                background: '#bdd6ff',
+                color: '#0d1f3c',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '12px', fontWeight: 700,
+                letterSpacing: '0.07em',
+                textDecoration: 'none',
+                textTransform: 'uppercase',
+                opacity: restaurant?.phone ? 1 : 0.55,
+                pointerEvents: restaurant?.phone ? 'auto' : 'none',
+              }}
+              onClick={() => setShowHelpSheet(false)}
+            >
+              Call Us
+            </a>
+          </div>
+        </div>
+      )}
+
       {/* ── MENU TAB STRIP: STARTERS / MAIN COURSE / DRINKS ── */}
       {activeNav === 'menu' && (
         <div style={{
@@ -3268,94 +3352,7 @@ export default function RestaurantWebsite() {
         </>
       )}
 
-      {/* ── HELP BOTTOM SHEET ── */}
-      {showHelpSheet && (
-        <>
-          {/* Backdrop */}
-          <div
-            onClick={() => setShowHelpSheet(false)}
-            style={{
-              position: 'fixed', inset: 0, zIndex: 1000,
-              background: 'rgba(0,0,0,0.5)',
-              backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)',
-            }}
-          />
-          {/* Sheet */}
-          <div style={{
-            position: 'fixed', bottom: 0, left: 0, right: 0,
-            zIndex: 1001,
-            background: darkMode ? '#1E1E1E' : '#fff',
-            borderRadius: '20px 20px 0 0',
-            maxHeight: '45vh',
-            paddingBottom: 'calc(32px + env(safe-area-inset-bottom))',
-            animation: 'helpSheetUp 250ms ease-out both',
-          }}>
-            {/* Drag handle */}
-            <div style={{ display: 'flex', justifyContent: 'center', paddingTop: '12px', paddingBottom: '4px' }}>
-              <div style={{ width: '40px', height: '4px', borderRadius: '2px', background: '#CCCCCC' }} />
-            </div>
-
-            {/* Content */}
-            <div style={{ padding: '16px 20px 0' }}>
-              <div style={{
-                fontSize: '18px', fontWeight: 700,
-                color: darkMode ? '#fff' : '#111',
-                textAlign: 'center', marginBottom: '8px',
-              }}>
-                Need Help?
-              </div>
-              <div style={{
-                fontSize: '13px', color: darkMode ? 'rgba(255,255,255,0.5)' : '#888',
-                textAlign: 'center', marginBottom: '24px',
-              }}>
-                Choose how you'd like to reach us
-              </div>
-
-              {/* Email Us */}
-              <a
-                href={`mailto:${restaurant?.email || 'support@exzibo.com'}`}
-                style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  width: '100%', height: '52px', borderRadius: '12px',
-                  background: 'transparent',
-                  border: '2px solid #2E7D32',
-                  color: '#2E7D32', fontSize: '15px', fontWeight: 600,
-                  textDecoration: 'none', marginBottom: '12px',
-                  gap: '8px',
-                }}
-                onClick={() => setShowHelpSheet(false)}
-              >
-                ✉ Email Us
-              </a>
-
-              {/* Call Us */}
-              <a
-                href={`tel:${restaurant?.phone || ''}`}
-                style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  width: '100%', height: '52px', borderRadius: '12px',
-                  background: '#2E7D32',
-                  color: '#fff', fontSize: '15px', fontWeight: 600,
-                  textDecoration: 'none',
-                  gap: '8px',
-                  opacity: restaurant?.phone ? 1 : 0.5,
-                  pointerEvents: restaurant?.phone ? 'auto' : 'none',
-                }}
-                onClick={() => setShowHelpSheet(false)}
-              >
-                📞 Call Us
-              </a>
-            </div>
-          </div>
-
-          <style>{`
-            @keyframes helpSheetUp {
-              from { transform: translateY(100%); }
-              to   { transform: translateY(0); }
-            }
-          `}</style>
-        </>
-      )}
+      {/* ── HELP INLINE BANNER (replaces bottom sheet) ── */}
 
       {/* ── FLOATING CART SUMMARY BAR ── */}
       {cartCount > 0 && activeNav !== 'cart' && (
