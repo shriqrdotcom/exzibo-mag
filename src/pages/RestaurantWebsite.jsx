@@ -1428,8 +1428,18 @@ export default function RestaurantWebsite() {
           FLOATING HEADER — transparent over hero, shrinks on scroll
           ══════════════════════════════════════════════════════ */}
       {(() => {
-        const isCollapsed = scrollY > 80 || activeNav !== 'home'
+        const COLLAPSE_DIST = 72
+        const progress = activeNav !== 'home' ? 1 : Math.min(1, Math.max(0, scrollY / COLLAPSE_DIST))
+        const isCollapsed = progress >= 1
         const themeColor = restaurant?.primaryColor || '#E8321A'
+        const bgAlpha = darkMode
+          ? 0.96 * progress
+          : (progress < 0.5 ? 0 : (progress - 0.5) * 2 * 0.97)
+        const headerBg = progress < 0.05
+          ? 'linear-gradient(to bottom, rgba(0,0,0,0.62) 0%, rgba(0,0,0,0.18) 72%, rgba(0,0,0,0) 100%)'
+          : darkMode
+            ? `rgba(10,10,10,${bgAlpha.toFixed(2)})`
+            : `rgba(255,255,255,${bgAlpha.toFixed(2)})`
         return (
           <div style={{
             position: 'fixed',
@@ -1439,27 +1449,27 @@ export default function RestaurantWebsite() {
             width: '100%',
             maxWidth: '480px',
             zIndex: 100,
-            transition: 'background 0.38s cubic-bezier(0.4,0,0.2,1), box-shadow 0.38s ease, backdrop-filter 0.38s ease',
-            background: isCollapsed
-              ? (darkMode ? 'rgba(10,10,10,0.96)' : 'rgba(255,255,255,0.97)')
-              : 'linear-gradient(to bottom, rgba(0,0,0,0.62) 0%, rgba(0,0,0,0.18) 72%, rgba(0,0,0,0) 100%)',
-            backdropFilter: isCollapsed ? 'blur(20px)' : 'none',
-            WebkitBackdropFilter: isCollapsed ? 'blur(20px)' : 'none',
-            boxShadow: isCollapsed ? '0 2px 24px rgba(0,0,0,0.22)' : 'none',
+            background: headerBg,
+            backdropFilter: progress > 0.3 ? `blur(${(progress * 20).toFixed(1)}px)` : 'none',
+            WebkitBackdropFilter: progress > 0.3 ? `blur(${(progress * 20).toFixed(1)}px)` : 'none',
+            boxShadow: progress > 0.8 ? `0 2px 24px rgba(0,0,0,${(0.22 * progress).toFixed(2)})` : 'none',
           }}>
 
-            {/* ── Row 1: Logo + Name + Location (fades out + slides up when collapsed) ── */}
+            {/* ── Row 1: Logo + Name + Location (scroll-linked collapse) ── */}
             <div style={{
               display: 'flex',
               alignItems: 'center',
               gap: '10px',
-              padding: isCollapsed ? '0 16px' : '12px 16px 0',
-              maxHeight: isCollapsed ? '0' : '70px',
-              opacity: isCollapsed ? 0 : 1,
+              paddingTop: `${Math.round(12 * (1 - progress))}px`,
+              paddingBottom: 0,
+              paddingLeft: '16px',
+              paddingRight: '16px',
+              maxHeight: `${Math.round(70 * (1 - progress))}px`,
+              opacity: Math.max(0, 1 - progress * 1.4),
               overflow: 'hidden',
-              transform: isCollapsed ? 'translateY(-10px)' : 'translateY(0)',
-              transition: 'max-height 0.38s cubic-bezier(0.4,0,0.2,1), opacity 0.28s ease, transform 0.35s ease, padding 0.38s ease',
-              pointerEvents: isCollapsed ? 'none' : 'auto',
+              transform: `translateY(${Math.round(-12 * progress)}px)`,
+              willChange: 'transform, opacity, max-height',
+              pointerEvents: progress > 0.85 ? 'none' : 'auto',
             }}>
               {/* Restaurant logo */}
               <div style={{ flexShrink: 0, width: '44px', height: '44px' }}>
@@ -1596,8 +1606,7 @@ export default function RestaurantWebsite() {
             {/* ── Row 2: Search bar + Veg toggle (always visible) ── */}
             <div style={{
               display: 'flex', gap: '10px', alignItems: 'center',
-              padding: isCollapsed ? '10px 12px' : '10px 16px 14px',
-              transition: 'padding 0.38s cubic-bezier(0.4,0,0.2,1)',
+              padding: `10px ${Math.round(16 - 4 * progress)}px ${Math.round(14 - 4 * progress)}px`,
             }}>
               {/* Search input */}
               <div style={{ flex: 1, position: 'relative' }}>

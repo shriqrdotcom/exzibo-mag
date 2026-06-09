@@ -1,0 +1,153 @@
+Fix Header Scroll Animation & Make It Behave Like Zomato 
+
+
+
+The restaurant header currently has a glitchy feeling when the user scrolls. The restaurant information section (logo, restaurant name, and location) hides using a fixed animation, which sometimes feels delayed, jumpy, or disconnected from the user's finger movement.
+
+
+
+### Required Behavior
+
+
+
+Implement a **scroll-linked collapsing header**, similar to Zomato and Swiggy.
+
+
+
+#### Header Collapse Logic
+
+
+
+* The upper information section:
+
+
+
+  * Restaurant Logo
+
+  * Restaurant Name
+
+  * Restaurant Location
+
+
+
+should collapse **based directly on scroll position**, not based on a timed animation.
+
+
+
+* As the user scrolls down:
+
+
+
+  * The information section should move upward gradually.
+
+  * Opacity should reduce smoothly.
+
+  * Height should shrink proportionally.
+
+  * The collapse speed should exactly follow the user's scroll speed.
+
+
+
+* If the user scrolls slowly:
+
+
+
+  * Header collapses slowly.
+
+
+
+* If the user scrolls fast:
+
+
+
+  * Header collapses fast.
+
+
+
+* If the user stops scrolling:
+
+
+
+  * Header immediately stops at the current position.
+
+
+
+### Avoid These Problems
+
+
+
+❌ Delayed animations
+
+
+
+❌ Fixed-duration transitions
+
+
+
+❌ Laggy or floating effects
+
+
+
+❌ Elements disappearing suddenly
+
+
+
+❌ Animation continuing after scrolling stops
+
+
+
+❌ Jittering during fast scrolling
+
+
+
+### Technical Requirements
+
+
+
+* Use requestAnimationFrame or a performant scroll listener.
+
+* Link header transform directly to scrollY.
+
+* Use translateY() and opacity interpolation.
+
+* Avoid large CSS transition durations.
+
+* Use GPU-accelerated transforms.
+
+* Keep scrolling at 60fps on mobile devices.
+
+* Prevent layout shifts and reflows.
+
+
+
+### Search Bar Behavior
+
+
+
+* The search bar should remain visible.
+
+* As the top information collapses, the search bar smoothly moves upward into its final sticky position.
+
+* No jumping between states.
+
+
+
+### Final Result
+
+
+
+The header should feel exactly like modern food apps:
+
+
+
+* User scrolls → header collapses proportionally.
+
+* User stops → header stops instantly.
+
+* User scrolls back up → header expands smoothly following the finger movement.
+
+* No glitches, no delayed animations, no fixed-timer effects.
+
+
+
+The experience should feel native, fluid, and premium, similar to Zomato's scroll-responsive collapsing header.
