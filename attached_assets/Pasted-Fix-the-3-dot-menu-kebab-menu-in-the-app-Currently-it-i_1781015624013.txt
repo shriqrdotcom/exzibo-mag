@@ -1,0 +1,144 @@
+Fix the 3-dot menu (kebab menu) in the app. Currently it is 
+not working when clicked. Implement the full menu flow exactly 
+as described below.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+GLOBAL SIZE FORMAT RULES (Apply everywhere)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+All popups, dropdowns, and bottom sheets must follow the 
+app's existing sizing system:
+
+- Never exceed 90% of the screen width
+- Never exceed 80% of the screen height (except bottom sheets)
+- Use the same border-radius scale the app already uses
+- Use the same font sizes already used in the app for 
+  body text (typically 14-15px) and titles (16-18px)
+- All touch targets minimum 48px height (accessibility)
+- Spacing unit: use multiples of 4px (8, 12, 16, 20, 24px)
+- All components must look native to the app, not foreign
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 1 — 3-DOT MENU DROPDOWN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+When user taps the 3-dot (⋮) icon, show a small dropdown menu:
+
+WINDOW SIZE:
+- Width: 160px fixed — compact, not full screen
+- Height: auto (fits exactly 2 options, ~100px total)
+- Max width: never exceed 50% of screen width
+- Do NOT make it full screen or full width
+
+DESIGN:
+- Appears just below the 3-dot icon, aligned to the right edge
+- Background: white (light mode) / #1E1E1E (dark mode)
+- Border radius: 12px
+- Box shadow: 0 4px 20px rgba(0,0,0,0.15)
+- z-index: 999
+
+TWO OPTIONS inside the dropdown:
+  Option 1: ⭐ Rate Us
+  Option 2: ❓ Help
+
+Each option:
+- Height: 48px
+- Font size: 15px, font-weight: 500
+- Horizontal padding: 16px
+- A thin divider line between the two options
+- On hover/press: light grey background highlight #F5F5F5 
+  (dark mode: #2A2A2A)
+
+Tapping anywhere OUTSIDE the dropdown closes it.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 2 — RATE US ACTION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+When user taps "⭐ Rate Us":
+- Close the dropdown
+- Immediately open Google Reviews page for the restaurant 
+  in a new browser tab using:
+  window.open('https://search.google.com/local/writereview?placeid=YOUR_GOOGLE_PLACE_ID', '_blank')
+- Replace YOUR_GOOGLE_PLACE_ID with the actual Google Place ID 
+  of the restaurant (find it from Google Maps or ask the owner)
+- If Place ID is not available yet, use this fallback:
+  window.open('https://www.google.com/search?q=YOUR+RESTAURANT+NAME+reviews', '_blank')
+
+NO popup window opens inside the app for Rate Us — 
+it goes directly to the browser/external link only.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 3 — HELP BOTTOM SHEET
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+When user taps "❓ Help":
+- Close the dropdown
+- Open a bottom sheet modal from the bottom of the screen
+
+WINDOW SIZE:
+- Width: 100% of screen (full width, edge to edge)
+- Height: auto — only as tall as the content needs
+  (drag handle + title + subtitle + 2 buttons + padding)
+  Approximately 260-300px total, never more than 45% 
+  of screen height
+- It must NOT cover the full screen — user should see 
+  the blurred page content above it
+- On small screens (height < 700px): max 50% screen height, 
+  add internal scroll if content overflows
+
+DESIGN:
+- Slides up with animation (translateY from 100% to 0, 
+  duration 250ms ease-out)
+- Background: white (light) / #1E1E1E (dark)
+- Top border radius: 20px, bottom radius: 0 (flush to screen)
+- Drag handle bar at top center: 
+  width 40px, height 4px, background #CCCCCC, 
+  border-radius 2px, margin 12px auto
+- Backdrop: full screen rgba(0,0,0,0.5) blur(4px) 
+  behind the sheet, tapping it closes the sheet
+- z-index: 1000 (above navbar and everything)
+
+CONTENT inside the bottom sheet:
+  Title: "Need Help?" — font-size 18px, font-weight: 700, 
+  centered, margin-bottom 8px
+
+  Subtitle: "Choose how you'd like to reach us" — 
+  font-size 13px, color grey, centered, margin-bottom 24px
+
+  TWO BUTTONS stacked vertically with 12px gap:
+
+  Button 1 — EMAIL US:
+  - Full width, height 52px, border-radius 12px
+  - Background: transparent
+  - Border: 2px solid #2E7D32 (green)
+  - Text: "✉ Email Us", color #2E7D32, font-weight: 600
+  - On tap: opens mailto:support@yourrestaurant.com
+    (replace with actual support email)
+  - No new window opens inside the app — uses device 
+    mail app via mailto link
+
+  Button 2 — CALL:
+  - Full width, height 52px, border-radius 12px
+  - Background: #2E7D32 (solid green)
+  - Text: "📞 Call Us", color white, font-weight: 600
+  - On tap: opens tel:+91XXXXXXXXXX
+    (replace with actual restaurant phone number)
+  - No new window opens inside the app — uses device 
+    dialer via tel link
+
+  Side padding inside sheet: 20px left and right
+  Bottom padding: 32px + env(safe-area-inset-bottom)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+IMPORTANT RULES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+- All 3 flows (dropdown → Rate Us / Help → Email / Call) 
+  must work independently without breaking each other
+- All windows/sheets must feel native to the app in size — 
+  not too big, not too small, proportional to screen
+- Match the app's existing dark/light theme throughout
+- Do NOT change any other part of the header or navbar
+- Use the app's existing theme context/variables for colors
+- Replace all placeholder values (Place ID, email, phone) 
+  with real values from the project's config or .env file

@@ -249,6 +249,7 @@ export default function RestaurantWebsite() {
   const [liked, setLiked] = useState({})
   const [restaurantLiked, setRestaurantLiked] = useState(false)
   const [showHeaderMenu, setShowHeaderMenu] = useState(false)
+  const [showHelpSheet, setShowHelpSheet] = useState(false)
   const [cartItems, setCartItems] = useState([])
   const [cartBounce, setCartBounce] = useState(false)
   const [cartBtnXY, setCartBtnXY] = useState(null)
@@ -1565,39 +1566,69 @@ export default function RestaurantWebsite() {
                   </button>
                   {showHeaderMenu && (
                     <>
+                      {/* Backdrop to close dropdown */}
                       <div
-                        style={{ position: 'fixed', inset: 0, zIndex: 100 }}
+                        style={{ position: 'fixed', inset: 0, zIndex: 998 }}
                         onClick={() => setShowHeaderMenu(false)}
                       />
+                      {/* Dropdown */}
                       <div style={{
-                        position: 'absolute', top: '42px', right: 0, zIndex: 101,
-                        background: darkMode ? '#1e1e1e' : '#fff',
-                        border: `1px solid ${darkMode ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.10)'}`,
-                        borderRadius: '14px',
-                        minWidth: '160px',
-                        boxShadow: '0 8px 32px rgba(0,0,0,0.45)',
+                        position: 'absolute', top: '42px', right: 0, zIndex: 999,
+                        background: darkMode ? '#1E1E1E' : '#fff',
+                        borderRadius: '12px',
+                        width: '160px',
+                        maxWidth: '50vw',
+                        boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
                         overflow: 'hidden',
                       }}>
-                        {['Share Menu', 'Call Restaurant', 'Report Issue'].map(label => (
-                          <button
-                            key={label}
-                            onClick={() => setShowHeaderMenu(false)}
-                            style={{
-                              width: '100%', padding: '12px 16px',
-                              background: 'none', border: 'none',
-                              color: label === 'Report Issue'
-                                ? themeColor
-                                : (darkMode ? 'rgba(255,255,255,0.85)' : '#111'),
-                              fontSize: '13px', fontWeight: 500,
-                              textAlign: 'left', cursor: 'pointer',
-                              display: 'block',
-                            }}
-                            onMouseEnter={e => e.currentTarget.style.background = darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)'}
-                            onMouseLeave={e => e.currentTarget.style.background = 'none'}
-                          >
-                            {label}
-                          </button>
-                        ))}
+                        {/* Rate Us */}
+                        <button
+                          onClick={() => {
+                            setShowHeaderMenu(false)
+                            const name = restaurant?.name || ''
+                            const placeId = restaurant?.google_place_id
+                            if (placeId) {
+                              window.open(`https://search.google.com/local/writereview?placeid=${placeId}`, '_blank')
+                            } else {
+                              window.open(`https://www.google.com/search?q=${encodeURIComponent(name + ' reviews')}`, '_blank')
+                            }
+                          }}
+                          style={{
+                            width: '100%', height: '48px',
+                            padding: '0 16px',
+                            background: 'none', border: 'none',
+                            color: darkMode ? 'rgba(255,255,255,0.85)' : '#111',
+                            fontSize: '15px', fontWeight: 500,
+                            textAlign: 'left', cursor: 'pointer',
+                            display: 'flex', alignItems: 'center', gap: '8px',
+                          }}
+                          onMouseEnter={e => e.currentTarget.style.background = darkMode ? '#2A2A2A' : '#F5F5F5'}
+                          onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                        >
+                          <span>⭐</span> Rate Us
+                        </button>
+                        {/* Divider */}
+                        <div style={{ height: '1px', background: darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)', margin: '0 12px' }} />
+                        {/* Help */}
+                        <button
+                          onClick={() => {
+                            setShowHeaderMenu(false)
+                            setShowHelpSheet(true)
+                          }}
+                          style={{
+                            width: '100%', height: '48px',
+                            padding: '0 16px',
+                            background: 'none', border: 'none',
+                            color: darkMode ? 'rgba(255,255,255,0.85)' : '#111',
+                            fontSize: '15px', fontWeight: 500,
+                            textAlign: 'left', cursor: 'pointer',
+                            display: 'flex', alignItems: 'center', gap: '8px',
+                          }}
+                          onMouseEnter={e => e.currentTarget.style.background = darkMode ? '#2A2A2A' : '#F5F5F5'}
+                          onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                        >
+                          <span>❓</span> Help
+                        </button>
                       </div>
                     </>
                   )}
@@ -3222,6 +3253,95 @@ export default function RestaurantWebsite() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* ── HELP BOTTOM SHEET ── */}
+      {showHelpSheet && (
+        <>
+          {/* Backdrop */}
+          <div
+            onClick={() => setShowHelpSheet(false)}
+            style={{
+              position: 'fixed', inset: 0, zIndex: 1000,
+              background: 'rgba(0,0,0,0.5)',
+              backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)',
+            }}
+          />
+          {/* Sheet */}
+          <div style={{
+            position: 'fixed', bottom: 0, left: 0, right: 0,
+            zIndex: 1001,
+            background: darkMode ? '#1E1E1E' : '#fff',
+            borderRadius: '20px 20px 0 0',
+            maxHeight: '45vh',
+            paddingBottom: 'calc(32px + env(safe-area-inset-bottom))',
+            animation: 'helpSheetUp 250ms ease-out both',
+          }}>
+            {/* Drag handle */}
+            <div style={{ display: 'flex', justifyContent: 'center', paddingTop: '12px', paddingBottom: '4px' }}>
+              <div style={{ width: '40px', height: '4px', borderRadius: '2px', background: '#CCCCCC' }} />
+            </div>
+
+            {/* Content */}
+            <div style={{ padding: '16px 20px 0' }}>
+              <div style={{
+                fontSize: '18px', fontWeight: 700,
+                color: darkMode ? '#fff' : '#111',
+                textAlign: 'center', marginBottom: '8px',
+              }}>
+                Need Help?
+              </div>
+              <div style={{
+                fontSize: '13px', color: darkMode ? 'rgba(255,255,255,0.5)' : '#888',
+                textAlign: 'center', marginBottom: '24px',
+              }}>
+                Choose how you'd like to reach us
+              </div>
+
+              {/* Email Us */}
+              <a
+                href={`mailto:${restaurant?.email || 'support@exzibo.com'}`}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  width: '100%', height: '52px', borderRadius: '12px',
+                  background: 'transparent',
+                  border: '2px solid #2E7D32',
+                  color: '#2E7D32', fontSize: '15px', fontWeight: 600,
+                  textDecoration: 'none', marginBottom: '12px',
+                  gap: '8px',
+                }}
+                onClick={() => setShowHelpSheet(false)}
+              >
+                ✉ Email Us
+              </a>
+
+              {/* Call Us */}
+              <a
+                href={`tel:${restaurant?.phone || ''}`}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  width: '100%', height: '52px', borderRadius: '12px',
+                  background: '#2E7D32',
+                  color: '#fff', fontSize: '15px', fontWeight: 600,
+                  textDecoration: 'none',
+                  gap: '8px',
+                  opacity: restaurant?.phone ? 1 : 0.5,
+                  pointerEvents: restaurant?.phone ? 'auto' : 'none',
+                }}
+                onClick={() => setShowHelpSheet(false)}
+              >
+                📞 Call Us
+              </a>
+            </div>
+          </div>
+
+          <style>{`
+            @keyframes helpSheetUp {
+              from { transform: translateY(100%); }
+              to   { transform: translateY(0); }
+            }
+          `}</style>
+        </>
       )}
 
       {/* ── FLOATING CART SUMMARY BAR ── */}
