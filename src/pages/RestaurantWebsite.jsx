@@ -3276,37 +3276,36 @@ export default function RestaurantWebsite() {
       )}
 
       <nav style={{
-        position: 'fixed', bottom: '16px', left: '50%', transform: 'translateX(-50%)',
-        width: 'calc(100% - 32px)', maxWidth: '440px', zIndex: 1100,
-        background: theme.navBg,
-        backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
-        borderRadius: '22px',
-        boxShadow: darkMode ? '0 8px 28px rgba(0,0,0,0.15)' : '0 8px 28px rgba(0,0,0,0.55)',
-        height: '68px',
-        padding: '0 16px',
+        position: 'fixed', bottom: 0, left: 0, right: 0,
+        zIndex: 1100,
+        background: darkMode ? '#1A1A1A' : '#FFFFFF',
+        borderRadius: '12px 12px 0 0',
+        borderTop: darkMode ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)',
+        height: '56px',
+        padding: `6px 0 env(safe-area-inset-bottom)`,
         display: 'flex', justifyContent: 'space-around', alignItems: 'center',
-        transition: 'background 0.3s ease, box-shadow 0.3s ease',
+        transition: 'background 0.3s ease',
       }}>
         {[
           { id: 'home', icon: <FaHouse size={22} /> },
-          { id: 'menu', icon: <FaUtensils size={20} /> },
+          { id: 'menu', icon: <FaUtensils size={22} /> },
           {
             id: 'cart',
             icon: (
               <div style={{ position: 'relative', display: 'inline-flex' }}>
                 <FaCartShopping size={22} />
                 {cartCount > 0 && (
-                  <span style={{ position: 'absolute', top: '-5px', right: '-7px', width: '15px', height: '15px', borderRadius: '8px', background: '#E8321A', color: '#fff', fontSize: '8px', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{cartCount}</span>
+                  <span style={{ position: 'absolute', top: '-5px', right: '-7px', width: '16px', height: '16px', borderRadius: '8px', background: '#E8321A', color: '#fff', fontSize: '10px', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{cartCount}</span>
                 )}
               </div>
             ),
           },
-          { id: 'orders', icon: <FaClipboardList size={21} /> },
-          { id: 'booking', icon: <FaStore size={21} /> },
+          { id: 'orders', icon: <FaClipboardList size={22} /> },
+          { id: 'booking', icon: <FaStore size={22} /> },
         ].map(({ id, icon }) => {
           const isActive = activeNav === id
-          const activeIconColor = darkMode ? '#111' : '#fff'
-          const activePillBg = darkMode ? 'rgba(0,0,0,0.10)' : 'rgba(255,255,255,0.12)'
+          const activeIconColor = darkMode ? '#FFFFFF' : '#1A1A1A'
+          const activePillBg = darkMode ? '#3A3A3A' : '#F0F0F0'
           return (
             <button
               key={id}
@@ -3317,18 +3316,16 @@ export default function RestaurantWebsite() {
               style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 border: 'none', cursor: 'pointer', background: 'none',
-                padding: 0,
-                transition: 'transform 0.2s ease',
-                transform: isActive ? 'scale(1.12)' : 'scale(1)',
+                padding: 0, flex: 1,
               }}
             >
               <div
                 ref={id === 'cart' ? cartIconRef : undefined}
                 style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  width: '48px', height: '44px', borderRadius: '14px',
+                  width: '44px', height: '36px', borderRadius: '10px',
                   background: isActive ? activePillBg : 'transparent',
-                  color: isActive ? activeIconColor : theme.navInactive,
+                  color: isActive ? activeIconColor : '#9E9E9E',
                   transition: 'background 0.25s ease, color 0.25s ease',
                   animation: id === 'cart' && cartBounce ? 'cartIconBounce 0.45s cubic-bezier(0.34,1.56,0.64,1) forwards' : 'none',
                 }}
