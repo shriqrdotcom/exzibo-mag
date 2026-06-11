@@ -4096,7 +4096,7 @@ const CATEGORY_TABS = [
   { key: 'drinks',   label: 'Drinks',   emoji: '🍹' },
 ]
 
-const BLANK_ITEM = { name: '', desc: '', price: '', tags: [], img: null, veg: false, addOns: [], available: true, is_published: false }
+const BLANK_ITEM = { name: '', desc: '', price: '', tags: [], img: null, veg: false, addOns: [], available: true, is_published: false, imageShape: 'vertical' }
 
 const DEFAULT_CAT_FILTERS = {
   starters: [
@@ -5810,6 +5810,64 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
               onChange={v => setAddDraft(d => ({ ...d, img: v }))}
               accentStart={accentStart}
             />
+            {/* Image shape selector */}
+            <div style={{ display: 'flex', gap: '8px', marginTop: '12px', marginBottom: '12px' }}>
+              {[
+                {
+                  key: 'vertical',
+                  label: 'VERTICAL',
+                  icon: (
+                    <svg width="18" height="26" viewBox="0 0 18 26" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <rect x="1" y="1" width="16" height="24" rx="2"
+                        fill={addDraft.imageShape === 'vertical' ? '#fff' : 'none'}
+                        stroke={addDraft.imageShape === 'vertical' ? '#fff' : '#6B6BF8'}
+                        strokeWidth="1.8"
+                      />
+                    </svg>
+                  ),
+                },
+                {
+                  key: 'horizontal',
+                  label: 'HORIZONTAL',
+                  icon: (
+                    <svg width="26" height="18" viewBox="0 0 26 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <rect x="1" y="1" width="24" height="16" rx="2"
+                        fill={addDraft.imageShape === 'horizontal' ? '#fff' : 'none'}
+                        stroke={addDraft.imageShape === 'horizontal' ? '#fff' : '#6B6BF8'}
+                        strokeWidth="1.8"
+                      />
+                    </svg>
+                  ),
+                },
+              ].map(({ key, label, icon }) => {
+                const active = addDraft.imageShape === key
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setAddDraft(d => ({ ...d, imageShape: key }))}
+                    style={{
+                      flex: 1,
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                      gap: '6px',
+                      padding: '10px 8px',
+                      border: `1.5px solid #6B6BF8`,
+                      borderRadius: '8px',
+                      background: active ? '#6B6BF8' : 'transparent',
+                      cursor: 'pointer',
+                      transition: 'background 0.15s, color 0.15s',
+                      fontFamily: 'inherit',
+                    }}
+                  >
+                    {icon}
+                    <span style={{
+                      fontSize: '10px', fontWeight: 800, letterSpacing: '0.08em',
+                      color: active ? '#fff' : '#6B6BF8',
+                    }}>{label}</span>
+                  </button>
+                )
+              })}
+            </div>
             <input
               value={addDraft.name} onChange={e => setAddDraft(d => ({ ...d, name: e.target.value }))}
               placeholder="Item name *" style={inputSt}
