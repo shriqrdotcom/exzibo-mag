@@ -4787,13 +4787,48 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
     if (!addDraft.name.trim()) return
     isAddingItemRef.current = true
 
+    // ── Demo / preview mode ──────────────────────────────────────────────────
+    // restaurantId is 'demo' when DISABLE_AUTH is active and no real restaurant
+    // is loaded (isDefault === true). Supabase rejects 'demo' as a UUID, so we
+    // save to localStorage only — the item will appear immediately in the preview.
+    if (!restaurantId || restaurantId === 'demo') {
+      try {
+        const demoItem = {
+          id: `local-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+          dbId: null,
+          img: addDraft.img || null,
+          name: addDraft.name.trim(),
+          desc: addDraft.desc?.trim() || '',
+          price: parseFloat(addDraft.price) || 0,
+          tags: addDraft.tags || [],
+          veg: addDraft.veg || false,
+          addOns: addDraft.addOns || [],
+          available: true,
+          is_published: true,
+          imageShape: addDraft.imageShape || 'vertical',
+        }
+        const updated = { ...menu, [activeCategory]: [...(menu[activeCategory] || []), demoItem] }
+        saveMenu(updated)
+        localStorage.setItem(storageKey, JSON.stringify(updated))
+        window.dispatchEvent(new StorageEvent('storage', { key: storageKey, newValue: JSON.stringify(updated) }))
+        setAddDraft(BLANK_ITEM)
+        setShowAdd(false)
+        showToast('✅ Item added to menu!')
+        sendMenuRefresh()
+      } finally {
+        isAddingItemRef.current = false
+      }
+      return
+    }
+
+    // ── Real restaurant: save to Supabase ────────────────────────────────────
     const currentTab = categoryTabs.find(t => t.key === activeCategory)
     let categoryId = currentTab?.dbId || null
 
     // If this category hasn't been saved to Supabase yet, save it now so the
     // inserted item gets a real UUID category_id (null category_id makes items
     // invisible on the restaurant website).
-    if (!categoryId && currentTab && restaurantId && restaurantId !== 'demo') {
+    if (!categoryId && currentTab) {
       try {
         const saved = await upsertMenuCategory(restaurantId, {
           name: currentTab.label,
@@ -4824,7 +4859,7 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
         savedRow = await insertMenuItem(restaurantId, {
           image_shape: addDraft.imageShape || 'vertical',
           name: addDraft.name.trim(),
-          description: addDraft.desc.trim(),
+          description: addDraft.desc?.trim() || '',
           price: parseFloat(addDraft.price) || 0,
           image: resolvedImg,
           veg: addDraft.veg || false,
@@ -4862,7 +4897,6 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
       setAddDraft(BLANK_ITEM)
       setShowAdd(false)
       showToast('✅ Item added to menu!')
-      // Notify customer menu pages of the new item
       sendMenuRefresh()
     } finally {
       isAddingItemRef.current = false
