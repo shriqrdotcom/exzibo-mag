@@ -1936,30 +1936,33 @@ export default function RestaurantWebsite() {
             style={{
               width: '310px',
               maxHeight: '70vh',
-              background: '#fff',
+              background: darkMode ? '#1c1c1c' : '#fff',
               borderRadius: '16px',
               margin: '0 0 0 16px',
               display: 'flex',
               flexDirection: 'column',
-              boxShadow: '0 8px 40px rgba(0,0,0,0.22)',
+              boxShadow: darkMode ? '0 8px 40px rgba(0,0,0,0.6)' : '0 8px 40px rgba(0,0,0,0.22)',
               overflow: 'hidden',
             }}
           >
             {/* Header */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 18px 10px', flexShrink: 0 }}>
-              <div style={{ fontSize: '18px', fontWeight: 800, color: '#1a1a1a', letterSpacing: '-0.02em' }}>Filters</div>
+              <div style={{ fontSize: '18px', fontWeight: 800, color: darkMode ? '#fff' : '#1a1a1a', letterSpacing: '-0.02em' }}>Filters</div>
               <button
                 onClick={() => setFilterPanelOpen(false)}
-                style={{ background: '#f2f2f2', border: 'none', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#333', flexShrink: 0 }}
+                style={{ background: darkMode ? 'rgba(255,255,255,0.1)' : '#f2f2f2', border: 'none', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: darkMode ? '#fff' : '#333', flexShrink: 0 }}
               ><X size={15} /></button>
             </div>
 
-            <div style={{ fontSize: '12px', color: '#999', padding: '0 18px 10px', fontWeight: 500, flexShrink: 0 }}>Show dishes that are</div>
+            <div style={{ fontSize: '12px', color: darkMode ? 'rgba(255,255,255,0.4)' : '#999', padding: '0 18px 10px', fontWeight: 500, flexShrink: 0 }}>Show dishes that are</div>
 
             {/* Filter rows — scrollable */}
             <div style={{ overflowY: 'auto', flex: 1 }}>
               {QUICK_FILTERS.map((qf, idx) => {
                 const isOn = activeQuickFilters.includes(qf.id)
+                const rowBg = isOn
+                  ? 'rgba(232,50,26,0.12)'
+                  : (darkMode ? '#1c1c1c' : '#fff')
                 return (
                   <div
                     key={qf.id}
@@ -1967,22 +1970,22 @@ export default function RestaurantWebsite() {
                     style={{
                       display: 'flex', alignItems: 'center', gap: '14px',
                       padding: '13px 18px',
-                      borderTop: '1px solid #f4f4f4',
+                      borderTop: `1px solid ${darkMode ? 'rgba(255,255,255,0.07)' : '#f4f4f4'}`,
                       cursor: 'pointer',
-                      background: isOn ? 'rgba(232,50,26,0.04)' : '#fff',
+                      background: rowBg,
                       transition: 'background 0.15s',
                       userSelect: 'none',
                     }}
                   >
                     <span style={{ fontSize: '22px', lineHeight: 1, flexShrink: 0, width: '28px', textAlign: 'center' }}>{qf.icon}</span>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: '14px', fontWeight: 700, color: '#1a1a1a', lineHeight: 1.3 }}>{qf.label}</div>
-                      <div style={{ fontSize: '12px', color: '#999', marginTop: '2px', lineHeight: 1.4 }}>{qf.sub}</div>
+                      <div style={{ fontSize: '14px', fontWeight: 700, color: darkMode ? '#fff' : '#1a1a1a', lineHeight: 1.3 }}>{qf.label}</div>
+                      <div style={{ fontSize: '12px', color: darkMode ? 'rgba(255,255,255,0.45)' : '#999', marginTop: '2px', lineHeight: 1.4 }}>{qf.sub}</div>
                     </div>
                     <div style={{
                       width: '20px', height: '20px', borderRadius: '4px', flexShrink: 0,
-                      border: isOn ? 'none' : '1.5px solid #d0d0d0',
-                      background: isOn ? '#E8321A' : '#fff',
+                      border: isOn ? 'none' : `1.5px solid ${darkMode ? 'rgba(255,255,255,0.25)' : '#d0d0d0'}`,
+                      background: isOn ? '#E8321A' : (darkMode ? 'rgba(255,255,255,0.06)' : '#fff'),
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       transition: 'all 0.15s',
                     }}>
@@ -1998,9 +2001,9 @@ export default function RestaurantWebsite() {
             </div>
 
             {/* Footer */}
-            <div style={{ padding: '14px 18px', borderTop: '1px solid #f0f0f0', background: '#fff', flexShrink: 0 }}>
+            <div style={{ padding: '14px 18px', borderTop: `1px solid ${darkMode ? 'rgba(255,255,255,0.07)' : '#f0f0f0'}`, background: darkMode ? '#1c1c1c' : '#fff', flexShrink: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-                <span style={{ fontSize: '13px', color: '#666', fontWeight: 500 }}>
+                <span style={{ fontSize: '13px', color: darkMode ? 'rgba(255,255,255,0.5)' : '#666', fontWeight: 500 }}>
                   {activeQuickFilters.length} filter{activeQuickFilters.length !== 1 ? 's' : ''} selected
                 </span>
                 {activeQuickFilters.length > 0 && (
