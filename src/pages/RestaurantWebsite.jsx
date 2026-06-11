@@ -1597,7 +1597,6 @@ export default function RestaurantWebsite() {
                 {/* Heart / Love button */}
                 <button
                   onClick={() => {
-                    setRestaurantLiked(v => !v)
                     setActiveQuickFilters(prev =>
                       prev.includes('favourite') ? prev : [...prev, 'favourite']
                     )
