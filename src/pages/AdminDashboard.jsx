@@ -5883,26 +5883,26 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
             <div style={{ display: 'flex', gap: '8px', marginTop: '12px', marginBottom: '12px' }}>
               {[
                 {
-                  key: 'vertical',
+                  key: 'horizontal',
                   label: 'VERTICAL',
                   icon: (
                     <svg width="18" height="26" viewBox="0 0 18 26" fill="none" xmlns="http://www.w3.org/2000/svg">
                       <rect x="1" y="1" width="16" height="24" rx="2"
-                        fill={addDraft.imageShape === 'vertical' ? '#fff' : 'none'}
-                        stroke={addDraft.imageShape === 'vertical' ? '#fff' : '#6B6BF8'}
+                        fill={addDraft.imageShape === 'horizontal' ? '#fff' : 'none'}
+                        stroke={addDraft.imageShape === 'horizontal' ? '#fff' : '#6B6BF8'}
                         strokeWidth="1.8"
                       />
                     </svg>
                   ),
                 },
                 {
-                  key: 'horizontal',
+                  key: 'vertical',
                   label: 'HORIZONTAL',
                   icon: (
                     <svg width="26" height="18" viewBox="0 0 26 18" fill="none" xmlns="http://www.w3.org/2000/svg">
                       <rect x="1" y="1" width="24" height="16" rx="2"
-                        fill={addDraft.imageShape === 'horizontal' ? '#fff' : 'none'}
-                        stroke={addDraft.imageShape === 'horizontal' ? '#fff' : '#6B6BF8'}
+                        fill={addDraft.imageShape === 'vertical' ? '#fff' : 'none'}
+                        stroke={addDraft.imageShape === 'vertical' ? '#fff' : '#6B6BF8'}
                         strokeWidth="1.8"
                       />
                     </svg>
@@ -6084,26 +6084,26 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
                   <div style={{ display: 'flex', gap: '8px' }}>
                     {[
                       {
-                        key: 'vertical',
+                        key: 'horizontal',
                         label: 'VERTICAL',
                         icon: (
                           <svg width="18" height="26" viewBox="0 0 18 26" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <rect x="1" y="1" width="16" height="24" rx="2"
-                              fill={(editDraft.imageShape || 'vertical') === 'vertical' ? '#fff' : 'none'}
-                              stroke={(editDraft.imageShape || 'vertical') === 'vertical' ? '#fff' : '#6B6BF8'}
+                              fill={(editDraft.imageShape || 'vertical') === 'horizontal' ? '#fff' : 'none'}
+                              stroke={(editDraft.imageShape || 'vertical') === 'horizontal' ? '#fff' : '#6B6BF8'}
                               strokeWidth="1.8"
                             />
                           </svg>
                         ),
                       },
                       {
-                        key: 'horizontal',
+                        key: 'vertical',
                         label: 'HORIZONTAL',
                         icon: (
                           <svg width="26" height="18" viewBox="0 0 26 18" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <rect x="1" y="1" width="24" height="16" rx="2"
-                              fill={(editDraft.imageShape || 'vertical') === 'horizontal' ? '#fff' : 'none'}
-                              stroke={(editDraft.imageShape || 'vertical') === 'horizontal' ? '#fff' : '#6B6BF8'}
+                              fill={(editDraft.imageShape || 'vertical') === 'vertical' ? '#fff' : 'none'}
+                              stroke={(editDraft.imageShape || 'vertical') === 'vertical' ? '#fff' : '#6B6BF8'}
                               strokeWidth="1.8"
                             />
                           </svg>
