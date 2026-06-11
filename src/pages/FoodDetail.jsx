@@ -63,7 +63,13 @@ export default function FoodDetail() {
   const [restaurant, setRestaurant] = useState(null)
   const [loading, setLoading] = useState(!location.state?.item)
   const [itemNotFound, setItemNotFound] = useState(false)
-  const [liked, setLiked] = useState(false)
+  const [liked, setLiked] = useState(() => {
+    try {
+      const item = location.state?.item
+      const favs = JSON.parse(localStorage.getItem(`exzibo_fav_${slug}`) || '{}')
+      return item ? !!(favs[item.id] || favs[item.name]) : false
+    } catch { return false }
+  })
   const [imgLoaded, setImgLoaded] = useState(false)
   const [detailsOpen, setDetailsOpen] = useState(false)
   const [heartBounce, setHeartBounce] = useState(false)
@@ -186,6 +192,14 @@ export default function FoodDetail() {
   const spiceColors = { None: '#60a5fa', Mild: '#4ade80', Medium: '#fbbf24', Hot: '#f97316', 'Very Hot': '#ef4444' }
 
   function toggleLike() {
+    if (!item) return
+    const key = item.id || item.name
+    try {
+      const favs = JSON.parse(localStorage.getItem(`exzibo_fav_${slug}`) || '{}')
+      if (favs[key]) delete favs[key]
+      else favs[key] = true
+      localStorage.setItem(`exzibo_fav_${slug}`, JSON.stringify(favs))
+    } catch {}
     setLiked(v => !v)
     setHeartBounce(true)
     setTimeout(() => setHeartBounce(false), 400)

@@ -270,8 +270,21 @@ export default function RestaurantWebsite() {
   )
   const [carouselIdx, setCarouselIdx] = useState(0)
   const [customCarouselImages, setCustomCarouselImages] = useState(null)
-  const [liked, setLiked] = useState({})
+  const [liked, setLiked] = useState(() => {
+    try { return JSON.parse(localStorage.getItem(`exzibo_fav_${slug}`) || '{}') } catch { return {} }
+  })
   const [restaurantLiked, setRestaurantLiked] = useState(false)
+
+  function toggleLiked(item) {
+    const key = item.id || item.name
+    setLiked(prev => {
+      const next = { ...prev }
+      if (next[key]) delete next[key]
+      else next[key] = true
+      try { localStorage.setItem(`exzibo_fav_${slug}`, JSON.stringify(next)) } catch {}
+      return next
+    })
+  }
   const [showHeaderMenu, setShowHeaderMenu] = useState(false)
   const [showHelpSheet, setShowHelpSheet] = useState(false)
   const [helpDismissing, setHelpDismissing] = useState(false)
@@ -1327,7 +1340,7 @@ export default function RestaurantWebsite() {
       case 'offers':        return item.oldPrice && Number(item.oldPrice) > Number(item.price)
       case 'newlyAdded':    return item.isNew || item.tags?.some(t => t.toLowerCase() === 'new')
       case 'veg':           return item.veg === true
-      case 'favourite':     return item.tags?.some(t => t.toLowerCase() === 'favourite')
+      case 'favourite':     return !!(liked[item.id] || liked[item.name])
       case 'spicy':         return item.tags?.some(t => t.toLowerCase() === 'spicy')
       case 'newlyLaunched': return item.tags?.some(t => t.toLowerCase() === 'new')
       case 'seasonal':      return item.tags?.some(t => t.toLowerCase() === 'seasonal')
@@ -2506,6 +2519,8 @@ export default function RestaurantWebsite() {
                   theme={theme}
                   onAddToCart={addToCart}
                   cartQty={inCart ? inCart.qty : 0}
+                  liked={!!(liked[item.id] || liked[item.name])}
+                  onLike={() => toggleLiked(item)}
                   onPress={() => navigate(
                     isMenuPath
                       ? `/${slug}/item/${toSlug(item.name)}/${tableNumber}`
@@ -4056,7 +4071,7 @@ const MENU_TAG_COLORS = {
   Seasonal:      { color: '#7c3aed', border: '#c4b5fd' },
 }
 
-function MenuCard({ item, theme, onAddToCart, cartQty, onPress }) {
+function MenuCard({ item, theme, onAddToCart, cartQty, onPress, liked, onLike }) {
   const fallbackImg = '/menu/wagyu-ribeye.png'
   const oldPrice = item.oldPrice || Math.round((item.price || 0) * 1.5)
   const isHorizontal = item.imageShape === 'horizontal' || item.image_shape === 'horizontal'
@@ -4096,22 +4111,33 @@ function MenuCard({ item, theme, onAddToCart, cartQty, onPress }) {
 
           {/* Heart + Share — top right */}
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px', marginBottom: '8px' }}>
-            {[Heart, Share2].map((Icon, i) => (
-              <button
-                key={i}
-                type="button"
-                onClick={e => e.stopPropagation()}
-                style={{
-                  width: '28px', height: '28px', borderRadius: '50%',
-                  background: theme.cardBg,
-                  border: `1px solid ${theme.cardBorder}`,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  cursor: 'pointer', padding: 0, flexShrink: 0,
-                }}
-              >
-                <Icon size={13} color={theme.itemName} />
-              </button>
-            ))}
+            <button
+              type="button"
+              onClick={e => { e.stopPropagation(); onLike && onLike() }}
+              style={{
+                width: '28px', height: '28px', borderRadius: '50%',
+                background: liked ? 'rgba(232,50,26,0.12)' : theme.cardBg,
+                border: `1px solid ${liked ? '#E8321A' : theme.cardBorder}`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer', padding: 0, flexShrink: 0,
+                transition: 'all 0.2s ease',
+              }}
+            >
+              <Heart size={13} fill={liked ? '#E8321A' : 'none'} color={liked ? '#E8321A' : theme.itemName} />
+            </button>
+            <button
+              type="button"
+              onClick={e => e.stopPropagation()}
+              style={{
+                width: '28px', height: '28px', borderRadius: '50%',
+                background: theme.cardBg,
+                border: `1px solid ${theme.cardBorder}`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer', padding: 0, flexShrink: 0,
+              }}
+            >
+              <Share2 size={13} color={theme.itemName} />
+            </button>
           </div>
 
           {/* VEG badge + item name */}
@@ -4242,6 +4268,23 @@ function MenuCard({ item, theme, onAddToCart, cartQty, onPress }) {
             background: item.veg !== false ? '#16a34a' : '#dc2626',
           }} />
         </div>
+        {/* Heart button overlay — top right */}
+        <button
+          type="button"
+          onClick={e => { e.stopPropagation(); onLike && onLike() }}
+          style={{
+            position: 'absolute', top: '8px', right: '8px',
+            width: '30px', height: '30px', borderRadius: '50%',
+            background: 'rgba(0,0,0,0.55)',
+            backdropFilter: 'blur(6px)',
+            border: liked ? '1.5px solid #E8321A' : 'none',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: 'pointer', padding: 0,
+            transition: 'all 0.2s ease',
+          }}
+        >
+          <Heart size={14} fill={liked ? '#E8321A' : 'none'} color={liked ? '#E8321A' : '#fff'} />
+        </button>
       </div>
 
       {/* Bottom — content */}
