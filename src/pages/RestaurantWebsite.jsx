@@ -4207,37 +4207,146 @@ function MenuCard({ item, theme, onAddToCart, cartQty, onPress }) {
 
   // ── Default vertical card ────────────────────────────────────────────────
   return (
-    <div className="menu-card" onClick={onPress} style={{ background: theme.cardBg, border: `1px solid ${theme.cardBorder}`, borderRadius: '18px', marginBottom: '14px', boxShadow: theme.cardShadow, padding: '10px 10px 0', cursor: 'pointer' }}>
-      <div style={{ position: 'relative', width: '100%', height: '200px', overflow: 'hidden', borderRadius: '12px' }}>
-        <img src={item.img || fallbackImg} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', transition: 'transform 0.35s ease' }} onError={e => { e.target.src = fallbackImg }} loading="lazy"
+    <div
+      className="menu-card"
+      onClick={onPress}
+      style={{
+        display: 'flex',
+        background: theme.cardBg,
+        border: `1.5px solid ${theme.cardBorder}`,
+        borderRadius: '18px',
+        overflow: 'hidden',
+        marginBottom: '14px',
+        boxShadow: theme.cardShadow,
+        cursor: 'pointer',
+        minHeight: '210px',
+      }}
+    >
+      {/* Left — image ~55% width, full height */}
+      <div style={{ width: '55%', flexShrink: 0, position: 'relative', overflow: 'hidden', borderRadius: '14px', margin: '10px 0 10px 10px' }}>
+        <img
+          src={item.img || fallbackImg}
+          alt={item.name}
+          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', transition: 'transform 0.35s ease', borderRadius: '12px' }}
+          onError={e => { e.target.src = fallbackImg }}
+          loading="lazy"
           onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.04)' }}
           onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)' }}
         />
-        <div style={{ position: 'absolute', bottom: '10px', right: '10px', background: 'rgba(0,0,0,0.72)', borderRadius: '8px', padding: '4px 10px', fontSize: '10px', fontWeight: 700, color: '#fff', letterSpacing: '0.04em' }}>
-          View Details
-        </div>
       </div>
-      <div style={{ padding: '14px 16px 16px' }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', marginBottom: '10px' }}>
-          <div style={{ flexShrink: 0, marginTop: '3px', width: '14px', height: '14px', borderRadius: '3px', border: `1.5px solid ${item.veg !== false ? theme.vegDot : theme.nonVegDot}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <div style={{ width: '7px', height: '7px', borderRadius: '4px', background: item.veg !== false ? theme.vegDot : theme.nonVegDot }} />
-          </div>
-          <div style={{ fontSize: '14px', fontWeight: 700, color: theme.itemName, lineHeight: 1.35 }}>{item.name}</div>
+
+      {/* Right — info panel */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '12px 14px 14px', minWidth: 0 }}>
+
+        {/* Heart + Share — top right */}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px', marginBottom: '8px' }}>
+          {[Heart, Share2].map((Icon, i) => (
+            <button
+              key={i}
+              type="button"
+              onClick={e => e.stopPropagation()}
+              style={{
+                width: '30px', height: '30px', borderRadius: '50%',
+                background: theme.cardBg,
+                border: `1.5px solid ${theme.cardBorder}`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer', padding: 0, flexShrink: 0,
+              }}
+            >
+              <Icon size={13} color={theme.itemName} />
+            </button>
+          ))}
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginBottom: '4px' }}>
-              <span style={{ fontSize: '16px', fontWeight: 800, color: '#E8321A' }}>₹{(item.price || 0).toLocaleString('en-IN')}</span>
-              <span style={{ fontSize: '13px', fontWeight: 500, color: theme.priceOld, textDecoration: 'line-through' }}>₹{oldPrice.toLocaleString('en-IN')}</span>
+
+        {/* VEG/NON-VEG badge + item name */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+          <div style={{
+            width: '32px', height: '32px', borderRadius: '50%', flexShrink: 0,
+            background: '#111',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <span style={{
+              fontSize: '7px', fontWeight: 900, color: '#fff',
+              letterSpacing: '0.03em', textAlign: 'center', lineHeight: 1.1,
+              whiteSpace: 'pre-line',
+            }}>
+              {item.veg !== false ? 'VEG' : 'NON\nVEG'}
+            </span>
+          </div>
+          <div style={{
+            fontSize: '15px', fontWeight: 900, color: theme.itemName,
+            lineHeight: 1.2, wordBreak: 'break-word', textTransform: 'uppercase',
+            letterSpacing: '0.01em',
+          }}>
+            {item.name}
+          </div>
+        </div>
+
+        {/* Description */}
+        {(item.description || item.desc) && (
+          <div style={{
+            fontSize: '11px', color: '#94A3B8', lineHeight: 1.6, marginBottom: '8px',
+            display: '-webkit-box', WebkitLineClamp: 4,
+            WebkitBoxOrient: 'vertical', overflow: 'hidden',
+          }}>
+            {item.description || item.desc}
+          </div>
+        )}
+
+        {/* Tags */}
+        {item.tags?.length > 0 && (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px', marginBottom: '8px' }}>
+            {item.tags.map(tag => {
+              const tc = MENU_TAG_COLORS[tag] || { color: '#64748b', border: '#e2e8f0' }
+              return (
+                <span key={tag} style={{
+                  padding: '3px 10px', borderRadius: '20px',
+                  border: `1.5px solid ${tc.border}`,
+                  color: tc.color,
+                  fontSize: '10px', fontWeight: 700,
+                  background: 'transparent', letterSpacing: '0.04em',
+                  whiteSpace: 'nowrap',
+                }}>
+                  {tag}
+                </span>
+              )
+            })}
+          </div>
+        )}
+
+        {/* Spacer pushes price row to bottom */}
+        <div style={{ flex: 1 }} />
+
+        {/* Price + ADD TO CART */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', marginBottom: '2px', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '17px', fontWeight: 900, color: theme.itemName }}>
+                ₹ {(item.price || 0).toLocaleString('en-IN')}
+              </span>
+              <span style={{ fontSize: '12px', fontWeight: 500, color: theme.priceOld, textDecoration: 'line-through' }}>
+                ₹{oldPrice.toLocaleString('en-IN')}
+              </span>
             </div>
-            <div style={{ fontSize: '11px', fontWeight: 600, color: theme.offerColor }}>Best offer applied</div>
+            <div style={{ fontSize: '9px', fontWeight: 700, color: theme.offerColor, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+              Best offer applied
+            </div>
           </div>
           <button
             className="view-cart-btn"
-            onClick={(e) => { e.stopPropagation(); onAddToCart && onAddToCart(item, e) }}
-            style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '9px 16px', borderRadius: '10px', background: cartQty > 0 ? 'rgba(232,50,26,0.10)' : 'transparent', border: `1.5px solid #E8321A`, color: '#E8321A', fontSize: '12px', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
+            onClick={e => { e.stopPropagation(); onAddToCart && onAddToCart(item, e) }}
+            style={{
+              padding: '9px 13px', borderRadius: '10px',
+              background: cartQty > 0 ? theme.itemName : 'transparent',
+              border: `2px solid ${theme.itemName}`,
+              color: cartQty > 0 ? theme.cardBg : theme.itemName,
+              fontSize: '11px', fontWeight: 800,
+              cursor: 'pointer', whiteSpace: 'nowrap',
+              letterSpacing: '0.05em', flexShrink: 0,
+              transition: 'all 0.2s ease',
+            }}
           >
-            {cartQty > 0 ? `In cart (${cartQty})` : <><Plus size={12} strokeWidth={3} /> Add</>}
+            {cartQty > 0 ? `In cart (${cartQty})` : 'ADD TO CART'}
           </button>
         </div>
       </div>
