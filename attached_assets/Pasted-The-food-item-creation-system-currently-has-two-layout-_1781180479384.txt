@@ -1,0 +1,213 @@
+The food item creation system currently has two layout options:
+
+1. VERTICAL
+2. HORIZONTAL
+
+However, regardless of which option is selected, all food items are being rendered in the Vertical layout.
+
+This is incorrect behavior.
+
+--------------------------------------------------
+
+REQUIRED BEHAVIOR
+
+When creating or editing a food item:
+
+IF Layout Type = VERTICAL
+→ Render only the Vertical Food Card.
+
+IF Layout Type = HORIZONTAL
+→ Render only the Horizontal Food Card.
+
+The selected layout must be saved in the database and loaded correctly every time.
+
+--------------------------------------------------
+
+CRITICAL REQUIREMENT
+
+The Vertical and Horizontal layouts must be completely independent UI components.
+
+DO NOT use the same component with small CSS changes.
+
+Create:
+
+VerticalFoodCard.jsx
+HorizontalFoodCard.jsx
+
+(or equivalent files)
+
+Each component should have its own structure and styling.
+
+--------------------------------------------------
+
+VERTICAL CARD STRUCTURE
+
+Image:
+- Full width
+- Large image section on top
+
+Content:
+- Food Name
+- Description
+- Price
+- Veg/Non-Veg Indicator
+
+Button:
+- Add To Cart button floating on image area or bottom-right
+
+Layout Direction:
+COLUMN
+
+Example:
+
+[ IMAGE ]
+[ FOOD NAME ]
+[ DESCRIPTION ]
+[ PRICE ]
+[ ADD TO CART ]
+
+--------------------------------------------------
+
+HORIZONTAL CARD STRUCTURE
+
+Image:
+- Left Side
+
+Content:
+- Right Side
+
+Layout Direction:
+ROW
+
+Example:
+
+[ IMAGE ] [ FOOD NAME        ]
+          [ DESCRIPTION      ]
+          [ PRICE            ]
+          [ ADD TO CART      ]
+
+Image and content must appear side-by-side.
+
+NOT stacked vertically.
+
+--------------------------------------------------
+
+DATABASE REQUIREMENT
+
+Add a field:
+
+layoutType
+
+Possible values:
+
+"vertical"
+"horizontal"
+
+Example:
+
+{
+  "name": "Chicken Biryani",
+  "price": 299,
+  "layoutType": "vertical"
+}
+
+{
+  "name": "Chicken Biryani",
+  "price": 299,
+  "layoutType": "horizontal"
+}
+
+--------------------------------------------------
+
+RENDERING LOGIC
+
+Pseudo Code:
+
+if(layoutType === "vertical"){
+   return <VerticalFoodCard />
+}
+
+if(layoutType === "horizontal"){
+   return <HorizontalFoodCard />
+}
+
+--------------------------------------------------
+
+ADMIN DASHBOARD REQUIREMENT
+
+Inside Add Food Item Form:
+
+Show two clearly separated buttons:
+
+[ VERTICAL ]
+[ HORIZONTAL ]
+
+Selected option must have:
+
+- Blue border
+- Blue background
+- Check icon
+
+Unselected option must have:
+
+- Neutral border
+- White background
+
+User should instantly understand which layout is selected.
+
+--------------------------------------------------
+
+IMPORTANT UX RULES
+
+1. Vertical and Horizontal must look visually different.
+
+2. Switching layouts should immediately update the preview.
+
+3. Existing food items must preserve their selected layout.
+
+4. Editing a food item must load its previously selected layout.
+
+5. No automatic conversion to Vertical.
+
+6. No fallback that forces Horizontal items into Vertical layout.
+
+7. Layout choice must be respected everywhere:
+   - Customer Menu
+   - Category View
+   - Search Results
+   - Popular Items
+   - Featured Items
+   - Offers Section
+
+--------------------------------------------------
+
+VALIDATION TEST
+
+Create Food Item A:
+Layout = Vertical
+
+Expected:
+Vertical card appears.
+
+Create Food Item B:
+Layout = Horizontal
+
+Expected:
+Horizontal card appears.
+
+Refresh Page.
+
+Expected:
+Food Item A remains Vertical.
+Food Item B remains Horizontal.
+
+Edit both items.
+
+Expected:
+Previously selected layout remains selected.
+
+--------------------------------------------------
+
+GOAL
+
+Implement a true dual-layout food card system where Vertical and Horizontal are completely separate components, visually distinct, saved in the database, rendered correctly, and never automatically converted into each other.

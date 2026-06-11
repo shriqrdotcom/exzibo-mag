@@ -4748,6 +4748,7 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
           is_published: updatedItem.is_published === true,
           tags: updatedItem.tags || [],
           add_ons: updatedItem.addOns || [],
+          image_shape: updatedItem.imageShape || 'vertical',
         }
         // Only update category_id if we have a real Supabase UUID — never
         // overwrite an existing category_id with null (would hide the item
@@ -6047,6 +6048,60 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
                     onChange={v => setEditDraft(d => ({ ...d, img: v }))}
                     accentStart={accentStart}
                   />
+                  {/* Layout selector */}
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    {[
+                      {
+                        key: 'vertical',
+                        label: 'VERTICAL',
+                        icon: (
+                          <svg width="18" height="26" viewBox="0 0 18 26" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <rect x="1" y="1" width="16" height="24" rx="2"
+                              fill={(editDraft.imageShape || 'vertical') === 'vertical' ? '#fff' : 'none'}
+                              stroke={(editDraft.imageShape || 'vertical') === 'vertical' ? '#fff' : '#6B6BF8'}
+                              strokeWidth="1.8"
+                            />
+                          </svg>
+                        ),
+                      },
+                      {
+                        key: 'horizontal',
+                        label: 'HORIZONTAL',
+                        icon: (
+                          <svg width="26" height="18" viewBox="0 0 26 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <rect x="1" y="1" width="24" height="16" rx="2"
+                              fill={(editDraft.imageShape || 'vertical') === 'horizontal' ? '#fff' : 'none'}
+                              stroke={(editDraft.imageShape || 'vertical') === 'horizontal' ? '#fff' : '#6B6BF8'}
+                              strokeWidth="1.8"
+                            />
+                          </svg>
+                        ),
+                      },
+                    ].map(({ key, label, icon }) => {
+                      const active = (editDraft.imageShape || 'vertical') === key
+                      return (
+                        <button
+                          key={key}
+                          type="button"
+                          onClick={() => setEditDraft(d => ({ ...d, imageShape: key }))}
+                          style={{
+                            flex: 1,
+                            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                            gap: '6px', padding: '10px 8px',
+                            border: `1.5px solid #6B6BF8`,
+                            borderRadius: '8px',
+                            background: active ? '#6B6BF8' : 'transparent',
+                            cursor: 'pointer',
+                            transition: 'background 0.15s, color 0.15s',
+                            fontFamily: 'inherit',
+                          }}
+                        >
+                          {icon}
+                          <span style={{ fontSize: '10px', fontWeight: 800, letterSpacing: '0.08em', color: active ? '#fff' : '#6B6BF8' }}>{label}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
                   <input
                     value={editDraft.name} onChange={e => setEditDraft(d => ({ ...d, name: e.target.value }))}
                     style={inputSt}
