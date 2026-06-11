@@ -8,11 +8,12 @@ import { toSlug } from '../lib/slug'
 import {
   Star, MapPin, Bell, ShoppingCart, Home,
   UtensilsCrossed, ClipboardList, CalendarDays,
-  Heart, ChevronRight, ChevronLeft,
+  Heart, ChevronRight, ChevronLeft, ChevronDown,
   Phone, Mail, Flame, Award, Clock, Users, AtSign,
   Share2, MessageCircle, Globe, Leaf, ExternalLink,
   Trash2, Minus, Plus, Tag, CheckCircle, ShoppingBag,
-  Copy, PhoneCall, ArrowLeft, MoreVertical
+  Copy, PhoneCall, ArrowLeft, MoreVertical,
+  SlidersHorizontal, GlassWater, X
 } from 'lucide-react'
 import { FaInstagram, FaFacebook, FaWhatsapp, FaLinkedinIn, FaYoutube } from 'react-icons/fa'
 import { FaXTwitter, FaHouse, FaUtensils, FaCartShopping, FaClipboardList, FaCalendarDays, FaStore } from 'react-icons/fa6'
@@ -46,6 +47,18 @@ const MENU_TABS = [
   { id: 'starters', label: 'STARTERS' },
   { id: 'mains', label: 'MAIN COURSE' },
   { id: 'drinks', label: 'DRINKS' },
+]
+
+const TAB_ICONS = {
+  starters: Star,
+  mains:    UtensilsCrossed,
+  drinks:   GlassWater,
+}
+
+const DRINKS_SUB_FILTERS = [
+  { id: 'soft',    label: 'Soft Drinks' },
+  { id: 'alcohol', label: 'Alcoholic' },
+  { id: 'hot',     label: 'Hot Drinks' },
 ]
 
 function loadMenuTabs(id) {
@@ -378,6 +391,12 @@ export default function RestaurantWebsite() {
   const [searchQuery, setSearchQuery] = useState('')
   const [activeCategory, setActiveCategory] = useState('all')
   const [vegMode, setVegMode] = useState(false)
+  const [filterPanelOpen, setFilterPanelOpen] = useState(false)
+  const [priceRange, setPriceRange] = useState([0, 20000])
+  const [ratingFilter, setRatingFilter] = useState(0)
+  const [activeDietaryTags, setActiveDietaryTags] = useState([])
+  const [drinksDropdownOpen, setDrinksDropdownOpen] = useState(false)
+  const [drinksSubFilter, setDrinksSubFilter] = useState('')
   const [scrollY, setScrollY] = useState(0)
   const scrollTickRef = useRef(false)
   const cartIconRef = useRef(null)
@@ -1277,6 +1296,17 @@ export default function RestaurantWebsite() {
     ? [...categoryFiltered].sort((a, b) => (b.veg ? 1 : 0) - (a.veg ? 1 : 0))
     : categoryFiltered
 
+  const panelFilteredItems = activeMenuItems.filter(item => {
+    const price = Number(item.price) || 0
+    if (price > priceRange[1]) return false
+    if (activeDietaryTags.includes('veg') && !item.veg) return false
+    if (activeDietaryTags.includes('non-veg') && item.veg) return false
+    if (activeDietaryTags.includes('vegan') && !item.veg) return false
+    return true
+  })
+
+  const filterCount = (priceRange[1] < 20000 ? 1 : 0) + (ratingFilter > 0 ? 1 : 0) + activeDietaryTags.length
+
   function onCartBtnPointerDown(e) {
     const btn = e.currentTarget
     const rect = btn.getBoundingClientRect()
@@ -1405,6 +1435,8 @@ export default function RestaurantWebsite() {
         .food-card:active { transform: scale(0.97); }
         .category-pill:hover { transform: translateY(-1px); }
         .category-pill:active { transform: scale(0.95); }
+        .filter-bar-btn:hover { filter: brightness(0.92); }
+        .filter-bar-btn:active { transform: scale(0.95); }
         .bestseller-card { transition: transform 0.22s ease, box-shadow 0.22s ease; }
         .bestseller-card:hover { transform: translateY(-4px) scale(1.02); box-shadow: 0 12px 32px rgba(0,0,0,0.22) !important; }
         .bestseller-card:active { transform: scale(0.97); }
@@ -1659,55 +1691,349 @@ export default function RestaurantWebsite() {
       {activeNav !== 'home' && <div style={{ height: '64px' }} />}
 
 
-      {/* ── MENU TAB STRIP: STARTERS / MAIN COURSE / DRINKS ── */}
+      {/* ── FILTER BAR: replaces old tab strip ── */}
       {activeNav === 'menu' && (
         <div style={{
           position: 'sticky',
           top: '64px',
           zIndex: 90,
-          background: darkMode ? '#0a0a0a' : '#f2f2f2',
-          padding: '10px 14px',
+          background: darkMode ? '#0a0a0a' : '#f5f5f5',
+          padding: '10px 14px 8px',
           transition: 'background 0.3s ease',
         }}>
           <div style={{
             display: 'flex',
-            gap: '6px',
-            background: darkMode ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)',
-            borderRadius: '14px',
-            padding: '5px',
+            gap: '8px',
             overflowX: 'auto',
             scrollbarWidth: 'none',
             msOverflowStyle: 'none',
+            paddingBottom: '2px',
+            alignItems: 'center',
           }}>
+            {/* Filter button */}
+            <button
+              className="filter-bar-btn"
+              onClick={() => setFilterPanelOpen(true)}
+              style={{
+                flexShrink: 0,
+                display: 'flex', alignItems: 'center', gap: '6px',
+                padding: '9px 14px',
+                borderRadius: '12px',
+                border: `1.5px solid ${darkMode ? 'rgba(255,255,255,0.15)' : '#e0e0e0'}`,
+                background: filterCount > 0
+                  ? '#1a1a1a'
+                  : (darkMode ? 'rgba(255,255,255,0.06)' : '#fff'),
+                color: filterCount > 0 ? '#fff' : (darkMode ? 'rgba(255,255,255,0.75)' : '#1a1a1a'),
+                fontSize: '13px', fontWeight: 600, cursor: 'pointer',
+                fontFamily: 'inherit', whiteSpace: 'nowrap',
+                boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+                transition: 'all 0.2s ease',
+                position: 'relative',
+              }}
+            >
+              <SlidersHorizontal size={15} />
+              <span>Filter</span>
+              {filterCount > 0 && (
+                <span style={{
+                  position: 'absolute', top: '-6px', right: '-6px',
+                  width: '18px', height: '18px', borderRadius: '9px',
+                  background: '#E8321A', color: '#fff',
+                  fontSize: '10px', fontWeight: 800,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  lineHeight: 1,
+                }}>{filterCount}</span>
+              )}
+            </button>
+
+            {/* Category tab pills */}
             {menuTabs.map(tab => {
               const isActive = activeMenuTab === tab.id
-              const themeColor = restaurant?.primaryColor || '#E8321A'
+              const isDrinksTab = tab.id === 'drinks'
+              const TabIcon = TAB_ICONS[tab.id] || UtensilsCrossed
               return (
-                <button
-                  key={tab.id}
-                  onClick={() => { setActiveMenuTab(tab.id); setActiveCategory('all') }}
-                  style={{
-                    flex: 1,
-                    minWidth: '80px',
-                    padding: '9px 12px',
-                    borderRadius: '10px',
-                    border: 'none',
-                    background: isActive ? themeColor : 'transparent',
-                    color: isActive ? '#fff' : (darkMode ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.45)'),
-                    fontSize: '12px',
-                    fontWeight: 800,
-                    letterSpacing: '0.07em',
-                    cursor: 'pointer',
-                    fontFamily: 'inherit',
-                    whiteSpace: 'nowrap',
-                    boxShadow: isActive ? `0 4px 14px ${themeColor}55` : 'none',
-                    transition: 'background 0.25s ease, color 0.25s ease, box-shadow 0.25s ease',
-                  }}
-                >
-                  {tab.label}
-                </button>
+                <div key={tab.id} style={{ position: 'relative', flexShrink: 0 }}>
+                  <button
+                    className="filter-bar-btn"
+                    onClick={() => {
+                      if (isActive && isDrinksTab) {
+                        setDrinksDropdownOpen(o => !o)
+                      } else {
+                        setActiveMenuTab(tab.id)
+                        setActiveCategory('all')
+                        setDrinksSubFilter('')
+                        if (!isDrinksTab) setDrinksDropdownOpen(false)
+                      }
+                    }}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: '6px',
+                      padding: isDrinksTab ? '9px 10px 9px 14px' : '9px 14px',
+                      borderRadius: '12px',
+                      border: `1.5px solid ${isActive ? 'transparent' : (darkMode ? 'rgba(255,255,255,0.15)' : '#e0e0e0')}`,
+                      background: isActive ? '#1a1a1a' : (darkMode ? 'rgba(255,255,255,0.06)' : '#fff'),
+                      color: isActive ? '#fff' : (darkMode ? 'rgba(255,255,255,0.75)' : '#1a1a1a'),
+                      fontSize: '13px', fontWeight: 600, cursor: 'pointer',
+                      fontFamily: 'inherit', whiteSpace: 'nowrap',
+                      boxShadow: isActive ? '0 2px 12px rgba(0,0,0,0.18)' : '0 1px 4px rgba(0,0,0,0.06)',
+                      transition: 'all 0.2s ease',
+                    }}
+                  >
+                    <TabIcon size={15} />
+                    <span style={{ textTransform: 'capitalize', letterSpacing: '0.01em' }}>
+                      {tab.label.charAt(0) + tab.label.slice(1).toLowerCase()}
+                    </span>
+                    {isDrinksTab && (
+                      <ChevronDown
+                        size={14}
+                        style={{
+                          marginLeft: '2px',
+                          transition: 'transform 0.2s ease',
+                          transform: drinksDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                          opacity: isActive ? 1 : 0.6,
+                        }}
+                      />
+                    )}
+                  </button>
+
+                  {/* Drinks sub-filter dropdown */}
+                  {isDrinksTab && drinksDropdownOpen && isActive && (
+                    <div style={{
+                      position: 'absolute', top: 'calc(100% + 8px)', left: 0,
+                      background: darkMode ? '#1c1c1c' : '#fff',
+                      border: `1px solid ${darkMode ? 'rgba(255,255,255,0.12)' : '#e5e5e5'}`,
+                      borderRadius: '12px',
+                      boxShadow: '0 8px 28px rgba(0,0,0,0.18)',
+                      zIndex: 200,
+                      overflow: 'hidden',
+                      minWidth: '140px',
+                      animation: 'fadeUp 0.18s ease both',
+                    }}>
+                      {[{ id: '', label: 'All Drinks' }, ...DRINKS_SUB_FILTERS].map(sf => (
+                        <button
+                          key={sf.id}
+                          onClick={() => { setDrinksSubFilter(sf.id); setDrinksDropdownOpen(false) }}
+                          style={{
+                            display: 'block', width: '100%', textAlign: 'left',
+                            padding: '10px 14px',
+                            background: drinksSubFilter === sf.id
+                              ? (darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)')
+                              : 'transparent',
+                            border: 'none',
+                            color: drinksSubFilter === sf.id
+                              ? (darkMode ? '#fff' : '#1a1a1a')
+                              : (darkMode ? 'rgba(255,255,255,0.65)' : '#555'),
+                            fontSize: '13px', fontWeight: drinksSubFilter === sf.id ? 700 : 500,
+                            cursor: 'pointer', fontFamily: 'inherit',
+                            transition: 'background 0.15s ease',
+                          }}
+                        >
+                          {sf.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
               )
             })}
+          </div>
+
+          {/* Showing count + active sub-filter badge */}
+          {(filterCount > 0 || drinksSubFilter) && (
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: '8px',
+              paddingTop: '8px', flexWrap: 'wrap',
+            }}>
+              <span style={{
+                fontSize: '12px', color: darkMode ? 'rgba(255,255,255,0.45)' : '#888',
+                fontWeight: 500,
+              }}>
+                Showing {panelFilteredItems.length} item{panelFilteredItems.length !== 1 ? 's' : ''}
+              </span>
+              {drinksSubFilter && (
+                <span style={{
+                  display: 'inline-flex', alignItems: 'center', gap: '4px',
+                  background: darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.07)',
+                  borderRadius: '20px', padding: '2px 8px 2px 10px',
+                  fontSize: '11px', fontWeight: 600,
+                  color: darkMode ? 'rgba(255,255,255,0.8)' : '#1a1a1a',
+                }}>
+                  {DRINKS_SUB_FILTERS.find(s => s.id === drinksSubFilter)?.label}
+                  <button
+                    onClick={() => setDrinksSubFilter('')}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', color: 'inherit' }}
+                  ><X size={11} /></button>
+                </span>
+              )}
+              {activeDietaryTags.map(tag => (
+                <span key={tag} style={{
+                  display: 'inline-flex', alignItems: 'center', gap: '4px',
+                  background: darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.07)',
+                  borderRadius: '20px', padding: '2px 8px 2px 10px',
+                  fontSize: '11px', fontWeight: 600,
+                  color: darkMode ? 'rgba(255,255,255,0.8)' : '#1a1a1a',
+                  textTransform: 'capitalize',
+                }}>
+                  {tag}
+                  <button
+                    onClick={() => setActiveDietaryTags(prev => prev.filter(t => t !== tag))}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', color: 'inherit' }}
+                  ><X size={11} /></button>
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── FILTER PANEL MODAL ── */}
+      {filterPanelOpen && (
+        <div
+          onClick={() => setFilterPanelOpen(false)}
+          style={{
+            position: 'fixed', inset: 0,
+            background: 'rgba(0,0,0,0.5)',
+            zIndex: 999,
+            display: 'flex', alignItems: 'flex-end',
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              width: '100%',
+              background: darkMode ? '#111' : '#fff',
+              borderRadius: '20px 20px 0 0',
+              padding: '0 0 32px',
+              animation: 'slideUp 0.28s cubic-bezier(0.32,0.72,0,1) both',
+              maxHeight: '85vh',
+              overflowY: 'auto',
+            }}
+          >
+            {/* Handle */}
+            <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0 4px' }}>
+              <div style={{ width: '36px', height: '4px', borderRadius: '2px', background: darkMode ? 'rgba(255,255,255,0.2)' : '#ddd' }} />
+            </div>
+
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 20px 20px' }}>
+              <div>
+                <div style={{ fontSize: '18px', fontWeight: 800, color: darkMode ? '#fff' : '#1a1a1a', letterSpacing: '-0.02em' }}>Filters</div>
+                {filterCount > 0 && (
+                  <div style={{ fontSize: '12px', color: '#E8321A', fontWeight: 600, marginTop: '2px' }}>{filterCount} active</div>
+                )}
+              </div>
+              <button
+                onClick={() => setFilterPanelOpen(false)}
+                style={{ background: darkMode ? 'rgba(255,255,255,0.08)' : '#f2f2f2', border: 'none', borderRadius: '50%', width: '34px', height: '34px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: darkMode ? '#fff' : '#333' }}
+              ><X size={16} /></button>
+            </div>
+
+            <div style={{ padding: '0 20px', display: 'flex', flexDirection: 'column', gap: '28px' }}>
+              {/* Price Range */}
+              <div>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: darkMode ? 'rgba(255,255,255,0.55)' : '#888', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: '14px' }}>Max Price</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                  <input
+                    type="range"
+                    min={0} max={20000} step={100}
+                    value={priceRange[1]}
+                    onChange={e => setPriceRange([0, Number(e.target.value)])}
+                    style={{ flex: 1, accentColor: '#1a1a1a', height: '4px' }}
+                  />
+                  <span style={{
+                    fontSize: '14px', fontWeight: 700,
+                    color: darkMode ? '#fff' : '#1a1a1a',
+                    minWidth: '72px', textAlign: 'right',
+                  }}>
+                    {priceRange[1] >= 20000 ? 'Any' : `₹${priceRange[1].toLocaleString()}`}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px' }}>
+                  <span style={{ fontSize: '11px', color: darkMode ? 'rgba(255,255,255,0.3)' : '#bbb' }}>₹0</span>
+                  <span style={{ fontSize: '11px', color: darkMode ? 'rgba(255,255,255,0.3)' : '#bbb' }}>₹20,000+</span>
+                </div>
+              </div>
+
+              {/* Rating */}
+              <div>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: darkMode ? 'rgba(255,255,255,0.55)' : '#888', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: '14px' }}>Min Rating</div>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  {[0, 1, 2, 3, 4, 5].map(r => (
+                    <button
+                      key={r}
+                      onClick={() => setRatingFilter(r === ratingFilter ? 0 : r)}
+                      style={{
+                        flex: 1, padding: '9px 4px',
+                        borderRadius: '10px',
+                        border: `1.5px solid ${ratingFilter === r ? '#1a1a1a' : (darkMode ? 'rgba(255,255,255,0.12)' : '#e5e5e5')}`,
+                        background: ratingFilter === r ? '#1a1a1a' : (darkMode ? 'rgba(255,255,255,0.05)' : '#fafafa'),
+                        color: ratingFilter === r ? '#fff' : (darkMode ? 'rgba(255,255,255,0.6)' : '#555'),
+                        fontSize: '13px', fontWeight: 700, cursor: 'pointer',
+                        fontFamily: 'inherit', transition: 'all 0.18s ease',
+                      }}
+                    >
+                      {r === 0 ? 'Any' : `${r}★`}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Dietary Tags */}
+              <div>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: darkMode ? 'rgba(255,255,255,0.55)' : '#888', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: '14px' }}>Dietary</div>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  {['veg', 'non-veg', 'vegan', 'gluten-free'].map(tag => {
+                    const isOn = activeDietaryTags.includes(tag)
+                    return (
+                      <button
+                        key={tag}
+                        onClick={() => setActiveDietaryTags(prev => isOn ? prev.filter(t => t !== tag) : [...prev, tag])}
+                        style={{
+                          padding: '9px 16px',
+                          borderRadius: '100px',
+                          border: `1.5px solid ${isOn ? '#1a1a1a' : (darkMode ? 'rgba(255,255,255,0.12)' : '#e5e5e5')}`,
+                          background: isOn ? '#1a1a1a' : (darkMode ? 'rgba(255,255,255,0.05)' : '#fafafa'),
+                          color: isOn ? '#fff' : (darkMode ? 'rgba(255,255,255,0.7)' : '#555'),
+                          fontSize: '13px', fontWeight: 600, cursor: 'pointer',
+                          fontFamily: 'inherit', textTransform: 'capitalize',
+                          transition: 'all 0.18s ease',
+                          letterSpacing: '0.01em',
+                        }}
+                      >
+                        {tag === 'veg' ? '🥦 Veg' : tag === 'non-veg' ? '🍗 Non-Veg' : tag === 'vegan' ? '🌱 Vegan' : '🌾 Gluten-Free'}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* Apply / Reset */}
+            <div style={{ display: 'flex', gap: '10px', padding: '28px 20px 0' }}>
+              <button
+                onClick={() => { setPriceRange([0, 20000]); setRatingFilter(0); setActiveDietaryTags([]) }}
+                style={{
+                  flex: 1, padding: '14px',
+                  borderRadius: '12px',
+                  border: `1.5px solid ${darkMode ? 'rgba(255,255,255,0.15)' : '#e5e5e5'}`,
+                  background: 'transparent',
+                  color: darkMode ? 'rgba(255,255,255,0.7)' : '#555',
+                  fontSize: '14px', fontWeight: 700, cursor: 'pointer',
+                  fontFamily: 'inherit', transition: 'all 0.18s ease',
+                }}
+              >Reset</button>
+              <button
+                onClick={() => setFilterPanelOpen(false)}
+                style={{
+                  flex: 2, padding: '14px',
+                  borderRadius: '12px',
+                  border: 'none',
+                  background: '#1a1a1a',
+                  color: '#fff',
+                  fontSize: '14px', fontWeight: 700, cursor: 'pointer',
+                  fontFamily: 'inherit',
+                  boxShadow: '0 4px 16px rgba(0,0,0,0.2)',
+                }}
+              >Apply Filters</button>
+            </div>
           </div>
         </div>
       )}
@@ -2172,10 +2498,10 @@ export default function RestaurantWebsite() {
 
           {/* Menu Cards */}
           <div style={{ padding: '4px 14px 8px' }}>
-            {activeMenuItems.length === 0 && (
+            {panelFilteredItems.length === 0 && (
               <div style={{ textAlign: 'center', padding: '60px 20px', color: theme.tabInactiveColor, fontSize: '13px' }}>No items in this category yet</div>
             )}
-            {activeMenuItems.map((item, i) => {
+            {panelFilteredItems.map((item, i) => {
               const inCart = cartItems.find(c => c.name === item.name)
               return (
                 <MenuCard

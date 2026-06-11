@@ -1,0 +1,89 @@
+I have a food menu app. I need to replace the current category 
+tabs (Starters, Main Course, Drinks) with a proper FILTER SYSTEM 
+similar to the reference UI — rounded pill/card buttons with icons.
+
+=== FILTER REQUIREMENTS ===
+
+Create a FilterBar component with these filters:
+
+1. Filter Button (settings/sliders icon) — opens a filter panel
+2. Category filters: Starters, Main Course, Drinks
+3. Each filter = rounded rectangle card with icon + label
+4. Active filter = filled/highlighted state
+5. "Drinks" has a dropdown chevron (v) for sub-filters
+
+=== FILTER LOGIC ===
+
+State to manage:
+- activeCategory: string ("all" | "starters" | "main" | "drinks")
+- activeSubFilter: string (for drinks: "soft" | "alcohol" | "hot")
+- filterPanelOpen: boolean
+
+Filtering behavior:
+- Clicking a category filters the menu items array
+- Only show items where item.category === activeCategory
+- If "all" → show everything
+- Drinks chevron opens: [Soft Drinks, Alcoholic, Hot Drinks]
+
+=== DASHBOARD CONNECTION ===
+
+Pass these props to Dashboard:
+- filteredItems → the filtered menu list
+- activeCategory → to highlight active tab
+- filterCount → number of active filters (show badge on Filter button)
+
+Dashboard should:
+- Receive filteredItems and render them
+- Show item count: "Showing X items"
+- Update in real-time when filter changes
+
+=== COMPONENT STRUCTURE ===
+
+<FilterBar
+  categories={["starters", "main", "drinks"]}
+  activeCategory={activeCategory}
+  onCategoryChange={setActiveCategory}
+  onFilterOpen={() => setFilterPanelOpen(true)}
+/>
+
+<MenuDashboard
+  items={filteredItems}
+  activeCategory={activeCategory}
+/>
+
+=== FILTER PANEL (slide-up or modal) ===
+
+When Filter button clicked, show panel with:
+- Price range slider
+- Rating filter (1-5 stars)
+- Dietary tags: [Veg, Non-Veg, Vegan, Gluten-Free]
+- Apply / Reset buttons
+
+=== UI STYLE ===
+
+- Background: white cards, light gray border (#e5e5e5)
+- Border radius: 12px
+- Active state: dark fill (#1a1a1a) with white text
+- Icons: outline style (use lucide-react icons)
+  - Filter → SlidersHorizontal
+  - Starters → Star
+  - Main Course → UtensilsCrossed  
+  - Drinks → GlassWater
+- Font: medium weight, 14-15px
+
+=== DATA STRUCTURE ===
+
+Each menu item should have:
+{
+  id: 1,
+  name: "Chicken Wings",
+  category: "starters",  // "starters" | "main" | "drinks"
+  subCategory: "",        // for drinks: "soft" | "alcohol" | "hot"
+  price: 12.99,
+  rating: 4.5,
+  dietary: ["non-veg"],
+  image: ""
+}
+
+Connect FilterBar state to Dashboard so filtering 
+happens live without page reload.
