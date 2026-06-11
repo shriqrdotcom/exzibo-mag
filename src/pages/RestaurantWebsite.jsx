@@ -18,6 +18,17 @@ import {
 import { FaInstagram, FaFacebook, FaWhatsapp, FaLinkedinIn, FaYoutube } from 'react-icons/fa'
 import { FaXTwitter, FaHouse, FaUtensils, FaCartShopping, FaClipboardList, FaCalendarDays, FaStore } from 'react-icons/fa6'
 
+const QUICK_FILTERS = [
+  { id: 'popular',       label: 'Popular',   sub: 'Most ordered by customers',    icon: '🔥' },
+  { id: 'offers',        label: 'Offers',    sub: 'Best offers & discounts',       icon: '🏷️' },
+  { id: 'newlyAdded',    label: 'New',       sub: 'Recently added dishes',         icon: '🆕' },
+  { id: 'veg',           label: 'Veg',       sub: 'Pure vegetarian dishes',        icon: '🥦' },
+  { id: 'favourite',     label: 'Favourite', sub: 'Your favourite dishes',         icon: '❤️' },
+  { id: 'spicy',         label: 'Spicy',     sub: 'For those who love spicy food', icon: '🌶️' },
+  { id: 'newlyLaunched', label: 'New',       sub: 'Newly launched dishes',         icon: '🔵' },
+  { id: 'seasonal',      label: 'Seasonal',  sub: 'Dishes for the season',         icon: '🍂' },
+]
+
 const FALLBACK_IMAGES = [
   '/menu/wagyu-ribeye.png',
   '/menu/lobster-thermidor.png',
@@ -392,9 +403,7 @@ export default function RestaurantWebsite() {
   const [activeCategory, setActiveCategory] = useState('all')
   const [vegMode, setVegMode] = useState(false)
   const [filterPanelOpen, setFilterPanelOpen] = useState(false)
-  const [priceRange, setPriceRange] = useState([0, 20000])
-  const [ratingFilter, setRatingFilter] = useState(0)
-  const [activeDietaryTags, setActiveDietaryTags] = useState([])
+  const [activeQuickFilters, setActiveQuickFilters] = useState([])
   const [drinksDropdownOpen, setDrinksDropdownOpen] = useState(false)
   const [drinksSubFilter, setDrinksSubFilter] = useState('')
   const [scrollY, setScrollY] = useState(0)
@@ -1312,16 +1321,25 @@ export default function RestaurantWebsite() {
     ? [...categoryFiltered].sort((a, b) => (b.veg ? 1 : 0) - (a.veg ? 1 : 0))
     : categoryFiltered
 
-  const panelFilteredItems = activeMenuItems.filter(item => {
-    const price = Number(item.price) || 0
-    if (price > priceRange[1]) return false
-    if (activeDietaryTags.includes('veg') && !item.veg) return false
-    if (activeDietaryTags.includes('non-veg') && item.veg) return false
-    if (activeDietaryTags.includes('vegan') && !item.veg) return false
-    return true
-  })
+  const qfTest = (item, fid) => {
+    switch (fid) {
+      case 'popular':       return item.tags?.some(t => t.toLowerCase() === 'popular')
+      case 'offers':        return item.oldPrice && Number(item.oldPrice) > Number(item.price)
+      case 'newlyAdded':    return item.isNew || item.tags?.some(t => t.toLowerCase() === 'new')
+      case 'veg':           return item.veg === true
+      case 'favourite':     return item.tags?.some(t => t.toLowerCase() === 'favourite')
+      case 'spicy':         return item.tags?.some(t => t.toLowerCase() === 'spicy')
+      case 'newlyLaunched': return item.tags?.some(t => t.toLowerCase() === 'new')
+      case 'seasonal':      return item.tags?.some(t => t.toLowerCase() === 'seasonal')
+      default:              return true
+    }
+  }
 
-  const filterCount = (priceRange[1] < 20000 ? 1 : 0) + (ratingFilter > 0 ? 1 : 0) + activeDietaryTags.length
+  const panelFilteredItems = activeQuickFilters.length === 0
+    ? activeMenuItems
+    : activeMenuItems.filter(item => activeQuickFilters.every(fid => qfTest(item, fid)))
+
+  const filterCount = activeQuickFilters.length
 
   function onCartBtnPointerDown(e) {
     const btn = e.currentTarget
@@ -1879,22 +1897,24 @@ export default function RestaurantWebsite() {
                   ><X size={11} /></button>
                 </span>
               )}
-              {activeDietaryTags.map(tag => (
-                <span key={tag} style={{
-                  display: 'inline-flex', alignItems: 'center', gap: '4px',
-                  background: darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.07)',
-                  borderRadius: '20px', padding: '2px 8px 2px 10px',
-                  fontSize: '11px', fontWeight: 600,
-                  color: darkMode ? 'rgba(255,255,255,0.8)' : '#1a1a1a',
-                  textTransform: 'capitalize',
-                }}>
-                  {tag}
-                  <button
-                    onClick={() => setActiveDietaryTags(prev => prev.filter(t => t !== tag))}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', color: 'inherit' }}
-                  ><X size={11} /></button>
-                </span>
-              ))}
+              {activeQuickFilters.map(fid => {
+                const qf = QUICK_FILTERS.find(f => f.id === fid)
+                return qf ? (
+                  <span key={fid} style={{
+                    display: 'inline-flex', alignItems: 'center', gap: '4px',
+                    background: darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.07)',
+                    borderRadius: '20px', padding: '2px 8px 2px 10px',
+                    fontSize: '11px', fontWeight: 600,
+                    color: darkMode ? 'rgba(255,255,255,0.8)' : '#1a1a1a',
+                  }}>
+                    {qf.icon} {qf.label}
+                    <button
+                      onClick={() => setActiveQuickFilters(prev => prev.filter(f => f !== fid))}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', color: 'inherit' }}
+                    ><X size={11} /></button>
+                  </span>
+                ) : null
+              })}
             </div>
           )}
         </div>
@@ -1906,147 +1926,99 @@ export default function RestaurantWebsite() {
           onClick={() => setFilterPanelOpen(false)}
           style={{
             position: 'fixed', inset: 0,
-            background: 'rgba(0,0,0,0.5)',
+            background: 'rgba(0,0,0,0.45)',
             zIndex: 999,
-            display: 'flex', alignItems: 'flex-end',
+            display: 'flex', alignItems: 'center', justifyContent: 'flex-start',
           }}
         >
           <div
             onClick={e => e.stopPropagation()}
             style={{
-              width: '100%',
-              background: darkMode ? '#111' : '#fff',
-              borderRadius: '20px 20px 0 0',
-              padding: '0 0 32px',
-              animation: 'slideUp 0.28s cubic-bezier(0.32,0.72,0,1) both',
-              maxHeight: '85vh',
-              overflowY: 'auto',
+              width: '310px',
+              maxHeight: '70vh',
+              background: '#fff',
+              borderRadius: '16px',
+              margin: '0 0 0 16px',
+              display: 'flex',
+              flexDirection: 'column',
+              boxShadow: '0 8px 40px rgba(0,0,0,0.22)',
+              overflow: 'hidden',
             }}
           >
-            {/* Handle */}
-            <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0 4px' }}>
-              <div style={{ width: '36px', height: '4px', borderRadius: '2px', background: darkMode ? 'rgba(255,255,255,0.2)' : '#ddd' }} />
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 18px 10px', flexShrink: 0 }}>
+              <div style={{ fontSize: '18px', fontWeight: 800, color: '#1a1a1a', letterSpacing: '-0.02em' }}>Filters</div>
+              <button
+                onClick={() => setFilterPanelOpen(false)}
+                style={{ background: '#f2f2f2', border: 'none', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#333', flexShrink: 0 }}
+              ><X size={15} /></button>
             </div>
 
-            {/* Header */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 20px 20px' }}>
-              <div>
-                <div style={{ fontSize: '18px', fontWeight: 800, color: darkMode ? '#fff' : '#1a1a1a', letterSpacing: '-0.02em' }}>Filters</div>
-                {filterCount > 0 && (
-                  <div style={{ fontSize: '12px', color: '#E8321A', fontWeight: 600, marginTop: '2px' }}>{filterCount} active</div>
+            <div style={{ fontSize: '12px', color: '#999', padding: '0 18px 10px', fontWeight: 500, flexShrink: 0 }}>Show dishes that are</div>
+
+            {/* Filter rows — scrollable */}
+            <div style={{ overflowY: 'auto', flex: 1 }}>
+              {QUICK_FILTERS.map((qf, idx) => {
+                const isOn = activeQuickFilters.includes(qf.id)
+                return (
+                  <div
+                    key={qf.id}
+                    onClick={() => setActiveQuickFilters(prev => isOn ? prev.filter(f => f !== qf.id) : [...prev, qf.id])}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: '14px',
+                      padding: '13px 18px',
+                      borderTop: '1px solid #f4f4f4',
+                      cursor: 'pointer',
+                      background: isOn ? 'rgba(232,50,26,0.04)' : '#fff',
+                      transition: 'background 0.15s',
+                      userSelect: 'none',
+                    }}
+                  >
+                    <span style={{ fontSize: '22px', lineHeight: 1, flexShrink: 0, width: '28px', textAlign: 'center' }}>{qf.icon}</span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: '14px', fontWeight: 700, color: '#1a1a1a', lineHeight: 1.3 }}>{qf.label}</div>
+                      <div style={{ fontSize: '12px', color: '#999', marginTop: '2px', lineHeight: 1.4 }}>{qf.sub}</div>
+                    </div>
+                    <div style={{
+                      width: '20px', height: '20px', borderRadius: '4px', flexShrink: 0,
+                      border: isOn ? 'none' : '1.5px solid #d0d0d0',
+                      background: isOn ? '#E8321A' : '#fff',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      transition: 'all 0.15s',
+                    }}>
+                      {isOn && (
+                        <svg width="11" height="8" viewBox="0 0 11 8" fill="none">
+                          <path d="M1 3.5L4 6.5L10 1" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+
+            {/* Footer */}
+            <div style={{ padding: '14px 18px', borderTop: '1px solid #f0f0f0', background: '#fff', flexShrink: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                <span style={{ fontSize: '13px', color: '#666', fontWeight: 500 }}>
+                  {activeQuickFilters.length} filter{activeQuickFilters.length !== 1 ? 's' : ''} selected
+                </span>
+                {activeQuickFilters.length > 0 && (
+                  <button
+                    onClick={() => setActiveQuickFilters([])}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '13px', fontWeight: 700, color: '#E8321A', padding: 0, fontFamily: 'inherit' }}
+                  >Clear all</button>
                 )}
               </div>
               <button
                 onClick={() => setFilterPanelOpen(false)}
-                style={{ background: darkMode ? 'rgba(255,255,255,0.08)' : '#f2f2f2', border: 'none', borderRadius: '50%', width: '34px', height: '34px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: darkMode ? '#fff' : '#333' }}
-              ><X size={16} /></button>
-            </div>
-
-            <div style={{ padding: '0 20px', display: 'flex', flexDirection: 'column', gap: '28px' }}>
-              {/* Price Range */}
-              <div>
-                <div style={{ fontSize: '13px', fontWeight: 700, color: darkMode ? 'rgba(255,255,255,0.55)' : '#888', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: '14px' }}>Max Price</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                  <input
-                    type="range"
-                    min={0} max={20000} step={100}
-                    value={priceRange[1]}
-                    onChange={e => setPriceRange([0, Number(e.target.value)])}
-                    style={{ flex: 1, accentColor: '#1a1a1a', height: '4px' }}
-                  />
-                  <span style={{
-                    fontSize: '14px', fontWeight: 700,
-                    color: darkMode ? '#fff' : '#1a1a1a',
-                    minWidth: '72px', textAlign: 'right',
-                  }}>
-                    {priceRange[1] >= 20000 ? 'Any' : `₹${priceRange[1].toLocaleString()}`}
-                  </span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px' }}>
-                  <span style={{ fontSize: '11px', color: darkMode ? 'rgba(255,255,255,0.3)' : '#bbb' }}>₹0</span>
-                  <span style={{ fontSize: '11px', color: darkMode ? 'rgba(255,255,255,0.3)' : '#bbb' }}>₹20,000+</span>
-                </div>
-              </div>
-
-              {/* Rating */}
-              <div>
-                <div style={{ fontSize: '13px', fontWeight: 700, color: darkMode ? 'rgba(255,255,255,0.55)' : '#888', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: '14px' }}>Min Rating</div>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  {[0, 1, 2, 3, 4, 5].map(r => (
-                    <button
-                      key={r}
-                      onClick={() => setRatingFilter(r === ratingFilter ? 0 : r)}
-                      style={{
-                        flex: 1, padding: '9px 4px',
-                        borderRadius: '10px',
-                        border: `1.5px solid ${ratingFilter === r ? '#1a1a1a' : (darkMode ? 'rgba(255,255,255,0.12)' : '#e5e5e5')}`,
-                        background: ratingFilter === r ? '#1a1a1a' : (darkMode ? 'rgba(255,255,255,0.05)' : '#fafafa'),
-                        color: ratingFilter === r ? '#fff' : (darkMode ? 'rgba(255,255,255,0.6)' : '#555'),
-                        fontSize: '13px', fontWeight: 700, cursor: 'pointer',
-                        fontFamily: 'inherit', transition: 'all 0.18s ease',
-                      }}
-                    >
-                      {r === 0 ? 'Any' : `${r}★`}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Dietary Tags */}
-              <div>
-                <div style={{ fontSize: '13px', fontWeight: 700, color: darkMode ? 'rgba(255,255,255,0.55)' : '#888', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: '14px' }}>Dietary</div>
-                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                  {['veg', 'non-veg', 'vegan', 'gluten-free'].map(tag => {
-                    const isOn = activeDietaryTags.includes(tag)
-                    return (
-                      <button
-                        key={tag}
-                        onClick={() => setActiveDietaryTags(prev => isOn ? prev.filter(t => t !== tag) : [...prev, tag])}
-                        style={{
-                          padding: '9px 16px',
-                          borderRadius: '100px',
-                          border: `1.5px solid ${isOn ? '#1a1a1a' : (darkMode ? 'rgba(255,255,255,0.12)' : '#e5e5e5')}`,
-                          background: isOn ? '#1a1a1a' : (darkMode ? 'rgba(255,255,255,0.05)' : '#fafafa'),
-                          color: isOn ? '#fff' : (darkMode ? 'rgba(255,255,255,0.7)' : '#555'),
-                          fontSize: '13px', fontWeight: 600, cursor: 'pointer',
-                          fontFamily: 'inherit', textTransform: 'capitalize',
-                          transition: 'all 0.18s ease',
-                          letterSpacing: '0.01em',
-                        }}
-                      >
-                        {tag === 'veg' ? '🥦 Veg' : tag === 'non-veg' ? '🍗 Non-Veg' : tag === 'vegan' ? '🌱 Vegan' : '🌾 Gluten-Free'}
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-            </div>
-
-            {/* Apply / Reset */}
-            <div style={{ display: 'flex', gap: '10px', padding: '28px 20px 0' }}>
-              <button
-                onClick={() => { setPriceRange([0, 20000]); setRatingFilter(0); setActiveDietaryTags([]) }}
                 style={{
-                  flex: 1, padding: '14px',
-                  borderRadius: '12px',
-                  border: `1.5px solid ${darkMode ? 'rgba(255,255,255,0.15)' : '#e5e5e5'}`,
-                  background: 'transparent',
-                  color: darkMode ? 'rgba(255,255,255,0.7)' : '#555',
-                  fontSize: '14px', fontWeight: 700, cursor: 'pointer',
-                  fontFamily: 'inherit', transition: 'all 0.18s ease',
-                }}
-              >Reset</button>
-              <button
-                onClick={() => setFilterPanelOpen(false)}
-                style={{
-                  flex: 2, padding: '14px',
-                  borderRadius: '12px',
-                  border: 'none',
-                  background: '#1a1a1a',
-                  color: '#fff',
+                  width: '100%', padding: '13px',
+                  borderRadius: '10px', border: 'none',
+                  background: '#E8321A', color: '#fff',
                   fontSize: '14px', fontWeight: 700, cursor: 'pointer',
                   fontFamily: 'inherit',
-                  boxShadow: '0 4px 16px rgba(0,0,0,0.2)',
+                  boxShadow: '0 4px 14px rgba(232,50,26,0.3)',
                 }}
               >Apply Filters</button>
             </div>
