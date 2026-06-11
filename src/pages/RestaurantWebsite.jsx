@@ -864,6 +864,8 @@ export default function RestaurantWebsite() {
                   available: it.available !== false,
                   tags: it.tags || [],
                   addOns: it.add_ons || [],
+                  image_shape: it.image_shape || 'vertical',
+                  imageShape: it.image_shape || 'vertical',
                 }))
               }
             })
@@ -915,6 +917,8 @@ export default function RestaurantWebsite() {
                 available: it.available !== false,
                 tags: it.tags || [],
                 addOns: it.add_ons || [],
+                image_shape: it.image_shape || 'vertical',
+                imageShape: it.image_shape || 'vertical',
               }))
             }
           })
