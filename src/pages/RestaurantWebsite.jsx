@@ -1605,20 +1605,20 @@ export default function RestaurantWebsite() {
                   style={{
                     width: '36px', height: '36px', borderRadius: '50%',
                     background: '#111',
-                    border: restaurantLiked ? `1.5px solid ${themeColor}` : '1.5px solid rgba(255,255,255,0.18)',
+                    border: '1.5px solid rgba(255,255,255,0.18)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     cursor: 'pointer', flexShrink: 0,
-                    transition: 'border-color 0.2s ease, transform 0.15s ease',
-                    boxShadow: restaurantLiked ? `0 0 0 3px ${themeColor}22` : 'none',
+                    transition: 'transform 0.15s ease',
+                    boxShadow: 'none',
                   }}
                   onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.1)'}
                   onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
                 >
                   <Heart
                     size={15}
-                    color={restaurantLiked ? themeColor : '#fff'}
-                    fill={restaurantLiked ? themeColor : 'none'}
-                    strokeWidth={restaurantLiked ? 0 : 2}
+                    color='#fff'
+                    fill='none'
+                    strokeWidth={2}
                   />
                 </button>
 
