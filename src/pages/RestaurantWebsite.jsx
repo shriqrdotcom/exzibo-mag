@@ -1596,7 +1596,13 @@ export default function RestaurantWebsite() {
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
                 {/* Heart / Love button */}
                 <button
-                  onClick={() => setRestaurantLiked(v => !v)}
+                  onClick={() => {
+                    setRestaurantLiked(v => !v)
+                    setActiveQuickFilters(prev =>
+                      prev.includes('favourite') ? prev : [...prev, 'favourite']
+                    )
+                    navigateToPage('menu')
+                  }}
                   style={{
                     width: '36px', height: '36px', borderRadius: '50%',
                     background: '#111',
