@@ -4053,9 +4053,159 @@ function BestsellerCard({ item, liked, onLike, theme, onPress }) {
   )
 }
 
+const MENU_TAG_COLORS = {
+  Popular:       { color: '#B45309', border: '#FDE68A' },
+  'Gluten Free': { color: '#1D4ED8', border: '#93C5FD' },
+  Vegetarian:    { color: '#16a34a', border: '#86efac' },
+  Seasonal:      { color: '#7c3aed', border: '#c4b5fd' },
+}
+
 function MenuCard({ item, theme, onAddToCart, cartQty, onPress }) {
   const fallbackImg = '/menu/wagyu-ribeye.png'
   const oldPrice = item.oldPrice || Math.round((item.price || 0) * 1.5)
+  const isHorizontal = item.imageShape === 'horizontal' || item.image_shape === 'horizontal'
+
+  if (isHorizontal) {
+    return (
+      <div
+        className="menu-card"
+        onClick={onPress}
+        style={{
+          display: 'flex',
+          background: theme.cardBg,
+          border: `1.5px solid ${theme.cardBorder}`,
+          borderRadius: '18px',
+          overflow: 'hidden',
+          marginBottom: '14px',
+          boxShadow: theme.cardShadow,
+          cursor: 'pointer',
+          minHeight: '210px',
+        }}
+      >
+        {/* Left — image ~55% width, full height */}
+        <div style={{ width: '55%', flexShrink: 0, position: 'relative', overflow: 'hidden' }}>
+          <img
+            src={item.img || fallbackImg}
+            alt={item.name}
+            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', transition: 'transform 0.35s ease' }}
+            onError={e => { e.target.src = fallbackImg }}
+            loading="lazy"
+            onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.04)' }}
+            onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)' }}
+          />
+        </div>
+
+        {/* Right — info panel */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '12px 14px 14px', minWidth: 0 }}>
+
+          {/* Heart + Share — top right */}
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px', marginBottom: '8px' }}>
+            {[Heart, Share2].map((Icon, i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={e => e.stopPropagation()}
+                style={{
+                  width: '28px', height: '28px', borderRadius: '50%',
+                  background: theme.cardBg,
+                  border: `1px solid ${theme.cardBorder}`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  cursor: 'pointer', padding: 0, flexShrink: 0,
+                }}
+              >
+                <Icon size={13} color={theme.itemName} />
+              </button>
+            ))}
+          </div>
+
+          {/* VEG badge + item name */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+            <div style={{
+              width: '30px', height: '30px', borderRadius: '50%', flexShrink: 0,
+              background: item.veg !== false ? '#16a34a' : '#dc2626',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <span style={{ fontSize: '7px', fontWeight: 900, color: '#fff', letterSpacing: '0.03em', textAlign: 'center', lineHeight: 1.1 }}>
+                {item.veg !== false ? 'VEG' : 'NON\nVEG'}
+              </span>
+            </div>
+            <div style={{ fontSize: '14px', fontWeight: 800, color: theme.itemName, lineHeight: 1.2, wordBreak: 'break-word' }}>
+              {item.name}
+            </div>
+          </div>
+
+          {/* Description */}
+          {(item.description || item.desc) && (
+            <div style={{
+              fontSize: '11px', color: '#94A3B8', lineHeight: 1.55, marginBottom: '8px',
+              display: '-webkit-box', WebkitLineClamp: 3,
+              WebkitBoxOrient: 'vertical', overflow: 'hidden',
+            }}>
+              {item.description || item.desc}
+            </div>
+          )}
+
+          {/* Tags */}
+          {item.tags?.length > 0 && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px', marginBottom: '8px' }}>
+              {item.tags.map(tag => {
+                const tc = MENU_TAG_COLORS[tag] || { color: '#64748b', border: '#e2e8f0' }
+                return (
+                  <span key={tag} style={{
+                    padding: '3px 9px', borderRadius: '20px',
+                    border: `1.5px solid ${tc.border}`,
+                    color: tc.color,
+                    fontSize: '10px', fontWeight: 700,
+                    background: 'transparent', letterSpacing: '0.03em',
+                    whiteSpace: 'nowrap',
+                  }}>
+                    {tag}
+                  </span>
+                )
+              })}
+            </div>
+          )}
+
+          {/* Spacer pushes price row to bottom */}
+          <div style={{ flex: 1 }} />
+
+          {/* Price + ADD TO CART */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', marginBottom: '2px', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '16px', fontWeight: 800, color: '#E8321A' }}>
+                  ₹{(item.price || 0).toLocaleString('en-IN')}
+                </span>
+                <span style={{ fontSize: '12px', fontWeight: 500, color: theme.priceOld, textDecoration: 'line-through' }}>
+                  ₹{oldPrice.toLocaleString('en-IN')}
+                </span>
+              </div>
+              <div style={{ fontSize: '10px', fontWeight: 600, color: theme.offerColor, letterSpacing: '0.03em', textTransform: 'uppercase' }}>
+                Best offer applied
+              </div>
+            </div>
+            <button
+              className="view-cart-btn"
+              onClick={e => { e.stopPropagation(); onAddToCart && onAddToCart(item, e) }}
+              style={{
+                padding: '9px 12px', borderRadius: '10px',
+                background: cartQty > 0 ? 'rgba(232,50,26,0.10)' : 'transparent',
+                border: `1.5px solid #E8321A`,
+                color: '#E8321A',
+                fontSize: '11px', fontWeight: 800,
+                cursor: 'pointer', whiteSpace: 'nowrap',
+                letterSpacing: '0.05em', flexShrink: 0,
+              }}
+            >
+              {cartQty > 0 ? `In cart (${cartQty})` : 'ADD TO CART'}
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // ── Default vertical card ────────────────────────────────────────────────
   return (
     <div className="menu-card" onClick={onPress} style={{ background: theme.cardBg, border: `1px solid ${theme.cardBorder}`, borderRadius: '18px', marginBottom: '14px', boxShadow: theme.cardShadow, padding: '10px 10px 0', cursor: 'pointer' }}>
       <div style={{ position: 'relative', width: '100%', height: '200px', overflow: 'hidden', borderRadius: '12px' }}>

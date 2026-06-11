@@ -4822,6 +4822,7 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
       let savedRow
       try {
         savedRow = await insertMenuItem(restaurantId, {
+          image_shape: addDraft.imageShape || 'vertical',
           name: addDraft.name.trim(),
           description: addDraft.desc.trim(),
           price: parseFloat(addDraft.price) || 0,
@@ -4851,6 +4852,7 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
         addOns: savedRow.add_ons || [],
         available: savedRow.available !== false,
         is_published: savedRow.is_published === true,
+        imageShape: savedRow.image_shape || addDraft.imageShape || 'vertical',
       }
 
       const updated = { ...menu, [activeCategory]: [...(menu[activeCategory] || []), item] }
