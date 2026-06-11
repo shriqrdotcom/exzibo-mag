@@ -216,6 +216,24 @@ export default function AdminDashboard({ restaurantId: restaurantIdProp, initial
   const [bookings, setBookings] = useState([])
   const [activeNav, setActiveNav] = useState(initialSection || 'orders')
 
+  // Run schema migration once per session (adds image_shape column if missing)
+  useEffect(() => {
+    const key = 'exzibo_migration_v1_done'
+    if (sessionStorage.getItem(key)) return
+    fetch('/api/migrate', { method: 'POST' })
+      .then(r => r.json())
+      .then(d => {
+        if (d?.ok === false && d?.sql) {
+          console.warn('[migrate] Manual SQL required in Supabase Dashboard:')
+          console.warn(d.sql)
+        } else {
+          console.log('[migrate]', d?.message || 'migration checked')
+        }
+        sessionStorage.setItem(key, '1')
+      })
+      .catch(() => {})
+  }, [])
+
   // Sync activeNav when initialSection prop changes (slug-based SPA navigation:
   // URL changes but AdminDashboard is not remounted, so useState won't re-run)
   useEffect(() => {
@@ -4098,6 +4116,15 @@ const CATEGORY_TABS = [
 
 const BLANK_ITEM = { name: '', desc: '', price: '', tags: [], img: null, veg: false, addOns: [], available: true, is_published: false, imageShape: 'vertical' }
 
+function saveToLayoutMap(itemId, imageShape) {
+  if (!itemId) return
+  try {
+    const map = JSON.parse(localStorage.getItem('exzibo_layout_map') || '{}')
+    map[itemId] = imageShape || 'vertical'
+    localStorage.setItem('exzibo_layout_map', JSON.stringify(map))
+  } catch {}
+}
+
 const DEFAULT_CAT_FILTERS = {
   starters: [
     { id: 'all', emoji: '🍽️', label: 'All', image: null, assignedItems: [] },
@@ -4392,6 +4419,8 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
                   is_published: it.is_published === true,
                   tags: it.tags || [],
                   addOns: it.add_ons || [],
+                  imageShape: it.image_shape || 'vertical',
+                  image_shape: it.image_shape || 'vertical',
                 })
               }
             })
@@ -4733,6 +4762,7 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
     }
 
     const updatedItem = { ...editDraft, img: resolvedImg, price: parseFloat(editDraft.price) || 0 }
+    saveToLayoutMap(updatedItem.id, updatedItem.imageShape)
     const currentTab = categoryTabs.find(t => t.key === activeCategory)
     const dbId = updatedItem.dbId
 
@@ -4808,6 +4838,7 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
           is_published: true,
           imageShape: addDraft.imageShape || 'vertical',
         }
+        saveToLayoutMap(demoItem.id, demoItem.imageShape)
         const updated = { ...menu, [activeCategory]: [...(menu[activeCategory] || []), demoItem] }
         saveMenu(updated)
         localStorage.setItem(storageKey, JSON.stringify(updated))
@@ -4890,6 +4921,7 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
         is_published: savedRow.is_published === true,
         imageShape: savedRow.image_shape || addDraft.imageShape || 'vertical',
       }
+      saveToLayoutMap(item.id, item.imageShape)
 
       const updated = { ...menu, [activeCategory]: [...(menu[activeCategory] || []), item] }
       saveMenu(updated)

@@ -849,10 +849,18 @@ export default function RestaurantWebsite() {
           setMenuTabs(tabs)
           setActiveMenuTab(tabs[0]?.id)
           const menuObj = Object.fromEntries(tabs.map(t => [t.id, []]))
+          // Build a layout fallback map from localStorage (covers case where DB column is missing)
+          const localLayoutMap = (() => {
+            try {
+              const stored = JSON.parse(localStorage.getItem(`exzibo_layout_map`) || '{}')
+              return stored
+            } catch { return {} }
+          })()
           if (items) {
             items.forEach(it => {
               const key = it.category_id
               if (key && menuObj[key] !== undefined) {
+                const shape = it.image_shape || localLayoutMap[it.id] || 'vertical'
                 menuObj[key].push(normalizeItem({
                   id: it.id, dbId: it.id,
                   name: it.name,
@@ -864,8 +872,8 @@ export default function RestaurantWebsite() {
                   available: it.available !== false,
                   tags: it.tags || [],
                   addOns: it.add_ons || [],
-                  image_shape: it.image_shape || 'vertical',
-                  imageShape: it.image_shape || 'vertical',
+                  image_shape: shape,
+                  imageShape: shape,
                 }))
               }
             })
@@ -902,10 +910,14 @@ export default function RestaurantWebsite() {
         const tabs = cats.map(c => ({ id: c.id, label: c.name.toUpperCase() }))
         setMenuTabs(tabs)
         const menuObj = Object.fromEntries(tabs.map(t => [t.id, []]))
+        const localLayoutMap = (() => {
+          try { return JSON.parse(localStorage.getItem('exzibo_layout_map') || '{}') } catch { return {} }
+        })()
         if (menuItems) {
           menuItems.forEach(it => {
             const key = it.category_id
             if (key && menuObj[key] !== undefined) {
+              const shape = it.image_shape || localLayoutMap[it.id] || 'vertical'
               menuObj[key].push(normalizeItem({
                 id: it.id, dbId: it.id,
                 name: it.name,
@@ -917,8 +929,8 @@ export default function RestaurantWebsite() {
                 available: it.available !== false,
                 tags: it.tags || [],
                 addOns: it.add_ons || [],
-                image_shape: it.image_shape || 'vertical',
-                imageShape: it.image_shape || 'vertical',
+                image_shape: shape,
+                imageShape: shape,
               }))
             }
           })

@@ -64,6 +64,7 @@ CREATE TABLE IF NOT EXISTS menu_items (
   tags          JSONB DEFAULT '[]',
   add_ons       JSONB DEFAULT '[]',
   is_published  BOOLEAN NOT NULL DEFAULT false,
+  image_shape   TEXT NOT NULL DEFAULT 'vertical',
   created_at    TIMESTAMPTZ DEFAULT NOW()
 );
 

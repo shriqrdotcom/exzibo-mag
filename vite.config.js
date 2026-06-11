@@ -352,6 +352,49 @@ function menuApiPlugin() {
         } catch (e) { return json(res, 500, { error: e.message }) }
       })
 
+      // POST /api/migrate — idempotent schema migration (add missing columns)
+      server.middlewares.use('/api/migrate', async (req, res) => {
+        if (req.method === 'OPTIONS') return json(res, 200, {})
+        if (req.method !== 'POST') return json(res, 405, { error: 'Method not allowed' })
+        try {
+          const { url: supabaseUrl, headers } = getServiceHeaders()
+
+          // Check if image_shape column exists
+          const check = await fetch(
+            `${supabaseUrl}/rest/v1/menu_items?select=image_shape&limit=0`,
+            { headers }
+          )
+          if (check.ok) {
+            return json(res, 200, { ok: true, message: 'image_shape column already exists' })
+          }
+          const checkErr = await check.json().catch(() => ({}))
+          if (checkErr?.code !== '42703') {
+            return json(res, 200, { ok: true, message: 'table not ready yet or unexpected error', detail: checkErr })
+          }
+
+          // Try to add the column via exec_sql RPC
+          const migrate = await fetch(`${supabaseUrl}/rest/v1/rpc/exec_sql`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({ query: "ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS image_shape TEXT NOT NULL DEFAULT 'vertical'" }),
+          })
+          if (migrate.ok) {
+            console.log('[migrate] image_shape column added via exec_sql ✓')
+            return json(res, 200, { ok: true, message: 'image_shape column added successfully' })
+          }
+
+          // exec_sql not available — return instructions
+          console.warn('[migrate] exec_sql not available — manual SQL needed')
+          return json(res, 200, {
+            ok: false,
+            message: 'exec_sql RPC not available. Run this in Supabase SQL Editor:',
+            sql: "ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS image_shape TEXT NOT NULL DEFAULT 'vertical';"
+          })
+        } catch (e) {
+          return json(res, 500, { error: e.message })
+        }
+      })
+
     },
   }
 }

@@ -750,6 +750,51 @@ app.get('*', (req, res) => {
   res.sendFile(path.resolve(__dirname, 'dist', 'index.html'))
 })
 
+// ── Startup migration: add image_shape column if missing ─────────────────────
+async function runStartupMigration() {
+  try {
+    const { url: supabaseUrl, headers } = getSupabaseServiceHeaders()
+    // 1. Check if column exists by trying to SELECT it
+    const check = await fetch(
+      `${supabaseUrl}/rest/v1/menu_items?select=image_shape&limit=0`,
+      { headers }
+    )
+    if (check.ok) {
+      console.log('[migration] image_shape column exists ✓')
+      return
+    }
+    const checkErr = await check.json().catch(() => ({}))
+    if (checkErr?.code !== '42703') {
+      // Unexpected error or table doesn't exist yet — skip
+      return
+    }
+
+    // 2. Column missing — try to add it via Supabase RPC exec_sql
+    console.log('[migration] image_shape column missing — attempting to add it…')
+    const migrate = await fetch(`${supabaseUrl}/rest/v1/rpc/exec_sql`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        query: "ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS image_shape TEXT NOT NULL DEFAULT 'vertical'"
+      }),
+    })
+    if (migrate.ok) {
+      console.log('[migration] image_shape column added via exec_sql ✓')
+      return
+    }
+
+    // 3. exec_sql not available — log instructions
+    console.warn('[migration] Could not auto-add image_shape column. Run this SQL in your Supabase Dashboard → SQL Editor:')
+    console.warn("  ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS image_shape TEXT NOT NULL DEFAULT 'vertical';")
+  } catch (e) {
+    // Supabase not configured or unreachable at startup — silent
+    if (!e.message?.includes('not configured')) {
+      console.warn('[migration] startup migration skipped:', e.message)
+    }
+  }
+}
+
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on port ${PORT}`)
+  runStartupMigration()
 })
