@@ -5,6 +5,7 @@ import PlanBadge from '../components/PlanBadge'
 import { getRestaurants } from '../lib/db'
 import { supabase } from '../lib/supabase'
 import { openRoleDashboard } from '../lib/navigation'
+import { getSubdomain } from '../lib/subdomain'
 
 export default function Restaurants() {
   const navigate = useNavigate()
@@ -290,7 +291,14 @@ export default function Restaurants() {
                   key={r.id}
                   restaurant={r}
                   isLast={i === filtered.length - 1}
-                  onCustomer={() => window.open(`https://menu.exzibo.online/${r.slug || r.id}/home/1`, '_blank', 'noopener,noreferrer')}
+                  onCustomer={() => {
+                    const slug = r.slug || r.id
+                    if (getSubdomain()) {
+                      window.open(`https://menu.exzibo.online/${slug}/home/1`, '_blank', 'noopener,noreferrer')
+                    } else {
+                      navigate(`/${slug}/home/1`)
+                    }
+                  }}
                   onAdmin={() => openRoleDashboard(navigate, r, 'owner')}
                 />
               ))
