@@ -1747,11 +1747,11 @@ export default function RestaurantWebsite() {
               return (
                 <div style={{
                   display: 'flex',
-                  gap: '12px',
+                  gap: '8px',
                   overflowX: 'auto',
                   scrollbarWidth: 'none',
                   msOverflowStyle: 'none',
-                  padding: '4px 16px 14px',
+                  padding: '2px 16px 10px',
                   alignItems: 'flex-start',
                 }}>
                   {menuTabs.map(tab => {
@@ -1766,49 +1766,50 @@ export default function RestaurantWebsite() {
                         style={{
                           flexShrink: 0,
                           display: 'flex', flexDirection: 'column', alignItems: 'center',
-                          gap: '7px',
+                          gap: '5px',
                           background: 'none',
                           border: 'none',
                           padding: 0,
                           cursor: 'pointer',
                           fontFamily: 'inherit',
-                          minWidth: '76px',
+                          minWidth: '52px',
                           transition: 'transform 0.15s ease',
                         }}
-                        onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.05)'}
+                        onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.06)'}
                         onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
                       >
-                        {/* Image box */}
+                        {/* Image box — compact square */}
                         <div style={{
-                          width: '76px', height: '72px', borderRadius: '20px',
+                          width: '54px', height: '50px', borderRadius: '14px',
                           overflow: 'hidden',
                           background: '#ffffff',
                           border: isActive
-                            ? `2.5px solid ${themeColor}`
-                            : '2.5px solid transparent',
+                            ? `2px solid ${themeColor}`
+                            : '2px solid transparent',
                           boxShadow: isActive
-                            ? `0 6px 20px rgba(0,0,0,0.45), 0 0 0 1px ${themeColor}33`
-                            : '0 3px 12px rgba(0,0,0,0.30)',
+                            ? `0 4px 14px rgba(0,0,0,0.40), 0 0 0 1px ${themeColor}44`
+                            : '0 2px 8px rgba(0,0,0,0.25)',
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
                           transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
                           flexShrink: 0,
+                          padding: '4px',
                         }}>
                           {firstImage ? (
                             <img
                               src={firstImage}
                               alt={shortLabel}
-                              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                              style={{ width: '100%', height: '100%', objectFit: 'contain' }}
                             />
                           ) : (
-                            <span style={{ fontSize: '34px', lineHeight: 1 }}>{emoji}</span>
+                            <span style={{ fontSize: '24px', lineHeight: 1 }}>{emoji}</span>
                           )}
                         </div>
                         {/* Label */}
                         <span style={{
-                          fontSize: '10px',
+                          fontSize: '9px',
                           fontWeight: isActive ? 900 : 700,
                           color: isActive ? '#ffffff' : 'rgba(255,255,255,0.55)',
-                          letterSpacing: '0.09em',
+                          letterSpacing: '0.07em',
                           textTransform: 'uppercase',
                           whiteSpace: 'nowrap',
                           transition: 'color 0.2s ease',
@@ -1826,35 +1827,35 @@ export default function RestaurantWebsite() {
       })()}
 
       {/* ── HEADER SPACER — pushes content below fixed header on non-home tabs ── */}
-      {activeNav !== 'home' && <div style={{ height: activeNav === 'menu' ? '246px' : '132px' }} />}
+      {activeNav !== 'home' && <div style={{ height: activeNav === 'menu' ? '210px' : '132px' }} />}
 
 
       {/* ── SUB-CATEGORY BAR: Filter button + circular category cards ── */}
       {activeNav === 'menu' && (
         <div style={{
           position: 'sticky',
-          top: '166px',
+          top: '138px',
           zIndex: 90,
           background: darkMode ? '#0a0a0a' : '#ffffff',
           borderBottom: `1px solid ${darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.07)'}`,
-          padding: '12px 16px 10px',
+          padding: '8px 16px 8px',
           transition: 'background 0.3s ease',
         }}>
           <div style={{
             display: 'flex',
-            gap: '18px',
+            gap: '12px',
             overflowX: 'auto',
             scrollbarWidth: 'none',
             msOverflowStyle: 'none',
             alignItems: 'flex-start',
           }}>
-            {/* Filter button — outlined rect, left-anchored */}
-            <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '7px', position: 'relative' }}>
+            {/* Filter button — compact outlined square */}
+            <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px', position: 'relative' }}>
               <button
                 onClick={() => setFilterPanelOpen(true)}
                 style={{
-                  width: '68px', height: '68px',
-                  borderRadius: '16px',
+                  width: '52px', height: '50px',
+                  borderRadius: '14px',
                   border: filterCount > 0
                     ? `2px solid ${restaurant?.primaryColor || '#E8321A'}`
                     : `1.5px solid ${darkMode ? 'rgba(255,255,255,0.20)' : 'rgba(0,0,0,0.15)'}`,
@@ -1870,30 +1871,30 @@ export default function RestaurantWebsite() {
                 onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
               >
                 <SlidersHorizontal
-                  size={24}
+                  size={18}
                   color={filterCount > 0
                     ? (restaurant?.primaryColor || '#E8321A')
                     : (darkMode ? 'rgba(255,255,255,0.65)' : '#555')}
                 />
               </button>
               <span style={{
-                fontSize: '12px', fontWeight: 500,
+                fontSize: '10px', fontWeight: 500,
                 color: darkMode ? 'rgba(255,255,255,0.65)' : '#444',
                 whiteSpace: 'nowrap',
               }}>Filter</span>
               {filterCount > 0 && (
                 <span style={{
                   position: 'absolute', top: '-4px', right: '-4px',
-                  width: '18px', height: '18px', borderRadius: '9px',
+                  width: '16px', height: '16px', borderRadius: '8px',
                   background: '#E8321A', color: '#fff',
-                  fontSize: '10px', fontWeight: 800,
+                  fontSize: '9px', fontWeight: 800,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   lineHeight: 1,
                 }}>{filterCount}</span>
               )}
             </div>
 
-            {/* Circular subcategory cards */}
+            {/* Circular subcategory cards — compact */}
             {tabCategories.map(cat => {
               const isActive = activeCategory === cat.id
               return (
@@ -1903,7 +1904,7 @@ export default function RestaurantWebsite() {
                   style={{
                     flexShrink: 0,
                     display: 'flex', flexDirection: 'column', alignItems: 'center',
-                    gap: '7px',
+                    gap: '5px',
                     background: 'none',
                     border: 'none',
                     padding: 0,
@@ -1914,9 +1915,9 @@ export default function RestaurantWebsite() {
                   onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.06)'}
                   onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
                 >
-                  {/* Circle image */}
+                  {/* Circle image — compact */}
                   <div style={{
-                    width: '68px', height: '68px', borderRadius: '50%',
+                    width: '52px', height: '52px', borderRadius: '50%',
                     overflow: 'hidden',
                     border: isActive
                       ? `2.5px solid ${restaurant?.primaryColor || '#E8321A'}`
@@ -1932,15 +1933,15 @@ export default function RestaurantWebsite() {
                       <img
                         src={cat.image}
                         alt={cat.label}
-                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        style={{ width: '85%', height: '85%', objectFit: 'contain' }}
                       />
                     ) : (
-                      <span style={{ fontSize: '30px', lineHeight: 1 }}>{cat.emoji || '🍽️'}</span>
+                      <span style={{ fontSize: '22px', lineHeight: 1 }}>{cat.emoji || '🍽️'}</span>
                     )}
                   </div>
                   {/* Label */}
                   <span style={{
-                    fontSize: '12px',
+                    fontSize: '11px',
                     fontWeight: isActive ? 700 : 500,
                     color: isActive
                       ? (darkMode ? '#fff' : '#111')

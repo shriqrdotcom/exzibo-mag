@@ -1,0 +1,145 @@
+Analyze the current menu page header and redesign the category section to match a modern food delivery UI similar to the provided reference. 
+
+
+
+#### Current Problems
+
+
+
+* Category cards (Starters, Mains, Drinks) are too large.
+
+* Excessive vertical spacing is making the header look bulky.
+
+* Category icons occupy too much space and dominate the header.
+
+* The overall layout feels zoomed-in and wastes valuable screen space.
+
+
+
+#### Required Changes
+
+
+
+1. **Reduce Category Card Size**
+
+
+
+   * Make category cards approximately 40-50% smaller than their current size.
+
+   * Keep them square with rounded corners (12-16px radius).
+
+   * Display more categories within the same horizontal space.
+
+
+
+2. **Optimize Category Images**
+
+
+
+   * Category images should be small, clean thumbnails.
+
+   * Image should occupy about 65-70% of the card.
+
+   * Maintain consistent image size across all categories.
+
+   * Use `object-fit: contain` so images never appear oversized.
+
+
+
+3. **Compact Category Labels**
+
+
+
+   * Reduce label font size.
+
+   * Use bold uppercase text.
+
+   * Keep labels centered below the image.
+
+   * Ensure text does not wrap.
+
+
+
+4. **Reduce Header Height**
+
+
+
+   * Minimize vertical spacing between:
+
+
+
+     * Search bar
+
+     * Category section
+
+     * Filter section
+
+   * The category row should feel compact and dense like modern food ordering apps.
+
+
+
+5. **Improve Horizontal Scrolling**
+
+
+
+   * Categories should scroll horizontally smoothly.
+
+   * Maintain equal spacing between category cards.
+
+   * Prevent oversized margins or padding.
+
+
+
+6. **Match Reference Layout**
+
+
+
+   * Visually follow the proportions shown in the reference image:
+
+
+
+     * Small category cards
+
+     * Compact header
+
+     * Better use of horizontal space
+
+     * Professional food-app appearance
+
+
+
+7. **Responsive Mobile Design**
+
+
+
+   * Optimize specifically for mobile devices.
+
+   * Ensure at least 4 categories are partially visible on screen without feeling cramped.
+
+   * No clipping, overflow, or layout shifts.
+
+
+
+#### Important
+
+
+
+Do not change:
+
+
+
+* Search bar functionality.
+
+* Theme colors.
+
+* Header information layout.
+
+* Existing category selection logic.
+
+
+
+Only improve the visual proportions, sizing, spacing, and responsiveness of the category section to closely match the reference design.
+
+
+
+
