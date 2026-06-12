@@ -4941,8 +4941,19 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
     setDraft(d => ({ ...d, tags: has ? d.tags.filter(t => t !== tag) : [...d.tags, tag] }))
   }
 
+  function persistCatFilters(updated) {
+    saveCatFilters(updated)
+    // Write to localStorage immediately so the customer menu page's storage
+    // listener fires right away — don't wait for "Save All".
+    try {
+      localStorage.setItem(filtersKey, JSON.stringify(updated))
+      window.dispatchEvent(new StorageEvent('storage', { key: filtersKey, newValue: JSON.stringify(updated) }))
+    } catch {}
+  }
+
   function addCatFilter() {
     if (!newCat.label.trim()) return
+    const currentList = catFilters[activeCategory] || [{ id: 'all', emoji: '🍽️', label: 'All', image: null, assignedItems: [] }]
     const cat = {
       id: Date.now().toString(),
       emoji: newCat.emoji || '🏷️',
@@ -4950,16 +4961,16 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
       image: newCat.image || null,
       assignedItems: [],
     }
-    const updated = { ...catFilters, [activeCategory]: [...catFilters[activeCategory], cat] }
-    saveCatFilters(updated)
+    const updated = { ...catFilters, [activeCategory]: [...currentList, cat] }
+    persistCatFilters(updated)
     setNewCat({ emoji: '', label: '', image: null })
     setShowAddCatModal(false)
   }
 
   function removeCatFilter(catId) {
     if (catId === 'all') return
-    const updated = { ...catFilters, [activeCategory]: catFilters[activeCategory].filter(c => c.id !== catId) }
-    saveCatFilters(updated)
+    const updated = { ...catFilters, [activeCategory]: (catFilters[activeCategory] || []).filter(c => c.id !== catId) }
+    persistCatFilters(updated)
     if (activeCatFilter[activeCategory] === catId) {
       setActiveCatFilter(prev => ({ ...prev, [activeCategory]: 'all' }))
     }
