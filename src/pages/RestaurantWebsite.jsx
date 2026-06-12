@@ -1542,62 +1542,64 @@ export default function RestaurantWebsite() {
             <div style={{
               display: 'flex',
               alignItems: 'center',
-              gap: '10px',
-              paddingTop: `${Math.round(12 * (1 - progress))}px`,
+              gap: '12px',
+              paddingTop: `${Math.round(14 * (1 - progress))}px`,
               paddingBottom: 0,
               paddingLeft: '16px',
               paddingRight: '16px',
-              maxHeight: `${Math.round(70 * (1 - progress))}px`,
+              maxHeight: `${Math.round(76 * (1 - progress))}px`,
               opacity: Math.max(0, 1 - progress * 1.4),
               overflow: 'hidden',
               transform: `translateY(${Math.round(-12 * progress)}px)`,
               willChange: 'transform, opacity, max-height',
               pointerEvents: progress > 0.85 ? 'none' : 'auto',
             }}>
-              {/* Restaurant logo */}
-              <div style={{ flexShrink: 0, width: '44px', height: '44px' }}>
+              {/* Restaurant logo — white circular badge */}
+              <div style={{ flexShrink: 0, width: '52px', height: '52px' }}>
                 {restaurant.logo ? (
                   <img
                     src={restaurant.logo}
                     alt={restaurant.name}
                     style={{
-                      width: '44px', height: '44px', borderRadius: '50%',
+                      width: '52px', height: '52px', borderRadius: '50%',
                       objectFit: 'cover',
-                      border: '2px solid rgba(255,255,255,0.25)',
-                      boxShadow: '0 2px 8px rgba(0,0,0,0.35)',
+                      border: '2.5px solid rgba(255,255,255,0.90)',
+                      boxShadow: '0 3px 12px rgba(0,0,0,0.45)',
                       display: 'block',
+                      background: '#fff',
                     }}
                   />
                 ) : (
                   <div style={{
-                    width: '44px', height: '44px', borderRadius: '50%',
-                    background: `linear-gradient(135deg, ${themeColor}cc, ${themeColor}66)`,
-                    border: '2px solid rgba(255,255,255,0.25)',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.35)',
+                    width: '52px', height: '52px', borderRadius: '50%',
+                    background: '#ffffff',
+                    border: '2.5px solid rgba(255,255,255,0.90)',
+                    boxShadow: '0 3px 12px rgba(0,0,0,0.45)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: '18px', fontWeight: 900, color: '#fff',
-                    letterSpacing: '-0.02em',
+                    fontSize: '20px', fontWeight: 900, color: '#1a1a1a',
+                    letterSpacing: '-0.03em',
                   }}>
-                    {(restaurant.name || '?').charAt(0).toUpperCase()}
+                    {(restaurant.name || '?').slice(0, 2).toUpperCase()}
                   </div>
                 )}
               </div>
               {/* Name + location stack */}
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{
-                  fontSize: '15px', fontWeight: 800, color: '#fff',
-                  letterSpacing: '-0.01em', lineHeight: 1.2,
+                  fontSize: '20px', fontWeight: 900, color: '#ffffff',
+                  letterSpacing: '-0.02em', lineHeight: 1.15,
                   whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                  textTransform: 'uppercase',
                 }}>
                   {restaurant.name}
                 </div>
                 <div style={{
-                  display: 'flex', alignItems: 'center', gap: '3px',
-                  marginTop: '2px',
+                  display: 'flex', alignItems: 'center', gap: '4px',
+                  marginTop: '3px',
                 }}>
-                  <MapPin size={12} color={themeColor} style={{ flexShrink: 0 }} />
+                  <MapPin size={13} color={themeColor} style={{ flexShrink: 0 }} />
                   <div style={{
-                    fontSize: '11px', color: 'rgba(255,255,255,0.6)', fontWeight: 500,
+                    fontSize: '13px', color: 'rgba(255,255,255,0.65)', fontWeight: 500,
                     whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                   }}>
                     {restaurant.location || 'Fine Dining'}
@@ -1606,7 +1608,7 @@ export default function RestaurantWebsite() {
               </div>
 
               {/* ── Heart + 3-dot icons ── */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
                 {/* Heart / Love button */}
                 <button
                   onClick={() => {
@@ -1616,37 +1618,36 @@ export default function RestaurantWebsite() {
                     navigateToPage('menu')
                   }}
                   style={{
-                    width: '36px', height: '36px', borderRadius: '50%',
-                    background: '#111',
-                    border: '1.5px solid rgba(255,255,255,0.18)',
+                    width: '44px', height: '44px', borderRadius: '50%',
+                    background: 'rgba(30,30,30,0.85)',
+                    border: '1.5px solid rgba(255,255,255,0.28)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     cursor: 'pointer', flexShrink: 0,
-                    transition: 'transform 0.15s ease',
-                    boxShadow: 'none',
+                    transition: 'transform 0.15s ease, background 0.2s ease',
+                    boxShadow: '0 2px 10px rgba(0,0,0,0.4)',
                   }}
-                  onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.1)'}
-                  onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+                  onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.08)'; e.currentTarget.style.background = 'rgba(50,50,50,0.9)' }}
+                  onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.background = 'rgba(30,30,30,0.85)' }}
                 >
-                  <Heart
-                    size={15}
-                    color='#fff'
-                    fill='none'
-                    strokeWidth={2}
-                  />
+                  <Heart size={18} color='#ffffff' fill='none' strokeWidth={2} />
                 </button>
 
                 {/* Three-dot vertical menu — dropdown is rendered as a fixed portal below */}
                 <button
                   onClick={() => setShowHeaderMenu(v => !v)}
                   style={{
-                    width: '36px', height: '36px', borderRadius: '50%',
-                    background: '#111',
-                    border: '1.5px solid rgba(255,255,255,0.18)',
+                    width: '44px', height: '44px', borderRadius: '50%',
+                    background: 'rgba(30,30,30,0.85)',
+                    border: '1.5px solid rgba(255,255,255,0.28)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     cursor: 'pointer', flexShrink: 0,
+                    transition: 'transform 0.15s ease, background 0.2s ease',
+                    boxShadow: '0 2px 10px rgba(0,0,0,0.4)',
                   }}
+                  onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.08)'; e.currentTarget.style.background = 'rgba(50,50,50,0.9)' }}
+                  onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.background = 'rgba(30,30,30,0.85)' }}
                 >
-                  <MoreVertical size={15} color="rgba(255,255,255,0.8)" />
+                  <MoreVertical size={18} color="rgba(255,255,255,0.90)" />
                 </button>
               </div>
             </div>
@@ -1654,37 +1655,36 @@ export default function RestaurantWebsite() {
             {/* ── Row 2: Search bar + Veg toggle (always visible) ── */}
             <div style={{
               display: 'flex', gap: '10px', alignItems: 'center',
-              padding: `10px ${Math.round(16 - 4 * progress)}px ${Math.round(14 - 4 * progress)}px`,
+              padding: `10px 16px ${Math.round(14 - 4 * progress)}px`,
             }}>
-              {/* Search input */}
+              {/* Search input — large white pill */}
               <div style={{ flex: 1, position: 'relative' }}>
                 {/* Search icon */}
                 <svg
-                  width="16" height="16" viewBox="0 0 24 24" fill="none"
-                  stroke={darkMode ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.35)'}
+                  width="18" height="18" viewBox="0 0 24 24" fill="none"
+                  stroke="rgba(0,0,0,0.38)"
                   strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
-                  style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}
+                  style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}
                 >
                   <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
                 </svg>
                 <input
-                  className={darkMode ? 'float-search-dark' : 'float-search-light'}
+                  className="float-search-light"
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
-                  placeholder='Search dishes, drinks…'
+                  placeholder='Search dishes, drinks...'
                   style={{
                     width: '100%',
-                    background: darkMode ? '#1c1c1c' : '#ffffff',
-                    border: `1.5px solid ${darkMode ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.10)'}`,
-                    borderRadius: '14px',
-                    padding: '11px 36px 11px 40px',
-                    fontSize: '14px',
-                    color: darkMode ? '#fff' : '#111',
+                    background: '#ffffff',
+                    border: 'none',
+                    borderRadius: '50px',
+                    padding: '13px 40px 13px 46px',
+                    fontSize: '15px',
+                    color: '#111',
                     fontFamily: 'inherit',
-                    boxShadow: darkMode
-                      ? '0 2px 12px rgba(0,0,0,0.45)'
-                      : '0 2px 12px rgba(0,0,0,0.12)',
-                    transition: 'background 0.35s ease, border-color 0.3s ease',
+                    fontWeight: 400,
+                    boxShadow: '0 3px 16px rgba(0,0,0,0.55)',
+                    transition: 'box-shadow 0.2s ease',
                   }}
                 />
                 {/* Clear × */}
@@ -1692,44 +1692,43 @@ export default function RestaurantWebsite() {
                   <button
                     onClick={() => setSearchQuery('')}
                     style={{
-                      position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)',
-                      background: darkMode ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)',
+                      position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)',
+                      background: 'rgba(0,0,0,0.10)',
                       border: 'none', borderRadius: '50%',
-                      width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      color: darkMode ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.5)',
-                      cursor: 'pointer', fontSize: '13px', lineHeight: 1,
+                      width: '22px', height: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      color: 'rgba(0,0,0,0.5)',
+                      cursor: 'pointer', fontSize: '14px', lineHeight: 1,
                     }}
                   >×</button>
                 )}
               </div>
 
               {/* VEG toggle */}
-              <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}>
+              <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
                 <span style={{
-                  fontSize: '9px', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase',
+                  fontSize: '10px', fontWeight: 800, letterSpacing: '0.10em', textTransform: 'uppercase',
                   color: isCollapsed
-                    ? (darkMode ? 'rgba(255,255,255,0.55)' : 'rgba(0,0,0,0.45)')
-                    : 'rgba(255,255,255,0.75)',
+                    ? (darkMode ? 'rgba(255,255,255,0.60)' : 'rgba(0,0,0,0.50)')
+                    : 'rgba(255,255,255,0.90)',
                   transition: 'color 0.3s ease',
                 }}>VEG</span>
                 <button
                   onClick={() => setVegMode(v => !v)}
                   style={{
-                    width: '44px', height: '24px', borderRadius: '12px',
-                    background: vegMode ? '#22c55e' : (isCollapsed
-                      ? (darkMode ? 'rgba(255,255,255,0.14)' : 'rgba(0,0,0,0.12)')
-                      : 'rgba(255,255,255,0.22)'),
-                    border: vegMode ? 'none' : `1.5px solid ${isCollapsed ? (darkMode ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.18)') : 'rgba(255,255,255,0.35)'}`,
+                    width: '48px', height: '28px', borderRadius: '14px',
+                    background: vegMode ? '#22c55e' : (darkMode ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.18)'),
+                    border: vegMode ? 'none' : '1.5px solid rgba(255,255,255,0.40)',
                     cursor: 'pointer', position: 'relative',
                     transition: 'background 0.28s ease, border-color 0.28s ease',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.30)',
                   }}
                 >
                   <div style={{
-                    position: 'absolute', top: '3px',
-                    left: vegMode ? 'calc(100% - 21px)' : '3px',
-                    width: '16px', height: '16px', borderRadius: '8px',
+                    position: 'absolute', top: '4px',
+                    left: vegMode ? 'calc(100% - 23px)' : '4px',
+                    width: '18px', height: '18px', borderRadius: '9px',
                     background: '#fff',
-                    boxShadow: '0 1px 4px rgba(0,0,0,0.3)',
+                    boxShadow: '0 1px 5px rgba(0,0,0,0.35)',
                     transition: 'left 0.25s cubic-bezier(0.4,0,0.2,1)',
                   }} />
                 </button>
