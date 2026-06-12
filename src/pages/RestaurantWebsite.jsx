@@ -1512,17 +1512,23 @@ export default function RestaurantWebsite() {
           ══════════════════════════════════════════════════════ */}
       {(() => {
         const COLLAPSE_DIST = 72
-        const progress = activeNav !== 'home' ? 1 : Math.min(1, Math.max(0, scrollY / COLLAPSE_DIST))
-        const isCollapsed = progress >= 1
+        const isHome = activeNav === 'home'
+        // bgProgress drives background opacity — always 1 on non-home tabs (solid dark bg)
+        const bgProgress = isHome ? Math.min(1, Math.max(0, scrollY / COLLAPSE_DIST)) : 1
+        // rowProgress drives logo/name row collapse — NEVER collapses on non-home tabs
+        const rowProgress = isHome ? bgProgress : 0
+        const isCollapsed = bgProgress >= 1 && isHome
         const themeColor = restaurant?.primaryColor || '#E8321A'
         const bgAlpha = darkMode
-          ? 0.96 * progress
-          : (progress < 0.5 ? 0 : (progress - 0.5) * 2 * 0.97)
-        const headerBg = progress < 0.05
-          ? 'linear-gradient(to bottom, rgba(0,0,0,0.62) 0%, rgba(0,0,0,0.18) 72%, rgba(0,0,0,0) 100%)'
-          : darkMode
-            ? `rgba(10,10,10,${bgAlpha.toFixed(2)})`
-            : `rgba(255,255,255,${bgAlpha.toFixed(2)})`
+          ? 0.96 * bgProgress
+          : (bgProgress < 0.5 ? 0 : (bgProgress - 0.5) * 2 * 0.97)
+        const headerBg = !isHome
+          ? (darkMode ? 'rgba(10,10,10,0.97)' : 'rgba(255,255,255,0.97)')
+          : bgProgress < 0.05
+            ? 'linear-gradient(to bottom, rgba(0,0,0,0.62) 0%, rgba(0,0,0,0.18) 72%, rgba(0,0,0,0) 100%)'
+            : darkMode
+              ? `rgba(10,10,10,${bgAlpha.toFixed(2)})`
+              : `rgba(255,255,255,${bgAlpha.toFixed(2)})`
         return (
           <div style={{
             position: 'fixed',
@@ -1533,9 +1539,9 @@ export default function RestaurantWebsite() {
             maxWidth: '480px',
             zIndex: 100,
             background: headerBg,
-            backdropFilter: progress > 0.3 ? `blur(${(progress * 20).toFixed(1)}px)` : 'none',
-            WebkitBackdropFilter: progress > 0.3 ? `blur(${(progress * 20).toFixed(1)}px)` : 'none',
-            boxShadow: progress > 0.8 ? `0 2px 24px rgba(0,0,0,${(0.22 * progress).toFixed(2)})` : 'none',
+            backdropFilter: bgProgress > 0.3 ? `blur(${(bgProgress * 20).toFixed(1)}px)` : 'none',
+            WebkitBackdropFilter: bgProgress > 0.3 ? `blur(${(bgProgress * 20).toFixed(1)}px)` : 'none',
+            boxShadow: bgProgress > 0.8 ? `0 2px 24px rgba(0,0,0,${(0.22 * bgProgress).toFixed(2)})` : 'none',
           }}>
 
             {/* ── Row 1: Logo + Name + Location (scroll-linked collapse) ── */}
@@ -1543,16 +1549,16 @@ export default function RestaurantWebsite() {
               display: 'flex',
               alignItems: 'center',
               gap: '12px',
-              paddingTop: `${Math.round(14 * (1 - progress))}px`,
+              paddingTop: `${Math.round(14 * (1 - rowProgress))}px`,
               paddingBottom: 0,
               paddingLeft: '16px',
               paddingRight: '16px',
-              maxHeight: `${Math.round(76 * (1 - progress))}px`,
-              opacity: Math.max(0, 1 - progress * 1.4),
+              maxHeight: `${Math.round(76 * (1 - rowProgress))}px`,
+              opacity: Math.max(0, 1 - rowProgress * 1.4),
               overflow: 'hidden',
-              transform: `translateY(${Math.round(-12 * progress)}px)`,
+              transform: `translateY(${Math.round(-12 * rowProgress)}px)`,
               willChange: 'transform, opacity, max-height',
-              pointerEvents: progress > 0.85 ? 'none' : 'auto',
+              pointerEvents: rowProgress > 0.85 ? 'none' : 'auto',
             }}>
               {/* Restaurant logo — white circular badge */}
               <div style={{ flexShrink: 0, width: '52px', height: '52px' }}>
@@ -1655,7 +1661,7 @@ export default function RestaurantWebsite() {
             {/* ── Row 2: Search bar + Veg toggle (always visible) ── */}
             <div style={{
               display: 'flex', gap: '10px', alignItems: 'center',
-              padding: `10px 16px ${Math.round(14 - 4 * progress)}px`,
+              padding: `10px 16px ${Math.round(14 - 4 * rowProgress)}px`,
             }}>
               {/* Search input — large white pill */}
               <div style={{ flex: 1, position: 'relative' }}>
@@ -1739,7 +1745,7 @@ export default function RestaurantWebsite() {
       })()}
 
       {/* ── HEADER SPACER — pushes content below fixed header on non-home tabs ── */}
-      {activeNav !== 'home' && <div style={{ height: '64px' }} />}
+      {activeNav !== 'home' && <div style={{ height: '132px' }} />}
 
 
       {/* ── FILTER BAR: replaces old tab strip ── */}
