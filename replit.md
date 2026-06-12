@@ -23,6 +23,7 @@ A full-stack restaurant management SaaS platform. Features a cinematic dark them
 All secrets are stored in Replit Secrets (never in code):
 - `VITE_SUPABASE_URL` — Supabase project URL (used by Vite/browser bundle)
 - `VITE_SUPABASE_ANON_KEY` — Supabase anonymous/public key (used by Vite/browser bundle)
+- `SUPABASE_SERVICE_ROLE_KEY` — Supabase service role key (server-side only, never exposed to browser)
 - `DATABASE_URL` — Replit PostgreSQL connection string (auto-provisioned)
 - `PREVIEW_EMAIL` — (optional) Email for dev preview login bypass
 - `PREVIEW_PASSWORD_HASH` — (optional) bcrypt hash of preview password
