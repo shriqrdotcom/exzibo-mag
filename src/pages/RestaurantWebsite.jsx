@@ -1740,19 +1740,100 @@ export default function RestaurantWebsite() {
                 </button>
               </div>
             </div>
+
+            {/* ── Row 3: Visual category cards (menu page only) ── */}
+            {activeNav === 'menu' && (() => {
+              const TAB_EMOJIS = { starters: '🥗', mains: '🍛', drinks: '🥤' }
+              return (
+                <div style={{
+                  display: 'flex',
+                  gap: '12px',
+                  overflowX: 'auto',
+                  scrollbarWidth: 'none',
+                  msOverflowStyle: 'none',
+                  padding: '4px 16px 14px',
+                  alignItems: 'flex-start',
+                }}>
+                  {menuTabs.map(tab => {
+                    const isActive = activeMenuTab === tab.id
+                    const firstImage = (visibleMenuData[tab.id] || []).find(item => item.image)?.image
+                    const emoji = TAB_EMOJIS[tab.id] || '🍽️'
+                    const shortLabel = tab.label === 'MAIN COURSE' ? 'MAIN' : tab.label
+                    return (
+                      <button
+                        key={tab.id}
+                        onClick={() => { setActiveMenuTab(tab.id); setActiveCategory('all') }}
+                        style={{
+                          flexShrink: 0,
+                          display: 'flex', flexDirection: 'column', alignItems: 'center',
+                          gap: '7px',
+                          background: 'none',
+                          border: 'none',
+                          padding: 0,
+                          cursor: 'pointer',
+                          fontFamily: 'inherit',
+                          minWidth: '76px',
+                          transition: 'transform 0.15s ease',
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.05)'}
+                        onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+                      >
+                        {/* Image box */}
+                        <div style={{
+                          width: '76px', height: '72px', borderRadius: '20px',
+                          overflow: 'hidden',
+                          background: '#ffffff',
+                          border: isActive
+                            ? `2.5px solid ${themeColor}`
+                            : '2.5px solid transparent',
+                          boxShadow: isActive
+                            ? `0 6px 20px rgba(0,0,0,0.45), 0 0 0 1px ${themeColor}33`
+                            : '0 3px 12px rgba(0,0,0,0.30)',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
+                          flexShrink: 0,
+                        }}>
+                          {firstImage ? (
+                            <img
+                              src={firstImage}
+                              alt={shortLabel}
+                              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                            />
+                          ) : (
+                            <span style={{ fontSize: '34px', lineHeight: 1 }}>{emoji}</span>
+                          )}
+                        </div>
+                        {/* Label */}
+                        <span style={{
+                          fontSize: '10px',
+                          fontWeight: isActive ? 900 : 700,
+                          color: isActive ? '#ffffff' : 'rgba(255,255,255,0.55)',
+                          letterSpacing: '0.09em',
+                          textTransform: 'uppercase',
+                          whiteSpace: 'nowrap',
+                          transition: 'color 0.2s ease',
+                        }}>
+                          {shortLabel}
+                        </span>
+                      </button>
+                    )
+                  })}
+                </div>
+              )
+            })()}
           </div>
         )
       })()}
 
       {/* ── HEADER SPACER — pushes content below fixed header on non-home tabs ── */}
-      {activeNav !== 'home' && <div style={{ height: '132px' }} />}
+      {activeNav !== 'home' && <div style={{ height: activeNav === 'menu' ? '246px' : '132px' }} />}
 
 
       {/* ── FILTER BAR: replaces old tab strip ── */}
       {activeNav === 'menu' && (
         <div style={{
           position: 'sticky',
-          top: '64px',
+          top: '166px',
           zIndex: 90,
           background: darkMode ? '#0a0a0a' : '#f5f5f5',
           padding: '10px 14px 8px',
