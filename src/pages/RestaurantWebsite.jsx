@@ -1829,51 +1829,61 @@ export default function RestaurantWebsite() {
       {activeNav !== 'home' && <div style={{ height: activeNav === 'menu' ? '246px' : '132px' }} />}
 
 
-      {/* ── FILTER BAR: replaces old tab strip ── */}
+      {/* ── SUB-CATEGORY BAR: Filter button + circular category cards ── */}
       {activeNav === 'menu' && (
         <div style={{
           position: 'sticky',
           top: '166px',
           zIndex: 90,
-          background: darkMode ? '#0a0a0a' : '#f5f5f5',
-          padding: '10px 14px 8px',
+          background: darkMode ? '#0a0a0a' : '#ffffff',
+          borderBottom: `1px solid ${darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.07)'}`,
+          padding: '12px 16px 10px',
           transition: 'background 0.3s ease',
         }}>
           <div style={{
             display: 'flex',
-            gap: '8px',
+            gap: '18px',
             overflowX: 'auto',
             scrollbarWidth: 'none',
             msOverflowStyle: 'none',
-            paddingBottom: '2px',
-            alignItems: 'center',
+            alignItems: 'flex-start',
           }}>
-            {/* Filter button */}
-            <button
-              className="filter-bar-btn"
-              onClick={() => setFilterPanelOpen(true)}
-              style={{
-                flexShrink: 0,
-                display: 'flex', alignItems: 'center', gap: '6px',
-                padding: '9px 14px',
-                borderRadius: '12px',
-                border: `1.5px solid ${darkMode ? 'rgba(255,255,255,0.15)' : '#e0e0e0'}`,
-                background: filterCount > 0
-                  ? '#1a1a1a'
-                  : (darkMode ? 'rgba(255,255,255,0.06)' : '#fff'),
-                color: filterCount > 0 ? '#fff' : (darkMode ? 'rgba(255,255,255,0.75)' : '#1a1a1a'),
-                fontSize: '13px', fontWeight: 600, cursor: 'pointer',
-                fontFamily: 'inherit', whiteSpace: 'nowrap',
-                boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
-                transition: 'all 0.2s ease',
-                position: 'relative',
-              }}
-            >
-              <SlidersHorizontal size={15} />
-              <span>Filter</span>
+            {/* Filter button — outlined rect, left-anchored */}
+            <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '7px', position: 'relative' }}>
+              <button
+                onClick={() => setFilterPanelOpen(true)}
+                style={{
+                  width: '68px', height: '68px',
+                  borderRadius: '16px',
+                  border: filterCount > 0
+                    ? `2px solid ${restaurant?.primaryColor || '#E8321A'}`
+                    : `1.5px solid ${darkMode ? 'rgba(255,255,255,0.20)' : 'rgba(0,0,0,0.15)'}`,
+                  background: filterCount > 0
+                    ? (darkMode ? 'rgba(232,50,26,0.15)' : 'rgba(232,50,26,0.06)')
+                    : (darkMode ? 'rgba(255,255,255,0.05)' : '#f8f8f8'),
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  flexShrink: 0,
+                }}
+                onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.05)'}
+                onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+              >
+                <SlidersHorizontal
+                  size={24}
+                  color={filterCount > 0
+                    ? (restaurant?.primaryColor || '#E8321A')
+                    : (darkMode ? 'rgba(255,255,255,0.65)' : '#555')}
+                />
+              </button>
+              <span style={{
+                fontSize: '12px', fontWeight: 500,
+                color: darkMode ? 'rgba(255,255,255,0.65)' : '#444',
+                whiteSpace: 'nowrap',
+              }}>Filter</span>
               {filterCount > 0 && (
                 <span style={{
-                  position: 'absolute', top: '-6px', right: '-6px',
+                  position: 'absolute', top: '-4px', right: '-4px',
                   width: '18px', height: '18px', borderRadius: '9px',
                   background: '#E8321A', color: '#fff',
                   fontSize: '10px', fontWeight: 800,
@@ -1881,104 +1891,76 @@ export default function RestaurantWebsite() {
                   lineHeight: 1,
                 }}>{filterCount}</span>
               )}
-            </button>
+            </div>
 
-            {/* Category tab pills */}
-            {menuTabs.map(tab => {
-              const isActive = activeMenuTab === tab.id
-              const isDrinksTab = tab.id === 'drinks'
-              const TabIcon = TAB_ICONS[tab.id] || UtensilsCrossed
+            {/* Circular subcategory cards */}
+            {tabCategories.map(cat => {
+              const isActive = activeCategory === cat.id
               return (
-                <div key={tab.id} style={{ position: 'relative', flexShrink: 0 }}>
-                  <button
-                    className="filter-bar-btn"
-                    onClick={() => {
-                      if (isActive && isDrinksTab) {
-                        setDrinksDropdownOpen(o => !o)
-                      } else {
-                        setActiveMenuTab(tab.id)
-                        setActiveCategory('all')
-                        setDrinksSubFilter('')
-                        if (!isDrinksTab) setDrinksDropdownOpen(false)
-                      }
-                    }}
-                    style={{
-                      display: 'flex', alignItems: 'center', gap: '6px',
-                      padding: isDrinksTab ? '9px 10px 9px 14px' : '9px 14px',
-                      borderRadius: '12px',
-                      border: `1.5px solid ${isActive ? 'transparent' : (darkMode ? 'rgba(255,255,255,0.15)' : '#e0e0e0')}`,
-                      background: isActive ? '#1a1a1a' : (darkMode ? 'rgba(255,255,255,0.06)' : '#fff'),
-                      color: isActive ? '#fff' : (darkMode ? 'rgba(255,255,255,0.75)' : '#1a1a1a'),
-                      fontSize: '13px', fontWeight: 600, cursor: 'pointer',
-                      fontFamily: 'inherit', whiteSpace: 'nowrap',
-                      boxShadow: isActive ? '0 2px 12px rgba(0,0,0,0.18)' : '0 1px 4px rgba(0,0,0,0.06)',
-                      transition: 'all 0.2s ease',
-                    }}
-                  >
-                    <TabIcon size={15} />
-                    <span style={{ textTransform: 'capitalize', letterSpacing: '0.01em' }}>
-                      {tab.label.charAt(0) + tab.label.slice(1).toLowerCase()}
-                    </span>
-                    {isDrinksTab && (
-                      <ChevronDown
-                        size={14}
-                        style={{
-                          marginLeft: '2px',
-                          transition: 'transform 0.2s ease',
-                          transform: drinksDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)',
-                          opacity: isActive ? 1 : 0.6,
-                        }}
+                <button
+                  key={cat.id}
+                  onClick={() => setActiveCategory(cat.id)}
+                  style={{
+                    flexShrink: 0,
+                    display: 'flex', flexDirection: 'column', alignItems: 'center',
+                    gap: '7px',
+                    background: 'none',
+                    border: 'none',
+                    padding: 0,
+                    cursor: 'pointer',
+                    fontFamily: 'inherit',
+                    transition: 'transform 0.15s ease',
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.06)'}
+                  onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+                >
+                  {/* Circle image */}
+                  <div style={{
+                    width: '68px', height: '68px', borderRadius: '50%',
+                    overflow: 'hidden',
+                    border: isActive
+                      ? `2.5px solid ${restaurant?.primaryColor || '#E8321A'}`
+                      : `2px solid ${darkMode ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.09)'}`,
+                    boxShadow: isActive
+                      ? `0 4px 16px rgba(0,0,0,0.20)`
+                      : '0 2px 8px rgba(0,0,0,0.08)',
+                    background: darkMode ? '#1e1e1e' : '#f4f4f4',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
+                  }}>
+                    {cat.image ? (
+                      <img
+                        src={cat.image}
+                        alt={cat.label}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                       />
+                    ) : (
+                      <span style={{ fontSize: '30px', lineHeight: 1 }}>{cat.emoji || '🍽️'}</span>
                     )}
-                  </button>
-
-                  {/* Drinks sub-filter dropdown */}
-                  {isDrinksTab && drinksDropdownOpen && isActive && (
-                    <div style={{
-                      position: 'absolute', top: 'calc(100% + 8px)', left: 0,
-                      background: darkMode ? '#1c1c1c' : '#fff',
-                      border: `1px solid ${darkMode ? 'rgba(255,255,255,0.12)' : '#e5e5e5'}`,
-                      borderRadius: '12px',
-                      boxShadow: '0 8px 28px rgba(0,0,0,0.18)',
-                      zIndex: 200,
-                      overflow: 'hidden',
-                      minWidth: '140px',
-                      animation: 'fadeUp 0.18s ease both',
-                    }}>
-                      {[{ id: '', label: 'All Drinks' }, ...DRINKS_SUB_FILTERS].map(sf => (
-                        <button
-                          key={sf.id}
-                          onClick={() => { setDrinksSubFilter(sf.id); setDrinksDropdownOpen(false) }}
-                          style={{
-                            display: 'block', width: '100%', textAlign: 'left',
-                            padding: '10px 14px',
-                            background: drinksSubFilter === sf.id
-                              ? (darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)')
-                              : 'transparent',
-                            border: 'none',
-                            color: drinksSubFilter === sf.id
-                              ? (darkMode ? '#fff' : '#1a1a1a')
-                              : (darkMode ? 'rgba(255,255,255,0.65)' : '#555'),
-                            fontSize: '13px', fontWeight: drinksSubFilter === sf.id ? 700 : 500,
-                            cursor: 'pointer', fontFamily: 'inherit',
-                            transition: 'background 0.15s ease',
-                          }}
-                        >
-                          {sf.label}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                  </div>
+                  {/* Label */}
+                  <span style={{
+                    fontSize: '12px',
+                    fontWeight: isActive ? 700 : 500,
+                    color: isActive
+                      ? (darkMode ? '#fff' : '#111')
+                      : (darkMode ? 'rgba(255,255,255,0.60)' : '#555'),
+                    whiteSpace: 'nowrap',
+                    letterSpacing: '0.01em',
+                    transition: 'color 0.2s ease, font-weight 0.2s ease',
+                  }}>
+                    {cat.label}
+                  </span>
+                </button>
               )
             })}
           </div>
 
-          {/* Showing count + active sub-filter badge */}
+          {/* Active filter badges row */}
           {(filterCount > 0 || drinksSubFilter) && (
             <div style={{
               display: 'flex', alignItems: 'center', gap: '8px',
-              paddingTop: '8px', flexWrap: 'wrap',
+              paddingTop: '10px', flexWrap: 'wrap',
             }}>
               <span style={{
                 fontSize: '12px', color: darkMode ? 'rgba(255,255,255,0.45)' : '#888',
@@ -2133,60 +2115,6 @@ export default function RestaurantWebsite() {
         </div>
       )}
 
-      {/* ── CATEGORY FILTER STRIP — standalone, outside header ── */}
-      {activeNav === 'menu' && filtersEnabled[activeMenuTab] !== false && (
-        <div style={{ padding: '14px 16px 0' }}>
-          <div className="category-scroll-row" style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '2px' }}>
-            {tabCategories.map(cat => {
-              const isActive = activeCategory === cat.id
-              return (
-                <button
-                  key={cat.id}
-                  onClick={() => setActiveCategory(cat.id)}
-                  style={{
-                    flexShrink: 0,
-                    display: 'flex', flexDirection: 'column', alignItems: 'center',
-                    gap: '6px',
-                    background: isActive
-                      ? '#fff'
-                      : (darkMode ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)'),
-                    border: 'none',
-                    borderRadius: '16px',
-                    padding: '10px 10px 8px',
-                    cursor: 'pointer',
-                    minWidth: '62px',
-                    boxShadow: isActive ? '0 4px 14px rgba(0,0,0,0.2)' : 'none',
-                    transition: 'all 0.2s ease',
-                    fontFamily: 'inherit',
-                  }}
-                >
-                  <div style={{
-                    width: '44px', height: '44px', borderRadius: '12px',
-                    overflow: 'hidden',
-                    background: isActive ? 'rgba(232,50,26,0.08)' : (darkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'),
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  }}>
-                    {cat.image ? (
-                      <img src={cat.image} alt={cat.label} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    ) : (
-                      <span style={{ fontSize: '24px', lineHeight: 1 }}>{cat.emoji}</span>
-                    )}
-                  </div>
-                  <span style={{
-                    fontSize: '10px',
-                    fontWeight: isActive ? 800 : 500,
-                    color: isActive ? '#111' : (darkMode ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.5)'),
-                    letterSpacing: '0.01em',
-                    whiteSpace: 'nowrap',
-                  }}>
-                    {cat.label}
-                  </span>
-                </button>
-              )
-            })}
-          </div>
-        </div>
-      )}
 
       {/* ── SEARCH RESULTS OVERLAY ── */}
       {searchFilteredAll && (
