@@ -4591,6 +4591,17 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
         // Notify all open customer menu pages of the bulk save
         sendMenuRefresh()
       }
+      // Persist sub-category filters + enabled state to Supabase so every device
+      // (including the customer-facing restaurant page on Vercel) sees the latest
+      // filters without relying on localStorage alone.
+      try {
+        await updateRestaurant(restaurantId, {
+          menu_filters: catFilters,
+          filters_enabled: filtersEnabled,
+        })
+      } catch (e) {
+        console.warn('[saveAll] Could not save filters to Supabase (column may not exist yet — run migration):', e.message)
+      }
     } catch (e) {
       console.error('Supabase sync error:', e)
       showToast('⚠️ Menu saved locally — database sync failed')

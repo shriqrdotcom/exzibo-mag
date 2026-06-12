@@ -859,6 +859,18 @@ export default function RestaurantWebsite() {
         setRestaurant(r)
         setCustomerOrders(loadAndFilterCustomerOrders(r.id))
 
+        // Load sub-category filters from Supabase (production-safe, cross-device).
+        // Takes priority over localStorage so that "Save Changes" in admin is
+        // immediately reflected on any browser/device, including Vercel deployments.
+        if (dbRow.menu_filters && typeof dbRow.menu_filters === 'object' && Object.keys(dbRow.menu_filters).length > 0) {
+          setDynamicCategories(dbRow.menu_filters)
+          try { localStorage.setItem(`exzibo_menu_filters_${r.id}`, JSON.stringify(dbRow.menu_filters)) } catch {}
+        }
+        if (dbRow.filters_enabled && typeof dbRow.filters_enabled === 'object' && Object.keys(dbRow.filters_enabled).length > 0) {
+          setFiltersEnabled(dbRow.filters_enabled)
+          try { localStorage.setItem(`exzibo_filters_enabled_${r.id}`, JSON.stringify(dbRow.filters_enabled)) } catch {}
+        }
+
         // Load menu from Supabase — public page shows only published items
         const [cats, items] = await Promise.all([
           getMenuCategories(r.id),
