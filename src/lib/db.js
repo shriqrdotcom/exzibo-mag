@@ -1139,6 +1139,54 @@ export async function upsertGlobalSetting(key, value) {
   if (error) throw error
 }
 
+// ── Per-restaurant menu sub-category filters ──────────────────────────────────
+// Stored in global_settings under key `menu_filters_<restaurantId>`.
+// This avoids the need for new columns on the restaurants table and works with
+// both the anon key (reads on the restaurant page) and authenticated key (writes
+// from the admin dashboard). The same table is already used by other features.
+
+const _menuFiltersKey = (id) => `menu_filters_${id}`
+
+/**
+ * Persist sub-category filters + enabled state for a restaurant.
+ * Safe to call with either the anon or authenticated client — both have
+ * INSERT/UPDATE permission on global_settings per the existing RLS policies.
+ */
+export async function saveMenuFilters(restaurantId, filters, filtersEnabled) {
+  const key = _menuFiltersKey(restaurantId)
+  const value = { filters, filtersEnabled }
+  const { error } = await supabase
+    .from('global_settings')
+    .upsert({ key, value, updated_at: new Date().toISOString() }, { onConflict: 'key' })
+  if (error) throw error
+}
+
+/**
+ * Load sub-category filters for a restaurant.
+ * Returns { filters, filtersEnabled } or null when not found.
+ * Uses the anon client so the restaurant page can call it without auth.
+ */
+export async function loadMenuFilters(restaurantId) {
+  try {
+    const key = _menuFiltersKey(restaurantId)
+    // Try anon client first (works on public restaurant pages)
+    const { data, error } = await supabaseAnon
+      .from('global_settings')
+      .select('value')
+      .eq('key', key)
+      .single()
+    if (!error && data?.value) return data.value
+    // Fallback to authenticated client
+    const { data: d2, error: e2 } = await supabase
+      .from('global_settings')
+      .select('value')
+      .eq('key', key)
+      .single()
+    if (!e2 && d2?.value) return d2.value
+  } catch {}
+  return null
+}
+
 /**
  * Subscribe to real-time NIE IQE1 limit changes.
  * Fires onUpdate({ minKB, maxKB }) whenever the super-admin saves new limits

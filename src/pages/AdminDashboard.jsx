@@ -4,7 +4,7 @@ import { ACTIVE_SUBDOMAIN } from '../lib/subdomain'
 import { getRouteConfig } from '../lib/routeConfig'
 import { useAnalytics, notifyAnalyticsUpdate } from '../context/AnalyticsContext'
 import { useRole } from '../context/RoleContext'
-import { getRestaurantById, getRestaurants, getOrders, getBookings, updateOrderStatus, updateBookingStatus, getMenuCategories, getMenuItems, insertMenuItem, updateMenuItem, deleteMenuItem, upsertMenuCategory, deleteMenuCategory, upsertMenuItems, uploadMenuImage, updateRestaurant, uploadToStorage, uploadDataUrlToStorage, toggleMenuItemPublish, normalizeOrder, normalizeBooking, sendMessage, getLatestSmsNotification, upsertSmsNotification, fetchActiveNotification, publishActiveNotification, confirmActiveNotification, insertNotificationHistory, fetchNotificationHistory, fetchNIELimits, subscribeToNIELimits } from '../lib/db'
+import { getRestaurantById, getRestaurants, getOrders, getBookings, updateOrderStatus, updateBookingStatus, getMenuCategories, getMenuItems, insertMenuItem, updateMenuItem, deleteMenuItem, upsertMenuCategory, deleteMenuCategory, upsertMenuItems, uploadMenuImage, updateRestaurant, uploadToStorage, uploadDataUrlToStorage, toggleMenuItemPublish, normalizeOrder, normalizeBooking, sendMessage, getLatestSmsNotification, upsertSmsNotification, fetchActiveNotification, publishActiveNotification, confirmActiveNotification, insertNotificationHistory, fetchNotificationHistory, fetchNIELimits, subscribeToNIELimits, saveMenuFilters } from '../lib/db'
 import { processImageFile, isAcceptedImageType } from '../lib/processImage'
 import { toSlug } from '../lib/slug'
 import { supabase } from '../lib/supabase'
@@ -4591,16 +4591,14 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
         // Notify all open customer menu pages of the bulk save
         sendMenuRefresh()
       }
-      // Persist sub-category filters + enabled state to Supabase so every device
-      // (including the customer-facing restaurant page on Vercel) sees the latest
-      // filters without relying on localStorage alone.
+      // Persist sub-category filters + enabled state to Supabase (global_settings)
+      // so every device — including the customer-facing restaurant page on any
+      // host (Vercel, Replit deployed, etc.) — gets the latest filters without
+      // relying on localStorage. No schema migration required.
       try {
-        await updateRestaurant(restaurantId, {
-          menu_filters: catFilters,
-          filters_enabled: filtersEnabled,
-        })
+        await saveMenuFilters(restaurantId, catFilters, filtersEnabled)
       } catch (e) {
-        console.warn('[saveAll] Could not save filters to Supabase (column may not exist yet — run migration):', e.message)
+        console.warn('[saveAll] Could not save filters to Supabase:', e.message)
       }
     } catch (e) {
       console.error('Supabase sync error:', e)

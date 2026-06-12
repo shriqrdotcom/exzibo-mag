@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { notifyAnalyticsUpdate } from '../context/AnalyticsContext'
-import { getRestaurantBySlug, getMenuCategories, getMenuItems, getPublishedMenuItems } from '../lib/db'
+import { getRestaurantBySlug, getMenuCategories, getMenuItems, getPublishedMenuItems, loadMenuFilters } from '../lib/db'
 import { supabase } from '../lib/supabase'
 import { useMenuSubdomainRedirect } from '../lib/routeConfig'
 import { toSlug } from '../lib/slug'
@@ -859,17 +859,21 @@ export default function RestaurantWebsite() {
         setRestaurant(r)
         setCustomerOrders(loadAndFilterCustomerOrders(r.id))
 
-        // Load sub-category filters from Supabase (production-safe, cross-device).
-        // Takes priority over localStorage so that "Save Changes" in admin is
-        // immediately reflected on any browser/device, including Vercel deployments.
-        if (dbRow.menu_filters && typeof dbRow.menu_filters === 'object' && Object.keys(dbRow.menu_filters).length > 0) {
-          setDynamicCategories(dbRow.menu_filters)
-          try { localStorage.setItem(`exzibo_menu_filters_${r.id}`, JSON.stringify(dbRow.menu_filters)) } catch {}
-        }
-        if (dbRow.filters_enabled && typeof dbRow.filters_enabled === 'object' && Object.keys(dbRow.filters_enabled).length > 0) {
-          setFiltersEnabled(dbRow.filters_enabled)
-          try { localStorage.setItem(`exzibo_filters_enabled_${r.id}`, JSON.stringify(dbRow.filters_enabled)) } catch {}
-        }
+        // Load sub-category filters from Supabase (global_settings table).
+        // Production-safe and cross-device — no schema migration required.
+        // Takes priority over localStorage so "Save Changes" in admin is
+        // immediately reflected on any device, including Vercel deployments.
+        loadMenuFilters(r.id).then(saved => {
+          if (!saved || cancelled) return
+          if (saved.filters && typeof saved.filters === 'object' && Object.keys(saved.filters).length > 0) {
+            setDynamicCategories(saved.filters)
+            try { localStorage.setItem(`exzibo_menu_filters_${r.id}`, JSON.stringify(saved.filters)) } catch {}
+          }
+          if (saved.filtersEnabled && typeof saved.filtersEnabled === 'object' && Object.keys(saved.filtersEnabled).length > 0) {
+            setFiltersEnabled(saved.filtersEnabled)
+            try { localStorage.setItem(`exzibo_filters_enabled_${r.id}`, JSON.stringify(saved.filtersEnabled)) } catch {}
+          }
+        }).catch(() => {})
 
         // Load menu from Supabase — public page shows only published items
         const [cats, items] = await Promise.all([
