@@ -1,0 +1,141 @@
+Redesign the **Sub Category Filter Section** to match the modern style shown in the reference design. 
+
+
+
+#### Current Problems
+
+
+
+* Sub-category items are displayed inside circular/boxed containers.
+
+* Icons have visible backgrounds and borders.
+
+* The design looks heavy and outdated.
+
+* Too much space is occupied by each sub-category item.
+
+
+
+#### Required Design Changes
+
+
+
+1. **Remove All Icon Containers**
+
+
+
+   * Remove the circular, square, or bordered background behind sub-category images.
+
+   * Display only the food image itself.
+
+   * Images should appear as clean PNG-style cutouts with transparent backgrounds.
+
+
+
+2. **Use Background-Erased Images**
+
+
+
+   * Sub-category images should look like floating food items.
+
+   * No white box, colored box, circle, shadow container, or card behind the image.
+
+   * Only the food image should be visible.
+
+
+
+3. **Modern Horizontal Layout**
+
+
+
+   * Display sub-categories in a horizontal scroll row.
+
+   * Each item should contain:
+
+
+
+     * Food image on top
+
+     * Category name below
+
+   * Keep alignment perfectly centered.
+
+
+
+4. **Image Size Optimization**
+
+
+
+   * Increase food image visibility while keeping the overall component compact.
+
+   * Images should be approximately 50–60px tall on mobile.
+
+   * Maintain aspect ratio using `object-fit: contain`.
+
+
+
+5. **Selected State Design**
+
+
+
+   * Do NOT wrap the selected item inside a circle.
+
+   * Instead, highlight the selected sub-category using:
+
+
+
+     * Slight scale effect (1.05x)
+
+     * Theme-colored text
+
+     * Optional thin underline or bottom indicator
+
+   * Keep the food image unchanged.
+
+
+
+6. **Spacing & Visual Balance**
+
+
+
+   * Reduce unnecessary padding and margins.
+
+   * Keep equal spacing between all sub-category items.
+
+   * Ensure the section feels lightweight and premium.
+
+
+
+7. **Mobile-First Design**
+
+
+
+   * Optimize specifically for mobile screens.
+
+   * Smooth horizontal scrolling.
+
+   * No layout shifts or oversized elements.
+
+
+
+#### Important
+
+
+
+Keep:
+
+
+
+* Existing filter functionality.
+
+* Existing category selection logic.
+
+* Existing theme colors.
+
+
+
+Only redesign the visual appearance so the sub-category filter looks like modern food delivery apps, where food images appear as transparent floating cutouts instead of icons inside boxes or circles.
+
+
+
+**Goal:** Make the sub-category filter visually match the reference design with clean background-erased food images, minimal UI, and a premium modern appearance. 

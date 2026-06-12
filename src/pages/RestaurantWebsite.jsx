@@ -1894,9 +1894,10 @@ export default function RestaurantWebsite() {
               )}
             </div>
 
-            {/* Circular subcategory cards — compact */}
+            {/* Modern floating-cutout subcategory cards */}
             {tabCategories.map(cat => {
               const isActive = activeCategory === cat.id
+              const accentColor = restaurant?.primaryColor || '#E8321A'
               return (
                 <button
                   key={cat.id}
@@ -1904,39 +1905,43 @@ export default function RestaurantWebsite() {
                   style={{
                     flexShrink: 0,
                     display: 'flex', flexDirection: 'column', alignItems: 'center',
-                    gap: '5px',
+                    gap: '4px',
                     background: 'none',
                     border: 'none',
-                    padding: 0,
+                    padding: '2px 4px 4px',
                     cursor: 'pointer',
                     fontFamily: 'inherit',
-                    transition: 'transform 0.15s ease',
+                    transform: isActive ? 'scale(1.05)' : 'scale(1)',
+                    transition: 'transform 0.18s ease',
+                    position: 'relative',
                   }}
-                  onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.06)'}
-                  onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+                  onMouseEnter={e => !isActive && (e.currentTarget.style.transform = 'scale(1.04)')}
+                  onMouseLeave={e => !isActive && (e.currentTarget.style.transform = 'scale(1)')}
                 >
-                  {/* Circle image — compact */}
+                  {/* Floating food image — no container, no background */}
                   <div style={{
-                    width: '52px', height: '52px', borderRadius: '50%',
-                    overflow: 'hidden',
-                    border: isActive
-                      ? `2.5px solid ${restaurant?.primaryColor || '#E8321A'}`
-                      : `2px solid ${darkMode ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.09)'}`,
-                    boxShadow: isActive
-                      ? `0 4px 16px rgba(0,0,0,0.20)`
-                      : '0 2px 8px rgba(0,0,0,0.08)',
-                    background: darkMode ? '#1e1e1e' : '#f4f4f4',
+                    width: '58px', height: '54px',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
+                    position: 'relative',
                   }}>
                     {cat.image ? (
                       <img
                         src={cat.image}
                         alt={cat.label}
-                        style={{ width: '85%', height: '85%', objectFit: 'contain' }}
+                        style={{
+                          width: '54px', height: '54px',
+                          objectFit: 'contain',
+                          filter: isActive ? 'none' : (darkMode ? 'brightness(0.75) saturate(0.7)' : 'saturate(0.6) opacity(0.75)'),
+                          transition: 'filter 0.2s ease',
+                          display: 'block',
+                        }}
                       />
                     ) : (
-                      <span style={{ fontSize: '22px', lineHeight: 1 }}>{cat.emoji || '🍽️'}</span>
+                      <span style={{
+                        fontSize: '36px', lineHeight: 1,
+                        filter: isActive ? 'none' : 'saturate(0.5) opacity(0.7)',
+                        transition: 'filter 0.2s ease',
+                      }}>{cat.emoji || '🍽️'}</span>
                     )}
                   </div>
                   {/* Label */}
@@ -1944,14 +1949,24 @@ export default function RestaurantWebsite() {
                     fontSize: '11px',
                     fontWeight: isActive ? 700 : 500,
                     color: isActive
-                      ? (darkMode ? '#fff' : '#111')
-                      : (darkMode ? 'rgba(255,255,255,0.60)' : '#555'),
+                      ? accentColor
+                      : (darkMode ? 'rgba(255,255,255,0.55)' : '#666'),
                     whiteSpace: 'nowrap',
                     letterSpacing: '0.01em',
                     transition: 'color 0.2s ease, font-weight 0.2s ease',
                   }}>
                     {cat.label}
                   </span>
+                  {/* Active underline indicator */}
+                  <span style={{
+                    display: 'block',
+                    height: '2.5px',
+                    width: isActive ? '70%' : '0%',
+                    background: accentColor,
+                    borderRadius: '2px',
+                    transition: 'width 0.22s ease',
+                    marginTop: '1px',
+                  }} />
                 </button>
               )
             })}
