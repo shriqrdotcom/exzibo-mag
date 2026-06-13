@@ -416,6 +416,7 @@ export default function RestaurantWebsite() {
   const [searchQuery, setSearchQuery] = useState('')
   const [activeCategory, setActiveCategory] = useState('all')
   const [vegMode, setVegMode] = useState(false)
+  const [homeCatSelected, setHomeCatSelected] = useState(null)
   const [filterPanelOpen, setFilterPanelOpen] = useState(false)
   const [activeQuickFilters, setActiveQuickFilters] = useState([])
   const [drinksDropdownOpen, setDrinksDropdownOpen] = useState(false)
@@ -2594,23 +2595,23 @@ export default function RestaurantWebsite() {
                     return (
                       <button
                         key={cat.id}
-                        onClick={() => {
-                          setActiveMenuTab(cat.tabId)
-                          setActiveCategory(cat.id)
-                          navigateToPage('menu')
-                        }}
+                        onClick={() => setHomeCatSelected(prev => prev?.id === cat.id ? null : cat)}
                         style={{
                           display: 'flex', flexDirection: 'column',
                           alignItems: 'center',
-                          background: darkMode ? 'rgba(255,255,255,0.07)' : '#E4EFF9',
-                          border: 'none',
+                          background: homeCatSelected?.id === cat.id
+                            ? (darkMode ? 'rgba(232,50,26,0.22)' : '#ffd9d4')
+                            : (darkMode ? 'rgba(255,255,255,0.07)' : '#E4EFF9'),
+                          border: homeCatSelected?.id === cat.id
+                            ? `2px solid ${restaurant?.primaryColor || '#E8321A'}`
+                            : '2px solid transparent',
                           borderRadius: '16px',
                           padding: '12px 6px 10px',
                           cursor: 'pointer',
                           fontFamily: 'inherit',
                           outline: 'none',
                           WebkitTapHighlightColor: 'transparent',
-                          transition: 'transform 0.15s ease',
+                          transition: 'transform 0.15s ease, background 0.2s ease, border-color 0.2s ease',
                           minWidth: 0,
                         }}
                         onTouchStart={e => e.currentTarget.style.transform = 'scale(0.94)'}
@@ -2644,6 +2645,92 @@ export default function RestaurantWebsite() {
                     )
                   })}
                 </div>
+                </div>
+              </section>
+            )
+          })()}
+
+          {/* ── HOME CATEGORY FOOD ROW — shown when a category is selected ── */}
+          {homeCatSelected && (() => {
+            const tabItems = visibleMenuData[homeCatSelected.tabId] || []
+            const assigned = homeCatSelected.assignedItems || []
+            const items = assigned.length > 0
+              ? tabItems.filter(item => assigned.includes(item.id))
+              : tabItems
+            const themeColor = restaurant?.primaryColor || '#E8321A'
+            if (items.length === 0) return (
+              <section style={{ padding: '14px 14px 0' }}>
+                <p style={{ fontSize: '12px', color: darkMode ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.35)', textAlign: 'center', margin: 0 }}>
+                  No items found in this category.
+                </p>
+              </section>
+            )
+            return (
+              <section style={{ padding: '14px 0 0' }}>
+                {/* Section label */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 14px', marginBottom: '10px' }}>
+                  <span style={{ fontSize: '12px', fontWeight: 800, color: themeColor, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                    {(homeCatSelected.label || homeCatSelected.id).replace(/_/g, ' ')}
+                  </span>
+                  <button
+                    onClick={() => { setActiveMenuTab(homeCatSelected.tabId); setActiveCategory(homeCatSelected.id); navigateToPage('menu') }}
+                    style={{ display: 'flex', alignItems: 'center', gap: '3px', background: 'none', border: 'none', color: themeColor, fontSize: '11px', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}
+                  >
+                    See all <ChevronRight size={12} />
+                  </button>
+                </div>
+
+                {/* Horizontal food card row */}
+                <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch', padding: '0 14px 4px', scrollSnapType: 'x mandatory' }}>
+                  {items.map((item, i) => (
+                    <div
+                      key={item.id || i}
+                      onClick={() => navigate(
+                        isMenuPath
+                          ? `/${slug}/item/${toSlug(item.name)}/${tableNumber}`
+                          : `/restaurant/${slug}/food/${encodeURIComponent(item.name)}`,
+                        { state: { item, returnTab: activeNav, darkMode, themeColor } }
+                      )}
+                      style={{
+                        flexShrink: 0,
+                        width: '150px',
+                        borderRadius: '16px',
+                        overflow: 'hidden',
+                        cursor: 'pointer',
+                        background: darkMode ? 'rgba(255,255,255,0.06)' : '#fff',
+                        boxShadow: darkMode ? '0 4px 18px rgba(0,0,0,0.35)' : '0 4px 16px rgba(0,0,0,0.10)',
+                        scrollSnapAlign: 'start',
+                        transition: 'transform 0.15s ease',
+                      }}
+                      onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-3px)'}
+                      onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
+                    >
+                      {/* Food image */}
+                      <div style={{ width: '100%', height: '110px', overflow: 'hidden', position: 'relative' }}>
+                        <img
+                          src={item.image || item.img || '/menu/wagyu-ribeye.png'}
+                          alt={item.name}
+                          onError={e => { e.target.src = '/menu/wagyu-ribeye.png' }}
+                          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                        />
+                        {item.veg && (
+                          <div style={{ position: 'absolute', top: '6px', left: '6px', width: '16px', height: '16px', borderRadius: '3px', border: '1.5px solid #2e7d32', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#2e7d32' }} />
+                          </div>
+                        )}
+                      </div>
+                      {/* Info */}
+                      <div style={{ padding: '8px 10px 10px' }}>
+                        <div style={{ fontSize: '12px', fontWeight: 700, color: darkMode ? '#fff' : '#1a1a1a', lineHeight: 1.3, marginBottom: '4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {item.name}
+                        </div>
+                        <div style={{ fontSize: '12px', fontWeight: 800, color: themeColor }}>
+                          ₹{item.price}
+                          {item.oldPrice && <span style={{ fontSize: '10px', fontWeight: 500, color: darkMode ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.35)', textDecoration: 'line-through', marginLeft: '4px' }}>₹{item.oldPrice}</span>}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </section>
             )
