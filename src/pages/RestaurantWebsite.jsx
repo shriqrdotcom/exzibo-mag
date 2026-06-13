@@ -1757,77 +1757,123 @@ export default function RestaurantWebsite() {
               </div>
             </div>
 
-            {/* ── Row 3: Visual category cards (menu page only) ── */}
+            {/* ── Row 3: Premium visual category cards (menu page only) ── */}
             {activeNav === 'menu' && (() => {
-              const TAB_EMOJIS = { starters: '🥗', mains: '🍛', drinks: '🥤' }
+              const CATEGORY_DEFAULT_IMAGES = {
+                starters:   'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=300&q=80',
+                starter:    'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=300&q=80',
+                appetizer:  'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=300&q=80',
+                mains:      'https://images.unsplash.com/photo-1585937421612-70a008356fbe?w=300&q=80',
+                main:       'https://images.unsplash.com/photo-1585937421612-70a008356fbe?w=300&q=80',
+                maincourse: 'https://images.unsplash.com/photo-1585937421612-70a008356fbe?w=300&q=80',
+                rice:       'https://images.unsplash.com/photo-1585937421612-70a008356fbe?w=300&q=80',
+                curry:      'https://images.unsplash.com/photo-1585937421612-70a008356fbe?w=300&q=80',
+                drinks:     'https://images.unsplash.com/photo-1544145945-f90425340c7e?w=300&q=80',
+                drink:      'https://images.unsplash.com/photo-1544145945-f90425340c7e?w=300&q=80',
+                juice:      'https://images.unsplash.com/photo-1544145945-f90425340c7e?w=300&q=80',
+                soda:       'https://images.unsplash.com/photo-1544145945-f90425340c7e?w=300&q=80',
+                beverages:  'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=300&q=80',
+                beverage:   'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=300&q=80',
+                coffee:     'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=300&q=80',
+                hot:        'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=300&q=80',
+                desserts:   'https://images.unsplash.com/photo-1551024601-bec78aea704b?w=300&q=80',
+                dessert:    'https://images.unsplash.com/photo-1551024601-bec78aea704b?w=300&q=80',
+                sweets:     'https://images.unsplash.com/photo-1551024601-bec78aea704b?w=300&q=80',
+                combos:     'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=300&q=80',
+                combo:      'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=300&q=80',
+                meals:      'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=300&q=80',
+                thali:      'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=300&q=80',
+              }
+              const FALLBACK_IMG = 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=300&q=80'
+
               return (
                 <div style={{
                   display: 'flex',
-                  gap: '8px',
+                  gap: '10px',
                   overflowX: 'auto',
                   scrollbarWidth: 'none',
                   msOverflowStyle: 'none',
-                  padding: '2px 16px 10px',
+                  padding: '6px 16px 14px',
                   alignItems: 'flex-start',
                 }}>
                   {menuTabs.map(tab => {
                     const isActive = activeMenuTab === tab.id
                     const firstImage = (visibleMenuData[tab.id] || []).find(item => item.image)?.image
-                    const emoji = TAB_EMOJIS[tab.id] || '🍽️'
+                    const labelKey = (tab.label || '').toLowerCase().replace(/[\s_-]/g, '')
+                    const defaultImg =
+                      CATEGORY_DEFAULT_IMAGES[tab.id] ||
+                      CATEGORY_DEFAULT_IMAGES[labelKey] ||
+                      Object.entries(CATEGORY_DEFAULT_IMAGES).find(([k]) => labelKey.includes(k))?.[1] ||
+                      FALLBACK_IMG
+                    const imgSrc = firstImage || defaultImg
                     const shortLabel = tab.label === 'MAIN COURSE' ? 'MAIN' : tab.label
+
                     return (
                       <button
                         key={tab.id}
                         onClick={() => { setActiveMenuTab(tab.id); setActiveCategory('all') }}
                         style={{
                           flexShrink: 0,
-                          display: 'flex', flexDirection: 'column', alignItems: 'center',
-                          gap: '5px',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          gap: '8px',
                           background: 'none',
                           border: 'none',
                           padding: 0,
                           cursor: 'pointer',
                           fontFamily: 'inherit',
-                          minWidth: '52px',
-                          transition: 'transform 0.15s ease',
+                          minWidth: '82px',
+                          transition: 'transform 0.18s cubic-bezier(0.34,1.56,0.64,1)',
                         }}
-                        onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.06)'}
+                        onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.07)'}
                         onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
                       >
-                        {/* Image box — compact square */}
+                        {/* White rounded square card with food image */}
                         <div style={{
-                          width: '54px', height: '50px', borderRadius: '14px',
-                          overflow: 'hidden',
+                          width: '82px',
+                          height: '82px',
+                          borderRadius: '22px',
                           background: '#ffffff',
                           border: isActive
-                            ? `2px solid ${themeColor}`
-                            : '2px solid transparent',
+                            ? `2.5px solid ${themeColor}`
+                            : '2.5px solid rgba(255,255,255,0.12)',
                           boxShadow: isActive
-                            ? `0 4px 14px rgba(0,0,0,0.40), 0 0 0 1px ${themeColor}44`
-                            : '0 2px 8px rgba(0,0,0,0.25)',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
+                            ? `0 6px 20px rgba(0,0,0,0.35), 0 0 0 4px ${themeColor}30`
+                            : '0 4px 14px rgba(0,0,0,0.30)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          transition: 'border-color 0.22s ease, box-shadow 0.22s ease',
                           flexShrink: 0,
-                          padding: '4px',
+                          overflow: 'hidden',
+                          padding: '6px',
                         }}>
-                          {firstImage ? (
-                            <img
-                              src={firstImage}
-                              alt={shortLabel}
-                              style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-                            />
-                          ) : (
-                            <span style={{ fontSize: '24px', lineHeight: 1 }}>{emoji}</span>
-                          )}
+                          <img
+                            src={imgSrc}
+                            alt={shortLabel}
+                            style={{
+                              width: '100%',
+                              height: '100%',
+                              objectFit: 'contain',
+                              borderRadius: '14px',
+                              display: 'block',
+                            }}
+                            onError={e => {
+                              if (e.target.src !== defaultImg) e.target.src = defaultImg
+                            }}
+                          />
                         </div>
-                        {/* Label */}
+
+                        {/* Category name below card */}
                         <span style={{
-                          fontSize: '9px',
+                          fontSize: '10px',
                           fontWeight: isActive ? 900 : 700,
-                          color: isActive ? '#ffffff' : 'rgba(255,255,255,0.55)',
-                          letterSpacing: '0.07em',
+                          color: isActive ? '#ffffff' : 'rgba(255,255,255,0.52)',
+                          letterSpacing: '0.08em',
                           textTransform: 'uppercase',
                           whiteSpace: 'nowrap',
+                          lineHeight: 1,
                           transition: 'color 0.2s ease',
                         }}>
                           {shortLabel}
@@ -1843,14 +1889,14 @@ export default function RestaurantWebsite() {
       })()}
 
       {/* ── HEADER SPACER — pushes content below fixed header on non-home tabs ── */}
-      {activeNav !== 'home' && <div style={{ height: activeNav === 'menu' ? '192px' : '120px' }} />}
+      {activeNav !== 'home' && <div style={{ height: activeNav === 'menu' ? '232px' : '120px' }} />}
 
 
       {/* ── SUB-CATEGORY BAR: Filter button + circular category cards ── */}
       {activeNav === 'menu' && (
         <div style={{
           position: 'sticky',
-          top: '128px',
+          top: '168px',
           zIndex: 90,
           background: darkMode ? '#0a0a0a' : '#ffffff',
           borderBottom: `1px solid ${darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.07)'}`,
