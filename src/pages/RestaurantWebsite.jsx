@@ -1377,8 +1377,9 @@ export default function RestaurantWebsite() {
     const id = setInterval(() => {
       setOffersIdx(prev => {
         const next = (prev + 1) % SPECIAL_OFFERS_DATA.length
-        if (offersScrollRef.current?.children[next]) {
-          offersScrollRef.current.children[next].scrollIntoView({ behavior: 'smooth', inline: 'start', block: 'nearest' })
+        const container = offersScrollRef.current
+        if (container?.children[next]) {
+          container.scrollTo({ left: container.children[next].offsetLeft - container.offsetLeft, behavior: 'smooth' })
         }
         return next
       })
@@ -3072,8 +3073,9 @@ export default function RestaurantWebsite() {
                   key={i}
                   onClick={() => {
                     setOffersIdx(i)
-                    if (offersScrollRef.current?.children[i]) {
-                      offersScrollRef.current.children[i].scrollIntoView({ behavior: 'smooth', inline: 'start', block: 'nearest' })
+                    const container = offersScrollRef.current
+                    if (container?.children[i]) {
+                      container.scrollTo({ left: container.children[i].offsetLeft - container.offsetLeft, behavior: 'smooth' })
                     }
                   }}
                   style={{
