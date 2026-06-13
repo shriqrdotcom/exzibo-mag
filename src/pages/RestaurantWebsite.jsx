@@ -1906,14 +1906,14 @@ export default function RestaurantWebsite() {
         }}>
           <div style={{
             display: 'flex',
-            gap: '8px',
+            gap: '4px',
             overflowX: 'auto',
             scrollbarWidth: 'none',
             msOverflowStyle: 'none',
-            alignItems: 'flex-start',
+            alignItems: 'flex-end',
           }}>
-            {/* Filter button — compact outlined square */}
-            <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', position: 'relative' }}>
+            {/* Filter button — aligned to bottom with inactive cards */}
+            <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', position: 'relative', alignSelf: 'flex-end' }}>
               <button
                 onClick={() => setFilterPanelOpen(true)}
                 style={{
@@ -1957,79 +1957,69 @@ export default function RestaurantWebsite() {
               )}
             </div>
 
-            {/* Modern floating-cutout subcategory cards */}
+            {/* Sub-category cards — exact reference style */}
             {tabCategories.map(cat => {
               const isActive = activeCategory === cat.id
-              const accentColor = restaurant?.primaryColor || '#E8321A'
               return (
                 <button
                   key={cat.id}
                   onClick={() => setActiveCategory(cat.id)}
                   style={{
                     flexShrink: 0,
-                    display: 'flex', flexDirection: 'column', alignItems: 'center',
-                    gap: '4px',
-                    background: 'none',
-                    border: 'none',
-                    padding: '2px 4px 4px',
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-between',
+                    width: '76px',
+                    height: isActive ? '112px' : '86px',
+                    background: '#fff',
+                    border: isActive ? '2px solid #1a1a1a' : '1.5px solid #e8e8e8',
+                    borderRadius: '20px',
+                    padding: '10px 6px 10px',
                     cursor: 'pointer',
                     fontFamily: 'inherit',
-                    transform: isActive ? 'scale(1.05)' : 'scale(1)',
-                    transition: 'transform 0.18s ease',
-                    position: 'relative',
+                    transition: 'height 0.18s ease, border 0.18s ease',
+                    outline: 'none',
+                    WebkitTapHighlightColor: 'transparent',
                   }}
-                  onMouseEnter={e => !isActive && (e.currentTarget.style.transform = 'scale(1.04)')}
-                  onMouseLeave={e => !isActive && (e.currentTarget.style.transform = 'scale(1)')}
                 >
-                  {/* Floating food image — compact */}
+                  {/* Food image */}
                   <div style={{
-                    width: '40px', height: '38px',
+                    flex: 1,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    position: 'relative',
+                    width: '100%',
                   }}>
                     {cat.image ? (
                       <img
                         src={cat.image}
                         alt={cat.label}
                         style={{
-                          width: '36px', height: '36px',
+                          width: isActive ? '58px' : '50px',
+                          height: isActive ? '58px' : '50px',
                           objectFit: 'contain',
-                          filter: isActive ? 'none' : (darkMode ? 'brightness(0.75) saturate(0.7)' : 'saturate(0.6) opacity(0.75)'),
-                          transition: 'filter 0.2s ease',
                           display: 'block',
+                          transition: 'width 0.18s ease, height 0.18s ease',
                         }}
                       />
                     ) : (
                       <span style={{
-                        fontSize: '24px', lineHeight: 1,
-                        filter: isActive ? 'none' : 'saturate(0.5) opacity(0.7)',
-                        transition: 'filter 0.2s ease',
-                      }}>{cat.emoji || '🍽️'}</span>
+                        fontSize: isActive ? '30px' : '26px',
+                        lineHeight: 1,
+                        transition: 'font-size 0.18s ease',
+                      }}>
+                        {cat.emoji || '🍽️'}
+                      </span>
                     )}
                   </div>
                   {/* Label */}
                   <span style={{
-                    fontSize: '10px',
+                    fontSize: '12px',
                     fontWeight: isActive ? 700 : 500,
-                    color: isActive
-                      ? accentColor
-                      : (darkMode ? 'rgba(255,255,255,0.55)' : '#666'),
+                    color: '#111',
                     whiteSpace: 'nowrap',
-                    letterSpacing: '0.01em',
-                    transition: 'color 0.2s ease, font-weight 0.2s ease',
+                    letterSpacing: 0,
+                    lineHeight: 1,
+                    flexShrink: 0,
                   }}>
                     {cat.label}
                   </span>
-                  {/* Active underline indicator */}
-                  <span style={{
-                    display: 'block',
-                    height: '2.5px',
-                    width: isActive ? '70%' : '0%',
-                    background: accentColor,
-                    borderRadius: '2px',
-                    transition: 'width 0.22s ease',
-                    marginTop: '1px',
-                  }} />
                 </button>
               )
             })}
