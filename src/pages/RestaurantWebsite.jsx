@@ -1565,16 +1565,16 @@ export default function RestaurantWebsite() {
               display: 'flex',
               alignItems: 'center',
               gap: '10px',
-              paddingTop: `${Math.round(10 * (1 - rowProgress))}px`,
+              paddingTop: activeNav === 'menu' ? 0 : `${Math.round(10 * (1 - rowProgress))}px`,
               paddingBottom: 0,
               paddingLeft: '16px',
               paddingRight: '16px',
-              maxHeight: `${Math.round(62 * (1 - rowProgress))}px`,
-              opacity: Math.max(0, 1 - rowProgress * 1.4),
+              maxHeight: activeNav === 'menu' ? 0 : `${Math.round(62 * (1 - rowProgress))}px`,
+              opacity: activeNav === 'menu' ? 0 : Math.max(0, 1 - rowProgress * 1.4),
               overflow: 'hidden',
               transform: `translateY(${Math.round(-10 * rowProgress)}px)`,
               willChange: 'transform, opacity, max-height',
-              pointerEvents: rowProgress > 0.85 ? 'none' : 'auto',
+              pointerEvents: (activeNav === 'menu' || rowProgress > 0.85) ? 'none' : 'auto',
             }}>
               {/* Restaurant logo — white circular badge */}
               <div style={{ flexShrink: 0, width: '40px', height: '40px' }}>
@@ -1889,14 +1889,14 @@ export default function RestaurantWebsite() {
       })()}
 
       {/* ── HEADER SPACER — pushes content below fixed header on non-home tabs ── */}
-      {activeNav !== 'home' && <div style={{ height: activeNav === 'menu' ? '232px' : '120px' }} />}
+      {activeNav !== 'home' && <div style={{ height: activeNav === 'menu' ? '160px' : '120px' }} />}
 
 
       {/* ── SUB-CATEGORY BAR: Filter button + circular category cards ── */}
       {activeNav === 'menu' && (
         <div style={{
           position: 'sticky',
-          top: '168px',
+          top: '96px',
           zIndex: 90,
           background: darkMode ? '#0a0a0a' : '#ffffff',
           borderBottom: `1px solid ${darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.07)'}`,
