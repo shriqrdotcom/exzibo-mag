@@ -4,7 +4,7 @@ import { ACTIVE_SUBDOMAIN } from '../lib/subdomain'
 import { getRouteConfig } from '../lib/routeConfig'
 import { useAnalytics, notifyAnalyticsUpdate } from '../context/AnalyticsContext'
 import { useRole } from '../context/RoleContext'
-import { getRestaurantById, getRestaurants, getOrders, getBookings, updateOrderStatus, updateBookingStatus, getMenuCategories, getMenuItems, insertMenuItem, updateMenuItem, deleteMenuItem, upsertMenuCategory, deleteMenuCategory, upsertMenuItems, uploadMenuImage, updateRestaurant, uploadToStorage, uploadDataUrlToStorage, toggleMenuItemPublish, normalizeOrder, normalizeBooking, sendMessage, getLatestSmsNotification, upsertSmsNotification, fetchActiveNotification, publishActiveNotification, confirmActiveNotification, insertNotificationHistory, fetchNotificationHistory, fetchNIELimits, subscribeToNIELimits, saveMenuFilters } from '../lib/db'
+import { getRestaurantById, getRestaurants, getOrders, getBookings, updateOrderStatus, updateBookingStatus, getMenuCategories, getMenuItems, insertMenuItem, updateMenuItem, deleteMenuItem, upsertMenuCategory, deleteMenuCategory, upsertMenuItems, uploadMenuImage, updateRestaurant, uploadToStorage, uploadDataUrlToStorage, toggleMenuItemPublish, normalizeOrder, normalizeBooking, sendMessage, getLatestSmsNotification, upsertSmsNotification, fetchActiveNotification, publishActiveNotification, confirmActiveNotification, insertNotificationHistory, fetchNotificationHistory, fetchNIELimits, subscribeToNIELimits, saveMenuFilters, loadMenuFilters } from '../lib/db'
 import { processImageFile, isAcceptedImageType } from '../lib/processImage'
 import { toSlug } from '../lib/slug'
 import { supabase } from '../lib/supabase'
@@ -4426,6 +4426,24 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
             })
           }
           setMenu(menuObj)
+        }
+        // Load sub-category filters from Supabase so existing filters are
+        // always present — even on a fresh device or after clearing localStorage.
+        // Without this, adding a new sub-cat would start from DEFAULT and
+        // overwrite previously saved filters on Save All.
+        try {
+          const savedFilters = await loadMenuFilters(restaurantId)
+          if (cancelled) return
+          if (savedFilters?.filters && typeof savedFilters.filters === 'object' && Object.keys(savedFilters.filters).length > 0) {
+            setCatFilters(savedFilters.filters)
+            try { localStorage.setItem(`exzibo_menu_filters_${restaurantId}`, JSON.stringify(savedFilters.filters)) } catch {}
+          }
+          if (savedFilters?.filtersEnabled && typeof savedFilters.filtersEnabled === 'object') {
+            setFiltersEnabled(savedFilters.filtersEnabled)
+            try { localStorage.setItem(`exzibo_filters_enabled_${restaurantId}`, JSON.stringify(savedFilters.filtersEnabled)) } catch {}
+          }
+        } catch (e) {
+          console.warn('[AdminDashboard] Could not load filters from Supabase:', e.message)
         }
       } catch (e) {
         console.error('Menu load error:', e)
