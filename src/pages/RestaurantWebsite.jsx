@@ -223,10 +223,58 @@ function loadMenuFromStorage(id, tabs) {
 }
 
 const SPECIAL_OFFERS_DATA = [
-  { id: 1, tag: 'First Order', title: '50% OFF',     desc: 'Get 50% off on your very first order with us', cta: 'Claim Offer', accent: '#E8321A', lightBg: '#fff5f3', darkBg: '#1f0f0c', emoji: '🎉' },
-  { id: 2, tag: 'Today Only',  title: 'Buy 1 Get 1', desc: 'Free on selected menu items today',             cta: 'Order Now',  accent: '#1a8a45', lightBg: '#f0faf4', darkBg: '#091a0f', emoji: '🍔' },
-  { id: 3, tag: 'Always On',   title: 'Free Delivery',desc: 'On all orders above ₹299',                    cta: 'Order Now',  accent: '#c47f00', lightBg: '#fffbf0', darkBg: '#1a1400', emoji: '🛵' },
-  { id: 4, tag: 'Weekend Deal',title: 'Save ₹150',   desc: 'Weekend combo meal for two — limited time',    cta: 'Grab Deal',  accent: '#6e3bbd', lightBg: '#faf5ff', darkBg: '#120a1e', emoji: '🍽️' },
+  {
+    id: 1,
+    headline: '50% Off\nFirst Order',
+    subtitle: 'Use code WELCOME50 at checkout',
+    cta: 'Order Now',
+    gradient: 'linear-gradient(125deg, #c0392b 0%, #e74c3c 45%, #ff6b6b 100%)',
+    emoji: '🍕',
+    emojiStyle: { fontSize: '110px', transform: 'rotate(-15deg) translate(10px, 12px)', filter: 'drop-shadow(0 12px 24px rgba(0,0,0,0.30))' },
+    textColor: '#fff',
+    subColor: 'rgba(255,255,255,0.75)',
+    btnBg: '#fff',
+    btnColor: '#c0392b',
+  },
+  {
+    id: 2,
+    headline: 'Free\nDelivery',
+    subtitle: 'On all orders above ₹299',
+    cta: 'Start Ordering',
+    gradient: 'linear-gradient(125deg, #0f6b4a 0%, #1abc9c 55%, #48d1a8 100%)',
+    emoji: '🛵',
+    emojiStyle: { fontSize: '104px', transform: 'rotate(8deg) translate(8px, 14px)', filter: 'drop-shadow(0 12px 24px rgba(0,0,0,0.28))' },
+    textColor: '#fff',
+    subColor: 'rgba(255,255,255,0.72)',
+    btnBg: '#fff',
+    btnColor: '#0f6b4a',
+  },
+  {
+    id: 3,
+    headline: 'Weekend\nCombo Deal',
+    subtitle: 'Save ₹150 on a meal for two',
+    cta: 'Grab the Deal',
+    gradient: 'linear-gradient(125deg, #7c3aed 0%, #9b59b6 50%, #c084fc 100%)',
+    emoji: '🍽️',
+    emojiStyle: { fontSize: '108px', transform: 'rotate(-10deg) translate(6px, 10px)', filter: 'drop-shadow(0 12px 24px rgba(0,0,0,0.30))' },
+    textColor: '#fff',
+    subColor: 'rgba(255,255,255,0.72)',
+    btnBg: '#fff',
+    btnColor: '#7c3aed',
+  },
+  {
+    id: 4,
+    headline: 'Buy 1\nGet 1 Free',
+    subtitle: 'On selected items — today only',
+    cta: 'See Menu',
+    gradient: 'linear-gradient(125deg, #b45309 0%, #d97706 50%, #fbbf24 100%)',
+    emoji: '🍔',
+    emojiStyle: { fontSize: '112px', transform: 'rotate(12deg) translate(4px, 14px)', filter: 'drop-shadow(0 12px 24px rgba(0,0,0,0.28))' },
+    textColor: '#fff',
+    subColor: 'rgba(255,255,255,0.72)',
+    btnBg: '#fff',
+    btnColor: '#b45309',
+  },
 ]
 
 export default function RestaurantWebsite() {
@@ -2888,112 +2936,137 @@ export default function RestaurantWebsite() {
 
 
           {/* ── SPECIAL OFFERS ── */}
-          <section style={{ padding: '32px 0 8px' }}>
-            {/* Header */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 14px', marginBottom: '16px' }}>
+          <section style={{ padding: '32px 0 16px' }}>
+            {/* Section title */}
+            <div style={{ padding: '0 14px', marginBottom: '14px' }}>
               <div style={{ fontSize: '13px', fontWeight: 900, color: theme.sectionTitle, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
                 Special Offers
               </div>
-              <button style={{ display: 'flex', alignItems: 'center', gap: '3px', background: 'none', border: 'none', color: '#E8321A', fontSize: '12px', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
-                View All <ChevronRight size={13} />
-              </button>
             </div>
 
-            {/* Scrollable cards */}
+            {/* Hero banner slider — left-padded so next banner peeks right */}
             <div
               ref={offersScrollRef}
-              onTouchStart={() => { setOffersPaused(true); clearTimeout(window._offerResume); window._offerResume = setTimeout(() => setOffersPaused(false), 8000) }}
-              onMouseDown={() => { setOffersPaused(true); clearTimeout(window._offerResume); window._offerResume = setTimeout(() => setOffersPaused(false), 8000) }}
+              onTouchStart={() => { setOffersPaused(true); clearTimeout(window._offerResume); window._offerResume = setTimeout(() => setOffersPaused(false), 9000) }}
+              onMouseDown={() => { setOffersPaused(true); clearTimeout(window._offerResume); window._offerResume = setTimeout(() => setOffersPaused(false), 9000) }}
               style={{
-                display: 'flex', gap: '12px',
-                overflowX: 'auto', scrollSnapType: 'x mandatory',
+                display: 'flex',
+                gap: '12px',
+                overflowX: 'auto',
+                scrollSnapType: 'x mandatory',
                 WebkitOverflowScrolling: 'touch',
-                padding: '4px 14px 8px',
-                msOverflowStyle: 'none', scrollbarWidth: 'none',
+                padding: '4px 14px 10px',
+                msOverflowStyle: 'none',
+                scrollbarWidth: 'none',
               }}
             >
-              {SPECIAL_OFFERS_DATA.map((offer, i) => (
+              {SPECIAL_OFFERS_DATA.map((banner) => (
                 <div
-                  key={offer.id}
+                  key={banner.id}
                   style={{
-                    minWidth: 'calc(min(480px, 100vw) - 44px)',
-                    width: 'calc(min(480px, 100vw) - 44px)',
-                    height: '190px',
-                    borderRadius: '24px',
-                    background: darkMode ? offer.darkBg : offer.lightBg,
-                    border: `1px solid ${darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'}`,
-                    boxShadow: darkMode ? '0 4px 24px rgba(0,0,0,0.35)' : '0 4px 20px rgba(0,0,0,0.09)',
+                    minWidth: 'calc(min(480px, 100vw) - 52px)',
+                    width: 'calc(min(480px, 100vw) - 52px)',
+                    height: '210px',
+                    borderRadius: '28px',
+                    background: banner.gradient,
                     scrollSnapAlign: 'start',
                     flexShrink: 0,
                     display: 'flex',
                     alignItems: 'stretch',
                     overflow: 'hidden',
                     position: 'relative',
+                    boxShadow: '0 8px 32px rgba(0,0,0,0.22)',
                   }}
                 >
-                  {/* Left content */}
-                  <div style={{ flex: 1, padding: '20px 0 20px 22px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', zIndex: 1, minWidth: 0 }}>
-                    {/* Tag pill */}
+                  {/* Subtle inner highlight at top */}
+                  <div style={{
+                    position: 'absolute', top: 0, left: 0, right: 0, height: '50%',
+                    background: 'linear-gradient(180deg, rgba(255,255,255,0.10) 0%, transparent 100%)',
+                    pointerEvents: 'none',
+                  }} />
+
+                  {/* LEFT — text content */}
+                  <div style={{
+                    flex: 1,
+                    padding: '26px 0 24px 24px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    zIndex: 1,
+                    minWidth: 0,
+                  }}>
+                    {/* Headline — newline-aware */}
                     <div style={{
-                      display: 'inline-flex', alignItems: 'center', gap: '5px',
-                      background: offer.accent + '1a',
-                      color: offer.accent,
-                      fontSize: '9px', fontWeight: 800, letterSpacing: '0.10em',
-                      padding: '4px 10px', borderRadius: '100px',
-                      textTransform: 'uppercase', width: 'fit-content',
+                      fontSize: '26px',
+                      fontWeight: 900,
+                      color: banner.textColor,
+                      lineHeight: 1.10,
+                      letterSpacing: '-0.02em',
+                      whiteSpace: 'pre-line',
                     }}>
-                      <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: offer.accent, flexShrink: 0 }} />
-                      {offer.tag}
+                      {banner.headline}
                     </div>
-                    {/* Title + description */}
+
+                    {/* Subtitle + CTA stacked */}
                     <div>
-                      <div style={{ fontSize: '28px', fontWeight: 900, color: offer.accent, lineHeight: 1.0, letterSpacing: '-0.02em' }}>
-                        {offer.title}
+                      <div style={{
+                        fontSize: '11.5px',
+                        color: banner.subColor,
+                        lineHeight: 1.45,
+                        marginBottom: '14px',
+                        maxWidth: '160px',
+                      }}>
+                        {banner.subtitle}
                       </div>
-                      <div style={{ fontSize: '11px', color: darkMode ? 'rgba(255,255,255,0.52)' : 'rgba(0,0,0,0.50)', marginTop: '5px', lineHeight: 1.45, maxWidth: '155px', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
-                        {offer.desc}
-                      </div>
+                      <button
+                        onClick={() => navigateToPage('menu')}
+                        style={{
+                          background: banner.btnBg,
+                          color: banner.btnColor,
+                          border: 'none',
+                          borderRadius: '100px',
+                          padding: '9px 20px',
+                          fontSize: '12px',
+                          fontWeight: 800,
+                          letterSpacing: '0.02em',
+                          cursor: 'pointer',
+                          fontFamily: 'inherit',
+                          boxShadow: '0 4px 16px rgba(0,0,0,0.20)',
+                        }}
+                      >
+                        {banner.cta}
+                      </button>
                     </div>
-                    {/* CTA button */}
-                    <button style={{
-                      background: offer.accent,
-                      color: '#fff',
-                      border: 'none',
-                      borderRadius: '100px',
-                      padding: '8px 18px',
-                      fontSize: '11px',
-                      fontWeight: 800,
-                      letterSpacing: '0.03em',
-                      cursor: 'pointer',
-                      fontFamily: 'inherit',
-                      width: 'fit-content',
-                      boxShadow: `0 4px 14px ${offer.accent}45`,
-                    }}>
-                      {offer.cta}
-                    </button>
                   </div>
 
-                  {/* Right — emoji illustration */}
+                  {/* RIGHT — large floating emoji illustration */}
                   <div style={{
-                    width: '120px', flexShrink: 0,
-                    display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
-                    paddingBottom: '0',
+                    width: '130px',
+                    flexShrink: 0,
+                    position: 'relative',
+                    overflow: 'visible',
+                    display: 'flex',
+                    alignItems: 'flex-end',
+                    justifyContent: 'center',
                   }}>
                     <span style={{
-                      fontSize: '90px', lineHeight: 1,
-                      transform: 'rotate(10deg) translateY(6px)',
-                      display: 'block', userSelect: 'none',
-                      filter: 'drop-shadow(0 8px 18px rgba(0,0,0,0.20))',
+                      ...banner.emojiStyle,
+                      display: 'block',
+                      lineHeight: 1,
+                      userSelect: 'none',
+                      position: 'absolute',
+                      bottom: '-4px',
+                      right: '-4px',
                     }}>
-                      {offer.emoji}
+                      {banner.emoji}
                     </span>
                   </div>
                 </div>
               ))}
             </div>
 
-            {/* Dot indicators */}
-            <div style={{ display: 'flex', justifyContent: 'center', gap: '6px', marginTop: '8px' }}>
+            {/* Pagination dots */}
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '6px', marginTop: '10px' }}>
               {SPECIAL_OFFERS_DATA.map((_, i) => (
                 <button
                   key={i}
@@ -3004,10 +3077,10 @@ export default function RestaurantWebsite() {
                     }
                   }}
                   style={{
-                    width: i === offersIdx ? '18px' : '6px',
+                    width: i === offersIdx ? '20px' : '6px',
                     height: '6px',
                     borderRadius: '3px',
-                    background: i === offersIdx ? '#E8321A' : (darkMode ? 'rgba(255,255,255,0.22)' : 'rgba(0,0,0,0.16)'),
+                    background: i === offersIdx ? '#E8321A' : (darkMode ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.18)'),
                     border: 'none',
                     cursor: 'pointer',
                     padding: 0,
