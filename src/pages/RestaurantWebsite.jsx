@@ -1798,9 +1798,7 @@ export default function RestaurantWebsite() {
                 <div style={{
                   display: 'flex',
                   gap: '10px',
-                  overflowX: 'auto',
-                  scrollbarWidth: 'none',
-                  msOverflowStyle: 'none',
+                  flexWrap: 'wrap',
                   padding: '6px 16px 14px',
                   alignItems: 'flex-start',
                   justifyContent: 'center',
