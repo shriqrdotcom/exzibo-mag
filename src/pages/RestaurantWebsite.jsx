@@ -1902,29 +1902,23 @@ export default function RestaurantWebsite() {
       {/* ── SUB-CATEGORY BAR: Filter button + circular category cards ── */}
       {activeNav === 'menu' && (
         <div style={{
-          position: 'sticky',
-          top: '104px',
-          zIndex: 90,
-          background: darkMode ? '#0a0a0a' : '#ffffff',
-          borderBottom: `1px solid ${darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.07)'}`,
-          padding: '8px 16px 8px',
-          transition: 'background 0.3s ease',
+          padding: '4px 16px 6px',
         }}>
           <div style={{
             display: 'flex',
-            gap: '12px',
+            gap: '8px',
             overflowX: 'auto',
             scrollbarWidth: 'none',
             msOverflowStyle: 'none',
             alignItems: 'flex-start',
           }}>
             {/* Filter button — compact outlined square */}
-            <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px', position: 'relative' }}>
+            <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', position: 'relative' }}>
               <button
                 onClick={() => setFilterPanelOpen(true)}
                 style={{
-                  width: '52px', height: '50px',
-                  borderRadius: '14px',
+                  width: '38px', height: '36px',
+                  borderRadius: '10px',
                   border: filterCount > 0
                     ? `2px solid ${restaurant?.primaryColor || '#E8321A'}`
                     : `1.5px solid ${darkMode ? 'rgba(255,255,255,0.20)' : 'rgba(0,0,0,0.15)'}`,
@@ -1940,14 +1934,14 @@ export default function RestaurantWebsite() {
                 onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
               >
                 <SlidersHorizontal
-                  size={18}
+                  size={14}
                   color={filterCount > 0
                     ? (restaurant?.primaryColor || '#E8321A')
                     : (darkMode ? 'rgba(255,255,255,0.65)' : '#555')}
                 />
               </button>
               <span style={{
-                fontSize: '10px', fontWeight: 500,
+                fontSize: '9px', fontWeight: 500,
                 color: darkMode ? 'rgba(255,255,255,0.65)' : '#444',
                 whiteSpace: 'nowrap',
               }}>Filter</span>
@@ -1987,9 +1981,9 @@ export default function RestaurantWebsite() {
                   onMouseEnter={e => !isActive && (e.currentTarget.style.transform = 'scale(1.04)')}
                   onMouseLeave={e => !isActive && (e.currentTarget.style.transform = 'scale(1)')}
                 >
-                  {/* Floating food image — no container, no background */}
+                  {/* Floating food image — compact */}
                   <div style={{
-                    width: '58px', height: '54px',
+                    width: '40px', height: '38px',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     position: 'relative',
                   }}>
@@ -1998,7 +1992,7 @@ export default function RestaurantWebsite() {
                         src={cat.image}
                         alt={cat.label}
                         style={{
-                          width: '54px', height: '54px',
+                          width: '36px', height: '36px',
                           objectFit: 'contain',
                           filter: isActive ? 'none' : (darkMode ? 'brightness(0.75) saturate(0.7)' : 'saturate(0.6) opacity(0.75)'),
                           transition: 'filter 0.2s ease',
@@ -2007,7 +2001,7 @@ export default function RestaurantWebsite() {
                       />
                     ) : (
                       <span style={{
-                        fontSize: '36px', lineHeight: 1,
+                        fontSize: '24px', lineHeight: 1,
                         filter: isActive ? 'none' : 'saturate(0.5) opacity(0.7)',
                         transition: 'filter 0.2s ease',
                       }}>{cat.emoji || '🍽️'}</span>
@@ -2015,7 +2009,7 @@ export default function RestaurantWebsite() {
                   </div>
                   {/* Label */}
                   <span style={{
-                    fontSize: '11px',
+                    fontSize: '10px',
                     fontWeight: isActive ? 700 : 500,
                     color: isActive
                       ? accentColor
