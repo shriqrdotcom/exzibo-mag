@@ -1802,6 +1802,7 @@ export default function RestaurantWebsite() {
                   msOverflowStyle: 'none',
                   padding: '6px 16px 14px',
                   alignItems: 'flex-start',
+                  justifyContent: 'center',
                 }}>
                   {menuTabs.map(tab => {
                     const isActive = activeMenuTab === tab.id
@@ -1842,12 +1843,8 @@ export default function RestaurantWebsite() {
                           height: '82px',
                           borderRadius: '22px',
                           background: '#ffffff',
-                          border: isActive
-                            ? `2.5px solid ${themeColor}`
-                            : '2.5px solid rgba(255,255,255,0.12)',
-                          boxShadow: isActive
-                            ? `0 6px 20px rgba(0,0,0,0.35), 0 0 0 4px ${themeColor}30`
-                            : '0 4px 14px rgba(0,0,0,0.30)',
+                          border: '2.5px solid rgba(255,255,255,0.12)',
+                          boxShadow: '0 4px 14px rgba(0,0,0,0.30)',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
