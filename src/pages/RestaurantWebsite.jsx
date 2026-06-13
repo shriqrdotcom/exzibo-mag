@@ -2599,19 +2599,15 @@ export default function RestaurantWebsite() {
                         style={{
                           display: 'flex', flexDirection: 'column',
                           alignItems: 'center',
-                          background: homeCatSelected?.id === cat.id
-                            ? (darkMode ? 'rgba(232,50,26,0.22)' : '#ffd9d4')
-                            : (darkMode ? 'rgba(255,255,255,0.07)' : '#E4EFF9'),
-                          border: homeCatSelected?.id === cat.id
-                            ? `2px solid ${restaurant?.primaryColor || '#E8321A'}`
-                            : '2px solid transparent',
-                          borderRadius: '16px',
-                          padding: '12px 6px 10px',
+                          background: darkMode ? 'rgba(255,255,255,0.07)' : '#E4EFF9',
+                          border: '2px solid transparent',
+                          borderRadius: '14px',
+                          padding: '8px 6px 7px',
                           cursor: 'pointer',
                           fontFamily: 'inherit',
                           outline: 'none',
                           WebkitTapHighlightColor: 'transparent',
-                          transition: 'transform 0.15s ease, background 0.2s ease, border-color 0.2s ease',
+                          transition: 'transform 0.15s ease',
                           minWidth: 0,
                         }}
                         onTouchStart={e => e.currentTarget.style.transform = 'scale(0.94)'}
@@ -2624,17 +2620,17 @@ export default function RestaurantWebsite() {
                           alt={label}
                           onError={e => { e.target.src = FALLBACK_IMG }}
                           style={{
-                            width: '62px', height: '62px',
+                            width: '42px', height: '42px',
                             objectFit: 'contain',
                             display: 'block',
-                            marginBottom: '8px',
-                            filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.12))',
+                            marginBottom: '5px',
+                            filter: 'drop-shadow(0 2px 5px rgba(0,0,0,0.12))',
                           }}
                         />
                         <span style={{
-                          fontSize: '11px', fontWeight: 700,
+                          fontSize: '10px', fontWeight: 700,
                           color: darkMode ? 'rgba(255,255,255,0.88)' : '#1a1a2e',
-                          textAlign: 'center', lineHeight: 1.3,
+                          textAlign: 'center', lineHeight: 1.2,
                           textTransform: 'capitalize',
                           wordBreak: 'break-word',
                           width: '100%',
