@@ -265,6 +265,7 @@ export default function RestaurantWebsite() {
     return location.state?.activeNav || 'home'
   })
   const [activeMenuTab, setActiveMenuTab] = useState('starters')
+  const [selectedHomeCategory, setSelectedHomeCategory] = useState(null)
   const [darkMode, setDarkMode] = useState(() =>
     window.matchMedia('(prefers-color-scheme: dark)').matches
   )
