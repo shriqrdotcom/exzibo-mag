@@ -1,0 +1,157 @@
+
+
+
+
+### Fix Sub Category Filter UI (Reference Matching Required)
+
+
+
+The recent update is still not matching the reference design.
+
+
+
+### Current Problems
+
+
+
+1. The selected **"All"** category is extremely tall and oversized.
+
+2. The icon inside the selected category is too small and floating in empty space.
+
+3. The selected category looks like a stretched pill instead of the compact premium card shown in the reference.
+
+4. The **Filter** button is still visually disconnected:
+
+
+
+   * Different size.
+
+   * Different alignment.
+
+   * Different vertical position.
+
+   * Different spacing from category items.
+
+5. Overall proportions do not match the reference image.
+
+
+
+### Required Fixes
+
+
+
+#### 1. Match Reference Layout Exactly
+
+
+
+The selected category should look like the reference image:
+
+
+
+* Width approximately 80-90px.
+
+* Height approximately 110-130px.
+
+* Not taller than necessary.
+
+* Perfectly balanced proportions.
+
+* Large circular food image at the top.
+
+* Category label directly below the image.
+
+* Everything centered vertically.
+
+
+
+#### 2. Fix Category Image Size
+
+
+
+* Increase category image size by 40-50%.
+
+* Image should occupy most of the upper section.
+
+* Use transparent background food images.
+
+* Remove excessive empty space around the icon.
+
+
+
+#### 3. Fix Selected State Design
+
+
+
+* Use a clean rounded rectangle/pill card.
+
+* Thin theme-colored border.
+
+* Soft shadow.
+
+* Premium food-app appearance.
+
+* Do not make it excessively tall.
+
+* Maintain the same proportions as the reference image.
+
+
+
+#### 4. Fix Filter Button
+
+
+
+The Filter button must align with category items.
+
+
+
+Requirements:
+
+
+
+* Same overall height as category row.
+
+* Icon centered.
+
+* Label aligned properly.
+
+* Equal vertical positioning with category cards.
+
+* Same spacing system as categories.
+
+* Should look like it belongs to the same component family.
+
+
+
+#### 5. Improve Horizontal Layout
+
+
+
+* Equal spacing between all category items.
+
+* Perfect center alignment.
+
+* Consistent image sizes.
+
+* Consistent text spacing.
+
+* No element should look larger or smaller without purpose.
+
+
+
+### Important
+
+
+
+Do not redesign creatively.
+
+
+
+Do not guess dimensions.
+
+
+
+Use the provided reference image as the source of truth and replicate its proportions, spacing, alignment, image sizing, selected-state card shape, and overall visual hierarchy as closely as possible.
+
+
+
+The final result should feel identical to the reference image and look like a premium food delivery app category selector. 

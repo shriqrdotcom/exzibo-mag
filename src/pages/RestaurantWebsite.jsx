@@ -1965,29 +1965,32 @@ export default function RestaurantWebsite() {
             {/* Category items */}
             {tabCategories.map(cat => {
               const isActive = activeCategory === cat.id
+              const IMG_ACTIVE = '70px'
+              const IMG_INACTIVE = '66px'
+
               const imgEl = cat.image ? (
                 <img
                   src={cat.image}
                   alt={cat.label}
                   style={{
-                    width: isActive ? '74px' : '68px',
-                    height: isActive ? '74px' : '68px',
+                    width: isActive ? IMG_ACTIVE : IMG_INACTIVE,
+                    height: isActive ? IMG_ACTIVE : IMG_INACTIVE,
                     borderRadius: '50%',
                     objectFit: 'cover',
                     display: 'block',
-                    transition: 'width 0.22s ease, height 0.22s ease',
+                    flexShrink: 0,
                   }}
                 />
               ) : (
                 <div style={{
-                  width: isActive ? '74px' : '68px',
-                  height: isActive ? '74px' : '68px',
+                  width: isActive ? IMG_ACTIVE : IMG_INACTIVE,
+                  height: isActive ? IMG_ACTIVE : IMG_INACTIVE,
                   borderRadius: '50%',
                   background: darkMode ? 'rgba(255,255,255,0.10)' : '#efefef',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: isActive ? '34px' : '30px',
+                  fontSize: isActive ? '32px' : '29px',
                   lineHeight: 1,
-                  transition: 'width 0.22s ease, height 0.22s ease, font-size 0.22s ease',
+                  flexShrink: 0,
                 }}>
                   {cat.emoji || '🍽️'}
                 </div>
@@ -2001,20 +2004,19 @@ export default function RestaurantWebsite() {
                     style={{
                       flexShrink: 0,
                       display: 'flex', flexDirection: 'column',
-                      alignItems: 'center', justifyContent: 'center',
-                      gap: '8px',
-                      width: '96px',
-                      paddingTop: '12px',
-                      paddingBottom: '12px',
+                      alignItems: 'center',
+                      gap: '6px',
+                      width: '86px',
+                      paddingTop: '9px',
+                      paddingBottom: '9px',
                       background: '#FFFFFF',
                       border: '2px solid #FF3B30',
-                      borderRadius: '50px',
-                      boxShadow: '0 2px 12px rgba(255,59,48,0.18)',
+                      borderRadius: '46px',
+                      boxShadow: '0 2px 10px rgba(255,59,48,0.15)',
                       cursor: 'pointer',
                       fontFamily: 'inherit',
                       outline: 'none',
                       WebkitTapHighlightColor: 'transparent',
-                      transition: 'box-shadow 0.22s ease',
                     }}
                   >
                     {imgEl}
@@ -2023,9 +2025,9 @@ export default function RestaurantWebsite() {
                       fontWeight: 700,
                       color: '#FF3B30',
                       textAlign: 'center',
-                      lineHeight: 1.25,
+                      lineHeight: 1.2,
                       wordBreak: 'break-word',
-                      maxWidth: '80px',
+                      maxWidth: '78px',
                     }}>
                       {cat.label}
                     </span>
