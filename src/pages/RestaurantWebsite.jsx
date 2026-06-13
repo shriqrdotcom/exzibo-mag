@@ -1548,10 +1548,10 @@ export default function RestaurantWebsite() {
         return (
           <div style={{
             position: 'fixed',
-            top: 0,
+            top: activeNav === 'menu' ? '8px' : 0,
             left: '50%',
             transform: 'translateX(-50%)',
-            width: '100%',
+            width: activeNav === 'menu' ? 'calc(100% - 16px)' : '100%',
             maxWidth: '480px',
             zIndex: 100,
             background: activeNav === 'menu' ? 'rgba(10,10,10,0.98)' : headerBg,
@@ -1894,14 +1894,14 @@ export default function RestaurantWebsite() {
       })()}
 
       {/* ── HEADER SPACER — pushes content below fixed header on non-home tabs ── */}
-      {activeNav !== 'home' && <div style={{ height: activeNav === 'menu' ? '160px' : '120px' }} />}
+      {activeNav !== 'home' && <div style={{ height: activeNav === 'menu' ? '148px' : '120px' }} />}
 
 
       {/* ── SUB-CATEGORY BAR: Filter button + circular category cards ── */}
       {activeNav === 'menu' && (
         <div style={{
           position: 'sticky',
-          top: '96px',
+          top: '104px',
           zIndex: 90,
           background: darkMode ? '#0a0a0a' : '#ffffff',
           borderBottom: `1px solid ${darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.07)'}`,
