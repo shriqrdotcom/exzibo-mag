@@ -64,4 +64,3 @@ run = ["node", "server.js"]
 [userenv]
 
 [userenv.development]
-VITE_DISABLE_AUTH = "true"
