@@ -2585,7 +2585,7 @@ export default function RestaurantWebsite() {
                   display: 'grid',
                   gridTemplateRows: 'repeat(2, auto)',
                   gridAutoFlow: 'column',
-                  gridAutoColumns: 'calc((100vw - 58px) / 4)',
+                  gridAutoColumns: 'calc((min(480px, 100vw) - 58px) / 4)',
                   gap: '10px',
                   width: 'max-content',
                 }}>
