@@ -2529,6 +2529,171 @@ export default function RestaurantWebsite() {
             )
           })()}
 
+          {/* ── CATEGORY SECTION ── */}
+          {(() => {
+            const CAT_IMGS = {
+              starters:   'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=300&q=80',
+              starter:    'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=300&q=80',
+              main:       'https://images.unsplash.com/photo-1585937421612-70a008356fbe?w=300&q=80',
+              mains:      'https://images.unsplash.com/photo-1585937421612-70a008356fbe?w=300&q=80',
+              maincourse: 'https://images.unsplash.com/photo-1585937421612-70a008356fbe?w=300&q=80',
+              drinks:     'https://images.unsplash.com/photo-1544145945-f90425340c7e?w=300&q=80',
+              drink:      'https://images.unsplash.com/photo-1544145945-f90425340c7e?w=300&q=80',
+              desserts:   'https://images.unsplash.com/photo-1551024601-bec78aea704b?w=300&q=80',
+              dessert:    'https://images.unsplash.com/photo-1551024601-bec78aea704b?w=300&q=80',
+              combos:     'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=300&q=80',
+            }
+            const FALLBACK = 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=300&q=80'
+            function getCatImg(tab) {
+              const fromData = (visibleMenuData[tab.id] || []).find(i => i.image)?.image
+              if (fromData) return fromData
+              const key = (tab.label || tab.id).toLowerCase().replace(/[\s_-]/g, '')
+              return CAT_IMGS[tab.id] || Object.entries(CAT_IMGS).find(([k]) => key.includes(k))?.[1] || FALLBACK
+            }
+            const selectedTab = selectedHomeCategory ? menuTabs.find(t => t.id === selectedHomeCategory) : null
+            return (
+              <section className="reveal" style={{ padding: '20px 14px 0' }}>
+                {/* Header */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+                  <span style={{ fontSize: '13px', fontWeight: 900, color: theme.sectionTitle, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                    Categories
+                  </span>
+                  <span style={{ fontSize: '11px', fontWeight: 600, color: darkMode ? 'rgba(255,255,255,0.38)' : 'rgba(0,0,0,0.32)' }}>
+                    {menuTabs.length} categories
+                  </span>
+                </div>
+
+                {/* 2-column grid */}
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 1fr',
+                  gap: '10px',
+                }}>
+                  {menuTabs.map(tab => {
+                    const imgSrc = getCatImg(tab)
+                    const isSelected = selectedHomeCategory === tab.id
+                    const shortLabel = tab.label === 'MAIN COURSE' ? 'Main Course' : (tab.label || tab.id).replace(/_/g, ' ')
+                    return (
+                      <button
+                        key={tab.id}
+                        onClick={() => setSelectedHomeCategory(isSelected ? null : tab.id)}
+                        style={{
+                          display: 'flex', flexDirection: 'column',
+                          alignItems: 'center',
+                          background: darkMode ? 'rgba(255,255,255,0.05)' : '#EEF4FF',
+                          border: isSelected
+                            ? `2px solid ${themeColor}`
+                            : `2px solid ${darkMode ? 'rgba(255,255,255,0.06)' : '#E0E8F9'}`,
+                          borderRadius: '18px',
+                          padding: '16px 10px 12px',
+                          cursor: 'pointer',
+                          fontFamily: 'inherit',
+                          outline: 'none',
+                          WebkitTapHighlightColor: 'transparent',
+                          transition: 'border-color 0.2s ease, background 0.2s ease',
+                          position: 'relative',
+                          overflow: 'hidden',
+                        }}
+                      >
+                        {isSelected && (
+                          <div style={{
+                            position: 'absolute', top: '8px', right: '8px',
+                            width: '18px', height: '18px', borderRadius: '50%',
+                            background: themeColor,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          }}>
+                            <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                              <path d="M2 5l2 2 4-4" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                            </svg>
+                          </div>
+                        )}
+                        <img
+                          src={imgSrc}
+                          alt={shortLabel}
+                          onError={e => { e.target.src = FALLBACK }}
+                          style={{
+                            width: '100px', height: '100px',
+                            objectFit: 'contain',
+                            borderRadius: '12px',
+                            display: 'block',
+                            marginBottom: '10px',
+                          }}
+                        />
+                        <span style={{
+                          fontSize: '13px', fontWeight: 700,
+                          color: isSelected ? themeColor : (darkMode ? 'rgba(255,255,255,0.88)' : '#1a1a2e'),
+                          textAlign: 'center', lineHeight: 1.3,
+                          textTransform: 'capitalize',
+                          transition: 'color 0.2s ease',
+                        }}>
+                          {shortLabel}
+                        </span>
+                      </button>
+                    )
+                  })}
+                </div>
+
+                {/* Expanded panel — appears when a category is selected */}
+                {selectedTab && (
+                  <div style={{
+                    marginTop: '12px',
+                    borderRadius: '16px',
+                    background: darkMode ? 'rgba(255,255,255,0.06)' : '#F0F4FF',
+                    border: `1.5px solid ${themeColor}30`,
+                    padding: '12px 14px',
+                    display: 'flex', alignItems: 'center', gap: '12px',
+                    animation: 'fadeInUp 0.22s ease',
+                  }}>
+                    <img
+                      src={getCatImg(selectedTab)}
+                      alt={selectedTab.label}
+                      onError={e => { e.target.src = FALLBACK }}
+                      style={{
+                        width: '52px', height: '52px',
+                        borderRadius: '12px', objectFit: 'cover',
+                        flexShrink: 0,
+                        border: `2px solid ${themeColor}25`,
+                      }}
+                    />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{
+                        fontSize: '15px', fontWeight: 800,
+                        color: darkMode ? '#fff' : '#1a1a2e',
+                        textTransform: 'capitalize', lineHeight: 1.2,
+                      }}>
+                        {(selectedTab.label === 'MAIN COURSE' ? 'Main Course' : selectedTab.label || selectedTab.id).replace(/_/g, ' ')}
+                      </div>
+                      <div style={{
+                        fontSize: '11px', fontWeight: 500, marginTop: '2px',
+                        color: darkMode ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.42)',
+                      }}>
+                        {(visibleMenuData[selectedTab.id] || []).length} items available
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => { setActiveMenuTab(selectedTab.id); navigateToPage('menu') }}
+                      style={{
+                        flexShrink: 0,
+                        padding: '8px 14px',
+                        background: themeColor,
+                        color: '#fff',
+                        border: 'none', borderRadius: '22px',
+                        fontSize: '12px', fontWeight: 800,
+                        cursor: 'pointer', fontFamily: 'inherit',
+                        letterSpacing: '0.01em',
+                        boxShadow: `0 3px 12px ${themeColor}40`,
+                        outline: 'none',
+                        WebkitTapHighlightColor: 'transparent',
+                      }}
+                    >
+                      View Category
+                    </button>
+                  </div>
+                )}
+              </section>
+            )
+          })()}
+
           {/* ── BEST SELLING FOOD — 3-column portrait grid ── */}
           <section className="reveal reveal-3" style={{ padding: '20px 14px 0' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
