@@ -2562,9 +2562,7 @@ export default function RestaurantWebsite() {
                 .map(c => ({ ...c, tabId }))
             )
 
-            const allSubCats = subCatsFromData.length > 0
-              ? subCatsFromData
-              : menuTabs.map(t => ({ id: t.id, label: t.label || t.id, image: null, tabId: t.id, assignedItems: [] }))
+            const allSubCats = subCatsFromData
 
             if (allSubCats.length === 0) return null
 
