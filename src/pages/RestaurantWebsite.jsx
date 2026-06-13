@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useMemo } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { notifyAnalyticsUpdate } from '../context/AnalyticsContext'
 import { getRestaurantBySlug, getMenuCategories, getMenuItems, getPublishedMenuItems, loadMenuFilters } from '../lib/db'
@@ -1314,25 +1314,32 @@ export default function RestaurantWebsite() {
     return () => clearInterval(interval)
   }, [carouselImages])
 
-  const SEARCH_PLACEHOLDERS = ['Pizza', 'Chicken', 'Juice', 'Biryani', 'Virgin Mojito']
-  useEffect(() => {
-    if (searchFocused || searchQuery) return
-    const cycle = setInterval(() => {
-      setPhVisible(false)
-      setTimeout(() => {
-        setPhIdx(i => (i + 1) % SEARCH_PLACEHOLDERS.length)
-        setPhVisible(true)
-      }, 350)
-    }, 5000)
-    return () => clearInterval(cycle)
-  }, [searchFocused, searchQuery])
-
   const visibleMenuData = Object.fromEntries(
     menuTabs.map(tab => [tab.id, (menuData[tab.id] || []).filter(m => m.available !== false)])
   )
 
   const allItems = menuTabs.flatMap(tab => visibleMenuData[tab.id] || [])
   const tagged = allItems.filter(m => m.tags?.some(t => ['Popular', 'Seasonal', "Chef's Pick"].includes(t)))
+
+  const SEARCH_PLACEHOLDERS = useMemo(() => {
+    const seen = new Set()
+    const names = allItems
+      .map(m => (m.name || '').trim())
+      .filter(n => n && !seen.has(n) && seen.add(n))
+    return names.length > 0 ? names : ['Pizza', 'Chicken', 'Biryani', 'Juice', 'Burger']
+  }, [allItems])
+
+  useEffect(() => {
+    if (searchFocused || searchQuery || SEARCH_PLACEHOLDERS.length < 2) return
+    const cycle = setInterval(() => {
+      setPhVisible(false)
+      setTimeout(() => {
+        setPhIdx(i => (i + 1) % SEARCH_PLACEHOLDERS.length)
+        setPhVisible(true)
+      }, 350)
+    }, 4000)
+    return () => clearInterval(cycle)
+  }, [searchFocused, searchQuery, SEARCH_PLACEHOLDERS])
 
   const getCategoryItems = () => {
     const q = searchQuery.trim().toLowerCase()
