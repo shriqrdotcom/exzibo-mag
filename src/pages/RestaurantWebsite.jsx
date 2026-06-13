@@ -414,6 +414,9 @@ export default function RestaurantWebsite() {
   const [dynamicCategories, setDynamicCategories] = useState(DEFAULT_CATEGORY_FILTERS)
   const [filtersEnabled, setFiltersEnabled] = useState({ starters: true, mains: true, drinks: true })
   const [searchQuery, setSearchQuery] = useState('')
+  const [searchFocused, setSearchFocused] = useState(false)
+  const [phIdx, setPhIdx] = useState(0)
+  const [phVisible, setPhVisible] = useState(true)
   const [activeCategory, setActiveCategory] = useState('all')
   const [vegMode, setVegMode] = useState(false)
   const [homeCatSelected, setHomeCatSelected] = useState(null)
@@ -1311,6 +1314,19 @@ export default function RestaurantWebsite() {
     return () => clearInterval(interval)
   }, [carouselImages])
 
+  const SEARCH_PLACEHOLDERS = ['Pizza', 'Chicken', 'Juice', 'Biryani', 'Virgin Mojito']
+  useEffect(() => {
+    if (searchFocused || searchQuery) return
+    const cycle = setInterval(() => {
+      setPhVisible(false)
+      setTimeout(() => {
+        setPhIdx(i => (i + 1) % SEARCH_PLACEHOLDERS.length)
+        setPhVisible(true)
+      }, 350)
+    }, 5000)
+    return () => clearInterval(cycle)
+  }, [searchFocused, searchQuery])
+
   const visibleMenuData = Object.fromEntries(
     menuTabs.map(tab => [tab.id, (menuData[tab.id] || []).filter(m => m.available !== false)])
   )
@@ -1703,7 +1719,9 @@ export default function RestaurantWebsite() {
                   className="float-search-light"
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
-                  placeholder='Search dishes, drinks...'
+                  onFocus={() => setSearchFocused(true)}
+                  onBlur={() => setSearchFocused(false)}
+                  placeholder=""
                   style={{
                     width: '100%',
                     background: darkMode ? '#242424' : '#ffffff',
@@ -1719,6 +1737,30 @@ export default function RestaurantWebsite() {
                     transition: 'border-color 0.2s ease, background 0.2s ease',
                   }}
                 />
+                {/* Animated placeholder overlay — only shown when input is empty & not focused */}
+                {!searchQuery && !searchFocused && (
+                  <span
+                    style={{
+                      position: 'absolute',
+                      left: '38px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      pointerEvents: 'none',
+                      fontSize: '13px',
+                      fontWeight: 400,
+                      color: darkMode ? 'rgba(255,255,255,0.38)' : 'rgba(0,0,0,0.38)',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      maxWidth: 'calc(100% - 72px)',
+                      textOverflow: 'ellipsis',
+                      opacity: phVisible ? 1 : 0,
+                      transition: 'opacity 0.35s ease',
+                      userSelect: 'none',
+                    }}
+                  >
+                    Search &ldquo;{SEARCH_PLACEHOLDERS[phIdx]}&rdquo;
+                  </span>
+                )}
                 {/* Clear × */}
                 {searchQuery && (
                   <button
