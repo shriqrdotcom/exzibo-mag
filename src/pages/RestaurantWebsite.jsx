@@ -2531,6 +2531,7 @@ export default function RestaurantWebsite() {
 
           {/* ── CATEGORY SECTION ── */}
           {(() => {
+            const themeColor = restaurant?.primaryColor || '#E8321A'
             const CAT_IMGS = {
               starters:   'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=300&q=80',
               starter:    'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=300&q=80',
