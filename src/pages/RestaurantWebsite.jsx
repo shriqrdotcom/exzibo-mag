@@ -1314,12 +1314,21 @@ export default function RestaurantWebsite() {
     return () => clearInterval(interval)
   }, [carouselImages])
 
-  const visibleMenuData = Object.fromEntries(
-    menuTabs.map(tab => [tab.id, (menuData[tab.id] || []).filter(m => m.available !== false)])
+  const visibleMenuData = useMemo(
+    () => Object.fromEntries(
+      menuTabs.map(tab => [tab.id, (menuData[tab.id] || []).filter(m => m.available !== false)])
+    ),
+    [menuTabs, menuData]
   )
 
-  const allItems = menuTabs.flatMap(tab => visibleMenuData[tab.id] || [])
-  const tagged = allItems.filter(m => m.tags?.some(t => ['Popular', 'Seasonal', "Chef's Pick"].includes(t)))
+  const allItems = useMemo(
+    () => menuTabs.flatMap(tab => visibleMenuData[tab.id] || []),
+    [menuTabs, visibleMenuData]
+  )
+  const tagged = useMemo(
+    () => allItems.filter(m => m.tags?.some(t => ['Popular', 'Seasonal', "Chef's Pick"].includes(t))),
+    [allItems]
+  )
 
   const SEARCH_PLACEHOLDERS = useMemo(() => {
     const seen = new Set()
