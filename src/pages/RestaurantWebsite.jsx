@@ -2580,11 +2580,11 @@ export default function RestaurantWebsite() {
                   </span>
                 </div>
 
-                {/* 4-column grid */}
+                {/* 2-column grid — large cards matching reference */}
                 <div style={{
                   display: 'grid',
-                  gridTemplateColumns: 'repeat(4, 1fr)',
-                  gap: '8px',
+                  gridTemplateColumns: 'repeat(2, 1fr)',
+                  gap: '12px',
                 }}>
                   {allSubCats.map(cat => {
                     const imgSrc = getSubCatImg(cat)
@@ -2600,36 +2600,38 @@ export default function RestaurantWebsite() {
                         style={{
                           display: 'flex', flexDirection: 'column',
                           alignItems: 'center',
-                          background: darkMode ? 'rgba(255,255,255,0.06)' : '#E8F1FB',
+                          background: darkMode ? 'rgba(255,255,255,0.07)' : '#E4EFF9',
                           border: 'none',
-                          borderRadius: '16px',
-                          padding: '12px 6px 10px',
+                          borderRadius: '20px',
+                          padding: '20px 12px 16px',
                           cursor: 'pointer',
                           fontFamily: 'inherit',
                           outline: 'none',
                           WebkitTapHighlightColor: 'transparent',
-                          transition: 'transform 0.15s ease, background 0.15s ease',
+                          transition: 'transform 0.15s ease',
                           minWidth: 0,
                         }}
-                        onTouchStart={e => e.currentTarget.style.transform = 'scale(0.95)'}
+                        onTouchStart={e => e.currentTarget.style.transform = 'scale(0.96)'}
                         onTouchEnd={e => e.currentTarget.style.transform = 'scale(1)'}
+                        onMouseDown={e => e.currentTarget.style.transform = 'scale(0.96)'}
+                        onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}
                       >
                         <img
                           src={imgSrc}
                           alt={label}
                           onError={e => { e.target.src = FALLBACK_IMG }}
                           style={{
-                            width: '64px', height: '64px',
+                            width: '110px', height: '110px',
                             objectFit: 'contain',
                             display: 'block',
-                            marginBottom: '8px',
-                            filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.12))',
+                            marginBottom: '14px',
+                            filter: 'drop-shadow(0 4px 10px rgba(0,0,0,0.13))',
                           }}
                         />
                         <span style={{
-                          fontSize: '11px', fontWeight: 700,
-                          color: darkMode ? 'rgba(255,255,255,0.88)' : '#1a1a2e',
-                          textAlign: 'center', lineHeight: 1.3,
+                          fontSize: '14px', fontWeight: 700,
+                          color: darkMode ? 'rgba(255,255,255,0.90)' : '#1a1a2e',
+                          textAlign: 'center', lineHeight: 1.4,
                           textTransform: 'capitalize',
                           wordBreak: 'break-word',
                           width: '100%',
