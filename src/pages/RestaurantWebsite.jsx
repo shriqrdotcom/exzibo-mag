@@ -2373,52 +2373,160 @@ export default function RestaurantWebsite() {
             </div>
           </section>
 
-          {/* ── ACTION BUTTONS: icon square + "View menu" pill ── */}
-          <section className="reveal reveal-2" style={{ padding: '14px 14px 0', display: 'flex', gap: '12px', alignItems: 'stretch' }}>
-            {/* Left: booking icon square button */}
-            <button
-              className="action-btn"
-              onClick={() => handleOpenBooking()}
-              style={{
-                width: '48px', height: '48px', flexShrink: 0,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                background: darkMode ? '#ffffff' : '#111111',
-                border: 'none', borderRadius: '20px',
-                cursor: 'pointer', position: 'relative',
-                boxShadow: darkMode ? '0 4px 18px rgba(0,0,0,0.18)' : '0 4px 18px rgba(0,0,0,0.45)',
-                transition: 'background 0.3s ease, box-shadow 0.3s ease',
-              }}
-            >
-              <img
-                src="/booking-icon.jpeg"
-                alt="booking"
-                style={{
-                  width: '38px', height: '38px', objectFit: 'contain', borderRadius: '4px',
-                  filter: darkMode ? 'invert(1)' : 'none',
-                  transition: 'filter 0.3s ease',
-                }}
-              />
-            </button>
+          {/* ── OFFERS SLIDER ── */}
+          {(() => {
+            const OFFERS = [
+              {
+                id: 1,
+                tag: 'LIMITED TIME',
+                title: '20% OFF',
+                sub: 'On all orders above ₹499',
+                code: 'SAVE20',
+                gradient: 'linear-gradient(135deg, #FF6B35 0%, #F7C59F 100%)',
+                textColor: '#fff',
+                icon: '🔥',
+              },
+              {
+                id: 2,
+                tag: 'TODAY ONLY',
+                title: 'FLAT ₹100 OFF',
+                sub: 'Use on your first order',
+                code: 'FIRST100',
+                gradient: 'linear-gradient(135deg, #4C1D95 0%, #7C3AED 100%)',
+                textColor: '#fff',
+                icon: '🎉',
+              },
+              {
+                id: 3,
+                tag: 'WEEKEND SPECIAL',
+                title: 'BUY 1 GET 1',
+                sub: 'On selected starters',
+                code: 'BOGO',
+                gradient: 'linear-gradient(135deg, #065F46 0%, #34D399 100%)',
+                textColor: '#fff',
+                icon: '🍽️',
+              },
+              {
+                id: 4,
+                tag: 'HAPPY HOURS',
+                title: '15% OFF',
+                sub: 'Mon–Fri, 3 PM – 6 PM',
+                code: 'HAPPY15',
+                gradient: 'linear-gradient(135deg, #1E40AF 0%, #60A5FA 100%)',
+                textColor: '#fff',
+                icon: '⏰',
+              },
+            ]
+            return (
+              <section className="reveal reveal-2" style={{ padding: '14px 0 0' }}>
+                <div style={{ padding: '0 14px 8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span style={{ fontSize: '13px', fontWeight: 900, color: theme.sectionTitle, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                    Offers &amp; Deals
+                  </span>
+                  <span style={{ fontSize: '11px', fontWeight: 600, color: darkMode ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.35)', letterSpacing: '0.03em' }}>
+                    {OFFERS.length} offers
+                  </span>
+                </div>
+                <div style={{
+                  display: 'flex', gap: '10px',
+                  overflowX: 'auto', scrollSnapType: 'x mandatory',
+                  WebkitOverflowScrolling: 'touch',
+                  scrollbarWidth: 'none', msOverflowStyle: 'none',
+                  padding: '0 14px 4px',
+                }}>
+                  {OFFERS.map(offer => (
+                    <div
+                      key={offer.id}
+                      style={{
+                        flexShrink: 0, scrollSnapAlign: 'start',
+                        width: '240px', height: '110px',
+                        borderRadius: '18px',
+                        background: offer.gradient,
+                        padding: '14px 16px',
+                        display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
+                        boxShadow: '0 4px 18px rgba(0,0,0,0.18)',
+                        cursor: 'default',
+                        position: 'relative',
+                        overflow: 'hidden',
+                      }}
+                    >
+                      {/* Decorative circle */}
+                      <div style={{
+                        position: 'absolute', right: '-20px', top: '-20px',
+                        width: '90px', height: '90px', borderRadius: '50%',
+                        background: 'rgba(255,255,255,0.12)',
+                        pointerEvents: 'none',
+                      }} />
+                      <div style={{
+                        position: 'absolute', right: '12px', bottom: '-15px',
+                        width: '60px', height: '60px', borderRadius: '50%',
+                        background: 'rgba(255,255,255,0.08)',
+                        pointerEvents: 'none',
+                      }} />
 
-            {/* Right: View menu pill */}
-            <button
-              className="action-btn"
-              onClick={() => navigateToPage('menu')}
-              style={{
-                flex: 1, height: '48px',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                background: darkMode ? '#ffffff' : '#111111',
-                border: 'none', borderRadius: '20px',
-                color: darkMode ? '#111111' : '#ffffff',
-                fontSize: '16px', fontWeight: 800, cursor: 'pointer',
-                letterSpacing: '-0.02em', fontFamily: 'inherit',
-                boxShadow: darkMode ? '0 4px 18px rgba(0,0,0,0.18)' : '0 4px 18px rgba(0,0,0,0.45)',
-                transition: 'background 0.3s ease, color 0.3s ease, box-shadow 0.3s ease',
-              }}
-            >
-              View menu
-            </button>
-          </section>
+                      {/* Top row: tag + icon */}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <span style={{
+                          fontSize: '9px', fontWeight: 800,
+                          color: 'rgba(255,255,255,0.80)',
+                          letterSpacing: '0.10em', textTransform: 'uppercase',
+                          background: 'rgba(0,0,0,0.18)',
+                          borderRadius: '6px', padding: '2px 7px',
+                        }}>
+                          {offer.tag}
+                        </span>
+                        <span style={{ fontSize: '22px', lineHeight: 1 }}>{offer.icon}</span>
+                      </div>
+
+                      {/* Middle: title + sub */}
+                      <div>
+                        <div style={{
+                          fontSize: '22px', fontWeight: 900,
+                          color: offer.textColor,
+                          lineHeight: 1, letterSpacing: '-0.02em',
+                          fontFamily: 'inherit',
+                        }}>
+                          {offer.title}
+                        </div>
+                        <div style={{
+                          fontSize: '11px', fontWeight: 500,
+                          color: 'rgba(255,255,255,0.82)',
+                          marginTop: '2px', lineHeight: 1.3,
+                        }}>
+                          {offer.sub}
+                        </div>
+                      </div>
+
+                      {/* Bottom: code */}
+                      <div style={{
+                        display: 'inline-flex', alignItems: 'center', gap: '5px',
+                        background: 'rgba(255,255,255,0.20)',
+                        borderRadius: '8px', padding: '3px 10px',
+                        alignSelf: 'flex-start',
+                      }}>
+                        <span style={{ fontSize: '10px', fontWeight: 800, color: '#fff', letterSpacing: '0.08em' }}>
+                          USE: {offer.code}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {/* Dots indicator */}
+                <div style={{ display: 'flex', justifyContent: 'center', gap: '5px', paddingTop: '8px' }}>
+                  {OFFERS.map((_, i) => (
+                    <div key={i} style={{
+                      width: i === 0 ? '16px' : '5px', height: '5px',
+                      borderRadius: '3px',
+                      background: i === 0
+                        ? (darkMode ? '#fff' : '#111')
+                        : (darkMode ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.18)'),
+                      transition: 'all 0.3s ease',
+                    }} />
+                  ))}
+                </div>
+              </section>
+            )
+          })()}
 
           {/* ── BEST SELLING FOOD — 3-column portrait grid ── */}
           <section className="reveal reveal-3" style={{ padding: '20px 14px 0' }}>
