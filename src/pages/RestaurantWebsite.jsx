@@ -1740,9 +1740,10 @@ export default function RestaurantWebsite() {
                   placeholder=""
                   style={{
                     width: '100%',
+                    boxSizing: 'border-box',
                     background: darkMode ? '#242424' : '#ffffff',
                     border: darkMode ? '1.5px solid rgba(255,255,255,0.12)' : '1.5px solid #1a1a1a',
-                    borderRadius: '50px',
+                    borderRadius: '14px',
                     padding: '9px 34px 9px 38px',
                     fontSize: '13px',
                     color: darkMode ? '#ffffff' : '#111111',
