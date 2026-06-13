@@ -1693,7 +1693,7 @@ export default function RestaurantWebsite() {
                 {/* Search icon */}
                 <svg
                   width="15" height="15" viewBox="0 0 24 24" fill="none"
-                  stroke="rgba(0,0,0,0.38)"
+                  stroke={darkMode ? 'rgba(255,255,255,0.50)' : 'rgba(0,0,0,0.45)'}
                   strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
                   style={{ position: 'absolute', left: '13px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}
                 >
@@ -1706,16 +1706,17 @@ export default function RestaurantWebsite() {
                   placeholder='Search dishes, drinks...'
                   style={{
                     width: '100%',
-                    background: '#ffffff',
-                    border: 'none',
+                    background: darkMode ? '#242424' : '#ffffff',
+                    border: darkMode ? '1.5px solid rgba(255,255,255,0.12)' : '1.5px solid #1a1a1a',
                     borderRadius: '50px',
                     padding: '9px 34px 9px 38px',
                     fontSize: '13px',
-                    color: '#111',
+                    color: darkMode ? '#ffffff' : '#111111',
                     fontFamily: 'inherit',
                     fontWeight: 400,
-                    boxShadow: '0 2px 12px rgba(0,0,0,0.50)',
-                    transition: 'box-shadow 0.2s ease',
+                    boxShadow: 'none',
+                    outline: 'none',
+                    transition: 'border-color 0.2s ease, background 0.2s ease',
                   }}
                 />
                 {/* Clear × */}
@@ -1724,10 +1725,10 @@ export default function RestaurantWebsite() {
                     onClick={() => setSearchQuery('')}
                     style={{
                       position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)',
-                      background: 'rgba(0,0,0,0.10)',
+                      background: darkMode ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.10)',
                       border: 'none', borderRadius: '50%',
                       width: '18px', height: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      color: 'rgba(0,0,0,0.5)',
+                      color: darkMode ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.5)',
                       cursor: 'pointer', fontSize: '12px', lineHeight: 1,
                     }}
                   >×</button>
