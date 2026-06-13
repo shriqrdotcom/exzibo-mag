@@ -1,0 +1,109 @@
+The current Sub Category Filter UI on the menu page needs a complete redesign to match the reference design exactly. 
+
+
+
+### Problems to Fix
+
+
+
+1. The **Filter button** and **"All" category button** have different sizes and heights, making the layout look inconsistent.
+
+2. Category icons are too small and feel disconnected from the category labels.
+
+3. Spacing, alignment, and proportions are not visually balanced.
+
+4. The current design looks like separate buttons instead of a premium category selector.
+
+
+
+### Required Design Changes
+
+
+
+1. Redesign the entire Sub Category Filter section to match the provided reference image.
+
+2. Every category should contain:
+
+
+
+   * Circular food image at the top.
+
+   * Category name below the image.
+
+   * Center-aligned layout.
+
+3. Increase category image size significantly so they become the primary visual element.
+
+4. Use transparent PNG/background-removed food images whenever available.
+
+5. Keep equal spacing between all category items.
+
+6. Make all category items the same visual size and alignment.
+
+7. Remove the small square look of the current "All" button.
+
+8. Convert the selected category into a large rounded vertical pill/card exactly like the reference:
+
+
+
+   * Rounded border radius (50px+).
+
+   * Theme color border.
+
+   * Slight elevation/shadow.
+
+   * Larger height than unselected items.
+
+9. The selected category should smoothly animate when changed.
+
+10. Unselected categories should remain clean and minimal without heavy borders.
+
+11. Ensure the Filter button visually matches the category row:
+
+
+
+* Same height.
+
+* Same vertical alignment.
+
+* Same spacing system.
+
+
+
+12. Make the entire section feel like a modern food delivery app (Zomato/Swiggy premium quality).
+
+
+
+### Mobile Optimization
+
+
+
+* Horizontal scrolling must remain smooth.
+
+* Images should never be cropped incorrectly.
+
+* Category text should remain readable on all screen sizes.
+
+* Touch targets must be large enough for mobile users.
+
+
+
+### Important
+
+
+
+Do not modify the existing category logic, filtering functionality, API calls, or database structure.
+
+Only redesign the UI/UX layer.
+
+
+
+### Final Goal
+
+
+
+After implementation, the Sub Category Filter section should visually match the reference image as closely as possible, with large food images, a premium selected-state card, perfect alignment, consistent sizing, and a professional restaurant-app appearance.
+
+
+
+

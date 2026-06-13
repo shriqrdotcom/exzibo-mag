@@ -1899,76 +1899,150 @@ export default function RestaurantWebsite() {
       {activeNav !== 'home' && <div style={{ height: activeNav === 'menu' ? '185px' : '120px' }} />}
 
 
-      {/* ── SUB-CATEGORY BAR: Filter button + circular category cards ── */}
+      {/* ── SUB-CATEGORY BAR: Filter button + premium category selector ── */}
       {activeNav === 'menu' && (
-        <div style={{
-          padding: '4px 16px 6px',
-        }}>
+        <div style={{ padding: '6px 16px 8px' }}>
           <div style={{
             display: 'flex',
-            gap: '4px',
+            gap: '16px',
             overflowX: 'auto',
             scrollbarWidth: 'none',
             msOverflowStyle: 'none',
-            alignItems: 'flex-end',
+            alignItems: 'center',
           }}>
-            {/* Filter button — aligned to bottom with inactive cards */}
-            <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', position: 'relative', alignSelf: 'flex-end' }}>
+
+            {/* Filter button — vertically centered, same height as inactive items */}
+            <div style={{
+              flexShrink: 0,
+              display: 'flex', flexDirection: 'column',
+              alignItems: 'center', justifyContent: 'center',
+              gap: '4px',
+              position: 'relative',
+            }}>
               <button
                 onClick={() => setFilterPanelOpen(true)}
                 style={{
-                  width: '38px', height: '36px',
-                  borderRadius: '10px',
+                  width: '44px', height: '44px',
+                  borderRadius: '50%',
                   border: filterCount > 0
-                    ? `2px solid ${restaurant?.primaryColor || '#E8321A'}`
-                    : `1.5px solid ${darkMode ? 'rgba(255,255,255,0.20)' : 'rgba(0,0,0,0.15)'}`,
+                    ? `2px solid ${restaurant?.primaryColor || '#FF3B30'}`
+                    : `1.5px solid ${darkMode ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.12)'}`,
                   background: filterCount > 0
-                    ? (darkMode ? 'rgba(232,50,26,0.15)' : 'rgba(232,50,26,0.06)')
-                    : (darkMode ? 'rgba(255,255,255,0.05)' : '#f8f8f8'),
+                    ? (darkMode ? 'rgba(255,59,48,0.15)' : 'rgba(255,59,48,0.07)')
+                    : (darkMode ? 'rgba(255,255,255,0.06)' : '#f5f5f5'),
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   cursor: 'pointer',
                   transition: 'all 0.2s ease',
                   flexShrink: 0,
+                  outline: 'none',
+                  WebkitTapHighlightColor: 'transparent',
                 }}
-                onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.05)'}
-                onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
               >
                 <SlidersHorizontal
-                  size={14}
+                  size={16}
                   color={filterCount > 0
-                    ? (restaurant?.primaryColor || '#E8321A')
-                    : (darkMode ? 'rgba(255,255,255,0.65)' : '#555')}
+                    ? (restaurant?.primaryColor || '#FF3B30')
+                    : (darkMode ? 'rgba(255,255,255,0.6)' : '#555')}
                 />
               </button>
               <span style={{
-                fontSize: '9px', fontWeight: 500,
-                color: darkMode ? 'rgba(255,255,255,0.65)' : '#444',
+                fontSize: '11px', fontWeight: 500,
+                color: darkMode ? 'rgba(255,255,255,0.6)' : '#555',
                 whiteSpace: 'nowrap',
               }}>Filter</span>
               {filterCount > 0 && (
                 <span style={{
-                  position: 'absolute', top: '-4px', right: '-4px',
-                  width: '16px', height: '16px', borderRadius: '8px',
-                  background: '#E8321A', color: '#fff',
-                  fontSize: '9px', fontWeight: 800,
+                  position: 'absolute', top: '-3px', right: '-3px',
+                  width: '17px', height: '17px', borderRadius: '50%',
+                  background: '#FF3B30', color: '#fff',
+                  fontSize: '10px', fontWeight: 800,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   lineHeight: 1,
                 }}>{filterCount}</span>
               )}
             </div>
 
-            {/* Sub-category items — circular image + label, red border when active */}
+            {/* Category items */}
             {tabCategories.map(cat => {
               const isActive = activeCategory === cat.id
+              const imgEl = cat.image ? (
+                <img
+                  src={cat.image}
+                  alt={cat.label}
+                  style={{
+                    width: isActive ? '74px' : '68px',
+                    height: isActive ? '74px' : '68px',
+                    borderRadius: '50%',
+                    objectFit: 'cover',
+                    display: 'block',
+                    transition: 'width 0.22s ease, height 0.22s ease',
+                  }}
+                />
+              ) : (
+                <div style={{
+                  width: isActive ? '74px' : '68px',
+                  height: isActive ? '74px' : '68px',
+                  borderRadius: '50%',
+                  background: darkMode ? 'rgba(255,255,255,0.10)' : '#efefef',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: isActive ? '34px' : '30px',
+                  lineHeight: 1,
+                  transition: 'width 0.22s ease, height 0.22s ease, font-size 0.22s ease',
+                }}>
+                  {cat.emoji || '🍽️'}
+                </div>
+              )
+
+              if (isActive) {
+                return (
+                  <button
+                    key={cat.id}
+                    onClick={() => setActiveCategory(cat.id)}
+                    style={{
+                      flexShrink: 0,
+                      display: 'flex', flexDirection: 'column',
+                      alignItems: 'center', justifyContent: 'center',
+                      gap: '8px',
+                      width: '96px',
+                      paddingTop: '12px',
+                      paddingBottom: '12px',
+                      background: '#FFFFFF',
+                      border: '2px solid #FF3B30',
+                      borderRadius: '50px',
+                      boxShadow: '0 2px 12px rgba(255,59,48,0.18)',
+                      cursor: 'pointer',
+                      fontFamily: 'inherit',
+                      outline: 'none',
+                      WebkitTapHighlightColor: 'transparent',
+                      transition: 'box-shadow 0.22s ease',
+                    }}
+                  >
+                    {imgEl}
+                    <span style={{
+                      fontSize: '13px',
+                      fontWeight: 700,
+                      color: '#FF3B30',
+                      textAlign: 'center',
+                      lineHeight: 1.25,
+                      wordBreak: 'break-word',
+                      maxWidth: '80px',
+                    }}>
+                      {cat.label}
+                    </span>
+                  </button>
+                )
+              }
+
               return (
                 <button
                   key={cat.id}
                   onClick={() => setActiveCategory(cat.id)}
                   style={{
                     flexShrink: 0,
-                    display: 'flex', flexDirection: 'column', alignItems: 'center',
+                    display: 'flex', flexDirection: 'column',
+                    alignItems: 'center',
                     gap: '6px',
-                    width: '72px',
+                    width: '76px',
                     background: 'none',
                     border: 'none',
                     padding: '4px 0',
@@ -1978,54 +2052,15 @@ export default function RestaurantWebsite() {
                     WebkitTapHighlightColor: 'transparent',
                   }}
                 >
-                  {/* Image container — 30px radius border, 2px solid #FF3B30 when active */}
-                  <div style={{
-                    width: '70px',
-                    height: '70px',
-                    borderRadius: '30px',
-                    border: isActive ? '2px solid #FF3B30' : '2px solid transparent',
-                    background: '#FFFFFF',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    transition: 'border-color 0.18s ease',
-                    boxSizing: 'border-box',
-                  }}>
-                    {cat.image ? (
-                      <img
-                        src={cat.image}
-                        alt={cat.label}
-                        style={{
-                          width: '54px',
-                          height: '54px',
-                          borderRadius: '50%',
-                          objectFit: 'cover',
-                          display: 'block',
-                        }}
-                      />
-                    ) : (
-                      <div style={{
-                        width: '54px',
-                        height: '54px',
-                        borderRadius: '50%',
-                        background: '#f0f0f0',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: '26px',
-                        lineHeight: 1,
-                      }}>
-                        {cat.emoji || '🍽️'}
-                      </div>
-                    )}
-                  </div>
-                  {/* Label */}
+                  {imgEl}
                   <span style={{
-                    fontSize: '14px',
+                    fontSize: '13px',
                     fontWeight: 500,
-                    color: isActive ? '#FF3B30' : '#222222',
+                    color: darkMode ? 'rgba(255,255,255,0.80)' : '#222222',
                     textAlign: 'center',
                     lineHeight: 1.25,
-                    letterSpacing: 0,
                     wordBreak: 'break-word',
-                    maxWidth: '72px',
-                    transition: 'color 0.18s ease',
+                    maxWidth: '76px',
                   }}>
                     {cat.label}
                   </span>
