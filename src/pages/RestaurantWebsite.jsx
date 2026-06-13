@@ -1960,7 +1960,6 @@ export default function RestaurantWebsite() {
             {/* Sub-category items — circular image + label, red border when active */}
             {tabCategories.map(cat => {
               const isActive = activeCategory === cat.id
-              const accentColor = restaurant?.primaryColor || '#E8321A'
               return (
                 <button
                   key={cat.id}
@@ -1969,7 +1968,7 @@ export default function RestaurantWebsite() {
                     flexShrink: 0,
                     display: 'flex', flexDirection: 'column', alignItems: 'center',
                     gap: '6px',
-                    width: '76px',
+                    width: '72px',
                     background: 'none',
                     border: 'none',
                     padding: '4px 0',
@@ -1977,17 +1976,16 @@ export default function RestaurantWebsite() {
                     fontFamily: 'inherit',
                     outline: 'none',
                     WebkitTapHighlightColor: 'transparent',
-                    transition: 'opacity 0.15s ease',
                   }}
                 >
-                  {/* Image container — rounded-rect border when active */}
+                  {/* Image container — 30px radius border, 2px solid #FF3B30 when active */}
                   <div style={{
-                    width: '78px',
-                    height: '78px',
-                    borderRadius: '20px',
-                    border: isActive ? `2.5px solid ${accentColor}` : '2.5px solid transparent',
+                    width: '70px',
+                    height: '70px',
+                    borderRadius: '30px',
+                    border: isActive ? '2px solid #FF3B30' : '2px solid transparent',
+                    background: '#FFFFFF',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    padding: '6px',
                     transition: 'border-color 0.18s ease',
                     boxSizing: 'border-box',
                   }}>
@@ -1996,8 +1994,8 @@ export default function RestaurantWebsite() {
                         src={cat.image}
                         alt={cat.label}
                         style={{
-                          width: '62px',
-                          height: '62px',
+                          width: '54px',
+                          height: '54px',
                           borderRadius: '50%',
                           objectFit: 'cover',
                           display: 'block',
@@ -2005,12 +2003,12 @@ export default function RestaurantWebsite() {
                       />
                     ) : (
                       <div style={{
-                        width: '62px',
-                        height: '62px',
+                        width: '54px',
+                        height: '54px',
                         borderRadius: '50%',
-                        background: darkMode ? 'rgba(255,255,255,0.08)' : '#f0f0f0',
+                        background: '#f0f0f0',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: '28px',
+                        fontSize: '26px',
                         lineHeight: 1,
                       }}>
                         {cat.emoji || '🍽️'}
@@ -2019,14 +2017,14 @@ export default function RestaurantWebsite() {
                   </div>
                   {/* Label */}
                   <span style={{
-                    fontSize: '13px',
-                    fontWeight: isActive ? 700 : 500,
-                    color: isActive ? accentColor : (darkMode ? 'rgba(255,255,255,0.80)' : '#333'),
+                    fontSize: '14px',
+                    fontWeight: 500,
+                    color: isActive ? '#FF3B30' : '#222222',
                     textAlign: 'center',
                     lineHeight: 1.25,
                     letterSpacing: 0,
                     wordBreak: 'break-word',
-                    maxWidth: '76px',
+                    maxWidth: '72px',
                     transition: 'color 0.18s ease',
                   }}>
                     {cat.label}
