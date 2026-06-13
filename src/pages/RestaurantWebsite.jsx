@@ -1379,7 +1379,7 @@ export default function RestaurantWebsite() {
         const next = (prev + 1) % SPECIAL_OFFERS_DATA.length
         const container = offersScrollRef.current
         if (container?.children[next]) {
-          container.scrollTo({ left: container.children[next].offsetLeft - container.offsetLeft, behavior: 'smooth' })
+          container.scrollLeft = container.children[next].offsetLeft - container.offsetLeft
         }
         return next
       })
@@ -2955,6 +2955,7 @@ export default function RestaurantWebsite() {
                 gap: '12px',
                 overflowX: 'auto',
                 scrollSnapType: 'x mandatory',
+                scrollBehavior: 'smooth',
                 WebkitOverflowScrolling: 'touch',
                 padding: '4px 14px 10px',
                 msOverflowStyle: 'none',
@@ -3075,7 +3076,7 @@ export default function RestaurantWebsite() {
                     setOffersIdx(i)
                     const container = offersScrollRef.current
                     if (container?.children[i]) {
-                      container.scrollTo({ left: container.children[i].offsetLeft - container.offsetLeft, behavior: 'smooth' })
+                      container.scrollLeft = container.children[i].offsetLeft - container.offsetLeft
                     }
                   }}
                   style={{
