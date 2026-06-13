@@ -1970,8 +1970,8 @@ export default function RestaurantWebsite() {
                   src={cat.image}
                   alt={cat.label}
                   style={{
-                    width: isActive ? '50px' : '48px',
-                    height: isActive ? '50px' : '48px',
+                    width: isActive ? '40px' : '38px',
+                    height: isActive ? '40px' : '38px',
                     borderRadius: '50%',
                     objectFit: 'cover',
                     display: 'block',
@@ -1980,12 +1980,12 @@ export default function RestaurantWebsite() {
                 />
               ) : (
                 <div style={{
-                  width: isActive ? '50px' : '48px',
-                  height: isActive ? '50px' : '48px',
+                  width: isActive ? '40px' : '38px',
+                  height: isActive ? '40px' : '38px',
                   borderRadius: '50%',
                   background: darkMode ? 'rgba(255,255,255,0.10)' : '#efefef',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: isActive ? '22px' : '21px',
+                  fontSize: isActive ? '18px' : '17px',
                   lineHeight: 1,
                   flexShrink: 0,
                 }}>
@@ -2002,14 +2002,14 @@ export default function RestaurantWebsite() {
                       flexShrink: 0,
                       display: 'flex', flexDirection: 'column',
                       alignItems: 'center',
-                      gap: '4px',
-                      width: '66px',
+                      gap: '3px',
+                      width: '54px',
                       height: 'auto',
-                      paddingTop: '6px',
-                      paddingBottom: '6px',
+                      paddingTop: '5px',
+                      paddingBottom: '5px',
                       background: '#FFFFFF',
                       border: '2px solid #FF3B30',
-                      borderRadius: '36px',
+                      borderRadius: '28px',
                       boxShadow: '0 2px 8px rgba(255,59,48,0.14)',
                       cursor: 'pointer',
                       fontFamily: 'inherit',
@@ -2020,13 +2020,13 @@ export default function RestaurantWebsite() {
                   >
                     {imgEl}
                     <span style={{
-                      fontSize: '12px',
+                      fontSize: '11px',
                       fontWeight: 700,
                       color: '#FF3B30',
                       textAlign: 'center',
                       lineHeight: 1.2,
                       wordBreak: 'break-word',
-                      maxWidth: '60px',
+                      maxWidth: '48px',
                     }}>
                       {cat.label}
                     </span>
