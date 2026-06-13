@@ -2580,13 +2580,17 @@ export default function RestaurantWebsite() {
                   </span>
                 </div>
 
-                {/* 4-column compact grid — max 2 rows = 8 items */}
+                {/* 2-row horizontal scroll, fixed card width to keep shape */}
+                <div style={{ overflowX: 'auto', overflowY: 'hidden', scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch', margin: '0 -14px', padding: '0 14px 4px' }}>
                 <div style={{
                   display: 'grid',
-                  gridTemplateColumns: 'repeat(4, 1fr)',
+                  gridTemplateRows: 'repeat(2, auto)',
+                  gridAutoFlow: 'column',
+                  gridAutoColumns: 'calc((100vw - 58px) / 4)',
                   gap: '10px',
+                  width: 'max-content',
                 }}>
-                  {allSubCats.slice(0, 8).map(cat => {
+                  {allSubCats.map(cat => {
                     const imgSrc = getSubCatImg(cat)
                     const label = (cat.label || cat.id).replace(/_/g, ' ')
                     return (
@@ -2642,22 +2646,7 @@ export default function RestaurantWebsite() {
                     )
                   })}
                 </div>
-                {allSubCats.length > 8 && (
-                  <button
-                    onClick={() => navigateToPage('menu')}
-                    style={{
-                      display: 'block', width: '100%', marginTop: '10px',
-                      padding: '9px', background: 'none',
-                      border: `1.5px solid ${darkMode ? 'rgba(255,255,255,0.12)' : '#D0DFF0'}`,
-                      borderRadius: '12px', fontSize: '12px', fontWeight: 700,
-                      color: darkMode ? 'rgba(255,255,255,0.5)' : '#5a7a99',
-                      cursor: 'pointer', fontFamily: 'inherit',
-                      WebkitTapHighlightColor: 'transparent',
-                    }}
-                  >
-                    View all {allSubCats.length} categories →
-                  </button>
-                )}
+                </div>
               </section>
             )
           })()}
