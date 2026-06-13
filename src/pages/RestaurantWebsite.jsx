@@ -1896,7 +1896,7 @@ export default function RestaurantWebsite() {
       })()}
 
       {/* ── HEADER SPACER — pushes content below fixed header on non-home tabs ── */}
-      {activeNav !== 'home' && <div style={{ height: activeNav === 'menu' ? '148px' : '120px' }} />}
+      {activeNav !== 'home' && <div style={{ height: activeNav === 'menu' ? '185px' : '120px' }} />}
 
 
       {/* ── SUB-CATEGORY BAR: Filter button + circular category cards ── */}
