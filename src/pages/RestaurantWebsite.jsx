@@ -1554,10 +1554,15 @@ export default function RestaurantWebsite() {
             width: '100%',
             maxWidth: '480px',
             zIndex: 100,
-            background: headerBg,
+            background: activeNav === 'menu' ? 'rgba(10,10,10,0.98)' : headerBg,
             backdropFilter: bgProgress > 0.3 ? `blur(${(bgProgress * 20).toFixed(1)}px)` : 'none',
             WebkitBackdropFilter: bgProgress > 0.3 ? `blur(${(bgProgress * 20).toFixed(1)}px)` : 'none',
-            boxShadow: bgProgress > 0.8 ? `0 2px 24px rgba(0,0,0,${(0.22 * bgProgress).toFixed(2)})` : 'none',
+            boxShadow: activeNav === 'menu'
+              ? '0 8px 28px rgba(0,0,0,0.50)'
+              : bgProgress > 0.8 ? `0 2px 24px rgba(0,0,0,${(0.22 * bgProgress).toFixed(2)})` : 'none',
+            borderBottomLeftRadius: activeNav === 'menu' ? '28px' : 0,
+            borderBottomRightRadius: activeNav === 'menu' ? '28px' : 0,
+            overflow: activeNav === 'menu' ? 'hidden' : 'visible',
           }}>
 
             {/* ── Row 1: Logo + Name + Location (scroll-linked collapse) ── */}
