@@ -1548,10 +1548,10 @@ export default function RestaurantWebsite() {
         return (
           <div style={{
             position: 'fixed',
-            top: activeNav === 'menu' ? '8px' : 0,
+            top: 0,
             left: '50%',
             transform: 'translateX(-50%)',
-            width: activeNav === 'menu' ? 'calc(100% - 16px)' : '100%',
+            width: '100%',
             maxWidth: '480px',
             zIndex: 100,
             background: activeNav === 'menu' ? 'rgba(10,10,10,0.98)' : headerBg,
@@ -1682,7 +1682,9 @@ export default function RestaurantWebsite() {
             {/* ── Row 2: Search bar + Veg toggle (always visible) ── */}
             <div style={{
               display: 'flex', gap: '8px', alignItems: 'center',
-              padding: `8px 16px ${Math.round(10 - 3 * rowProgress)}px`,
+              padding: activeNav === 'menu'
+                ? '14px 16px 10px'
+                : `8px 16px ${Math.round(10 - 3 * rowProgress)}px`,
             }}>
               {/* Search input — compact white pill */}
               <div style={{ flex: 1, position: 'relative' }}>
