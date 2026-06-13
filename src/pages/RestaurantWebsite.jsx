@@ -1554,10 +1554,15 @@ export default function RestaurantWebsite() {
             width: '100%',
             maxWidth: '480px',
             zIndex: 100,
-            background: headerBg,
+            background: activeNav === 'menu' ? 'rgba(10,10,10,0.98)' : headerBg,
             backdropFilter: bgProgress > 0.3 ? `blur(${(bgProgress * 20).toFixed(1)}px)` : 'none',
             WebkitBackdropFilter: bgProgress > 0.3 ? `blur(${(bgProgress * 20).toFixed(1)}px)` : 'none',
-            boxShadow: bgProgress > 0.8 ? `0 2px 24px rgba(0,0,0,${(0.22 * bgProgress).toFixed(2)})` : 'none',
+            boxShadow: activeNav === 'menu'
+              ? '0 8px 32px rgba(0,0,0,0.55)'
+              : bgProgress > 0.8 ? `0 2px 24px rgba(0,0,0,${(0.22 * bgProgress).toFixed(2)})` : 'none',
+            borderBottomLeftRadius: activeNav === 'menu' ? '28px' : 0,
+            borderBottomRightRadius: activeNav === 'menu' ? '28px' : 0,
+            overflow: activeNav === 'menu' ? 'hidden' : 'visible',
           }}>
 
             {/* ── Row 1: Logo + Name + Location (scroll-linked collapse) ── */}
@@ -1676,17 +1681,21 @@ export default function RestaurantWebsite() {
 
             {/* ── Row 2: Search bar + Veg toggle (always visible) ── */}
             <div style={{
-              display: 'flex', gap: '8px', alignItems: 'center',
-              padding: `8px 16px ${Math.round(10 - 3 * rowProgress)}px`,
+              display: 'flex', gap: '10px', alignItems: 'center',
+              padding: activeNav === 'menu'
+                ? '10px 16px 12px'
+                : `8px 16px ${Math.round(10 - 3 * rowProgress)}px`,
             }}>
-              {/* Search input — compact white pill */}
+              {/* Search input — large white pill */}
               <div style={{ flex: 1, position: 'relative' }}>
                 {/* Search icon */}
                 <svg
-                  width="15" height="15" viewBox="0 0 24 24" fill="none"
-                  stroke="rgba(0,0,0,0.38)"
+                  width={activeNav === 'menu' ? 18 : 15}
+                  height={activeNav === 'menu' ? 18 : 15}
+                  viewBox="0 0 24 24" fill="none"
+                  stroke={activeNav === 'menu' ? 'rgba(0,0,0,0.40)' : 'rgba(0,0,0,0.38)'}
                   strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
-                  style={{ position: 'absolute', left: '13px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}
+                  style={{ position: 'absolute', left: activeNav === 'menu' ? '16px' : '13px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}
                 >
                   <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
                 </svg>
@@ -1700,12 +1709,14 @@ export default function RestaurantWebsite() {
                     background: '#ffffff',
                     border: 'none',
                     borderRadius: '50px',
-                    padding: '9px 34px 9px 38px',
-                    fontSize: '13px',
+                    padding: activeNav === 'menu' ? '15px 38px 15px 48px' : '9px 34px 9px 38px',
+                    fontSize: activeNav === 'menu' ? '15px' : '13px',
                     color: '#111',
                     fontFamily: 'inherit',
-                    fontWeight: 400,
-                    boxShadow: '0 2px 12px rgba(0,0,0,0.50)',
+                    fontWeight: activeNav === 'menu' ? 500 : 400,
+                    boxShadow: activeNav === 'menu'
+                      ? '0 4px 20px rgba(0,0,0,0.45)'
+                      : '0 2px 12px rgba(0,0,0,0.50)',
                     transition: 'box-shadow 0.2s ease',
                   }}
                 />
@@ -1714,47 +1725,87 @@ export default function RestaurantWebsite() {
                   <button
                     onClick={() => setSearchQuery('')}
                     style={{
-                      position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)',
+                      position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)',
                       background: 'rgba(0,0,0,0.10)',
                       border: 'none', borderRadius: '50%',
-                      width: '18px', height: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center',
                       color: 'rgba(0,0,0,0.5)',
-                      cursor: 'pointer', fontSize: '12px', lineHeight: 1,
+                      cursor: 'pointer', fontSize: '13px', lineHeight: 1,
                     }}
                   >×</button>
                 )}
               </div>
 
-              {/* VEG toggle */}
-              <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}>
-                <span style={{
-                  fontSize: '9px', fontWeight: 800, letterSpacing: '0.10em', textTransform: 'uppercase',
-                  color: isCollapsed
-                    ? (darkMode ? 'rgba(255,255,255,0.60)' : 'rgba(0,0,0,0.50)')
-                    : 'rgba(255,255,255,0.90)',
-                  transition: 'color 0.3s ease',
-                }}>VEG</span>
+              {/* VEG toggle — reference style: white rounded rectangle block */}
+              {activeNav === 'menu' ? (
                 <button
                   onClick={() => setVegMode(v => !v)}
                   style={{
-                    width: '40px', height: '23px', borderRadius: '12px',
-                    background: vegMode ? '#22c55e' : (darkMode ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.18)'),
-                    border: vegMode ? 'none' : '1.5px solid rgba(255,255,255,0.40)',
-                    cursor: 'pointer', position: 'relative',
-                    transition: 'background 0.28s ease, border-color 0.28s ease',
-                    boxShadow: '0 2px 6px rgba(0,0,0,0.25)',
+                    flexShrink: 0,
+                    height: '52px',
+                    minWidth: '62px',
+                    borderRadius: '14px',
+                    background: vegMode ? '#16a34a' : '#ffffff',
+                    border: vegMode ? '2px solid #16a34a' : '2px solid #ffffff',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '2px',
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 16px rgba(0,0,0,0.40)',
+                    transition: 'background 0.25s ease, border-color 0.25s ease',
+                    padding: '0 10px',
                   }}
                 >
+                  {/* Green dot indicator */}
                   <div style={{
-                    position: 'absolute', top: '3px',
-                    left: vegMode ? 'calc(100% - 19px)' : '3px',
-                    width: '15px', height: '15px', borderRadius: '8px',
-                    background: '#fff',
-                    boxShadow: '0 1px 4px rgba(0,0,0,0.30)',
-                    transition: 'left 0.25s cubic-bezier(0.4,0,0.2,1)',
+                    width: '10px', height: '10px', borderRadius: '50%',
+                    background: vegMode ? '#ffffff' : '#16a34a',
+                    border: vegMode ? '2px solid rgba(255,255,255,0.6)' : '2px solid #16a34a',
+                    transition: 'background 0.25s ease',
                   }} />
+                  <span style={{
+                    fontSize: '11px',
+                    fontWeight: 900,
+                    letterSpacing: '0.08em',
+                    color: vegMode ? '#ffffff' : '#111111',
+                    textTransform: 'uppercase',
+                    lineHeight: 1,
+                    transition: 'color 0.25s ease',
+                  }}>VEG</span>
                 </button>
-              </div>
+              ) : (
+                <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}>
+                  <span style={{
+                    fontSize: '9px', fontWeight: 800, letterSpacing: '0.10em', textTransform: 'uppercase',
+                    color: isCollapsed
+                      ? (darkMode ? 'rgba(255,255,255,0.60)' : 'rgba(0,0,0,0.50)')
+                      : 'rgba(255,255,255,0.90)',
+                    transition: 'color 0.3s ease',
+                  }}>VEG</span>
+                  <button
+                    onClick={() => setVegMode(v => !v)}
+                    style={{
+                      width: '40px', height: '23px', borderRadius: '12px',
+                      background: vegMode ? '#22c55e' : (darkMode ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.18)'),
+                      border: vegMode ? 'none' : '1.5px solid rgba(255,255,255,0.40)',
+                      cursor: 'pointer', position: 'relative',
+                      transition: 'background 0.28s ease, border-color 0.28s ease',
+                      boxShadow: '0 2px 6px rgba(0,0,0,0.25)',
+                    }}
+                  >
+                    <div style={{
+                      position: 'absolute', top: '3px',
+                      left: vegMode ? 'calc(100% - 19px)' : '3px',
+                      width: '15px', height: '15px', borderRadius: '8px',
+                      background: '#fff',
+                      boxShadow: '0 1px 4px rgba(0,0,0,0.30)',
+                      transition: 'left 0.25s cubic-bezier(0.4,0,0.2,1)',
+                    }} />
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* ── Row 3: Premium visual category cards (menu page only) ── */}

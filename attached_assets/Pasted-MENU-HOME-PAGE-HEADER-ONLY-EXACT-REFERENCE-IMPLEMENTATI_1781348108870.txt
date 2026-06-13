@@ -1,0 +1,113 @@
+MENU HOME PAGE HEADER ONLY - EXACT REFERENCE IMPLEMENTATION
+
+IMPORTANT:
+Apply these changes ONLY on the Menu Home Page header.
+Do NOT change any other page, component, modal, dashboard, restaurant list, or menu item cards.
+
+REFERENCE GOAL:
+Recreate the header exactly like the provided reference image.
+
+HEADER STRUCTURE:
+
+┌─────────────────────────────────────┐
+│ Search Bar          │ VEG Toggle    │
+├─────────────────────────────────────┤
+│ Category Navigation Row             │
+│ STARTERS MAIN DRINKS BEVERAGES      │
+└─────────────────────────────────────┘
+
+HEADER CONTAINER:
+
+- Full-width black header background
+- Large rounded bottom-left corner
+- Large rounded bottom-right corner
+- Header feels like one complete rounded container
+- Premium modern food app design
+- Padding around all content
+
+SEARCH SECTION:
+
+Position:
+Top area of header
+
+Layout:
+[ Search Bar ] [ Veg Toggle ]
+
+SEARCH BAR REQUIREMENTS:
+
+- Same shape as reference image
+- Large horizontal pill shape
+- White background
+- Large border radius (fully rounded)
+- Search icon on left
+- Placeholder:
+  "Search dishes, drinks..."
+- Height approximately 60px
+- Takes most of the width
+- Clean premium appearance
+
+VEG TOGGLE REQUIREMENTS:
+
+- Positioned to the right of search bar
+- Same visual style as reference image
+- White outer container
+- Black active section
+- Text: VEG
+- Rounded rectangle shape
+- Same height as search bar
+- Premium modern appearance
+
+CATEGORY SECTION:
+
+Place directly below search section.
+
+Each category card contains:
+
+- White rounded square card
+- Real food image
+- Large image size
+- Category name below image
+- Bold category text
+- Center aligned
+
+Categories:
+
+STARTERS
+MAIN
+DRINKS
+BEVERAGES
+
+Category row must:
+- Scroll horizontally
+- Maintain equal spacing
+- Look exactly like the reference structure
+
+ACTIVE CATEGORY:
+
+When selected:
+- Highlight card
+- Visible border
+- Auto-scroll to related menu section
+
+CRITICAL RULES:
+
+1. Apply only on Menu Home Page.
+2. Do not modify any other page.
+3. Do not change menu item cards.
+4. Do not change existing menu logic.
+5. Only redesign the header.
+6. Search bar must match the reference shape.
+7. Veg toggle must match the reference shape.
+8. Header container must end with large rounded corners on both bottom sides.
+9. Category names must appear below the images.
+10. Use real food images, not icons or emojis.
+
+FINAL RESULT:
+
+The Menu Home Page header should visually match the provided reference image:
+- Black rounded header container
+- Large white search bar
+- Premium VEG toggle
+- Food-image category navigation
+- Rounded bottom corners
+- Modern food delivery app appearance
