@@ -1957,66 +1957,77 @@ export default function RestaurantWebsite() {
               )}
             </div>
 
-            {/* Sub-category cards — exact reference style */}
+            {/* Sub-category items — circular image + label, red border when active */}
             {tabCategories.map(cat => {
               const isActive = activeCategory === cat.id
+              const accentColor = restaurant?.primaryColor || '#E8321A'
               return (
                 <button
                   key={cat.id}
                   onClick={() => setActiveCategory(cat.id)}
                   style={{
                     flexShrink: 0,
-                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-between',
+                    display: 'flex', flexDirection: 'column', alignItems: 'center',
+                    gap: '6px',
                     width: '76px',
-                    height: isActive ? '112px' : '86px',
-                    background: '#fff',
-                    border: isActive ? '2px solid #1a1a1a' : '1.5px solid #e8e8e8',
-                    borderRadius: '20px',
-                    padding: '10px 6px 10px',
+                    background: 'none',
+                    border: 'none',
+                    padding: '4px 0',
                     cursor: 'pointer',
                     fontFamily: 'inherit',
-                    transition: 'height 0.18s ease, border 0.18s ease',
                     outline: 'none',
                     WebkitTapHighlightColor: 'transparent',
+                    transition: 'opacity 0.15s ease',
                   }}
                 >
-                  {/* Food image */}
+                  {/* Image container — rounded-rect border when active */}
                   <div style={{
-                    flex: 1,
+                    width: '78px',
+                    height: '78px',
+                    borderRadius: '20px',
+                    border: isActive ? `2.5px solid ${accentColor}` : '2.5px solid transparent',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    width: '100%',
+                    padding: '6px',
+                    transition: 'border-color 0.18s ease',
+                    boxSizing: 'border-box',
                   }}>
                     {cat.image ? (
                       <img
                         src={cat.image}
                         alt={cat.label}
                         style={{
-                          width: isActive ? '58px' : '50px',
-                          height: isActive ? '58px' : '50px',
-                          objectFit: 'contain',
+                          width: '62px',
+                          height: '62px',
+                          borderRadius: '50%',
+                          objectFit: 'cover',
                           display: 'block',
-                          transition: 'width 0.18s ease, height 0.18s ease',
                         }}
                       />
                     ) : (
-                      <span style={{
-                        fontSize: isActive ? '30px' : '26px',
+                      <div style={{
+                        width: '62px',
+                        height: '62px',
+                        borderRadius: '50%',
+                        background: darkMode ? 'rgba(255,255,255,0.08)' : '#f0f0f0',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: '28px',
                         lineHeight: 1,
-                        transition: 'font-size 0.18s ease',
                       }}>
                         {cat.emoji || '🍽️'}
-                      </span>
+                      </div>
                     )}
                   </div>
                   {/* Label */}
                   <span style={{
-                    fontSize: '12px',
+                    fontSize: '13px',
                     fontWeight: isActive ? 700 : 500,
-                    color: '#111',
-                    whiteSpace: 'nowrap',
+                    color: isActive ? accentColor : (darkMode ? 'rgba(255,255,255,0.80)' : '#333'),
+                    textAlign: 'center',
+                    lineHeight: 1.25,
                     letterSpacing: 0,
-                    lineHeight: 1,
-                    flexShrink: 0,
+                    wordBreak: 'break-word',
+                    maxWidth: '76px',
+                    transition: 'color 0.18s ease',
                   }}>
                     {cat.label}
                   </span>
