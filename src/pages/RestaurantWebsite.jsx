@@ -222,6 +222,13 @@ function loadMenuFromStorage(id, tabs) {
   } catch { return null }
 }
 
+const SPECIAL_OFFERS_DATA = [
+  { id: 1, tag: 'First Order', title: '50% OFF',     desc: 'Get 50% off on your very first order with us', cta: 'Claim Offer', accent: '#E8321A', lightBg: '#fff5f3', darkBg: '#1f0f0c', emoji: '🎉' },
+  { id: 2, tag: 'Today Only',  title: 'Buy 1 Get 1', desc: 'Free on selected menu items today',             cta: 'Order Now',  accent: '#1a8a45', lightBg: '#f0faf4', darkBg: '#091a0f', emoji: '🍔' },
+  { id: 3, tag: 'Always On',   title: 'Free Delivery',desc: 'On all orders above ₹299',                    cta: 'Order Now',  accent: '#c47f00', lightBg: '#fffbf0', darkBg: '#1a1400', emoji: '🛵' },
+  { id: 4, tag: 'Weekend Deal',title: 'Save ₹150',   desc: 'Weekend combo meal for two — limited time',    cta: 'Grab Deal',  accent: '#6e3bbd', lightBg: '#faf5ff', darkBg: '#120a1e', emoji: '🍽️' },
+]
+
 export default function RestaurantWebsite() {
   const { slug, page, tableNumber: tableParam } = useParams()
   const navigate = useNavigate()
@@ -417,6 +424,8 @@ export default function RestaurantWebsite() {
   const [searchFocused, setSearchFocused] = useState(false)
   const [phIdx, setPhIdx] = useState(0)
   const [phVisible, setPhVisible] = useState(true)
+  const [offersIdx, setOffersIdx] = useState(0)
+  const [offersPaused, setOffersPaused] = useState(false)
   const [activeCategory, setActiveCategory] = useState('all')
   const [vegMode, setVegMode] = useState(false)
   const [homeCatSelected, setHomeCatSelected] = useState(null)
@@ -427,6 +436,7 @@ export default function RestaurantWebsite() {
   const [scrollY, setScrollY] = useState(0)
   const scrollTickRef = useRef(false)
   const cartIconRef = useRef(null)
+  const offersScrollRef = useRef(null)
 
   useEffect(() => {
     function onScroll() {
@@ -1313,6 +1323,20 @@ export default function RestaurantWebsite() {
     const interval = setInterval(() => setCarouselIdx(i => (i + 1) % carouselImages.length), 4000)
     return () => clearInterval(interval)
   }, [carouselImages])
+
+  useEffect(() => {
+    if (offersPaused) return
+    const id = setInterval(() => {
+      setOffersIdx(prev => {
+        const next = (prev + 1) % SPECIAL_OFFERS_DATA.length
+        if (offersScrollRef.current?.children[next]) {
+          offersScrollRef.current.children[next].scrollIntoView({ behavior: 'smooth', inline: 'start', block: 'nearest' })
+        }
+        return next
+      })
+    }, 4500)
+    return () => clearInterval(id)
+  }, [offersPaused])
 
   const visibleMenuData = useMemo(
     () => Object.fromEntries(
@@ -2862,6 +2886,137 @@ export default function RestaurantWebsite() {
             </div>
           </section>
 
+
+          {/* ── SPECIAL OFFERS ── */}
+          <section style={{ padding: '32px 0 8px' }}>
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 14px', marginBottom: '16px' }}>
+              <div style={{ fontSize: '13px', fontWeight: 900, color: theme.sectionTitle, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                Special Offers
+              </div>
+              <button style={{ display: 'flex', alignItems: 'center', gap: '3px', background: 'none', border: 'none', color: '#E8321A', fontSize: '12px', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                View All <ChevronRight size={13} />
+              </button>
+            </div>
+
+            {/* Scrollable cards */}
+            <div
+              ref={offersScrollRef}
+              onTouchStart={() => { setOffersPaused(true); clearTimeout(window._offerResume); window._offerResume = setTimeout(() => setOffersPaused(false), 8000) }}
+              onMouseDown={() => { setOffersPaused(true); clearTimeout(window._offerResume); window._offerResume = setTimeout(() => setOffersPaused(false), 8000) }}
+              style={{
+                display: 'flex', gap: '12px',
+                overflowX: 'auto', scrollSnapType: 'x mandatory',
+                WebkitOverflowScrolling: 'touch',
+                padding: '4px 14px 8px',
+                msOverflowStyle: 'none', scrollbarWidth: 'none',
+              }}
+            >
+              {SPECIAL_OFFERS_DATA.map((offer, i) => (
+                <div
+                  key={offer.id}
+                  style={{
+                    minWidth: 'calc(min(480px, 100vw) - 44px)',
+                    width: 'calc(min(480px, 100vw) - 44px)',
+                    height: '190px',
+                    borderRadius: '24px',
+                    background: darkMode ? offer.darkBg : offer.lightBg,
+                    border: `1px solid ${darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'}`,
+                    boxShadow: darkMode ? '0 4px 24px rgba(0,0,0,0.35)' : '0 4px 20px rgba(0,0,0,0.09)',
+                    scrollSnapAlign: 'start',
+                    flexShrink: 0,
+                    display: 'flex',
+                    alignItems: 'stretch',
+                    overflow: 'hidden',
+                    position: 'relative',
+                  }}
+                >
+                  {/* Left content */}
+                  <div style={{ flex: 1, padding: '20px 0 20px 22px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', zIndex: 1, minWidth: 0 }}>
+                    {/* Tag pill */}
+                    <div style={{
+                      display: 'inline-flex', alignItems: 'center', gap: '5px',
+                      background: offer.accent + '1a',
+                      color: offer.accent,
+                      fontSize: '9px', fontWeight: 800, letterSpacing: '0.10em',
+                      padding: '4px 10px', borderRadius: '100px',
+                      textTransform: 'uppercase', width: 'fit-content',
+                    }}>
+                      <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: offer.accent, flexShrink: 0 }} />
+                      {offer.tag}
+                    </div>
+                    {/* Title + description */}
+                    <div>
+                      <div style={{ fontSize: '28px', fontWeight: 900, color: offer.accent, lineHeight: 1.0, letterSpacing: '-0.02em' }}>
+                        {offer.title}
+                      </div>
+                      <div style={{ fontSize: '11px', color: darkMode ? 'rgba(255,255,255,0.52)' : 'rgba(0,0,0,0.50)', marginTop: '5px', lineHeight: 1.45, maxWidth: '155px', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                        {offer.desc}
+                      </div>
+                    </div>
+                    {/* CTA button */}
+                    <button style={{
+                      background: offer.accent,
+                      color: '#fff',
+                      border: 'none',
+                      borderRadius: '100px',
+                      padding: '8px 18px',
+                      fontSize: '11px',
+                      fontWeight: 800,
+                      letterSpacing: '0.03em',
+                      cursor: 'pointer',
+                      fontFamily: 'inherit',
+                      width: 'fit-content',
+                      boxShadow: `0 4px 14px ${offer.accent}45`,
+                    }}>
+                      {offer.cta}
+                    </button>
+                  </div>
+
+                  {/* Right — emoji illustration */}
+                  <div style={{
+                    width: '120px', flexShrink: 0,
+                    display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+                    paddingBottom: '0',
+                  }}>
+                    <span style={{
+                      fontSize: '90px', lineHeight: 1,
+                      transform: 'rotate(10deg) translateY(6px)',
+                      display: 'block', userSelect: 'none',
+                      filter: 'drop-shadow(0 8px 18px rgba(0,0,0,0.20))',
+                    }}>
+                      {offer.emoji}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Dot indicators */}
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '6px', marginTop: '8px' }}>
+              {SPECIAL_OFFERS_DATA.map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => {
+                    setOffersIdx(i)
+                    if (offersScrollRef.current?.children[i]) {
+                      offersScrollRef.current.children[i].scrollIntoView({ behavior: 'smooth', inline: 'start', block: 'nearest' })
+                    }
+                  }}
+                  style={{
+                    width: i === offersIdx ? '18px' : '6px',
+                    height: '6px',
+                    borderRadius: '3px',
+                    background: i === offersIdx ? '#E8321A' : (darkMode ? 'rgba(255,255,255,0.22)' : 'rgba(0,0,0,0.16)'),
+                    border: 'none',
+                    cursor: 'pointer',
+                    padding: 0,
+                    transition: 'all 0.3s ease',
+                  }}
+                />
+              ))}
+            </div>
+          </section>
 
           {/* ── OUR STORY ── */}
           <section className="reveal reveal-4" style={{ padding: '24px 14px 0' }}>
