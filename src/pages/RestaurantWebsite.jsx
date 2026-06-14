@@ -382,6 +382,7 @@ export default function RestaurantWebsite() {
   const currentOrder = customerOrders[0] ?? null
   const orderHistory = customerOrders.slice(1)
   const [reorderHistory, setReorderHistory] = useState([])
+  const [billOpen, setBillOpen] = useState(false)
   const [showSuccessPopup, setShowSuccessPopup] = useState(false)
   const [orderNotes, setOrderNotes] = useState('')
   const [orderStatus, setOrderStatus] = useState(1)
@@ -3380,27 +3381,40 @@ export default function RestaurantWebsite() {
 
       {/* ── CART VIEW ── */}
       {activeNav === 'cart' && (
-        <div style={{ animation: 'fadeIn 0.3s ease', paddingBottom: '100px' }}>
+        <div style={{ animation: 'fadeIn 0.3s ease', paddingBottom: '140px' }}>
           <style>{`
-            .cart-item-card { transition: box-shadow 0.2s ease, transform 0.15s ease; }
-            .cart-item-card:hover { box-shadow: 0 6px 24px rgba(0,0,0,0.13) !important; }
-            .qty-btn { transition: background 0.15s ease, transform 0.1s ease; }
-            .qty-btn:active { transform: scale(0.88); }
-            .delete-btn { transition: color 0.15s ease, background 0.15s ease; }
-            .delete-btn:hover { background: rgba(232,50,26,0.10) !important; color: #E8321A !important; }
+            .crt-qty-btn { transition: opacity 0.12s ease, transform 0.1s ease; }
+            .crt-qty-btn:active { transform: scale(0.85); opacity: 0.7; }
+            .crt-del-btn { transition: opacity 0.15s ease; }
+            .crt-del-btn:active { opacity: 0.6; }
+            .bill-row { transition: background 0.15s; }
+            .sticky-order-btn { transition: opacity 0.15s ease, transform 0.12s ease; }
+            .sticky-order-btn:active { transform: scale(0.97); opacity: 0.9; }
             .coupon-apply-btn { transition: background 0.15s ease, transform 0.1s ease; }
             .coupon-apply-btn:active { transform: scale(0.96); }
-            .checkout-btn { transition: opacity 0.15s ease, transform 0.12s ease, box-shadow 0.15s ease; }
-            .checkout-btn:hover { opacity: 0.92; box-shadow: 0 12px 32px rgba(232,50,26,0.50) !important; }
-            .checkout-btn:active { transform: scale(0.98); }
           `}</style>
 
-          {/* Section title */}
-          <div style={{ padding: '22px 18px 8px' }}>
-            <div style={{ fontSize: '22px', fontWeight: 900, color: theme.color, letterSpacing: '-0.01em' }}>Your Order</div>
+          {/* ── Header ── */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '22px 18px 14px' }}>
+            <div style={{ fontSize: '22px', fontWeight: 900, color: theme.color, letterSpacing: '-0.01em' }}>
+              Your Cart
+              {cartItems.length > 0 && (
+                <span style={{ fontSize: '16px', fontWeight: 500, color: theme.locationColor, marginLeft: '8px' }}>
+                  ({cartItems.reduce((s, i) => s + i.qty, 0)} item{cartItems.reduce((s, i) => s + i.qty, 0) !== 1 ? 's' : ''})
+                </span>
+              )}
+            </div>
+            {cartItems.length > 0 && (
+              <button
+                onClick={() => setCartItems([])}
+                style={{ background: 'none', border: 'none', color: '#3b82f6', fontSize: '14px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', padding: '4px 0' }}
+              >
+                Clear cart <Trash2 size={14} />
+              </button>
+            )}
           </div>
 
-          {/* Empty state */}
+          {/* ── Empty state ── */}
           {cartItems.length === 0 && (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 24px', gap: '14px', animation: 'fadeIn 0.4s ease' }}>
               <div style={{ width: '72px', height: '72px', borderRadius: '36px', background: darkMode ? 'rgba(255,255,255,0.05)' : '#f0ece8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -3411,62 +3425,77 @@ export default function RestaurantWebsite() {
               <button
                 onClick={() => navigateToPage('menu')}
                 style={{ marginTop: '8px', background: '#E8321A', color: '#fff', border: 'none', borderRadius: '14px', padding: '12px 28px', fontSize: '13px', fontWeight: 700, cursor: 'pointer', boxShadow: '0 6px 20px rgba(232,50,26,0.35)' }}
-              >
-                Browse Menu
-              </button>
+              >Browse Menu</button>
             </div>
           )}
 
-          {/* Cart items */}
+          {/* ── Cart items card ── */}
           {cartItems.length > 0 && (
-            <div style={{ margin: '8px 14px 0', background: '#fff', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 2px 10px rgba(0,0,0,0.06)' }}>
+            <div style={{ margin: '0 14px', background: darkMode ? '#1c1c1e' : '#fff', borderRadius: '16px', overflow: 'hidden', border: darkMode ? '1px solid rgba(255,255,255,0.06)' : '1px solid #f0f0f0' }}>
               {cartItems.map((item, idx) => {
                 const unitPrice = item.price
-                const originalPrice = item.oldPrice || Math.round(unitPrice * 1.28)
+                const isVeg = item.isVeg !== false && !/(chicken|mutton|prawn|fish|egg|beef|pork|lamb|meat|tandoori|keema)/i.test(item.name)
                 return (
                   <div key={item.id}>
-                    <div style={{ display: 'flex', alignItems: 'flex-start', padding: '16px', gap: '14px' }}>
-                      {/* Food image */}
-                      <div style={{ flexShrink: 0, width: '80px', height: '80px', borderRadius: '12px', overflow: 'hidden', background: '#f5f5f5' }}>
-                        <img
-                          src={item.img}
-                          alt={item.name}
-                          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-                          onError={e => { e.target.src = '/menu/wagyu-ribeye.png' }}
-                        />
+                    <div style={{ display: 'flex', alignItems: 'center', padding: '14px 14px', gap: '12px' }}>
+
+                      {/* Veg/Non-veg indicator + image */}
+                      <div style={{ flexShrink: 0, position: 'relative' }}>
+                        <div style={{ position: 'absolute', top: '-4px', left: '-4px', zIndex: 1, width: '14px', height: '14px', borderRadius: isVeg ? '2px' : '50%', border: `2px solid ${isVeg ? '#22c55e' : '#e53935'}`, background: darkMode ? '#1c1c1e' : '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <div style={{ width: '6px', height: '6px', borderRadius: isVeg ? '1px' : '50%', background: isVeg ? '#22c55e' : '#e53935' }} />
+                        </div>
+                        <div style={{ width: '68px', height: '68px', borderRadius: '10px', overflow: 'hidden', background: darkMode ? '#2a2a2a' : '#f5f5f5' }}>
+                          <img
+                            src={item.img}
+                            alt={item.name}
+                            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                            onError={e => { e.target.src = '/menu/wagyu-ribeye.png' }}
+                          />
+                        </div>
                       </div>
 
-                      {/* Middle info */}
+                      {/* Name + description */}
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: '15px', fontWeight: 700, color: '#1a1a1a', lineHeight: 1.3 }}>{item.name}</div>
-                        {item.description && (
-                          <div style={{ fontSize: '13px', color: '#888', marginTop: '3px' }}>{item.description}</div>
+                        <div style={{ fontSize: '15px', fontWeight: 700, color: theme.color, lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.name}</div>
+                        {item.description ? (
+                          <div style={{ fontSize: '12px', color: theme.locationColor, marginTop: '3px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.description}</div>
+                        ) : (
+                          <div style={{ fontSize: '12px', color: theme.locationColor, marginTop: '3px' }}>{isVeg ? '🌿 Vegetarian' : '🍗 Non-Veg'}</div>
                         )}
                       </div>
 
-                      {/* Right: green stepper + prices */}
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px', flexShrink: 0 }}>
-                        {/* Dark green pill stepper */}
-                        <div style={{ display: 'flex', alignItems: 'center', background: '#2e7d32', borderRadius: '24px', height: '40px', padding: '0 8px', gap: '4px' }}>
-                          <button
-                            onClick={() => updateQty(item.id, -1)}
-                            style={{ background: 'none', border: 'none', color: '#fff', fontSize: '20px', lineHeight: 1, cursor: 'pointer', width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'inherit', padding: 0 }}
-                          >−</button>
-                          <span style={{ color: '#fff', fontWeight: 700, fontSize: '15px', minWidth: '22px', textAlign: 'center' }}>{item.qty}</span>
-                          <button
-                            onClick={() => updateQty(item.id, 1)}
-                            style={{ background: 'none', border: 'none', color: '#fff', fontSize: '20px', lineHeight: 1, cursor: 'pointer', width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'inherit', padding: 0 }}
-                          >+</button>
-                        </div>
-                        {/* Prices */}
-                        <div style={{ textAlign: 'right', display: 'flex', alignItems: 'baseline', gap: '5px' }}>
-                          <span style={{ fontSize: '13px', color: '#aaa', textDecoration: 'line-through' }}>₹{(originalPrice * item.qty).toLocaleString('en-IN')}</span>
-                          <span style={{ fontSize: '15px', fontWeight: 700, color: '#1a1a1a' }}>₹{(unitPrice * item.qty).toLocaleString('en-IN')}</span>
-                        </div>
+                      {/* Price */}
+                      <div style={{ flexShrink: 0, fontSize: '15px', fontWeight: 700, color: theme.color, minWidth: '52px', textAlign: 'right' }}>
+                        ₹{(unitPrice * item.qty).toLocaleString('en-IN')}
                       </div>
+
+                      {/* Outlined qty stepper */}
+                      <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', border: `1.5px solid ${darkMode ? 'rgba(255,255,255,0.25)' : '#d0d0d0'}`, borderRadius: '10px', overflow: 'hidden', height: '36px' }}>
+                        <button
+                          className="crt-qty-btn"
+                          onClick={() => updateQty(item.id, -1)}
+                          style={{ background: 'none', border: 'none', color: '#3b82f6', fontSize: '18px', fontWeight: 700, cursor: 'pointer', width: '32px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}
+                        >−</button>
+                        <span style={{ color: theme.color, fontWeight: 700, fontSize: '14px', minWidth: '22px', textAlign: 'center', borderLeft: `1px solid ${darkMode ? 'rgba(255,255,255,0.12)' : '#e8e8e8'}`, borderRight: `1px solid ${darkMode ? 'rgba(255,255,255,0.12)' : '#e8e8e8'}`, height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{item.qty}</span>
+                        <button
+                          className="crt-qty-btn"
+                          onClick={() => updateQty(item.id, 1)}
+                          style={{ background: 'none', border: 'none', color: '#3b82f6', fontSize: '18px', fontWeight: 700, cursor: 'pointer', width: '32px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}
+                        >+</button>
+                      </div>
+
+                      {/* Delete */}
+                      <button
+                        className="crt-del-btn"
+                        onClick={() => removeItem(item.id)}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+                      >
+                        <Trash2 size={18} color="#e53935" />
+                      </button>
                     </div>
+
                     {idx < cartItems.length - 1 && (
-                      <div style={{ height: '1px', background: '#f0f0f0', margin: '0 16px' }} />
+                      <div style={{ height: '1px', background: darkMode ? 'rgba(255,255,255,0.06)' : '#f0f0f0', margin: '0 14px' }} />
                     )}
                   </div>
                 )
@@ -3474,179 +3503,135 @@ export default function RestaurantWebsite() {
             </div>
           )}
 
-          {/* Price Details + Place Order */}
+          {/* ── Bill Summary (collapsible) ── */}
           {cartItems.length > 0 && (
-            <>
-            {/* Price Details card */}
-            <div style={{ padding: '8px 14px 0' }}>
-              <div style={{
-                background: '#fff',
-                borderRadius: '16px',
-                padding: '18px 18px 14px',
-                boxShadow: '0 2px 12px rgba(0,0,0,0.08)',
-              }}>
-                <div style={{ fontSize: '16px', fontWeight: 700, color: '#1a1a1a', marginBottom: '16px' }}>Price Details</div>
+            <div style={{ margin: '12px 14px 0', background: darkMode ? '#1c1c1e' : '#fff', borderRadius: '16px', border: darkMode ? '1px solid rgba(255,255,255,0.06)' : '1px solid #f0f0f0', overflow: 'hidden' }}>
 
-                {/* Total MRP */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '13px' }}>
-                  <span style={{ fontSize: '14px', color: '#444', fontWeight: 400 }}>Total MRP</span>
-                  <span style={{ fontSize: '14px', color: '#1a1a1a', fontWeight: 500 }}>₹{subtotal.toLocaleString('en-IN')}</span>
-                </div>
-
-                {/* Coupon Discount */}
-                {couponSectionEnabled && (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '13px' }}>
-                    <span style={{ fontSize: '14px', color: '#444', fontWeight: 400 }}>Coupon Discount</span>
-                    {couponApplied ? (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ fontSize: '14px', color: '#22c55e', fontWeight: 600 }}>− ₹{discountAmt.toLocaleString('en-IN')}</span>
-                        <button
-                          onClick={() => { setCouponApplied(false); setCouponInput(''); setAppliedCouponData(null) }}
-                          style={{ background: 'none', border: 'none', color: '#999', fontSize: '11px', fontWeight: 600, cursor: 'pointer', padding: '0', textDecoration: 'underline' }}
-                        >Remove</button>
-                      </div>
-                    ) : (
-                      <button
-                        onClick={() => { setCouponError(''); setShowCouponModal(true) }}
-                        style={{ background: 'none', border: 'none', color: '#e91e8c', fontSize: '14px', fontWeight: 600, cursor: 'pointer', padding: '0' }}
-                      >Apply Coupon</button>
-                    )}
-                  </div>
-                )}
-
-                {/* GST */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '13px' }}>
-                  <span style={{ fontSize: '14px', color: '#444', fontWeight: 400 }}>GST (5%)</span>
-                  <span style={{ fontSize: '14px', color: '#1a1a1a', fontWeight: 500 }}>₹{gstAmt.toLocaleString('en-IN')}</span>
-                </div>
-
-                {/* Dashed divider */}
-                <div style={{ borderTop: '1.5px dashed #ddd', margin: '4px 0 16px' }} />
-
-                {/* Total Amount */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: '16px', fontWeight: 800, color: '#1a1a1a' }}>Total Amount</span>
-                  <span style={{ fontSize: '17px', fontWeight: 900, color: '#1a1a1a' }}>₹{grandTotal.toLocaleString('en-IN')}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Place Order button */}
-            <div style={{ padding: '14px 14px 8px' }}>
-              <button
-                className="checkout-btn"
-                onClick={() => setShowOrderConfirm(true)}
-                style={{
-                  width: '100%',
-                  background: '#e53935',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: '14px',
-                  padding: '16px',
-                  fontSize: '15px',
-                  fontWeight: 800,
-                  cursor: 'pointer',
-                  letterSpacing: '0.01em',
-                  boxShadow: '0 6px 20px rgba(229,57,53,0.40)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px',
-                }}
+              {/* Header row — always visible */}
+              <div
+                onClick={() => setBillOpen(o => !o)}
+                style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '14px 16px', cursor: 'pointer', userSelect: 'none' }}
               >
-                Place Order <span style={{ fontSize: '16px' }}>→</span>
-              </button>
-            </div>
-
-            {/* Coupon Modal */}
-            {showCouponModal && (
-              <>
-                <style>{`@keyframes couponFadeIn { from { opacity: 0; transform: translate(-50%, -48%); } to { opacity: 1; transform: translate(-50%, -50%); } }`}</style>
-                {/* Overlay */}
-                <div
-                  onClick={() => { setShowCouponModal(false); setCouponError('') }}
-                  style={{
-                    position: 'fixed',
-                    top: 0, left: 0,
-                    width: '100%', height: '100%',
-                    backdropFilter: 'blur(6px)',
-                    WebkitBackdropFilter: 'blur(6px)',
-                    backgroundColor: 'rgba(0,0,0,0.4)',
-                    zIndex: 999,
-                  }}
-                />
-                {/* Centered modal */}
-                <div style={{
-                  position: 'fixed',
-                  top: '50%', left: '50%',
-                  transform: 'translate(-50%, -50%)',
-                  zIndex: 1000,
-                  width: '85%',
-                  maxWidth: '400px',
-                  background: '#fff',
-                  borderRadius: '16px',
-                  padding: '24px',
-                  boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
-                  animation: 'couponFadeIn 0.2s ease both',
-                }}>
-                  {/* Header */}
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
-                    <span style={{ fontSize: '17px', fontWeight: 800, color: '#1a1a1a' }}>Apply Coupon</span>
-                    <button
-                      onClick={() => { setShowCouponModal(false); setCouponError('') }}
-                      style={{ background: '#f5f5f5', border: 'none', borderRadius: '50%', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '16px', color: '#555', fontWeight: 700 }}
-                    >✕</button>
-                  </div>
-
-                  {/* Input + button */}
-                  <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                    <input
-                      value={couponInput}
-                      onChange={e => { setCouponInput(e.target.value.toUpperCase()); setCouponError('') }}
-                      onKeyDown={e => e.key === 'Enter' && handleApplyCoupon()}
-                      placeholder="Enter coupon code"
-                      autoFocus
-                      style={{
-                        flex: 1,
-                        border: `1.5px solid ${couponError ? '#e53935' : '#ddd'}`,
-                        borderRadius: '12px',
-                        padding: '13px 14px',
-                        fontSize: '14px',
-                        color: '#1a1a1a',
-                        outline: 'none',
-                        fontFamily: 'inherit',
-                        letterSpacing: '0.05em',
-                        fontWeight: 600,
-                        background: '#fafafa',
-                        transition: 'border-color 0.2s',
-                      }}
-                    />
-                    <button
-                      onClick={handleApplyCoupon}
-                      style={{ background: '#e53935', color: '#fff', border: 'none', borderRadius: '12px', padding: '13px 20px', fontSize: '14px', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: '0 4px 14px rgba(229,57,53,0.30)' }}
-                    >Apply</button>
-                  </div>
-
-                  {/* Error message */}
-                  {couponError && !couponApplied && (
-                    <div style={{ fontSize: '12px', color: '#e53935', marginTop: '8px', fontWeight: 600 }}>{couponError}</div>
-                  )}
-
-                  {/* Success message */}
-                  {couponApplied && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '12px', background: 'rgba(34,197,94,0.08)', border: '1.5px solid rgba(34,197,94,0.25)', borderRadius: '10px', padding: '10px 14px' }}>
-                      <CheckCircle size={16} color="#22c55e" />
-                      <span style={{ fontSize: '13px', fontWeight: 700, color: '#22c55e' }}>
-                        {appliedCouponData
-                          ? `${appliedCouponData.code} applied — ${appliedCouponData.discountType === 'Fixed Amount' ? `₹${appliedCouponData.discountPct} off!` : `${appliedCouponData.discountPct}% off!`}`
-                          : 'Coupon applied!'}
-                      </span>
+                {/* Icon */}
+                <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: darkMode ? '#2a2a2a' : '#f5f5f5', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={theme.locationColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>
+                  </svg>
+                </div>
+                {/* Text */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: '15px', fontWeight: 700, color: theme.color }}>Bill Summary</div>
+                  {!billOpen && (
+                    <div style={{ fontSize: '11.5px', color: theme.locationColor, marginTop: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      Item Total ₹{subtotal.toLocaleString('en-IN')} &nbsp;|&nbsp; GST (5%) ₹{gstAmt.toLocaleString('en-IN')} &nbsp;|&nbsp; Total ₹{grandTotal.toLocaleString('en-IN')}
                     </div>
                   )}
                 </div>
-              </>
-            )}
+                {/* Chevron */}
+                <ChevronDown size={18} color={theme.locationColor} style={{ flexShrink: 0, transform: billOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s ease' }} />
+              </div>
+
+              {/* Expanded breakdown */}
+              {billOpen && (
+                <div style={{ borderTop: darkMode ? '1px solid rgba(255,255,255,0.06)' : '1px solid #f0f0f0', padding: '14px 16px 6px' }}>
+                  <div className="bill-row" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '11px' }}>
+                    <span style={{ fontSize: '13.5px', color: theme.locationColor }}>Item Total</span>
+                    <span style={{ fontSize: '13.5px', color: theme.color, fontWeight: 500 }}>₹{subtotal.toLocaleString('en-IN')}</span>
+                  </div>
+                  {couponSectionEnabled && (
+                    <div className="bill-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '11px' }}>
+                      <span style={{ fontSize: '13.5px', color: theme.locationColor }}>Coupon Discount</span>
+                      {couponApplied ? (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span style={{ fontSize: '13.5px', color: '#22c55e', fontWeight: 600 }}>− ₹{discountAmt.toLocaleString('en-IN')}</span>
+                          <button onClick={() => { setCouponApplied(false); setCouponInput(''); setAppliedCouponData(null) }} style={{ background: 'none', border: 'none', color: '#999', fontSize: '11px', fontWeight: 600, cursor: 'pointer', textDecoration: 'underline', padding: 0 }}>Remove</button>
+                        </div>
+                      ) : (
+                        <button onClick={() => { setCouponError(''); setShowCouponModal(true) }} style={{ background: 'none', border: 'none', color: '#e91e8c', fontSize: '13.5px', fontWeight: 600, cursor: 'pointer', padding: 0 }}>Apply Coupon</button>
+                      )}
+                    </div>
+                  )}
+                  <div className="bill-row" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '11px' }}>
+                    <span style={{ fontSize: '13.5px', color: theme.locationColor }}>GST (5%)</span>
+                    <span style={{ fontSize: '13.5px', color: theme.color, fontWeight: 500 }}>₹{gstAmt.toLocaleString('en-IN')}</span>
+                  </div>
+                  <div className="bill-row" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '11px' }}>
+                    <span style={{ fontSize: '13.5px', color: theme.locationColor }}>Delivery Charge</span>
+                    {deliveryFee === 0
+                      ? <span style={{ fontSize: '13px', color: '#22c55e', fontWeight: 600 }}>FREE</span>
+                      : <span style={{ fontSize: '13.5px', color: theme.color, fontWeight: 500 }}>₹{deliveryFee}</span>
+                    }
+                  </div>
+                  <div style={{ borderTop: darkMode ? '1px dashed rgba(255,255,255,0.10)' : '1px dashed #e0e0e0', margin: '6px 0 12px' }} />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '14px' }}>
+                    <span style={{ fontSize: '15px', fontWeight: 800, color: theme.color }}>Total Amount</span>
+                    <span style={{ fontSize: '15px', fontWeight: 900, color: theme.color }}>₹{grandTotal.toLocaleString('en-IN')}</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── Coupon Modal ── */}
+          {cartItems.length > 0 && showCouponModal && (
+            <>
+              <style>{`@keyframes couponFadeIn { from { opacity: 0; transform: translate(-50%, -48%); } to { opacity: 1; transform: translate(-50%, -50%); } }`}</style>
+              <div onClick={() => { setShowCouponModal(false); setCouponError('') }} style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', backgroundColor: 'rgba(0,0,0,0.4)', zIndex: 999 }} />
+              <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 1000, width: '85%', maxWidth: '400px', background: '#fff', borderRadius: '16px', padding: '24px', boxShadow: '0 8px 32px rgba(0,0,0,0.3)', animation: 'couponFadeIn 0.2s ease both' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+                  <span style={{ fontSize: '17px', fontWeight: 800, color: '#1a1a1a' }}>Apply Coupon</span>
+                  <button onClick={() => { setShowCouponModal(false); setCouponError('') }} style={{ background: '#f5f5f5', border: 'none', borderRadius: '50%', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '16px', color: '#555', fontWeight: 700 }}>✕</button>
+                </div>
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                  <input value={couponInput} onChange={e => { setCouponInput(e.target.value.toUpperCase()); setCouponError('') }} onKeyDown={e => e.key === 'Enter' && handleApplyCoupon()} placeholder="Enter coupon code" autoFocus style={{ flex: 1, border: `1.5px solid ${couponError ? '#e53935' : '#ddd'}`, borderRadius: '12px', padding: '13px 14px', fontSize: '14px', color: '#1a1a1a', outline: 'none', fontFamily: 'inherit', letterSpacing: '0.05em', fontWeight: 600, background: '#fafafa', transition: 'border-color 0.2s' }} />
+                  <button onClick={handleApplyCoupon} style={{ background: '#e53935', color: '#fff', border: 'none', borderRadius: '12px', padding: '13px 20px', fontSize: '14px', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: '0 4px 14px rgba(229,57,53,0.30)' }}>Apply</button>
+                </div>
+                {couponError && !couponApplied && (
+                  <div style={{ fontSize: '12px', color: '#e53935', marginTop: '8px', fontWeight: 600 }}>{couponError}</div>
+                )}
+                {couponApplied && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '12px', background: 'rgba(34,197,94,0.08)', border: '1.5px solid rgba(34,197,94,0.25)', borderRadius: '10px', padding: '10px 14px' }}>
+                    <CheckCircle size={16} color="#22c55e" />
+                    <span style={{ fontSize: '13px', fontWeight: 700, color: '#22c55e' }}>
+                      {appliedCouponData ? `${appliedCouponData.code} applied — ${appliedCouponData.discountType === 'Fixed Amount' ? `₹${appliedCouponData.discountPct} off!` : `${appliedCouponData.discountPct}% off!`}` : 'Coupon applied!'}
+                    </span>
+                  </div>
+                )}
+              </div>
             </>
+          )}
+
+          {/* ── Sticky bottom checkout bar ── */}
+          {cartItems.length > 0 && (
+            <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 90, padding: '10px 14px 16px', background: 'transparent', pointerEvents: 'none' }}>
+              <div style={{ display: 'flex', borderRadius: '18px', overflow: 'hidden', boxShadow: '0 -4px 32px rgba(0,0,0,0.25)', pointerEvents: 'auto' }}>
+                {/* Left: amount + savings */}
+                <div style={{ flex: 1, background: darkMode ? '#1c1c1e' : '#fff', padding: '14px 18px', display: 'flex', flexDirection: 'column', justifyContent: 'center', borderRight: darkMode ? '1px solid rgba(255,255,255,0.06)' : '1px solid #eee' }}>
+                  <div style={{ fontSize: '20px', fontWeight: 900, color: theme.color, lineHeight: 1.1 }}>₹{grandTotal.toLocaleString('en-IN')}</div>
+                  {discountAmt > 0 ? (
+                    <div style={{ marginTop: '5px', display: 'inline-flex', alignItems: 'center', background: 'rgba(34,197,94,0.12)', border: '1px solid rgba(34,197,94,0.25)', borderRadius: '20px', padding: '2px 9px' }}>
+                      <span style={{ fontSize: '11.5px', fontWeight: 700, color: '#22c55e' }}>You save ₹{discountAmt.toLocaleString('en-IN')}</span>
+                    </div>
+                  ) : deliveryFee === 0 ? (
+                    <div style={{ marginTop: '5px', display: 'inline-flex', alignItems: 'center', background: 'rgba(34,197,94,0.12)', border: '1px solid rgba(34,197,94,0.25)', borderRadius: '20px', padding: '2px 9px' }}>
+                      <span style={{ fontSize: '11.5px', fontWeight: 700, color: '#22c55e' }}>Free delivery 🎉</span>
+                    </div>
+                  ) : (
+                    <div style={{ marginTop: '5px' }}>
+                      <span style={{ fontSize: '11.5px', color: theme.locationColor }}>+₹{deliveryFee} delivery</span>
+                    </div>
+                  )}
+                </div>
+                {/* Right: Place Order button */}
+                <button
+                  className="sticky-order-btn"
+                  onClick={() => setShowOrderConfirm(true)}
+                  style={{ background: '#2563eb', border: 'none', color: '#fff', padding: '0 24px', fontSize: '15px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', letterSpacing: '0.01em', whiteSpace: 'nowrap' }}
+                >
+                  Place Order <span style={{ fontSize: '17px' }}>→</span>
+                </button>
+              </div>
+            </div>
           )}
 
           {/* ── ORDER AGAIN — always visible when history exists ── */}
