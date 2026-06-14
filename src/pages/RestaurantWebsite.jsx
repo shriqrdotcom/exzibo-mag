@@ -342,6 +342,8 @@ export default function RestaurantWebsite() {
     })
   }
   const [showHeaderMenu, setShowHeaderMenu] = useState(false)
+  const [menuSearchOpen, setMenuSearchOpen] = useState(false)
+  const menuSearchInputRef = useRef(null)
   const [showHelpSheet, setShowHelpSheet] = useState(false)
   const [helpDismissing, setHelpDismissing] = useState(false)
   const [cartItems, setCartItems] = useState([])
@@ -363,6 +365,13 @@ export default function RestaurantWebsite() {
   const [viewingHistoryOrder, setViewingHistoryOrder] = useState(null)
   const [showOrderConfirm, setShowOrderConfirm] = useState(false)
   useEffect(() => { setShowOrderConfirm(false); setShowHelpSheet(false) }, [activeNav])
+  useEffect(() => { if (activeNav !== 'menu') setMenuSearchOpen(false) }, [activeNav])
+  useEffect(() => {
+    if (menuSearchOpen) {
+      const t = setTimeout(() => menuSearchInputRef.current?.focus(), 280)
+      return () => clearTimeout(t)
+    }
+  }, [menuSearchOpen])
   const [openingHours, setOpeningHours] = useState(null)
   const [heroBadge, setHeroBadge] = useState('')
   const [heroText, setHeroText] = useState('')
@@ -1765,134 +1774,171 @@ export default function RestaurantWebsite() {
                   <Heart size={15} color='#ffffff' fill='none' strokeWidth={2} />
                 </button>
 
-                {/* Three-dot vertical menu — dropdown is rendered as a fixed portal below */}
-                <button
-                  onClick={() => setShowHeaderMenu(v => !v)}
-                  style={{
-                    width: '36px', height: '36px', borderRadius: '50%',
-                    background: 'rgba(30,30,30,0.85)',
-                    border: '1.5px solid rgba(255,255,255,0.28)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    cursor: 'pointer', flexShrink: 0,
-                    transition: 'transform 0.15s ease, background 0.2s ease',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.35)',
-                  }}
-                  onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.08)'; e.currentTarget.style.background = 'rgba(50,50,50,0.9)' }}
-                  onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.background = 'rgba(30,30,30,0.85)' }}
-                >
-                  <MoreVertical size={15} color="rgba(255,255,255,0.90)" />
-                </button>
+                {/* Menu page: Search icon toggle; other pages: three-dot dropdown */}
+                {activeNav === 'menu' ? (
+                  <button
+                    onClick={() => setMenuSearchOpen(v => !v)}
+                    style={{
+                      width: '36px', height: '36px', borderRadius: '50%',
+                      background: menuSearchOpen ? 'rgba(255,255,255,0.22)' : 'rgba(30,30,30,0.85)',
+                      border: menuSearchOpen ? '1.5px solid rgba(255,255,255,0.55)' : '1.5px solid rgba(255,255,255,0.28)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      cursor: 'pointer', flexShrink: 0,
+                      transition: 'transform 0.15s ease, background 0.2s ease, border-color 0.2s ease',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.35)',
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.08)' }}
+                    onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)' }}
+                  >
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.90)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+                    </svg>
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => setShowHeaderMenu(v => !v)}
+                    style={{
+                      width: '36px', height: '36px', borderRadius: '50%',
+                      background: 'rgba(30,30,30,0.85)',
+                      border: '1.5px solid rgba(255,255,255,0.28)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      cursor: 'pointer', flexShrink: 0,
+                      transition: 'transform 0.15s ease, background 0.2s ease',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.35)',
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.08)'; e.currentTarget.style.background = 'rgba(50,50,50,0.9)' }}
+                    onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.background = 'rgba(30,30,30,0.85)' }}
+                  >
+                    <MoreVertical size={15} color="rgba(255,255,255,0.90)" />
+                  </button>
+                )}
               </div>
             </div>
 
-            {/* ── Row 2: Search bar + Veg toggle (always visible) ── */}
+            {/* ── Row 2: Search bar + Veg toggle ── */}
+            {/* On menu page: hidden by default, slides down when menuSearchOpen is true */}
+            {/* On all other pages: always visible */}
             <div style={{
-              display: 'flex', gap: '8px', alignItems: 'center',
-              padding: `8px 16px ${Math.round(10 - 3 * rowProgress)}px`,
+              maxHeight: activeNav === 'menu' ? (menuSearchOpen ? '80px' : '0px') : '80px',
+              opacity: activeNav === 'menu' ? (menuSearchOpen ? 1 : 0) : 1,
+              overflow: 'hidden',
+              transition: 'max-height 0.30s cubic-bezier(0.4,0,0.2,1), opacity 0.22s ease',
+              pointerEvents: activeNav === 'menu' && !menuSearchOpen ? 'none' : 'auto',
             }}>
-              {/* Search input — compact white pill */}
-              <div style={{ flex: 1, position: 'relative' }}>
-                {/* Search icon */}
-                <svg
-                  width="15" height="15" viewBox="0 0 24 24" fill="none"
-                  stroke={darkMode ? 'rgba(255,255,255,0.50)' : 'rgba(0,0,0,0.45)'}
-                  strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
-                  style={{ position: 'absolute', left: '13px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}
-                >
-                  <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
-                </svg>
-                <input
-                  className="float-search-light"
-                  value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
-                  onFocus={() => setSearchFocused(true)}
-                  onBlur={() => setSearchFocused(false)}
-                  placeholder=""
-                  style={{
-                    width: '100%',
-                    boxSizing: 'border-box',
-                    background: darkMode ? '#242424' : '#ffffff',
-                    border: darkMode ? '1.5px solid rgba(255,255,255,0.12)' : '1.5px solid #1a1a1a',
-                    borderRadius: '14px',
-                    padding: '9px 34px 9px 38px',
-                    fontSize: '13px',
-                    color: darkMode ? '#ffffff' : '#111111',
-                    fontFamily: 'inherit',
-                    fontWeight: 400,
-                    boxShadow: 'none',
-                    outline: 'none',
-                    transition: 'border-color 0.2s ease, background 0.2s ease',
-                  }}
-                />
-                {/* Animated placeholder overlay — only shown when input is empty & not focused */}
-                {!searchQuery && !searchFocused && (
-                  <span
+              <div style={{
+                display: 'flex', gap: '8px', alignItems: 'center',
+                padding: `8px 16px ${Math.round(10 - 3 * rowProgress)}px`,
+              }}>
+                {/* Search input — compact white pill */}
+                <div style={{ flex: 1, position: 'relative' }}>
+                  {/* Search icon */}
+                  <svg
+                    width="15" height="15" viewBox="0 0 24 24" fill="none"
+                    stroke={darkMode ? 'rgba(255,255,255,0.50)' : 'rgba(0,0,0,0.45)'}
+                    strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+                    style={{ position: 'absolute', left: '13px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}
+                  >
+                    <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+                  </svg>
+                  <input
+                    ref={activeNav === 'menu' ? menuSearchInputRef : undefined}
+                    className="float-search-light"
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                    onFocus={() => setSearchFocused(true)}
+                    onBlur={() => {
+                      setSearchFocused(false)
+                      if (activeNav === 'menu' && !searchQuery) {
+                        setTimeout(() => setMenuSearchOpen(false), 180)
+                      }
+                    }}
+                    placeholder=""
                     style={{
-                      position: 'absolute',
-                      left: '38px',
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      pointerEvents: 'none',
+                      width: '100%',
+                      boxSizing: 'border-box',
+                      background: darkMode ? '#242424' : '#ffffff',
+                      border: darkMode ? '1.5px solid rgba(255,255,255,0.12)' : '1.5px solid #1a1a1a',
+                      borderRadius: '14px',
+                      padding: '9px 34px 9px 38px',
                       fontSize: '13px',
+                      color: darkMode ? '#ffffff' : '#111111',
+                      fontFamily: 'inherit',
                       fontWeight: 400,
-                      color: darkMode ? 'rgba(255,255,255,0.38)' : 'rgba(0,0,0,0.38)',
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      maxWidth: 'calc(100% - 72px)',
-                      textOverflow: 'ellipsis',
-                      opacity: phVisible ? 1 : 0,
-                      transition: 'opacity 0.35s ease',
-                      userSelect: 'none',
+                      boxShadow: 'none',
+                      outline: 'none',
+                      transition: 'border-color 0.2s ease, background 0.2s ease',
+                    }}
+                  />
+                  {/* Animated placeholder overlay — only shown when input is empty & not focused */}
+                  {!searchQuery && !searchFocused && (
+                    <span
+                      style={{
+                        position: 'absolute',
+                        left: '38px',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        pointerEvents: 'none',
+                        fontSize: '13px',
+                        fontWeight: 400,
+                        color: darkMode ? 'rgba(255,255,255,0.38)' : 'rgba(0,0,0,0.38)',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        maxWidth: 'calc(100% - 72px)',
+                        textOverflow: 'ellipsis',
+                        opacity: phVisible ? 1 : 0,
+                        transition: 'opacity 0.35s ease',
+                        userSelect: 'none',
+                      }}
+                    >
+                      Search &ldquo;{SEARCH_PLACEHOLDERS[phIdx]}&rdquo;
+                    </span>
+                  )}
+                  {/* Clear × */}
+                  {searchQuery && (
+                    <button
+                      onClick={() => setSearchQuery('')}
+                      style={{
+                        position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)',
+                        background: darkMode ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.10)',
+                        border: 'none', borderRadius: '50%',
+                        width: '18px', height: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        color: darkMode ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.5)',
+                        cursor: 'pointer', fontSize: '12px', lineHeight: 1,
+                      }}
+                    >×</button>
+                  )}
+                </div>
+
+                {/* VEG toggle */}
+                <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}>
+                  <span style={{
+                    fontSize: '9px', fontWeight: 800, letterSpacing: '0.10em', textTransform: 'uppercase',
+                    color: isCollapsed
+                      ? (darkMode ? 'rgba(255,255,255,0.60)' : 'rgba(0,0,0,0.50)')
+                      : 'rgba(255,255,255,0.90)',
+                    transition: 'color 0.3s ease',
+                  }}>VEG</span>
+                  <button
+                    onClick={() => setVegMode(v => !v)}
+                    style={{
+                      width: '40px', height: '23px', borderRadius: '12px',
+                      background: vegMode ? '#22c55e' : (darkMode ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.18)'),
+                      border: vegMode ? 'none' : '1.5px solid rgba(255,255,255,0.40)',
+                      cursor: 'pointer', position: 'relative',
+                      transition: 'background 0.28s ease, border-color 0.28s ease',
+                      boxShadow: '0 2px 6px rgba(0,0,0,0.25)',
                     }}
                   >
-                    Search &ldquo;{SEARCH_PLACEHOLDERS[phIdx]}&rdquo;
-                  </span>
-                )}
-                {/* Clear × */}
-                {searchQuery && (
-                  <button
-                    onClick={() => setSearchQuery('')}
-                    style={{
-                      position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)',
-                      background: darkMode ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.10)',
-                      border: 'none', borderRadius: '50%',
-                      width: '18px', height: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      color: darkMode ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.5)',
-                      cursor: 'pointer', fontSize: '12px', lineHeight: 1,
-                    }}
-                  >×</button>
-                )}
-              </div>
-
-              {/* VEG toggle */}
-              <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}>
-                <span style={{
-                  fontSize: '9px', fontWeight: 800, letterSpacing: '0.10em', textTransform: 'uppercase',
-                  color: isCollapsed
-                    ? (darkMode ? 'rgba(255,255,255,0.60)' : 'rgba(0,0,0,0.50)')
-                    : 'rgba(255,255,255,0.90)',
-                  transition: 'color 0.3s ease',
-                }}>VEG</span>
-                <button
-                  onClick={() => setVegMode(v => !v)}
-                  style={{
-                    width: '40px', height: '23px', borderRadius: '12px',
-                    background: vegMode ? '#22c55e' : (darkMode ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.18)'),
-                    border: vegMode ? 'none' : '1.5px solid rgba(255,255,255,0.40)',
-                    cursor: 'pointer', position: 'relative',
-                    transition: 'background 0.28s ease, border-color 0.28s ease',
-                    boxShadow: '0 2px 6px rgba(0,0,0,0.25)',
-                  }}
-                >
-                  <div style={{
-                    position: 'absolute', top: '3px',
-                    left: vegMode ? 'calc(100% - 19px)' : '3px',
-                    width: '15px', height: '15px', borderRadius: '8px',
-                    background: '#fff',
-                    boxShadow: '0 1px 4px rgba(0,0,0,0.30)',
-                    transition: 'left 0.25s cubic-bezier(0.4,0,0.2,1)',
-                  }} />
-                </button>
+                    <div style={{
+                      position: 'absolute', top: '3px',
+                      left: vegMode ? 'calc(100% - 19px)' : '3px',
+                      width: '15px', height: '15px', borderRadius: '8px',
+                      background: '#fff',
+                      boxShadow: '0 1px 4px rgba(0,0,0,0.30)',
+                      transition: 'left 0.25s cubic-bezier(0.4,0,0.2,1)',
+                    }} />
+                  </button>
+                </div>
               </div>
             </div>
 
