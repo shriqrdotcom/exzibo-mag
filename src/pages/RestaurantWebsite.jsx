@@ -209,25 +209,25 @@ function persistCustomerOrders(restaurantId, orders) {
 }
 
 const REORDER_MAX = 10
-function getReorderKey(restaurantId) { return `exzibo_reorder_${restaurantId}` }
+function getReorderKey(restaurantId) { return `exzibo_reorder_v2_${restaurantId}` }
+function dedupeByName(arr) {
+  const seen = new Set()
+  return arr.filter(item => {
+    if (!item?.name || seen.has(item.name)) return false
+    seen.add(item.name)
+    return true
+  })
+}
 function loadReorderHistory(restaurantId) {
   try {
     const raw = JSON.parse(localStorage.getItem(getReorderKey(restaurantId)) || '[]')
-    const seen = new Set()
-    const deduped = raw.filter(item => {
-      const key = item.name
-      if (!key || seen.has(key)) return false
-      seen.add(key)
-      return true
-    }).slice(0, REORDER_MAX)
-    if (deduped.length !== raw.length) {
-      try { localStorage.setItem(getReorderKey(restaurantId), JSON.stringify(deduped)) } catch {}
-    }
-    return deduped
+    const clean = dedupeByName(raw).slice(0, REORDER_MAX)
+    localStorage.setItem(getReorderKey(restaurantId), JSON.stringify(clean))
+    return clean
   } catch { return [] }
 }
 function saveReorderHistory(restaurantId, items) {
-  try { localStorage.setItem(getReorderKey(restaurantId), JSON.stringify(items)) } catch {}
+  try { localStorage.setItem(getReorderKey(restaurantId), JSON.stringify(dedupeByName(items).slice(0, REORDER_MAX))) } catch {}
 }
 
 function loadMenuFromStorage(id, tabs) {
@@ -834,9 +834,9 @@ export default function RestaurantWebsite() {
         updated = updated.filter(r => r.name !== cartItem.name)
         updated.unshift({ name: cartItem.name, price: cartItem.price, img: cartItem.img, qty: 1 })
       })
-      updated = updated.slice(0, REORDER_MAX)
-      saveReorderHistory(restaurantId, updated)
-      return updated
+      const next = dedupeByName(updated).slice(0, REORDER_MAX)
+      saveReorderHistory(restaurantId, next)
+      return next
     })
 
     // Also persist to Supabase so admin dashboards on ALL devices see it instantly
@@ -3559,18 +3559,15 @@ export default function RestaurantWebsite() {
             </div>
 
             {/* ── ORDER AGAIN ── */}
-            {reorderHistory.length > 0 && (
+            {dedupeByName(reorderHistory).length > 0 && (
               <div style={{ padding: '8px 0 4px' }}>
                 <style>{`.oa-scroll::-webkit-scrollbar{display:none} .oa-card{transition:transform 0.15s ease,box-shadow 0.15s ease;} .oa-card:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,0.13)!important;} .oa-card:active{transform:scale(0.97);}`}</style>
-                {/* Divider */}
                 <div style={{ margin: '4px 14px 16px', height: '1px', background: darkMode ? 'rgba(255,255,255,0.07)' : '#f0f0f0' }} />
-                {/* Title */}
                 <div style={{ padding: '0 18px 12px' }}>
                   <div style={{ fontSize: '18px', fontWeight: 900, color: theme.color, letterSpacing: '-0.01em' }}>Order Again</div>
                 </div>
-                {/* Horizontal scroll */}
                 <div className="oa-scroll" style={{ display: 'flex', gap: '14px', overflowX: 'auto', paddingLeft: '18px', paddingRight: '18px', paddingBottom: '6px', scrollbarWidth: 'none' }}>
-                  {reorderHistory.map((item, idx) => {
+                  {dedupeByName(reorderHistory).map((item) => {
                     const unitPrice = item.price || 0
                     const originalPrice = item.oldPrice || Math.round(unitPrice * 1.28)
                     const discountPct = originalPrice > unitPrice ? Math.round(((originalPrice - unitPrice) / originalPrice) * 100) : 0
@@ -3578,12 +3575,11 @@ export default function RestaurantWebsite() {
                     const restaurantRating = restaurant?.rating || '4.2'
                     return (
                       <div
-                        key={item.id || item.name || idx}
+                        key={item.name}
                         className="oa-card"
                         style={{ flexShrink: 0, width: '158px', cursor: 'pointer' }}
                         onClick={() => addToCart(item)}
                       >
-                        {/* Image with badges */}
                         <div style={{ position: 'relative', width: '158px', height: '158px', borderRadius: '18px', overflow: 'hidden', background: darkMode ? '#2a2a2a' : '#f0ece8', boxShadow: '0 2px 12px rgba(0,0,0,0.10)' }}>
                           <img
                             src={item.img}
@@ -3591,21 +3587,17 @@ export default function RestaurantWebsite() {
                             style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                             onError={e => { e.target.src = '/menu/wagyu-ribeye.png' }}
                           />
-                          {/* Offer badge — top left */}
                           <div style={{ position: 'absolute', top: '10px', left: '10px', background: 'rgba(15,15,15,0.75)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', borderRadius: '8px', padding: '4px 9px', maxWidth: '130px' }}>
                             <span style={{ fontSize: '10.5px', fontWeight: 700, color: '#fff', letterSpacing: '0.01em', lineHeight: 1.3, display: 'block' }}>
                               {discountPct > 0 ? `${discountPct}% OFF up to ₹${savingAmt.toLocaleString('en-IN')}` : 'ORDER AGAIN'}
                             </span>
                           </div>
-                          {/* Rating badge — bottom left */}
                           <div style={{ position: 'absolute', bottom: '10px', left: '10px', background: '#2e7d32', borderRadius: '20px', padding: '3px 9px', display: 'flex', alignItems: 'center', gap: '4px' }}>
                             <span style={{ fontSize: '11px', color: '#FFD700', lineHeight: 1 }}>★</span>
                             <span style={{ fontSize: '11px', fontWeight: 800, color: '#fff', letterSpacing: '0.02em' }}>{restaurantRating}</span>
                           </div>
                         </div>
-                        {/* Name */}
                         <div style={{ marginTop: '9px', fontSize: '14px', fontWeight: 800, color: theme.color, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', letterSpacing: '-0.01em' }}>{item.name}</div>
-                        {/* Delivery / price line */}
                         <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginTop: '4px' }}>
                           <span style={{ fontSize: '13px', color: '#E8321A', lineHeight: 1 }}>⚡</span>
                           <span style={{ fontSize: '12px', color: theme.locationColor, fontWeight: 500 }}>
