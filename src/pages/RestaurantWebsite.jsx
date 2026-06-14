@@ -1978,7 +1978,7 @@ export default function RestaurantWebsite() {
                   <div style={{
                     background: 'transparent',
                     borderRadius: '30px',
-                    padding: '10px 12px',
+                    padding: '8px 10px',
                     display: 'flex',
                     gap: '10px',
                     alignItems: 'center',
@@ -2020,7 +2020,7 @@ export default function RestaurantWebsite() {
                           {/* Landscape white card — rounded rectangle, clear straight edges */}
                           <div style={{
                             width: '100%',
-                            height: '72px',
+                            height: '60px',
                             borderRadius: '18px',
                             background: '#ffffff',
                             overflow: 'hidden',
