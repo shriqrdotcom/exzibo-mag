@@ -1981,10 +1981,6 @@ export default function RestaurantWebsite() {
                     padding: '10px 12px',
                     display: 'flex',
                     gap: '10px',
-                    overflowX: 'auto',
-                    scrollbarWidth: 'none',
-                    msOverflowStyle: 'none',
-                    WebkitOverflowScrolling: 'touch',
                     alignItems: 'center',
                   }}>
                     {menuTabs.map(tab => {
@@ -2004,7 +2000,7 @@ export default function RestaurantWebsite() {
                           key={tab.id}
                           onClick={() => { setActiveMenuTab(tab.id); setActiveCategory('all') }}
                           style={{
-                            flexShrink: 0,
+                            flex: 1,
                             display: 'flex',
                             flexDirection: 'column',
                             alignItems: 'center',
@@ -2014,6 +2010,7 @@ export default function RestaurantWebsite() {
                             padding: 0,
                             cursor: 'pointer',
                             fontFamily: 'inherit',
+                            minWidth: 0,
                             transition: 'transform 0.18s cubic-bezier(0.34,1.56,0.64,1)',
                             WebkitTapHighlightColor: 'transparent',
                           }}
@@ -2022,15 +2019,13 @@ export default function RestaurantWebsite() {
                         >
                           {/* Landscape white card — rounded rectangle, clear straight edges */}
                           <div style={{
-                            width: '165px',
+                            width: '100%',
                             height: '72px',
                             borderRadius: '18px',
                             background: '#ffffff',
                             overflow: 'hidden',
                             boxSizing: 'border-box',
-                            border: isActive ? `2.5px solid ${themeColor}` : '2.5px solid transparent',
-                            transition: 'border-color 0.22s ease',
-                            flexShrink: 0,
+                            border: 'none',
                           }}>
                             <img
                               src={imgSrc}
