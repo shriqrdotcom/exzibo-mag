@@ -215,7 +215,7 @@ function loadReorderHistory(restaurantId) {
     const raw = JSON.parse(localStorage.getItem(getReorderKey(restaurantId)) || '[]')
     const seen = new Set()
     const deduped = raw.filter(item => {
-      const key = (item.id != null && item.id !== '' ? String(item.id) : null) || item.name
+      const key = item.name
       if (!key || seen.has(key)) return false
       seen.add(key)
       return true
@@ -831,9 +831,8 @@ export default function RestaurantWebsite() {
     setReorderHistory(prev => {
       let updated = [...prev]
       cartItems.forEach(cartItem => {
-        const key = cartItem.id || cartItem.name
-        updated = updated.filter(r => (r.id || r.name) !== key)
-        updated.unshift({ ...cartItem, qty: 1 })
+        updated = updated.filter(r => r.name !== cartItem.name)
+        updated.unshift({ name: cartItem.name, price: cartItem.price, img: cartItem.img, qty: 1 })
       })
       updated = updated.slice(0, REORDER_MAX)
       saveReorderHistory(restaurantId, updated)
