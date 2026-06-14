@@ -1,0 +1,46 @@
+Recreate the exact header component from the Home Page and apply it 
+to the Menu Page with the same structure, layout, and visual style. 
+Do not redesign — only copy and reuse.
+
+HEADER STRUCTURE TO COPY (top to bottom):
+
+1. BACKGROUND LAYER:
+   - Full-width header with a dark/black transparent overlay background
+   - A restaurant hero image sits behind the overlay (carousel/slider 
+     with left and right arrow navigation buttons on both sides)
+   - Carousel dot indicators at the bottom-right of the image
+
+2. TOP BAR (overlaid on the image):
+   - LEFT SIDE: Circular restaurant logo (white circle with logo inside)
+     next to bold white restaurant name (large font) and below it a 
+     location pin icon + category label (e.g., "Fine Dining") in 
+     lighter/smaller text
+   - RIGHT SIDE: Two circular icon buttons (dark semi-transparent 
+     background) — first is a Heart/Favourite icon, second is a 
+     3-dot vertical menu icon
+
+3. SEARCH BAR ROW (below the top bar, still overlaid on image):
+   - A wide, rounded pill-shaped search bar (white/light background) 
+     with a search icon on the left and placeholder text inside
+   - On the RIGHT of the search bar: A VEG toggle switch — label "VEG" 
+     above it, with an iOS-style ON/OFF toggle below
+
+4. STYLING RULES:
+   - The entire header has NO solid background — it uses the 
+     restaurant image as the background with a dark transparent overlay
+   - All text on the header must be white or light-colored for 
+     contrast against the dark overlay
+   - Logo circle must have a solid white fill
+   - Icon buttons (heart, 3-dot) must use semi-transparent dark 
+     circular containers
+   - Search bar must stand out with a white/light fill against 
+     the dark header
+   - Rounded corners on search bar (pill shape)
+   - Keep padding and spacing consistent with the Home Page header
+
+5. APPLY THIS EXACT SAME HEADER to the Menu Page:
+   - Do not change any element's size, position, or shape
+   - Only replace the page-specific content if needed 
+     (same restaurant name, same logo)
+   - The Menu Page header must be visually identical to the 
+     Home Page header

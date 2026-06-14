@@ -1636,16 +1636,17 @@ export default function RestaurantWebsite() {
       {(() => {
         const COLLAPSE_DIST = 72
         const isHome = activeNav === 'home'
-        // bgProgress drives background opacity — always 1 on non-home tabs (solid dark bg)
-        const bgProgress = isHome ? Math.min(1, Math.max(0, scrollY / COLLAPSE_DIST)) : 1
-        // rowProgress drives logo/name row collapse — NEVER collapses on non-home tabs
+        const isMenuOrHome = activeNav === 'home' || activeNav === 'menu'
+        // bgProgress drives background opacity — scroll-linked on home+menu, always 1 elsewhere
+        const bgProgress = isMenuOrHome ? Math.min(1, Math.max(0, scrollY / COLLAPSE_DIST)) : 1
+        // rowProgress drives logo/name row collapse — only collapses on home tab
         const rowProgress = isHome ? bgProgress : 0
         const isCollapsed = bgProgress >= 1 && isHome
         const themeColor = restaurant?.primaryColor || '#E8321A'
         const bgAlpha = darkMode
           ? 0.96 * bgProgress
           : (bgProgress < 0.5 ? 0 : (bgProgress - 0.5) * 2 * 0.97)
-        const headerBg = !isHome
+        const headerBg = !isMenuOrHome
           ? (darkMode ? 'rgba(10,10,10,0.97)' : 'rgba(255,255,255,0.97)')
           : bgProgress < 0.05
             ? 'linear-gradient(to bottom, rgba(0,0,0,0.62) 0%, rgba(0,0,0,0.18) 72%, rgba(0,0,0,0) 100%)'
@@ -1661,15 +1662,13 @@ export default function RestaurantWebsite() {
             width: '100%',
             maxWidth: '480px',
             zIndex: 100,
-            background: activeNav === 'menu' ? 'rgba(10,10,10,0.98)' : headerBg,
+            background: headerBg,
             backdropFilter: bgProgress > 0.3 ? `blur(${(bgProgress * 20).toFixed(1)}px)` : 'none',
             WebkitBackdropFilter: bgProgress > 0.3 ? `blur(${(bgProgress * 20).toFixed(1)}px)` : 'none',
-            boxShadow: activeNav === 'menu'
-              ? '0 8px 28px rgba(0,0,0,0.50)'
-              : bgProgress > 0.8 ? `0 2px 24px rgba(0,0,0,${(0.22 * bgProgress).toFixed(2)})` : 'none',
-            borderBottomLeftRadius: activeNav === 'menu' ? '28px' : 0,
-            borderBottomRightRadius: activeNav === 'menu' ? '28px' : 0,
-            overflow: activeNav === 'menu' ? 'hidden' : 'visible',
+            boxShadow: bgProgress > 0.8 ? `0 2px 24px rgba(0,0,0,${(0.22 * bgProgress).toFixed(2)})` : 'none',
+            borderBottomLeftRadius: 0,
+            borderBottomRightRadius: 0,
+            overflow: 'visible',
           }}>
 
             {/* ── Row 1: Logo + Name + Location (scroll-linked collapse) ── */}
@@ -1677,16 +1676,16 @@ export default function RestaurantWebsite() {
               display: 'flex',
               alignItems: 'center',
               gap: '10px',
-              paddingTop: activeNav === 'menu' ? 0 : `${Math.round(10 * (1 - rowProgress))}px`,
+              paddingTop: `${Math.round(10 * (1 - rowProgress))}px`,
               paddingBottom: 0,
               paddingLeft: '16px',
               paddingRight: '16px',
-              maxHeight: activeNav === 'menu' ? 0 : `${Math.round(62 * (1 - rowProgress))}px`,
-              opacity: activeNav === 'menu' ? 0 : Math.max(0, 1 - rowProgress * 1.4),
+              maxHeight: `${Math.round(62 * (1 - rowProgress))}px`,
+              opacity: Math.max(0, 1 - rowProgress * 1.4),
               overflow: 'hidden',
               transform: `translateY(${Math.round(-10 * rowProgress)}px)`,
               willChange: 'transform, opacity, max-height',
-              pointerEvents: (activeNav === 'menu' || rowProgress > 0.85) ? 'none' : 'auto',
+              pointerEvents: rowProgress > 0.85 ? 'none' : 'auto',
             }}>
               {/* Restaurant logo — white circular badge */}
               <div style={{ flexShrink: 0, width: '40px', height: '40px' }}>
@@ -1789,9 +1788,7 @@ export default function RestaurantWebsite() {
             {/* ── Row 2: Search bar + Veg toggle (always visible) ── */}
             <div style={{
               display: 'flex', gap: '8px', alignItems: 'center',
-              padding: activeNav === 'menu'
-                ? '14px 16px 10px'
-                : `8px 16px ${Math.round(10 - 3 * rowProgress)}px`,
+              padding: `8px 16px ${Math.round(10 - 3 * rowProgress)}px`,
             }}>
               {/* Search input — compact white pill */}
               <div style={{ flex: 1, position: 'relative' }}>
@@ -2025,8 +2022,35 @@ export default function RestaurantWebsite() {
         )
       })()}
 
-      {/* ── HEADER SPACER — pushes content below fixed header on non-home tabs ── */}
-      {activeNav !== 'home' && <div style={{ height: activeNav === 'menu' ? '185px' : '120px' }} />}
+      {/* ── HEADER SPACER — pushes content below fixed header on non-home/non-menu tabs ── */}
+      {activeNav !== 'home' && activeNav !== 'menu' && <div style={{ height: '120px' }} />}
+
+      {/* ── MENU PAGE HERO CAROUSEL — sits beneath transparent fixed header ── */}
+      {activeNav === 'menu' && (
+        <section style={{ position: 'relative', height: '300px', overflow: 'hidden', margin: 0 }}>
+          <div style={{ position: 'relative', height: '100%', borderRadius: '0 0 20px 20px', overflow: 'hidden', background: '#111' }}>
+            {carouselImages && carouselImages.map((src, i) => (
+              <div key={i} style={{ position: 'absolute', inset: 0, backgroundImage: `url(${src})`, backgroundSize: 'cover', backgroundPosition: 'center', opacity: i === carouselIdx ? 1 : 0, transition: 'opacity 1s ease' }} />
+            ))}
+            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg, rgba(0,0,0,0.70) 0%, rgba(0,0,0,0.10) 50%, rgba(0,0,0,0.65) 100%)', borderRadius: '20px' }} />
+            {carouselImages && carouselImages.length > 1 && (
+              <>
+                <button onClick={() => setCarouselIdx(i => (i - 1 + carouselImages.length) % carouselImages.length)} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(0,0,0,0.6)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '15px', width: '30px', height: '30px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', cursor: 'pointer', zIndex: 2 }}>
+                  <ChevronLeft size={15} />
+                </button>
+                <button onClick={() => setCarouselIdx(i => (i + 1) % carouselImages.length)} style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(0,0,0,0.6)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '15px', width: '30px', height: '30px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', cursor: 'pointer', zIndex: 2 }}>
+                  <ChevronRight size={15} />
+                </button>
+                <div style={{ position: 'absolute', bottom: '10px', right: '14px', display: 'flex', gap: '4px', zIndex: 2 }}>
+                  {carouselImages.map((_, i) => (
+                    <button key={i} onClick={() => setCarouselIdx(i)} style={{ width: i === carouselIdx ? '16px' : '5px', height: '5px', borderRadius: '3px', background: i === carouselIdx ? '#fff' : 'rgba(255,255,255,0.4)', border: 'none', cursor: 'pointer', padding: 0, transition: 'all 0.3s ease' }} />
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        </section>
+      )}
 
 
       {/* ── SUB-CATEGORY BAR: Filter button + premium category selector ── */}
