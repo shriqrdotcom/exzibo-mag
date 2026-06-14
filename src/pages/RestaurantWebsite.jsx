@@ -211,7 +211,20 @@ function persistCustomerOrders(restaurantId, orders) {
 const REORDER_MAX = 10
 function getReorderKey(restaurantId) { return `exzibo_reorder_${restaurantId}` }
 function loadReorderHistory(restaurantId) {
-  try { return JSON.parse(localStorage.getItem(getReorderKey(restaurantId)) || '[]') } catch { return [] }
+  try {
+    const raw = JSON.parse(localStorage.getItem(getReorderKey(restaurantId)) || '[]')
+    const seen = new Set()
+    const deduped = raw.filter(item => {
+      const key = (item.id != null && item.id !== '' ? String(item.id) : null) || item.name
+      if (!key || seen.has(key)) return false
+      seen.add(key)
+      return true
+    }).slice(0, REORDER_MAX)
+    if (deduped.length !== raw.length) {
+      try { localStorage.setItem(getReorderKey(restaurantId), JSON.stringify(deduped)) } catch {}
+    }
+    return deduped
+  } catch { return [] }
 }
 function saveReorderHistory(restaurantId, items) {
   try { localStorage.setItem(getReorderKey(restaurantId), JSON.stringify(items)) } catch {}
