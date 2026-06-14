@@ -3363,81 +3363,6 @@ export default function RestaurantWebsite() {
             <div style={{ fontSize: '22px', fontWeight: 900, color: theme.color, letterSpacing: '-0.01em' }}>Your Order</div>
           </div>
 
-          {/* ── ORDER AGAIN ── */}
-          {(() => {
-            const seen = new Set()
-            const reorderItems = []
-            ;(orderHistory || []).forEach(order => {
-              ;(order.items || []).forEach(item => {
-                const key = item.id || item.name
-                if (!seen.has(key)) {
-                  seen.add(key)
-                  reorderItems.push(item)
-                }
-              })
-            })
-            if (reorderItems.length === 0) return null
-            const restaurantRating = restaurant?.rating || '4.2'
-            return (
-              <div style={{ padding: '4px 0 12px' }}>
-                <style>{`.oa-scroll::-webkit-scrollbar{display:none} .oa-card{transition:transform 0.15s ease,box-shadow 0.15s ease;} .oa-card:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,0.13)!important;} .oa-card:active{transform:scale(0.97);}`}</style>
-                {/* Title row */}
-                <div style={{ padding: '0 18px 12px' }}>
-                  <div style={{ fontSize: '18px', fontWeight: 900, color: theme.color, letterSpacing: '-0.01em' }}>Order Again</div>
-                </div>
-                {/* Horizontal scroll */}
-                <div className="oa-scroll" style={{ display: 'flex', gap: '14px', overflowX: 'auto', paddingLeft: '18px', paddingRight: '18px', paddingBottom: '6px', scrollbarWidth: 'none' }}>
-                  {reorderItems.map((item, idx) => {
-                    const unitPrice = item.price || 0
-                    const originalPrice = item.oldPrice || Math.round(unitPrice * 1.28)
-                    const discountPct = originalPrice > unitPrice ? Math.round(((originalPrice - unitPrice) / originalPrice) * 100) : 0
-                    const savingAmt = originalPrice - unitPrice
-                    return (
-                      <div
-                        key={idx}
-                        className="oa-card"
-                        style={{ flexShrink: 0, width: '158px', cursor: 'pointer' }}
-                        onClick={() => addToCart(item)}
-                      >
-                        {/* Image with badges */}
-                        <div style={{ position: 'relative', width: '158px', height: '158px', borderRadius: '18px', overflow: 'hidden', background: darkMode ? '#2a2a2a' : '#f0ece8', boxShadow: '0 2px 12px rgba(0,0,0,0.10)' }}>
-                          <img
-                            src={item.img}
-                            alt={item.name}
-                            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-                            onError={e => { e.target.src = '/menu/wagyu-ribeye.png' }}
-                          />
-                          {/* Offer badge — top left */}
-                          <div style={{ position: 'absolute', top: '10px', left: '10px', background: 'rgba(15,15,15,0.75)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', borderRadius: '8px', padding: '4px 9px', maxWidth: '130px' }}>
-                            <span style={{ fontSize: '10.5px', fontWeight: 700, color: '#fff', letterSpacing: '0.01em', lineHeight: 1.3, display: 'block' }}>
-                              {discountPct > 0 ? `${discountPct}% OFF up to ₹${savingAmt.toLocaleString('en-IN')}` : 'ORDER AGAIN'}
-                            </span>
-                          </div>
-                          {/* Rating badge — bottom left */}
-                          <div style={{ position: 'absolute', bottom: '10px', left: '10px', background: '#2e7d32', borderRadius: '20px', padding: '3px 9px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            <span style={{ fontSize: '11px', color: '#FFD700', lineHeight: 1 }}>★</span>
-                            <span style={{ fontSize: '11px', fontWeight: 800, color: '#fff', letterSpacing: '0.02em' }}>{restaurantRating}</span>
-                          </div>
-                        </div>
-                        {/* Name */}
-                        <div style={{ marginTop: '9px', fontSize: '14px', fontWeight: 800, color: theme.color, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', letterSpacing: '-0.01em' }}>{item.name}</div>
-                        {/* Delivery / price line */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginTop: '4px' }}>
-                          <span style={{ fontSize: '13px', color: '#E8321A', lineHeight: 1 }}>⚡</span>
-                          <span style={{ fontSize: '12px', color: theme.locationColor, fontWeight: 500 }}>
-                            {unitPrice > 0 ? `₹${unitPrice.toLocaleString('en-IN')}` : ''}{unitPrice > 0 ? ' · ' : ''}20–25 mins
-                          </span>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-                {/* Divider */}
-                <div style={{ margin: '8px 18px 0', height: '1px', background: darkMode ? 'rgba(255,255,255,0.07)' : '#f0f0f0' }} />
-              </div>
-            )
-          })()}
-
           {/* Empty state */}
           {cartItems.length === 0 && (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 24px', gap: '14px', animation: 'fadeIn 0.4s ease' }}>
@@ -3595,6 +3520,81 @@ export default function RestaurantWebsite() {
                 Place Order <span style={{ fontSize: '16px' }}>→</span>
               </button>
             </div>
+
+            {/* ── ORDER AGAIN ── */}
+            {(() => {
+              const seen = new Set()
+              const reorderItems = []
+              ;(orderHistory || []).forEach(order => {
+                ;(order.items || []).forEach(item => {
+                  const key = item.id || item.name
+                  if (!seen.has(key)) {
+                    seen.add(key)
+                    reorderItems.push(item)
+                  }
+                })
+              })
+              if (reorderItems.length === 0) return null
+              const restaurantRating = restaurant?.rating || '4.2'
+              return (
+                <div style={{ padding: '8px 0 4px' }}>
+                  <style>{`.oa-scroll::-webkit-scrollbar{display:none} .oa-card{transition:transform 0.15s ease,box-shadow 0.15s ease;} .oa-card:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,0.13)!important;} .oa-card:active{transform:scale(0.97);}`}</style>
+                  {/* Divider */}
+                  <div style={{ margin: '4px 14px 16px', height: '1px', background: darkMode ? 'rgba(255,255,255,0.07)' : '#f0f0f0' }} />
+                  {/* Title */}
+                  <div style={{ padding: '0 18px 12px' }}>
+                    <div style={{ fontSize: '18px', fontWeight: 900, color: theme.color, letterSpacing: '-0.01em' }}>Order Again</div>
+                  </div>
+                  {/* Horizontal scroll */}
+                  <div className="oa-scroll" style={{ display: 'flex', gap: '14px', overflowX: 'auto', paddingLeft: '18px', paddingRight: '18px', paddingBottom: '6px', scrollbarWidth: 'none' }}>
+                    {reorderItems.map((item, idx) => {
+                      const unitPrice = item.price || 0
+                      const originalPrice = item.oldPrice || Math.round(unitPrice * 1.28)
+                      const discountPct = originalPrice > unitPrice ? Math.round(((originalPrice - unitPrice) / originalPrice) * 100) : 0
+                      const savingAmt = originalPrice - unitPrice
+                      return (
+                        <div
+                          key={idx}
+                          className="oa-card"
+                          style={{ flexShrink: 0, width: '158px', cursor: 'pointer' }}
+                          onClick={() => addToCart(item)}
+                        >
+                          {/* Image with badges */}
+                          <div style={{ position: 'relative', width: '158px', height: '158px', borderRadius: '18px', overflow: 'hidden', background: darkMode ? '#2a2a2a' : '#f0ece8', boxShadow: '0 2px 12px rgba(0,0,0,0.10)' }}>
+                            <img
+                              src={item.img}
+                              alt={item.name}
+                              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                              onError={e => { e.target.src = '/menu/wagyu-ribeye.png' }}
+                            />
+                            {/* Offer badge — top left */}
+                            <div style={{ position: 'absolute', top: '10px', left: '10px', background: 'rgba(15,15,15,0.75)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', borderRadius: '8px', padding: '4px 9px', maxWidth: '130px' }}>
+                              <span style={{ fontSize: '10.5px', fontWeight: 700, color: '#fff', letterSpacing: '0.01em', lineHeight: 1.3, display: 'block' }}>
+                                {discountPct > 0 ? `${discountPct}% OFF up to ₹${savingAmt.toLocaleString('en-IN')}` : 'ORDER AGAIN'}
+                              </span>
+                            </div>
+                            {/* Rating badge — bottom left */}
+                            <div style={{ position: 'absolute', bottom: '10px', left: '10px', background: '#2e7d32', borderRadius: '20px', padding: '3px 9px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              <span style={{ fontSize: '11px', color: '#FFD700', lineHeight: 1 }}>★</span>
+                              <span style={{ fontSize: '11px', fontWeight: 800, color: '#fff', letterSpacing: '0.02em' }}>{restaurantRating}</span>
+                            </div>
+                          </div>
+                          {/* Name */}
+                          <div style={{ marginTop: '9px', fontSize: '14px', fontWeight: 800, color: theme.color, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', letterSpacing: '-0.01em' }}>{item.name}</div>
+                          {/* Delivery / price line */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginTop: '4px' }}>
+                            <span style={{ fontSize: '13px', color: '#E8321A', lineHeight: 1 }}>⚡</span>
+                            <span style={{ fontSize: '12px', color: theme.locationColor, fontWeight: 500 }}>
+                              {unitPrice > 0 ? `₹${unitPrice.toLocaleString('en-IN')}` : ''}{unitPrice > 0 ? ' · ' : ''}20–25 mins
+                            </span>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )
+            })()}
 
             {/* Coupon Modal */}
             {showCouponModal && (
