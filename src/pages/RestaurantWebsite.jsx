@@ -260,8 +260,8 @@ const SPECIAL_OFFERS_DATA = [
   },
   {
     id: 2,
-    headline: 'Free\nDelivery',
-    subtitle: 'On all orders above ₹299',
+    headline: 'Special\nOffers',
+    subtitle: 'Exclusive deals just for you',
     cta: 'Start Ordering',
     gradient: 'linear-gradient(125deg, #0f6b4a 0%, #1abc9c 55%, #48d1a8 100%)',
     emoji: '🛵',
@@ -619,7 +619,6 @@ export default function RestaurantWebsite() {
 
   const cartCount = cartItems.reduce((s, i) => s + i.qty, 0)
   const subtotal = cartItems.reduce((s, i) => s + i.price * i.qty, 0)
-  const deliveryFee = subtotal > 500 ? 0 : 40
   const gstAmt = +(subtotal * 0.05).toFixed(2)
   const discountAmt = (() => {
     if (!couponApplied || !appliedCouponData) return 0
@@ -787,7 +786,6 @@ export default function RestaurantWebsite() {
       items: [...cartItems],
       subtotal,
       gstAmt,
-      deliveryFee,
       discountAmt,
       grandTotal,
       itemCount: cartItems.reduce((s, i) => s + i.qty, 0),
@@ -3558,13 +3556,6 @@ export default function RestaurantWebsite() {
                     <span style={{ fontSize: '13.5px', color: theme.locationColor }}>GST (5%)</span>
                     <span style={{ fontSize: '13.5px', color: theme.color, fontWeight: 500 }}>₹{gstAmt.toLocaleString('en-IN')}</span>
                   </div>
-                  <div className="bill-row" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '11px' }}>
-                    <span style={{ fontSize: '13.5px', color: theme.locationColor }}>Delivery Charge</span>
-                    {deliveryFee === 0
-                      ? <span style={{ fontSize: '13px', color: '#22c55e', fontWeight: 600 }}>FREE</span>
-                      : <span style={{ fontSize: '13.5px', color: theme.color, fontWeight: 500 }}>₹{deliveryFee}</span>
-                    }
-                  </div>
                   <div style={{ borderTop: darkMode ? '1px dashed rgba(255,255,255,0.10)' : '1px dashed #e0e0e0', margin: '6px 0 12px' }} />
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '14px' }}>
                     <span style={{ fontSize: '15px', fontWeight: 800, color: theme.color }}>Total Amount</span>
@@ -3676,17 +3667,9 @@ export default function RestaurantWebsite() {
                   <div style={{ fontSize: '22px', fontWeight: 900, color: darkMode ? '#ffffff' : '#111111', lineHeight: 1.1, letterSpacing: '-0.01em' }}>
                     ₹{grandTotal.toLocaleString('en-IN')}
                   </div>
-                  {discountAmt > 0 ? (
+                  {discountAmt > 0 && (
                     <div className="co-badge" style={{ background: darkMode ? 'rgba(34,197,94,0.15)' : '#e8f9ef', border: darkMode ? '1px solid rgba(34,197,94,0.28)' : '1px solid #a7e8bf' }}>
                       <span style={{ fontSize: '11.5px', fontWeight: 700, color: '#16a34a' }}>You save ₹{discountAmt.toLocaleString('en-IN')}</span>
-                    </div>
-                  ) : deliveryFee === 0 ? (
-                    <div className="co-badge" style={{ background: darkMode ? 'rgba(34,197,94,0.15)' : '#e8f9ef', border: darkMode ? '1px solid rgba(34,197,94,0.28)' : '1px solid #a7e8bf' }}>
-                      <span style={{ fontSize: '11.5px', fontWeight: 700, color: '#16a34a' }}>Free delivery 🎉</span>
-                    </div>
-                  ) : (
-                    <div style={{ marginTop: '4px' }}>
-                      <span style={{ fontSize: '11.5px', fontWeight: 500, color: darkMode ? 'rgba(255,255,255,0.45)' : '#999' }}>+₹{deliveryFee} delivery</span>
                     </div>
                   )}
                 </div>
