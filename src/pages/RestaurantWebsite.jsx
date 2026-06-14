@@ -208,6 +208,15 @@ function persistCustomerOrders(restaurantId, orders) {
   } catch {}
 }
 
+const REORDER_MAX = 10
+function getReorderKey(restaurantId) { return `exzibo_reorder_${restaurantId}` }
+function loadReorderHistory(restaurantId) {
+  try { return JSON.parse(localStorage.getItem(getReorderKey(restaurantId)) || '[]') } catch { return [] }
+}
+function saveReorderHistory(restaurantId, items) {
+  try { localStorage.setItem(getReorderKey(restaurantId), JSON.stringify(items)) } catch {}
+}
+
 function loadMenuFromStorage(id, tabs) {
   const saved = localStorage.getItem(`exzibo_menu_${id}`)
   if (!saved) return null
@@ -359,6 +368,7 @@ export default function RestaurantWebsite() {
   const [customerOrders, setCustomerOrders] = useState([])
   const currentOrder = customerOrders[0] ?? null
   const orderHistory = customerOrders.slice(1)
+  const [reorderHistory, setReorderHistory] = useState([])
   const [showSuccessPopup, setShowSuccessPopup] = useState(false)
   const [orderNotes, setOrderNotes] = useState('')
   const [orderStatus, setOrderStatus] = useState(1)
@@ -804,6 +814,19 @@ export default function RestaurantWebsite() {
     localStorage.setItem(ordersKey, JSON.stringify([adminOrder, ...existing]))
     notifyAnalyticsUpdate()
 
+    // ── Update "Order Again" history in localStorage ──
+    setReorderHistory(prev => {
+      let updated = [...prev]
+      cartItems.forEach(cartItem => {
+        const key = cartItem.id || cartItem.name
+        updated = updated.filter(r => (r.id || r.name) !== key)
+        updated.unshift({ ...cartItem, qty: 1 })
+      })
+      updated = updated.slice(0, REORDER_MAX)
+      saveReorderHistory(restaurantId, updated)
+      return updated
+    })
+
     // Also persist to Supabase so admin dashboards on ALL devices see it instantly
     const isSupabaseRestaurant = restaurantId && restaurantId !== 'demo' &&
       /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(restaurantId)
@@ -890,6 +913,7 @@ export default function RestaurantWebsite() {
       try { const fe = localStorage.getItem(`exzibo_filters_enabled_${found.id}`); if (fe) setFiltersEnabled(JSON.parse(fe)) } catch {}
       setActiveMenuTab(tabs[0]?.id || 'starters')
       setCustomerOrders(loadAndFilterCustomerOrders(found.id))
+      setReorderHistory(loadReorderHistory(found.id))
       // intentionally no return — fall through to Supabase fetch below
     }
 
@@ -930,6 +954,7 @@ export default function RestaurantWebsite() {
         }
         setRestaurant(r)
         setCustomerOrders(loadAndFilterCustomerOrders(r.id))
+        setReorderHistory(loadReorderHistory(r.id))
 
         // Load sub-category filters from Supabase (global_settings table).
         // Production-safe and cross-device — no schema migration required.
@@ -3522,79 +3547,65 @@ export default function RestaurantWebsite() {
             </div>
 
             {/* ── ORDER AGAIN ── */}
-            {(() => {
-              const seen = new Set()
-              const reorderItems = []
-              ;(orderHistory || []).forEach(order => {
-                ;(order.items || []).forEach(item => {
-                  const key = item.id || item.name
-                  if (!seen.has(key)) {
-                    seen.add(key)
-                    reorderItems.push(item)
-                  }
-                })
-              })
-              if (reorderItems.length === 0) return null
-              const restaurantRating = restaurant?.rating || '4.2'
-              return (
-                <div style={{ padding: '8px 0 4px' }}>
-                  <style>{`.oa-scroll::-webkit-scrollbar{display:none} .oa-card{transition:transform 0.15s ease,box-shadow 0.15s ease;} .oa-card:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,0.13)!important;} .oa-card:active{transform:scale(0.97);}`}</style>
-                  {/* Divider */}
-                  <div style={{ margin: '4px 14px 16px', height: '1px', background: darkMode ? 'rgba(255,255,255,0.07)' : '#f0f0f0' }} />
-                  {/* Title */}
-                  <div style={{ padding: '0 18px 12px' }}>
-                    <div style={{ fontSize: '18px', fontWeight: 900, color: theme.color, letterSpacing: '-0.01em' }}>Order Again</div>
-                  </div>
-                  {/* Horizontal scroll */}
-                  <div className="oa-scroll" style={{ display: 'flex', gap: '14px', overflowX: 'auto', paddingLeft: '18px', paddingRight: '18px', paddingBottom: '6px', scrollbarWidth: 'none' }}>
-                    {reorderItems.map((item, idx) => {
-                      const unitPrice = item.price || 0
-                      const originalPrice = item.oldPrice || Math.round(unitPrice * 1.28)
-                      const discountPct = originalPrice > unitPrice ? Math.round(((originalPrice - unitPrice) / originalPrice) * 100) : 0
-                      const savingAmt = originalPrice - unitPrice
-                      return (
-                        <div
-                          key={idx}
-                          className="oa-card"
-                          style={{ flexShrink: 0, width: '158px', cursor: 'pointer' }}
-                          onClick={() => addToCart(item)}
-                        >
-                          {/* Image with badges */}
-                          <div style={{ position: 'relative', width: '158px', height: '158px', borderRadius: '18px', overflow: 'hidden', background: darkMode ? '#2a2a2a' : '#f0ece8', boxShadow: '0 2px 12px rgba(0,0,0,0.10)' }}>
-                            <img
-                              src={item.img}
-                              alt={item.name}
-                              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-                              onError={e => { e.target.src = '/menu/wagyu-ribeye.png' }}
-                            />
-                            {/* Offer badge — top left */}
-                            <div style={{ position: 'absolute', top: '10px', left: '10px', background: 'rgba(15,15,15,0.75)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', borderRadius: '8px', padding: '4px 9px', maxWidth: '130px' }}>
-                              <span style={{ fontSize: '10.5px', fontWeight: 700, color: '#fff', letterSpacing: '0.01em', lineHeight: 1.3, display: 'block' }}>
-                                {discountPct > 0 ? `${discountPct}% OFF up to ₹${savingAmt.toLocaleString('en-IN')}` : 'ORDER AGAIN'}
-                              </span>
-                            </div>
-                            {/* Rating badge — bottom left */}
-                            <div style={{ position: 'absolute', bottom: '10px', left: '10px', background: '#2e7d32', borderRadius: '20px', padding: '3px 9px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                              <span style={{ fontSize: '11px', color: '#FFD700', lineHeight: 1 }}>★</span>
-                              <span style={{ fontSize: '11px', fontWeight: 800, color: '#fff', letterSpacing: '0.02em' }}>{restaurantRating}</span>
-                            </div>
-                          </div>
-                          {/* Name */}
-                          <div style={{ marginTop: '9px', fontSize: '14px', fontWeight: 800, color: theme.color, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', letterSpacing: '-0.01em' }}>{item.name}</div>
-                          {/* Delivery / price line */}
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginTop: '4px' }}>
-                            <span style={{ fontSize: '13px', color: '#E8321A', lineHeight: 1 }}>⚡</span>
-                            <span style={{ fontSize: '12px', color: theme.locationColor, fontWeight: 500 }}>
-                              {unitPrice > 0 ? `₹${unitPrice.toLocaleString('en-IN')}` : ''}{unitPrice > 0 ? ' · ' : ''}20–25 mins
+            {reorderHistory.length > 0 && (
+              <div style={{ padding: '8px 0 4px' }}>
+                <style>{`.oa-scroll::-webkit-scrollbar{display:none} .oa-card{transition:transform 0.15s ease,box-shadow 0.15s ease;} .oa-card:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,0.13)!important;} .oa-card:active{transform:scale(0.97);}`}</style>
+                {/* Divider */}
+                <div style={{ margin: '4px 14px 16px', height: '1px', background: darkMode ? 'rgba(255,255,255,0.07)' : '#f0f0f0' }} />
+                {/* Title */}
+                <div style={{ padding: '0 18px 12px' }}>
+                  <div style={{ fontSize: '18px', fontWeight: 900, color: theme.color, letterSpacing: '-0.01em' }}>Order Again</div>
+                </div>
+                {/* Horizontal scroll */}
+                <div className="oa-scroll" style={{ display: 'flex', gap: '14px', overflowX: 'auto', paddingLeft: '18px', paddingRight: '18px', paddingBottom: '6px', scrollbarWidth: 'none' }}>
+                  {reorderHistory.map((item, idx) => {
+                    const unitPrice = item.price || 0
+                    const originalPrice = item.oldPrice || Math.round(unitPrice * 1.28)
+                    const discountPct = originalPrice > unitPrice ? Math.round(((originalPrice - unitPrice) / originalPrice) * 100) : 0
+                    const savingAmt = originalPrice - unitPrice
+                    const restaurantRating = restaurant?.rating || '4.2'
+                    return (
+                      <div
+                        key={item.id || item.name || idx}
+                        className="oa-card"
+                        style={{ flexShrink: 0, width: '158px', cursor: 'pointer' }}
+                        onClick={() => addToCart(item)}
+                      >
+                        {/* Image with badges */}
+                        <div style={{ position: 'relative', width: '158px', height: '158px', borderRadius: '18px', overflow: 'hidden', background: darkMode ? '#2a2a2a' : '#f0ece8', boxShadow: '0 2px 12px rgba(0,0,0,0.10)' }}>
+                          <img
+                            src={item.img}
+                            alt={item.name}
+                            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                            onError={e => { e.target.src = '/menu/wagyu-ribeye.png' }}
+                          />
+                          {/* Offer badge — top left */}
+                          <div style={{ position: 'absolute', top: '10px', left: '10px', background: 'rgba(15,15,15,0.75)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', borderRadius: '8px', padding: '4px 9px', maxWidth: '130px' }}>
+                            <span style={{ fontSize: '10.5px', fontWeight: 700, color: '#fff', letterSpacing: '0.01em', lineHeight: 1.3, display: 'block' }}>
+                              {discountPct > 0 ? `${discountPct}% OFF up to ₹${savingAmt.toLocaleString('en-IN')}` : 'ORDER AGAIN'}
                             </span>
                           </div>
+                          {/* Rating badge — bottom left */}
+                          <div style={{ position: 'absolute', bottom: '10px', left: '10px', background: '#2e7d32', borderRadius: '20px', padding: '3px 9px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <span style={{ fontSize: '11px', color: '#FFD700', lineHeight: 1 }}>★</span>
+                            <span style={{ fontSize: '11px', fontWeight: 800, color: '#fff', letterSpacing: '0.02em' }}>{restaurantRating}</span>
+                          </div>
                         </div>
-                      )
-                    })}
-                  </div>
+                        {/* Name */}
+                        <div style={{ marginTop: '9px', fontSize: '14px', fontWeight: 800, color: theme.color, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', letterSpacing: '-0.01em' }}>{item.name}</div>
+                        {/* Delivery / price line */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginTop: '4px' }}>
+                          <span style={{ fontSize: '13px', color: '#E8321A', lineHeight: 1 }}>⚡</span>
+                          <span style={{ fontSize: '12px', color: theme.locationColor, fontWeight: 500 }}>
+                            {unitPrice > 0 ? `₹${unitPrice.toLocaleString('en-IN')}` : ''}{unitPrice > 0 ? ' · ' : ''}20–25 mins
+                          </span>
+                        </div>
+                      </div>
+                    )
+                  })}
                 </div>
-              )
-            })()}
+              </div>
+            )}
 
             {/* Coupon Modal */}
             {showCouponModal && (
