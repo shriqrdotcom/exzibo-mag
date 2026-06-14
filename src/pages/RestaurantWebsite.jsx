@@ -2020,11 +2020,11 @@ export default function RestaurantWebsite() {
                           onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.05)'}
                           onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
                         >
-                          {/* Landscape white card — 3:1 width:height ratio, rounded rectangle */}
+                          {/* Landscape white card — rounded rectangle, clear straight edges */}
                           <div style={{
-                            width: '150px',
-                            height: '50px',
-                            borderRadius: '16px',
+                            width: '165px',
+                            height: '72px',
+                            borderRadius: '18px',
                             background: '#ffffff',
                             overflow: 'hidden',
                             boxSizing: 'border-box',
