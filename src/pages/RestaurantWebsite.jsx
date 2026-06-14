@@ -3439,11 +3439,8 @@ export default function RestaurantWebsite() {
                   <div key={item.id}>
                     <div style={{ display: 'flex', alignItems: 'center', padding: '14px 14px', gap: '12px' }}>
 
-                      {/* Veg/Non-veg indicator + image */}
-                      <div style={{ flexShrink: 0, position: 'relative' }}>
-                        <div style={{ position: 'absolute', top: '-4px', left: '-4px', zIndex: 1, width: '14px', height: '14px', borderRadius: isVeg ? '2px' : '50%', border: `2px solid ${isVeg ? '#22c55e' : '#e53935'}`, background: darkMode ? '#1c1c1e' : '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <div style={{ width: '6px', height: '6px', borderRadius: isVeg ? '1px' : '50%', background: isVeg ? '#22c55e' : '#e53935' }} />
-                        </div>
+                      {/* Image */}
+                      <div style={{ flexShrink: 0 }}>
                         <div style={{ width: '68px', height: '68px', borderRadius: '10px', overflow: 'hidden', background: darkMode ? '#2a2a2a' : '#f5f5f5' }}>
                           <img
                             src={item.img}
@@ -3456,11 +3453,17 @@ export default function RestaurantWebsite() {
 
                       {/* Name + description */}
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: '15px', fontWeight: 700, color: theme.color, lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.name}</div>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px' }}>
+                          {/* Veg/Non-veg indicator */}
+                          <div style={{ flexShrink: 0, marginTop: '3px', width: '14px', height: '14px', borderRadius: isVeg ? '2px' : '50%', border: `2px solid ${isVeg ? '#22c55e' : '#e53935'}`, background: darkMode ? '#1c1c1e' : '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <div style={{ width: '6px', height: '6px', borderRadius: isVeg ? '1px' : '50%', background: isVeg ? '#22c55e' : '#e53935' }} />
+                          </div>
+                          <div style={{ fontSize: '15px', fontWeight: 700, color: theme.color, lineHeight: 1.3 }}>{item.name}</div>
+                        </div>
                         {item.description ? (
-                          <div style={{ fontSize: '12px', color: theme.locationColor, marginTop: '3px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.description}</div>
+                          <div style={{ fontSize: '12px', color: theme.locationColor, marginTop: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.description}</div>
                         ) : (
-                          <div style={{ fontSize: '12px', color: theme.locationColor, marginTop: '3px' }}>{isVeg ? '🌿 Vegetarian' : '🍗 Non-Veg'}</div>
+                          <div style={{ fontSize: '12px', color: theme.locationColor, marginTop: '4px' }}>{isVeg ? 'Vegetarian' : 'Non-Veg'}</div>
                         )}
                       </div>
 
