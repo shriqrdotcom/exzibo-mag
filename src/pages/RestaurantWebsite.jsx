@@ -1971,96 +1971,98 @@ export default function RestaurantWebsite() {
               }
               const FALLBACK_IMG = 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=300&q=80'
 
+              const themeColor = restaurant?.primaryColor || '#E8321A'
               return (
-                <div style={{
-                  display: 'flex',
-                  gap: '10px',
-                  flexWrap: 'wrap',
-                  padding: '6px 16px 14px',
-                  alignItems: 'flex-start',
-                  justifyContent: 'center',
-                }}>
-                  {menuTabs.map(tab => {
-                    const isActive = activeMenuTab === tab.id
-                    const firstImage = (visibleMenuData[tab.id] || []).find(item => item.image)?.image
-                    const labelKey = (tab.label || '').toLowerCase().replace(/[\s_-]/g, '')
-                    const defaultImg =
-                      CATEGORY_DEFAULT_IMAGES[tab.id] ||
-                      CATEGORY_DEFAULT_IMAGES[labelKey] ||
-                      Object.entries(CATEGORY_DEFAULT_IMAGES).find(([k]) => labelKey.includes(k))?.[1] ||
-                      FALLBACK_IMG
-                    const imgSrc = firstImage || defaultImg
-                    const shortLabel = tab.label === 'MAIN COURSE' ? 'MAIN' : tab.label
+                <div style={{ padding: '4px 16px 14px' }}>
+                  {/* ── Dark rounded-rectangle outer container ── */}
+                  <div style={{
+                    background: 'rgba(0,0,0,0.82)',
+                    borderRadius: '30px',
+                    padding: '10px 12px',
+                    display: 'flex',
+                    gap: '10px',
+                    overflowX: 'auto',
+                    scrollbarWidth: 'none',
+                    msOverflowStyle: 'none',
+                    WebkitOverflowScrolling: 'touch',
+                    alignItems: 'center',
+                  }}>
+                    {menuTabs.map(tab => {
+                      const isActive = activeMenuTab === tab.id
+                      const firstImage = (visibleMenuData[tab.id] || []).find(item => item.image)?.image
+                      const labelKey = (tab.label || '').toLowerCase().replace(/[\s_-]/g, '')
+                      const defaultImg =
+                        CATEGORY_DEFAULT_IMAGES[tab.id] ||
+                        CATEGORY_DEFAULT_IMAGES[labelKey] ||
+                        Object.entries(CATEGORY_DEFAULT_IMAGES).find(([k]) => labelKey.includes(k))?.[1] ||
+                        FALLBACK_IMG
+                      const imgSrc = firstImage || defaultImg
+                      const shortLabel = tab.label === 'MAIN COURSE' ? 'MAIN' : tab.label
 
-                    return (
-                      <button
-                        key={tab.id}
-                        onClick={() => { setActiveMenuTab(tab.id); setActiveCategory('all') }}
-                        style={{
-                          flexShrink: 0,
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'center',
-                          gap: '8px',
-                          background: 'none',
-                          border: 'none',
-                          padding: 0,
-                          cursor: 'pointer',
-                          fontFamily: 'inherit',
-                          minWidth: '82px',
-                          transition: 'transform 0.18s cubic-bezier(0.34,1.56,0.64,1)',
-                        }}
-                        onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.07)'}
-                        onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
-                      >
-                        {/* White rounded square card with food image */}
-                        <div style={{
-                          width: '82px',
-                          height: '82px',
-                          borderRadius: '22px',
-                          background: '#ffffff',
-                          border: '2.5px solid rgba(255,255,255,0.12)',
-                          boxShadow: '0 4px 14px rgba(0,0,0,0.30)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          transition: 'border-color 0.22s ease, box-shadow 0.22s ease',
-                          flexShrink: 0,
-                          overflow: 'hidden',
-                          padding: '6px',
-                        }}>
-                          <img
-                            src={imgSrc}
-                            alt={shortLabel}
-                            style={{
-                              width: '100%',
-                              height: '100%',
-                              objectFit: 'contain',
-                              borderRadius: '14px',
-                              display: 'block',
-                            }}
-                            onError={e => {
-                              if (e.target.src !== defaultImg) e.target.src = defaultImg
-                            }}
-                          />
-                        </div>
-
-                        {/* Category name below card */}
-                        <span style={{
-                          fontSize: '10px',
-                          fontWeight: isActive ? 900 : 700,
-                          color: isActive ? '#ffffff' : 'rgba(255,255,255,0.52)',
-                          letterSpacing: '0.08em',
-                          textTransform: 'uppercase',
-                          whiteSpace: 'nowrap',
-                          lineHeight: 1,
-                          transition: 'color 0.2s ease',
-                        }}>
-                          {shortLabel}
-                        </span>
-                      </button>
-                    )
-                  })}
+                      return (
+                        <button
+                          key={tab.id}
+                          onClick={() => { setActiveMenuTab(tab.id); setActiveCategory('all') }}
+                          style={{
+                            flexShrink: 0,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            gap: '6px',
+                            background: 'none',
+                            border: 'none',
+                            padding: 0,
+                            cursor: 'pointer',
+                            fontFamily: 'inherit',
+                            transition: 'transform 0.18s cubic-bezier(0.34,1.56,0.64,1)',
+                            WebkitTapHighlightColor: 'transparent',
+                          }}
+                          onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.05)'}
+                          onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+                        >
+                          {/* Landscape white card — 3:1 width:height ratio, 30px radius */}
+                          <div style={{
+                            width: '150px',
+                            height: '50px',
+                            borderRadius: '30px',
+                            background: '#ffffff',
+                            overflow: 'hidden',
+                            boxSizing: 'border-box',
+                            border: isActive ? `2.5px solid ${themeColor}` : '2.5px solid transparent',
+                            transition: 'border-color 0.22s ease',
+                            flexShrink: 0,
+                          }}>
+                            <img
+                              src={imgSrc}
+                              alt={shortLabel}
+                              style={{
+                                width: '100%',
+                                height: '100%',
+                                objectFit: 'cover',
+                                display: 'block',
+                              }}
+                              onError={e => {
+                                if (e.target.src !== defaultImg) e.target.src = defaultImg
+                              }}
+                            />
+                          </div>
+                          {/* Category label */}
+                          <span style={{
+                            fontSize: '10px',
+                            fontWeight: isActive ? 900 : 700,
+                            color: isActive ? '#ffffff' : 'rgba(255,255,255,0.52)',
+                            letterSpacing: '0.08em',
+                            textTransform: 'uppercase',
+                            whiteSpace: 'nowrap',
+                            lineHeight: 1,
+                            transition: 'color 0.2s ease',
+                          }}>
+                            {shortLabel}
+                          </span>
+                        </button>
+                      )
+                    })}
+                  </div>
                 </div>
               )
             })()}
