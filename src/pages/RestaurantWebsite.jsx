@@ -3602,33 +3602,94 @@ export default function RestaurantWebsite() {
           )}
 
           {/* ── Sticky bottom checkout bar ── */}
-          {cartItems.length > 0 && (
-            <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 90, padding: '10px 14px 16px', background: 'transparent', pointerEvents: 'none' }}>
-              <div style={{ display: 'flex', borderRadius: '18px', overflow: 'hidden', boxShadow: '0 -4px 32px rgba(0,0,0,0.25)', pointerEvents: 'auto' }}>
+          {activeNav === 'cart' && cartItems.length > 0 && (
+            <div style={{
+              position: 'fixed',
+              bottom: '56px',
+              left: 0,
+              right: 0,
+              zIndex: 9999,
+              padding: '0 14px 10px',
+              background: 'transparent',
+              pointerEvents: 'none',
+            }}>
+              <style>{`
+                .co-bar {
+                  display: flex;
+                  align-items: stretch;
+                  border-radius: 22px;
+                  box-shadow: 0 8px 40px rgba(0,0,0,0.32), 0 2px 12px rgba(0,0,0,0.16);
+                  pointer-events: auto;
+                  height: 70px;
+                  position: relative;
+                  overflow: hidden;
+                }
+                .co-left {
+                  flex: 0 0 42%;
+                  display: flex;
+                  flex-direction: column;
+                  justify-content: center;
+                  padding: 12px 22px;
+                  position: relative;
+                  z-index: 1;
+                  border-radius: 22px 0 0 22px;
+                }
+                .co-right {
+                  flex: 1;
+                  border: none;
+                  color: #fff;
+                  font-size: 16px;
+                  font-weight: 800;
+                  cursor: pointer;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  gap: 10px;
+                  letter-spacing: 0.02em;
+                  white-space: nowrap;
+                  background: linear-gradient(130deg, #2563eb 0%, #1d4ed8 100%);
+                  position: relative;
+                  z-index: 2;
+                  /* Large left radius creates the curved meeting point */
+                  border-radius: 60px 22px 22px 60px;
+                  /* Shift left to overlap the left section, creating the concave curve */
+                  margin-left: -28px;
+                  padding: 0 28px 0 44px;
+                  transition: filter 0.15s ease;
+                }
+                .co-right:active { filter: brightness(0.91); }
+                .co-badge {
+                  display: inline-flex;
+                  align-items: center;
+                  border-radius: 20px;
+                  padding: 2px 9px;
+                  margin-top: 4px;
+                  width: fit-content;
+                }
+              `}</style>
+              <div className="co-bar">
                 {/* Left: amount + savings */}
-                <div style={{ flex: 1, background: darkMode ? '#1c1c1e' : '#fff', padding: '14px 18px', display: 'flex', flexDirection: 'column', justifyContent: 'center', borderRight: darkMode ? '1px solid rgba(255,255,255,0.06)' : '1px solid #eee' }}>
-                  <div style={{ fontSize: '20px', fontWeight: 900, color: theme.color, lineHeight: 1.1 }}>₹{grandTotal.toLocaleString('en-IN')}</div>
+                <div className="co-left" style={{ background: darkMode ? '#1a1a1a' : '#ffffff' }}>
+                  <div style={{ fontSize: '22px', fontWeight: 900, color: darkMode ? '#ffffff' : '#111111', lineHeight: 1.1, letterSpacing: '-0.01em' }}>
+                    ₹{grandTotal.toLocaleString('en-IN')}
+                  </div>
                   {discountAmt > 0 ? (
-                    <div style={{ marginTop: '5px', display: 'inline-flex', alignItems: 'center', background: 'rgba(34,197,94,0.12)', border: '1px solid rgba(34,197,94,0.25)', borderRadius: '20px', padding: '2px 9px' }}>
-                      <span style={{ fontSize: '11.5px', fontWeight: 700, color: '#22c55e' }}>You save ₹{discountAmt.toLocaleString('en-IN')}</span>
+                    <div className="co-badge" style={{ background: darkMode ? 'rgba(34,197,94,0.15)' : '#e8f9ef', border: darkMode ? '1px solid rgba(34,197,94,0.28)' : '1px solid #a7e8bf' }}>
+                      <span style={{ fontSize: '11.5px', fontWeight: 700, color: '#16a34a' }}>You save ₹{discountAmt.toLocaleString('en-IN')}</span>
                     </div>
                   ) : deliveryFee === 0 ? (
-                    <div style={{ marginTop: '5px', display: 'inline-flex', alignItems: 'center', background: 'rgba(34,197,94,0.12)', border: '1px solid rgba(34,197,94,0.25)', borderRadius: '20px', padding: '2px 9px' }}>
-                      <span style={{ fontSize: '11.5px', fontWeight: 700, color: '#22c55e' }}>Free delivery 🎉</span>
+                    <div className="co-badge" style={{ background: darkMode ? 'rgba(34,197,94,0.15)' : '#e8f9ef', border: darkMode ? '1px solid rgba(34,197,94,0.28)' : '1px solid #a7e8bf' }}>
+                      <span style={{ fontSize: '11.5px', fontWeight: 700, color: '#16a34a' }}>Free delivery 🎉</span>
                     </div>
                   ) : (
-                    <div style={{ marginTop: '5px' }}>
-                      <span style={{ fontSize: '11.5px', color: theme.locationColor }}>+₹{deliveryFee} delivery</span>
+                    <div style={{ marginTop: '4px' }}>
+                      <span style={{ fontSize: '11.5px', fontWeight: 500, color: darkMode ? 'rgba(255,255,255,0.45)' : '#999' }}>+₹{deliveryFee} delivery</span>
                     </div>
                   )}
                 </div>
                 {/* Right: Place Order button */}
-                <button
-                  className="sticky-order-btn"
-                  onClick={() => setShowOrderConfirm(true)}
-                  style={{ background: '#2563eb', border: 'none', color: '#fff', padding: '0 24px', fontSize: '15px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', letterSpacing: '0.01em', whiteSpace: 'nowrap' }}
-                >
-                  Place Order <span style={{ fontSize: '17px' }}>→</span>
+                <button className="co-right" onClick={() => setShowOrderConfirm(true)}>
+                  Place Order <span style={{ fontSize: '18px', lineHeight: 1 }}>→</span>
                 </button>
               </div>
             </div>
