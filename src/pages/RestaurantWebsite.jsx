@@ -1976,7 +1976,7 @@ export default function RestaurantWebsite() {
                 <div style={{ padding: '4px 16px 14px' }}>
                   {/* ── Dark rounded-rectangle outer container ── */}
                   <div style={{
-                    background: 'rgba(0,0,0,0.82)',
+                    background: 'transparent',
                     borderRadius: '30px',
                     padding: '10px 12px',
                     display: 'flex',
@@ -2020,11 +2020,11 @@ export default function RestaurantWebsite() {
                           onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.05)'}
                           onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
                         >
-                          {/* Landscape white card — 3:1 width:height ratio, 30px radius */}
+                          {/* Landscape white card — 3:1 width:height ratio, rounded rectangle */}
                           <div style={{
                             width: '150px',
                             height: '50px',
-                            borderRadius: '30px',
+                            borderRadius: '16px',
                             background: '#ffffff',
                             overflow: 'hidden',
                             boxSizing: 'border-box',
