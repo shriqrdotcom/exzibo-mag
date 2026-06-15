@@ -3361,6 +3361,63 @@ export default function RestaurantWebsite() {
             ) : null}
             <div style={{ marginTop: '18px', fontSize: '10px', color: theme.footerLocation, letterSpacing: '0.12em', textTransform: 'uppercase' }}>Powered by EXZIBO</div>
           </footer>
+
+          {/* ── SOCIAL MEDIA SECTION ── */}
+          {(() => {
+            const sl = restaurant.socialLinks || {}
+            const socials = [
+              { key: 'instagram', icon: <FaInstagram size={22} />, href: sl.instagram },
+              { key: 'facebook',  icon: <FaFacebook  size={22} />, href: sl.facebook  },
+              { key: 'linkedin',  icon: <FaLinkedinIn size={20} />, href: sl.linkedin  },
+              { key: 'youtube',   icon: <FaYoutube   size={22} />, href: sl.youtube   },
+              { key: 'twitter',   icon: <FaXTwitter  size={20} />, href: sl.twitter   },
+            ].filter(s => s.href && s.href.trim() && s.href.trim() !== '#')
+            if (socials.length === 0) return null
+            return (
+              <div style={{
+                background: '#000',
+                padding: '28px 20px 36px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '16px',
+                flexWrap: 'wrap',
+              }}>
+                {socials.map(s => (
+                  <a
+                    key={s.key}
+                    href={s.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      width: '62px',
+                      height: '62px',
+                      borderRadius: '50%',
+                      border: '1.5px solid rgba(255,255,255,0.20)',
+                      background: 'transparent',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#fff',
+                      textDecoration: 'none',
+                      flexShrink: 0,
+                      transition: 'border-color 0.2s ease, background 0.2s ease',
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.borderColor = 'rgba(255,255,255,0.55)'
+                      e.currentTarget.style.background = 'rgba(255,255,255,0.07)'
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.borderColor = 'rgba(255,255,255,0.20)'
+                      e.currentTarget.style.background = 'transparent'
+                    }}
+                  >
+                    {s.icon}
+                  </a>
+                ))}
+              </div>
+            )
+          })()}
         </div>
       )}
 
