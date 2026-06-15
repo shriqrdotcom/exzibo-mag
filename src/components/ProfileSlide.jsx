@@ -241,17 +241,39 @@ export default function ProfileSlide({
   const isRealId = id => id && id !== 'default' && /^[0-9a-f-]{36}$/.test(id)
 
   useEffect(() => {
-    async function loadTelegram() {
+    async function loadSocialLinks() {
       const lsKey = `exzibo_telegram_${restaurantId || 'default'}`
       if (isRealId(restaurantId)) {
         try {
           const restaurant = await getRestaurantById(restaurantId)
           if (restaurant) {
-            socialLinksRef.current = restaurant.social_links || {}
-            const val = restaurant.social_links?.telegram || ''
-            setTelegramInput(val)
-            setTelegramSaved(val)
-            localStorage.setItem(lsKey, val)
+            const sl = restaurant.social_links || {}
+            socialLinksRef.current = sl
+            // Telegram
+            const tval = sl.telegram || ''
+            setTelegramInput(tval)
+            setTelegramSaved(tval)
+            localStorage.setItem(lsKey, tval)
+            // Facebook
+            const fbVal = sl.facebook || ''
+            setFacebookUrlInput(fbVal)
+            localStorage.setItem(`exzibo_social_facebook_${restaurantId}`, fbVal)
+            // Instagram
+            const igVal = sl.instagram || ''
+            setInstagramUrlInput(igVal)
+            localStorage.setItem(`exzibo_social_instagram_${restaurantId}`, igVal)
+            // LinkedIn
+            const liVal = sl.linkedin || ''
+            setLinkedinUrlInput(liVal)
+            localStorage.setItem(`exzibo_social_linkedin_${restaurantId}`, liVal)
+            // YouTube
+            const ytVal = sl.youtube || ''
+            setYoutubeUrlInput(ytVal)
+            localStorage.setItem(`exzibo_social_youtube_${restaurantId}`, ytVal)
+            // Twitter / X
+            const twVal = sl.twitter || ''
+            setTwitterUrlInput(twVal)
+            localStorage.setItem(`exzibo_social_twitter_${restaurantId}`, twVal)
             return
           }
         } catch { /* fall through to localStorage */ }
@@ -260,7 +282,7 @@ export default function ProfileSlide({
       setTelegramInput(val)
       setTelegramSaved(val)
     }
-    loadTelegram()
+    loadSocialLinks()
   }, [restaurantId])
 
   async function handleTelegramSave() {
@@ -297,70 +319,95 @@ export default function ProfileSlide({
   const [facebookModalOpen, setFacebookModalOpen] = useState(false)
   const [facebookUrlInput, setFacebookUrlInput] = useState('')
 
-  useEffect(() => {
-    const key = `exzibo_social_facebook_${restaurantId || 'default'}`
-    setFacebookUrlInput(localStorage.getItem(key) || '')
-  }, [restaurantId])
-
-  function handleFacebookSave() {
-    const key = `exzibo_social_facebook_${restaurantId || 'default'}`
-    localStorage.setItem(key, facebookUrlInput)
+  async function handleFacebookSave() {
+    const lsKey = `exzibo_social_facebook_${restaurantId || 'default'}`
+    try {
+      if (isRealId(restaurantId)) {
+        const merged = { ...socialLinksRef.current, facebook: facebookUrlInput }
+        const updated = await updateRestaurant(restaurantId, { social_links: merged })
+        socialLinksRef.current = updated?.social_links || merged
+      }
+      localStorage.setItem(lsKey, facebookUrlInput)
+    } catch (err) {
+      console.error('[Facebook save]', err)
+      localStorage.setItem(lsKey, facebookUrlInput)
+    }
     setFacebookModalOpen(false)
   }
 
   const [instagramModalOpen, setInstagramModalOpen] = useState(false)
   const [instagramUrlInput, setInstagramUrlInput] = useState('')
 
-  useEffect(() => {
-    const key = `exzibo_social_instagram_${restaurantId || 'default'}`
-    setInstagramUrlInput(localStorage.getItem(key) || '')
-  }, [restaurantId])
-
-  function handleInstagramSave() {
-    const key = `exzibo_social_instagram_${restaurantId || 'default'}`
-    localStorage.setItem(key, instagramUrlInput)
+  async function handleInstagramSave() {
+    const lsKey = `exzibo_social_instagram_${restaurantId || 'default'}`
+    try {
+      if (isRealId(restaurantId)) {
+        const merged = { ...socialLinksRef.current, instagram: instagramUrlInput }
+        const updated = await updateRestaurant(restaurantId, { social_links: merged })
+        socialLinksRef.current = updated?.social_links || merged
+      }
+      localStorage.setItem(lsKey, instagramUrlInput)
+    } catch (err) {
+      console.error('[Instagram save]', err)
+      localStorage.setItem(lsKey, instagramUrlInput)
+    }
     setInstagramModalOpen(false)
   }
 
   const [linkedinModalOpen, setLinkedinModalOpen] = useState(false)
   const [linkedinUrlInput, setLinkedinUrlInput] = useState('')
 
-  useEffect(() => {
-    const key = `exzibo_social_linkedin_${restaurantId || 'default'}`
-    setLinkedinUrlInput(localStorage.getItem(key) || '')
-  }, [restaurantId])
-
-  function handleLinkedinSave() {
-    const key = `exzibo_social_linkedin_${restaurantId || 'default'}`
-    localStorage.setItem(key, linkedinUrlInput)
+  async function handleLinkedinSave() {
+    const lsKey = `exzibo_social_linkedin_${restaurantId || 'default'}`
+    try {
+      if (isRealId(restaurantId)) {
+        const merged = { ...socialLinksRef.current, linkedin: linkedinUrlInput }
+        const updated = await updateRestaurant(restaurantId, { social_links: merged })
+        socialLinksRef.current = updated?.social_links || merged
+      }
+      localStorage.setItem(lsKey, linkedinUrlInput)
+    } catch (err) {
+      console.error('[LinkedIn save]', err)
+      localStorage.setItem(lsKey, linkedinUrlInput)
+    }
     setLinkedinModalOpen(false)
   }
 
   const [youtubeModalOpen, setYoutubeModalOpen] = useState(false)
   const [youtubeUrlInput, setYoutubeUrlInput] = useState('')
 
-  useEffect(() => {
-    const key = `exzibo_social_youtube_${restaurantId || 'default'}`
-    setYoutubeUrlInput(localStorage.getItem(key) || '')
-  }, [restaurantId])
-
-  function handleYoutubeSave() {
-    const key = `exzibo_social_youtube_${restaurantId || 'default'}`
-    localStorage.setItem(key, youtubeUrlInput)
+  async function handleYoutubeSave() {
+    const lsKey = `exzibo_social_youtube_${restaurantId || 'default'}`
+    try {
+      if (isRealId(restaurantId)) {
+        const merged = { ...socialLinksRef.current, youtube: youtubeUrlInput }
+        const updated = await updateRestaurant(restaurantId, { social_links: merged })
+        socialLinksRef.current = updated?.social_links || merged
+      }
+      localStorage.setItem(lsKey, youtubeUrlInput)
+    } catch (err) {
+      console.error('[YouTube save]', err)
+      localStorage.setItem(lsKey, youtubeUrlInput)
+    }
     setYoutubeModalOpen(false)
   }
 
   const [twitterModalOpen, setTwitterModalOpen] = useState(false)
   const [twitterUrlInput, setTwitterUrlInput] = useState('')
 
-  useEffect(() => {
-    const key = `exzibo_social_twitter_${restaurantId || 'default'}`
-    setTwitterUrlInput(localStorage.getItem(key) || '')
-  }, [restaurantId])
-
-  function handleTwitterSave() {
-    const key = `exzibo_social_twitter_${restaurantId || 'default'}`
-    localStorage.setItem(key, twitterUrlInput)
+  async function handleTwitterSave() {
+    const lsKey = `exzibo_social_twitter_${restaurantId || 'default'}`
+    try {
+      if (isRealId(restaurantId)) {
+        const merged = { ...socialLinksRef.current, twitter: twitterUrlInput }
+        const updated = await updateRestaurant(restaurantId, { social_links: merged })
+        socialLinksRef.current = updated?.social_links || merged
+      }
+      localStorage.setItem(lsKey, twitterUrlInput)
+    } catch (err) {
+      console.error('[Twitter save]', err)
+      localStorage.setItem(lsKey, twitterUrlInput)
+    }
     setTwitterModalOpen(false)
   }
 
