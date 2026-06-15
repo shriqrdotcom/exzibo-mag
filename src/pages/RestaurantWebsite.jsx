@@ -3243,32 +3243,6 @@ export default function RestaurantWebsite() {
               )
             })()}
 
-            {/* Philosophy card */}
-            <div style={{
-              background: theme.aboutCardBg,
-              border: `1px solid ${theme.aboutCardBorder}`,
-              borderRadius: '16px',
-              padding: '20px 20px 20px 0',
-              marginBottom: '10px',
-              display: 'flex',
-              gap: '0',
-              overflow: 'hidden',
-              position: 'relative',
-            }}>
-              {/* Crimson left accent bar */}
-              <div style={{ width: '4px', minWidth: '4px', background: 'linear-gradient(to bottom, #E8321A, #c0200e)', borderRadius: '0 2px 2px 0', marginRight: '16px' }} />
-              <div style={{ flex: 1 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
-                  <div style={{ fontSize: '9px', fontWeight: 800, letterSpacing: '0.22em', color: '#E8321A', textTransform: 'uppercase' }}>The Philosophy</div>
-                </div>
-                {restaurant.additionalInfo && (
-                  <p style={{ fontSize: '12px', lineHeight: 1.7, color: theme.aboutSub, marginTop: '12px', paddingTop: '12px', borderTop: `1px solid ${theme.aboutSubBorder}`, margin: '12px 0 0', fontStyle: 'normal' }}>
-                    {restaurant.additionalInfo}
-                  </p>
-                )}
-              </div>
-            </div>
-
             {/* Quick Info */}
             <div style={{ background: theme.statsBg, border: `1px solid ${theme.statsBorder}`, borderRadius: '16px', padding: '18px', marginBottom: '10px' }}>
               <div style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '0.18em', color: theme.infoLabel, textTransform: 'uppercase', marginBottom: '14px' }}>Quick Info</div>
