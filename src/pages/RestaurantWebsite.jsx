@@ -3246,7 +3246,7 @@ export default function RestaurantWebsite() {
             {/* ── Our Story Quote ── */}
             <div style={{
               textAlign: 'center',
-              padding: '36px 24px',
+              padding: '20px 24px 10px',
               marginBottom: '10px',
             }}>
               <p style={{
