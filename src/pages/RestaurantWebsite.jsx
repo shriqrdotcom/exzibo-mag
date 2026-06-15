@@ -3204,6 +3204,45 @@ export default function RestaurantWebsite() {
               <div style={{ fontSize: '11px', color: theme.sectionSub, marginTop: '2px' }}>Where every plate tells a story</div>
             </div>
 
+            {/* ── Our Story Gallery Layout ── */}
+            {(() => {
+              function StoryImageFrame({ src, shape, verticalOffset }) {
+                const isTall = shape === 'tall'
+                return (
+                  <div style={{
+                    flex: '0 0 auto',
+                    width: isTall ? '22%' : '28%',
+                    aspectRatio: isTall ? '1 / 1.35' : '1.5 / 1',
+                    borderRadius: '14px',
+                    overflow: 'hidden',
+                    alignSelf: 'center',
+                    marginTop: verticalOffset,
+                    position: 'relative',
+                    background: darkMode ? '#111111' : '#1a1a1a',
+                  }}>
+                    {src ? (
+                      <img src={src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                    ) : (
+                      <div style={{ width: '100%', height: '100%', background: darkMode ? '#111111' : '#1a1a1a' }} />
+                    )}
+                  </div>
+                )
+              }
+
+              const storyImages = { frame1: null, frame2: null, frame3: null, frame4: null }
+
+              return (
+                <div style={{ position: 'relative', width: '100%', height: '190px', marginBottom: '12px', borderRadius: '16px', overflow: 'hidden' }}>
+                  <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', padding: '0 14px' }}>
+                    <StoryImageFrame src={storyImages.frame1} shape="tall" verticalOffset="-12px" />
+                    <StoryImageFrame src={storyImages.frame2} shape="wide" verticalOffset="14px" />
+                    <StoryImageFrame src={storyImages.frame3} shape="tall" verticalOffset="-12px" />
+                    <StoryImageFrame src={storyImages.frame4} shape="wide" verticalOffset="14px" />
+                  </div>
+                </div>
+              )
+            })()}
+
             {/* Philosophy card */}
             <div style={{
               background: theme.aboutCardBg,
