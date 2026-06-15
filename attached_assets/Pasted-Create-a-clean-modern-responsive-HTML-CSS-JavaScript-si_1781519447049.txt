@@ -1,0 +1,33 @@
+Create a clean, modern, responsive HTML + CSS + JavaScript single-file web component that displays inspirational / motivational text content.
+
+Requirements:
+
+1. **Visual Style & Layout (match the 2nd image structure)**:
+   - Top: Large, bold, uppercase heading like "OUR STORY" (use a strong sans-serif font, e.g. Inter, Arial Black, or system-ui).
+   - Below the heading: A thin horizontal rule or subtle divider line.
+   - Then multiple paragraphs of body text (use clean paragraph spacing, left-aligned or justified with good readability).
+   - Overall card-like or full-width centered container with generous padding and rounded corners.
+   - Clean, professional, minimalist design similar to Microsoft Word document sections (white/light background by default).
+
+2. **Text Format Description (do NOT use the exact quote text from the first image)**:
+   - Heading: Very large, bold, centered or left-aligned, high visual weight.
+   - Body text: Multi-line paragraphs with natural line breaks, medium weight, excellent line height (1.6–1.8), comfortable font size (16–18px).
+   - Use semantic HTML (<h1> for heading, <p> for paragraphs).
+   - Preserve natural paragraph flow and whitespace as shown in the second image.
+
+3. **Dark / Light Theme Logic**:
+   - Automatically detect system preference (prefers-color-scheme) and allow manual toggle.
+   - **Dark theme**: Dark charcoal / near-black background (#111111 or #0a0a0a), pure white text for all content, high contrast.
+   - **Light theme**: Clean white / off-white background (#ffffff or #f8f9fa), deep black text (#111111 or #1a1a1a).
+   - Smooth transition between themes.
+   - All text must remain highly readable in both modes (use proper contrast ratios).
+
+4. **Additional Features**:
+   - Fully responsive (mobile-friendly, scales nicely on all screen sizes).
+   - Centered content with max-width constraint (e.g. 700–800px).
+   - Subtle shadow or border on the container for depth.
+   - Theme toggle button (sun/moon icon) in the top right.
+   - Use Tailwind CSS via CDN or plain modern CSS (your choice, but keep it clean and self-contained).
+   - Include sample placeholder text that follows the motivational tone but is different from the provided images.
+
+Output only the complete single HTML file with embedded CSS and JS that I can copy-paste and run immediately.

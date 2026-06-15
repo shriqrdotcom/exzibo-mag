@@ -3246,25 +3246,22 @@ export default function RestaurantWebsite() {
             {/* ── Our Story Quote ── */}
             <div style={{
               textAlign: 'center',
-              padding: '32px 20px',
+              padding: '36px 24px',
               marginBottom: '10px',
             }}>
               <p style={{
-                fontSize: 'clamp(15px, 4vw, 20px)',
+                fontSize: 'clamp(16px, 3.5vw, 22px)',
                 fontWeight: 500,
                 color: theme.text || '#ffffff',
-                lineHeight: 1.85,
+                lineHeight: 1.9,
                 margin: 0,
-                maxWidth: '600px',
+                maxWidth: '520px',
                 marginLeft: 'auto',
                 marginRight: 'auto',
+                wordBreak: 'break-word',
+                overflowWrap: 'break-word',
               }}>
-                Passion drives purpose, and purpose leads to progress.<br />
-                Every step forward, no matter how small, brings<br />
-                you closer to your goals. Embrace challenges,<br />
-                learn from every experience, and stay committed<br />
-                to your vision. Consistency today builds<br />
-                the success of tomorrow.
+                Passion drives purpose, and purpose leads to progress. Every step forward, no matter how small, brings you closer to your goals. Embrace challenges, learn from every experience, and stay committed to your vision. Consistency today builds the success of tomorrow.
               </p>
             </div>
 
