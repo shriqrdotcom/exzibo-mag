@@ -12,7 +12,7 @@ import { FaFacebook, FaInstagram, FaLinkedinIn, FaYoutube } from 'react-icons/fa
 import { FaXTwitter } from 'react-icons/fa6'
 import AddMembersModal from './AddMembersModal'
 import RemainingDaysModal from './RemainingDaysModal'
-import { updateRestaurant, uploadDataUrlToStorage, getTeamMembers, getRestaurantById } from '../lib/db'
+import { updateRestaurant, updateRestaurantSocial, uploadDataUrlToStorage, getTeamMembers, getRestaurantById } from '../lib/db'
 import { processImageFile, isAcceptedImageType } from '../lib/processImage'
 
 const TEAM_ACCENT_START = '#6366F1'
@@ -291,7 +291,7 @@ export default function ProfileSlide({
     try {
       if (isRealId(restaurantId)) {
         const merged = { ...socialLinksRef.current, telegram: telegramInput }
-        const updated = await updateRestaurant(restaurantId, { social_links: merged })
+        const updated = await updateRestaurantSocial(restaurantId, merged)
         socialLinksRef.current = updated?.social_links || merged
       }
       localStorage.setItem(lsKey, telegramInput)
@@ -324,7 +324,7 @@ export default function ProfileSlide({
     try {
       if (isRealId(restaurantId)) {
         const merged = { ...socialLinksRef.current, facebook: facebookUrlInput }
-        const updated = await updateRestaurant(restaurantId, { social_links: merged })
+        const updated = await updateRestaurantSocial(restaurantId, merged)
         socialLinksRef.current = updated?.social_links || merged
       }
       localStorage.setItem(lsKey, facebookUrlInput)
@@ -343,7 +343,7 @@ export default function ProfileSlide({
     try {
       if (isRealId(restaurantId)) {
         const merged = { ...socialLinksRef.current, instagram: instagramUrlInput }
-        const updated = await updateRestaurant(restaurantId, { social_links: merged })
+        const updated = await updateRestaurantSocial(restaurantId, merged)
         socialLinksRef.current = updated?.social_links || merged
       }
       localStorage.setItem(lsKey, instagramUrlInput)
@@ -362,7 +362,7 @@ export default function ProfileSlide({
     try {
       if (isRealId(restaurantId)) {
         const merged = { ...socialLinksRef.current, linkedin: linkedinUrlInput }
-        const updated = await updateRestaurant(restaurantId, { social_links: merged })
+        const updated = await updateRestaurantSocial(restaurantId, merged)
         socialLinksRef.current = updated?.social_links || merged
       }
       localStorage.setItem(lsKey, linkedinUrlInput)
@@ -381,7 +381,7 @@ export default function ProfileSlide({
     try {
       if (isRealId(restaurantId)) {
         const merged = { ...socialLinksRef.current, youtube: youtubeUrlInput }
-        const updated = await updateRestaurant(restaurantId, { social_links: merged })
+        const updated = await updateRestaurantSocial(restaurantId, merged)
         socialLinksRef.current = updated?.social_links || merged
       }
       localStorage.setItem(lsKey, youtubeUrlInput)
@@ -400,7 +400,7 @@ export default function ProfileSlide({
     try {
       if (isRealId(restaurantId)) {
         const merged = { ...socialLinksRef.current, twitter: twitterUrlInput }
-        const updated = await updateRestaurant(restaurantId, { social_links: merged })
+        const updated = await updateRestaurantSocial(restaurantId, merged)
         socialLinksRef.current = updated?.social_links || merged
       }
       localStorage.setItem(lsKey, twitterUrlInput)

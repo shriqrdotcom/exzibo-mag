@@ -745,6 +745,33 @@ app.post('/api/orders/auto-cleanup', async (req, res) => {
   }
 })
 
+// POST /api/restaurant/update-social
+// Body: { restaurantId, social_links: { facebook, instagram, ... } }
+// Uses the service-role key so RLS never blocks the update.
+app.post('/api/restaurant/update-social', async (req, res) => {
+  try {
+    const { restaurantId, social_links } = req.body
+    if (!restaurantId || typeof social_links !== 'object') {
+      return res.status(400).json({ error: 'restaurantId and social_links object required' })
+    }
+    const { url: supabaseUrl, headers } = getSupabaseServiceHeaders()
+    const r = await fetch(
+      `${supabaseUrl}/rest/v1/restaurants?id=eq.${encodeURIComponent(restaurantId)}`,
+      {
+        method: 'PATCH',
+        headers: { ...headers, Prefer: 'return=representation' },
+        body: JSON.stringify({ social_links }),
+      }
+    )
+    const data = await r.json()
+    if (!r.ok) return res.status(r.status).json({ error: data })
+    return res.json(Array.isArray(data) ? (data[0] ?? {}) : data)
+  } catch (err) {
+    console.error('[restaurant/update-social] Error:', err.message)
+    return res.status(500).json({ error: err.message })
+  }
+})
+
 // ── SPA fallback — must be last ───────────────────────────────────────────────
 app.get('*', (req, res) => {
   res.sendFile(path.resolve(__dirname, 'dist', 'index.html'))
