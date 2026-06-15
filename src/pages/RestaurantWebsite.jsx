@@ -3252,7 +3252,7 @@ export default function RestaurantWebsite() {
               <p style={{
                 fontSize: '11px',
                 fontFamily: "'Cormorant Garamond', 'Times NR MT Pro', 'Times New Roman', Georgia, serif",
-                fontWeight: 300,
+                fontWeight: 600,
                 fontStyle: 'italic',
                 color: theme.infoLabel || '#888',
                 letterSpacing: '0.08em',
