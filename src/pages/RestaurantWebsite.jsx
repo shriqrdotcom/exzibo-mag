@@ -3250,7 +3250,7 @@ export default function RestaurantWebsite() {
               marginBottom: '10px',
             }}>
               <p style={{
-                fontSize: 'clamp(16px, 3.5vw, 22px)',
+                fontSize: '15px',
                 fontWeight: 500,
                 color: theme.text || '#ffffff',
                 lineHeight: 1.9,
