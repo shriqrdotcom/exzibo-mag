@@ -3263,17 +3263,6 @@ export default function RestaurantWebsite() {
                   borderRadius: '16px',
                   overflow: 'hidden',
                 }}>
-                  {/* Two-tone background — theme-aware top, fixed yellow bottom */}
-                  <div style={{
-                    position: 'absolute',
-                    inset: 0,
-                    display: 'flex',
-                    flexDirection: 'column',
-                  }}>
-                    <div style={{ flex: '0 0 60%', background: darkMode ? '#000000' : '#FFFFFF' }} />
-                    <div style={{ flex: '0 0 40%', background: '#F6E88A' }} />
-                  </div>
-
                   {/* 4 image frames: [Tall] [Wide] [Tall] [Wide] */}
                   <div style={{
                     position: 'absolute',
