@@ -3204,76 +3204,94 @@ export default function RestaurantWebsite() {
               <div style={{ fontSize: '11px', color: theme.sectionSub, marginTop: '2px' }}>Where every plate tells a story</div>
             </div>
 
-            {/* ── Our Story Decorative Split Layout ── */}
-            <div style={{
-              position: 'relative',
-              width: '100%',
-              height: '180px',
-              marginBottom: '12px',
-              borderRadius: '16px',
-              overflow: 'hidden',
-            }}>
-              {/* Two-tone background */}
-              <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column' }}>
-                <div style={{ flex: '0 0 57%', background: '#FFFFFF' }} />
-                <div style={{ flex: '0 0 43%', background: '#F6E88A' }} />
-              </div>
+            {/* ── Our Story Gallery Layout ── */}
+            {(() => {
+              // StoryImageFrame — reusable image frame component
+              // shape: 'tall' | 'wide'
+              // src: optional image URL — shows placeholder when absent
+              function StoryImageFrame({ src, shape, verticalOffset }) {
+                const isTall = shape === 'tall'
+                return (
+                  <div style={{
+                    flex: '0 0 auto',
+                    width: isTall ? '22%' : '28%',
+                    aspectRatio: isTall ? '1 / 1.35' : '1.5 / 1',
+                    borderRadius: '14px',
+                    overflow: 'hidden',
+                    alignSelf: 'center',
+                    marginTop: verticalOffset,
+                    position: 'relative',
+                    background: darkMode ? '#111111' : '#1a1a1a',
+                  }}>
+                    {src ? (
+                      <img
+                        src={src}
+                        alt=""
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'cover',
+                          display: 'block',
+                        }}
+                      />
+                    ) : (
+                      /* Empty placeholder — no image, no text, no icon */
+                      <div style={{
+                        width: '100%',
+                        height: '100%',
+                        background: darkMode ? '#111111' : '#1a1a1a',
+                      }} />
+                    )}
+                  </div>
+                )
+              }
 
-              {/* 4 floating cards: [Tall] [Wide] [Tall] [Wide] */}
-              <div style={{
-                position: 'absolute',
-                inset: 0,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '10px',
-                padding: '0 14px',
-              }}>
-                {/* Box 1 — Tall */}
-                <div style={{
-                  background: '#000000',
-                  borderRadius: '14px',
-                  flex: '0 0 auto',
-                  width: '22%',
-                  aspectRatio: '1 / 1.35',
-                  alignSelf: 'center',
-                  marginTop: '-10px',
-                }} />
+              // Story images — wire up real URLs here when available
+              const storyImages = {
+                frame1: null,
+                frame2: null,
+                frame3: null,
+                frame4: null,
+              }
 
-                {/* Box 2 — Wide */}
+              return (
                 <div style={{
-                  background: '#000000',
-                  borderRadius: '14px',
-                  flex: '0 0 auto',
-                  width: '28%',
-                  aspectRatio: '1.5 / 1',
-                  alignSelf: 'center',
-                  marginTop: '12px',
-                }} />
+                  position: 'relative',
+                  width: '100%',
+                  height: '190px',
+                  marginBottom: '12px',
+                  borderRadius: '16px',
+                  overflow: 'hidden',
+                }}>
+                  {/* Two-tone background — theme-aware top, fixed yellow bottom */}
+                  <div style={{
+                    position: 'absolute',
+                    inset: 0,
+                    display: 'flex',
+                    flexDirection: 'column',
+                  }}>
+                    <div style={{ flex: '0 0 60%', background: darkMode ? '#000000' : '#FFFFFF' }} />
+                    <div style={{ flex: '0 0 40%', background: '#F6E88A' }} />
+                  </div>
 
-                {/* Box 3 — Tall (same as Box 1) */}
-                <div style={{
-                  background: '#000000',
-                  borderRadius: '14px',
-                  flex: '0 0 auto',
-                  width: '22%',
-                  aspectRatio: '1 / 1.35',
-                  alignSelf: 'center',
-                  marginTop: '-10px',
-                }} />
-
-                {/* Box 4 — Wide (same as Box 2) */}
-                <div style={{
-                  background: '#000000',
-                  borderRadius: '14px',
-                  flex: '0 0 auto',
-                  width: '28%',
-                  aspectRatio: '1.5 / 1',
-                  alignSelf: 'center',
-                  marginTop: '12px',
-                }} />
-              </div>
-            </div>
+                  {/* 4 image frames: [Tall] [Wide] [Tall] [Wide] */}
+                  <div style={{
+                    position: 'absolute',
+                    inset: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '10px',
+                    padding: '0 14px',
+                  }}>
+                    <StoryImageFrame src={storyImages.frame1} shape="tall" verticalOffset="-12px" />
+                    <StoryImageFrame src={storyImages.frame2} shape="wide" verticalOffset="14px" />
+                    <StoryImageFrame src={storyImages.frame3} shape="tall" verticalOffset="-12px" />
+                    <StoryImageFrame src={storyImages.frame4} shape="wide" verticalOffset="14px" />
+                  </div>
+                </div>
+              )
+            })()}
 
             {/* Philosophy card */}
             <div style={{

@@ -1,0 +1,107 @@
+I need to rebuild the "OUR STORY" section layout logic.
+
+Current problem:
+You misunderstood the previous instruction and inserted one static image inside the container.
+
+I do NOT want a single banner image.
+
+The black shapes shown in the reference are NOT images.
+Those black shapes are IMAGE FRAMES / IMAGE CONTAINERS.
+
+Build the structure itself and allow dynamic images to be inserted inside later.
+
+SECTION STRUCTURE:
+
+Create one large rounded container.
+
+Inside this container:
+- Create a two-layer background.
+- Top layer color:
+  → Theme dependent
+  → Light theme = White (#FFFFFF)
+  → Dark theme = Black (#000000)
+
+- Bottom layer:
+  → Keep Soft Yellow (#F6E88A)
+  → Same in both themes
+
+No gradients.
+No shadows.
+No textures.
+
+The top and bottom colors should divide horizontally across the section.
+
+BACKGROUND HEIGHT:
+- Top area ≈ 60%
+- Bottom yellow area ≈ 40%
+
+IMPORTANT:
+This background must react automatically to theme changes.
+Do NOT hardcode white.
+
+-----------------------------------
+
+IMAGE FRAME SYSTEM:
+
+Inside the container create 4 IMAGE FRAMES.
+
+These are placeholders for future story/gallery images.
+
+Do NOT render example images.
+Do NOT use uploaded image.
+Do NOT insert banners.
+
+Frames should support:
+- object-fit: cover
+- overflow hidden
+- image upload later
+- responsive scaling
+
+Pattern:
+[Tall] [Wide] [Tall] [Wide]
+
+FRAME 1:
+- Vertical rounded image frame
+- Taller than width
+- Positioned slightly higher
+
+FRAME 2:
+- Horizontal rounded image frame
+- Lower alignment
+- Width greater than height
+
+FRAME 3:
+- Exact copy of Frame 1
+
+FRAME 4:
+- Exact copy of Frame 2
+
+Layout Rules:
+- Equal spacing
+- Horizontally centered
+- Frames overlap both background colors
+- Frames remain empty until content is provided
+- If image exists → show image
+- If no image → show placeholder state
+
+EMPTY STATE:
+- Transparent or theme-colored placeholder
+- No sample image
+- No stock photo
+- No logo
+
+Responsive:
+Desktop:
+[Tall][Wide][Tall][Wide]
+
+Mobile:
+Stack while preserving shape ratio.
+
+Implementation logic:
+- Build reusable components
+- StoryImageFrame component
+- Pass image URL dynamically
+- Section should work without images
+
+Final result:
+This section must look like a gallery layout made of 4 image containers — NOT one large image pasted inside a frame.
