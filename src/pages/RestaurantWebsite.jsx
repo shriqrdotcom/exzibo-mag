@@ -3250,6 +3250,15 @@ export default function RestaurantWebsite() {
               marginBottom: '10px',
             }}>
               <p style={{
+                fontSize: '11px',
+                fontFamily: "'Times NR MT Pro', 'Times New Roman', 'Georgia', serif",
+                fontWeight: 400,
+                fontStyle: 'italic',
+                color: theme.infoLabel || '#888',
+                letterSpacing: '0.08em',
+                margin: '0 0 14px 0',
+              }}>Crafted With Passion</p>
+              <p style={{
                 fontSize: '15px',
                 fontWeight: 500,
                 color: theme.color,
