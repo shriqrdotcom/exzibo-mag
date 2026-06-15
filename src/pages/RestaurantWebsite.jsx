@@ -3232,7 +3232,7 @@ export default function RestaurantWebsite() {
               const storyImages = { frame1: null, frame2: null, frame3: null, frame4: null }
 
               return (
-                <div style={{ position: 'relative', width: '100%', height: '190px', marginBottom: '4px', borderRadius: '16px', overflow: 'hidden' }}>
+                <div style={{ position: 'relative', width: '100%', height: '190px', marginBottom: '0px', borderRadius: '16px', overflow: 'hidden' }}>
                   <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', padding: '0 14px' }}>
                     <StoryImageFrame src={storyImages.frame1} shape="tall" verticalOffset="-12px" />
                     <StoryImageFrame src={storyImages.frame2} shape="wide" verticalOffset="14px" />
@@ -3246,7 +3246,7 @@ export default function RestaurantWebsite() {
             {/* ── Our Story Quote ── */}
             <div style={{
               textAlign: 'center',
-              padding: '4px 24px 36px',
+              padding: '0px 24px 36px',
               marginBottom: '10px',
             }}>
               <p style={{
