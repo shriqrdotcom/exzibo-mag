@@ -3252,7 +3252,7 @@ export default function RestaurantWebsite() {
               <p style={{
                 fontSize: '15px',
                 fontWeight: 500,
-                color: theme.text || '#ffffff',
+                color: theme.color,
                 lineHeight: 1.9,
                 margin: 0,
                 maxWidth: '520px',
