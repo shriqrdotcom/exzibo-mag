@@ -1,0 +1,72 @@
+I want to redesign the "OUR STORY" section on my menu website.
+
+Current problem:
+- Right now this section shows one large banner image.
+- Remove the large banner completely.
+- Replace it with a custom split-layout structure exactly following the attached reference design.
+- Do NOT auto-convert this into a slider, hero banner, or full-width image.
+
+BACKGROUND:
+- Create a clean two-tone background.
+- Top section background color: Pure White (#FFFFFF)
+- Bottom section background color: Soft Warm Yellow (#F6E88A approximately)
+- The color transition should be a straight horizontal line across the full width.
+- White area should occupy around 55–60% of the section height.
+- Yellow area should occupy around 40–45%.
+- No gradients.
+- No shadows.
+- Keep background flat and minimal.
+
+STRUCTURE:
+Create exactly 4 floating rounded cards placed horizontally.
+
+General Rules:
+- Equal spacing between all 4 cards.
+- Center the entire composition.
+- Cards slightly overlap the white and yellow background split line.
+- Keep alignment perfectly balanced.
+- Same black color for all cards (#000000).
+- Use identical corner radius across every card.
+- No images inside.
+- No text inside.
+- No animation.
+- No hover scaling.
+- Static decorative layout only.
+
+BOX 1:
+- Large vertical rounded rectangle
+- Positioned slightly above the split line
+- Taller than wide
+- Width ≈ 1 unit
+- Height ≈ 1.3–1.4 units
+
+BOX 2:
+- Wide horizontal rounded rectangle
+- Same height style as Box 4
+- Width larger than height
+- Positioned lower than Box 1
+- Top aligned below Box 1
+
+BOX 3:
+- Exact same shape and size as Box 1
+- Same vertical rounded rectangle
+- Match height and width perfectly
+
+BOX 4:
+- Exact same shape and size as Box 2
+- Same horizontal rounded rectangle
+- Match dimensions perfectly
+
+Pattern:
+[Tall Card] [Wide Card] [Tall Card] [Wide Card]
+
+Spacing:
+- Keep consistent horizontal gaps
+- No overlapping between cards
+- Responsive scaling for mobile and desktop
+
+Section behavior:
+- This is the OUR STORY section only.
+- Remove any existing large image/banner.
+- Keep section lightweight and modern.
+- Preserve surrounding page spacing and responsiveness.

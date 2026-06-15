@@ -3204,17 +3204,76 @@ export default function RestaurantWebsite() {
               <div style={{ fontSize: '11px', color: theme.sectionSub, marginTop: '2px' }}>Where every plate tells a story</div>
             </div>
 
-            {/* About hero image — admin-uploaded takes priority, then carousel fallback */}
-            {(aboutData.image || carouselImages.length > 1) && (
-              <div style={{ height: '155px', borderRadius: '16px', overflow: 'hidden', marginBottom: '12px', position: 'relative' }}>
-                {aboutData.image ? (
-                  <img src={aboutData.image} alt="About" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-                ) : (
-                  <div style={{ height: '100%', backgroundImage: `url(${carouselImages[1] || carouselImages[0]})`, backgroundSize: 'cover', backgroundPosition: 'center' }} />
-                )}
-                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.6), transparent)' }} />
+            {/* ── Our Story Decorative Split Layout ── */}
+            <div style={{
+              position: 'relative',
+              width: '100%',
+              height: '180px',
+              marginBottom: '12px',
+              borderRadius: '16px',
+              overflow: 'hidden',
+            }}>
+              {/* Two-tone background */}
+              <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column' }}>
+                <div style={{ flex: '0 0 57%', background: '#FFFFFF' }} />
+                <div style={{ flex: '0 0 43%', background: '#F6E88A' }} />
               </div>
-            )}
+
+              {/* 4 floating cards: [Tall] [Wide] [Tall] [Wide] */}
+              <div style={{
+                position: 'absolute',
+                inset: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '10px',
+                padding: '0 14px',
+              }}>
+                {/* Box 1 — Tall */}
+                <div style={{
+                  background: '#000000',
+                  borderRadius: '14px',
+                  flex: '0 0 auto',
+                  width: '22%',
+                  aspectRatio: '1 / 1.35',
+                  alignSelf: 'center',
+                  marginTop: '-10px',
+                }} />
+
+                {/* Box 2 — Wide */}
+                <div style={{
+                  background: '#000000',
+                  borderRadius: '14px',
+                  flex: '0 0 auto',
+                  width: '28%',
+                  aspectRatio: '1.5 / 1',
+                  alignSelf: 'center',
+                  marginTop: '12px',
+                }} />
+
+                {/* Box 3 — Tall (same as Box 1) */}
+                <div style={{
+                  background: '#000000',
+                  borderRadius: '14px',
+                  flex: '0 0 auto',
+                  width: '22%',
+                  aspectRatio: '1 / 1.35',
+                  alignSelf: 'center',
+                  marginTop: '-10px',
+                }} />
+
+                {/* Box 4 — Wide (same as Box 2) */}
+                <div style={{
+                  background: '#000000',
+                  borderRadius: '14px',
+                  flex: '0 0 auto',
+                  width: '28%',
+                  aspectRatio: '1.5 / 1',
+                  alignSelf: 'center',
+                  marginTop: '12px',
+                }} />
+              </div>
+            </div>
 
             {/* Philosophy card */}
             <div style={{
