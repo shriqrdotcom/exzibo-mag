@@ -3243,6 +3243,31 @@ export default function RestaurantWebsite() {
               )
             })()}
 
+            {/* ── Our Story Quote ── */}
+            <div style={{
+              textAlign: 'center',
+              padding: '32px 20px',
+              marginBottom: '10px',
+            }}>
+              <p style={{
+                fontSize: 'clamp(15px, 4vw, 20px)',
+                fontWeight: 500,
+                color: theme.text || '#ffffff',
+                lineHeight: 1.85,
+                margin: 0,
+                maxWidth: '600px',
+                marginLeft: 'auto',
+                marginRight: 'auto',
+              }}>
+                Passion drives purpose, and purpose leads to progress.<br />
+                Every step forward, no matter how small, brings<br />
+                you closer to your goals. Embrace challenges,<br />
+                learn from every experience, and stay committed<br />
+                to your vision. Consistency today builds<br />
+                the success of tomorrow.
+              </p>
+            </div>
+
             {/* Quick Info */}
             <div style={{ background: theme.statsBg, border: `1px solid ${theme.statsBorder}`, borderRadius: '16px', padding: '18px', marginBottom: '10px' }}>
               <div style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '0.18em', color: theme.infoLabel, textTransform: 'uppercase', marginBottom: '14px' }}>Quick Info</div>
