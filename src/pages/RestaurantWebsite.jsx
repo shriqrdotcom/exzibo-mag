@@ -3251,8 +3251,8 @@ export default function RestaurantWebsite() {
             }}>
               <p style={{
                 fontSize: '11px',
-                fontFamily: "'Times NR MT Pro', 'Times New Roman', 'Georgia', serif",
-                fontWeight: 400,
+                fontFamily: "'Cormorant Garamond', 'Times NR MT Pro', 'Times New Roman', Georgia, serif",
+                fontWeight: 300,
                 fontStyle: 'italic',
                 color: theme.infoLabel || '#888',
                 letterSpacing: '0.08em',
