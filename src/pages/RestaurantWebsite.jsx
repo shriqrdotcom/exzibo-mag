@@ -1842,13 +1842,13 @@ export default function RestaurantWebsite() {
                     navigateToPage('menu')
                   }}
                   style={{
-                    width: '36px', height: '36px', borderRadius: '50%',
+                    width: '40px', height: '40px', borderRadius: '50%',
                     background: 'rgba(30,30,30,0.85)',
-                    border: '1.5px solid rgba(255,255,255,0.28)',
+                    border: '2px solid rgba(255,255,255,0.88)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     cursor: 'pointer', flexShrink: 0,
                     transition: 'transform 0.15s ease, background 0.2s ease',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.35)',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.40)',
                   }}
                   onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.08)'; e.currentTarget.style.background = 'rgba(50,50,50,0.9)' }}
                   onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.background = 'rgba(30,30,30,0.85)' }}
@@ -1861,13 +1861,13 @@ export default function RestaurantWebsite() {
                   <button
                     onClick={() => setMenuSearchOpen(v => !v)}
                     style={{
-                      width: '36px', height: '36px', borderRadius: '50%',
+                      width: '40px', height: '40px', borderRadius: '50%',
                       background: menuSearchOpen ? 'rgba(255,255,255,0.22)' : 'rgba(30,30,30,0.85)',
-                      border: menuSearchOpen ? '1.5px solid rgba(255,255,255,0.55)' : '1.5px solid rgba(255,255,255,0.28)',
+                      border: '2px solid rgba(255,255,255,0.88)',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       cursor: 'pointer', flexShrink: 0,
                       transition: 'transform 0.15s ease, background 0.2s ease, border-color 0.2s ease',
-                      boxShadow: '0 2px 8px rgba(0,0,0,0.35)',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.40)',
                     }}
                     onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.08)' }}
                     onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)' }}
@@ -1880,13 +1880,13 @@ export default function RestaurantWebsite() {
                   <button
                     onClick={() => setShowHeaderMenu(v => !v)}
                     style={{
-                      width: '36px', height: '36px', borderRadius: '50%',
+                      width: '40px', height: '40px', borderRadius: '50%',
                       background: 'rgba(30,30,30,0.85)',
-                      border: '1.5px solid rgba(255,255,255,0.28)',
+                      border: '2px solid rgba(255,255,255,0.88)',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       cursor: 'pointer', flexShrink: 0,
                       transition: 'transform 0.15s ease, background 0.2s ease',
-                      boxShadow: '0 2px 8px rgba(0,0,0,0.35)',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.40)',
                     }}
                     onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.08)'; e.currentTarget.style.background = 'rgba(50,50,50,0.9)' }}
                     onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.background = 'rgba(30,30,30,0.85)' }}
