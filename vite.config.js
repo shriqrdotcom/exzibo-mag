@@ -303,10 +303,12 @@ function menuApiPlugin() {
         if (req.method !== 'POST') return json(res, 405, { error: 'Method not allowed' })
         try {
           const { restaurantId, social_links } = await readBody(req)
+          console.log('[update-social] restaurantId:', restaurantId, 'links:', JSON.stringify(social_links))
           if (!restaurantId || typeof social_links !== 'object') {
             return json(res, 400, { error: 'restaurantId and social_links object required' })
           }
           const { url: supabaseUrl, headers } = getServiceHeaders()
+          console.log('[update-social] PATCH →', `${supabaseUrl}/rest/v1/restaurants?id=eq.${restaurantId}`)
           const r = await fetch(
             `${supabaseUrl}/rest/v1/restaurants?id=eq.${encodeURIComponent(restaurantId)}`,
             {
@@ -316,9 +318,13 @@ function menuApiPlugin() {
             }
           )
           const data = await r.json()
+          console.log('[update-social] Supabase status:', r.status, 'response:', JSON.stringify(data))
           if (!r.ok) return json(res, r.status, { error: data })
           return json(res, 200, Array.isArray(data) ? (data[0] ?? {}) : data)
-        } catch (e) { return json(res, 500, { error: e.message }) }
+        } catch (e) {
+          console.error('[update-social] Exception:', e.message)
+          return json(res, 500, { error: e.message })
+        }
       })
 
       // POST /api/orders/update-status — service-role PATCH on orders, bypasses RLS

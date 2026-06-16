@@ -1119,9 +1119,48 @@ export default function RestaurantWebsite() {
     // Fallback poll — refetch every 20 s
     const poll = setInterval(refetchMenu, 20_000)
 
+    // ── Realtime: restaurant profile changes (social links, name, etc.) ──────
+    async function refetchRestaurant() {
+      try {
+        const dbRow = await getRestaurantBySlug(slug)
+        if (!dbRow) return
+        setRestaurant(prev => prev ? {
+          ...prev,
+          social_links: dbRow.social_links || {},
+          socialLinks:  dbRow.social_links || {},
+          name:         dbRow.name         || prev.name,
+          description:  dbRow.description  || prev.description,
+          location:     dbRow.location     || prev.location,
+          phone:        dbRow.phone        || prev.phone,
+          logo:         dbRow.logo         || prev.logo,
+          googleReview: dbRow.google_review|| prev.googleReview,
+        } : prev)
+      } catch (e) {
+        console.warn('[rt-restaurant] Refetch failed:', e.message)
+      }
+    }
+
+    const restaurantCh = supabase
+      .channel(`rt-restaurant-${rid}`)
+      .on('postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'restaurants', filter: `id=eq.${rid}` },
+        refetchRestaurant
+      )
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') console.log('[rt] restaurant subscribed:', rid)
+      })
+
+    // Broadcast channel — admin side sends a push after saving social/profile fields
+    const restaurantBroadcastCh = supabase
+      .channel(`restaurant-updates-${rid}`, { config: { broadcast: { ack: false } } })
+      .on('broadcast', { event: 'restaurant-refresh' }, () => refetchRestaurant())
+      .subscribe()
+
     return () => {
       supabase.removeChannel(channel)
       supabase.removeChannel(broadcastCh)
+      supabase.removeChannel(restaurantCh)
+      supabase.removeChannel(restaurantBroadcastCh)
       clearInterval(poll)
     }
   }, [restaurant?.id])

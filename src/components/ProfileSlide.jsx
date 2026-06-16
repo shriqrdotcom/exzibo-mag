@@ -13,7 +13,15 @@ import { FaXTwitter } from 'react-icons/fa6'
 import AddMembersModal from './AddMembersModal'
 import RemainingDaysModal from './RemainingDaysModal'
 import { updateRestaurant, updateRestaurantSocial, uploadDataUrlToStorage, getTeamMembers, getRestaurantById } from '../lib/db'
+import { supabase } from '../lib/supabase'
 import { processImageFile, isAcceptedImageType } from '../lib/processImage'
+
+function broadcastRestaurantRefresh(restaurantId) {
+  if (!restaurantId || restaurantId === 'default') return
+  supabase.channel(`restaurant-updates-${restaurantId}`).send({
+    type: 'broadcast', event: 'restaurant-refresh', payload: {},
+  }).catch(() => {})
+}
 
 const TEAM_ACCENT_START = '#6366F1'
 const TEAM_ACCENT_END   = '#8B5CF6'
@@ -367,6 +375,7 @@ export default function ProfileSlide({
         const merged = { ...socialLinksRef.current, facebook: facebookUrlInput }
         const updated = await updateRestaurantSocial(restaurantId, merged)
         socialLinksRef.current = updated?.social_links || merged
+        broadcastRestaurantRefresh(restaurantId)
       }
       localStorage.setItem(lsKey, facebookUrlInput)
       setFacebookSuccess(true)
@@ -394,6 +403,7 @@ export default function ProfileSlide({
         const merged = { ...socialLinksRef.current, instagram: instagramUrlInput }
         const updated = await updateRestaurantSocial(restaurantId, merged)
         socialLinksRef.current = updated?.social_links || merged
+        broadcastRestaurantRefresh(restaurantId)
       }
       localStorage.setItem(lsKey, instagramUrlInput)
       setInstagramSuccess(true)
@@ -421,6 +431,7 @@ export default function ProfileSlide({
         const merged = { ...socialLinksRef.current, linkedin: linkedinUrlInput }
         const updated = await updateRestaurantSocial(restaurantId, merged)
         socialLinksRef.current = updated?.social_links || merged
+        broadcastRestaurantRefresh(restaurantId)
       }
       localStorage.setItem(lsKey, linkedinUrlInput)
       setLinkedinSuccess(true)
@@ -448,6 +459,7 @@ export default function ProfileSlide({
         const merged = { ...socialLinksRef.current, youtube: youtubeUrlInput }
         const updated = await updateRestaurantSocial(restaurantId, merged)
         socialLinksRef.current = updated?.social_links || merged
+        broadcastRestaurantRefresh(restaurantId)
       }
       localStorage.setItem(lsKey, youtubeUrlInput)
       setYoutubeSuccess(true)
@@ -475,6 +487,7 @@ export default function ProfileSlide({
         const merged = { ...socialLinksRef.current, twitter: twitterUrlInput }
         const updated = await updateRestaurantSocial(restaurantId, merged)
         socialLinksRef.current = updated?.social_links || merged
+        broadcastRestaurantRefresh(restaurantId)
       }
       localStorage.setItem(lsKey, twitterUrlInput)
       setTwitterSuccess(true)
