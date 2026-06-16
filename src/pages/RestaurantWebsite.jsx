@@ -3366,13 +3366,18 @@ export default function RestaurantWebsite() {
 
             {/* ── SOCIAL LINKS BELOW QUICK INFO ── */}
             {(() => {
+              const ensureUrl = url => {
+                if (!url || !url.trim() || url.trim() === '#') return null
+                const u = url.trim()
+                return /^https?:\/\//i.test(u) ? u : `https://${u}`
+              }
               const sl = restaurant.socialLinks || {}
               const socials = [
-                { key: 'instagram', icon: <FaInstagram size={22} />, href: sl.instagram },
-                { key: 'facebook',  icon: <FaFacebook  size={22} />, href: sl.facebook  },
-                { key: 'linkedin',  icon: <FaLinkedinIn size={20} />, href: sl.linkedin  },
-                { key: 'youtube',   icon: <FaYoutube   size={22} />, href: sl.youtube   },
-                { key: 'twitter',   icon: <FaXTwitter  size={20} />, href: sl.twitter   },
+                { key: 'instagram', icon: <FaInstagram size={22} />, href: ensureUrl(sl.instagram) },
+                { key: 'facebook',  icon: <FaFacebook  size={22} />, href: ensureUrl(sl.facebook)  },
+                { key: 'linkedin',  icon: <FaLinkedinIn size={20} />, href: ensureUrl(sl.linkedin)  },
+                { key: 'youtube',   icon: <FaYoutube   size={22} />, href: ensureUrl(sl.youtube)   },
+                { key: 'twitter',   icon: <FaXTwitter  size={20} />, href: ensureUrl(sl.twitter)   },
               ]
               return (
                 <div style={{
@@ -3443,23 +3448,6 @@ export default function RestaurantWebsite() {
                 <MapPin size={10} /> {restaurant.location}
               </div>
             )}
-            {(() => {
-              const sl = restaurant.socialLinks || {}
-              const has = key => sl[key] && sl[key].trim() && sl[key].trim() !== '#'
-              const anyLink = ['facebook','instagram','twitter','linkedin','youtube','website','whatsapp'].some(has)
-              if (!anyLink) return null
-              return (
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: '10px', marginBottom: '18px' }}>
-                  {has('facebook')  && <SocialBtn href={sl.facebook}  icon={<FaFacebook  size={19} />} brandColor="#1877F2" theme={theme} />}
-                  {has('instagram') && <SocialBtn href={sl.instagram} icon={<FaInstagram size={19} />} brandColor="#E1306C" theme={theme} />}
-                  {has('twitter')   && <SocialBtn href={sl.twitter}   icon={<FaXTwitter  size={18} />} brandColor="#000000" theme={theme} />}
-                  {has('linkedin')  && <SocialBtn href={sl.linkedin}  icon={<FaLinkedinIn size={18} />} brandColor="#0A66C2" theme={theme} />}
-                  {has('youtube')   && <SocialBtn href={sl.youtube}   icon={<FaYoutube   size={19} />} brandColor="#FF0000" theme={theme} />}
-                  {has('website')   && <SocialBtn href={sl.website}   icon={<Globe       size={18} />} brandColor="#0EA5E9" theme={theme} />}
-                  {has('whatsapp')  && <SocialBtn href={sl.whatsapp}  icon={<FaWhatsapp  size={19} />} brandColor="#25D366" theme={theme} />}
-                </div>
-              )
-            })()}
             {restaurant.googleReview && restaurant.googleReview.trim() ? (
               <a
                 href={restaurant.googleReview.trim()}
@@ -3478,62 +3466,6 @@ export default function RestaurantWebsite() {
             <div style={{ marginTop: '18px', fontSize: '10px', color: theme.footerLocation, letterSpacing: '0.12em', textTransform: 'uppercase' }}>Powered by EXZIBO</div>
           </footer>
 
-          {/* ── SOCIAL MEDIA SECTION ── */}
-          {(() => {
-            const sl = restaurant.socialLinks || {}
-            const socials = [
-              { key: 'instagram', icon: <FaInstagram size={22} />, href: sl.instagram },
-              { key: 'facebook',  icon: <FaFacebook  size={22} />, href: sl.facebook  },
-              { key: 'linkedin',  icon: <FaLinkedinIn size={20} />, href: sl.linkedin  },
-              { key: 'youtube',   icon: <FaYoutube   size={22} />, href: sl.youtube   },
-              { key: 'twitter',   icon: <FaXTwitter  size={20} />, href: sl.twitter   },
-            ].filter(s => s.href && s.href.trim() && s.href.trim() !== '#')
-            if (socials.length === 0) return null
-            return (
-              <div style={{
-                background: '#000',
-                padding: '28px 20px 36px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '16px',
-                flexWrap: 'wrap',
-              }}>
-                {socials.map(s => (
-                  <a
-                    key={s.key}
-                    href={s.href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{
-                      width: '62px',
-                      height: '62px',
-                      borderRadius: '50%',
-                      border: '1.5px solid rgba(255,255,255,0.20)',
-                      background: 'transparent',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: '#fff',
-                      textDecoration: 'none',
-                      flexShrink: 0,
-                      transition: 'border-color 0.2s ease, background 0.2s ease',
-                    }}
-                    onMouseEnter={e => {
-                      e.currentTarget.style.borderColor = 'rgba(255,255,255,0.55)'
-                      e.currentTarget.style.background = 'rgba(255,255,255,0.07)'
-                    }}
-                    onMouseLeave={e => {
-                      e.currentTarget.style.borderColor = 'rgba(255,255,255,0.20)'
-                      e.currentTarget.style.background = 'transparent'
-                    }}
-                  >
-                    {s.icon}
-                  </a>
-                ))}
-              </div>
-            )
-          })()}
         </div>
       )}
 
