@@ -158,6 +158,13 @@ function buildTheme(dark) {
     socialBg: dark ? 'rgba(255,255,255,0.05)' : '#f5f5f5',
     socialBorder: dark ? 'rgba(255,255,255,0.09)' : 'rgba(0,0,0,0.08)',
     socialColor: dark ? '#666' : '#888',
+    socialBarBg: dark ? '#000' : '#fff',
+    socialBarBorder: dark ? 'rgba(255,255,255,0.22)' : 'rgba(0,0,0,0.18)',
+    socialBarBorderDim: dark ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.08)',
+    socialBarIcon: dark ? '#fff' : '#111',
+    socialBarIconDim: dark ? 'rgba(255,255,255,0.22)' : 'rgba(0,0,0,0.18)',
+    socialBarHoverBorder: dark ? 'rgba(255,255,255,0.55)' : 'rgba(0,0,0,0.45)',
+    socialBarHoverBg: dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
     btnSecColor: dark ? '#fff' : '#111',
     adminBg: dark ? 'rgba(232,50,26,0.08)' : 'rgba(232,50,26,0.06)',
     adminBorder: dark ? 'rgba(232,50,26,0.18)' : 'rgba(232,50,26,0.14)',
@@ -3331,7 +3338,7 @@ export default function RestaurantWebsite() {
               return (
                 <div style={{
                   marginTop: '10px',
-                  background: '#000',
+                  background: theme.socialBarBg,
                   borderRadius: '16px',
                   padding: '20px 16px',
                   display: 'flex',
@@ -3346,12 +3353,12 @@ export default function RestaurantWebsite() {
                       width: '58px',
                       height: '58px',
                       borderRadius: '50%',
-                      border: `1.5px solid ${hasLink ? 'rgba(255,255,255,0.22)' : 'rgba(255,255,255,0.10)'}`,
+                      border: `1.5px solid ${hasLink ? theme.socialBarBorder : theme.socialBarBorderDim}`,
                       background: 'transparent',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      color: hasLink ? '#fff' : 'rgba(255,255,255,0.25)',
+                      color: hasLink ? theme.socialBarIcon : theme.socialBarIconDim,
                       textDecoration: 'none',
                       flexShrink: 0,
                       transition: 'border-color 0.2s ease, background 0.2s ease',
@@ -3366,11 +3373,11 @@ export default function RestaurantWebsite() {
                           rel="noopener noreferrer"
                           style={commonStyle}
                           onMouseEnter={e => {
-                            e.currentTarget.style.borderColor = 'rgba(255,255,255,0.55)'
-                            e.currentTarget.style.background = 'rgba(255,255,255,0.08)'
+                            e.currentTarget.style.borderColor = theme.socialBarHoverBorder
+                            e.currentTarget.style.background = theme.socialBarHoverBg
                           }}
                           onMouseLeave={e => {
-                            e.currentTarget.style.borderColor = 'rgba(255,255,255,0.22)'
+                            e.currentTarget.style.borderColor = theme.socialBarBorder
                             e.currentTarget.style.background = 'transparent'
                           }}
                         >
