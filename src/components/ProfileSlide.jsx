@@ -318,8 +318,13 @@ export default function ProfileSlide({
 
   const [facebookModalOpen, setFacebookModalOpen] = useState(false)
   const [facebookUrlInput, setFacebookUrlInput] = useState('')
+  const [facebookSaving, setFacebookSaving] = useState(false)
+  const [facebookSuccess, setFacebookSuccess] = useState(false)
+  const [facebookError, setFacebookError] = useState('')
 
   async function handleFacebookSave() {
+    setFacebookSaving(true)
+    setFacebookError('')
     const lsKey = `exzibo_social_facebook_${restaurantId || 'default'}`
     try {
       if (isRealId(restaurantId)) {
@@ -328,17 +333,25 @@ export default function ProfileSlide({
         socialLinksRef.current = updated?.social_links || merged
       }
       localStorage.setItem(lsKey, facebookUrlInput)
+      setFacebookSuccess(true)
+      setTimeout(() => { setFacebookSuccess(false); setFacebookModalOpen(false) }, 1200)
     } catch (err) {
       console.error('[Facebook save]', err)
-      localStorage.setItem(lsKey, facebookUrlInput)
+      setFacebookError('Save failed. Check your connection.')
+    } finally {
+      setFacebookSaving(false)
     }
-    setFacebookModalOpen(false)
   }
 
   const [instagramModalOpen, setInstagramModalOpen] = useState(false)
   const [instagramUrlInput, setInstagramUrlInput] = useState('')
+  const [instagramSaving, setInstagramSaving] = useState(false)
+  const [instagramSuccess, setInstagramSuccess] = useState(false)
+  const [instagramError, setInstagramError] = useState('')
 
   async function handleInstagramSave() {
+    setInstagramSaving(true)
+    setInstagramError('')
     const lsKey = `exzibo_social_instagram_${restaurantId || 'default'}`
     try {
       if (isRealId(restaurantId)) {
@@ -347,17 +360,25 @@ export default function ProfileSlide({
         socialLinksRef.current = updated?.social_links || merged
       }
       localStorage.setItem(lsKey, instagramUrlInput)
+      setInstagramSuccess(true)
+      setTimeout(() => { setInstagramSuccess(false); setInstagramModalOpen(false) }, 1200)
     } catch (err) {
       console.error('[Instagram save]', err)
-      localStorage.setItem(lsKey, instagramUrlInput)
+      setInstagramError('Save failed. Check your connection.')
+    } finally {
+      setInstagramSaving(false)
     }
-    setInstagramModalOpen(false)
   }
 
   const [linkedinModalOpen, setLinkedinModalOpen] = useState(false)
   const [linkedinUrlInput, setLinkedinUrlInput] = useState('')
+  const [linkedinSaving, setLinkedinSaving] = useState(false)
+  const [linkedinSuccess, setLinkedinSuccess] = useState(false)
+  const [linkedinError, setLinkedinError] = useState('')
 
   async function handleLinkedinSave() {
+    setLinkedinSaving(true)
+    setLinkedinError('')
     const lsKey = `exzibo_social_linkedin_${restaurantId || 'default'}`
     try {
       if (isRealId(restaurantId)) {
@@ -366,17 +387,25 @@ export default function ProfileSlide({
         socialLinksRef.current = updated?.social_links || merged
       }
       localStorage.setItem(lsKey, linkedinUrlInput)
+      setLinkedinSuccess(true)
+      setTimeout(() => { setLinkedinSuccess(false); setLinkedinModalOpen(false) }, 1200)
     } catch (err) {
       console.error('[LinkedIn save]', err)
-      localStorage.setItem(lsKey, linkedinUrlInput)
+      setLinkedinError('Save failed. Check your connection.')
+    } finally {
+      setLinkedinSaving(false)
     }
-    setLinkedinModalOpen(false)
   }
 
   const [youtubeModalOpen, setYoutubeModalOpen] = useState(false)
   const [youtubeUrlInput, setYoutubeUrlInput] = useState('')
+  const [youtubeSaving, setYoutubeSaving] = useState(false)
+  const [youtubeSuccess, setYoutubeSuccess] = useState(false)
+  const [youtubeError, setYoutubeError] = useState('')
 
   async function handleYoutubeSave() {
+    setYoutubeSaving(true)
+    setYoutubeError('')
     const lsKey = `exzibo_social_youtube_${restaurantId || 'default'}`
     try {
       if (isRealId(restaurantId)) {
@@ -385,17 +414,25 @@ export default function ProfileSlide({
         socialLinksRef.current = updated?.social_links || merged
       }
       localStorage.setItem(lsKey, youtubeUrlInput)
+      setYoutubeSuccess(true)
+      setTimeout(() => { setYoutubeSuccess(false); setYoutubeModalOpen(false) }, 1200)
     } catch (err) {
       console.error('[YouTube save]', err)
-      localStorage.setItem(lsKey, youtubeUrlInput)
+      setYoutubeError('Save failed. Check your connection.')
+    } finally {
+      setYoutubeSaving(false)
     }
-    setYoutubeModalOpen(false)
   }
 
   const [twitterModalOpen, setTwitterModalOpen] = useState(false)
   const [twitterUrlInput, setTwitterUrlInput] = useState('')
+  const [twitterSaving, setTwitterSaving] = useState(false)
+  const [twitterSuccess, setTwitterSuccess] = useState(false)
+  const [twitterError, setTwitterError] = useState('')
 
   async function handleTwitterSave() {
+    setTwitterSaving(true)
+    setTwitterError('')
     const lsKey = `exzibo_social_twitter_${restaurantId || 'default'}`
     try {
       if (isRealId(restaurantId)) {
@@ -404,11 +441,14 @@ export default function ProfileSlide({
         socialLinksRef.current = updated?.social_links || merged
       }
       localStorage.setItem(lsKey, twitterUrlInput)
+      setTwitterSuccess(true)
+      setTimeout(() => { setTwitterSuccess(false); setTwitterModalOpen(false) }, 1200)
     } catch (err) {
       console.error('[Twitter save]', err)
-      localStorage.setItem(lsKey, twitterUrlInput)
+      setTwitterError('Save failed. Check your connection.')
+    } finally {
+      setTwitterSaving(false)
     }
-    setTwitterModalOpen(false)
   }
 
   useEffect(() => { setPreviewUrl(logoUrl || '') }, [logoUrl])
@@ -1005,17 +1045,24 @@ export default function ProfileSlide({
                   </div>
                   <button
                     onClick={handleFacebookSave}
+                    disabled={facebookSaving}
                     style={{
                       padding: '8px 20px',
-                      background: '#bbf7d0',
+                      background: facebookSuccess ? '#dcfce7' : '#bbf7d0',
                       border: 'none', borderRadius: '10px',
                       color: '#166534', fontSize: '13px', fontWeight: 800,
-                      letterSpacing: '0.05em', cursor: 'pointer',
+                      letterSpacing: '0.05em', cursor: facebookSaving ? 'default' : 'pointer',
+                      display: 'flex', alignItems: 'center', gap: '5px', opacity: facebookSaving ? 0.7 : 1,
                     }}
                   >
-                    SAVE
+                    {facebookSaving
+                      ? <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} />
+                      : facebookSuccess ? <><Check size={13} /> SAVED</> : 'SAVE'}
                   </button>
                 </div>
+                {facebookError && (
+                  <p style={{ margin: '6px 0 0', fontSize: '12px', color: '#dc2626', fontWeight: 600 }}>{facebookError}</p>
+                )}
                 {/* URL input pill */}
                 <div style={{
                   display: 'flex', alignItems: 'center', gap: '10px',
@@ -1023,6 +1070,7 @@ export default function ProfileSlide({
                   border: '1.5px solid #e2e8f0',
                   borderRadius: '50px',
                   padding: '10px 16px',
+                  marginTop: '10px',
                 }}>
                   <Link2 size={16} color="#94a3b8" strokeWidth={2} style={{ flexShrink: 0 }} />
                   <span style={{ fontWeight: 700, fontSize: '13px', color: '#334155', whiteSpace: 'nowrap' }}>
@@ -1033,7 +1081,7 @@ export default function ProfileSlide({
                     value={facebookUrlInput}
                     onChange={e => setFacebookUrlInput(e.target.value)}
                     onKeyDown={e => { if (e.key === 'Enter') handleFacebookSave() }}
-                    placeholder="https://g.page/..."
+                    placeholder="https://facebook.com/..."
                     autoFocus
                     style={{
                       flex: 1, border: 'none', background: 'transparent',
@@ -1076,17 +1124,24 @@ export default function ProfileSlide({
                   </div>
                   <button
                     onClick={handleInstagramSave}
+                    disabled={instagramSaving}
                     style={{
                       padding: '8px 20px',
-                      background: '#bbf7d0',
+                      background: instagramSuccess ? '#dcfce7' : '#bbf7d0',
                       border: 'none', borderRadius: '10px',
                       color: '#166534', fontSize: '13px', fontWeight: 800,
-                      letterSpacing: '0.05em', cursor: 'pointer',
+                      letterSpacing: '0.05em', cursor: instagramSaving ? 'default' : 'pointer',
+                      display: 'flex', alignItems: 'center', gap: '5px', opacity: instagramSaving ? 0.7 : 1,
                     }}
                   >
-                    SAVE
+                    {instagramSaving
+                      ? <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} />
+                      : instagramSuccess ? <><Check size={13} /> SAVED</> : 'SAVE'}
                   </button>
                 </div>
+                {instagramError && (
+                  <p style={{ margin: '6px 0 0', fontSize: '12px', color: '#dc2626', fontWeight: 600 }}>{instagramError}</p>
+                )}
                 {/* URL input pill */}
                 <div style={{
                   display: 'flex', alignItems: 'center', gap: '10px',
@@ -1094,6 +1149,7 @@ export default function ProfileSlide({
                   border: '1.5px solid #e2e8f0',
                   borderRadius: '50px',
                   padding: '10px 16px',
+                  marginTop: '10px',
                 }}>
                   <Link2 size={16} color="#94a3b8" strokeWidth={2} style={{ flexShrink: 0 }} />
                   <span style={{ fontWeight: 700, fontSize: '13px', color: '#334155', whiteSpace: 'nowrap' }}>
@@ -1104,7 +1160,7 @@ export default function ProfileSlide({
                     value={instagramUrlInput}
                     onChange={e => setInstagramUrlInput(e.target.value)}
                     onKeyDown={e => { if (e.key === 'Enter') handleInstagramSave() }}
-                    placeholder="https://g.page/..."
+                    placeholder="https://instagram.com/..."
                     autoFocus
                     style={{
                       flex: 1, border: 'none', background: 'transparent',
@@ -1147,17 +1203,24 @@ export default function ProfileSlide({
                   </div>
                   <button
                     onClick={handleLinkedinSave}
+                    disabled={linkedinSaving}
                     style={{
                       padding: '8px 20px',
-                      background: '#bbf7d0',
+                      background: linkedinSuccess ? '#dcfce7' : '#bbf7d0',
                       border: 'none', borderRadius: '10px',
                       color: '#166534', fontSize: '13px', fontWeight: 800,
-                      letterSpacing: '0.05em', cursor: 'pointer',
+                      letterSpacing: '0.05em', cursor: linkedinSaving ? 'default' : 'pointer',
+                      display: 'flex', alignItems: 'center', gap: '5px', opacity: linkedinSaving ? 0.7 : 1,
                     }}
                   >
-                    SAVE
+                    {linkedinSaving
+                      ? <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} />
+                      : linkedinSuccess ? <><Check size={13} /> SAVED</> : 'SAVE'}
                   </button>
                 </div>
+                {linkedinError && (
+                  <p style={{ margin: '6px 0 0', fontSize: '12px', color: '#dc2626', fontWeight: 600 }}>{linkedinError}</p>
+                )}
                 {/* URL input pill */}
                 <div style={{
                   display: 'flex', alignItems: 'center', gap: '10px',
@@ -1165,6 +1228,7 @@ export default function ProfileSlide({
                   border: '1.5px solid #e2e8f0',
                   borderRadius: '50px',
                   padding: '10px 16px',
+                  marginTop: '10px',
                 }}>
                   <Link2 size={16} color="#94a3b8" strokeWidth={2} style={{ flexShrink: 0 }} />
                   <span style={{ fontWeight: 700, fontSize: '13px', color: '#334155', whiteSpace: 'nowrap' }}>
@@ -1218,17 +1282,24 @@ export default function ProfileSlide({
                   </div>
                   <button
                     onClick={handleYoutubeSave}
+                    disabled={youtubeSaving}
                     style={{
                       padding: '8px 20px',
-                      background: '#bbf7d0',
+                      background: youtubeSuccess ? '#dcfce7' : '#bbf7d0',
                       border: 'none', borderRadius: '10px',
                       color: '#166534', fontSize: '13px', fontWeight: 800,
-                      letterSpacing: '0.05em', cursor: 'pointer',
+                      letterSpacing: '0.05em', cursor: youtubeSaving ? 'default' : 'pointer',
+                      display: 'flex', alignItems: 'center', gap: '5px', opacity: youtubeSaving ? 0.7 : 1,
                     }}
                   >
-                    SAVE
+                    {youtubeSaving
+                      ? <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} />
+                      : youtubeSuccess ? <><Check size={13} /> SAVED</> : 'SAVE'}
                   </button>
                 </div>
+                {youtubeError && (
+                  <p style={{ margin: '6px 0 0', fontSize: '12px', color: '#dc2626', fontWeight: 600 }}>{youtubeError}</p>
+                )}
                 {/* URL input pill */}
                 <div style={{
                   display: 'flex', alignItems: 'center', gap: '10px',
@@ -1236,6 +1307,7 @@ export default function ProfileSlide({
                   border: '1.5px solid #e2e8f0',
                   borderRadius: '50px',
                   padding: '10px 16px',
+                  marginTop: '10px',
                 }}>
                   <Link2 size={16} color="#94a3b8" strokeWidth={2} style={{ flexShrink: 0 }} />
                   <span style={{ fontWeight: 700, fontSize: '13px', color: '#334155', whiteSpace: 'nowrap' }}>
@@ -1288,23 +1360,31 @@ export default function ProfileSlide({
                   </div>
                   <button
                     onClick={handleTwitterSave}
+                    disabled={twitterSaving}
                     style={{
                       padding: '8px 20px',
-                      background: '#bbf7d0',
+                      background: twitterSuccess ? '#dcfce7' : '#bbf7d0',
                       border: 'none', borderRadius: '10px',
                       color: '#166534', fontSize: '13px', fontWeight: 800,
-                      letterSpacing: '0.05em', cursor: 'pointer',
+                      letterSpacing: '0.05em', cursor: twitterSaving ? 'default' : 'pointer',
+                      display: 'flex', alignItems: 'center', gap: '5px', opacity: twitterSaving ? 0.7 : 1,
                     }}
                   >
-                    SAVE
+                    {twitterSaving
+                      ? <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} />
+                      : twitterSuccess ? <><Check size={13} /> SAVED</> : 'SAVE'}
                   </button>
                 </div>
+                {twitterError && (
+                  <p style={{ margin: '6px 0 0', fontSize: '12px', color: '#dc2626', fontWeight: 600 }}>{twitterError}</p>
+                )}
                 <div style={{
                   display: 'flex', alignItems: 'center', gap: '10px',
                   background: '#f1f5f9',
                   border: '1.5px solid #e2e8f0',
                   borderRadius: '50px',
                   padding: '10px 16px',
+                  marginTop: '10px',
                 }}>
                   <Link2 size={16} color="#94a3b8" strokeWidth={2} style={{ flexShrink: 0 }} />
                   <span style={{ fontWeight: 700, fontSize: '13px', color: '#334155', whiteSpace: 'nowrap' }}>
