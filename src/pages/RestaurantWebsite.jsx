@@ -1116,9 +1116,6 @@ export default function RestaurantWebsite() {
       .on('broadcast', { event: 'menu-refresh' }, () => refetchMenu())
       .subscribe()
 
-    // Fallback poll — refetch every 20 s
-    const poll = setInterval(refetchMenu, 20_000)
-
     // ── Realtime: restaurant profile changes (social links, name, etc.) ──────
     async function refetchRestaurant() {
       try {
@@ -1155,6 +1152,9 @@ export default function RestaurantWebsite() {
       .channel(`restaurant-updates-${rid}`, { config: { broadcast: { ack: false } } })
       .on('broadcast', { event: 'restaurant-refresh' }, () => refetchRestaurant())
       .subscribe()
+
+    // Fallback poll — refetch menu AND restaurant profile every 20 s
+    const poll = setInterval(() => { refetchMenu(); refetchRestaurant() }, 20_000)
 
     return () => {
       supabase.removeChannel(channel)

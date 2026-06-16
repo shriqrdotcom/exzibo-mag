@@ -16,12 +16,6 @@ import { updateRestaurant, updateRestaurantSocial, uploadDataUrlToStorage, getTe
 import { supabase } from '../lib/supabase'
 import { processImageFile, isAcceptedImageType } from '../lib/processImage'
 
-function broadcastRestaurantRefresh(restaurantId) {
-  if (!restaurantId || restaurantId === 'default') return
-  supabase.channel(`restaurant-updates-${restaurantId}`).send({
-    type: 'broadcast', event: 'restaurant-refresh', payload: {},
-  }).catch(() => {})
-}
 
 const TEAM_ACCENT_START = '#6366F1'
 const TEAM_ACCENT_END   = '#8B5CF6'
@@ -138,6 +132,8 @@ export default function ProfileSlide({
   const nameInputRef = useRef(null)
   const phoneInputRef = useRef(null)
   const addressRef = useRef(null)
+  const restaurantBroadcastRef = useRef(null)
+  const restaurantChannelReadyRef = useRef(false)
 
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState('')
@@ -329,6 +325,35 @@ export default function ProfileSlide({
     loadSocialLinks()
   }, [restaurantId])
 
+  // Persistent broadcast channel — subscribes once, stays ready to send
+  useEffect(() => {
+    if (!restaurantId || restaurantId === 'default') return
+    const ch = supabase
+      .channel(`restaurant-updates-${restaurantId}`, { config: { broadcast: { ack: false } } })
+      .subscribe((status) => {
+        restaurantChannelReadyRef.current = status === 'SUBSCRIBED'
+        restaurantBroadcastRef.current = ch
+      })
+    return () => {
+      restaurantBroadcastRef.current = null
+      restaurantChannelReadyRef.current = false
+      supabase.removeChannel(ch)
+    }
+  }, [restaurantId])
+
+  async function sendRestaurantRefresh() {
+    const ch = restaurantBroadcastRef.current
+    if (!ch) return
+    try {
+      const result = await ch.send({ type: 'broadcast', event: 'restaurant-refresh', payload: {} })
+      if (result !== 'ok') {
+        setTimeout(() => {
+          restaurantBroadcastRef.current?.send({ type: 'broadcast', event: 'restaurant-refresh', payload: {} })
+        }, 2000)
+      }
+    } catch {}
+  }
+
   async function handleTelegramSave() {
     setTelegramSaving(true)
     const lsKey = `exzibo_telegram_${restaurantId || 'default'}`
@@ -375,7 +400,7 @@ export default function ProfileSlide({
         const merged = { ...socialLinksRef.current, facebook: facebookUrlInput }
         const updated = await updateRestaurantSocial(restaurantId, merged)
         socialLinksRef.current = updated?.social_links || merged
-        broadcastRestaurantRefresh(restaurantId)
+        sendRestaurantRefresh()
       }
       localStorage.setItem(lsKey, facebookUrlInput)
       setFacebookSuccess(true)
@@ -403,7 +428,7 @@ export default function ProfileSlide({
         const merged = { ...socialLinksRef.current, instagram: instagramUrlInput }
         const updated = await updateRestaurantSocial(restaurantId, merged)
         socialLinksRef.current = updated?.social_links || merged
-        broadcastRestaurantRefresh(restaurantId)
+        sendRestaurantRefresh()
       }
       localStorage.setItem(lsKey, instagramUrlInput)
       setInstagramSuccess(true)
@@ -431,7 +456,7 @@ export default function ProfileSlide({
         const merged = { ...socialLinksRef.current, linkedin: linkedinUrlInput }
         const updated = await updateRestaurantSocial(restaurantId, merged)
         socialLinksRef.current = updated?.social_links || merged
-        broadcastRestaurantRefresh(restaurantId)
+        sendRestaurantRefresh()
       }
       localStorage.setItem(lsKey, linkedinUrlInput)
       setLinkedinSuccess(true)
@@ -459,7 +484,7 @@ export default function ProfileSlide({
         const merged = { ...socialLinksRef.current, youtube: youtubeUrlInput }
         const updated = await updateRestaurantSocial(restaurantId, merged)
         socialLinksRef.current = updated?.social_links || merged
-        broadcastRestaurantRefresh(restaurantId)
+        sendRestaurantRefresh()
       }
       localStorage.setItem(lsKey, youtubeUrlInput)
       setYoutubeSuccess(true)
@@ -487,7 +512,7 @@ export default function ProfileSlide({
         const merged = { ...socialLinksRef.current, twitter: twitterUrlInput }
         const updated = await updateRestaurantSocial(restaurantId, merged)
         socialLinksRef.current = updated?.social_links || merged
-        broadcastRestaurantRefresh(restaurantId)
+        sendRestaurantRefresh()
       }
       localStorage.setItem(lsKey, twitterUrlInput)
       setTwitterSuccess(true)
