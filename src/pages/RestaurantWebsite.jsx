@@ -1844,7 +1844,7 @@ export default function RestaurantWebsite() {
                   style={{
                     width: '40px', height: '40px', borderRadius: '50%',
                     background: 'rgba(30,30,30,0.85)',
-                    border: '1.5px solid rgba(255,255,255,0.28)',
+                    border: 'none',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     cursor: 'pointer', flexShrink: 0,
                     transition: 'transform 0.15s ease, background 0.2s ease',
@@ -1863,7 +1863,7 @@ export default function RestaurantWebsite() {
                     style={{
                       width: '40px', height: '40px', borderRadius: '50%',
                       background: menuSearchOpen ? 'rgba(255,255,255,0.22)' : 'rgba(30,30,30,0.85)',
-                      border: menuSearchOpen ? '1.5px solid rgba(255,255,255,0.55)' : '1.5px solid rgba(255,255,255,0.28)',
+                      border: 'none',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       cursor: 'pointer', flexShrink: 0,
                       transition: 'transform 0.15s ease, background 0.2s ease, border-color 0.2s ease',
@@ -1882,7 +1882,7 @@ export default function RestaurantWebsite() {
                     style={{
                       width: '40px', height: '40px', borderRadius: '50%',
                       background: 'rgba(30,30,30,0.85)',
-                      border: '1.5px solid rgba(255,255,255,0.28)',
+                      border: 'none',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       cursor: 'pointer', flexShrink: 0,
                       transition: 'transform 0.15s ease, background 0.2s ease',
