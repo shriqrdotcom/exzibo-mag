@@ -3051,6 +3051,7 @@ function SettingsPanel({ draft, setDraft, accentStart, accentEnd, onSave, saved,
   const fileInputRef = useRef(null)
 
   const carouselInputRef = useRef(null)
+  const slotUploadIdxRef = useRef(null)
   const [carouselImages, setCarouselImages] = useState([])
   const [carouselIdx, setCarouselIdx] = useState(0)
   const [galleryError, setGalleryError] = useState('')
@@ -3074,10 +3075,11 @@ function SettingsPanel({ draft, setDraft, accentStart, accentEnd, onSave, saved,
     setGalleryError(''); setGallerySuccess(false)
     const valid = Array.from(files).filter(f => isAcceptedImageType(f))
     if (!valid.length) { setGalleryError('Only image files are supported (JPG, PNG, WEBP, HEIC).'); return }
-    const currentCount = carouselImages.length
-    if (currentCount >= MAX_GALLERY) { setGalleryError(`Maximum ${MAX_GALLERY} images allowed.`); return }
-    const canAdd = MAX_GALLERY - currentCount
-    const toProcess = valid.slice(0, canAdd)
+    const replaceIdx = slotUploadIdxRef.current
+    slotUploadIdxRef.current = null
+    const isReplacing = replaceIdx !== null && replaceIdx < carouselImages.length
+    if (!isReplacing && carouselImages.length >= MAX_GALLERY) { setGalleryError(`Maximum ${MAX_GALLERY} images allowed.`); return }
+    const toProcess = valid.slice(0, isReplacing ? 1 : MAX_GALLERY - carouselImages.length)
     setGalleryCompressing(true)
     const isRealRestaurant = restaurantId && restaurantId !== 'demo'
     try {
@@ -3090,7 +3092,13 @@ function SettingsPanel({ draft, setDraft, accentStart, accentEnd, onSave, saved,
       }))
       const good = results.filter(Boolean)
       if (!good.length) { setGalleryError('Failed to process images.'); return }
-      const newImages = [...carouselImages, ...good]
+      let newImages
+      if (isReplacing) {
+        newImages = [...carouselImages]
+        newImages[replaceIdx] = good[0]
+      } else {
+        newImages = [...carouselImages, ...good]
+      }
       setCarouselImages(newImages)
       localStorage.setItem(`exzibo_carousel_${restaurantId || 'default'}`, JSON.stringify(newImages))
       window.dispatchEvent(new CustomEvent('exzibo-carousel-changed', { detail: { restaurantId, images: newImages } }))
@@ -3098,9 +3106,7 @@ function SettingsPanel({ draft, setDraft, accentStart, accentEnd, onSave, saved,
         updateRestaurant(restaurantId, { images: newImages }).catch(e => console.warn('[carousel] DB update failed:', e.message))
       }
       setCarouselIdx(0)
-      if (valid.length > canAdd) {
-        setGalleryError(`Only ${canAdd} image${canAdd !== 1 ? 's' : ''} added — gallery is full.`)
-      } else { setGallerySuccess(true); setTimeout(() => setGallerySuccess(false), 2500) }
+      setGallerySuccess(true); setTimeout(() => setGallerySuccess(false), 2500)
     } catch { setGalleryError('Failed to process images.') }
     finally { setGalleryCompressing(false) }
   }
@@ -3237,33 +3243,83 @@ function SettingsPanel({ draft, setDraft, accentStart, accentEnd, onSave, saved,
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
 
-        {/* Image Gallery */}
-        <input ref={carouselInputRef} type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={e => { if (e.target.files?.length) handleCarouselFiles(e.target.files); e.target.value = '' }} />
+        {/* Image Gallery — individual slots grid */}
+        <input ref={carouselInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={e => { if (e.target.files?.length) handleCarouselFiles(e.target.files); e.target.value = '' }} />
         <div style={cardStyle}>
-          <div style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#94a3b8', marginBottom: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#94a3b8', marginBottom: '12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span>Image Gallery ({carouselImages.length}/{MAX_GALLERY})</span>
             {galleryCompressing && <span style={{ fontSize: '10px', color: '#94a3b8', fontWeight: 500 }}>Compressing…</span>}
           </div>
-          {galleryError && <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: '8px', padding: '7px 10px', marginBottom: '8px', color: '#EF4444', fontSize: '11px', fontWeight: 600 }}><AlertCircle size={12} /> {galleryError}</div>}
-          {gallerySuccess && <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#F0FDF4', border: '1px solid #A7F3D0', borderRadius: '8px', padding: '7px 10px', marginBottom: '8px', color: '#10B981', fontSize: '11px', fontWeight: 600 }}><CheckCircle2 size={12} /> Images saved!</div>}
-          {carouselImages.length === 0 ? (
-            <div onClick={() => carouselInputRef.current?.click()} style={{ background: '#f8fafc', borderRadius: '12px', height: '120px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', position: 'relative', gap: '6px', border: '2px dashed #e2e8f0' }}>
-              <ImageIcon size={26} color="#cbd5e1" strokeWidth={1.2} />
-              <span style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 500 }}>Tap to add photos</span>
-              <button onClick={e => { e.stopPropagation(); carouselInputRef.current?.click() }} style={{ position: 'absolute', bottom: '8px', right: '8px', width: '26px', height: '26px', borderRadius: '8px', background: '#fff', border: '1.5px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '16px', color: '#555', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', zIndex: 2 }}>+</button>
-            </div>
-          ) : (
-            <div style={{ background: '#f1f5f9', borderRadius: '12px', height: '120px', position: 'relative', overflow: 'hidden' }}>
-              <img src={carouselImages[carouselIdx]} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '12px', display: 'block' }} />
-              {carouselImages.length > 1 && (
-                <>
-                  <button onClick={() => setCarouselIdx(i => (i - 1 + carouselImages.length) % carouselImages.length)} style={{ position: 'absolute', left: '6px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(0,0,0,0.4)', border: 'none', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#fff', fontSize: '14px' }}>‹</button>
-                  <button onClick={() => setCarouselIdx(i => (i + 1) % carouselImages.length)} style={{ position: 'absolute', right: '36px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(0,0,0,0.4)', border: 'none', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#fff', fontSize: '14px' }}>›</button>
-                </>
-              )}
-              <button onClick={e => { e.stopPropagation(); carouselInputRef.current?.click() }} style={{ position: 'absolute', bottom: '8px', right: '8px', width: '26px', height: '26px', borderRadius: '8px', background: 'rgba(255,255,255,0.9)', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '16px', color: '#555', boxShadow: '0 1px 4px rgba(0,0,0,0.15)', zIndex: 2 }}>+</button>
-              <button onClick={e => { e.stopPropagation(); removeCarouselImage(carouselIdx) }} style={{ position: 'absolute', top: '6px', right: '6px', width: '22px', height: '22px', borderRadius: '50%', background: 'rgba(0,0,0,0.5)', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#fff', zIndex: 2 }}><X size={11} /></button>
-            </div>
+          {galleryError && <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: '8px', padding: '7px 10px', marginBottom: '10px', color: '#EF4444', fontSize: '11px', fontWeight: 600 }}><AlertCircle size={12} /> {galleryError}</div>}
+          {gallerySuccess && <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#F0FDF4', border: '1px solid #A7F3D0', borderRadius: '8px', padding: '7px 10px', marginBottom: '10px', color: '#10B981', fontSize: '11px', fontWeight: 600 }}><CheckCircle2 size={12} /> Images saved!</div>}
+
+          {/* 4-slot grid — filled slots show thumbnail + ×; empty slot shows + Add */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
+            {Array.from({ length: Math.max(4, carouselImages.length + (carouselImages.length < MAX_GALLERY ? 1 : 0)) }).map((_, i) => {
+              const img = carouselImages[i]
+              const isAddSlot = !img && carouselImages.length < MAX_GALLERY && i === carouselImages.length
+              const isHiddenEmpty = !img && !isAddSlot
+              if (isHiddenEmpty) return null
+              return (
+                <div
+                  key={i}
+                  onClick={() => {
+                    if (img) {
+                      slotUploadIdxRef.current = i
+                      carouselInputRef.current?.click()
+                    } else {
+                      slotUploadIdxRef.current = null
+                      carouselInputRef.current?.click()
+                    }
+                  }}
+                  style={{
+                    position: 'relative',
+                    paddingTop: '100%',
+                    borderRadius: '14px',
+                    background: img ? 'transparent' : 'rgba(15,23,42,0.6)',
+                    border: img ? 'none' : '1.5px dashed rgba(148,163,184,0.25)',
+                    overflow: 'hidden',
+                    cursor: 'pointer',
+                  }}
+                >
+                  {img ? (
+                    <>
+                      <img
+                        src={img}
+                        alt=""
+                        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', display: 'block', borderRadius: '14px' }}
+                      />
+                      <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0)', transition: 'background 0.15s' }}
+                        onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,0,0,0.18)'}
+                        onMouseLeave={e => e.currentTarget.style.background = 'rgba(0,0,0,0)'}
+                      />
+                      <button
+                        onClick={e => { e.stopPropagation(); removeCarouselImage(i) }}
+                        style={{ position: 'absolute', top: '5px', right: '5px', width: '20px', height: '20px', borderRadius: '50%', background: 'rgba(0,0,0,0.65)', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#fff', zIndex: 3 }}
+                      >
+                        <X size={10} />
+                      </button>
+                    </>
+                  ) : (
+                    <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '5px' }}>
+                      <div style={{ width: '30px', height: '30px', borderRadius: '9px', background: 'rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <ImageIcon size={15} color="rgba(148,163,184,0.7)" strokeWidth={1.5} />
+                      </div>
+                      <span style={{ fontSize: '9px', fontWeight: 700, color: 'rgba(148,163,184,0.6)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Add</span>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+
+          {carouselImages.length < MAX_GALLERY && (
+            <button
+              onClick={() => { slotUploadIdxRef.current = null; carouselInputRef.current?.click() }}
+              style={{ marginTop: '10px', width: '100%', padding: '8px', borderRadius: '10px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: '#94a3b8', fontSize: '11px', fontWeight: 600, cursor: 'pointer', letterSpacing: '0.06em', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+            >
+              <span style={{ fontSize: '15px', lineHeight: 1 }}>+</span> Add More Photos
+            </button>
           )}
         </div>
 
