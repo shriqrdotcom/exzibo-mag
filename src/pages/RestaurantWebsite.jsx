@@ -1821,9 +1821,9 @@ export default function RestaurantWebsite() {
                   display: 'flex', alignItems: 'center', gap: '3px',
                   marginTop: '2px',
                 }}>
-                  <MapPin size={11} color={themeColor} style={{ flexShrink: 0 }} />
+                  <MapPin size={9} color='rgba(255,255,255,0.45)' style={{ flexShrink: 0 }} />
                   <div style={{
-                    fontSize: '11px', color: 'rgba(255,255,255,0.65)', fontWeight: 500,
+                    fontSize: '9px', color: 'rgba(255,255,255,0.55)', fontWeight: 500,
                     whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                   }}>
                     {restaurant.location || 'Fine Dining'}
