@@ -248,32 +248,51 @@ export default function ProfileSlide({
           const restaurant = await getRestaurantById(restaurantId)
           if (restaurant) {
             const sl = restaurant.social_links || {}
-            socialLinksRef.current = sl
-            // Telegram
-            const tval = sl.telegram || ''
+
+            // For each field: prefer Supabase value when non-empty,
+            // otherwise fall back to localStorage. Never overwrite a saved
+            // localStorage value with an empty Supabase value.
+            const merge = (sbVal, lsRawKey) => {
+              const lsVal = localStorage.getItem(lsRawKey) || ''
+              return sbVal || lsVal
+            }
+
+            const tval  = merge(sl.telegram,  lsKey)
+            const fbVal = merge(sl.facebook,  `exzibo_social_facebook_${restaurantId}`)
+            const igVal = merge(sl.instagram, `exzibo_social_instagram_${restaurantId}`)
+            const liVal = merge(sl.linkedin,  `exzibo_social_linkedin_${restaurantId}`)
+            const ytVal = merge(sl.youtube,   `exzibo_social_youtube_${restaurantId}`)
+            const twVal = merge(sl.twitter,   `exzibo_social_twitter_${restaurantId}`)
+
+            // Keep socialLinksRef in sync with the full merged state so that
+            // a subsequent save (e.g. Facebook) doesn't clobber sibling links
+            // that only exist in localStorage.
+            socialLinksRef.current = {
+              ...sl,
+              telegram:  tval,
+              facebook:  fbVal,
+              instagram: igVal,
+              linkedin:  liVal,
+              youtube:   ytVal,
+              twitter:   twVal,
+            }
+
+            // Sync UI
             setTelegramInput(tval)
             setTelegramSaved(tval)
-            localStorage.setItem(lsKey, tval)
-            // Facebook
-            const fbVal = sl.facebook || ''
             setFacebookUrlInput(fbVal)
-            localStorage.setItem(`exzibo_social_facebook_${restaurantId}`, fbVal)
-            // Instagram
-            const igVal = sl.instagram || ''
             setInstagramUrlInput(igVal)
-            localStorage.setItem(`exzibo_social_instagram_${restaurantId}`, igVal)
-            // LinkedIn
-            const liVal = sl.linkedin || ''
             setLinkedinUrlInput(liVal)
-            localStorage.setItem(`exzibo_social_linkedin_${restaurantId}`, liVal)
-            // YouTube
-            const ytVal = sl.youtube || ''
             setYoutubeUrlInput(ytVal)
-            localStorage.setItem(`exzibo_social_youtube_${restaurantId}`, ytVal)
-            // Twitter / X
-            const twVal = sl.twitter || ''
             setTwitterUrlInput(twVal)
-            localStorage.setItem(`exzibo_social_twitter_${restaurantId}`, twVal)
+
+            // Persist merged values back to localStorage (only when non-empty)
+            if (tval)  localStorage.setItem(lsKey, tval)
+            if (fbVal) localStorage.setItem(`exzibo_social_facebook_${restaurantId}`,  fbVal)
+            if (igVal) localStorage.setItem(`exzibo_social_instagram_${restaurantId}`, igVal)
+            if (liVal) localStorage.setItem(`exzibo_social_linkedin_${restaurantId}`,  liVal)
+            if (ytVal) localStorage.setItem(`exzibo_social_youtube_${restaurantId}`,   ytVal)
+            if (twVal) localStorage.setItem(`exzibo_social_twitter_${restaurantId}`,   twVal)
             return
           }
         } catch { /* fall through to localStorage */ }
@@ -281,6 +300,23 @@ export default function ProfileSlide({
       const val = localStorage.getItem(lsKey) || ''
       setTelegramInput(val)
       setTelegramSaved(val)
+      // Restore all social links from localStorage when Supabase is unavailable
+      if (isRealId(restaurantId)) {
+        const fbVal = localStorage.getItem(`exzibo_social_facebook_${restaurantId}`)  || ''
+        const igVal = localStorage.getItem(`exzibo_social_instagram_${restaurantId}`) || ''
+        const liVal = localStorage.getItem(`exzibo_social_linkedin_${restaurantId}`)  || ''
+        const ytVal = localStorage.getItem(`exzibo_social_youtube_${restaurantId}`)   || ''
+        const twVal = localStorage.getItem(`exzibo_social_twitter_${restaurantId}`)   || ''
+        setFacebookUrlInput(fbVal)
+        setInstagramUrlInput(igVal)
+        setLinkedinUrlInput(liVal)
+        setYoutubeUrlInput(ytVal)
+        setTwitterUrlInput(twVal)
+        socialLinksRef.current = {
+          telegram: val, facebook: fbVal, instagram: igVal,
+          linkedin: liVal, youtube: ytVal, twitter: twVal,
+        }
+      }
     }
     loadSocialLinks()
   }, [restaurantId])
