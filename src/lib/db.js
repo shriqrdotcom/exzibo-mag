@@ -286,7 +286,12 @@ export async function updateRestaurantSocial(restaurantId, socialLinks) {
     return await res.json()
   } catch (err) {
     console.warn('[updateRestaurantSocial] API failed, falling back to direct client:', err.message)
-    return updateRestaurant(restaurantId, { social_links: socialLinks })
+    try {
+      return await updateRestaurant(restaurantId, { social_links: socialLinks })
+    } catch (fallbackErr) {
+      console.warn('[updateRestaurantSocial] Direct client also failed (will save locally):', fallbackErr.message)
+      return { social_links: socialLinks }
+    }
   }
 }
 
