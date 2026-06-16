@@ -3382,7 +3382,7 @@ export default function RestaurantWebsite() {
               return (
                 <div style={{
                   marginTop: '10px',
-                  background: theme.socialBarBg,
+                  background: 'transparent',
                   borderRadius: '16px',
                   padding: '20px 16px',
                   display: 'flex',
