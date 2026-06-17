@@ -1346,23 +1346,33 @@ export async function uploadAboutImage(dataUrl, restaurantId, slot) {
   const filePath = `${restaurantId}/about/image_${slot + 1}.webp`
 
   // ── Step 2: Try direct Supabase Storage upload (works when authenticated) ────
+  // Uses DELETE-then-INSERT instead of upsert to avoid the missing UPDATE RLS
+  // policy issue (storage_setup.sql only grants INSERT and DELETE, not UPDATE).
   try {
     const base64 = compressedUrl.replace(/^data:[^;]+;base64,/, '')
     const bytes  = Uint8Array.from(atob(base64), c => c.charCodeAt(0))
     const blob   = new Blob([bytes], { type: 'image/webp' })
 
+    // Remove existing file first (DELETE policy allows this). Ignore the error —
+    // the file simply may not exist yet (first upload for this slot).
+    await supabase.storage.from('restaurant-images').remove([filePath]).catch(() => {})
+
     const { error: uploadErr } = await supabase.storage
       .from('restaurant-images')
-      .upload(filePath, blob, { contentType: 'image/webp', upsert: true })
+      .upload(filePath, blob, { contentType: 'image/webp', upsert: false })
 
     if (!uploadErr) {
       const { data: { publicUrl } } = supabase.storage
         .from('restaurant-images')
         .getPublicUrl(filePath)
-      console.log(`[uploadAboutImage] slot=${slot} direct upload →`, publicUrl)
-      return publicUrl
+      if (publicUrl && publicUrl.startsWith('http')) {
+        console.log(`[uploadAboutImage] slot=${slot} direct upload →`, publicUrl)
+        return publicUrl
+      }
+      console.warn('[uploadAboutImage] getPublicUrl returned invalid URL, trying server API')
+    } else {
+      console.warn('[uploadAboutImage] Direct upload failed, trying server API:', uploadErr.message)
     }
-    console.warn('[uploadAboutImage] Direct upload failed, trying server API:', uploadErr.message)
   } catch (clientErr) {
     console.warn('[uploadAboutImage] Direct upload error, trying server API:', clientErr.message)
   }

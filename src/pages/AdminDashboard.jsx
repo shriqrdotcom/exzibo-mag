@@ -3572,16 +3572,20 @@ function SettingsPanel({ draft, setDraft, accentStart, accentEnd, onSave, saved,
               if (restaurantId && restaurantId !== 'demo') {
                 for (let i = 0; i < 4; i++) {
                   if (savedImages[i] && savedImages[i].startsWith('data:')) {
-                    savedImages[i] = await uploadAboutImage(savedImages[i], restaurantId, i)
+                    const uploaded = await uploadAboutImage(savedImages[i], restaurantId, i)
+                    if (!uploaded || !uploaded.startsWith('http')) {
+                      throw new Error(`Image ${i + 1} upload did not return a valid URL. Please try again.`)
+                    }
+                    savedImages[i] = uploaded
                   }
                 }
                 setAboutImages(savedImages)
                 await saveRestaurantAbout(restaurantId, {
                   story_text:  aboutText,
-                  image_1_url: savedImages[0] || null,
-                  image_2_url: savedImages[1] || null,
-                  image_3_url: savedImages[2] || null,
-                  image_4_url: savedImages[3] || null,
+                  image_1_url: savedImages[0] && savedImages[0].startsWith('http') ? savedImages[0] : null,
+                  image_2_url: savedImages[1] && savedImages[1].startsWith('http') ? savedImages[1] : null,
+                  image_3_url: savedImages[2] && savedImages[2].startsWith('http') ? savedImages[2] : null,
+                  image_4_url: savedImages[3] && savedImages[3].startsWith('http') ? savedImages[3] : null,
                 })
               }
               // Save social links to restaurant record

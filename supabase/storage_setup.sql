@@ -65,7 +65,39 @@ DO $$ BEGIN
   END IF;
 END $$;
 
--- 4. Allow authenticated users to delete their own uploads
+-- 4. Allow authenticated users to update (overwrite) existing files
+--    Required when using upsert: true with an authenticated session (not service role).
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'storage' AND tablename = 'objects'
+    AND policyname = 'auth update restaurant images'
+  ) THEN
+    CREATE POLICY "auth update restaurant images"
+      ON storage.objects FOR UPDATE
+      USING (
+        bucket_id = 'restaurant-images'
+        AND auth.role() = 'authenticated'
+      );
+  END IF;
+END $$;
+
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'storage' AND tablename = 'objects'
+    AND policyname = 'auth update menu images'
+  ) THEN
+    CREATE POLICY "auth update menu images"
+      ON storage.objects FOR UPDATE
+      USING (
+        bucket_id = 'menu-images'
+        AND auth.role() = 'authenticated'
+      );
+  END IF;
+END $$;
+
+-- 5. Allow authenticated users to delete their own uploads
 DO $$ BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM pg_policies
