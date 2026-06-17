@@ -3515,102 +3515,35 @@ function SettingsPanel({ draft, setDraft, accentStart, accentEnd, onSave, saved,
               </div>
             )}
             <button
-              disabled={aboutSaveStatus === 'uploading' || aboutSaveStatus === 'saving'}
+              disabled={!restaurantId || restaurantId === 'demo' || aboutSaveStatus === 'uploading' || aboutSaveStatus === 'saving'}
               onClick={async () => {
-                if (!restaurantId || restaurantId === 'demo') return
                 setAboutSaveStatus('uploading')
                 setAboutSaveMsg('')
                 try {
                   const imageUrls = [...aboutImages]
 
-                  // ── Upload each new (data: URL) image ─────────────────────────
+                  // ── Upload each new (data: URL) image via uploadAboutImage (has server fallback) ──
                   for (let i = 0; i < 4; i++) {
                     if (!imageUrls[i] || !imageUrls[i].startsWith('data:')) continue
                     setAboutSaveMsg(`Uploading image ${i + 1} of 4…`)
-
-                    // Compress to WebP via canvas
-                    const compressed = await new Promise((resolve, reject) => {
-                      const img = new Image()
-                      img.onload = () => {
-                        const MAX = 900
-                        let w = img.width, h = img.height
-                        if (w > MAX || h > MAX) {
-                          const r = Math.min(MAX / w, MAX / h)
-                          w = Math.round(w * r); h = Math.round(h * r)
-                        }
-                        const canvas = document.createElement('canvas')
-                        canvas.width = w; canvas.height = h
-                        canvas.getContext('2d').drawImage(img, 0, 0, w, h)
-                        resolve(canvas.toDataURL('image/webp', 0.82))
-                      }
-                      img.onerror = () => reject(new Error(`Image ${i + 1} could not be loaded for compression`))
-                      img.src = imageUrls[i]
-                    })
-
-                    const b64   = compressed.replace(/^data:[^;]+;base64,/, '')
-                    const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0))
-                    const blob  = new Blob([bytes], { type: 'image/webp' })
-                    const path  = `${restaurantId}/about/image_${i + 1}.webp`
-
-                    // Delete existing file first (avoids UPDATE policy requirement)
-                    await supabase.storage.from('restaurant-images').remove([path]).catch(() => {})
-
-                    // Upload with authenticated supabase client (user is logged in via Google OAuth)
-                    const { error: upErr } = await supabase.storage
-                      .from('restaurant-images')
-                      .upload(path, blob, { contentType: 'image/webp', upsert: false })
-
-                    if (upErr) {
-                      // Fallback: server API (uses service role key)
-                      const r = await fetch('/api/about/upload-image', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ dataUrl: compressed, restaurantId, slot: i }),
-                      })
-                      if (!r.ok) {
-                        const e = await r.json().catch(() => ({}))
-                        throw new Error(`Image ${i + 1} upload failed: ${e.error || `HTTP ${r.status}`}. Make sure SUPABASE_SERVICE_ROLE_KEY is set in Vercel.`)
-                      }
-                      const { url } = await r.json()
-                      if (!url || !url.startsWith('http')) throw new Error(`Image ${i + 1}: server returned invalid URL`)
-                      imageUrls[i] = url
-                    } else {
-                      const { data: { publicUrl } } = supabase.storage.from('restaurant-images').getPublicUrl(path)
-                      if (!publicUrl || !publicUrl.startsWith('http')) throw new Error(`Image ${i + 1}: could not get public URL after upload`)
-                      imageUrls[i] = publicUrl
+                    const uploaded = await uploadAboutImage(imageUrls[i], restaurantId, i)
+                    if (!uploaded || !uploaded.startsWith('http')) {
+                      throw new Error(`Image ${i + 1} upload did not return a valid URL. Please try again.`)
                     }
+                    imageUrls[i] = uploaded
                   }
 
-                  // ── Save text + image URLs to restaurant_about table ──────────
+                  // ── Save text + image URLs via saveRestaurantAbout (tries /api/about/save first, then Supabase direct) ──
                   setAboutSaveStatus('saving')
                   setAboutSaveMsg('Saving story to database…')
 
-                  const payload = {
-                    restaurant_id: restaurantId,
-                    story_text:    aboutText ?? null,
-                    image_1_url:   imageUrls[0]?.startsWith('http') ? imageUrls[0] : null,
-                    image_2_url:   imageUrls[1]?.startsWith('http') ? imageUrls[1] : null,
-                    image_3_url:   imageUrls[2]?.startsWith('http') ? imageUrls[2] : null,
-                    image_4_url:   imageUrls[3]?.startsWith('http') ? imageUrls[3] : null,
-                    updated_at:    new Date().toISOString(),
-                  }
-
-                  // Try authenticated client UPDATE first
-                  const { data: updated, error: updErr } = await supabase
-                    .from('restaurant_about')
-                    .update(payload)
-                    .eq('restaurant_id', restaurantId)
-                    .select('id')
-
-                  if (updErr) throw new Error('Database update error: ' + updErr.message)
-
-                  if (!updated || updated.length === 0) {
-                    // No row yet — insert
-                    const { error: insErr } = await supabase
-                      .from('restaurant_about')
-                      .insert(payload)
-                    if (insErr) throw new Error('Database insert error: ' + insErr.message)
-                  }
+                  await saveRestaurantAbout(restaurantId, {
+                    story_text:  aboutText ?? null,
+                    image_1_url: imageUrls[0]?.startsWith('http') ? imageUrls[0] : null,
+                    image_2_url: imageUrls[1]?.startsWith('http') ? imageUrls[1] : null,
+                    image_3_url: imageUrls[2]?.startsWith('http') ? imageUrls[2] : null,
+                    image_4_url: imageUrls[3]?.startsWith('http') ? imageUrls[3] : null,
+                  })
 
                   // ── Done ───────────────────────────────────────────────────────
                   setAboutImages(imageUrls)
@@ -3625,7 +3558,9 @@ function SettingsPanel({ draft, setDraft, accentStart, accentEnd, onSave, saved,
               }}
               style={{
                 width: '100%', padding: '13px 16px',
-                background: aboutSaveStatus === 'uploading' || aboutSaveStatus === 'saving'
+                background: !restaurantId || restaurantId === 'demo'
+                  ? '#94a3b8'
+                  : aboutSaveStatus === 'uploading' || aboutSaveStatus === 'saving'
                   ? '#374151'
                   : aboutSaveStatus === 'done'
                   ? 'linear-gradient(135deg,#10B981,#059669)'
@@ -3634,9 +3569,10 @@ function SettingsPanel({ draft, setDraft, accentStart, accentEnd, onSave, saved,
                   : 'linear-gradient(135deg,#7C3AED,#6D28D9)',
                 border: 'none', borderRadius: '10px',
                 color: '#fff', fontSize: '13px', fontWeight: 800,
-                letterSpacing: '0.05em', cursor: aboutSaveStatus === 'uploading' || aboutSaveStatus === 'saving' ? 'not-allowed' : 'pointer',
+                letterSpacing: '0.05em',
+                cursor: !restaurantId || restaurantId === 'demo' || aboutSaveStatus === 'uploading' || aboutSaveStatus === 'saving' ? 'not-allowed' : 'pointer',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                opacity: aboutSaveStatus === 'uploading' || aboutSaveStatus === 'saving' ? 0.8 : 1,
+                opacity: !restaurantId || restaurantId === 'demo' || aboutSaveStatus === 'uploading' || aboutSaveStatus === 'saving' ? 0.6 : 1,
                 transition: 'all 0.25s ease',
               }}
             >
