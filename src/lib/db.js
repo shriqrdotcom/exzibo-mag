@@ -1241,14 +1241,36 @@ export function subscribeToNIELimits(onUpdate) {
 // ── Restaurant About (Our Story) ──────────────────────────────────────────────
 // All three functions route through the server-side API so the service role key
 // is used — this bypasses RLS entirely and works in both dev and production.
+// fetchRestaurantAbout falls back to the Supabase anon client (public read RLS
+// policy) if the API route is unavailable — e.g. on static-only deployments.
 
 export async function fetchRestaurantAbout(restaurantId) {
-  const res = await fetch(`/api/about/${encodeURIComponent(restaurantId)}`)
-  if (!res.ok) {
+  // Primary: server-side API (service role, no RLS dependency)
+  try {
+    const res = await fetch(`/api/about/${encodeURIComponent(restaurantId)}`)
+    if (res.ok) {
+      const data = await res.json()
+      // null means no row yet — that's valid; return it
+      return data
+    }
+    // Log but don't throw yet — try the fallback below
     const err = await res.json().catch(() => ({}))
-    throw new Error(err?.error || `fetch about failed: ${res.status}`)
+    console.warn(`[fetchRestaurantAbout] API returned ${res.status}:`, err?.error || err)
+  } catch (apiErr) {
+    console.warn('[fetchRestaurantAbout] API unreachable — trying Supabase direct:', apiErr.message)
   }
-  return res.json()
+
+  // Fallback: Supabase anon client (restaurant_about has public SELECT RLS policy)
+  const { data, error } = await supabase
+    .from('restaurant_about')
+    .select('story_text, image_1_url, image_2_url, image_3_url, image_4_url')
+    .eq('restaurant_id', restaurantId)
+    .order('updated_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (error) throw new Error(error.message)
+  return data
 }
 
 export async function saveRestaurantAbout(restaurantId, { story_text, image_1_url, image_2_url, image_3_url, image_4_url }) {
@@ -1265,16 +1287,27 @@ export async function saveRestaurantAbout(restaurantId, { story_text, image_1_ur
 
 // Upload a single about-section image via the server (service role, stable path).
 // slot: 0-3 → saved as image_1.webp … image_4.webp (overwrites previous file).
+// Compresses to WebP before sending to keep payload well within server limits.
 export async function uploadAboutImage(dataUrl, restaurantId, slot) {
+  // Compress first (client-side) to reduce payload size before sending to server
+  let compressedUrl = dataUrl
+  try {
+    const limits = await getCompressionLimits()
+    compressedUrl = await compressDataUrl(dataUrl, limits)
+  } catch (err) {
+    console.warn('[uploadAboutImage] Compression skipped (non-blocking):', err.message)
+  }
+
   const res = await fetch('/api/about/upload-image', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ dataUrl, restaurantId, slot }),
+    body: JSON.stringify({ dataUrl: compressedUrl, restaurantId, slot }),
   })
   if (!res.ok) {
     const err = await res.json().catch(() => ({}))
     throw new Error(err?.error || `about image upload failed: ${res.status}`)
   }
   const { url } = await res.json()
+  console.log(`[uploadAboutImage] slot=${slot} stored at:`, url)
   return url
 }

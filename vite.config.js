@@ -486,12 +486,14 @@ function aboutApiPlugin() {
         try {
           const { url: supabaseUrl, headers } = getServiceHeaders()
           const r = await fetch(
-            `${supabaseUrl}/rest/v1/restaurant_about?restaurant_id=eq.${encodeURIComponent(restaurantId)}&select=story_text,image_1_url,image_2_url,image_3_url,image_4_url&limit=1`,
+            `${supabaseUrl}/rest/v1/restaurant_about?restaurant_id=eq.${encodeURIComponent(restaurantId)}&select=story_text,image_1_url,image_2_url,image_3_url,image_4_url&order=updated_at.desc&limit=1`,
             { headers }
           )
           const data = await r.json()
-          if (!r.ok) return json(res, r.status, { error: data })
-          return json(res, 200, Array.isArray(data) ? (data[0] ?? null) : data)
+          if (!r.ok) { console.error('[about/get] Supabase error:', JSON.stringify(data)); return json(res, r.status, { error: data }) }
+          const row = Array.isArray(data) ? (data[0] ?? null) : data
+          console.log(`[about/get] restaurantId=${restaurantId} → images: ${row ? [row.image_1_url, row.image_2_url, row.image_3_url, row.image_4_url].filter(Boolean).length : 0}/4`)
+          return json(res, 200, row)
         } catch (e) { return json(res, 500, { error: e.message }) }
       })
 
@@ -502,25 +504,50 @@ function aboutApiPlugin() {
           const { restaurantId, story_text, image_1_url, image_2_url, image_3_url, image_4_url } = await readBody(req)
           if (!restaurantId) return json(res, 400, { error: 'restaurantId required' })
           const { url: supabaseUrl, headers } = getServiceHeaders()
-          const r = await fetch(
-            `${supabaseUrl}/rest/v1/restaurant_about?on_conflict=restaurant_id`,
+
+          const payload = {
+            story_text:  story_text  ?? null,
+            image_1_url: image_1_url ?? null,
+            image_2_url: image_2_url ?? null,
+            image_3_url: image_3_url ?? null,
+            image_4_url: image_4_url ?? null,
+            updated_at:  new Date().toISOString(),
+          }
+
+          const imageCount = [image_1_url, image_2_url, image_3_url, image_4_url].filter(Boolean).length
+          console.log(`[about/save] restaurantId=${restaurantId} images=${imageCount}/4`)
+
+          // 1. Try to UPDATE existing row
+          const patchRes = await fetch(
+            `${supabaseUrl}/rest/v1/restaurant_about?restaurant_id=eq.${encodeURIComponent(restaurantId)}`,
             {
-              method: 'POST',
-              headers: { ...headers, Prefer: 'resolution=merge-duplicates,return=representation' },
-              body: JSON.stringify({
-                restaurant_id: restaurantId,
-                story_text:    story_text    ?? null,
-                image_1_url:   image_1_url   ?? null,
-                image_2_url:   image_2_url   ?? null,
-                image_3_url:   image_3_url   ?? null,
-                image_4_url:   image_4_url   ?? null,
-                updated_at:    new Date().toISOString(),
-              }),
+              method: 'PATCH',
+              headers: { ...headers, Prefer: 'return=representation' },
+              body: JSON.stringify(payload),
             }
           )
-          const data = await r.json()
-          if (!r.ok) { console.error('[about/save] Supabase error:', data); return json(res, r.status, { error: data }) }
-          return json(res, 200, { success: true, data: Array.isArray(data) ? data[0] : data })
+          const patchData = await patchRes.json()
+          if (!patchRes.ok) { console.error('[about/save] PATCH error:', JSON.stringify(patchData)); return json(res, patchRes.status, { error: patchData }) }
+
+          // 2. If PATCH returned empty array = no existing row → INSERT
+          if (Array.isArray(patchData) && patchData.length === 0) {
+            console.log('[about/save] No existing row — inserting new row')
+            const insertRes = await fetch(
+              `${supabaseUrl}/rest/v1/restaurant_about`,
+              {
+                method: 'POST',
+                headers: { ...headers, Prefer: 'return=representation' },
+                body: JSON.stringify({ restaurant_id: restaurantId, ...payload }),
+              }
+            )
+            const insertData = await insertRes.json()
+            if (!insertRes.ok) { console.error('[about/save] INSERT error:', JSON.stringify(insertData)); return json(res, insertRes.status, { error: insertData }) }
+            console.log('[about/save] Inserted successfully')
+            return json(res, 200, { success: true, data: Array.isArray(insertData) ? insertData[0] : insertData })
+          }
+
+          console.log('[about/save] Updated successfully')
+          return json(res, 200, { success: true, data: Array.isArray(patchData) ? patchData[0] : patchData })
         } catch (e) { return json(res, 500, { error: e.message }) }
       })
 
