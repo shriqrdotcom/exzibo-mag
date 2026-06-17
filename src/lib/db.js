@@ -1324,19 +1324,50 @@ export async function saveRestaurantAbout(restaurantId, { story_text, image_1_ur
   console.log('[saveRestaurantAbout] Saved via Supabase direct ✓')
 }
 
-// Upload a single about-section image via the server (service role, stable path).
+// Upload a single about-section image.
 // slot: 0-3 → saved as image_1.webp … image_4.webp (overwrites previous file).
-// Compresses to WebP before sending to keep payload well within server limits.
+//
+// Strategy (same code path in all environments):
+//   1. Compress image client-side to WebP.
+//   2. Try uploading directly via Supabase Storage client.
+//      Works in production (admin user is authenticated via Google OAuth).
+//   3. If client upload fails (e.g. dev mode with no real session), fall back
+//      to the server-side API which uses the service role key.
 export async function uploadAboutImage(dataUrl, restaurantId, slot) {
-  // Compress first (client-side) to reduce payload size before sending to server
+  // ── Step 1: Compress ─────────────────────────────────────────────────────────
   let compressedUrl = dataUrl
   try {
     const limits = await getCompressionLimits()
     compressedUrl = await compressDataUrl(dataUrl, limits)
   } catch (err) {
-    console.warn('[uploadAboutImage] Compression skipped (non-blocking):', err.message)
+    console.warn('[uploadAboutImage] Compression skipped:', err.message)
   }
 
+  const filePath = `${restaurantId}/about/image_${slot + 1}.webp`
+
+  // ── Step 2: Try direct Supabase Storage upload (works when authenticated) ────
+  try {
+    const base64 = compressedUrl.replace(/^data:[^;]+;base64,/, '')
+    const bytes  = Uint8Array.from(atob(base64), c => c.charCodeAt(0))
+    const blob   = new Blob([bytes], { type: 'image/webp' })
+
+    const { error: uploadErr } = await supabase.storage
+      .from('restaurant-images')
+      .upload(filePath, blob, { contentType: 'image/webp', upsert: true })
+
+    if (!uploadErr) {
+      const { data: { publicUrl } } = supabase.storage
+        .from('restaurant-images')
+        .getPublicUrl(filePath)
+      console.log(`[uploadAboutImage] slot=${slot} direct upload →`, publicUrl)
+      return publicUrl
+    }
+    console.warn('[uploadAboutImage] Direct upload failed, trying server API:', uploadErr.message)
+  } catch (clientErr) {
+    console.warn('[uploadAboutImage] Direct upload error, trying server API:', clientErr.message)
+  }
+
+  // ── Step 3: Server-side API fallback (service role key) ──────────────────────
   const res = await fetch('/api/about/upload-image', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -1347,6 +1378,6 @@ export async function uploadAboutImage(dataUrl, restaurantId, slot) {
     throw new Error(err?.error || `about image upload failed: ${res.status}`)
   }
   const { url } = await res.json()
-  console.log(`[uploadAboutImage] slot=${slot} stored at:`, url)
+  console.log(`[uploadAboutImage] slot=${slot} server upload →`, url)
   return url
 }
