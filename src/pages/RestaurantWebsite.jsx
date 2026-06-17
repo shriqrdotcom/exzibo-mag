@@ -522,6 +522,7 @@ export default function RestaurantWebsite() {
   const [drinksDropdownOpen, setDrinksDropdownOpen] = useState(false)
   const [drinksSubFilter, setDrinksSubFilter] = useState('')
   const [scrollY, setScrollY] = useState(0)
+  const [reservationHovered, setReservationHovered] = useState(false)
   const scrollTickRef = useRef(false)
   const cartIconRef = useRef(null)
   const offersScrollRef = useRef(null)
@@ -3242,6 +3243,79 @@ export default function RestaurantWebsite() {
               ))}
             </div>
           </section>
+
+          {/* ── RESERVATION CARD ── */}
+          <div style={{ padding: '0 14px 24px' }}>
+            <div
+              onClick={() => navigateToPage('booking')}
+              onMouseEnter={() => setReservationHovered(true)}
+              onMouseLeave={() => setReservationHovered(false)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '16px',
+                background: '#ffffff',
+                borderRadius: '16px',
+                padding: '18px 16px',
+                boxShadow: reservationHovered
+                  ? '0 8px 32px rgba(0,0,0,0.18)'
+                  : '0 2px 12px rgba(0,0,0,0.08)',
+                cursor: 'pointer',
+                transform: reservationHovered ? 'scale(1.02)' : 'scale(1)',
+                transition: 'transform 0.18s ease, box-shadow 0.18s ease',
+                userSelect: 'none',
+              }}
+            >
+              {/* LEFT — blue circle with calendar icon */}
+              <div style={{
+                width: '80px',
+                height: '80px',
+                borderRadius: '50%',
+                background: '#dbeafe',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}>
+                <CalendarDays size={36} color="#3b82f6" strokeWidth={1.8} />
+              </div>
+
+              {/* CENTER — title + subtitle */}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{
+                  fontSize: '22px',
+                  fontWeight: 800,
+                  color: '#111827',
+                  lineHeight: 1.2,
+                  marginBottom: '6px',
+                }}>
+                  Reservation
+                </div>
+                <div style={{
+                  fontSize: '14px',
+                  color: '#6b7280',
+                  lineHeight: 1.5,
+                  fontWeight: 400,
+                }}>
+                  Book your table and enjoy a seamless dining experience.
+                </div>
+              </div>
+
+              {/* RIGHT — chevron button */}
+              <div style={{
+                width: '36px',
+                height: '36px',
+                borderRadius: '50%',
+                background: '#f3f4f6',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}>
+                <ChevronRight size={20} color="#374151" strokeWidth={2.5} />
+              </div>
+            </div>
+          </div>
 
           {/* ── OUR STORY ── */}
           <section className="reveal reveal-4" style={{ padding: '24px 14px 0' }}>

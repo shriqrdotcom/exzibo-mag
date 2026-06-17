@@ -1,0 +1,69 @@
+I need you to add a "Reservation" card section to my restaurant website/app. 
+Here are the exact requirements:
+
+---
+
+## DESIGN SPECIFICATIONS
+
+Create a card component that matches this exact design:
+
+- **Card**: White background, rounded corners (border-radius: 16px), 
+  subtle box shadow, full width with padding
+- **Layout**: Horizontal flex row with 3 elements:
+  1. LEFT: A soft blue circular background (light blue, ~80px diameter) 
+     containing a blue calendar icon (similar to lucide-react's 
+     `CalendarDays` icon) in medium blue color
+  2. CENTER: Text block with:
+     - Title: "Reservation" in bold, dark/black, large font (~24px)
+     - Subtitle: "Book your table and enjoy a seamless dining experience." 
+       in gray, regular weight, ~16px
+  3. RIGHT: A small circular gray button with a right chevron arrow `>`
+
+---
+
+## PLACEMENT
+
+- Place this Reservation card **directly below** the "SPECIAL OFFERS" section
+- It should be a sibling component, stacked vertically beneath it
+- Match the same horizontal padding/margin as the Special Offers section 
+  for visual consistency
+
+---
+
+## CLICK/NAVIGATION LOGIC
+
+When the user clicks **anywhere on the card** (the entire card is clickable):
+- Redirect the user to the **Booking/Reservation page**
+- The route should be `/booking` or `/reservation` 
+  (use whichever route already exists in the project for the booking page)
+- If no booking page exists yet, create a placeholder page at `/booking` 
+  that says "Table Reservation" as the heading
+- The card should have `cursor: pointer` on hover
+- Add a subtle hover effect: slightly darken the card shadow or 
+  scale it up by 1.02 on hover for visual feedback
+
+---
+
+## TECHNICAL REQUIREMENTS
+
+- Make the entire card a clickable element (wrap in a link or 
+  attach an onClick handler with navigation)
+- Use the existing routing system in the project 
+  (React Router / Next.js Link / etc. — detect and use what's already there)
+- The chevron `>` button on the right is decorative — 
+  clicking it should also trigger the same navigation as clicking the card
+- Component should be reusable and placed in the components folder
+
+---
+
+## EXAMPLE COMPONENT STRUCTURE
+
+<ReservationCard onClick={() => navigate('/booking')} />
+
+The card internally renders:
+[Blue Circle with Calendar Icon] [Title + Subtitle] [Chevron Button]
+
+---
+
+Make sure the card is pixel-perfect to the design, fully clickable, 
+and navigates to the booking page on tap/click.
