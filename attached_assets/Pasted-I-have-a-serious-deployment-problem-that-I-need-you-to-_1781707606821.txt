@@ -1,0 +1,141 @@
+I have a serious deployment problem that I need you to fix permanently. 
+Please read everything carefully before making any changes.
+
+---
+
+## MY PROJECT STRUCTURE
+
+- Code is written and edited in: Replit (you)
+- Code is pushed to: GitHub (my repository)
+- Deployment/Hosting is on: Vercel (auto-deploys from GitHub)
+- Database is: Supabase (PostgreSQL)
+- Storage is: Supabase Storage (for files/images)
+
+Flow is:  Replit → GitHub → Vercel → Live Website
+                                  ↕
+                              Supabase
+
+---
+
+## THE EXACT PROBLEM
+
+When I make changes in Replit, everything works perfectly 
+in the Replit Preview Mode.
+
+BUT when I push the same changes to GitHub:
+- Vercel deploys it but the features are broken OR
+- Nothing visually changes on my live Vercel website OR
+- Supabase database/storage connections fail on Vercel
+
+The Replit preview is NOT my real website.
+My real website runs on Vercel.
+I need everything that works in Replit preview 
+to also work exactly the same on Vercel.
+
+---
+
+## WHY I THINK THIS IS HAPPENING (possible causes):
+
+1. ENVIRONMENT VARIABLES PROBLEM
+   - Replit has its own Secrets/Env variables stored locally
+   - These secrets are NOT pushed to GitHub
+   - Vercel has its own separate Environment Variables
+   - Any Supabase URL, Supabase Anon Key, or API keys 
+     might be missing or mismatched in Vercel settings
+
+2. FILES NOT BEING PUSHED TO GITHUB
+   - Some changed files might not be getting committed
+   - .gitignore might be blocking important files
+   - Changes might be saved in Replit but not pushed to GitHub
+
+3. BUILD CONFIGURATION MISMATCH
+   - Replit runs the app differently than Vercel builds it
+   - Vercel might be using wrong build command or 
+     wrong output directory
+
+4. SUPABASE CONNECTION ISSUE ON VERCEL
+   - Supabase environment variables missing in Vercel dashboard
+   - Row Level Security (RLS) policies blocking requests
+   - Supabase project URL/keys not added to Vercel env settings
+
+---
+
+## WHAT I NEED YOU TO DO
+
+Please do all of the following steps:
+
+### STEP 1 — CHECK ENVIRONMENT VARIABLES
+- List every single environment variable / secret 
+  this project uses (Supabase URL, Supabase Anon Key, 
+  any API keys, etc.)
+- Tell me the exact variable NAMES so I can manually 
+  add them in my Vercel Dashboard under 
+  Project Settings → Environment Variables
+
+### STEP 2 — CHECK .gitignore FILE
+- Open the .gitignore file
+- Make sure it is NOT blocking any important 
+  config files or build files that Vercel needs
+- Only .env files should be ignored, not config files
+
+### STEP 3 — CHECK BUILD SETTINGS
+- Tell me the correct build command for this project
+- Tell me the correct output/publish directory
+- Tell me the correct install command
+- I will manually verify these match in my 
+  Vercel Project Settings → Build & Development Settings
+
+### STEP 4 — CHECK GITHUB PUSH
+- Make sure ALL recent changes are properly 
+  committed and pushed to GitHub
+- Check if any files are uncommitted or untracked
+- Force push all current working Replit code to GitHub cleanly
+
+### STEP 5 — CREATE AN ENVIRONMENT VARIABLE TEMPLATE
+- Create a file called .env.example in the project root
+- List all required environment variables with 
+  placeholder values like this:
+
+  NEXT_PUBLIC_SUPABASE_URL=your_supabase_url_here
+  NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key_here
+  (add all others too)
+
+- This file SHOULD be pushed to GitHub 
+  (it has no real secrets, just variable names)
+- This helps me know exactly what to add in Vercel
+
+### STEP 6 — VERIFY SUPABASE CONNECTION
+- Check how Supabase is connected in the code
+- Make sure the Supabase client is reading from 
+  environment variables and NOT hardcoded values
+- If any Supabase URL or Key is hardcoded, 
+  replace it with process.env.VARIABLE_NAME
+
+---
+
+## THE PERMANENT SOLUTION I WANT
+
+After you finish, I want:
+
+✅ All changes I make in Replit → push to GitHub → 
+   auto deploy on Vercel → work exactly like Replit preview
+
+✅ Supabase database and storage working on live 
+   Vercel deployment, not just Replit preview
+
+✅ A clear list of environment variables I need to 
+   add manually in my Vercel Dashboard
+
+✅ No hardcoded secrets or URLs anywhere in the code
+
+---
+
+## IMPORTANT NOTE TO YOU (Replit Agent)
+
+Please do NOT just fix it for Replit preview.
+The Replit preview is not my real product.
+My real product is on Vercel.
+Every fix must work on the Vercel deployment.
+Think of Vercel as the real production environment.
+
+Start with Step 1 and go through all steps one by one.
