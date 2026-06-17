@@ -1,0 +1,133 @@
+My app is deployed on Vercel, but all the recent changes I made in Replit 
+(the About Section image upload + Our Story sync feature) are only working 
+in Replit's preview mode. The live Vercel app is still showing the old version.
+
+I need you to fix this properly so my Vercel deployment reflects all the 
+latest changes from Replit.
+
+---
+
+### ROOT CAUSE (Most Likely):
+
+The changes I made in Replit were never pushed to my GitHub repository.
+Vercel is connected to my GitHub repo and only deploys when new code 
+is pushed to GitHub. Since the code never left Replit, Vercel never 
+got the update.
+
+---
+
+### STEP 1 — Check Git Status in Replit
+
+Run these commands in the Replit Shell and show me the output:
+
+  git status
+  git log --oneline -5
+
+This will show:
+- Which files were changed but never committed
+- Whether there are uncommitted changes sitting in Replit
+- What the last few commits look like
+
+---
+
+### STEP 2 — Commit All Changes
+
+If there are uncommitted changes, stage and commit everything:
+
+  git add .
+  git commit -m "feat: connect About Section to Our Story via Supabase - add 4 image upload slots, persist to DB, sync to customer page"
+
+Make sure ALL modified files are included in this commit, especially:
+- The About Section dashboard component
+- The Our Story customer page component  
+- Any Supabase service/helper files that were added or modified
+- Any new migration or schema files
+
+---
+
+### STEP 3 — Push to GitHub
+
+Push the committed changes to the GitHub repo:
+
+  git push origin main
+
+(If the main branch is called something else like "master" or "dev", 
+use that branch name instead — check with: git branch)
+
+If there's a push error (rejected, auth issue, conflicts), show me 
+the full error message so we can fix it.
+
+---
+
+### STEP 4 — Check Vercel Environment Variables
+
+This is CRITICAL. Even after pushing code, the Vercel app may still 
+break if Supabase environment variables are missing from Vercel's settings.
+
+Check what environment variables are currently used in the project 
+(look in .env, .env.local, or how the Supabase client is initialized).
+
+The required variables are likely:
+  - NEXT_PUBLIC_SUPABASE_URL (or VITE_SUPABASE_URL depending on framework)
+  - NEXT_PUBLIC_SUPABASE_ANON_KEY (or VITE_SUPABASE_ANON_KEY)
+
+Then tell me: I need to manually go to Vercel Dashboard → My Project → 
+Settings → Environment Variables and make sure these EXACT same variable 
+names and values are added there.
+
+List all the environment variable names used in this project so I can 
+add them to Vercel one by one.
+
+---
+
+### STEP 5 — Trigger Vercel Redeploy
+
+After pushing to GitHub, Vercel should auto-trigger a new deployment.
+
+But to be safe, also tell me to:
+1. Go to vercel.com → My Project → Deployments tab
+2. Check if a new deployment started automatically after the GitHub push
+3. If NOT → click "Redeploy" on the latest deployment manually
+4. Watch the build logs for any errors
+
+---
+
+### STEP 6 — Check for Build Errors
+
+If the Vercel build fails, the most common reasons are:
+
+1. Missing environment variables in Vercel (Supabase keys not added)
+2. A package that works in Replit but isn't in package.json 
+   (run: npm install → check if package.json was updated)
+3. TypeScript or lint errors that Replit ignored but Vercel's build catches
+
+Run this in Replit Shell to simulate what Vercel will build:
+  npm run build
+
+If it fails locally in Replit too, fix those errors first before pushing.
+
+---
+
+### STEP 7 — Verify the Live App After Deployment
+
+Once Vercel shows "Deployment Successful":
+
+✅ Open the live Vercel URL
+✅ Go to the restaurant admin dashboard → About Section
+✅ Confirm the 4 image slots are visible
+✅ Upload test images + write story text → click Save
+✅ Open the restaurant customer page → Our Story section
+✅ Confirm images and text are now showing
+✅ Refresh both pages — data should still be there
+
+---
+
+### IMPORTANT NOTES:
+- Do NOT create a new Vercel project — use the existing one
+- Do NOT change any environment variable values — just make sure 
+  the same ones from Replit/.env also exist in Vercel's settings
+- If the GitHub remote is not connected to this Replit project yet, 
+  show me how to connect it (git remote -v to check)
+- My framework is already set up — do not change build settings
+
+Start with Step 1 (git status) and show me the output before proceeding.
