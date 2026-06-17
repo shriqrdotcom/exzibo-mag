@@ -1245,23 +1245,22 @@ export function subscribeToNIELimits(onUpdate) {
 // policy) if the API route is unavailable — e.g. on static-only deployments.
 
 export async function fetchRestaurantAbout(restaurantId) {
-  // Primary: server-side API (service role, no RLS dependency)
+  // Primary: server-side API (service role key — bypasses RLS entirely)
   try {
     const res = await fetch(`/api/about/${encodeURIComponent(restaurantId)}`)
     if (res.ok) {
       const data = await res.json()
-      // null means no row yet — that's valid; return it
-      return data
+      return data  // null = no row yet, that is valid
     }
-    // Log but don't throw yet — try the fallback below
-    const err = await res.json().catch(() => ({}))
-    console.warn(`[fetchRestaurantAbout] API returned ${res.status}:`, err?.error || err)
+    const errBody = await res.json().catch(() => ({}))
+    console.warn(`[fetchRestaurantAbout] API ${res.status}:`, errBody?.error || errBody)
   } catch (apiErr) {
-    console.warn('[fetchRestaurantAbout] API unreachable — trying Supabase direct:', apiErr.message)
+    console.warn('[fetchRestaurantAbout] API unreachable — using Supabase direct:', apiErr.message)
   }
 
-  // Fallback: Supabase anon client (restaurant_about has public SELECT RLS policy)
-  const { data, error } = await supabase
+  // Fallback: Supabase anon client directly.
+  // Works because restaurant_about has "Public read" RLS policy (using true).
+  const { data, error } = await supabaseAnon
     .from('restaurant_about')
     .select('story_text, image_1_url, image_2_url, image_3_url, image_4_url')
     .eq('restaurant_id', restaurantId)
@@ -1269,20 +1268,60 @@ export async function fetchRestaurantAbout(restaurantId) {
     .limit(1)
     .maybeSingle()
 
-  if (error) throw new Error(error.message)
+  if (error) {
+    console.error('[fetchRestaurantAbout] Supabase direct error:', error.message)
+    throw new Error(error.message)
+  }
   return data
 }
 
 export async function saveRestaurantAbout(restaurantId, { story_text, image_1_url, image_2_url, image_3_url, image_4_url }) {
-  const res = await fetch('/api/about/save', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ restaurantId, story_text, image_1_url, image_2_url, image_3_url, image_4_url }),
-  })
-  if (!res.ok) {
+  // Primary: server-side API (service role key — most reliable)
+  try {
+    const res = await fetch('/api/about/save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ restaurantId, story_text, image_1_url, image_2_url, image_3_url, image_4_url }),
+    })
+    if (res.ok) return  // success — done
     const err = await res.json().catch(() => ({}))
-    throw new Error(err?.error || `save about failed: ${res.status}`)
+    console.warn(`[saveRestaurantAbout] API ${res.status} — trying Supabase direct:`, err?.error || err)
+  } catch (apiErr) {
+    console.warn('[saveRestaurantAbout] API unreachable — using Supabase direct:', apiErr.message)
   }
+
+  // Fallback: Supabase anon client directly.
+  // Works because restaurant_about RLS policies use "with check (true)" / "using (true)",
+  // allowing INSERT and UPDATE without an authenticated session.
+  const imageCount = [image_1_url, image_2_url, image_3_url, image_4_url].filter(Boolean).length
+  console.log(`[saveRestaurantAbout] Supabase direct — restaurantId=${restaurantId} images=${imageCount}/4`)
+
+  // Try PATCH first (update existing row)
+  const { data: patched, error: patchErr } = await supabaseAnon
+    .from('restaurant_about')
+    .update({ story_text: story_text ?? null, image_1_url: image_1_url ?? null, image_2_url: image_2_url ?? null, image_3_url: image_3_url ?? null, image_4_url: image_4_url ?? null, updated_at: new Date().toISOString() })
+    .eq('restaurant_id', restaurantId)
+    .select()
+
+  if (patchErr) {
+    console.error('[saveRestaurantAbout] UPDATE error:', patchErr.message)
+    throw new Error(patchErr.message)
+  }
+
+  // If no rows were updated, the row doesn't exist yet — insert it
+  if (!patched || patched.length === 0) {
+    console.log('[saveRestaurantAbout] No existing row — inserting')
+    const { error: insertErr } = await supabaseAnon
+      .from('restaurant_about')
+      .insert({ restaurant_id: restaurantId, story_text: story_text ?? null, image_1_url: image_1_url ?? null, image_2_url: image_2_url ?? null, image_3_url: image_3_url ?? null, image_4_url: image_4_url ?? null, updated_at: new Date().toISOString() })
+
+    if (insertErr) {
+      console.error('[saveRestaurantAbout] INSERT error:', insertErr.message)
+      throw new Error(insertErr.message)
+    }
+  }
+
+  console.log('[saveRestaurantAbout] Saved via Supabase direct ✓')
 }
 
 // Upload a single about-section image via the server (service role, stable path).
