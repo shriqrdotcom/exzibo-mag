@@ -3447,68 +3447,58 @@ export default function RestaurantWebsite() {
               }
               const sl = restaurant.socialLinks || {}
               const socials = [
-                { key: 'instagram', icon: <FaInstagram size={22} />, href: ensureUrl(sl.instagram) },
-                { key: 'facebook',  icon: <FaFacebook  size={22} />, href: ensureUrl(sl.facebook)  },
-                { key: 'linkedin',  icon: <FaLinkedinIn size={20} />, href: ensureUrl(sl.linkedin)  },
-                { key: 'youtube',   icon: <FaYoutube   size={22} />, href: ensureUrl(sl.youtube)   },
-                { key: 'twitter',   icon: <FaXTwitter  size={20} />, href: ensureUrl(sl.twitter)   },
-              ]
+                { key: 'instagram', icon: <FaInstagram size={17} />, href: ensureUrl(sl.instagram) },
+                { key: 'facebook',  icon: <FaFacebook  size={17} />, href: ensureUrl(sl.facebook)  },
+                { key: 'linkedin',  icon: <FaLinkedinIn size={16} />, href: ensureUrl(sl.linkedin)  },
+                { key: 'youtube',   icon: <FaYoutube   size={17} />, href: ensureUrl(sl.youtube)   },
+                { key: 'twitter',   icon: <FaXTwitter  size={16} />, href: ensureUrl(sl.twitter)   },
+              ].filter(s => s.href)
+              if (socials.length === 0) return null
               return (
                 <div style={{
                   marginTop: '10px',
                   background: 'transparent',
                   borderRadius: '16px',
-                  padding: '20px 16px',
+                  padding: '16px 16px',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  gap: '14px',
-                  flexWrap: 'wrap',
+                  gap: '12px',
+                  flexWrap: 'nowrap',
                 }}>
-                  {socials.map(s => {
-                    const hasLink = s.href && s.href.trim() && s.href.trim() !== '#'
-                    const commonStyle = {
-                      width: '58px',
-                      height: '58px',
-                      borderRadius: '50%',
-                      border: `1.5px solid ${hasLink ? theme.socialBarBorder : theme.socialBarBorderDim}`,
-                      background: 'transparent',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: hasLink ? theme.socialBarIcon : theme.socialBarIconDim,
-                      textDecoration: 'none',
-                      flexShrink: 0,
-                      transition: 'border-color 0.2s ease, background 0.2s ease',
-                      cursor: hasLink ? 'pointer' : 'default',
-                    }
-                    if (hasLink) {
-                      return (
-                        <a
-                          key={s.key}
-                          href={s.href}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          style={commonStyle}
-                          onMouseEnter={e => {
-                            e.currentTarget.style.borderColor = theme.socialBarHoverBorder
-                            e.currentTarget.style.background = theme.socialBarHoverBg
-                          }}
-                          onMouseLeave={e => {
-                            e.currentTarget.style.borderColor = theme.socialBarBorder
-                            e.currentTarget.style.background = 'transparent'
-                          }}
-                        >
-                          {s.icon}
-                        </a>
-                      )
-                    }
-                    return (
-                      <span key={s.key} style={commonStyle}>
-                        {s.icon}
-                      </span>
-                    )
-                  })}
+                  {socials.map(s => (
+                    <a
+                      key={s.key}
+                      href={s.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        width: '36px',
+                        height: '36px',
+                        borderRadius: '50%',
+                        border: `1.5px solid ${theme.socialBarBorder}`,
+                        background: 'transparent',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: theme.socialBarIcon,
+                        textDecoration: 'none',
+                        flexShrink: 0,
+                        transition: 'border-color 0.2s ease, background 0.2s ease',
+                        cursor: 'pointer',
+                      }}
+                      onMouseEnter={e => {
+                        e.currentTarget.style.borderColor = theme.socialBarHoverBorder
+                        e.currentTarget.style.background = theme.socialBarHoverBg
+                      }}
+                      onMouseLeave={e => {
+                        e.currentTarget.style.borderColor = theme.socialBarBorder
+                        e.currentTarget.style.background = 'transparent'
+                      }}
+                    >
+                      {s.icon}
+                    </a>
+                  ))}
                 </div>
               )
             })()}
