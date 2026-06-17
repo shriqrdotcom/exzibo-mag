@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { notifyAnalyticsUpdate } from '../context/AnalyticsContext'
-import { getRestaurantBySlug, getMenuCategories, getMenuItems, getPublishedMenuItems, loadMenuFilters } from '../lib/db'
+import { getRestaurantBySlug, getMenuCategories, getMenuItems, getPublishedMenuItems, loadMenuFilters, fetchRestaurantAbout } from '../lib/db'
 import { supabase } from '../lib/supabase'
 import { useMenuSubdomainRedirect } from '../lib/routeConfig'
 import { toSlug } from '../lib/slug'
@@ -337,7 +337,7 @@ export default function RestaurantWebsite() {
   }
 
   const [restaurant, setRestaurant] = useState(null)
-  const [aboutData, setAboutData] = useState({ description: '', image: '' })
+  const [aboutData, setAboutData] = useState({ story_text: '', image_1_url: '', image_2_url: '', image_3_url: '', image_4_url: '' })
   const [notFound, setNotFound] = useState(false)
   const [invalidTable, setInvalidTable] = useState(false)
   const [menuTabs, setMenuTabs] = useState(MENU_TABS)
@@ -1278,16 +1278,19 @@ export default function RestaurantWebsite() {
   useEffect(() => {
     const id = restaurant?.id || (slug === 'demo' ? 'demo' : null)
     if (!id) return
-    const key = `exzibo_about_${id}`
-    const load = () => {
-      try {
-        const stored = JSON.parse(localStorage.getItem(key) || '{}')
-        setAboutData({ description: stored.description || '', image: stored.image || '' })
-      } catch {}
+    if (id !== 'demo') {
+      fetchRestaurantAbout(id).then(data => {
+        if (data) {
+          setAboutData({
+            story_text:   data.story_text   || '',
+            image_1_url:  data.image_1_url  || '',
+            image_2_url:  data.image_2_url  || '',
+            image_3_url:  data.image_3_url  || '',
+            image_4_url:  data.image_4_url  || '',
+          })
+        }
+      }).catch(() => {})
     }
-    load()
-    window.addEventListener('storage', load)
-    return () => window.removeEventListener('storage', load)
   }, [restaurant?.id, slug])
 
   useEffect(() => {
@@ -3349,7 +3352,12 @@ export default function RestaurantWebsite() {
                 )
               }
 
-              const storyImages = { frame1: null, frame2: null, frame3: null, frame4: null }
+              const storyImages = {
+                frame1: aboutData.image_1_url || null,
+                frame2: aboutData.image_2_url || null,
+                frame3: aboutData.image_3_url || null,
+                frame4: aboutData.image_4_url || null,
+              }
 
               return (
                 <div style={{ position: 'relative', width: '100%', height: '190px', marginBottom: '0px', borderRadius: '16px', overflow: 'hidden' }}>
@@ -3390,7 +3398,7 @@ export default function RestaurantWebsite() {
                 wordBreak: 'break-word',
                 overflowWrap: 'break-word',
               }}>
-                Passion drives purpose, and purpose leads to progress. Every step forward, no matter how small, brings you closer to your goals. Embrace challenges, learn from every experience, and stay committed to your vision. Consistency today builds the success of tomorrow.
+                {aboutData.story_text || 'Passion drives purpose, and purpose leads to progress. Every step forward, no matter how small, brings you closer to your goals. Embrace challenges, learn from every experience, and stay committed to your vision. Consistency today builds the success of tomorrow.'}
               </p>
             </div>
 

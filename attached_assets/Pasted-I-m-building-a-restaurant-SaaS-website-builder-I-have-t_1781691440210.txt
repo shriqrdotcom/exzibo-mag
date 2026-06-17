@@ -1,0 +1,124 @@
+I'm building a restaurant SaaS website builder. I have two parts:
+1. A customer-facing homepage with an "Our Story" section
+2. A restaurant admin dashboard with an "About Section"
+
+Right now they are NOT connected. I need you to fully connect them using Supabase.
+
+---
+
+### CURRENT STATE:
+
+**Customer Page (Our Story section):**
+- Has a heading: "Our Story"
+- Subtitle: "Where every plate tells a story"
+- 4 image placeholder boxes (currently hardcoded/static, showing black boxes)
+- A label: "Crafted With Passion"
+- A paragraph/story text below
+
+**Admin Dashboard (About Section):**
+- Has a single text area: "Write a short description about the admin template..."
+- Has ONE image upload box with a "Click to upload image" placeholder
+- Has a "+" button
+
+---
+
+### WHAT I NEED YOU TO BUILD:
+
+**STEP 1 — Update the Admin Dashboard "About Section":**
+
+Replace the current single image upload box with EXACTLY 4 separate image upload slots, 
+arranged in a responsive grid (2x2 or 4 in a row), matching the layout of the 4 boxes 
+visible on the customer homepage.
+
+Each image slot should:
+- Show a dashed border upload box with an image icon + "Click to upload" label
+- Accept image file uploads (jpg, png, webp)
+- Show a preview thumbnail after an image is uploaded
+- Have a remove/replace button on hover
+- Be labeled "Image 1", "Image 2", "Image 3", "Image 4"
+
+Also keep the existing story text area (for the paragraph text shown on the customer page).
+
+Add a **"Save Changes"** button at the bottom of the About Section panel.
+
+---
+
+**STEP 2 — Supabase Setup:**
+
+Create/update the following in Supabase:
+
+1. **Storage Bucket:** Create a bucket called `about-images` (public bucket) to store 
+   the 4 uploaded images.
+
+2. **Database Table:** Create a table called `restaurant_about` with these columns:
+   - `id` (uuid, primary key, default: gen_random_uuid())
+   - `restaurant_id` (uuid or text — foreign key to identify which restaurant)
+   - `story_text` (text — the paragraph story description)
+   - `image_1_url` (text — public URL of image 1)
+   - `image_2_url` (text — public URL of image 2)
+   - `image_3_url` (text — public URL of image 3)
+   - `image_4_url` (text — public URL of image 4)
+   - `created_at` (timestamp, default: now())
+   - `updated_at` (timestamp, default: now())
+
+   Use upsert logic (insert or update based on restaurant_id) so each restaurant 
+   has only one row.
+
+---
+
+**STEP 3 — Admin Dashboard Logic (Save Flow):**
+
+When the admin clicks "Save Changes":
+
+1. For each of the 4 image slots where a NEW image was selected:
+   - Upload the image file to Supabase Storage bucket `about-images`
+   - Use a file path like: `{restaurant_id}/about/image_{1|2|3|4}.jpg`
+   - Get back the public URL
+
+2. Upsert a row into `restaurant_about` table with:
+   - `restaurant_id` = current restaurant's ID
+   - `story_text` = value from the text area
+   - `image_1_url` through `image_4_url` = the public URLs from Supabase Storage
+   - `updated_at` = now()
+
+3. Show a success toast/notification: "Story section updated successfully!"
+
+---
+
+**STEP 4 — Customer Homepage (Our Story section) — Fetch & Display:**
+
+On the customer-facing homepage, in the "Our Story" section:
+
+1. On page load, fetch the row from `restaurant_about` table where 
+   `restaurant_id` matches the current restaurant.
+
+2. Dynamically replace:
+   - The 4 black placeholder image boxes → with the actual images from 
+     `image_1_url`, `image_2_url`, `image_3_url`, `image_4_url`
+   - The paragraph/story text → with the `story_text` value from the database
+
+3. If any image URL is null/empty, keep showing the placeholder box for that slot.
+
+4. If `story_text` is null/empty, show a default fallback text.
+
+5. Use Supabase real-time subscription OR just fetch on page load 
+   (fetch on load is fine for now).
+
+---
+
+### TECH STACK CONTEXT:
+- Frontend: (my existing stack in this project)
+- Backend/Database: Supabase (already configured)
+- Use the existing Supabase client already set up in the project
+- Do NOT change any other sections of the homepage or dashboard
+- Keep all existing styling consistent with the current UI
+
+---
+
+### SUMMARY OF FILES YOU'LL LIKELY TOUCH:
+- Admin dashboard component (About Section panel)
+- Customer homepage component (Our Story section)
+- Supabase migration or table creation script
+- Any shared Supabase helper/service file for upload + fetch logic
+
+Start by showing me the plan, then implement step by step.

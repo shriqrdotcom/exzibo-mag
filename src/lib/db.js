@@ -1237,3 +1237,25 @@ export function subscribeToNIELimits(onUpdate) {
     .subscribe()
   return () => { supabase.removeChannel(channel) }
 }
+
+// ── Restaurant About (Our Story) ──────────────────────────────────────────────
+
+export async function fetchRestaurantAbout(restaurantId) {
+  const { data, error } = await supabaseAnon
+    .from('restaurant_about')
+    .select('story_text, image_1_url, image_2_url, image_3_url, image_4_url')
+    .eq('restaurant_id', restaurantId)
+    .maybeSingle()
+  if (error) throw error
+  return data
+}
+
+export async function saveRestaurantAbout(restaurantId, { story_text, image_1_url, image_2_url, image_3_url, image_4_url }) {
+  const { error } = await supabase
+    .from('restaurant_about')
+    .upsert(
+      { restaurant_id: restaurantId, story_text, image_1_url, image_2_url, image_3_url, image_4_url, updated_at: new Date().toISOString() },
+      { onConflict: 'restaurant_id' }
+    )
+  if (error) throw error
+}

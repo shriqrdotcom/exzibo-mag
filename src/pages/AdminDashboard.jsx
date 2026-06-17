@@ -4,7 +4,7 @@ import { ACTIVE_SUBDOMAIN } from '../lib/subdomain'
 import { getRouteConfig } from '../lib/routeConfig'
 import { useAnalytics, notifyAnalyticsUpdate } from '../context/AnalyticsContext'
 import { useRole } from '../context/RoleContext'
-import { getRestaurantById, getRestaurants, getOrders, getBookings, updateOrderStatus, updateBookingStatus, getMenuCategories, getMenuItems, insertMenuItem, updateMenuItem, deleteMenuItem, upsertMenuCategory, deleteMenuCategory, upsertMenuItems, uploadMenuImage, updateRestaurant, uploadToStorage, uploadDataUrlToStorage, toggleMenuItemPublish, normalizeOrder, normalizeBooking, sendMessage, getLatestSmsNotification, upsertSmsNotification, fetchActiveNotification, publishActiveNotification, confirmActiveNotification, insertNotificationHistory, fetchNotificationHistory, fetchNIELimits, subscribeToNIELimits, saveMenuFilters, loadMenuFilters } from '../lib/db'
+import { getRestaurantById, getRestaurants, getOrders, getBookings, updateOrderStatus, updateBookingStatus, getMenuCategories, getMenuItems, insertMenuItem, updateMenuItem, deleteMenuItem, upsertMenuCategory, deleteMenuCategory, upsertMenuItems, uploadMenuImage, updateRestaurant, uploadToStorage, uploadDataUrlToStorage, toggleMenuItemPublish, normalizeOrder, normalizeBooking, sendMessage, getLatestSmsNotification, upsertSmsNotification, fetchActiveNotification, publishActiveNotification, confirmActiveNotification, insertNotificationHistory, fetchNotificationHistory, fetchNIELimits, subscribeToNIELimits, saveMenuFilters, loadMenuFilters, fetchRestaurantAbout, saveRestaurantAbout } from '../lib/db'
 import { processImageFile, isAcceptedImageType } from '../lib/processImage'
 import { toSlug } from '../lib/slug'
 import { supabase } from '../lib/supabase'
@@ -3047,8 +3047,9 @@ function CreateCouponModal({ onClose, coupons = [], onCreateCoupon, onDeleteCoup
 /* ─── Settings Panel ─── */
 function SettingsPanel({ draft, setDraft, accentStart, accentEnd, onSave, saved, isDefault, restaurantId }) {
   const [aboutText, setAboutText] = useState('')
-  const [aboutImage, setAboutImage] = useState('')
+  const [aboutImages, setAboutImages] = useState(['', '', '', ''])
   const fileInputRef = useRef(null)
+  const activeSlotRef = useRef(0)
 
   const carouselInputRef = useRef(null)
   const slotUploadIdxRef = useRef(null)
@@ -3134,14 +3135,29 @@ function SettingsPanel({ draft, setDraft, accentStart, accentEnd, onSave, saved,
 
   useEffect(() => {
     if (!restaurantId) return
+    if (restaurantId !== 'demo') {
+      fetchRestaurantAbout(restaurantId).then(data => {
+        if (!data) return
+        if (data.story_text) setAboutText(data.story_text)
+        setAboutImages([
+          data.image_1_url || '',
+          data.image_2_url || '',
+          data.image_3_url || '',
+          data.image_4_url || '',
+        ])
+      }).catch(() => {
+        try {
+          const stored = JSON.parse(localStorage.getItem(aboutKey) || '{}')
+          if (stored.description) setAboutText(stored.description)
+        } catch {}
+      })
+    } else {
+      try {
+        const stored = JSON.parse(localStorage.getItem(aboutKey) || '{}')
+        if (stored.description) setAboutText(stored.description)
+      } catch {}
+    }
     try {
-      // Load about text + image
-      const stored = JSON.parse(localStorage.getItem(aboutKey) || '{}')
-      if (stored.description) setAboutText(stored.description)
-      if (stored.image) setAboutImage(stored.image)
-    } catch {}
-    try {
-      // Load google review (non-demo only)
       if (restaurantId !== 'demo') {
         const all = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
         const found = all.find(r => r.id === restaurantId)
@@ -3152,10 +3168,11 @@ function SettingsPanel({ draft, setDraft, accentStart, accentEnd, onSave, saved,
 
   const handleImageFile = async (file) => {
     if (!file || !isAcceptedImageType(file)) return
+    const slotIdx = activeSlotRef.current
     try {
       const dataUrl = await processImageFile(file)
-      if (dataUrl) setAboutImage(dataUrl)
-    } catch { /* silently fall back — uploadDataUrlToStorage still compresses on save */ }
+      if (dataUrl) setAboutImages(prev => { const next = [...prev]; next[slotIdx] = dataUrl; return next })
+    } catch {}
   }
   const [coupons, setCoupons] = useState(() => {
     try { return JSON.parse(localStorage.getItem(couponStorageKey) || '[]') } catch { return [] }
@@ -3391,86 +3408,85 @@ function SettingsPanel({ draft, setDraft, accentStart, accentEnd, onSave, saved,
             </div>
             <div>
               <div style={{ fontSize: '15px', fontWeight: 700, color: '#0f172a' }}>About Section</div>
-              <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '2px' }}>Short description or about text for the admin template</div>
+              <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '2px' }}>Story text and 4 photos shown in the "Our Story" section</div>
             </div>
           </div>
-          <input
+          {/* Story text */}
+          <textarea
             value={aboutText}
             onChange={e => setAboutText(e.target.value)}
-            placeholder="Write a short description about the admin template..."
-            style={{ ...inputStyle, marginBottom: '12px' }}
+            placeholder="Write a short story about your restaurant..."
+            rows={4}
+            style={{
+              ...inputStyle,
+              marginBottom: '14px',
+              resize: 'vertical',
+              fontFamily: 'inherit',
+              height: 'auto',
+            }}
           />
-          {/* Hidden file input */}
+          {/* Hidden file input — shared by all 4 slots */}
           <input
             ref={fileInputRef}
             type="file"
-            accept="image/*"
+            accept="image/jpeg,image/png,image/webp"
             style={{ display: 'none' }}
-            onChange={e => handleImageFile(e.target.files[0])}
+            onChange={e => { handleImageFile(e.target.files[0]); e.target.value = '' }}
           />
-          {/* Image upload / preview area */}
-          <div
-            onClick={() => !aboutImage && fileInputRef.current?.click()}
-            style={{
-              border: '1.5px dashed #cbd5e1',
-              borderRadius: '10px',
-              minHeight: '120px',
-              background: aboutImage ? 'transparent' : '#f8fafc',
-              position: 'relative',
-              overflow: 'hidden',
-              cursor: aboutImage ? 'default' : 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}
-          >
-            {aboutImage ? (
-              <>
-                <img
-                  src={aboutImage}
-                  alt="About preview"
-                  style={{ width: '100%', height: '150px', objectFit: 'cover', borderRadius: '9px', display: 'block' }}
-                />
-                {/* Replace / clear buttons */}
-                <div style={{ position: 'absolute', top: '8px', right: '8px', display: 'flex', gap: '6px' }}>
-                  <button
-                    onClick={e => { e.stopPropagation(); fileInputRef.current?.click() }}
-                    style={{
-                      padding: '4px 10px', fontSize: '11px', fontWeight: 700,
-                      background: '#fff', border: '1px solid #e2e8f0', borderRadius: '6px',
-                      color: '#0f172a', cursor: 'pointer', boxShadow: '0 1px 4px rgba(0,0,0,0.1)',
-                    }}
-                  >Change</button>
-                  <button
-                    onClick={e => { e.stopPropagation(); setAboutImage('') }}
-                    style={{
-                      padding: '4px 10px', fontSize: '11px', fontWeight: 700,
-                      background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: '6px',
-                      color: '#dc2626', cursor: 'pointer',
-                    }}
-                  >Remove</button>
+          {/* 4 image slots in a 2×2 grid */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+            {[0, 1, 2, 3].map(i => (
+              <div key={i} style={{ position: 'relative' }}>
+                <div
+                  onClick={() => { activeSlotRef.current = i; fileInputRef.current?.click() }}
+                  style={{
+                    border: aboutImages[i] ? 'none' : '1.5px dashed #cbd5e1',
+                    borderRadius: '10px',
+                    height: '100px',
+                    background: aboutImages[i] ? 'transparent' : '#f8fafc',
+                    overflow: 'hidden',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  {aboutImages[i] ? (
+                    <img
+                      src={aboutImages[i]}
+                      alt={`Story image ${i + 1}`}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                    />
+                  ) : (
+                    <div style={{ textAlign: 'center', color: '#94a3b8', pointerEvents: 'none', padding: '8px' }}>
+                      <div style={{ fontSize: '22px', lineHeight: 1 }}>🖼</div>
+                      <div style={{ fontSize: '10px', marginTop: '5px', fontWeight: 600 }}>Image {i + 1}</div>
+                      <div style={{ fontSize: '10px', color: '#cbd5e1', marginTop: '2px' }}>Click to upload</div>
+                    </div>
+                  )}
                 </div>
-              </>
-            ) : (
-              <div style={{ textAlign: 'center', color: '#94a3b8', pointerEvents: 'none' }}>
-                <div style={{ fontSize: '28px', lineHeight: 1 }}>🖼</div>
-                <div style={{ fontSize: '11px', marginTop: '6px' }}>Click to upload image</div>
+                {aboutImages[i] && (
+                  <div style={{ position: 'absolute', top: '5px', right: '5px', display: 'flex', gap: '4px' }}>
+                    <button
+                      onClick={e => { e.stopPropagation(); activeSlotRef.current = i; fileInputRef.current?.click() }}
+                      style={{
+                        padding: '3px 7px', fontSize: '10px', fontWeight: 700,
+                        background: '#fff', border: '1px solid #e2e8f0', borderRadius: '5px',
+                        color: '#0f172a', cursor: 'pointer', boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                      }}
+                    >Change</button>
+                    <button
+                      onClick={e => { e.stopPropagation(); setAboutImages(prev => { const n = [...prev]; n[i] = ''; return n }) }}
+                      style={{
+                        padding: '3px 7px', fontSize: '10px', fontWeight: 700,
+                        background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: '5px',
+                        color: '#dc2626', cursor: 'pointer',
+                      }}
+                    >✕</button>
+                  </div>
+                )}
               </div>
-            )}
-            {/* + button always visible */}
-            {!aboutImage && (
-              <button
-                onClick={e => { e.stopPropagation(); fileInputRef.current?.click() }}
-                style={{
-                  position: 'absolute', bottom: '10px', right: '10px',
-                  width: '28px', height: '28px',
-                  background: '#fff',
-                  border: '1.5px solid #e2e8f0',
-                  borderRadius: '8px',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  cursor: 'pointer', fontSize: '18px', color: '#64748b',
-                  boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
-                }}
-              >+</button>
-            )}
+            ))}
           </div>
         </div>
 
@@ -3537,18 +3553,27 @@ function SettingsPanel({ draft, setDraft, accentStart, accentEnd, onSave, saved,
         {/* Save Button */}
         <button
           onClick={async () => {
-            // Upload about image to Supabase Storage if it is still a data URL
-            let imageToSave = aboutImage || ''
-            if (imageToSave && imageToSave.startsWith('data:') && restaurantId && restaurantId !== 'demo') {
+            // Upload any new (data URL) about images to Supabase Storage
+            let savedImages = [...aboutImages]
+            if (restaurantId && restaurantId !== 'demo') {
+              for (let i = 0; i < 4; i++) {
+                if (savedImages[i] && savedImages[i].startsWith('data:')) {
+                  try {
+                    savedImages[i] = await uploadDataUrlToStorage(savedImages[i], 'restaurant-images', `${restaurantId}/about`)
+                  } catch (e) { console.warn(`[about] Image ${i + 1} upload failed:`, e.message) }
+                }
+              }
+              setAboutImages(savedImages)
               try {
-                imageToSave = await uploadDataUrlToStorage(imageToSave, 'restaurant-images', `${restaurantId}/about`)
-                setAboutImage(imageToSave)
-              } catch (e) { console.warn('[about] Image upload to storage failed:', e.message) }
+                await saveRestaurantAbout(restaurantId, {
+                  story_text: aboutText,
+                  image_1_url: savedImages[0] || null,
+                  image_2_url: savedImages[1] || null,
+                  image_3_url: savedImages[2] || null,
+                  image_4_url: savedImages[3] || null,
+                })
+              } catch (e) { console.warn('[about] Supabase save failed:', e.message) }
             }
-            // Save about text + image URL
-            try {
-              localStorage.setItem(aboutKey, JSON.stringify({ description: aboutText, image: imageToSave }))
-            } catch {}
             // Save social links to restaurant record
             if (restaurantId && restaurantId !== 'demo') {
               try {
