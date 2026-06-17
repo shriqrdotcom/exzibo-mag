@@ -3048,6 +3048,8 @@ function CreateCouponModal({ onClose, coupons = [], onCreateCoupon, onDeleteCoup
 function SettingsPanel({ draft, setDraft, accentStart, accentEnd, onSave, saved, isDefault, restaurantId }) {
   const [aboutText, setAboutText] = useState('')
   const [aboutImages, setAboutImages] = useState(['', '', '', ''])
+  const [aboutSaving, setAboutSaving] = useState(false)
+  const [aboutSaveError, setAboutSaveError] = useState('')
   const fileInputRef = useRef(null)
   const activeSlotRef = useRef(0)
 
@@ -3551,20 +3553,29 @@ function SettingsPanel({ draft, setDraft, accentStart, accentEnd, onSave, saved,
         </div>
 
         {/* Save Button */}
+        {aboutSaveError && (
+          <div style={{
+            padding: '10px 14px', marginBottom: '10px',
+            background: 'rgba(220,38,38,0.12)', border: '1px solid rgba(220,38,38,0.4)',
+            borderRadius: '10px', color: '#fca5a5', fontSize: '13px', lineHeight: 1.4,
+          }}>
+            ⚠️ Save failed: {aboutSaveError}
+          </div>
+        )}
         <button
+          disabled={aboutSaving}
           onClick={async () => {
-            // Upload any new (data URL) about images via the server (stable slot paths, service role)
-            let savedImages = [...aboutImages]
-            if (restaurantId && restaurantId !== 'demo') {
-              for (let i = 0; i < 4; i++) {
-                if (savedImages[i] && savedImages[i].startsWith('data:')) {
-                  try {
+            setAboutSaveError('')
+            setAboutSaving(true)
+            try {
+              let savedImages = [...aboutImages]
+              if (restaurantId && restaurantId !== 'demo') {
+                for (let i = 0; i < 4; i++) {
+                  if (savedImages[i] && savedImages[i].startsWith('data:')) {
                     savedImages[i] = await uploadAboutImage(savedImages[i], restaurantId, i)
-                  } catch (e) { console.error(`[about] Image ${i + 1} upload failed:`, e.message) }
+                  }
                 }
-              }
-              setAboutImages(savedImages)
-              try {
+                setAboutImages(savedImages)
                 await saveRestaurantAbout(restaurantId, {
                   story_text:  aboutText,
                   image_1_url: savedImages[0] || null,
@@ -3572,34 +3583,40 @@ function SettingsPanel({ draft, setDraft, accentStart, accentEnd, onSave, saved,
                   image_3_url: savedImages[2] || null,
                   image_4_url: savedImages[3] || null,
                 })
-              } catch (e) { console.error('[about] Save failed:', e.message) }
+              }
+              // Save social links to restaurant record
+              if (restaurantId && restaurantId !== 'demo') {
+                try {
+                  const mainList = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
+                  if (mainList.find(r => r.id === restaurantId)) {
+                    localStorage.setItem('exzibo_restaurants', JSON.stringify(mainList.map(r => r.id === restaurantId ? { ...r, googleReview } : r)))
+                  }
+                } catch {}
+              }
+              window.dispatchEvent(new Event('storage'))
+              onSave()
+            } catch (e) {
+              setAboutSaveError(e.message || 'Unknown error — check browser console for details')
+            } finally {
+              setAboutSaving(false)
             }
-            // Save social links to restaurant record
-            if (restaurantId && restaurantId !== 'demo') {
-              try {
-                const mainList = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
-                if (mainList.find(r => r.id === restaurantId)) {
-                  localStorage.setItem('exzibo_restaurants', JSON.stringify(mainList.map(r => r.id === restaurantId ? { ...r, googleReview } : r)))
-                }
-              } catch {}
-            }
-            // Notify all listeners
-            window.dispatchEvent(new Event('storage'))
-            onSave()
           }}
           style={{
             width: '100%', padding: '16px',
-            background: saved ? 'linear-gradient(135deg, #10B981, #059669)' : 'linear-gradient(135deg, #2563EB, #1D4ED8)',
+            background: aboutSaving ? '#374151'
+              : saved ? 'linear-gradient(135deg, #10B981, #059669)'
+              : 'linear-gradient(135deg, #2563EB, #1D4ED8)',
             border: 'none', borderRadius: '50px',
             color: '#fff', fontSize: '14px', fontWeight: 800,
-            letterSpacing: '0.06em', cursor: 'pointer',
+            letterSpacing: '0.06em',
+            cursor: aboutSaving ? 'not-allowed' : 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
             boxShadow: saved ? '0 6px 20px rgba(16,185,129,0.4)' : '0 6px 20px rgba(37,99,235,0.4)',
             transition: 'all 0.3s ease',
+            opacity: aboutSaving ? 0.7 : 1,
           }}
         >
-          {saved ? <Check size={16} /> : <Save size={16} />}
-          {saved ? 'SAVED!' : 'SAVE & APPLY TO ALL RESTAURANTS'}
+          {aboutSaving ? '⏳ Saving…' : saved ? <><Check size={16} /> SAVED!</> : <><Save size={16} /> SAVE & APPLY TO ALL RESTAURANTS</>}
         </button>
 
       </div>
