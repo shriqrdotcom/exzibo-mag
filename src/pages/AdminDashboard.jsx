@@ -3050,6 +3050,8 @@ function SettingsPanel({ draft, setDraft, accentStart, accentEnd, onSave, saved,
   const [aboutImages, setAboutImages] = useState(['', '', '', ''])
   const [aboutSaving, setAboutSaving] = useState(false)
   const [aboutSaveError, setAboutSaveError] = useState('')
+  const [aboutSaveStatus, setAboutSaveStatus] = useState('idle') // idle | uploading | saving | done | error
+  const [aboutSaveMsg, setAboutSaveMsg] = useState('')
   const fileInputRef = useRef(null)
   const activeSlotRef = useRef(0)
 
@@ -3489,6 +3491,163 @@ function SettingsPanel({ draft, setDraft, accentStart, accentEnd, onSave, saved,
                 )}
               </div>
             ))}
+          </div>
+
+          {/* ── Dedicated About Section Save Button ───────────────────────────── */}
+          <div style={{ marginTop: '16px' }}>
+            {aboutSaveStatus === 'error' && (
+              <div style={{
+                padding: '10px 14px', marginBottom: '10px',
+                background: 'rgba(220,38,38,0.12)', border: '1.5px solid rgba(220,38,38,0.5)',
+                borderRadius: '10px', color: '#f87171', fontSize: '13px', lineHeight: 1.5,
+                wordBreak: 'break-word',
+              }}>
+                ❌ Save failed: {aboutSaveMsg}
+              </div>
+            )}
+            {aboutSaveStatus === 'done' && (
+              <div style={{
+                padding: '10px 14px', marginBottom: '10px',
+                background: 'rgba(16,185,129,0.12)', border: '1.5px solid rgba(16,185,129,0.4)',
+                borderRadius: '10px', color: '#34d399', fontSize: '13px', fontWeight: 600,
+              }}>
+                ✅ Story & images saved successfully!
+              </div>
+            )}
+            <button
+              disabled={aboutSaveStatus === 'uploading' || aboutSaveStatus === 'saving'}
+              onClick={async () => {
+                if (!restaurantId || restaurantId === 'demo') return
+                setAboutSaveStatus('uploading')
+                setAboutSaveMsg('')
+                try {
+                  const imageUrls = [...aboutImages]
+
+                  // ── Upload each new (data: URL) image ─────────────────────────
+                  for (let i = 0; i < 4; i++) {
+                    if (!imageUrls[i] || !imageUrls[i].startsWith('data:')) continue
+                    setAboutSaveMsg(`Uploading image ${i + 1} of 4…`)
+
+                    // Compress to WebP via canvas
+                    const compressed = await new Promise((resolve, reject) => {
+                      const img = new Image()
+                      img.onload = () => {
+                        const MAX = 900
+                        let w = img.width, h = img.height
+                        if (w > MAX || h > MAX) {
+                          const r = Math.min(MAX / w, MAX / h)
+                          w = Math.round(w * r); h = Math.round(h * r)
+                        }
+                        const canvas = document.createElement('canvas')
+                        canvas.width = w; canvas.height = h
+                        canvas.getContext('2d').drawImage(img, 0, 0, w, h)
+                        resolve(canvas.toDataURL('image/webp', 0.82))
+                      }
+                      img.onerror = () => reject(new Error(`Image ${i + 1} could not be loaded for compression`))
+                      img.src = imageUrls[i]
+                    })
+
+                    const b64   = compressed.replace(/^data:[^;]+;base64,/, '')
+                    const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0))
+                    const blob  = new Blob([bytes], { type: 'image/webp' })
+                    const path  = `${restaurantId}/about/image_${i + 1}.webp`
+
+                    // Delete existing file first (avoids UPDATE policy requirement)
+                    await supabase.storage.from('restaurant-images').remove([path]).catch(() => {})
+
+                    // Upload with authenticated supabase client (user is logged in via Google OAuth)
+                    const { error: upErr } = await supabase.storage
+                      .from('restaurant-images')
+                      .upload(path, blob, { contentType: 'image/webp', upsert: false })
+
+                    if (upErr) {
+                      // Fallback: server API (uses service role key)
+                      const r = await fetch('/api/about/upload-image', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ dataUrl: compressed, restaurantId, slot: i }),
+                      })
+                      if (!r.ok) {
+                        const e = await r.json().catch(() => ({}))
+                        throw new Error(`Image ${i + 1} upload failed: ${e.error || `HTTP ${r.status}`}. Make sure SUPABASE_SERVICE_ROLE_KEY is set in Vercel.`)
+                      }
+                      const { url } = await r.json()
+                      if (!url || !url.startsWith('http')) throw new Error(`Image ${i + 1}: server returned invalid URL`)
+                      imageUrls[i] = url
+                    } else {
+                      const { data: { publicUrl } } = supabase.storage.from('restaurant-images').getPublicUrl(path)
+                      if (!publicUrl || !publicUrl.startsWith('http')) throw new Error(`Image ${i + 1}: could not get public URL after upload`)
+                      imageUrls[i] = publicUrl
+                    }
+                  }
+
+                  // ── Save text + image URLs to restaurant_about table ──────────
+                  setAboutSaveStatus('saving')
+                  setAboutSaveMsg('Saving story to database…')
+
+                  const payload = {
+                    restaurant_id: restaurantId,
+                    story_text:    aboutText ?? null,
+                    image_1_url:   imageUrls[0]?.startsWith('http') ? imageUrls[0] : null,
+                    image_2_url:   imageUrls[1]?.startsWith('http') ? imageUrls[1] : null,
+                    image_3_url:   imageUrls[2]?.startsWith('http') ? imageUrls[2] : null,
+                    image_4_url:   imageUrls[3]?.startsWith('http') ? imageUrls[3] : null,
+                    updated_at:    new Date().toISOString(),
+                  }
+
+                  // Try authenticated client UPDATE first
+                  const { data: updated, error: updErr } = await supabase
+                    .from('restaurant_about')
+                    .update(payload)
+                    .eq('restaurant_id', restaurantId)
+                    .select('id')
+
+                  if (updErr) throw new Error('Database update error: ' + updErr.message)
+
+                  if (!updated || updated.length === 0) {
+                    // No row yet — insert
+                    const { error: insErr } = await supabase
+                      .from('restaurant_about')
+                      .insert(payload)
+                    if (insErr) throw new Error('Database insert error: ' + insErr.message)
+                  }
+
+                  // ── Done ───────────────────────────────────────────────────────
+                  setAboutImages(imageUrls)
+                  setAboutSaveStatus('done')
+                  setAboutSaveMsg('Saved!')
+                  setTimeout(() => { setAboutSaveStatus('idle'); setAboutSaveMsg('') }, 4000)
+                } catch (err) {
+                  console.error('[About Section save]', err)
+                  setAboutSaveStatus('error')
+                  setAboutSaveMsg(err.message || 'Unknown error — open browser console for details')
+                }
+              }}
+              style={{
+                width: '100%', padding: '13px 16px',
+                background: aboutSaveStatus === 'uploading' || aboutSaveStatus === 'saving'
+                  ? '#374151'
+                  : aboutSaveStatus === 'done'
+                  ? 'linear-gradient(135deg,#10B981,#059669)'
+                  : aboutSaveStatus === 'error'
+                  ? 'linear-gradient(135deg,#dc2626,#b91c1c)'
+                  : 'linear-gradient(135deg,#7C3AED,#6D28D9)',
+                border: 'none', borderRadius: '10px',
+                color: '#fff', fontSize: '13px', fontWeight: 800,
+                letterSpacing: '0.05em', cursor: aboutSaveStatus === 'uploading' || aboutSaveStatus === 'saving' ? 'not-allowed' : 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                opacity: aboutSaveStatus === 'uploading' || aboutSaveStatus === 'saving' ? 0.8 : 1,
+                transition: 'all 0.25s ease',
+              }}
+            >
+              {aboutSaveStatus === 'uploading' || aboutSaveStatus === 'saving'
+                ? `⏳ ${aboutSaveMsg || 'Saving…'}`
+                : aboutSaveStatus === 'done'
+                ? '✅ STORY SAVED!'
+                : aboutSaveStatus === 'error'
+                ? '❌ RETRY SAVE'
+                : '💾 SAVE STORY & IMAGES'}
+            </button>
           </div>
         </div>
 
