@@ -4,7 +4,7 @@ import { ACTIVE_SUBDOMAIN } from '../lib/subdomain'
 import { getRouteConfig } from '../lib/routeConfig'
 import { useAnalytics, notifyAnalyticsUpdate } from '../context/AnalyticsContext'
 import { useRole } from '../context/RoleContext'
-import { getRestaurantById, getRestaurants, getOrders, getBookings, updateOrderStatus, updateBookingStatus, getMenuCategories, getMenuItems, insertMenuItem, updateMenuItem, deleteMenuItem, upsertMenuCategory, deleteMenuCategory, upsertMenuItems, uploadMenuImage, updateRestaurant, uploadToStorage, uploadDataUrlToStorage, toggleMenuItemPublish, normalizeOrder, normalizeBooking, sendMessage, getLatestSmsNotification, upsertSmsNotification, fetchActiveNotification, publishActiveNotification, confirmActiveNotification, insertNotificationHistory, fetchNotificationHistory, fetchNIELimits, subscribeToNIELimits, saveMenuFilters, loadMenuFilters, fetchRestaurantAbout, saveRestaurantAbout } from '../lib/db'
+import { getRestaurantById, getRestaurants, getOrders, getBookings, updateOrderStatus, updateBookingStatus, getMenuCategories, getMenuItems, insertMenuItem, updateMenuItem, deleteMenuItem, upsertMenuCategory, deleteMenuCategory, upsertMenuItems, uploadMenuImage, updateRestaurant, uploadToStorage, uploadDataUrlToStorage, toggleMenuItemPublish, normalizeOrder, normalizeBooking, sendMessage, getLatestSmsNotification, upsertSmsNotification, fetchActiveNotification, publishActiveNotification, confirmActiveNotification, insertNotificationHistory, fetchNotificationHistory, fetchNIELimits, subscribeToNIELimits, saveMenuFilters, loadMenuFilters, fetchRestaurantAbout, saveRestaurantAbout, uploadAboutImage } from '../lib/db'
 import { processImageFile, isAcceptedImageType } from '../lib/processImage'
 import { toSlug } from '../lib/slug'
 import { supabase } from '../lib/supabase'
@@ -3553,26 +3553,26 @@ function SettingsPanel({ draft, setDraft, accentStart, accentEnd, onSave, saved,
         {/* Save Button */}
         <button
           onClick={async () => {
-            // Upload any new (data URL) about images to Supabase Storage
+            // Upload any new (data URL) about images via the server (stable slot paths, service role)
             let savedImages = [...aboutImages]
             if (restaurantId && restaurantId !== 'demo') {
               for (let i = 0; i < 4; i++) {
                 if (savedImages[i] && savedImages[i].startsWith('data:')) {
                   try {
-                    savedImages[i] = await uploadDataUrlToStorage(savedImages[i], 'restaurant-images', `${restaurantId}/about`)
-                  } catch (e) { console.warn(`[about] Image ${i + 1} upload failed:`, e.message) }
+                    savedImages[i] = await uploadAboutImage(savedImages[i], restaurantId, i)
+                  } catch (e) { console.error(`[about] Image ${i + 1} upload failed:`, e.message) }
                 }
               }
               setAboutImages(savedImages)
               try {
                 await saveRestaurantAbout(restaurantId, {
-                  story_text: aboutText,
+                  story_text:  aboutText,
                   image_1_url: savedImages[0] || null,
                   image_2_url: savedImages[1] || null,
                   image_3_url: savedImages[2] || null,
                   image_4_url: savedImages[3] || null,
                 })
-              } catch (e) { console.warn('[about] Supabase save failed:', e.message) }
+              } catch (e) { console.error('[about] Save failed:', e.message) }
             }
             // Save social links to restaurant record
             if (restaurantId && restaurantId !== 'demo') {

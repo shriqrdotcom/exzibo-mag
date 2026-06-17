@@ -772,6 +772,100 @@ app.post('/api/restaurant/update-social', async (req, res) => {
   }
 })
 
+// ── About Section API (service-role, bypasses RLS) ───────────────────────────
+
+// POST /api/about/upload-image
+// Body: { dataUrl: string, restaurantId: string, slot: number (0-3) }
+// Uploads to restaurant-images/{restaurantId}/about/image_{slot+1}.webp with upsert.
+// Returns: { url: string }
+app.post('/api/about/upload-image', async (req, res) => {
+  try {
+    const { dataUrl, restaurantId, slot } = req.body
+    if (!dataUrl || !restaurantId || slot == null) {
+      return res.status(400).json({ error: 'dataUrl, restaurantId, and slot required' })
+    }
+    const { url: supabaseUrl, headers } = getSupabaseServiceHeaders()
+    const base64 = dataUrl.replace(/^data:[^;]+;base64,/, '')
+    const buf    = Buffer.from(base64, 'base64')
+    const filePath = `${restaurantId}/about/image_${slot + 1}.webp`
+    const uploadRes = await fetch(
+      `${supabaseUrl}/storage/v1/object/restaurant-images/${filePath}`,
+      {
+        method: 'POST',
+        headers: { ...headers, 'Content-Type': 'image/webp', 'x-upsert': 'true' },
+        body: buf,
+      }
+    )
+    if (!uploadRes.ok) {
+      const err = await uploadRes.text()
+      console.error('[about/upload-image] Storage error:', err)
+      return res.status(500).json({ error: `Storage upload failed: ${err}` })
+    }
+    const publicUrl = `${supabaseUrl}/storage/v1/object/public/restaurant-images/${filePath}`
+    console.log('[about/upload-image] Uploaded:', publicUrl)
+    return res.json({ url: publicUrl })
+  } catch (err) {
+    console.error('[about/upload-image] Error:', err.message)
+    return res.status(500).json({ error: err.message })
+  }
+})
+
+// GET /api/about/:restaurantId
+// Returns the restaurant_about row for a restaurant (service role — no RLS dependency)
+app.get('/api/about/:restaurantId', async (req, res) => {
+  try {
+    const { restaurantId } = req.params
+    if (!restaurantId) return res.status(400).json({ error: 'restaurantId required' })
+    const { url: supabaseUrl, headers } = getSupabaseServiceHeaders()
+    const r = await fetch(
+      `${supabaseUrl}/rest/v1/restaurant_about?restaurant_id=eq.${encodeURIComponent(restaurantId)}&select=story_text,image_1_url,image_2_url,image_3_url,image_4_url&limit=1`,
+      { headers }
+    )
+    const data = await r.json()
+    if (!r.ok) return res.status(r.status).json({ error: data })
+    return res.json(Array.isArray(data) ? (data[0] ?? null) : data)
+  } catch (err) {
+    console.error('[about/get] Error:', err.message)
+    return res.status(500).json({ error: err.message })
+  }
+})
+
+// POST /api/about/save
+// Body: { restaurantId, story_text, image_1_url, image_2_url, image_3_url, image_4_url }
+// Upserts the restaurant_about row using service role key.
+app.post('/api/about/save', async (req, res) => {
+  try {
+    const { restaurantId, story_text, image_1_url, image_2_url, image_3_url, image_4_url } = req.body
+    if (!restaurantId) return res.status(400).json({ error: 'restaurantId required' })
+    const { url: supabaseUrl, headers } = getSupabaseServiceHeaders()
+    const r = await fetch(
+      `${supabaseUrl}/rest/v1/restaurant_about?on_conflict=restaurant_id`,
+      {
+        method: 'POST',
+        headers: { ...headers, Prefer: 'resolution=merge-duplicates,return=representation' },
+        body: JSON.stringify({
+          restaurant_id: restaurantId,
+          story_text:    story_text    ?? null,
+          image_1_url:   image_1_url   ?? null,
+          image_2_url:   image_2_url   ?? null,
+          image_3_url:   image_3_url   ?? null,
+          image_4_url:   image_4_url   ?? null,
+          updated_at:    new Date().toISOString(),
+        }),
+      }
+    )
+    const data = await r.json()
+    if (!r.ok) {
+      console.error('[about/save] Supabase error:', data)
+      return res.status(r.status).json({ error: data })
+    }
+    return res.json({ success: true, data: Array.isArray(data) ? data[0] : data })
+  } catch (err) {
+    console.error('[about/save] Error:', err.message)
+    return res.status(500).json({ error: err.message })
+  }
+})
+
 // ── SPA fallback — must be last ───────────────────────────────────────────────
 app.get('*', (req, res) => {
   res.sendFile(path.resolve(__dirname, 'dist', 'index.html'))

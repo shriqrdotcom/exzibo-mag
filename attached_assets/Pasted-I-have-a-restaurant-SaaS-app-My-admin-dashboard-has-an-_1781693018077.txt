@@ -1,0 +1,151 @@
+I have a restaurant SaaS app. My admin dashboard has an "About Section" with:
+- A story text area
+- 4 image upload slots (Image 1, Image 2, Image 3, Image 4)
+- A "SAVE & APPLY TO ALL RESTAURANTS" button
+
+I have TWO critical bugs to fix:
+
+---
+
+### BUG 1 — DATA DOESN'T PERSIST (Disappears on refresh)
+
+After I type story text and upload images, clicking Save shows a success message,
+BUT when I refresh the dashboard page, everything is gone (blank text, empty image slots).
+
+This means either:
+- Images are being stored as temporary local blob:// URLs, NOT uploaded to Supabase Storage
+- OR the Supabase upsert/insert is failing silently (no real DB write happening)
+- OR the dashboard component is not FETCHING existing saved data on mount/load
+
+---
+
+### BUG 2 — CUSTOMER PAGE "Our Story" SECTION IS NOT UPDATING
+
+The restaurant's customer-facing homepage has an "Our Story" section with:
+- 4 image boxes (currently showing black/empty placeholders)
+- A story text paragraph
+
+Even after saving from the dashboard, these NEVER update on the customer page.
+
+This means the customer page is either:
+- Not fetching from Supabase at all (still using hardcoded/static data)
+- Fetching from the wrong table or wrong restaurant_id
+- Not re-rendering after data loads
+
+---
+
+### WHAT I NEED YOU TO FIX — STEP BY STEP:
+
+---
+
+#### FIX 1: Audit the current Save function in the About Section
+
+Find the save/submit handler in the About Section dashboard component.
+Check what it's actually doing when I click Save:
+
+- Is it uploading images to Supabase Storage? Or just using local blob URLs?
+- Is it writing to a Supabase table? Which table and which columns?
+- Is there any error handling? Add console.error logs to catch silent failures.
+- Is it using the correct restaurant_id from the current session/context?
+
+Show me the current save function code and explain what's broken.
+
+---
+
+#### FIX 2: Fix Image Upload to Supabase Storage
+
+When admin selects an image file in any of the 4 slots:
+
+1. On Save click, upload each new image file to Supabase Storage
+   - Bucket name: `about-images` (create it if it doesn't exist, set to PUBLIC)
+   - File path: `{restaurant_id}/story/image_{1|2|3|4}.{ext}`
+   - Overwrite if a file already exists at that path (upsert behavior)
+
+2. After upload, get the PUBLIC URL using:
+   supabase.storage.from('about-images').getPublicUrl(filePath)
+
+3. Store ONLY the public URL string in the database (NOT a blob:// URL)
+
+---
+
+#### FIX 3: Fix Database Save (Upsert to Supabase table)
+
+Make sure the save function properly upserts to the `restaurant_about` table.
+The table should have these columns (create it if missing):
+
+  - id (uuid, primary key, default gen_random_uuid())
+  - restaurant_id (text or uuid) ← REQUIRED, use current restaurant's ID
+  - story_text (text)
+  - image_1_url (text)
+  - image_2_url (text)
+  - image_3_url (text)
+  - image_4_url (text)
+  - updated_at (timestamp, default now())
+
+Use UPSERT with `onConflict: 'restaurant_id'` so each restaurant 
+has exactly one row and re-saving updates it instead of creating duplicates.
+
+If restaurant_id is not available, find where it comes from 
+(auth context, URL param, localStorage, etc.) and use it correctly.
+
+---
+
+#### FIX 4: Fix Dashboard Load — Fetch & Pre-fill Saved Data
+
+When the About Section component mounts (useEffect on load):
+
+1. Fetch the row from `restaurant_about` WHERE restaurant_id = current restaurant's ID
+2. If a row exists:
+   - Pre-fill the story text area with `story_text`
+   - Show thumbnail previews for image_1_url through image_4_url 
+     (display the saved images in each upload slot instead of empty placeholders)
+3. If no row exists yet, show empty placeholders (default state)
+
+This ensures data persists visually after page refresh.
+
+---
+
+#### FIX 5: Fix Customer-Facing "Our Story" Section
+
+Find the "Our Story" section component on the restaurant homepage/customer page.
+
+1. Add a useEffect (or server-side fetch) that runs on component mount:
+   - Query `restaurant_about` table WHERE restaurant_id = current restaurant's ID
+   - Store result in component state
+
+2. Replace the 4 hardcoded black placeholder image boxes with:
+   - If image_X_url is not null → show <img src={image_X_url} />
+   - If image_X_url is null → show the existing black placeholder box
+
+3. Replace the hardcoded/static story paragraph text with:
+   - If story_text is not null → show story_text
+   - If story_text is null → show a default fallback text
+
+4. Show a loading state while data is being fetched (skeleton or spinner)
+
+---
+
+#### FIX 6: End-to-End Test Checklist
+
+After making all fixes, verify this full flow works:
+
+✅ Admin uploads 4 images + writes story text → clicks Save
+✅ Success toast appears
+✅ Admin refreshes dashboard → images and text are still shown (pre-filled)
+✅ Customer opens restaurant homepage → Our Story section shows the uploaded 
+   images and story text
+✅ Admin updates images/text → saves again → customer page reflects the new data
+
+---
+
+### IMPORTANT CONTEXT:
+- Backend: Supabase (already configured in this project)
+- Use the existing Supabase client (do not create a new one)
+- The restaurant_id must come from the current authenticated session or 
+  existing context — find how other sections of the dashboard get restaurant_id 
+  and use the same approach
+- Do NOT break any other existing functionality
+- Keep all existing UI styling exactly the same
+
+Start by finding and showing me the current About Section save function 
+and the Our Story customer component, then fix all 6 issues above.

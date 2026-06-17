@@ -1239,23 +1239,42 @@ export function subscribeToNIELimits(onUpdate) {
 }
 
 // ── Restaurant About (Our Story) ──────────────────────────────────────────────
+// All three functions route through the server-side API so the service role key
+// is used — this bypasses RLS entirely and works in both dev and production.
 
 export async function fetchRestaurantAbout(restaurantId) {
-  const { data, error } = await supabaseAnon
-    .from('restaurant_about')
-    .select('story_text, image_1_url, image_2_url, image_3_url, image_4_url')
-    .eq('restaurant_id', restaurantId)
-    .maybeSingle()
-  if (error) throw error
-  return data
+  const res = await fetch(`/api/about/${encodeURIComponent(restaurantId)}`)
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err?.error || `fetch about failed: ${res.status}`)
+  }
+  return res.json()
 }
 
 export async function saveRestaurantAbout(restaurantId, { story_text, image_1_url, image_2_url, image_3_url, image_4_url }) {
-  const { error } = await supabase
-    .from('restaurant_about')
-    .upsert(
-      { restaurant_id: restaurantId, story_text, image_1_url, image_2_url, image_3_url, image_4_url, updated_at: new Date().toISOString() },
-      { onConflict: 'restaurant_id' }
-    )
-  if (error) throw error
+  const res = await fetch('/api/about/save', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ restaurantId, story_text, image_1_url, image_2_url, image_3_url, image_4_url }),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err?.error || `save about failed: ${res.status}`)
+  }
+}
+
+// Upload a single about-section image via the server (service role, stable path).
+// slot: 0-3 → saved as image_1.webp … image_4.webp (overwrites previous file).
+export async function uploadAboutImage(dataUrl, restaurantId, slot) {
+  const res = await fetch('/api/about/upload-image', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ dataUrl, restaurantId, slot }),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err?.error || `about image upload failed: ${res.status}`)
+  }
+  const { url } = await res.json()
+  return url
 }
