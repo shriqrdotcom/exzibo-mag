@@ -16,6 +16,12 @@
     { "source": "/api/restaurant/update-social",            "destination": "/api/content?action=updateSocial"                             },
     { "source": "/api/orders/update-status",                "destination": "/api/orders?action=updateStatus"                              },
     { "source": "/api/orders/auto-cleanup",                 "destination": "/api/orders?action=autoCleanup"                               },
+    { "source": "/api/preview-login",                       "destination": "/api/system?action=previewLogin"                              },
+    { "source": "/api/preview-verify",                      "destination": "/api/system?action=previewVerify"                             },
+    { "source": "/api/restaurant-db/create",                "destination": "/api/system?action=createRestaurantDb"                        },
+    { "source": "/api/restaurant-db/drop",                  "destination": "/api/system?action=dropRestaurantDb"                          },
+    { "source": "/api/restaurant-db/list",                  "destination": "/api/system?action=listRestaurantDb"                          },
+    { "source": "/api/migrate",                             "destination": "/api/system?action=migrate"                                   },
     { "source": "/api/(.*)",                                "destination": "/api/$1"                                                       },
     { "source": "/(.*)",                                    "destination": "/index.html"                                                   }
   ]

@@ -1,0 +1,100 @@
+TASK: Create a single merged Serverless Function called:
+
+/api/system
+
+GOAL:
+Centralize all missing, legacy, compatibility, migration and Replit-only endpoints.
+
+MERGE THESE APIs:
+
+/api/preview-login
+/api/preview-verify
+
+/api/restaurant-db/create
+/api/restaurant-db/drop
+/api/restaurant-db/list
+
+/api/migrate
+
+PATCH  /api/menu/items/:id
+DELETE /api/menu/items/:id
+
+PURPOSE:
+
+1. Fix Vercel missing preview authentication endpoints.
+2. Preserve legacy migration support.
+3. Preserve compatibility routes.
+4. Handle Replit-only database schema functions safely.
+
+REQUIRED INTERNAL ROUTES:
+
+?action=previewLogin
+
+?action=previewVerify
+
+?action=createRestaurantDb
+
+?action=dropRestaurantDb
+
+?action=listRestaurantDb
+
+?action=migrate
+
+?action=legacyPatchItem
+
+?action=legacyDeleteItem
+
+IMPORTANT:
+
+Preview Auth:
+- Preserve HMAC validation.
+- Preserve PREVIEW_SECRET.
+- Preserve PREVIEW_EMAIL.
+- Preserve PREVIEW_PASSWORD_HASH.
+- Preserve existing token format.
+
+Restaurant DB:
+- Detect Vercel environment.
+- If DATABASE_URL unavailable:
+  return graceful success response.
+- Do NOT crash deployment.
+
+Migration:
+- Execute only when required.
+- Keep legacy compatibility.
+
+Legacy PATCH/DELETE:
+- Internally route to menu update/delete handlers.
+- Maintain backward compatibility.
+
+VERCEL REWRITES:
+
+/api/preview-login
+→ /api/system?action=previewLogin
+
+/api/preview-verify
+→ /api/system?action=previewVerify
+
+/api/restaurant-db/create
+→ /api/system?action=createRestaurantDb
+
+/api/restaurant-db/drop
+→ /api/system?action=dropRestaurantDb
+
+/api/restaurant-db/list
+→ /api/system?action=listRestaurantDb
+
+/api/migrate
+→ /api/system?action=migrate
+
+/api/menu/items/:id (PATCH)
+→ /api/system?action=legacyPatchItem
+
+/api/menu/items/:id (DELETE)
+→ /api/system?action=legacyDeleteItem
+
+DO NOT REMOVE ANY EXISTING FUNCTIONALITY.
+DO NOT CHANGE FRONTEND CALLS.
+DO NOT CHANGE DATABASE SCHEMA.
+DO NOT CHANGE RESPONSE STRUCTURES.
+ONLY CONSOLIDATE SERVERLESS FUNCTIONS SAFELY.
