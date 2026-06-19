@@ -1,15 +1,17 @@
 {
   "rewrites": [
-    { "source": "/api/menu/categories/upsert",                        "destination": "/api/menu?action=upsertCategory"                                      },
-    { "source": "/api/menu/categories/delete",                        "destination": "/api/menu?action=deleteCategory"                                      },
-    { "source": "/api/menu/categories/:restaurantId",                 "destination": "/api/menu?action=getCategories&restaurantId=:restaurantId"            },
-    { "source": "/api/menu/items/upsert",                             "destination": "/api/menu?action=upsertItems"                                         },
-    { "source": "/api/menu/items/:restaurantId/published",            "destination": "/api/menu?action=getPublishedItems&restaurantId=:restaurantId"        },
-    { "source": "/api/menu/items/:restaurantId",                      "destination": "/api/menu?action=getItems&restaurantId=:restaurantId"                 },
-    { "source": "/api/menu/items",                                    "destination": "/api/menu?action=createItem"                                          },
-    { "source": "/api/menu/item-patch",                               "destination": "/api/menu?action=updateItem"                                          },
-    { "source": "/api/menu/item-delete",                              "destination": "/api/menu?action=deleteItem"                                          },
-    { "source": "/api/(.*)",                                          "destination": "/api/$1"                                                              },
-    { "source": "/(.*)",                                              "destination": "/index.html"                                                          }
+    { "source": "/api/menu/categories/upsert",              "destination": "/api/menu?action=upsertCategory"                              },
+    { "source": "/api/menu/categories/delete",              "destination": "/api/menu?action=deleteCategory"                              },
+    { "source": "/api/menu/categories/:restaurantId",       "destination": "/api/menu?action=getCategories&restaurantId=:restaurantId"    },
+    { "source": "/api/menu/items/upsert",                   "destination": "/api/menu?action=upsertItems"                                 },
+    { "source": "/api/menu/items/:restaurantId/published",  "destination": "/api/menu?action=getPublishedItems&restaurantId=:restaurantId"},
+    { "source": "/api/menu/items/:restaurantId",            "destination": "/api/menu?action=getItems&restaurantId=:restaurantId"         },
+    { "source": "/api/menu/items",                          "destination": "/api/menu?action=createItem"                                  },
+    { "source": "/api/menu/item-patch",                     "destination": "/api/menu?action=updateItem"                                  },
+    { "source": "/api/menu/item-delete",                    "destination": "/api/menu?action=deleteItem"                                  },
+    { "source": "/api/menu/upload-image",                   "destination": "/api/media?action=uploadMenuImage"                            },
+    { "source": "/api/about/upload-image",                  "destination": "/api/media?action=uploadAboutImage"                          },
+    { "source": "/api/(.*)",                                "destination": "/api/$1"                                                      },
+    { "source": "/(.*)",                                    "destination": "/index.html"                                                  }
   ]
 }
