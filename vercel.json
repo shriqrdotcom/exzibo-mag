@@ -10,10 +10,12 @@
     { "source": "/api/menu/item-patch",                     "destination": "/api/menu?action=updateItem"                                   },
     { "source": "/api/menu/item-delete",                    "destination": "/api/menu?action=deleteItem"                                   },
     { "source": "/api/menu/upload-image",                   "destination": "/api/media?action=uploadMenuImage"                             },
-    { "source": "/api/about/upload-image",                  "destination": "/api/media?action=uploadAboutImage"                           },
+    { "source": "/api/about/upload-image",                  "destination": "/api/media?action=uploadAboutImage"                            },
     { "source": "/api/about/save",                          "destination": "/api/content?action=saveAbout"                                 },
     { "source": "/api/about/:restaurantId",                 "destination": "/api/content?action=getAbout&restaurantId=:restaurantId"       },
     { "source": "/api/restaurant/update-social",            "destination": "/api/content?action=updateSocial"                             },
+    { "source": "/api/orders/update-status",                "destination": "/api/orders?action=updateStatus"                              },
+    { "source": "/api/orders/auto-cleanup",                 "destination": "/api/orders?action=autoCleanup"                               },
     { "source": "/api/(.*)",                                "destination": "/api/$1"                                                       },
     { "source": "/(.*)",                                    "destination": "/index.html"                                                   }
   ]
