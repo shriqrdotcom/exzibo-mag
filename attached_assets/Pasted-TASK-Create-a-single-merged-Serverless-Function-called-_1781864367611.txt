@@ -1,0 +1,108 @@
+TASK: Create a single merged Serverless Function called:
+
+/api/menu
+
+GOAL:
+Merge all menu CRUD endpoints into one function without breaking any existing frontend calls.
+
+MERGE THESE APIs:
+
+GET    /api/menu/categories/:restaurantId
+GET    /api/menu/items/:restaurantId
+GET    /api/menu/items/:restaurantId/published
+
+POST   /api/menu/items
+POST   /api/menu/items/upsert
+POST   /api/menu/item-patch
+POST   /api/menu/item-delete
+
+POST   /api/menu/categories/upsert
+POST   /api/menu/categories/delete
+
+EXISTING DATABASE TABLES:
+
+menu_items
+menu_categories
+
+AUTH:
+
+Public:
+- categories/:restaurantId
+- items/:restaurantId/published
+
+Protected:
+- items create
+- items update
+- items delete
+- category create
+- category update
+- category delete
+- items/:restaurantId (admin version)
+
+DEPENDENCIES:
+
+Supabase REST
+Supabase Service Role
+Existing db.js logic
+
+REQUIRED INTERNAL ROUTES:
+
+GET:
+?action=getCategories
+?action=getItems
+?action=getPublishedItems
+
+POST:
+?action=createItem
+?action=upsertItems
+?action=updateItem
+?action=deleteItem
+
+?action=upsertCategory
+?action=deleteCategory
+
+IMPORTANT:
+
+- Reuse existing business logic.
+- Do NOT change database schema.
+- Do NOT change frontend payload format.
+- Do NOT change response structure.
+- Preserve existing permissions.
+- Preserve service-role usage.
+- Preserve fallback logic.
+- Keep backward compatibility.
+
+VERCEL:
+
+Add rewrites so all old endpoints continue working.
+
+Examples:
+
+/api/menu/categories/:restaurantId
+→ /api/menu?action=getCategories
+
+/api/menu/items/:restaurantId
+→ /api/menu?action=getItems
+
+/api/menu/items/:restaurantId/published
+→ /api/menu?action=getPublishedItems
+
+/api/menu/items
+→ /api/menu?action=createItem
+
+/api/menu/items/upsert
+→ /api/menu?action=upsertItems
+
+/api/menu/item-patch
+→ /api/menu?action=updateItem
+
+/api/menu/item-delete
+→ /api/menu?action=deleteItem
+
+/api/menu/categories/upsert
+→ /api/menu?action=upsertCategory
+
+/api/menu/categories/delete
+→ /api/menu?action=deleteCategory
+
+DO NOT MODIFY ANY OTHER DOMAIN.
