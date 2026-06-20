@@ -269,6 +269,24 @@ export async function updateRestaurant(id, patch) {
   return data
 }
 
+export async function updateRestaurantProfile(restaurantId, patch) {
+  try {
+    const res = await fetch('/api/restaurant/update-profile', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ restaurantId, patch }),
+    })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      throw new Error(err?.error || `API ${res.status}`)
+    }
+    return await res.json()
+  } catch (err) {
+    console.warn('[updateRestaurantProfile] API failed, falling back to direct client:', err.message)
+    return await updateRestaurant(restaurantId, patch)
+  }
+}
+
 // Saves social_links through the server-side API so the service role key is
 // used — bypasses RLS (which blocks the anon key in dev / non-owner sessions).
 // Falls back to the direct Supabase client if the API isn't available.

@@ -12,7 +12,7 @@ import { FaFacebook, FaInstagram, FaLinkedinIn, FaYoutube } from 'react-icons/fa
 import { FaXTwitter } from 'react-icons/fa6'
 import AddMembersModal from './AddMembersModal'
 import RemainingDaysModal from './RemainingDaysModal'
-import { updateRestaurant, updateRestaurantSocial, uploadDataUrlToStorage, getTeamMembers, getRestaurantById } from '../lib/db'
+import { updateRestaurant, updateRestaurantProfile, updateRestaurantSocial, uploadDataUrlToStorage, getTeamMembers, getRestaurantById } from '../lib/db'
 import { supabase } from '../lib/supabase'
 import { processImageFile, isAcceptedImageType } from '../lib/processImage'
 
@@ -746,7 +746,8 @@ export default function ProfileSlide({
       if (restaurantId && restaurantId !== 'default' && restaurantId !== 'demo') {
         try {
           logoUrl = await uploadDataUrlToStorage(base64, 'restaurant-images', `${restaurantId}/logo`)
-          await updateRestaurant(restaurantId, { logo: logoUrl })
+          await updateRestaurantProfile(restaurantId, { logo: logoUrl })
+          sendRestaurantRefresh()
         } catch (e) {
           console.warn('[logo] Storage upload failed, using base64 fallback:', e.message)
           logoUrl = base64
@@ -781,10 +782,11 @@ export default function ProfileSlide({
       } else {
         const all = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
         localStorage.setItem('exzibo_restaurants', JSON.stringify(all.map(r => r.id === restaurantId ? { ...r, name: trimmed } : r)))
-        try { const { updateRestaurant: upd } = await import('../lib/db'); await upd(restaurantId, { name: trimmed }) } catch {}
+        await updateRestaurantProfile(restaurantId, { name: trimmed })
       }
       window.dispatchEvent(new CustomEvent('exzibo-name-changed', { detail: { restaurantId, name: trimmed } }))
       onNameUpdate && onNameUpdate(trimmed)
+      sendRestaurantRefresh()
       setSheetSaveSuccess(true)
       setTimeout(() => { setSheetSaveSuccess(false); setEditSheetOpen(false) }, 900)
     } catch { setSheetNameError('Failed to save. Please try again.') }
@@ -805,9 +807,11 @@ export default function ProfileSlide({
       } else {
         const all = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
         localStorage.setItem('exzibo_restaurants', JSON.stringify(all.map(r => r.id === restaurantId ? { ...r, name: trimmed } : r)))
+        await updateRestaurantProfile(restaurantId, { name: trimmed })
       }
       window.dispatchEvent(new CustomEvent('exzibo-name-changed', { detail: { restaurantId, name: trimmed } }))
       onNameUpdate && onNameUpdate(trimmed)
+      sendRestaurantRefresh()
       setNameSuccess(true); setEditingName(false); setTimeout(() => setNameSuccess(false), 2500)
     } catch { setNameError('Failed to save. Please try again.') }
     finally { setNameSaving(false) }

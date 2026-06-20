@@ -745,6 +745,38 @@ app.post('/api/orders/auto-cleanup', async (req, res) => {
   }
 })
 
+// POST /api/restaurant/update-profile
+// Body: { restaurantId, patch: { name?, logo? } }
+// Uses the service-role key so RLS never blocks the update.
+app.post('/api/restaurant/update-profile', async (req, res) => {
+  try {
+    const { restaurantId, patch } = req.body
+    if (!restaurantId || typeof patch !== 'object') {
+      return res.status(400).json({ error: 'restaurantId and patch object required' })
+    }
+    const allowed = ['name', 'logo']
+    const safePatch = Object.fromEntries(Object.entries(patch).filter(([k]) => allowed.includes(k)))
+    if (Object.keys(safePatch).length === 0) {
+      return res.status(400).json({ error: 'patch must include at least one of: name, logo' })
+    }
+    const { url: supabaseUrl, headers } = getSupabaseServiceHeaders()
+    const r = await fetch(
+      `${supabaseUrl}/rest/v1/restaurants?id=eq.${encodeURIComponent(restaurantId)}`,
+      {
+        method: 'PATCH',
+        headers: { ...headers, Prefer: 'return=representation' },
+        body: JSON.stringify(safePatch),
+      }
+    )
+    const data = await r.json()
+    if (!r.ok) return res.status(r.status).json({ error: data })
+    return res.json(Array.isArray(data) ? (data[0] ?? {}) : data)
+  } catch (err) {
+    console.error('[restaurant/update-profile] Error:', err.message)
+    return res.status(500).json({ error: err.message })
+  }
+})
+
 // POST /api/restaurant/update-social
 // Body: { restaurantId, social_links: { facebook, instagram, ... } }
 // Uses the service-role key so RLS never blocks the update.
