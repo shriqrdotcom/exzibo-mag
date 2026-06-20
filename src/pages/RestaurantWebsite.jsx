@@ -3370,7 +3370,7 @@ export default function RestaurantWebsite() {
             />
 
             {/* Quick Info */}
-            <div style={{ background: theme.statsBg, border: `1px solid ${theme.statsBorder}`, borderRadius: '16px', padding: '18px', marginBottom: '10px' }}>
+            <div style={{ background: theme.statsBg, border: `1px solid ${theme.statsBorder}`, borderRadius: '16px', padding: '18px', marginBottom: '10px', marginTop: '16px' }}>
               <div style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '0.18em', color: theme.infoLabel, textTransform: 'uppercase', marginBottom: '14px' }}>Quick Info</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                 {restaurant.location && (
