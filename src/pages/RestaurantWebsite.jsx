@@ -3326,14 +3326,7 @@ export default function RestaurantWebsite() {
             <OurStorySection
               label={restaurant.name || 'Our Restaurant'}
               heading={`Welcome to\n${restaurant.name || 'Our Restaurant'}.`}
-              body={
-                aboutData.story_text
-                  ? [aboutData.story_text]
-                  : [
-                      'Step into a world of elegance where every detail is crafted to delight your senses. Our fine dining restaurant offers a sophisticated ambiance, exquisite cuisine, and warm hospitality that make every visit unforgettable.',
-                      'From the first sip of wine to the final bite of dessert, every detail is thoughtfully curated to delight your senses. Impeccable service, world-class cuisine, and a serene ambiance come together to make every visit truly unforgettable.',
-                    ]
-              }
+              body={aboutData.story_text ? [aboutData.story_text] : []}
               imageSrc={
                 aboutData.image_1_url ||
                 aboutData.image_2_url ||
