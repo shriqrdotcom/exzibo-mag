@@ -2,7 +2,7 @@ import React from 'react'
 import ourStoryPlaceholder from '/our-story-placeholder.png'
 
 /**
- * OurStorySection — Clean two-panel "Our Story" layout
+ * OurStorySection — always side-by-side: text left, image right
  *
  * Props:
  *   label      {string}    — small top label (restaurant name)
@@ -22,18 +22,42 @@ export default function OurStorySection({
   const headingLines  = heading.split('\n')
 
   return (
-    <section className="w-full bg-black grid grid-cols-1 md:grid-cols-2">
+    <section style={{
+      width: '100%',
+      background: '#000',
+      display: 'grid',
+      gridTemplateColumns: '1fr 1fr',
+      minHeight: '280px',
+      maxHeight: '420px',
+    }}>
 
       {/* LEFT — Text */}
-      <div className="flex flex-col justify-center px-10 py-14 md:px-16 md:py-20">
-        <p className="text-xs tracking-widest uppercase text-gray-500 mb-8">
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+        padding: 'clamp(20px, 5vw, 48px)',
+        overflow: 'hidden',
+      }}>
+        <p style={{
+          fontSize: 'clamp(8px, 1.2vw, 11px)',
+          letterSpacing: '0.18em',
+          textTransform: 'uppercase',
+          color: '#6b7280',
+          marginBottom: 'clamp(8px, 1.5vw, 16px)',
+          fontFamily: "'Inter', sans-serif",
+        }}>
           {label}
         </p>
 
-        <h2
-          className="text-4xl md:text-5xl text-white leading-snug mb-8"
-          style={{ fontFamily: '"Playfair Display", Georgia, serif', fontWeight: 500 }}
-        >
+        <h2 style={{
+          fontFamily: '"Playfair Display", Georgia, serif',
+          fontWeight: 500,
+          fontSize: 'clamp(18px, 3.5vw, 42px)',
+          color: '#fff',
+          lineHeight: 1.2,
+          marginBottom: 'clamp(8px, 1.5vw, 16px)',
+        }}>
           {headingLines.map((line, i) => (
             <span key={i}>
               {line}
@@ -42,27 +66,43 @@ export default function OurStorySection({
           ))}
         </h2>
 
-        <div className="space-y-4 max-w-xs">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxWidth: '380px' }}>
           {body.map((para, i) => (
             <p
               key={i}
-              className="text-sm text-gray-400 leading-relaxed"
-              style={{ textAlign: 'justify' }}
+              style={{
+                fontSize: 'clamp(10px, 1.4vw, 13px)',
+                color: '#9ca3af',
+                lineHeight: 1.6,
+                textAlign: 'justify',
+                fontFamily: "'Inter', sans-serif",
+              }}
             >
               {para}
             </p>
           ))}
         </div>
 
-        <div className="mt-10 w-12 h-0.5 bg-[#E07A5F]" />
+        <div style={{
+          marginTop: 'clamp(10px, 2vw, 24px)',
+          width: '48px',
+          height: '2px',
+          background: '#E07A5F',
+        }} />
       </div>
 
       {/* RIGHT — Image */}
-      <div className="relative min-h-[300px] md:min-h-[480px]">
+      <div style={{ position: 'relative', overflow: 'hidden' }}>
         <img
           src={resolvedImage}
           alt={imageAlt}
-          className="absolute inset-0 w-full h-full object-cover"
+          style={{
+            position: 'absolute',
+            inset: 0,
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+          }}
         />
       </div>
 
