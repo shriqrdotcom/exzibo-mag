@@ -1,0 +1,72 @@
+TASK: Implement smart bottom navigation hide/show behavior.
+
+DO NOT change the size, shape, padding, border-radius, or any 
+visual styling of the existing bottom navigation bar.
+Only add scroll behavior logic.
+
+BEHAVIOR RULES:
+─────────────────────────────────────────
+1. Scroll DOWN  → slide nav OUT (hide below screen)
+2. Scroll UP    → slide nav IN  (show above bottom)
+3. Stop scroll  → keep whatever state it currently is
+4. At page TOP  → always force nav visible
+5. At page BOTTOM → always force nav visible
+─────────────────────────────────────────
+
+TIMING & FEEL:
+- Hide transition: 250ms ease-in  (slightly faster going out)
+- Show transition: 200ms ease-out (snappy coming back)
+- Do NOT use slow easing like 0.5s or ease-in-out
+- Must feel instant but not jarring
+
+TRIGGER THRESHOLD:
+- Only trigger hide after user scrolls DOWN more than 10px
+- This prevents accidental hide from tiny scroll jitter
+
+IMPLEMENTATION:
+─────────────────────────────────────────
+let lastScrollY = window.scrollY;
+const nav = document.querySelector('.bottom-nav'); 
+// ← Replace '.bottom-nav' with your actual nav selector
+
+const SCROLL_THRESHOLD = 10;
+
+window.addEventListener('scroll', () => {
+  const currentScrollY = window.scrollY;
+  const pageBottom = document.documentElement.scrollHeight 
+                     - window.innerHeight;
+
+  // At top or bottom → always show
+  if (currentScrollY <= 0 || currentScrollY >= pageBottom - 5) {
+    nav.style.transform = 'translateY(0)';
+    lastScrollY = currentScrollY;
+    return;
+  }
+
+  const diff = currentScrollY - lastScrollY;
+
+  if (diff > SCROLL_THRESHOLD) {
+    // Scrolling DOWN — hide
+    nav.style.transform = 'translateY(100%)';
+  } else if (diff < -SCROLL_THRESHOLD) {
+    // Scrolling UP — show
+    nav.style.transform = 'translateY(0)';
+  }
+  // If diff is within threshold → do nothing (stop scroll = keep state)
+
+  lastScrollY = currentScrollY;
+}, { passive: true });
+─────────────────────────────────────────
+
+CSS TO ADD (do not touch existing nav styles):
+.bottom-nav {
+  transition: transform 250ms ease-in;
+}
+.bottom-nav.visible {
+  transition: transform 200ms ease-out;
+}
+
+IMPORTANT:
+- passive: true on scroll listener = no performance lag
+- Do not animate width, height, opacity, or any other property
+- Only transform: translateY() is allowed to change

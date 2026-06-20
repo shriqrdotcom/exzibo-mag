@@ -527,6 +527,8 @@ export default function RestaurantWebsite() {
   const scrollTickRef = useRef(false)
   const cartIconRef = useRef(null)
   const offersScrollRef = useRef(null)
+  const bottomNavRef = useRef(null)
+  const lastScrollYRef = useRef(0)
 
   useEffect(() => {
     function onScroll() {
@@ -539,6 +541,33 @@ export default function RestaurantWebsite() {
     }
     window.addEventListener('scroll', onScroll, { passive: true })
     return () => window.removeEventListener('scroll', onScroll)
+  }, [])
+
+  useEffect(() => {
+    const THRESHOLD = 10
+    function onNavScroll() {
+      const nav = bottomNavRef.current
+      if (!nav) return
+      const currentY = window.scrollY
+      const pageBottom = document.documentElement.scrollHeight - window.innerHeight
+      if (currentY <= 0 || currentY >= pageBottom - 5) {
+        nav.style.transform = 'translateY(0)'
+        nav.style.transition = 'transform 200ms ease-out'
+        lastScrollYRef.current = currentY
+        return
+      }
+      const diff = currentY - lastScrollYRef.current
+      if (diff > THRESHOLD) {
+        nav.style.transition = 'transform 250ms ease-in'
+        nav.style.transform = 'translateY(100%)'
+      } else if (diff < -THRESHOLD) {
+        nav.style.transition = 'transform 200ms ease-out'
+        nav.style.transform = 'translateY(0)'
+      }
+      lastScrollYRef.current = currentY
+    }
+    window.addEventListener('scroll', onNavScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onNavScroll)
   }, [])
 
   const [bookingForm, setBookingForm] = useState({ name: '', phone: '', email: '', date: '', time: '19:00', guests: 2, occasion: 'Casual Dining', seating: 'Indoor', notes: '' })
@@ -4809,7 +4838,7 @@ export default function RestaurantWebsite() {
         </div>
       )}
 
-      <nav style={{
+      <nav ref={bottomNavRef} style={{
         position: 'fixed', bottom: 0, left: 0, right: 0,
         zIndex: 1100,
         background: darkMode ? '#1A1A1A' : '#FFFFFF',
@@ -4818,7 +4847,8 @@ export default function RestaurantWebsite() {
         height: '56px',
         padding: `6px 0 env(safe-area-inset-bottom)`,
         display: 'flex', justifyContent: 'space-around', alignItems: 'center',
-        transition: 'background 0.3s ease',
+        transition: 'background 0.3s ease, transform 200ms ease-out',
+        willChange: 'transform',
       }}>
         {[
           { id: 'home', icon: <FaHouse size={22} /> },
