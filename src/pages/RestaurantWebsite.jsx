@@ -3278,7 +3278,7 @@ export default function RestaurantWebsite() {
           </section>
 
           {/* ── RESERVATION CARD ── */}
-          <div style={{ padding: '0 14px 24px' }}>
+          <div style={{ padding: '0 14px 32px' }}>
             <div
               onClick={() => navigateToPage('booking')}
               onMouseEnter={() => setReservationHovered(true)}
@@ -3286,13 +3286,14 @@ export default function RestaurantWebsite() {
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '16px',
-                background: '#ffffff',
-                borderRadius: '16px',
-                padding: '18px 16px',
+                gap: '12px',
+                background: 'transparent',
+                border: `1px solid ${theme.cardBorder}`,
+                borderRadius: '14px',
+                padding: '12px 14px',
                 boxShadow: reservationHovered
-                  ? '0 8px 32px rgba(0,0,0,0.18)'
-                  : '0 2px 12px rgba(0,0,0,0.08)',
+                  ? (darkMode ? '0 4px 20px rgba(0,0,0,0.35)' : '0 4px 20px rgba(0,0,0,0.10)')
+                  : 'none',
                 cursor: 'pointer',
                 transform: reservationHovered ? 'scale(1.02)' : 'scale(1)',
                 transition: 'transform 0.18s ease, box-shadow 0.18s ease',
@@ -3301,32 +3302,32 @@ export default function RestaurantWebsite() {
             >
               {/* LEFT — blue circle with calendar icon */}
               <div style={{
-                width: '80px',
-                height: '80px',
+                width: '48px',
+                height: '48px',
                 borderRadius: '50%',
-                background: '#dbeafe',
+                background: darkMode ? 'rgba(59,130,246,0.15)' : '#dbeafe',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 flexShrink: 0,
               }}>
-                <CalendarDays size={36} color="#3b82f6" strokeWidth={1.8} />
+                <CalendarDays size={22} color="#3b82f6" strokeWidth={1.8} />
               </div>
 
               {/* CENTER — title + subtitle */}
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{
-                  fontSize: '22px',
-                  fontWeight: 800,
-                  color: '#111827',
+                  fontSize: '15px',
+                  fontWeight: 700,
+                  color: theme.color,
                   lineHeight: 1.2,
-                  marginBottom: '6px',
+                  marginBottom: '3px',
                 }}>
                   Reservation
                 </div>
                 <div style={{
-                  fontSize: '14px',
-                  color: '#6b7280',
+                  fontSize: '12px',
+                  color: theme.locationColor,
                   lineHeight: 1.5,
                   fontWeight: 400,
                 }}>
@@ -3336,16 +3337,16 @@ export default function RestaurantWebsite() {
 
               {/* RIGHT — chevron button */}
               <div style={{
-                width: '36px',
-                height: '36px',
+                width: '28px',
+                height: '28px',
                 borderRadius: '50%',
-                background: '#f3f4f6',
+                background: darkMode ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.05)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 flexShrink: 0,
               }}>
-                <ChevronRight size={20} color="#374151" strokeWidth={2.5} />
+                <ChevronRight size={16} color={theme.locationColor} strokeWidth={2.5} />
               </div>
             </div>
           </div>
