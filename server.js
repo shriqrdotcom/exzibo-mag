@@ -878,6 +878,25 @@ app.post('/api/about/upload-image', async (req, res) => {
   }
 })
 
+// GET /api/restaurant/:id — service-role single-row fetch, bypasses RLS
+app.get('/api/restaurant/:id', async (req, res) => {
+  try {
+    const { id } = req.params
+    if (!id) return res.status(400).json({ error: 'id required' })
+    const { url: supabaseUrl, headers } = getSupabaseServiceHeaders()
+    const r = await fetch(
+      `${supabaseUrl}/rest/v1/restaurants?id=eq.${encodeURIComponent(id)}&limit=1`,
+      { headers }
+    )
+    const data = await r.json()
+    if (!r.ok) return res.status(r.status).json({ error: data })
+    const row = Array.isArray(data) ? (data[0] ?? null) : data
+    return res.json(row)
+  } catch (err) {
+    return res.status(500).json({ error: err.message })
+  }
+})
+
 // GET /api/about/:restaurantId
 // Returns the restaurant_about row for a restaurant (service role — no RLS dependency)
 app.get('/api/about/:restaurantId', async (req, res) => {

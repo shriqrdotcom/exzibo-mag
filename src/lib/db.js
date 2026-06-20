@@ -463,9 +463,17 @@ export async function getRestaurantBySlug(slug) {
 }
 
 export async function getRestaurantById(id) {
-  // Try with the anon client first — it uses the `anon` RLS role which allows
-  // reading any restaurant. The authenticated client's RLS may restrict access
-  // to owned restaurants only, causing null returns for super-admin access.
+  // Try the server-side API first — uses service role key, bypasses RLS entirely.
+  // Works in both dev (Vite middleware) and production (Express server).
+  try {
+    const res = await fetch(`/api/restaurant/${encodeURIComponent(id)}`)
+    if (res.ok) {
+      const row = await res.json()
+      if (row && row.id) return row
+    }
+  } catch { /* fall through to Supabase direct */ }
+
+  // Fallback: anon client (works if RLS allows public restaurant reads)
   const { data: anonData, error: anonError } = await supabaseAnon
     .from('restaurants')
     .select('*')
@@ -473,7 +481,7 @@ export async function getRestaurantById(id) {
     .single()
   if (!anonError && anonData) return anonData
 
-  // Fallback to the authenticated client
+  // Last resort: authenticated client
   const { data, error } = await supabase
     .from('restaurants')
     .select('*')
