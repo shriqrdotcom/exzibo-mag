@@ -966,9 +966,12 @@ function spaFallbackPlugin() {
   }
 }
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   plugins: [react(), previewAuthPlugin(), menuApiPlugin(), aboutApiPlugin(), restaurantDbPlugin(), tableValidationPlugin(), spaFallbackPlugin()],
   appType: 'spa',
+  define: mode === 'development' ? {
+    'import.meta.env.VITE_DISABLE_AUTH': JSON.stringify('true'),
+  } : {},
   resolve: {
     alias: {
       '@assets': path.resolve(__dirname, 'attached_assets'),
@@ -984,4 +987,4 @@ export default defineConfig({
     // table numbers. The spaFallbackPlugin (a post-hook) handles SPA routing instead,
     // so it always runs AFTER table validation has had a chance to block bad URLs.
   }
-})
+}))
