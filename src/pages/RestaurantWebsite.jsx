@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react'
+import OurStorySection from '../components/OurStorySection'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { notifyAnalyticsUpdate } from '../context/AnalyticsContext'
 import { getRestaurantBySlug, getMenuCategories, getMenuItems, getPublishedMenuItems, loadMenuFilters, fetchRestaurantAbout } from '../lib/db'
@@ -3321,86 +3322,28 @@ export default function RestaurantWebsite() {
           </div>
 
           {/* ── OUR STORY ── */}
-          <section className="reveal reveal-4" style={{ padding: '24px 14px 0' }}>
-            <div style={{ marginBottom: '14px' }}>
-              <div style={{ fontSize: '16px', fontWeight: 800, color: theme.sectionTitle, letterSpacing: '-0.01em' }}>Our Story</div>
-              <div style={{ fontSize: '11px', color: theme.sectionSub, marginTop: '2px' }}>Where every plate tells a story</div>
-            </div>
-
-            {/* ── Our Story Gallery Layout ── */}
-            {(() => {
-              function StoryImageFrame({ src, shape, verticalOffset }) {
-                const isTall = shape === 'tall'
-                return (
-                  <div style={{
-                    flex: '0 0 auto',
-                    width: isTall ? '22%' : '28%',
-                    aspectRatio: isTall ? '1 / 1.35' : '1.5 / 1',
-                    borderRadius: '14px',
-                    overflow: 'hidden',
-                    alignSelf: 'center',
-                    marginTop: verticalOffset,
-                    position: 'relative',
-                    background: darkMode ? '#111111' : '#1a1a1a',
-                  }}>
-                    {src ? (
-                      <img src={src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-                    ) : (
-                      <div style={{ width: '100%', height: '100%', background: darkMode ? '#111111' : '#1a1a1a' }} />
-                    )}
-                  </div>
-                )
+          <section className="reveal reveal-4">
+            <OurStorySection
+              label={restaurant.name || 'Our Restaurant'}
+              heading={`Welcome to\n${restaurant.name || 'Our Restaurant'}.`}
+              body={
+                aboutData.story_text
+                  ? [aboutData.story_text]
+                  : [
+                      'Step into a world of elegance where every detail is crafted to delight your senses. Our fine dining restaurant offers a sophisticated ambiance, exquisite cuisine, and warm hospitality that make every visit unforgettable.',
+                      'From the first sip of wine to the final bite of dessert, every detail is thoughtfully curated to delight your senses. Impeccable service, world-class cuisine, and a serene ambiance come together to make every visit truly unforgettable.',
+                    ]
               }
-
-              const storyImages = {
-                frame1: aboutData.image_1_url || null,
-                frame2: aboutData.image_2_url || null,
-                frame3: aboutData.image_3_url || null,
-                frame4: aboutData.image_4_url || null,
+              imageSrc={
+                aboutData.image_1_url ||
+                aboutData.image_2_url ||
+                aboutData.image_3_url ||
+                aboutData.image_4_url ||
+                null
               }
-
-              return (
-                <div style={{ position: 'relative', width: '100%', height: '190px', marginBottom: '0px', borderRadius: '16px', overflow: 'hidden' }}>
-                  <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', padding: '0 14px' }}>
-                    <StoryImageFrame src={storyImages.frame1} shape="tall" verticalOffset="-12px" />
-                    <StoryImageFrame src={storyImages.frame2} shape="wide" verticalOffset="14px" />
-                    <StoryImageFrame src={storyImages.frame3} shape="tall" verticalOffset="-12px" />
-                    <StoryImageFrame src={storyImages.frame4} shape="wide" verticalOffset="14px" />
-                  </div>
-                </div>
-              )
-            })()}
-
-            {/* ── Our Story Quote ── */}
-            <div style={{
-              textAlign: 'center',
-              padding: '0px 24px 36px',
-              marginBottom: '10px',
-            }}>
-              <p style={{
-                fontSize: '11px',
-                fontFamily: "'Cormorant Garamond', 'Times NR MT Pro', 'Times New Roman', Georgia, serif",
-                fontWeight: 600,
-                fontStyle: 'italic',
-                color: theme.infoLabel || '#888',
-                letterSpacing: '0.08em',
-                margin: '0 0 14px 0',
-              }}>Crafted With Passion</p>
-              <p style={{
-                fontSize: '15px',
-                fontWeight: 500,
-                color: theme.color,
-                lineHeight: 1.9,
-                margin: 0,
-                maxWidth: '520px',
-                marginLeft: 'auto',
-                marginRight: 'auto',
-                wordBreak: 'break-word',
-                overflowWrap: 'break-word',
-              }}>
-                {aboutData.story_text || 'Passion drives purpose, and purpose leads to progress. Every step forward, no matter how small, brings you closer to your goals. Embrace challenges, learn from every experience, and stay committed to your vision. Consistency today builds the success of tomorrow.'}
-              </p>
-            </div>
+              websiteUrl={restaurant.slug ? `${restaurant.slug}.exzibo.com` : 'www.exzibo.com'}
+              pageLabel="Our Story"
+            />
 
             {/* Quick Info */}
             <div style={{ background: theme.statsBg, border: `1px solid ${theme.statsBorder}`, borderRadius: '16px', padding: '18px', marginBottom: '10px' }}>
