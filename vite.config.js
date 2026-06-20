@@ -969,9 +969,7 @@ function spaFallbackPlugin() {
 export default defineConfig(({ mode }) => ({
   plugins: [react(), previewAuthPlugin(), menuApiPlugin(), aboutApiPlugin(), restaurantDbPlugin(), tableValidationPlugin(), spaFallbackPlugin()],
   appType: 'spa',
-  define: mode === 'development' ? {
-    'import.meta.env.VITE_DISABLE_AUTH': JSON.stringify('true'),
-  } : {},
+  define: {},
   resolve: {
     alias: {
       '@assets': path.resolve(__dirname, 'attached_assets'),
