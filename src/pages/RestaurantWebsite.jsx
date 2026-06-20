@@ -3365,6 +3365,7 @@ export default function RestaurantWebsite() {
               }
               websiteUrl={restaurant.slug ? `${restaurant.slug}.exzibo.com` : 'www.exzibo.com'}
               pageLabel="Our Story"
+              darkMode={darkMode}
             />
 
             {/* Quick Info */}

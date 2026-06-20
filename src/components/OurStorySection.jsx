@@ -10,6 +10,7 @@ import ourStoryPlaceholder from '/our-story-placeholder.png'
  *   body       {string[]}  — array of paragraph strings
  *   imageSrc   {string}    — right-column image URL (null = placeholder)
  *   imageAlt   {string}    — alt text for the image
+ *   darkMode   {boolean}   — true = dark theme (white text), false = light theme (black text)
  */
 export default function OurStorySection({
   label    = 'Our Restaurant',
@@ -17,14 +18,19 @@ export default function OurStorySection({
   body     = [],
   imageSrc = null,
   imageAlt = 'Our restaurant',
+  darkMode = true,
 }) {
   const resolvedImage = imageSrc || ourStoryPlaceholder
   const headingLines  = heading.split('\n')
 
+  const headingColor = darkMode ? '#ffffff' : '#111111'
+  const labelColor   = darkMode ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.45)'
+  const bodyColor    = darkMode ? 'rgba(255,255,255,0.55)' : 'rgba(0,0,0,0.55)'
+
   return (
     <section style={{
       width: '100%',
-      background: '#000',
+      background: 'transparent',
       display: 'grid',
       gridTemplateColumns: '1fr 1fr',
       minHeight: '280px',
@@ -43,7 +49,7 @@ export default function OurStorySection({
           fontSize: 'clamp(8px, 1.2vw, 11px)',
           letterSpacing: '0.18em',
           textTransform: 'uppercase',
-          color: '#6b7280',
+          color: labelColor,
           marginBottom: 'clamp(8px, 1.5vw, 16px)',
           fontFamily: "'Inter', sans-serif",
         }}>
@@ -54,7 +60,7 @@ export default function OurStorySection({
           fontFamily: '"Playfair Display", Georgia, serif',
           fontWeight: 500,
           fontSize: 'clamp(18px, 3.5vw, 42px)',
-          color: '#fff',
+          color: headingColor,
           lineHeight: 1.2,
           marginBottom: 'clamp(8px, 1.5vw, 16px)',
         }}>
@@ -72,7 +78,7 @@ export default function OurStorySection({
               key={i}
               style={{
                 fontSize: 'clamp(10px, 1.4vw, 13px)',
-                color: '#9ca3af',
+                color: bodyColor,
                 lineHeight: 1.6,
                 textAlign: 'justify',
                 fontFamily: "'Inter', sans-serif",
