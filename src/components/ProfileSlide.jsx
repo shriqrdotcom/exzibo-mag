@@ -12,7 +12,7 @@ import { FaFacebook, FaInstagram, FaLinkedinIn, FaYoutube } from 'react-icons/fa
 import { FaXTwitter } from 'react-icons/fa6'
 import AddMembersModal from './AddMembersModal'
 import RemainingDaysModal from './RemainingDaysModal'
-import { updateRestaurant, updateRestaurantProfile, updateRestaurantSocial, uploadDataUrlToStorage, getTeamMembers, getRestaurantById } from '../lib/db'
+import { updateRestaurant, updateRestaurantProfile, updateRestaurantSocial, uploadLogoViaApi, getTeamMembers, getRestaurantById } from '../lib/db'
 import { supabase } from '../lib/supabase'
 import { processImageFile, isAcceptedImageType } from '../lib/processImage'
 
@@ -139,6 +139,7 @@ export default function ProfileSlide({
   const [uploadError, setUploadError] = useState('')
   const [uploadSuccess, setUploadSuccess] = useState(false)
   const [previewUrl, setPreviewUrl] = useState(logoUrl || '')
+  const [logoCompressing, setLogoCompressing] = useState(false)
 
   // Gallery state
   const [galleryError, setGalleryError] = useState('')
@@ -742,16 +743,10 @@ export default function ProfileSlide({
     try {
       setPreviewUrl(base64) // Show preview immediately
       let logoUrl = base64
-      // Upload to Supabase Storage for real (non-demo) restaurants
+      // Upload to Supabase Storage for real (non-demo) restaurants via server-side API (no client auth needed)
       if (restaurantId && restaurantId !== 'default' && restaurantId !== 'demo') {
-        try {
-          logoUrl = await uploadDataUrlToStorage(base64, 'restaurant-images', `${restaurantId}/logo`)
-          await updateRestaurantProfile(restaurantId, { logo: logoUrl })
-          sendRestaurantRefresh()
-        } catch (e) {
-          console.warn('[logo] Storage upload failed, using base64 fallback:', e.message)
-          logoUrl = base64
-        }
+        logoUrl = await uploadLogoViaApi(base64, restaurantId)
+        sendRestaurantRefresh()
       }
       setPreviewUrl(logoUrl)
       if (!restaurantId || restaurantId === 'default') {
@@ -763,7 +758,10 @@ export default function ProfileSlide({
       window.dispatchEvent(new CustomEvent('exzibo-logo-changed', { detail: { restaurantId, logo: logoUrl } }))
       onLogoUpdate && onLogoUpdate(logoUrl)
       setUploadSuccess(true); setTimeout(() => setUploadSuccess(false), 2500)
-    } catch { setUploadError('Failed to save logo. Please try again.') }
+    } catch (e) {
+      console.error('[saveLogo]', e.message)
+      setUploadError('Failed to save logo. Please try again.')
+    }
     finally { setUploading(false) }
   }
 

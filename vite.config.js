@@ -297,6 +297,35 @@ function menuApiPlugin() {
         } catch (e) { return json(res, 500, { error: e.message }) }
       })
 
+      // POST /api/restaurant/upload-logo — service-role upload to restaurant-images bucket + DB update
+      server.middlewares.use('/api/restaurant/upload-logo', async (req, res) => {
+        if (req.method === 'OPTIONS') return json(res, 200, {})
+        if (req.method !== 'POST') return json(res, 405, { error: 'Method not allowed' })
+        try {
+          const { restaurantId, dataUrl } = await readBody(req)
+          if (!restaurantId || !dataUrl) return json(res, 400, { error: 'restaurantId and dataUrl required' })
+          const { url: supabaseUrl, headers } = getServiceHeaders()
+          const base64 = dataUrl.replace(/^data:[^;]+;base64,/, '')
+          const buf = Buffer.from(base64, 'base64')
+          const filePath = `${restaurantId}/logo/${Date.now()}.webp`
+          const uploadRes = await fetch(
+            `${supabaseUrl}/storage/v1/object/restaurant-images/${filePath}`,
+            { method: 'POST', headers: { ...headers, 'Content-Type': 'image/webp', 'x-upsert': 'true' }, body: buf }
+          )
+          if (!uploadRes.ok) { const e = await uploadRes.text(); return json(res, 500, { error: `Storage upload failed: ${e}` }) }
+          const publicUrl = `${supabaseUrl}/storage/v1/object/public/restaurant-images/${filePath}`
+          const patchRes = await fetch(
+            `${supabaseUrl}/rest/v1/restaurants?id=eq.${encodeURIComponent(restaurantId)}`,
+            { method: 'PATCH', headers: { ...headers, Prefer: 'return=representation' }, body: JSON.stringify({ logo: publicUrl }) }
+          )
+          if (!patchRes.ok) { const e = await patchRes.text(); return json(res, 500, { error: `DB update failed: ${e}` }) }
+          return json(res, 200, { url: publicUrl })
+        } catch (e) {
+          console.error('[upload-logo] Exception:', e.message)
+          return json(res, 500, { error: e.message })
+        }
+      })
+
       // POST /api/restaurant/update-profile — service-role PATCH on name/logo fields, bypasses RLS
       server.middlewares.use('/api/restaurant/update-profile', async (req, res) => {
         if (req.method === 'OPTIONS') return json(res, 200, {})

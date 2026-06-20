@@ -4,6 +4,7 @@ import ProfileSlide from '../components/ProfileSlide'
 import HelpBottomSheet from '../components/HelpBottomSheet'
 import { useAuth } from '../context/AuthContext'
 import { useRole } from '../context/RoleContext'
+import { getRestaurantById } from '../lib/db'
 
 const MOBILE_FONT = "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif"
 
@@ -69,6 +70,28 @@ export default function ProfilePage({ restaurantId: propRestaurantId } = {}) {
     setRestaurantName(loadRestaurantName(restaurantId))
     setRestaurantUid(loadRestaurantUid(restaurantId))
     setLogoUrl(loadLogoUrl(restaurantId))
+
+    // Fetch fresh data from Supabase for real restaurants so first-visit
+    // always shows the correct name and logo (not just what's in localStorage).
+    if (!restaurantId || restaurantId === 'default') return
+    let cancelled = false
+    getRestaurantById(restaurantId)
+      .then(r => {
+        if (cancelled || !r) return
+        if (r.name) setRestaurantName(r.name)
+        if (r.uid)  setRestaurantUid(r.uid)
+        if (r.logo) setLogoUrl(r.logo)
+        // Sync back into localStorage so subsequent loads are instant
+        try {
+          const all = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
+          const updated = all.some(x => x.id === r.id)
+            ? all.map(x => x.id === r.id ? { ...x, name: r.name, logo: r.logo, uid: r.uid } : x)
+            : [...all, r]
+          localStorage.setItem('exzibo_restaurants', JSON.stringify(updated))
+        } catch { /* noop */ }
+      })
+      .catch(() => { /* silently fall back to localStorage data */ })
+    return () => { cancelled = true }
   }, [restaurantId])
 
   function handleTeamClick() {

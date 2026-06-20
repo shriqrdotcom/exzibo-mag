@@ -598,6 +598,30 @@ export async function uploadDataUrlToStorage(dataUrl, bucket, pathPrefix) {
 // /api/menu/upload-image endpoint which uses the SUPABASE_SERVICE_ROLE_KEY
 // to upload to Supabase Storage — no client auth session required.
 // This is the same code path in both dev preview and production.
+// Upload a restaurant logo via the server-side API (service role — no client auth needed).
+// Compresses to WebP client-side, then POSTs to /api/restaurant/upload-logo which
+// uploads to Supabase Storage and patches the restaurant's logo field in one call.
+export async function uploadLogoViaApi(dataUrl, restaurantId) {
+  let compressedUrl = dataUrl
+  try {
+    const limits = await getCompressionLimits()
+    compressedUrl = await compressDataUrl(dataUrl, limits)
+  } catch (err) {
+    console.warn('[uploadLogoViaApi] Compression skipped (non-blocking):', err.message)
+  }
+  const res = await fetch('/api/restaurant/upload-logo', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ restaurantId, dataUrl: compressedUrl }),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }))
+    throw new Error(err.error || 'Logo upload failed')
+  }
+  const { url } = await res.json()
+  return url
+}
+
 export async function uploadMenuImage(dataUrl, restaurantId) {
   // Compress first (client-side) to reduce payload size
   let compressedUrl = dataUrl

@@ -745,6 +745,42 @@ app.post('/api/orders/auto-cleanup', async (req, res) => {
   }
 })
 
+// POST /api/restaurant/upload-logo
+// Body: { restaurantId, dataUrl }
+// Uploads WebP to restaurant-images bucket + patches logo field. Service-role, no client auth needed.
+app.post('/api/restaurant/upload-logo', async (req, res) => {
+  try {
+    const { restaurantId, dataUrl } = req.body
+    if (!restaurantId || !dataUrl) return res.status(400).json({ error: 'restaurantId and dataUrl required' })
+    const { url: supabaseUrl, headers } = getSupabaseServiceHeaders()
+    const base64 = dataUrl.replace(/^data:[^;]+;base64,/, '')
+    const buf = Buffer.from(base64, 'base64')
+    const filePath = `${restaurantId}/logo/${Date.now()}.webp`
+    const uploadRes = await fetch(
+      `${supabaseUrl}/storage/v1/object/restaurant-images/${filePath}`,
+      { method: 'POST', headers: { ...headers, 'Content-Type': 'image/webp', 'x-upsert': 'true' }, body: buf }
+    )
+    if (!uploadRes.ok) {
+      const e = await uploadRes.text()
+      return res.status(500).json({ error: `Storage upload failed: ${e}` })
+    }
+    const publicUrl = `${supabaseUrl}/storage/v1/object/public/restaurant-images/${filePath}`
+    const patchRes = await fetch(
+      `${supabaseUrl}/rest/v1/restaurants?id=eq.${encodeURIComponent(restaurantId)}`,
+      { method: 'PATCH', headers: { ...headers, Prefer: 'return=representation' }, body: JSON.stringify({ logo: publicUrl }) }
+    )
+    if (!patchRes.ok) {
+      const e = await patchRes.text()
+      return res.status(500).json({ error: `DB update failed: ${e}` })
+    }
+    console.log('[restaurant/upload-logo] Uploaded:', publicUrl)
+    return res.json({ url: publicUrl })
+  } catch (err) {
+    console.error('[restaurant/upload-logo] Error:', err.message)
+    return res.status(500).json({ error: err.message })
+  }
+})
+
 // POST /api/restaurant/update-profile
 // Body: { restaurantId, patch: { name?, logo? } }
 // Uses the service-role key so RLS never blocks the update.
