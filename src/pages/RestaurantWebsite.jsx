@@ -926,17 +926,21 @@ export default function RestaurantWebsite() {
       setRestaurant({
         id: 'demo', slug: 'demo',
         name: savedDemoName,
-        location: demoConfig.location || 'Cyber City, Gurugram',
+        location: demoConfig.location || '123, Food Street, City Center, Mumbai, Maharashtra 400001',
         description: 'An uncompromising culinary experience rooted in craft, quality, and atmosphere. Every dish is a conversation between heritage and innovation.',
         chefInfo: 'Chef Marcus Aurélius, trained in Paris and Tokyo, brings 20 years of Michelin-star experience to every plate.',
-        rating: '4.9',
+        rating: '4.6',
         phone: demoConfig.phone || '+91 98765 43210',
-        email: demoConfig.email || '',
+        email: demoConfig.email || 'hello@restaurantname.com',
         tables: '24',
         images: FALLBACK_IMAGES,
         logo: savedDemoLogo,
+        googleReview: demoConfig.googleReview || 'https://g.page/r/demo/review',
         socialLinks: { instagram: '', facebook: '', twitter: '', website: '', linkedin: '', youtube: '' },
       })
+      if (!localStorage.getItem('exzibo_hours_default')) {
+        setOpeningHours({ openH: 11, openM: 0, openAmPm: 'AM', closeH: 11, closeM: 0, closeAmPm: 'PM' })
+      }
       const demoTabs = loadMenuTabs('demo')
       setMenuTabs(demoTabs)
       setMenuData(loadMenuFromStorage('demo', demoTabs) || MENU_FALLBACK)
@@ -3461,20 +3465,29 @@ export default function RestaurantWebsite() {
 
                   {/* LEFT — contact information */}
                   <div className="exz-ft-left">
-                    <div style={{ fontSize: '18px', fontWeight: 800, color: '#fff', letterSpacing: '0.06em', textTransform: 'uppercase', lineHeight: 1.1, marginBottom: '26px' }}>
+                    <div style={{
+                      fontSize: 'clamp(14px, 3.5vw, 18px)',
+                      fontWeight: 800,
+                      color: '#fff',
+                      letterSpacing: '0.06em',
+                      textTransform: 'uppercase',
+                      lineHeight: 1.15,
+                      marginBottom: '24px',
+                      wordBreak: 'break-word',
+                    }}>
                       {restaurant.name}
                     </div>
 
                     {restaurant.phone && (
                       <a href={`tel:${restaurant.phone}`} style={{ ...rowStyle, textDecoration: 'none', display: 'flex' }}>
-                        <span style={iconStyle}><Phone size={15} /></span>
+                        <span style={iconStyle}><Phone size={14} /></span>
                         <span style={rowTxtStyle}>{restaurant.phone}</span>
                       </a>
                     )}
 
                     {restaurant.email && (
                       <a href={`mailto:${restaurant.email}`} style={{ ...rowStyle, textDecoration: 'none', display: 'flex' }}>
-                        <span style={iconStyle}><Mail size={15} /></span>
+                        <span style={iconStyle}><Mail size={14} /></span>
                         <span style={rowTxtStyle}>{restaurant.email}</span>
                       </a>
                     )}
@@ -3485,32 +3498,32 @@ export default function RestaurantWebsite() {
                         target="_blank" rel="noopener noreferrer"
                         style={{ ...rowStyle, textDecoration: 'none', display: 'flex' }}
                       >
-                        <span style={iconStyle}><FaWhatsapp size={15} /></span>
+                        <span style={iconStyle}><FaWhatsapp size={14} /></span>
                         <span style={rowTxtStyle}>{restaurant.phone}</span>
                       </a>
                     )}
 
                     {hoursStr && (
                       <div style={rowStyle}>
-                        <span style={iconStyle}><Clock size={15} /></span>
+                        <span style={iconStyle}><Clock size={14} /></span>
                         <span style={rowTxtStyle}>Mon - Sun: {hoursStr}</span>
                       </div>
                     )}
 
                     {restaurant.location && (
                       <div style={rowStyle}>
-                        <span style={iconStyle}><MapPin size={15} /></span>
+                        <span style={iconStyle}><MapPin size={14} /></span>
                         <span style={rowTxtStyle}>{restaurant.location}</span>
                       </div>
                     )}
 
                     {ratingVal > 0 && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '9px', flexWrap: 'wrap', marginTop: '4px' }}>
-                        <span style={iconStyle}><Star size={15} color="#FFB800" fill="#FFB800" /></span>
-                        <span style={{ fontSize: '13.5px', color: textMid }}>{ratingVal}</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginTop: '2px' }}>
+                        <span style={{ ...iconStyle, color: '#FFB800' }}><Star size={14} color="#FFB800" fill="#FFB800" /></span>
+                        <span style={{ fontSize: '13px', color: textMid, fontWeight: 600 }}>{ratingVal}</span>
                         <div style={{ display: 'flex', gap: '2px', alignItems: 'center' }}>
                           {[1,2,3,4,5].map(i => (
-                            <Star key={i} size={12} color="#FFB800" fill={i <= ratingStars ? '#FFB800' : 'none'} />
+                            <Star key={i} size={11} color="#FFB800" fill={i <= ratingStars ? '#FFB800' : 'none'} />
                           ))}
                         </div>
                         {restaurant.googleReview && restaurant.googleReview.trim() && (
