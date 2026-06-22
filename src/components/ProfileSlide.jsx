@@ -1554,36 +1554,66 @@ export default function ProfileSlide({
                     </div>
                   )}
                   {row.title === 'EDIT INFO' && editingLocation && (
-                    <div style={{ background: '#f8fafc', borderTop: '1px solid #F0F0F5', padding: '20px 18px', animation: 'locInlineIn 0.2s cubic-bezier(0.2, 0.8, 0.2, 1)' }}>
-                      {savedAddress && (
-                        <div style={{ background: '#F0FDF4', border: '1px solid #A7F3D0', borderRadius: '10px', padding: '8px 12px', marginBottom: '12px', display: 'flex', alignItems: 'flex-start', gap: '7px' }}>
-                          <MapPin size={13} color="#10B981" style={{ marginTop: '2px', flexShrink: 0 }} />
-                          <span style={{ fontSize: '12px', color: '#065F46', fontWeight: 600, lineHeight: 1.5 }}>{savedAddress}</span>
+                    <div style={{ background: '#0a0a0a', borderTop: '1px solid #1a1a1a', padding: '28px 24px', animation: 'locInlineIn 0.2s cubic-bezier(0.2, 0.8, 0.2, 1)' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px' }}>
+                        {/* Left column — restaurant name + contact + address */}
+                        <div>
+                          <div style={{ fontSize: '13px', fontWeight: 800, color: '#fff', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '16px' }}>
+                            {restaurantName || 'Restaurant Name'}
+                          </div>
+                          {contactPhone ? (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+                              <Phone size={14} color="#666" strokeWidth={1.5} />
+                              <span style={{ fontSize: '13px', color: '#bbb', fontWeight: 500 }}>{contactPhone}</span>
+                            </div>
+                          ) : null}
+                          {contactEmail ? (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
+                              <Mail size={14} color="#666" strokeWidth={1.5} />
+                              <span style={{ fontSize: '13px', color: '#bbb', fontWeight: 500 }}>{contactEmail}</span>
+                            </div>
+                          ) : null}
+                          {savedAddress ? (
+                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+                              <MapPin size={14} color="#666" strokeWidth={1.5} style={{ marginTop: '2px', flexShrink: 0 }} />
+                              <span style={{ fontSize: '13px', color: '#bbb', fontWeight: 500, lineHeight: 1.65 }}>{savedAddress}</span>
+                            </div>
+                          ) : (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                              <MapPin size={14} color="#444" strokeWidth={1.5} />
+                              <span style={{ fontSize: '13px', color: '#444', fontStyle: 'italic' }}>No address set</span>
+                            </div>
+                          )}
                         </div>
-                      )}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '6px' }}>
-                        <MapPin size={11} color="#999" />
-                        <span style={{ fontSize: '10px', fontWeight: 700, color: '#999', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Restaurant Address</span>
+                        {/* Right column — location + rating */}
+                        <div>
+                          <div style={{ fontSize: '13px', fontWeight: 800, color: '#fff', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '16px' }}>
+                            Location
+                          </div>
+                          {savedAddress ? (
+                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', marginBottom: '24px' }}>
+                              <MapPin size={14} color="#666" strokeWidth={1.5} style={{ marginTop: '2px', flexShrink: 0 }} />
+                              <span style={{ fontSize: '13px', color: '#bbb', fontWeight: 500, lineHeight: 1.65 }}>{savedAddress}</span>
+                            </div>
+                          ) : (
+                            <div style={{ marginBottom: '24px' }} />
+                          )}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <Star size={14} color="#F59E0B" fill="#F59E0B" />
+                            <span style={{ color: '#F59E0B', fontSize: '13px', letterSpacing: '2px' }}>★★★★★</span>
+                            <button
+                              onClick={() => {
+                                const link = localStorage.getItem(`exzibo_google_review_${restaurantId || 'default'}`) || ''
+                                if (link) window.open(link, '_blank')
+                              }}
+                              style={{ padding: '4px 14px', borderRadius: '6px', background: '#fff', border: 'none', cursor: 'pointer', fontWeight: 800, fontSize: '11px', letterSpacing: '0.07em', color: '#111' }}
+                            >
+                              RATE US
+                            </button>
+                          </div>
+                        </div>
                       </div>
-                      <textarea
-                        ref={addressRef}
-                        value={addressInput}
-                        onChange={e => { setAddressInput(e.target.value); setAddressError('') }}
-                        placeholder="Enter your full restaurant address…"
-                        rows={3}
-                        style={{ width: '100%', boxSizing: 'border-box', padding: '10px 12px', borderRadius: '10px', border: `1.5px solid ${addressError ? '#FECACA' : '#E0E0E8'}`, fontSize: '13px', fontWeight: 500, color: '#111', outline: 'none', background: '#F7F7FA', resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.5, transition: 'border-color 0.15s', marginBottom: addressError ? '6px' : '10px' }}
-                        onFocus={e => e.target.style.borderColor = addressError ? '#FECACA' : LIME}
-                        onBlur={e => e.target.style.borderColor = addressError ? '#FECACA' : '#E0E0E8'}
-                      />
-                      {addressError && <div style={{ fontSize: '12px', color: '#EF4444', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '5px' }}><AlertCircle size={12} />{addressError}</div>}
-                      <div style={{ display: 'flex', gap: '10px' }}>
-                        <button onClick={handleSaveLocation} disabled={locationSaving} style={{ flex: 1, padding: '12px 0', borderRadius: '12px', background: LIME, border: 'none', cursor: locationSaving ? 'not-allowed' : 'pointer', fontWeight: 700, fontSize: '13px', letterSpacing: '0.06em', color: '#111', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '7px' }}>
-                          {locationSaving ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <Check size={14} />} SAVE
-                        </button>
-                        <button onClick={() => { setEditingLocation(false); setAddressError(''); setAddressInput(loadLocationAddress(restaurantId)) }} style={{ padding: '12px 18px', borderRadius: '12px', background: '#F0F0F5', border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: '13px', letterSpacing: '0.06em', color: '#666' }}>
-                          CANCEL
-                        </button>
-                      </div>
+                      <div style={{ marginTop: '24px', height: '1px', background: '#1e1e1e' }} />
                     </div>
                   )}
                   {row.title === 'EDIT CONTACT' && editingContact && (
