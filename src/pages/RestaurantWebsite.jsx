@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react'
 import OurStorySection from '../components/OurStorySection'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { notifyAnalyticsUpdate } from '../context/AnalyticsContext'
-import { getRestaurantBySlug, getMenuCategories, getMenuItems, getPublishedMenuItems, loadMenuFilters, fetchRestaurantAbout } from '../lib/db'
+import { getRestaurantBySlug, getMenuCategories, getMenuItems, getPublishedMenuItems, loadMenuFilters, fetchRestaurantAbout, loadRestaurantHours } from '../lib/db'
 import { supabase } from '../lib/supabase'
 import { useMenuSubdomainRedirect } from '../lib/routeConfig'
 import { toSlug } from '../lib/slug'
@@ -433,7 +433,16 @@ export default function RestaurantWebsite() {
     const rid = (!rawId || rawId === 'demo') ? 'default' : rawId
     const key = `exzibo_hours_${rid}`
     const stored = localStorage.getItem(key)
-    setOpeningHours(stored ? JSON.parse(stored) : null)
+    if (stored) {
+      setOpeningHours(JSON.parse(stored))
+    } else if (rawId && rawId !== 'demo') {
+      loadRestaurantHours(rawId).then(h => {
+        if (h) {
+          setOpeningHours(h)
+          try { localStorage.setItem(key, JSON.stringify(h)) } catch {}
+        }
+      }).catch(() => {})
+    }
 
     function onHoursChanged(e) {
       const { restaurantId: changedId, hours } = e.detail || {}

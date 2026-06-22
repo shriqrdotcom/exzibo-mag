@@ -12,7 +12,7 @@ import { FaFacebook, FaInstagram, FaLinkedinIn, FaYoutube } from 'react-icons/fa
 import { FaXTwitter } from 'react-icons/fa6'
 import AddMembersModal from './AddMembersModal'
 import RemainingDaysModal from './RemainingDaysModal'
-import { updateRestaurant, updateRestaurantProfile, updateRestaurantSocial, uploadLogoViaApi, getTeamMembers, getRestaurantById } from '../lib/db'
+import { updateRestaurant, updateRestaurantProfile, updateRestaurantSocial, uploadLogoViaApi, getTeamMembers, getRestaurantById, saveRestaurantHours } from '../lib/db'
 import { supabase } from '../lib/supabase'
 import { processImageFile, isAcceptedImageType } from '../lib/processImage'
 
@@ -685,6 +685,9 @@ export default function ProfileSlide({
     setSavedHours(data)
     window.dispatchEvent(new CustomEvent('exzibo-hours-changed', { detail: { restaurantId, hours: data } }))
     setHoursModalOpen(false)
+    if (restaurantId && restaurantId !== 'default') {
+      saveRestaurantHours(restaurantId, data).catch(e => console.warn('[hours] Supabase save failed:', e.message))
+    }
   }
 
   function formatTime(h, m, ampm) {
@@ -842,6 +845,7 @@ export default function ProfileSlide({
       } else {
         const all = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
         localStorage.setItem('exzibo_restaurants', JSON.stringify(all.map(r => r.id === restaurantId ? { ...r, phone, email } : r)))
+        await updateRestaurant(restaurantId, { phone, email })
       }
       window.dispatchEvent(new CustomEvent('exzibo-contact-changed', { detail: { restaurantId, phone, email } }))
       setContactSuccess(true); setEditingContact(false); setTimeout(() => setContactSuccess(false), 2500)
@@ -866,6 +870,7 @@ export default function ProfileSlide({
       } else {
         const all = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
         localStorage.setItem('exzibo_restaurants', JSON.stringify(all.map(r => r.id === restaurantId ? { ...r, location: address } : r)))
+        await updateRestaurant(restaurantId, { location: address })
       }
       window.dispatchEvent(new CustomEvent('exzibo-location-changed', { detail: { restaurantId, location: address } }))
       setSavedAddress(address)

@@ -1263,6 +1263,40 @@ export async function loadMenuFilters(restaurantId) {
   return null
 }
 
+// ── Per-restaurant opening hours ──────────────────────────────────────────────
+// Stored in global_settings under key `restaurant_hours_<restaurantId>`.
+// Uses the same anon-accessible table as menu filters so the restaurant
+// website can read them without auth. ProfileSlide writes; RestaurantWebsite reads.
+
+const _restaurantHoursKey = (id) => `restaurant_hours_${id || 'default'}`
+
+export async function saveRestaurantHours(restaurantId, hours) {
+  const key = _restaurantHoursKey(restaurantId)
+  const { error } = await supabase
+    .from('global_settings')
+    .upsert({ key, value: hours, updated_at: new Date().toISOString() }, { onConflict: 'key' })
+  if (error) throw error
+}
+
+export async function loadRestaurantHours(restaurantId) {
+  try {
+    const key = _restaurantHoursKey(restaurantId)
+    const { data, error } = await supabaseAnon
+      .from('global_settings')
+      .select('value')
+      .eq('key', key)
+      .single()
+    if (!error && data?.value) return data.value
+    const { data: d2, error: e2 } = await supabase
+      .from('global_settings')
+      .select('value')
+      .eq('key', key)
+      .single()
+    if (!e2 && d2?.value) return d2.value
+  } catch {}
+  return null
+}
+
 /**
  * Subscribe to real-time NIE IQE1 limit changes.
  * Fires onUpdate({ minKB, maxKB }) whenever the super-admin saves new limits
