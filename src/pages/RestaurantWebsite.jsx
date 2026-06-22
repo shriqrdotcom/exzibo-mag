@@ -3482,26 +3482,6 @@ export default function RestaurantWebsite() {
                       ))}
                     </div>
 
-                    {/* RIGHT — Social */}
-                    {allSocials.length > 0 && (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                        <div style={{ fontSize: '9px', fontWeight: 800, letterSpacing: '0.18em', color: footerSub, textTransform: 'uppercase', marginBottom: '2px' }}>Follow Us</div>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
-                          {allSocials.map(s => (
-                            <a
-                              key={s.key}
-                              href={s.href}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="exz-footer-social"
-                            >
-                              {s.icon}
-                            </a>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
                     {/* Google Review */}
                     {restaurant.googleReview && restaurant.googleReview.trim() && (
                       <a
