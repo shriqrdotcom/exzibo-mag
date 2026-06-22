@@ -1610,70 +1610,68 @@ export default function ProfileSlide({
                   {row.title === 'EDIT INFO' && editingLocation && (() => {
                     const hoursStr = savedHours
                       ? `${formatTime(savedHours.openH, savedHours.openM, savedHours.openAmPm)} – ${formatTime(savedHours.closeH, savedHours.closeM, savedHours.closeAmPm)}`
-                      : null
+                      : '11:00 AM – 11:00 PM'
                     const reviewLink = googleReviewInput || ''
                     const iconC = 'rgba(255,255,255,0.4)'
-                    const textC = 'rgba(255,255,255,0.58)'
-                    const dimC  = 'rgba(255,255,255,0.35)'
-                    const rowS  = { display: 'flex', alignItems: 'flex-start', gap: '10px', marginBottom: '13px' }
-                    const txtS  = { fontSize: '12px', color: textC, lineHeight: 1.55 }
+                    const textC = 'rgba(255,255,255,0.6)'
+                    const dimC  = 'rgba(255,255,255,0.36)'
+                    const phC   = 'rgba(255,255,255,0.22)'
+                    const rowS  = { display: 'flex', alignItems: 'flex-start', gap: '10px', marginBottom: '12px' }
+                    const txtS  = (val) => ({ fontSize: '12px', color: val ? textC : phC, lineHeight: 1.55, fontStyle: val ? 'normal' : 'italic' })
                     return (
-                      <div style={{ background: '#0a0a0a', borderTop: '1px solid rgba(255,255,255,0.06)', padding: '20px 16px', animation: 'locInlineIn 0.2s cubic-bezier(0.2,0.8,0.2,1)' }}>
-                        <div style={{ display: 'flex', gap: '0', flexWrap: 'wrap' }}>
+                      <div style={{ background: '#0a0a0a', borderTop: '1px solid rgba(255,255,255,0.06)', padding: '22px 16px 18px', animation: 'locInlineIn 0.2s cubic-bezier(0.2,0.8,0.2,1)' }}>
+                        <div style={{ display: 'flex' }}>
 
                           {/* LEFT — contact info */}
-                          <div style={{ flex: '1 1 140px', paddingRight: '16px', paddingBottom: '16px', minWidth: 0 }}>
-                            <div style={{ fontSize: '12px', fontWeight: 800, color: '#fff', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '16px', lineHeight: 1.2 }}>
+                          <div style={{ flex: '1 1 0', paddingRight: '16px', minWidth: 0 }}>
+                            <div style={{ fontSize: '12px', fontWeight: 800, color: '#fff', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '18px', lineHeight: 1.2 }}>
                               {restaurantName || 'Restaurant Name'}
                             </div>
 
-                            {contactPhone && (
-                              <div style={rowS}>
-                                <Phone size={13} color={iconC} strokeWidth={1.5} style={{ flexShrink: 0, marginTop: '1px' }} />
-                                <span style={txtS}>{contactPhone}</span>
-                              </div>
-                            )}
+                            {/* Phone */}
+                            <div style={rowS}>
+                              <Phone size={13} color={iconC} strokeWidth={1.5} style={{ flexShrink: 0, marginTop: '1px' }} />
+                              <span style={txtS(contactPhone)}>{contactPhone || '+91 00000 00000'}</span>
+                            </div>
 
-                            {contactEmail && (
-                              <div style={rowS}>
-                                <Mail size={13} color={iconC} strokeWidth={1.5} style={{ flexShrink: 0, marginTop: '1px' }} />
-                                <span style={txtS}>{contactEmail}</span>
-                              </div>
-                            )}
+                            {/* Email */}
+                            <div style={rowS}>
+                              <Mail size={13} color={iconC} strokeWidth={1.5} style={{ flexShrink: 0, marginTop: '1px' }} />
+                              <span style={txtS(contactEmail)}>{contactEmail || 'hello@restaurant.com'}</span>
+                            </div>
 
-                            {contactPhone && (
-                              <div style={rowS}>
-                                <FaWhatsapp size={13} color={iconC} style={{ flexShrink: 0, marginTop: '1px' }} />
-                                <span style={txtS}>{contactPhone}</span>
-                              </div>
-                            )}
+                            {/* WhatsApp */}
+                            <div style={rowS}>
+                              <FaWhatsapp size={13} color={iconC} style={{ flexShrink: 0, marginTop: '1px' }} />
+                              <span style={txtS(contactPhone)}>{contactPhone || '+91 00000 00000'}</span>
+                            </div>
 
-                            {hoursStr && (
-                              <div style={rowS}>
-                                <Clock size={13} color={iconC} strokeWidth={1.5} style={{ flexShrink: 0, marginTop: '1px' }} />
-                                <span style={txtS}>Mon - Sun: {hoursStr}</span>
-                              </div>
-                            )}
+                            {/* Hours */}
+                            <div style={rowS}>
+                              <Clock size={13} color={iconC} strokeWidth={1.5} style={{ flexShrink: 0, marginTop: '1px' }} />
+                              <span style={txtS(savedHours)}>Mon - Sun: {hoursStr}</span>
+                            </div>
 
-                            {savedAddress && (
-                              <div style={rowS}>
-                                <MapPin size={13} color={iconC} strokeWidth={1.5} style={{ flexShrink: 0, marginTop: '1px' }} />
-                                <span style={txtS}>{savedAddress}</span>
-                              </div>
-                            )}
+                            {/* Address */}
+                            <div style={rowS}>
+                              <MapPin size={13} color={iconC} strokeWidth={1.5} style={{ flexShrink: 0, marginTop: '1px' }} />
+                              <span style={txtS(savedAddress)}>{savedAddress || '123, Food Street, City Center'}</span>
+                            </div>
 
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '7px', flexWrap: 'wrap', marginTop: '2px' }}>
+                            {/* Rating + Rate Us */}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '7px', flexWrap: 'wrap', marginTop: '4px' }}>
                               <Star size={13} color="#FFB800" fill="#FFB800" style={{ flexShrink: 0 }} />
+                              <span style={{ fontSize: '12px', color: textC, fontWeight: 600 }}>4.6</span>
                               <div style={{ display: 'flex', gap: '2px' }}>
                                 {[1,2,3,4,5].map(i => <Star key={i} size={10} color="#FFB800" fill="#FFB800" />)}
                               </div>
                               {reviewLink ? (
                                 <a href={reviewLink} target="_blank" rel="noopener noreferrer"
-                                  style={{ padding: '3px 10px', border: '1.5px solid rgba(255,255,255,0.3)', borderRadius: '4px', fontSize: '9.5px', fontWeight: 700, letterSpacing: '0.1em', color: '#fff', textTransform: 'uppercase', textDecoration: 'none', whiteSpace: 'nowrap' }}>
+                                  style={{ padding: '4px 12px', border: '1.5px solid rgba(255,255,255,0.35)', borderRadius: '4px', fontSize: '10px', fontWeight: 700, letterSpacing: '0.1em', color: '#fff', textTransform: 'uppercase', textDecoration: 'none', whiteSpace: 'nowrap' }}>
                                   Rate Us
                                 </a>
                               ) : (
-                                <span style={{ padding: '3px 10px', border: '1.5px solid rgba(255,255,255,0.15)', borderRadius: '4px', fontSize: '9.5px', fontWeight: 700, letterSpacing: '0.1em', color: dimC, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
+                                <span style={{ padding: '4px 12px', border: '1.5px solid rgba(255,255,255,0.2)', borderRadius: '4px', fontSize: '10px', fontWeight: 700, letterSpacing: '0.1em', color: phC, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
                                   Rate Us
                                 </span>
                               )}
@@ -1681,40 +1679,37 @@ export default function ProfileSlide({
                           </div>
 
                           {/* RIGHT — opening hours + location */}
-                          <div style={{ flex: '1 1 110px', borderLeft: '1px solid rgba(255,255,255,0.06)', paddingLeft: '16px', minWidth: 0 }}>
+                          <div style={{ flex: '1 1 0', borderLeft: '1px solid rgba(255,255,255,0.06)', paddingLeft: '16px', minWidth: 0 }}>
 
-                            {hoursStr && (
-                              <div style={{ marginBottom: '20px' }}>
-                                <div style={{ fontSize: '9px', fontWeight: 800, letterSpacing: '0.2em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.9)', marginBottom: '12px' }}>
-                                  Opening Hours
-                                </div>
-                                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
-                                  <Clock size={12} color={iconC} strokeWidth={1.5} style={{ flexShrink: 0, marginTop: '2px' }} />
-                                  <div>
-                                    <div style={{ fontSize: '11px', color: textC, fontWeight: 500, marginBottom: '1px' }}>Mon - Fri</div>
-                                    <div style={{ fontSize: '11px', color: dimC, marginBottom: '8px' }}>{hoursStr}</div>
-                                    <div style={{ fontSize: '11px', color: textC, fontWeight: 500, marginBottom: '1px' }}>Sat - Sun</div>
-                                    <div style={{ fontSize: '11px', color: dimC }}>{hoursStr}</div>
-                                  </div>
+                            {/* Opening Hours */}
+                            <div style={{ marginBottom: '22px' }}>
+                              <div style={{ fontSize: '9px', fontWeight: 800, letterSpacing: '0.2em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.9)', marginBottom: '14px' }}>
+                                Opening Hours
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                                <Clock size={12} color={iconC} strokeWidth={1.5} style={{ flexShrink: 0, marginTop: '2px' }} />
+                                <div>
+                                  <div style={{ fontSize: '11px', color: textC, fontWeight: 500, marginBottom: '2px' }}>Mon - Fri</div>
+                                  <div style={{ fontSize: '11px', color: dimC, marginBottom: '10px' }}>{hoursStr}</div>
+                                  <div style={{ fontSize: '11px', color: textC, fontWeight: 500, marginBottom: '2px' }}>Sat - Sun</div>
+                                  <div style={{ fontSize: '11px', color: dimC }}>10:00 AM – 12:00 AM</div>
                                 </div>
                               </div>
-                            )}
+                            </div>
 
-                            {savedAddress && (
-                              <div>
-                                <div style={{ fontSize: '9px', fontWeight: 800, letterSpacing: '0.2em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.9)', marginBottom: '12px' }}>
-                                  Location
-                                </div>
-                                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
-                                  <MapPin size={12} color={iconC} strokeWidth={1.5} style={{ flexShrink: 0, marginTop: '2px' }} />
-                                  <span style={{ fontSize: '11px', color: dimC, lineHeight: 1.6 }}>{savedAddress}</span>
-                                </div>
+                            {/* Location */}
+                            <div>
+                              <div style={{ fontSize: '9px', fontWeight: 800, letterSpacing: '0.2em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.9)', marginBottom: '14px' }}>
+                                Location
                               </div>
-                            )}
+                              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                                <MapPin size={12} color={iconC} strokeWidth={1.5} style={{ flexShrink: 0, marginTop: '2px' }} />
+                                <span style={{ fontSize: '11px', color: savedAddress ? dimC : phC, lineHeight: 1.6, fontStyle: savedAddress ? 'normal' : 'italic' }}>
+                                  {savedAddress || '123, Food Street, City Center'}
+                                </span>
+                              </div>
+                            </div>
 
-                            {!hoursStr && !savedAddress && (
-                              <div style={{ fontSize: '11px', color: dimC, fontStyle: 'italic', marginTop: '8px' }}>No data yet</div>
-                            )}
                           </div>
                         </div>
                       </div>
