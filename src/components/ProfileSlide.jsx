@@ -1554,66 +1554,58 @@ export default function ProfileSlide({
                     </div>
                   )}
                   {row.title === 'EDIT INFO' && editingLocation && (
-                    <div style={{ background: '#0a0a0a', borderTop: '1px solid #1a1a1a', padding: '28px 24px', animation: 'locInlineIn 0.2s cubic-bezier(0.2, 0.8, 0.2, 1)' }}>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px' }}>
-                        {/* Left column — restaurant name + contact + address */}
-                        <div>
-                          <div style={{ fontSize: '13px', fontWeight: 800, color: '#fff', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '16px' }}>
+                    <div style={{ background: '#0a0a0a', borderTop: '1px solid #1a1a1a', padding: '14px 16px', animation: 'locInlineIn 0.2s cubic-bezier(0.2, 0.8, 0.2, 1)' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                        {/* Left column */}
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ fontSize: '11px', fontWeight: 800, color: '#fff', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: '8px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                             {restaurantName || 'Restaurant Name'}
                           </div>
                           {contactPhone ? (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
-                              <Phone size={14} color="#666" strokeWidth={1.5} />
-                              <span style={{ fontSize: '13px', color: '#bbb', fontWeight: 500 }}>{contactPhone}</span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '5px' }}>
+                              <Phone size={11} color="#666" strokeWidth={1.5} style={{ flexShrink: 0 }} />
+                              <span style={{ fontSize: '11px', color: '#bbb', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{contactPhone}</span>
                             </div>
                           ) : null}
                           {contactEmail ? (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
-                              <Mail size={14} color="#666" strokeWidth={1.5} />
-                              <span style={{ fontSize: '13px', color: '#bbb', fontWeight: 500 }}>{contactEmail}</span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '5px' }}>
+                              <Mail size={11} color="#666" strokeWidth={1.5} style={{ flexShrink: 0 }} />
+                              <span style={{ fontSize: '11px', color: '#bbb', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{contactEmail}</span>
                             </div>
                           ) : null}
-                          {savedAddress ? (
-                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
-                              <MapPin size={14} color="#666" strokeWidth={1.5} style={{ marginTop: '2px', flexShrink: 0 }} />
-                              <span style={{ fontSize: '13px', color: '#bbb', fontWeight: 500, lineHeight: 1.65 }}>{savedAddress}</span>
-                            </div>
-                          ) : (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                              <MapPin size={14} color="#444" strokeWidth={1.5} />
-                              <span style={{ fontSize: '13px', color: '#444', fontStyle: 'italic' }}>No address set</span>
-                            </div>
-                          )}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <MapPin size={11} color="#555" strokeWidth={1.5} style={{ flexShrink: 0 }} />
+                            <span style={{ fontSize: '11px', color: savedAddress ? '#bbb' : '#444', fontWeight: 500, fontStyle: savedAddress ? 'normal' : 'italic', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              {savedAddress || 'No address set'}
+                            </span>
+                          </div>
                         </div>
-                        {/* Right column — location + rating */}
-                        <div>
-                          <div style={{ fontSize: '13px', fontWeight: 800, color: '#fff', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '16px' }}>
+                        {/* Right column */}
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ fontSize: '11px', fontWeight: 800, color: '#fff', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: '8px' }}>
                             Location
                           </div>
-                          {savedAddress ? (
-                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', marginBottom: '24px' }}>
-                              <MapPin size={14} color="#666" strokeWidth={1.5} style={{ marginTop: '2px', flexShrink: 0 }} />
-                              <span style={{ fontSize: '13px', color: '#bbb', fontWeight: 500, lineHeight: 1.65 }}>{savedAddress}</span>
-                            </div>
-                          ) : (
-                            <div style={{ marginBottom: '24px' }} />
-                          )}
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <Star size={14} color="#F59E0B" fill="#F59E0B" />
-                            <span style={{ color: '#F59E0B', fontSize: '13px', letterSpacing: '2px' }}>★★★★★</span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+                            <MapPin size={11} color="#555" strokeWidth={1.5} style={{ flexShrink: 0 }} />
+                            <span style={{ fontSize: '11px', color: savedAddress ? '#bbb' : '#444', fontWeight: 500, fontStyle: savedAddress ? 'normal' : 'italic', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              {savedAddress || 'No address set'}
+                            </span>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span style={{ color: '#F59E0B', fontSize: '11px', letterSpacing: '1px', flexShrink: 0 }}>★★★★★</span>
                             <button
                               onClick={() => {
                                 const link = localStorage.getItem(`exzibo_google_review_${restaurantId || 'default'}`) || ''
                                 if (link) window.open(link, '_blank')
                               }}
-                              style={{ padding: '4px 14px', borderRadius: '6px', background: '#fff', border: 'none', cursor: 'pointer', fontWeight: 800, fontSize: '11px', letterSpacing: '0.07em', color: '#111' }}
+                              style={{ padding: '2px 8px', borderRadius: '4px', background: '#fff', border: 'none', cursor: 'pointer', fontWeight: 800, fontSize: '9px', letterSpacing: '0.06em', color: '#111', whiteSpace: 'nowrap' }}
                             >
                               RATE US
                             </button>
                           </div>
                         </div>
                       </div>
-                      <div style={{ marginTop: '24px', height: '1px', background: '#1e1e1e' }} />
+                      <div style={{ marginTop: '12px', height: '1px', background: '#1e1e1e' }} />
                     </div>
                   )}
                   {row.title === 'EDIT CONTACT' && editingContact && (
