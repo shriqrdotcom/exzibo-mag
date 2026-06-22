@@ -990,7 +990,9 @@ export default function RestaurantWebsite() {
           description:     dbRow.description     || '',
           location:        dbRow.location        || '',
           phone:           dbRow.phone           || '',
+          email:           dbRow.email           || '',
           rating:          dbRow.rating          || '',
+          googleReview:    dbRow.google_review   || dbRow.googleReview || '',
           tables:          dbRow.tables          || '',
           images:          dbRow.images          || [],
           logo:            dbRow.logo            || '',
@@ -3405,6 +3407,7 @@ export default function RestaurantWebsite() {
             const ratingVal = restaurant.rating ? parseFloat(restaurant.rating) : 0
             const ratingStars = Math.round(ratingVal)
             const waNum = restaurant.phone ? restaurant.phone.replace(/\D/g, '') : ''
+            const hasRightCol = !!(hoursStr || restaurant.location)
 
             const iconStyle = { flexShrink: 0, marginTop: '1px', display: 'flex', alignItems: 'center', color: iconClr }
             const rowStyle  = { display: 'flex', alignItems: 'flex-start', gap: '12px', marginBottom: '16px' }
@@ -3413,24 +3416,42 @@ export default function RestaurantWebsite() {
             return (
               <footer style={{ background: footerBg, borderTop: `1px solid ${divClr}` }}>
                 <style>{`
+                  .exz-ft-wrap {
+                    container-type: inline-size;
+                  }
                   .exz-ft-cols {
                     display: flex;
-                    gap: 0;
-                    padding: 52px 24px 44px;
+                    flex-wrap: wrap;
+                    padding: 44px 22px 36px;
                   }
                   .exz-ft-left {
-                    flex: 1.5;
-                    padding-right: 40px;
+                    flex: 1 1 240px;
+                    padding-right: 36px;
+                    padding-bottom: 32px;
+                    min-width: 0;
+                  }
+                  .exz-ft-left.exz-ft-solo {
+                    flex-basis: 100%;
+                    padding-right: 0;
                   }
                   .exz-ft-right {
-                    flex: 1;
+                    flex: 1 1 160px;
                     border-left: 1px solid ${divClr};
-                    padding-left: 40px;
+                    padding-left: 36px;
+                    min-width: 0;
                   }
-                  @media (max-width: 600px) {
-                    .exz-ft-cols { flex-direction: column; padding: 40px 20px 36px; }
-                    .exz-ft-left { padding-right: 0; padding-bottom: 36px; }
-                    .exz-ft-right { border-left: none; padding-left: 0; border-top: 1px solid ${divClr}; padding-top: 32px; }
+                  @container (max-width: 460px) {
+                    .exz-ft-left {
+                      flex-basis: 100%;
+                      padding-right: 0;
+                    }
+                    .exz-ft-right {
+                      flex-basis: 100%;
+                      border-left: none;
+                      padding-left: 0;
+                      border-top: 1px solid ${divClr};
+                      padding-top: 28px;
+                    }
                   }
                   .exz-ft-rh {
                     font-size: 9.5px; font-weight: 800; letter-spacing: 0.2em;
@@ -3461,19 +3482,21 @@ export default function RestaurantWebsite() {
                 `}</style>
 
                 {/* ── TWO-COLUMN MAIN AREA ── */}
+                <div className="exz-ft-wrap">
                 <div className="exz-ft-cols">
 
                   {/* LEFT — contact information */}
-                  <div className="exz-ft-left">
+                  <div className={`exz-ft-left${!hasRightCol ? ' exz-ft-solo' : ''}`}>
                     <div style={{
-                      fontSize: 'clamp(14px, 3.5vw, 18px)',
+                      fontSize: '15px',
                       fontWeight: 800,
                       color: '#fff',
                       letterSpacing: '0.06em',
                       textTransform: 'uppercase',
-                      lineHeight: 1.15,
+                      lineHeight: 1.2,
                       marginBottom: '24px',
                       wordBreak: 'break-word',
+                      overflowWrap: 'break-word',
                     }}>
                       {restaurant.name}
                     </div>
@@ -3535,7 +3558,8 @@ export default function RestaurantWebsite() {
                     )}
                   </div>
 
-                  {/* RIGHT — opening hours + location */}
+                  {/* RIGHT — opening hours + location (only render when data exists) */}
+                  {hasRightCol && (
                   <div className="exz-ft-right">
 
                     {hoursStr && (
@@ -3563,7 +3587,9 @@ export default function RestaurantWebsite() {
                       </div>
                     )}
                   </div>
+                  )}
                 </div>
+                </div>{/* end exz-ft-wrap */}
 
                 {/* ── DIVIDER ── */}
                 <div style={{ height: '1px', background: divClr, margin: '0 24px' }} />
