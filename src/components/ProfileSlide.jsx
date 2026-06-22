@@ -187,6 +187,15 @@ export default function ProfileSlide({
   const [locationSaving, setLocationSaving] = useState(false)
   const [locationSuccess, setLocationSuccess] = useState(false)
 
+  // EDIT INFO form state
+  const [editInfoPhone, setEditInfoPhone] = useState('')
+  const [editInfoEmail, setEditInfoEmail] = useState('')
+  const [editInfoAddress, setEditInfoAddress] = useState('')
+  const [editInfoLink, setEditInfoLink] = useState('')
+  const [editInfoSaving, setEditInfoSaving] = useState(false)
+  const [editInfoSuccess, setEditInfoSuccess] = useState(false)
+  const [editInfoError, setEditInfoError] = useState('')
+
   const [hoursModalOpen, setHoursModalOpen] = useState(false)
   const [savedHours, setSavedHours] = useState(null)
   const [tempOpenH, setTempOpenH] = useState(9)
@@ -855,6 +864,51 @@ export default function ProfileSlide({
 
   function handlePhoneInput(val) {
     setContactPhone(val.replace(/\D/g, '').slice(0, 10)); setContactPhoneError('')
+  }
+
+  // Populate EDIT INFO form when panel opens
+  useEffect(() => {
+    if (editingLocation) {
+      setEditInfoPhone(contactPhone || '')
+      setEditInfoEmail(contactEmail || '')
+      setEditInfoAddress(savedAddress || '')
+      setEditInfoLink(googleReviewInput || '')
+      setEditInfoError('')
+      setEditInfoSuccess(false)
+    }
+  }, [editingLocation])
+
+  async function handleSaveEditInfo() {
+    setEditInfoError(''); setEditInfoSaving(true)
+    try {
+      const patch = {
+        phone: editInfoPhone.trim(),
+        email: editInfoEmail.trim(),
+        location: editInfoAddress.trim(),
+        google_review: editInfoLink.trim(),
+      }
+      if (restaurantId && restaurantId !== 'default') {
+        await updateRestaurant(restaurantId, patch)
+      }
+      // Sync local states so the slide reflects the changes immediately
+      setContactPhone(editInfoPhone.trim())
+      setContactEmail(editInfoEmail.trim())
+      setSavedAddress(editInfoAddress.trim())
+      setAddressInput(editInfoAddress.trim())
+      setGoogleReviewInput(editInfoLink.trim())
+      // Persist to localStorage caches
+      const key = `exzibo_google_review_${restaurantId || 'default'}`
+      localStorage.setItem(key, editInfoLink.trim())
+      const contact = JSON.parse(localStorage.getItem(`exzibo_contact_${restaurantId || 'default'}`) || '{}')
+      localStorage.setItem(`exzibo_contact_${restaurantId || 'default'}`, JSON.stringify({ ...contact, phone: editInfoPhone.trim(), email: editInfoEmail.trim() }))
+      window.dispatchEvent(new CustomEvent('exzibo-location-changed', { detail: { restaurantId, location: editInfoAddress.trim() } }))
+      setEditInfoSuccess(true)
+      setTimeout(() => { setEditInfoSuccess(false); setEditingLocation(false) }, 1400)
+    } catch (e) {
+      setEditInfoError('Failed to save. Please try again.')
+    } finally {
+      setEditInfoSaving(false)
+    }
   }
 
   async function handleSaveLocation() {
@@ -1554,50 +1608,83 @@ export default function ProfileSlide({
                     </div>
                   )}
                   {row.title === 'EDIT INFO' && editingLocation && (
-                    <div style={{ background: '#0a0a0a', borderTop: '1px solid #1a1a1a', padding: '16px 20px', animation: 'locInlineIn 0.2s cubic-bezier(0.2, 0.8, 0.2, 1)' }}>
-                      {/* Restaurant Name */}
-                      <div style={{ fontSize: '13px', fontWeight: 900, color: '#fff', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '10px' }}>
-                        {restaurantName || 'Restaurant Name'}
-                      </div>
+                    <div style={{ background: '#0a0a0a', borderTop: '1px solid #1a1a1a', padding: '16px 18px', animation: 'locInlineIn 0.2s cubic-bezier(0.2, 0.8, 0.2, 1)' }}>
                       {/* Phone */}
-                      {contactPhone ? (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                          <Phone size={12} color="#666" strokeWidth={1.5} style={{ flexShrink: 0 }} />
-                          <span style={{ fontSize: '12px', color: '#999', fontWeight: 500 }}>{contactPhone}</span>
-                        </div>
-                      ) : null}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '5px' }}>
+                        <Phone size={11} color="#555" strokeWidth={1.5} style={{ flexShrink: 0 }} />
+                        <span style={{ fontSize: '10px', fontWeight: 700, color: '#555', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Phone</span>
+                      </div>
+                      <input
+                        type="tel"
+                        value={editInfoPhone}
+                        onChange={e => setEditInfoPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                        placeholder="10-digit number"
+                        style={{ width: '100%', boxSizing: 'border-box', padding: '9px 11px', borderRadius: '8px', border: '1.5px solid #2a2a2a', fontSize: '12px', fontWeight: 500, color: '#eee', outline: 'none', background: '#141414', fontFamily: 'inherit', marginBottom: '10px' }}
+                        onFocus={e => e.target.style.borderColor = '#c0392b'}
+                        onBlur={e => e.target.style.borderColor = '#2a2a2a'}
+                      />
                       {/* Email */}
-                      {contactEmail ? (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                          <Mail size={12} color="#666" strokeWidth={1.5} style={{ flexShrink: 0 }} />
-                          <span style={{ fontSize: '12px', color: '#999', fontWeight: 500 }}>{contactEmail}</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '5px' }}>
+                        <Mail size={11} color="#555" strokeWidth={1.5} style={{ flexShrink: 0 }} />
+                        <span style={{ fontSize: '10px', fontWeight: 700, color: '#555', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Email</span>
+                      </div>
+                      <input
+                        type="email"
+                        value={editInfoEmail}
+                        onChange={e => setEditInfoEmail(e.target.value)}
+                        placeholder="restaurant@email.com"
+                        style={{ width: '100%', boxSizing: 'border-box', padding: '9px 11px', borderRadius: '8px', border: '1.5px solid #2a2a2a', fontSize: '12px', fontWeight: 500, color: '#eee', outline: 'none', background: '#141414', fontFamily: 'inherit', marginBottom: '10px' }}
+                        onFocus={e => e.target.style.borderColor = '#c0392b'}
+                        onBlur={e => e.target.style.borderColor = '#2a2a2a'}
+                      />
+                      {/* Address */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '5px' }}>
+                        <MapPin size={11} color="#555" strokeWidth={1.5} style={{ flexShrink: 0 }} />
+                        <span style={{ fontSize: '10px', fontWeight: 700, color: '#555', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Address</span>
+                      </div>
+                      <textarea
+                        value={editInfoAddress}
+                        onChange={e => setEditInfoAddress(e.target.value)}
+                        placeholder="123, Street, City"
+                        rows={2}
+                        style={{ width: '100%', boxSizing: 'border-box', padding: '9px 11px', borderRadius: '8px', border: '1.5px solid #2a2a2a', fontSize: '12px', fontWeight: 500, color: '#eee', outline: 'none', background: '#141414', fontFamily: 'inherit', resize: 'none', marginBottom: '10px', lineHeight: 1.5 }}
+                        onFocus={e => e.target.style.borderColor = '#c0392b'}
+                        onBlur={e => e.target.style.borderColor = '#2a2a2a'}
+                      />
+                      {/* Google Review Link */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '5px' }}>
+                        <Star size={11} color="#555" strokeWidth={1.5} style={{ flexShrink: 0 }} />
+                        <span style={{ fontSize: '10px', fontWeight: 700, color: '#555', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Google Review Link</span>
+                      </div>
+                      <input
+                        type="url"
+                        value={editInfoLink}
+                        onChange={e => setEditInfoLink(e.target.value)}
+                        placeholder="https://g.page/r/.../review"
+                        style={{ width: '100%', boxSizing: 'border-box', padding: '9px 11px', borderRadius: '8px', border: '1.5px solid #2a2a2a', fontSize: '12px', fontWeight: 500, color: '#eee', outline: 'none', background: '#141414', fontFamily: 'inherit', marginBottom: '12px' }}
+                        onFocus={e => e.target.style.borderColor = '#c0392b'}
+                        onBlur={e => e.target.style.borderColor = '#2a2a2a'}
+                      />
+                      {/* Error */}
+                      {editInfoError && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px', fontSize: '12px', color: '#f87171' }}>
+                          <AlertCircle size={12} />{editInfoError}
                         </div>
-                      ) : null}
-                      {/* Divider */}
-                      <div style={{ height: '1px', background: '#1e1e1e', margin: '12px 0' }} />
-                      {/* Location */}
-                      <div style={{ fontSize: '13px', fontWeight: 900, color: '#fff', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '10px' }}>
-                        Location
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                        <MapPin size={12} color="#555" strokeWidth={1.5} style={{ flexShrink: 0 }} />
-                        <span style={{ fontSize: '12px', color: savedAddress ? '#999' : '#555', fontWeight: 500, fontStyle: savedAddress ? 'normal' : 'italic' }}>
-                          {savedAddress || 'No address set'}
-                        </span>
-                      </div>
-                      {/* Divider */}
-                      <div style={{ height: '1px', background: '#1e1e1e', margin: '12px 0' }} />
-                      {/* Stars + Rate Us */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <span style={{ color: '#F59E0B', fontSize: '14px', letterSpacing: '2px' }}>★★★★★</span>
+                      )}
+                      {/* Buttons */}
+                      <div style={{ display: 'flex', gap: '8px' }}>
                         <button
-                          onClick={() => {
-                            const link = localStorage.getItem(`exzibo_google_review_${restaurantId || 'default'}`) || ''
-                            if (link) window.open(link, '_blank')
-                          }}
-                          style={{ padding: '5px 16px', borderRadius: '8px', background: '#fff', border: 'none', cursor: 'pointer', fontWeight: 800, fontSize: '11px', letterSpacing: '0.08em', color: '#111', whiteSpace: 'nowrap' }}
+                          onClick={() => setEditingLocation(false)}
+                          style={{ flex: 1, padding: '10px 0', borderRadius: '8px', background: '#1e1e1e', border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: '12px', color: '#888', letterSpacing: '0.05em' }}
                         >
-                          ADD LINK
+                          CANCEL
+                        </button>
+                        <button
+                          onClick={handleSaveEditInfo}
+                          disabled={editInfoSaving}
+                          style={{ flex: 2, padding: '10px 0', borderRadius: '8px', background: editInfoSuccess ? '#16a34a' : '#c0392b', border: 'none', cursor: editInfoSaving ? 'not-allowed' : 'pointer', fontWeight: 800, fontSize: '12px', color: '#fff', letterSpacing: '0.06em', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', transition: 'background 0.2s' }}
+                        >
+                          {editInfoSaving ? <><Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> SAVING…</> : editInfoSuccess ? <><CheckCircle2 size={13} /> SAVED!</> : 'SAVE CHANGES'}
                         </button>
                       </div>
                     </div>
