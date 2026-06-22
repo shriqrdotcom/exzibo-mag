@@ -1555,57 +1555,63 @@ export default function ProfileSlide({
                   )}
                   {row.title === 'EDIT INFO' && editingLocation && (
                     <div style={{ background: '#0a0a0a', borderTop: '1px solid #1a1a1a', padding: '14px 16px', animation: 'locInlineIn 0.2s cubic-bezier(0.2, 0.8, 0.2, 1)' }}>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                        {/* Left column */}
+                      {/* Top row: restaurant name + contact side by side */}
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '10px' }}>
+                        {/* Left — name + phone + email */}
                         <div style={{ minWidth: 0 }}>
-                          <div style={{ fontSize: '11px', fontWeight: 800, color: '#fff', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: '8px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          <div style={{ fontSize: '11px', fontWeight: 800, color: '#fff', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: '6px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                             {restaurantName || 'Restaurant Name'}
                           </div>
                           {contactPhone ? (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '5px' }}>
-                              <Phone size={11} color="#666" strokeWidth={1.5} style={{ flexShrink: 0 }} />
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '4px' }}>
+                              <Phone size={10} color="#666" strokeWidth={1.5} style={{ flexShrink: 0 }} />
                               <span style={{ fontSize: '11px', color: '#bbb', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{contactPhone}</span>
                             </div>
                           ) : null}
                           {contactEmail ? (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '5px' }}>
-                              <Mail size={11} color="#666" strokeWidth={1.5} style={{ flexShrink: 0 }} />
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                              <Mail size={10} color="#666" strokeWidth={1.5} style={{ flexShrink: 0 }} />
                               <span style={{ fontSize: '11px', color: '#bbb', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{contactEmail}</span>
                             </div>
                           ) : null}
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <MapPin size={11} color="#555" strokeWidth={1.5} style={{ flexShrink: 0 }} />
-                            <span style={{ fontSize: '11px', color: savedAddress ? '#bbb' : '#444', fontWeight: 500, fontStyle: savedAddress ? 'normal' : 'italic', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                              {savedAddress || 'No address set'}
-                            </span>
-                          </div>
                         </div>
-                        {/* Right column */}
+                        {/* Right — location header + address */}
                         <div style={{ minWidth: 0 }}>
-                          <div style={{ fontSize: '11px', fontWeight: 800, color: '#fff', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: '8px' }}>
+                          <div style={{ fontSize: '11px', fontWeight: 800, color: '#fff', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: '6px' }}>
                             Location
                           </div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
-                            <MapPin size={11} color="#555" strokeWidth={1.5} style={{ flexShrink: 0 }} />
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                            <MapPin size={10} color="#555" strokeWidth={1.5} style={{ flexShrink: 0 }} />
                             <span style={{ fontSize: '11px', color: savedAddress ? '#bbb' : '#444', fontWeight: 500, fontStyle: savedAddress ? 'normal' : 'italic', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                               {savedAddress || 'No address set'}
                             </span>
-                          </div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <span style={{ color: '#F59E0B', fontSize: '11px', letterSpacing: '1px', flexShrink: 0 }}>★★★★★</span>
-                            <button
-                              onClick={() => {
-                                const link = localStorage.getItem(`exzibo_google_review_${restaurantId || 'default'}`) || ''
-                                if (link) window.open(link, '_blank')
-                              }}
-                              style={{ padding: '2px 8px', borderRadius: '4px', background: '#fff', border: 'none', cursor: 'pointer', fontWeight: 800, fontSize: '9px', letterSpacing: '0.06em', color: '#111', whiteSpace: 'nowrap' }}
-                            >
-                              RATE US
-                            </button>
                           </div>
                         </div>
                       </div>
-                      <div style={{ marginTop: '12px', height: '1px', background: '#1e1e1e' }} />
+                      {/* Divider */}
+                      <div style={{ height: '1px', background: '#1e1e1e', marginBottom: '10px' }} />
+                      {/* Bottom row: address (left) + stars + RATE US (right) */}
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                        <div style={{ minWidth: 0, display: 'flex', alignItems: 'center', gap: '5px' }}>
+                          <MapPin size={10} color="#555" strokeWidth={1.5} style={{ flexShrink: 0 }} />
+                          <span style={{ fontSize: '11px', color: savedAddress ? '#bbb' : '#444', fontWeight: 500, fontStyle: savedAddress ? 'normal' : 'italic', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {savedAddress || 'No address set'}
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span style={{ color: '#F59E0B', fontSize: '11px', letterSpacing: '1px', flexShrink: 0 }}>★★★★★</span>
+                          <button
+                            onClick={() => {
+                              const link = localStorage.getItem(`exzibo_google_review_${restaurantId || 'default'}`) || ''
+                              if (link) window.open(link, '_blank')
+                            }}
+                            style={{ padding: '2px 8px', borderRadius: '4px', background: '#fff', border: 'none', cursor: 'pointer', fontWeight: 800, fontSize: '9px', letterSpacing: '0.06em', color: '#111', whiteSpace: 'nowrap' }}
+                          >
+                            RATE US
+                          </button>
+                        </div>
+                      </div>
+                      <div style={{ marginTop: '10px', height: '1px', background: '#1e1e1e' }} />
                     </div>
                   )}
                   {row.title === 'EDIT CONTACT' && editingContact && (
