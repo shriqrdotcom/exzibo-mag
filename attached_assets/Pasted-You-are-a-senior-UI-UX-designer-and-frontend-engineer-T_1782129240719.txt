@@ -1,0 +1,165 @@
+You are a senior UI/UX designer and frontend engineer.
+
+TASK:
+Completely redesign the existing footer section of my restaurant website to match the exact structure, layout, spacing, and visual hierarchy shown in the provided reference image.
+
+IMPORTANT FIRST STEP:
+Before adding anything new, remove all existing footer content and footer-related sections that currently exist.
+
+DELETE COMPLETELY:
+- The current "Quick Info" card/section.
+- The current restaurant information card.
+- The current footer layout.
+- Existing social media blocks.
+- Existing contact cards.
+- Existing location cards.
+- Existing opening-hours sections.
+- Any duplicate contact or location information.
+- Any unnecessary boxes, cards, or containers above the footer.
+
+After deletion, create a completely new footer structure from scratch.
+
+==================================================
+NEW FOOTER LAYOUT (EXACT STRUCTURE)
+==================================================
+
+Create a single full-width footer with a dark premium background.
+
+The footer must be divided into TWO MAIN COLUMNS:
+
+--------------------------------------------------
+LEFT SIDE (CONTACT INFORMATION SECTION)
+--------------------------------------------------
+
+Place this section on the LEFT side of the footer.
+
+Display:
+
+1. Restaurant Name (Large Heading)
+2. Phone Number
+3. Email Address
+4. WhatsApp Number
+5. Opening Hours Summary
+6. Full Restaurant Address
+7. Rating Section
+   - Rating Score
+   - Star Rating
+   - "Rate Us" Button
+
+Use icons before each item exactly like the reference image:
+- Phone Icon
+- Email Icon
+- WhatsApp Icon
+- Clock Icon
+- Location Icon
+- Star Icon
+
+All information must come dynamically from the restaurant dashboard settings.
+
+Layout Requirements:
+- Vertical alignment.
+- Clean spacing between rows.
+- Consistent icon sizes.
+- Professional typography.
+- No cards inside cards.
+- No extra containers.
+
+--------------------------------------------------
+RIGHT SIDE (BUSINESS INFORMATION SECTION)
+--------------------------------------------------
+
+Place this section on the RIGHT side of the footer.
+
+Create TWO BLOCKS:
+
+BLOCK 1:
+OPENING HOURS
+
+Display:
+- Weekday Schedule
+- Weekend Schedule
+
+Example Layout:
+
+OPENING HOURS
+
+Mon - Fri
+11:00 AM - 11:00 PM
+
+Sat - Sun
+10:00 AM - 12:00 AM
+
+Use dashboard data dynamically.
+
+BLOCK 2:
+LOCATION
+
+Display:
+- Location Icon
+- Full Address
+
+Use the restaurant's dashboard address automatically.
+
+Spacing between Opening Hours and Location should match the reference image.
+
+==================================================
+BOTTOM SECTION
+==================================================
+
+Add a full-width horizontal divider line below the content.
+
+Below the divider:
+
+CENTER ALIGN:
+- Facebook Icon
+- Instagram Icon
+- WhatsApp Icon
+- X/Twitter Icon
+- YouTube Icon (if available)
+
+IMPORTANT:
+Use the social media URLs already saved in the restaurant dashboard.
+
+When clicked:
+- Open the saved URL.
+- Open in a new tab.
+- Only show icons that have valid URLs.
+
+Below social icons display:
+
+© Current Year Restaurant Name
+Powered by Exzibo
+
+==================================================
+DESIGN REQUIREMENTS
+==================================================
+
+- Match the provided reference image as closely as possible.
+- Premium luxury restaurant aesthetic.
+- Dark elegant background.
+- White typography.
+- Proper spacing and alignment.
+- Large left-side content area.
+- Smaller right-side information area.
+- No boxed cards.
+- No rounded floating containers.
+- Clean professional layout.
+- Responsive on desktop, tablet, and mobile.
+- On mobile, stack sections vertically while maintaining spacing.
+- Smooth hover effects on links and icons.
+- Perfect visual balance.
+
+==================================================
+IMPORTANT
+==================================================
+
+Do NOT create a footer similar to the current design.
+
+The final footer should visually resemble the provided reference image:
+- Contact details on the LEFT.
+- Opening Hours and Location on the RIGHT.
+- Divider line below.
+- Social media icons centered at the bottom.
+- Clean luxury restaurant footer style.
+
+Replace the entire existing footer implementation with this new structure.
