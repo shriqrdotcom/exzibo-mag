@@ -898,7 +898,7 @@ export default function ProfileSlide({
       },
       {
         icon: <MapPin size={22} strokeWidth={1.5} />,
-        title: 'ADD LOCATION',
+        title: 'EDIT INFO',
         sub: 'UPDATE YOUR ADDRESS',
         onClick: () => {
           if (editingLocation) { setEditingLocation(false); setAddressError('') }
@@ -1553,7 +1553,7 @@ export default function ProfileSlide({
                       </div>
                     </div>
                   )}
-                  {row.title === 'ADD LOCATION' && editingLocation && (
+                  {row.title === 'EDIT INFO' && editingLocation && (
                     <div style={{ background: '#f8fafc', borderTop: '1px solid #F0F0F5', padding: '20px 18px', animation: 'locInlineIn 0.2s cubic-bezier(0.2, 0.8, 0.2, 1)' }}>
                       {savedAddress && (
                         <div style={{ background: '#F0FDF4', border: '1px solid #A7F3D0', borderRadius: '10px', padding: '8px 12px', marginBottom: '12px', display: 'flex', alignItems: 'flex-start', gap: '7px' }}>
