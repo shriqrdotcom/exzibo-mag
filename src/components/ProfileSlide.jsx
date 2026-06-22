@@ -8,7 +8,7 @@ import {
   User, UserX, ChevronRight, Calendar, Star, Link2, Send, Copy, Camera,
 } from 'lucide-react'
 import { PiPencilCircle } from 'react-icons/pi'
-import { FaFacebook, FaInstagram, FaLinkedinIn, FaYoutube } from 'react-icons/fa'
+import { FaFacebook, FaInstagram, FaLinkedinIn, FaYoutube, FaWhatsapp } from 'react-icons/fa'
 import { FaXTwitter } from 'react-icons/fa6'
 import AddMembersModal from './AddMembersModal'
 import RemainingDaysModal from './RemainingDaysModal'
@@ -1607,88 +1607,119 @@ export default function ProfileSlide({
                       </div>
                     </div>
                   )}
-                  {row.title === 'EDIT INFO' && editingLocation && (
-                    <div style={{ background: '#0a0a0a', borderTop: '1px solid #1a1a1a', padding: '16px 18px', animation: 'locInlineIn 0.2s cubic-bezier(0.2, 0.8, 0.2, 1)' }}>
-                      {/* Phone */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '5px' }}>
-                        <Phone size={11} color="#555" strokeWidth={1.5} style={{ flexShrink: 0 }} />
-                        <span style={{ fontSize: '10px', fontWeight: 700, color: '#555', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Phone</span>
-                      </div>
-                      <input
-                        type="tel"
-                        value={editInfoPhone}
-                        onChange={e => setEditInfoPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                        placeholder="10-digit number"
-                        style={{ width: '100%', boxSizing: 'border-box', padding: '9px 11px', borderRadius: '8px', border: '1.5px solid #2a2a2a', fontSize: '12px', fontWeight: 500, color: '#eee', outline: 'none', background: '#141414', fontFamily: 'inherit', marginBottom: '10px' }}
-                        onFocus={e => e.target.style.borderColor = '#c0392b'}
-                        onBlur={e => e.target.style.borderColor = '#2a2a2a'}
-                      />
-                      {/* Email */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '5px' }}>
-                        <Mail size={11} color="#555" strokeWidth={1.5} style={{ flexShrink: 0 }} />
-                        <span style={{ fontSize: '10px', fontWeight: 700, color: '#555', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Email</span>
-                      </div>
-                      <input
-                        type="email"
-                        value={editInfoEmail}
-                        onChange={e => setEditInfoEmail(e.target.value)}
-                        placeholder="restaurant@email.com"
-                        style={{ width: '100%', boxSizing: 'border-box', padding: '9px 11px', borderRadius: '8px', border: '1.5px solid #2a2a2a', fontSize: '12px', fontWeight: 500, color: '#eee', outline: 'none', background: '#141414', fontFamily: 'inherit', marginBottom: '10px' }}
-                        onFocus={e => e.target.style.borderColor = '#c0392b'}
-                        onBlur={e => e.target.style.borderColor = '#2a2a2a'}
-                      />
-                      {/* Address */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '5px' }}>
-                        <MapPin size={11} color="#555" strokeWidth={1.5} style={{ flexShrink: 0 }} />
-                        <span style={{ fontSize: '10px', fontWeight: 700, color: '#555', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Address</span>
-                      </div>
-                      <textarea
-                        value={editInfoAddress}
-                        onChange={e => setEditInfoAddress(e.target.value)}
-                        placeholder="123, Street, City"
-                        rows={2}
-                        style={{ width: '100%', boxSizing: 'border-box', padding: '9px 11px', borderRadius: '8px', border: '1.5px solid #2a2a2a', fontSize: '12px', fontWeight: 500, color: '#eee', outline: 'none', background: '#141414', fontFamily: 'inherit', resize: 'none', marginBottom: '10px', lineHeight: 1.5 }}
-                        onFocus={e => e.target.style.borderColor = '#c0392b'}
-                        onBlur={e => e.target.style.borderColor = '#2a2a2a'}
-                      />
-                      {/* Google Review Link */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '5px' }}>
-                        <Star size={11} color="#555" strokeWidth={1.5} style={{ flexShrink: 0 }} />
-                        <span style={{ fontSize: '10px', fontWeight: 700, color: '#555', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Google Review Link</span>
-                      </div>
-                      <input
-                        type="url"
-                        value={editInfoLink}
-                        onChange={e => setEditInfoLink(e.target.value)}
-                        placeholder="https://g.page/r/.../review"
-                        style={{ width: '100%', boxSizing: 'border-box', padding: '9px 11px', borderRadius: '8px', border: '1.5px solid #2a2a2a', fontSize: '12px', fontWeight: 500, color: '#eee', outline: 'none', background: '#141414', fontFamily: 'inherit', marginBottom: '12px' }}
-                        onFocus={e => e.target.style.borderColor = '#c0392b'}
-                        onBlur={e => e.target.style.borderColor = '#2a2a2a'}
-                      />
-                      {/* Error */}
-                      {editInfoError && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px', fontSize: '12px', color: '#f87171' }}>
-                          <AlertCircle size={12} />{editInfoError}
+                  {row.title === 'EDIT INFO' && editingLocation && (() => {
+                    const hoursStr = savedHours
+                      ? `${formatTime(savedHours.openH, savedHours.openM, savedHours.openAmPm)} – ${formatTime(savedHours.closeH, savedHours.closeM, savedHours.closeAmPm)}`
+                      : null
+                    const reviewLink = googleReviewInput || ''
+                    const iconC = 'rgba(255,255,255,0.4)'
+                    const textC = 'rgba(255,255,255,0.58)'
+                    const dimC  = 'rgba(255,255,255,0.35)'
+                    const rowS  = { display: 'flex', alignItems: 'flex-start', gap: '10px', marginBottom: '13px' }
+                    const txtS  = { fontSize: '12px', color: textC, lineHeight: 1.55 }
+                    return (
+                      <div style={{ background: '#0a0a0a', borderTop: '1px solid rgba(255,255,255,0.06)', padding: '20px 16px', animation: 'locInlineIn 0.2s cubic-bezier(0.2,0.8,0.2,1)' }}>
+                        <div style={{ display: 'flex', gap: '0', flexWrap: 'wrap' }}>
+
+                          {/* LEFT — contact info */}
+                          <div style={{ flex: '1 1 140px', paddingRight: '16px', paddingBottom: '16px', minWidth: 0 }}>
+                            <div style={{ fontSize: '12px', fontWeight: 800, color: '#fff', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '16px', lineHeight: 1.2 }}>
+                              {restaurantName || 'Restaurant Name'}
+                            </div>
+
+                            {contactPhone && (
+                              <div style={rowS}>
+                                <Phone size={13} color={iconC} strokeWidth={1.5} style={{ flexShrink: 0, marginTop: '1px' }} />
+                                <span style={txtS}>{contactPhone}</span>
+                              </div>
+                            )}
+
+                            {contactEmail && (
+                              <div style={rowS}>
+                                <Mail size={13} color={iconC} strokeWidth={1.5} style={{ flexShrink: 0, marginTop: '1px' }} />
+                                <span style={txtS}>{contactEmail}</span>
+                              </div>
+                            )}
+
+                            {contactPhone && (
+                              <div style={rowS}>
+                                <FaWhatsapp size={13} color={iconC} style={{ flexShrink: 0, marginTop: '1px' }} />
+                                <span style={txtS}>{contactPhone}</span>
+                              </div>
+                            )}
+
+                            {hoursStr && (
+                              <div style={rowS}>
+                                <Clock size={13} color={iconC} strokeWidth={1.5} style={{ flexShrink: 0, marginTop: '1px' }} />
+                                <span style={txtS}>Mon - Sun: {hoursStr}</span>
+                              </div>
+                            )}
+
+                            {savedAddress && (
+                              <div style={rowS}>
+                                <MapPin size={13} color={iconC} strokeWidth={1.5} style={{ flexShrink: 0, marginTop: '1px' }} />
+                                <span style={txtS}>{savedAddress}</span>
+                              </div>
+                            )}
+
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '7px', flexWrap: 'wrap', marginTop: '2px' }}>
+                              <Star size={13} color="#FFB800" fill="#FFB800" style={{ flexShrink: 0 }} />
+                              <div style={{ display: 'flex', gap: '2px' }}>
+                                {[1,2,3,4,5].map(i => <Star key={i} size={10} color="#FFB800" fill="#FFB800" />)}
+                              </div>
+                              {reviewLink ? (
+                                <a href={reviewLink} target="_blank" rel="noopener noreferrer"
+                                  style={{ padding: '3px 10px', border: '1.5px solid rgba(255,255,255,0.3)', borderRadius: '4px', fontSize: '9.5px', fontWeight: 700, letterSpacing: '0.1em', color: '#fff', textTransform: 'uppercase', textDecoration: 'none', whiteSpace: 'nowrap' }}>
+                                  Rate Us
+                                </a>
+                              ) : (
+                                <span style={{ padding: '3px 10px', border: '1.5px solid rgba(255,255,255,0.15)', borderRadius: '4px', fontSize: '9.5px', fontWeight: 700, letterSpacing: '0.1em', color: dimC, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
+                                  Rate Us
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* RIGHT — opening hours + location */}
+                          <div style={{ flex: '1 1 110px', borderLeft: '1px solid rgba(255,255,255,0.06)', paddingLeft: '16px', minWidth: 0 }}>
+
+                            {hoursStr && (
+                              <div style={{ marginBottom: '20px' }}>
+                                <div style={{ fontSize: '9px', fontWeight: 800, letterSpacing: '0.2em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.9)', marginBottom: '12px' }}>
+                                  Opening Hours
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                                  <Clock size={12} color={iconC} strokeWidth={1.5} style={{ flexShrink: 0, marginTop: '2px' }} />
+                                  <div>
+                                    <div style={{ fontSize: '11px', color: textC, fontWeight: 500, marginBottom: '1px' }}>Mon - Fri</div>
+                                    <div style={{ fontSize: '11px', color: dimC, marginBottom: '8px' }}>{hoursStr}</div>
+                                    <div style={{ fontSize: '11px', color: textC, fontWeight: 500, marginBottom: '1px' }}>Sat - Sun</div>
+                                    <div style={{ fontSize: '11px', color: dimC }}>{hoursStr}</div>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+
+                            {savedAddress && (
+                              <div>
+                                <div style={{ fontSize: '9px', fontWeight: 800, letterSpacing: '0.2em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.9)', marginBottom: '12px' }}>
+                                  Location
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                                  <MapPin size={12} color={iconC} strokeWidth={1.5} style={{ flexShrink: 0, marginTop: '2px' }} />
+                                  <span style={{ fontSize: '11px', color: dimC, lineHeight: 1.6 }}>{savedAddress}</span>
+                                </div>
+                              </div>
+                            )}
+
+                            {!hoursStr && !savedAddress && (
+                              <div style={{ fontSize: '11px', color: dimC, fontStyle: 'italic', marginTop: '8px' }}>No data yet</div>
+                            )}
+                          </div>
                         </div>
-                      )}
-                      {/* Buttons */}
-                      <div style={{ display: 'flex', gap: '8px' }}>
-                        <button
-                          onClick={() => setEditingLocation(false)}
-                          style={{ flex: 1, padding: '10px 0', borderRadius: '8px', background: '#1e1e1e', border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: '12px', color: '#888', letterSpacing: '0.05em' }}
-                        >
-                          CANCEL
-                        </button>
-                        <button
-                          onClick={handleSaveEditInfo}
-                          disabled={editInfoSaving}
-                          style={{ flex: 2, padding: '10px 0', borderRadius: '8px', background: editInfoSuccess ? '#16a34a' : '#c0392b', border: 'none', cursor: editInfoSaving ? 'not-allowed' : 'pointer', fontWeight: 800, fontSize: '12px', color: '#fff', letterSpacing: '0.06em', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', transition: 'background 0.2s' }}
-                        >
-                          {editInfoSaving ? <><Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> SAVING…</> : editInfoSuccess ? <><CheckCircle2 size={13} /> SAVED!</> : 'SAVE CHANGES'}
-                        </button>
                       </div>
-                    </div>
-                  )}
+                    )
+                  })()}
                   {row.title === 'EDIT CONTACT' && editingContact && (
                     <div style={{ background: '#f8fafc', borderTop: '1px solid #F0F0F5', padding: '20px 18px', animation: 'locInlineIn 0.2s cubic-bezier(0.2, 0.8, 0.2, 1)' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '6px' }}>
