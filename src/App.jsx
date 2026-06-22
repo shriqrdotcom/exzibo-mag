@@ -18,6 +18,7 @@ function MenuRedirect() {
   return <GlobalLoader />
 }
 
+import GroceryCategoryGrid  from './pages/GroceryCategoryGrid'
 import Landing              from './pages/Landing'
 import Auth                 from './pages/Auth'
 import Dashboard            from './pages/Dashboard'
@@ -262,6 +263,9 @@ function SuperAdminApp() {
       <Route path="/information"
         element={<SuperAdminRoute><InformationPage /></SuperAdminRoute>} />
 
+      {/* Grocery category grid demo */}
+      <Route path="/grocery-grid" element={<GroceryCategoryGrid />} />
+
       {/* Other linked pages */}
       <Route path="/restaurants"
         element={<SuperAdminRoute><Restaurants /></SuperAdminRoute>} />
@@ -380,6 +384,9 @@ function DashboardApp() {
       <Route path="/auth"  element={<Auth />} />
       <Route path="/login" element={<Navigate to="/auth" replace />} />
 
+      {/* Grocery category grid demo — must come before /:restaurantSlug wildcard */}
+      <Route path="/grocery-grid" element={<GroceryCategoryGrid />} />
+
       {/* ── Internal / direct-id routes (unchanged) ── */}
       <Route path="/admin/:id"           element={<AdminDashboard />} />
       <Route path="/admin/:id/team"      element={<TeamMembers />} />
@@ -477,6 +484,9 @@ function DefaultApp() {
       <Route path="/dynamic-route"           element={<ProtectedRoute><DynamicRoute /></ProtectedRoute>} />
       <Route path="/add-role"               element={<ProtectedRoute><AddRolePage /></ProtectedRoute>} />
       <Route path="/order-time"             element={<ProtectedRoute><OrderTimePage /></ProtectedRoute>} />
+
+      {/* Grocery category grid demo */}
+      <Route path="/grocery-grid" element={<GroceryCategoryGrid />} />
 
       {/* Catch-all */}
       <Route path="*" element={<Navigate to="/" replace />} />
