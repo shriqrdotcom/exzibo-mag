@@ -897,7 +897,7 @@ export default function ProfileSlide({
         },
       },
       {
-        icon: <MapPin size={22} strokeWidth={1.5} />,
+        icon: <PiPencilCircle size={22} />,
         title: 'EDIT INFO',
         sub: 'UPDATE YOUR ADDRESS',
         onClick: () => {
