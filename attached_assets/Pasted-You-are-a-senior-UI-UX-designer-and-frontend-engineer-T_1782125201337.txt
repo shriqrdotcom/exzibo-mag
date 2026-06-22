@@ -1,0 +1,89 @@
+You are a senior UI/UX designer and frontend engineer.
+
+TASK:
+Completely redesign and replace the current footer section of my restaurant website.
+
+CURRENT PROBLEM:
+- The existing footer looks outdated and unfinished.
+- There is a separate "Quick Info" card above the footer containing location, phone number, and rating.
+- The footer content is split into multiple disconnected boxes.
+- The overall design does not feel premium, modern, or professional.
+
+OBJECTIVE:
+Transform the footer into a single, elegant, full-width footer similar to the reference image provided.
+
+REQUIREMENTS:
+
+1. REMOVE COMPLETELY:
+   - The entire "Quick Info" section/card.
+   - Any separate information cards above the footer.
+   - Duplicate location/contact blocks.
+   - The current footer layout.
+
+2. CREATE A NEW PREMIUM FOOTER:
+   - Full-width footer container.
+   - Dark luxury aesthetic matching the restaurant theme.
+   - Clean horizontal layout.
+   - Proper spacing and alignment.
+   - Responsive on desktop, tablet, and mobile.
+
+3. FOOTER STRUCTURE:
+
+   LEFT COLUMN:
+   - Restaurant Name (Prominent)
+   - Short brand description (1-2 lines)
+   - Location
+   - Phone Number
+   - Email Address
+
+   MIDDLE COLUMN:
+   - Quick Links
+     - Home
+     - Menu
+     - About
+     - Gallery
+     - Contact
+
+   RIGHT COLUMN:
+   - Social Media Icons
+     - Facebook
+     - Instagram
+     - WhatsApp
+     - X/Twitter
+     - YouTube (optional)
+   - Icons must use the saved social links from the dashboard settings.
+   - Clicking an icon must open the corresponding saved URL in a new tab.
+
+4. BOTTOM SECTION:
+   - Thin divider line.
+   - Centered social icons.
+   - Copyright text.
+   - "Powered by Exzibo" text.
+   - Clean, minimal appearance.
+
+5. DESIGN REQUIREMENTS:
+   - Luxury restaurant style.
+   - Similar visual hierarchy to the reference footer image.
+   - Elegant typography.
+   - Subtle hover effects.
+   - Smooth transitions.
+   - Consistent spacing.
+   - Modern premium feel.
+   - No large empty gaps.
+   - Perfect alignment across all screen sizes.
+
+6. MOBILE RESPONSIVENESS:
+   - Stack columns vertically.
+   - Maintain spacing and readability.
+   - Center-align content on mobile.
+   - Ensure icons remain easily clickable.
+
+7. IMPORTANT:
+   - Keep all existing functionality.
+   - Do not break routing or navigation.
+   - Use dynamic restaurant data already available in the system.
+   - Use dashboard-configured contact details and social media links automatically.
+   - Remove every trace of the old footer design and replace it with the new unified footer.
+
+DELIVERABLE:
+Implement the complete redesigned footer directly in the existing project and replace the current footer section entirely.
