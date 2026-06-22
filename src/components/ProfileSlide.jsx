@@ -1597,7 +1597,7 @@ export default function ProfileSlide({
                           }}
                           style={{ padding: '5px 16px', borderRadius: '8px', background: '#fff', border: 'none', cursor: 'pointer', fontWeight: 800, fontSize: '11px', letterSpacing: '0.08em', color: '#111', whiteSpace: 'nowrap' }}
                         >
-                          RATE US
+                          ADD LINK
                         </button>
                       </div>
                     </div>
