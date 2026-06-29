@@ -1041,6 +1041,36 @@ function neonRestaurantPlugin() {
   return {
     name: 'neon-restaurant',
     configureServer(server) {
+      // GET /api/neon/restaurants[?ids=uuid1,uuid2,...]
+      // Returns active (non-deleted) restaurants ordered newest-first.
+      // Accepts optional comma-separated "ids" query param to restrict to a
+      // specific set of UUIDs (auth-scoped path). Does NOT replace current
+      // Supabase list reads — prepared here for future D2 switch.
+      server.middlewares.use('/api/neon/restaurants', async (req, res, next) => {
+        if (req.method !== 'GET') return next()
+
+        function json(status, body) {
+          res.statusCode = status
+          res.setHeader('Content-Type', 'application/json')
+          res.end(JSON.stringify(body))
+        }
+
+        const { getNeonRestaurants } = await import('./src/db/neon-restaurants.js')
+
+        try {
+          const qs = new URLSearchParams((req.url || '').split('?')[1] || '')
+          const rawIds = qs.get('ids')
+          const ids = rawIds
+            ? rawIds.split(',').map(s => s.trim()).filter(Boolean)
+            : null
+          const rows = await getNeonRestaurants(ids)
+          return json(200, rows)
+        } catch (err) {
+          console.error('[neon-restaurants]', err.message)
+          return json(500, { error: err.message })
+        }
+      })
+
       server.middlewares.use('/api/neon/restaurant', async (req, res, next) => {
         const method = req.method
         const url = (req.url || '/').split('?')[0]

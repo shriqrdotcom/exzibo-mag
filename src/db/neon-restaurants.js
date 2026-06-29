@@ -119,6 +119,43 @@ export async function createNeonRestaurant(payload) {
   return rows[0]
 }
 
+// ── List ──────────────────────────────────────────────────────────────────────
+
+// Adds a computed "tables" field so Neon rows match the shape Supabase returns.
+// Supabase stores a count string like "5"; Neon stores table_numbers as a JSONB
+// array. We derive the count on the way out — no schema change needed.
+export function neonRowWithTables(row) {
+  if (!row) return row
+  const count =
+    Array.isArray(row.table_numbers) && row.table_numbers.length > 0
+      ? String(row.table_numbers.length)
+      : null
+  return { ...row, tables: count }
+}
+
+// Returns active (non-deleted) restaurants ordered newest-first.
+// Pass an ids array (UUIDs) to restrict results to specific restaurants —
+// used by the authenticated path where get_my_restaurant_ids already scoped
+// the allowed set. Omit ids (null/undefined) for the DISABLE_AUTH dev path.
+export async function getNeonRestaurants(ids) {
+  const sql = getSql()
+  let rows
+  if (Array.isArray(ids) && ids.length > 0) {
+    rows = await sql`
+      SELECT * FROM restaurants
+      WHERE id = ANY(${ids}::uuid[]) AND is_deleted = false
+      ORDER BY created_at DESC
+    `
+  } else {
+    rows = await sql`
+      SELECT * FROM restaurants
+      WHERE is_deleted = false
+      ORDER BY created_at DESC
+    `
+  }
+  return rows.map(neonRowWithTables)
+}
+
 // ── Update ────────────────────────────────────────────────────────────────────
 
 export async function patchNeonRestaurant(id, patch) {

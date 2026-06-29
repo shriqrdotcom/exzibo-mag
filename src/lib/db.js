@@ -204,9 +204,11 @@ export async function getDeletedRestaurants() {
 // Soft-delete: marks the restaurant as deleted without removing data.
 // Falls back to localStorage persistence if the DB column doesn't exist yet.
 export async function softDeleteRestaurant(id) {
+  const deletedAt = new Date().toISOString()
+
   const { error } = await supabase
     .from('restaurants')
-    .update({ is_deleted: true, deleted_at: new Date().toISOString() })
+    .update({ is_deleted: true, deleted_at: deletedAt })
     .eq('id', id)
 
   if (error) {
@@ -217,6 +219,26 @@ export async function softDeleteRestaurant(id) {
   }
   // Also track locally for UI consistency across all fallback paths
   addSoftDeletedId(id)
+
+  // ── Neon shadow-write (non-blocking) ──────────────────────────────────────
+  // Mirror the soft-delete to Neon so future Neon-first list reads exclude
+  // this restaurant. Failures are logged but never thrown — Supabase remains
+  // the source of truth and the operation has already succeeded above.
+  ;(async () => {
+    try {
+      const res = await fetch(`/api/neon/restaurant/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_deleted: true, deleted_at: deletedAt }),
+      })
+      if (!res.ok) {
+        const body = await res.text().catch(() => '')
+        console.warn('[softDeleteRestaurant] Neon shadow-write failed:', res.status, body)
+      }
+    } catch (err) {
+      console.warn('[softDeleteRestaurant] Neon shadow-write error:', err.message)
+    }
+  })()
 }
 
 export async function createRestaurant(payload) {

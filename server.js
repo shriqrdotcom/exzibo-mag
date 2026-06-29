@@ -11,6 +11,7 @@ import {
   getNeonRestaurantByUid,
   createNeonRestaurant,
   patchNeonRestaurant,
+  getNeonRestaurants,
 } from './src/db/neon-restaurants.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -1024,6 +1025,26 @@ app.post('/api/about/save', async (req, res) => {
 })
 
 // ── Neon restaurant API routes ────────────────────────────────────────────────
+
+// GET /api/neon/restaurants[?ids=uuid1,uuid2,...]
+// Returns active (non-deleted) restaurants ordered newest-first.
+// Accepts optional comma-separated "ids" query param to restrict to a specific
+// set of restaurant UUIDs — used when the caller already holds an access-scoped
+// ID list (e.g. from get_my_restaurant_ids RPC). Omitting ids returns all active
+// restaurants (DISABLE_AUTH / dev path). Does NOT replace current Supabase reads.
+app.get('/api/neon/restaurants', async (req, res) => {
+  try {
+    const rawIds = req.query.ids
+    const ids = rawIds
+      ? String(rawIds).split(',').map(s => s.trim()).filter(Boolean)
+      : null
+    const rows = await getNeonRestaurants(ids)
+    return res.json(rows)
+  } catch (err) {
+    console.error('[neon/restaurants]', err.message)
+    return res.status(500).json({ error: err.message })
+  }
+})
 
 // GET /api/neon/restaurant/by-slug/:slug
 app.get('/api/neon/restaurant/by-slug/:slug', async (req, res) => {
