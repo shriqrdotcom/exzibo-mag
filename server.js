@@ -13,6 +13,10 @@ import {
   patchNeonRestaurant,
   getNeonRestaurants,
 } from './src/db/neon-restaurants.js'
+import {
+  upsertNeonMenuCategory,
+  deleteNeonMenuCategory,
+} from './src/db/neon-menu-categories.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const app = express()
@@ -586,7 +590,14 @@ app.post('/api/menu/categories/upsert', async (req, res) => {
     })
     const json = await r.json()
     if (!r.ok) return res.status(r.status).json({ error: json })
-    return res.json(Array.isArray(json) ? json[0] : json)
+    const saved = Array.isArray(json) ? json[0] : json
+    // ── Neon shadow-write (non-blocking) ──────────────────────────────────────
+    upsertNeonMenuCategory(restaurantId, saved).then(() => {
+      console.log('[menu/categories/upsert] Neon shadow-write ✅ id:', saved.id)
+    }).catch(neonErr => {
+      console.warn('[menu/categories/upsert] Neon shadow-write error (non-blocking):', neonErr.message)
+    })
+    return res.json(saved)
   } catch (err) {
     console.error('[menu/categories/upsert] Error:', err.message)
     return res.status(500).json({ error: err.message })
@@ -605,6 +616,12 @@ app.post('/api/menu/categories/delete', async (req, res) => {
       headers,
     })
     if (!r.ok) { const err = await r.text(); return res.status(r.status).json({ error: err }) }
+    // ── Neon shadow-delete (non-blocking) ─────────────────────────────────────
+    deleteNeonMenuCategory(id).then(() => {
+      console.log('[menu/categories/delete] Neon shadow-delete ✅ id:', id)
+    }).catch(neonErr => {
+      console.warn('[menu/categories/delete] Neon shadow-delete error (non-blocking):', neonErr.message)
+    })
     return res.json({ success: true })
   } catch (err) {
     console.error('[menu/categories/delete] Error:', err.message)

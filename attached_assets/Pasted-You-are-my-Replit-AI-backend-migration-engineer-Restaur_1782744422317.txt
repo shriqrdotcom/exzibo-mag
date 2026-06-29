@@ -1,0 +1,93 @@
+You are my Replit AI backend migration engineer.
+
+Restaurant profile/list migration is complete.
+
+Now proceed with Phase E1A only: menu category shadow-write.
+
+Important:
+Do NOT remove Supabase.
+Do NOT remove Supabase environment variables.
+Do NOT switch category reads to Neon yet.
+Do NOT remove existing Supabase menu category logic.
+Do NOT change Auth.
+Do NOT change Realtime.
+Do NOT change Storage.
+Do NOT add Better Auth.
+Do NOT add Ably.
+Do NOT add Cloudflare R2.
+Do NOT add Upstash.
+Do NOT change UI/design.
+Do NOT move menu items, orders, bookings, staff, or notifications.
+Do NOT run one-time backfill SQL unless I approve separately.
+
+Goal:
+Keep Supabase as the main source of truth for menu categories, but add non-blocking shadow-write to Neon for category create/update/delete.
+
+Scope:
+Only menu_categories.
+
+Tasks:
+
+1. Create a Neon menu category helper file if needed:
+   
+   - src/db/neon-menu-categories.js
+
+2. Add helper functions:
+   
+   - upsertNeonMenuCategory(restaurantId, category)
+   - deleteNeonMenuCategory(id)
+   - getNeonMenuCategories(restaurantId) if needed for testing only
+
+3. Update only the existing category mutation routes:
+   
+   - POST /api/menu/categories/upsert
+   - POST /api/menu/categories/delete
+
+4. After Supabase category upsert succeeds:
+   
+   - fire a non-blocking Neon shadow-write
+   - use the same category id where possible
+   - preserve restaurant_id, name, emoji, position
+   - coerce missing/null position to 0 or safe default before writing to Neon
+
+5. After Supabase category delete succeeds:
+   
+   - fire a non-blocking Neon delete for the same category id
+
+6. Supabase must remain authoritative:
+   
+   - If Supabase fails, return the same error as before
+   - If Neon fails, do not break the app
+   - Log Neon failure safely with console.warn
+   - Do not throw Neon errors to frontend
+
+7. Do not switch reads:
+   
+   - getMenuCategories() must still read from Supabase for now
+   - public restaurant page category reads must still use Supabase
+   - admin category reads must still use Supabase
+
+8. Test:
+   
+   - Create a category through the existing flow
+   - Confirm Supabase category row exists
+   - Confirm Neon shadow category row exists
+   - Confirm id, restaurant_id, name, emoji, position match
+   - Update/reorder category and confirm both Supabase and Neon update
+   - Delete category and confirm Supabase deleted and Neon shadow delete happened
+   - Confirm app UI still works
+   - Confirm menu items, orders, bookings, auth, realtime, storage untouched
+
+9. Report:
+   
+   - files changed
+   - functions/routes changed
+   - category fields mapped
+   - test results
+   - any mismatches
+   - confirmation that category reads still use Supabase
+   - whether Phase E1B read switchover is safe
+
+Final rule:
+Phase E1A only adds shadow-write for menu category mutations.
+Do not switch category reads to Neon yet.

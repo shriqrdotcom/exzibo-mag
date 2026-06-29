@@ -6,6 +6,7 @@ import { createHmac } from 'crypto'
 import bcrypt from 'bcryptjs'
 import pg from 'pg'
 import { patchNeonRestaurant, getNeonRestaurantById } from './src/db/neon-restaurants.js'
+import { upsertNeonMenuCategory, deleteNeonMenuCategory } from './src/db/neon-menu-categories.js'
 
 function previewAuthPlugin() {
   return {
@@ -278,7 +279,14 @@ function menuApiPlugin() {
             })
             const data = await r.json()
             if (!r.ok) return json(res, r.status, { error: data })
-            return json(res, 200, Array.isArray(data) ? data[0] : data)
+            const saved = Array.isArray(data) ? data[0] : data
+            // ── Neon shadow-write (non-blocking) ──────────────────────────────
+            upsertNeonMenuCategory(restaurantId, saved).then(() => {
+              console.log('[menu/categories/upsert] Neon shadow-write ✅ id:', saved.id)
+            }).catch(neonErr => {
+              console.warn('[menu/categories/upsert] Neon shadow-write error (non-blocking):', neonErr.message)
+            })
+            return json(res, 200, saved)
           }
 
           // POST /api/menu/categories/delete — delete a menu category by id
@@ -291,6 +299,12 @@ function menuApiPlugin() {
               headers,
             })
             if (!r.ok) { const e = await r.text(); return json(res, r.status, { error: e }) }
+            // ── Neon shadow-delete (non-blocking) ─────────────────────────────
+            deleteNeonMenuCategory(id).then(() => {
+              console.log('[menu/categories/delete] Neon shadow-delete ✅ id:', id)
+            }).catch(neonErr => {
+              console.warn('[menu/categories/delete] Neon shadow-delete error (non-blocking):', neonErr.message)
+            })
             return json(res, 200, { success: true })
           }
 

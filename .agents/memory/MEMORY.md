@@ -4,3 +4,4 @@
 - [Menu system RLS fix](menu-rls-fix.md) — anon key reads of menu_categories/menu_items are blocked by RLS; fixed by routing all reads through server-side API (service role key, bypasses RLS entirely).
 - [Replit migration setup](replit-migration.md) — Supabase stays as-is (auth + data + realtime); Replit PostgreSQL (DATABASE_URL) used for per-restaurant schemas; VITE_DISABLE_AUTH=true is dev-only via [userenv.development] in .replit.
 - [Neon shadow-write pattern](neon-shadow-write.md) — Phase C: non-blocking shadow-writes to Neon after Supabase restaurant create/update. db.js uses fetch; server.js/vite.config.js call patchNeonRestaurant() directly. Neon sql.query() returns rows array directly, not {rows:[]}.
+- [Menu category shadow-write](menu-category-shadow-write.md) — E1A: upsert/delete shadow-writes for menu_categories added to server.js + vite.config.js mutation routes; reads still go to Supabase. position coerced ?? 0; uses ON CONFLICT (id) DO UPDATE.
