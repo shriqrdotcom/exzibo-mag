@@ -1,0 +1,108 @@
+You are my Replit AI backend migration engineer.
+
+Phase D2A is complete:
+
+- Soft-delete shadow-write to Neon is added and tested.
+- GET "/api/neon/restaurants" route exists and works.
+- Neon restaurant list rows include computed "tables" from "table_numbers.length".
+- "get_my_restaurant_ids" RPC remains in Supabase for auth/team-member permission.
+- "getRestaurants()" still uses Supabase for now.
+- Auth, realtime, storage, menu, orders, bookings, staff, notifications, and UI are untouched.
+
+Now proceed with Phase D2B only.
+
+Goal:
+Switch "getRestaurants()" dashboard/list read flow to Neon-first with Supabase fallback.
+
+Important:
+Do NOT remove Supabase.
+Do NOT remove Supabase environment variables.
+Do NOT remove Supabase client.
+Do NOT change Auth.
+Do NOT add Better Auth.
+Do NOT change Realtime.
+Do NOT add Ably.
+Do NOT change Storage.
+Do NOT add Cloudflare R2.
+Do NOT add Upstash.
+Do NOT change UI/design.
+Do NOT move menu items, orders, bookings, staff, or notifications.
+Do NOT modify deleted restaurant page, MasterControl, or unrelated admin flows unless absolutely required.
+Do NOT change create/update/soft-delete shadow-write except if needed for compatibility.
+
+Scope:
+Only update "getRestaurants()" list read flow.
+
+Required behavior:
+
+1. Keep permission discovery in Supabase:
+   
+   - If authenticated path uses "supabase.rpc("get_my_restaurant_ids")", keep that RPC in Supabase.
+   - Do not recreate team-member permission logic in Neon yet.
+
+2. After getting allowed restaurant IDs from Supabase, fetch restaurant rows from Neon first:
+   
+   - Use "GET /api/neon/restaurants?ids=id1,id2,id3"
+   - Neon route must filter "is_deleted = false"
+   - Neon route must order by "created_at DESC"
+   - Neon route must return "tables" computed from "table_numbers.length"
+
+3. Fallback behavior:
+   
+   - If Neon returns rows for all requested IDs, use Neon rows.
+   - If Neon returns missing rows, fetch missing rows from Supabase and merge them.
+   - If Neon errors, fallback fully to the existing Supabase getRestaurants() logic.
+   - If no IDs are available, return the same result as before.
+
+4. For dev/DISABLE_AUTH path:
+   
+   - Try Neon list first.
+   - If Neon returns rows, use Neon rows.
+   - If Neon errors or empty when Supabase has rows, fallback to existing Supabase list logic.
+
+5. Keep response shape compatible with existing frontend:
+   
+   - id
+   - uid
+   - slug
+   - name
+   - logo
+   - images
+   - status
+   - plan
+   - place
+   - note
+   - start_date
+   - end_date
+   - created_at
+   - is_deleted
+   - deleted_at
+   - table_numbers
+   - tables
+
+6. Tests:
+   
+   - Test getRestaurants() when restaurants exist in Neon.
+   - Test getRestaurants() when some restaurants exist only in Supabase.
+   - Test fallback when Neon misses a restaurant.
+   - Test fallback when Neon route fails safely.
+   - Confirm dashboard list renders correctly.
+   - Confirm Restaurants page renders correctly.
+   - Confirm create/update/soft-delete shadow-write still works.
+   - Confirm single restaurant reads from D1 still work.
+   - Confirm auth/realtime/storage/menu/orders/bookings/staff/notifications untouched.
+
+7. Report:
+   
+   - files changed
+   - exact function changed
+   - new getRestaurants() flow
+   - fallback behavior
+   - test results
+   - any missing fields
+   - any warnings
+   - whether restaurant profile/list migration is complete
+
+Final rule:
+D2B only switches "getRestaurants()" to Neon-first with Supabase fallback.
+Do not migrate any other feature.

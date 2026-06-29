@@ -96,46 +96,48 @@ function filterActive(rows) {
   )
 }
 
-export async function getRestaurants() {
-  // In DISABLE_AUTH dev mode there is no real Supabase session, so we cannot
-  // call auth-gated RPCs. Fetch all restaurants publicly instead.
-  if (DISABLE_AUTH) {
-    // Try with is_deleted column filter first
-    const { data, error } = await supabase
-      .from('restaurants')
-      .select('*')
-      .or('is_deleted.is.null,is_deleted.eq.false')
-      .order('created_at', { ascending: false })
+// ── Neon list helper (internal) ───────────────────────────────────────────────
+// Calls the Neon restaurant list API route. Returns the array of rows, already
+// normalised with the computed "tables" field. Throws on network/HTTP error so
+// the caller can catch and fall back to Supabase.
+// Pass ids = null/undefined for the DISABLE_AUTH all-restaurants query.
+// Pass ids = string[] for the authenticated path scoped by get_my_restaurant_ids.
+async function fetchNeonRestaurantList(ids) {
+  const url =
+    Array.isArray(ids) && ids.length > 0
+      ? `/api/neon/restaurants?ids=${ids.join(',')}`
+      : '/api/neon/restaurants'
+  const res = await fetch(url)
+  if (!res.ok) throw new Error(`[getRestaurants] Neon list HTTP ${res.status}`)
+  const rows = await res.json()
+  if (!Array.isArray(rows)) throw new Error('[getRestaurants] Neon list returned non-array')
+  return rows
+}
 
-    if (error) {
-      // Column doesn't exist yet — fetch everything and filter client-side
-      if (isMissingColumnError(error)) {
-        const { data: all, error: e2 } = await supabase
-          .from('restaurants')
-          .select('*')
-          .order('created_at', { ascending: false })
-        if (e2) throw e2
-        return applyForcedDemoStatus(filterActive(all ?? []))
-      }
-      throw error
+// ── Supabase full-list fallback (internal, DISABLE_AUTH path) ─────────────────
+async function fetchSupabaseAllRestaurants() {
+  const { data, error } = await supabase
+    .from('restaurants')
+    .select('*')
+    .or('is_deleted.is.null,is_deleted.eq.false')
+    .order('created_at', { ascending: false })
+
+  if (error) {
+    if (isMissingColumnError(error)) {
+      const { data: all, error: e2 } = await supabase
+        .from('restaurants')
+        .select('*')
+        .order('created_at', { ascending: false })
+      if (e2) throw e2
+      return all ?? []
     }
-    return applyForcedDemoStatus(filterActive(data ?? []))
+    throw error
   }
+  return data ?? []
+}
 
-  const { data: { user }, error: authError } = await supabase.auth.getUser()
-  if (authError || !user) throw new Error('Not authenticated')
-
-  // Fetch all restaurant IDs accessible to this user:
-  //   • restaurants they own (owner_id = auth.uid())
-  //   • restaurants where they are an active team member
-  // Uses a SECURITY DEFINER RPC so cross-table access is handled server-side.
-  const { data: idRows, error: idError } = await supabase
-    .rpc('get_my_restaurant_ids')
-  if (idError) throw idError
-
-  const ids = (idRows ?? []).map(r => r.restaurant_id)
-  if (ids.length === 0) return []
-
+// ── Supabase ID-scoped fallback (internal, authenticated path) ─────────────────
+async function fetchSupabaseRestaurantsByIds(ids) {
   const { data, error } = await supabase
     .from('restaurants')
     .select('*')
@@ -151,11 +153,85 @@ export async function getRestaurants() {
         .in('id', ids)
         .order('created_at', { ascending: false })
       if (e2) throw e2
-      return applyForcedDemoStatus(filterActive(all ?? []))
+      return all ?? []
     }
     throw error
   }
-  return applyForcedDemoStatus(filterActive(data ?? []))
+  return data ?? []
+}
+
+// ── getRestaurants — Neon-first, Supabase fallback ────────────────────────────
+// Permission discovery (which restaurants a user may access) stays in Supabase
+// via get_my_restaurant_ids RPC. Only the data fetch moves to Neon-first.
+//
+// DISABLE_AUTH path (dev):
+//   1. Try Neon list (no id filter).
+//   2. Use Neon rows if any returned.
+//   3. Fall back to Supabase if Neon errors or returns 0 rows.
+//
+// Authenticated path (prod):
+//   1. get_my_restaurant_ids RPC → allowed UUID set (Supabase, unchanged).
+//   2. Try Neon list with those IDs.
+//   3. If Neon has all IDs → use Neon rows.
+//   4. If Neon is missing some IDs → fetch only the missing ones from Supabase
+//      and merge (handles restaurants not yet shadow-written to Neon).
+//   5. If Neon errors → fall back fully to Supabase.
+export async function getRestaurants() {
+  // ── Dev / DISABLE_AUTH path ───────────────────────────────────────────────
+  if (DISABLE_AUTH) {
+    try {
+      const neonRows = await fetchNeonRestaurantList(null)
+      if (neonRows.length > 0) {
+        return applyForcedDemoStatus(filterActive(neonRows))
+      }
+      // Neon returned 0 rows — fall through to Supabase so existing restaurants
+      // (not yet shadow-written to Neon) still appear during migration.
+    } catch (neonErr) {
+      console.warn('[getRestaurants] Neon unavailable, falling back to Supabase:', neonErr.message)
+    }
+
+    // Supabase fallback (original behaviour, preserved exactly)
+    const sbRows = await fetchSupabaseAllRestaurants()
+    return applyForcedDemoStatus(filterActive(sbRows))
+  }
+
+  // ── Authenticated path ────────────────────────────────────────────────────
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) throw new Error('Not authenticated')
+
+  // Permission discovery stays in Supabase — team-member RPC cannot move to
+  // Neon until team_members table is migrated (later phase).
+  const { data: idRows, error: idError } = await supabase.rpc('get_my_restaurant_ids')
+  if (idError) throw idError
+
+  const ids = (idRows ?? []).map(r => r.restaurant_id)
+  if (ids.length === 0) return []
+
+  // ── Try Neon for the data fetch ───────────────────────────────────────────
+  try {
+    const neonRows = await fetchNeonRestaurantList(ids)
+    const neonIdSet = new Set(neonRows.map(r => r.id))
+    const missingIds = ids.filter(id => !neonIdSet.has(id))
+
+    if (missingIds.length === 0) {
+      // Neon has every restaurant — use Neon rows exclusively
+      return applyForcedDemoStatus(filterActive(neonRows))
+    }
+
+    // Partial overlap: some restaurants exist only in Supabase (not yet
+    // shadow-written). Fetch only the missing ones from Supabase and merge.
+    const sbRows = await fetchSupabaseRestaurantsByIds(missingIds)
+    const merged = [...neonRows, ...sbRows]
+    // Re-sort merged list by created_at desc to preserve expected order
+    merged.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+    return applyForcedDemoStatus(filterActive(merged))
+  } catch (neonErr) {
+    console.warn('[getRestaurants] Neon unavailable, falling back to Supabase:', neonErr.message)
+  }
+
+  // ── Full Supabase fallback (original behaviour, preserved exactly) ─────────
+  const sbRows = await fetchSupabaseRestaurantsByIds(ids)
+  return applyForcedDemoStatus(filterActive(sbRows))
 }
 
 // Returns soft-deleted restaurants (is_deleted = true).
