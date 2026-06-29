@@ -1,0 +1,77 @@
+You are my Replit AI backend migration engineer.
+
+Phase D1 is complete:
+
+- Single restaurant reads by id/slug now use Neon-first with Supabase fallback.
+- Supabase-only restaurants still load correctly through fallback.
+- Create/update shadow-write still works.
+- getRestaurants() dashboard list still uses Supabase.
+- Auth, realtime, storage, menu, orders, bookings, staff, and notifications are untouched.
+
+Now I want to prepare Phase D2 carefully.
+
+Goal:
+Analyze ONLY the dashboard restaurant list read flow before switching "getRestaurants()" to Neon-first with Supabase fallback.
+
+Important:
+Do NOT change code yet.
+Do NOT switch getRestaurants() yet.
+Do NOT remove Supabase.
+Do NOT remove Supabase env variables.
+Do NOT change Auth.
+Do NOT change Realtime.
+Do NOT change Storage.
+Do NOT add Better Auth.
+Do NOT add Ably.
+Do NOT add Cloudflare R2.
+Do NOT add Upstash.
+Do NOT change UI/design.
+Do NOT move menu, orders, bookings, staff, or notifications.
+
+Analysis scope:
+Only inspect restaurant list/dashboard read flow.
+
+Tasks:
+
+1. Find every place using "getRestaurants()".
+
+2. Find every page/component that shows restaurant list data:
+   
+   - dashboard list
+   - restaurants page
+   - deleted restaurants page
+   - master control page
+   - any admin restaurant list
+
+3. List every field required by these list pages.
+
+4. Compare required fields with Neon "restaurants" table fields.
+
+5. Identify fields that exist in Supabase but not Neon, especially:
+   
+   - tables
+   - any old legacy fields
+   - any soft-delete fields
+   - plan/status fields
+   - image/logo fields
+
+6. Check whether current Neon schema is safe for restaurant list reads.
+
+7. Recommend whether Phase D2 should:
+   
+   - use Neon-first + Supabase fallback
+   - use Supabase-only for deleted restaurants
+   - add compatibility fields to Neon first
+   - or keep dashboard list on Supabase for now
+
+8. Report:
+   
+   - files using getRestaurants()
+   - fields required
+   - schema mismatches
+   - risks
+   - exact implementation plan for D2
+   - whether D2 is safe
+
+Final rule:
+Analysis only. Do not edit code. Stop after the report and wait for my approval.
