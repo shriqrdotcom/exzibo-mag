@@ -1010,6 +1010,87 @@ function tableValidationPlugin() {
   }
 }
 
+function neonRestaurantPlugin() {
+  return {
+    name: 'neon-restaurant',
+    configureServer(server) {
+      server.middlewares.use('/api/neon/restaurant', async (req, res, next) => {
+        const method = req.method
+        const url = (req.url || '/').split('?')[0]
+
+        function json(status, body) {
+          res.statusCode = status
+          res.setHeader('Content-Type', 'application/json')
+          res.end(JSON.stringify(body))
+        }
+
+        function readBody() {
+          return new Promise((resolve, reject) => {
+            let data = ''
+            req.on('data', c => { data += c })
+            req.on('end', () => { try { resolve(JSON.parse(data || '{}')) } catch (e) { reject(e) } })
+          })
+        }
+
+        const {
+          getNeonRestaurantById,
+          getNeonRestaurantBySlug,
+          getNeonRestaurantByUid,
+          createNeonRestaurant,
+          patchNeonRestaurant,
+        } = await import('./src/db/neon-restaurants.js')
+
+        try {
+          // GET /api/neon/restaurant/by-slug/:slug
+          if (method === 'GET' && url.startsWith('/by-slug/')) {
+            const slug = decodeURIComponent(url.replace('/by-slug/', ''))
+            if (!slug) return json(400, { error: 'slug required' })
+            const row = await getNeonRestaurantBySlug(slug)
+            return row ? json(200, row) : json(404, { error: 'Not found' })
+          }
+
+          // GET /api/neon/restaurant/by-uid/:uid
+          if (method === 'GET' && url.startsWith('/by-uid/')) {
+            const uid = decodeURIComponent(url.replace('/by-uid/', ''))
+            if (!uid) return json(400, { error: 'uid required' })
+            const row = await getNeonRestaurantByUid(uid)
+            return row ? json(200, row) : json(404, { error: 'Not found' })
+          }
+
+          // POST /api/neon/restaurant/create
+          if (method === 'POST' && url === '/create') {
+            const body = await readBody()
+            const row = await createNeonRestaurant(body)
+            return json(201, row)
+          }
+
+          // PATCH /api/neon/restaurant/:id
+          if (method === 'PATCH' && url.length > 1) {
+            const id = decodeURIComponent(url.replace(/^\//, ''))
+            if (!id) return json(400, { error: 'id required' })
+            const body = await readBody()
+            const row = await patchNeonRestaurant(id, body)
+            return row ? json(200, row) : json(404, { error: 'Not found or no valid fields' })
+          }
+
+          // GET /api/neon/restaurant/:id
+          if (method === 'GET' && url.length > 1) {
+            const id = decodeURIComponent(url.replace(/^\//, ''))
+            if (!id) return json(400, { error: 'id required' })
+            const row = await getNeonRestaurantById(id)
+            return row ? json(200, row) : json(404, { error: 'Not found' })
+          }
+
+          return next()
+        } catch (err) {
+          console.error('[neon-restaurant]', err.message)
+          return json(err.message.includes('already taken') ? 409 : 500, { error: err.message })
+        }
+      })
+    },
+  }
+}
+
 function neonHealthPlugin() {
   return {
     name: 'neon-health',
@@ -1079,7 +1160,7 @@ function spaFallbackPlugin() {
 }
 
 export default defineConfig(({ mode }) => ({
-  plugins: [react(), previewAuthPlugin(), menuApiPlugin(), aboutApiPlugin(), restaurantDbPlugin(), tableValidationPlugin(), neonHealthPlugin(), spaFallbackPlugin()],
+  plugins: [react(), previewAuthPlugin(), menuApiPlugin(), aboutApiPlugin(), restaurantDbPlugin(), tableValidationPlugin(), neonRestaurantPlugin(), neonHealthPlugin(), spaFallbackPlugin()],
   appType: 'spa',
   define: {},
   resolve: {

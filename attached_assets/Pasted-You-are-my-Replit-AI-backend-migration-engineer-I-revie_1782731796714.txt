@@ -1,0 +1,98 @@
+You are my Replit AI backend migration engineer.
+
+I reviewed the restaurant profile analysis report.
+
+Proceed with the next step carefully, but only with Phase A and Phase B.
+
+Important:
+Do NOT remove Supabase.
+Do NOT remove Supabase environment variables.
+Do NOT replace all Supabase code.
+Do NOT change Auth.
+Do NOT add Better Auth.
+Do NOT change Realtime.
+Do NOT add Ably.
+Do NOT change Storage.
+Do NOT add Cloudflare R2.
+Do NOT add Upstash.
+Do NOT migrate old Supabase data.
+Do NOT change frontend UI/design.
+Do NOT move menu items, orders, bookings, staff, notifications, or images.
+Do NOT switch reads from Supabase to Neon yet.
+Do NOT do full dual-write yet unless I approve separately.
+
+Goal for this step:
+Prepare the Neon restaurant profile structure and create safe Neon restaurant API routes for testing only.
+
+Phase A — Neon schema patch:
+
+1. Update "src/db/schema.ts".
+
+2. Add these compatibility columns to the Neon "restaurants" table:
+   
+   - "logo" TEXT
+   - "table_numbers" JSONB DEFAULT []
+
+Reason:
+The current app expects "restaurant.logo" and "restaurants.table_numbers" as a JSONB array. Keep "logo_key" and separate "table_numbers" table if already created, but add these compatibility columns so the current frontend response shape does not break.
+
+3. Generate a new Drizzle migration file.
+
+4. Apply the migration to the verified Neon "DATABASE_URL".
+
+5. Verify these columns exist in Neon:
+   
+   - restaurants.logo
+   - restaurants.table_numbers
+
+Phase B — Add Neon restaurant API routes:
+
+Create new Neon-only API routes without replacing old Supabase routes:
+
+- GET "/api/neon/restaurant/:id"
+- GET "/api/neon/restaurant/by-slug/:slug"
+- GET "/api/neon/restaurant/by-uid/:uid"
+- POST "/api/neon/restaurant/create"
+- PATCH "/api/neon/restaurant/:id"
+
+Rules:
+
+- Use Drizzle ORM only.
+- Use the verified Neon "DATABASE_URL".
+- Do not use Supabase in these new Neon routes.
+- Keep old Supabase routes untouched.
+- Keep response shape compatible with existing restaurant objects as much as possible.
+- Validate required fields.
+- Enforce unique slug.
+- Enforce unique uid.
+- Do not touch image upload/storage.
+- For now, accept "logo" as a text field only. Do not upload images.
+- For now, accept "table_numbers" as a JSON array.
+
+Testing:
+
+Create safe test logic to verify:
+
+1. Create test restaurant in Neon works.
+2. Fetch by id works.
+3. Fetch by slug works.
+4. Fetch by uid works.
+5. Update restaurant profile works.
+6. Existing Supabase app still works.
+7. "/api/health/neon" still works.
+
+After completion, report:
+
+- Files changed
+- New migration file created
+- Neon columns added
+- API routes created
+- Test restaurant created/fetched/updated result
+- Confirmation that old Supabase routes are untouched
+- Confirmation that no frontend reads were switched yet
+- Confirmation that no dual-write was added yet
+- Any warnings
+
+Final rule:
+This step only prepares and tests Neon restaurant profile APIs.
+Do not switch the live app to Neon yet.

@@ -5,6 +5,13 @@ import { createHmac } from 'crypto'
 import bcrypt from 'bcryptjs'
 import pg from 'pg'
 import { neonHealthCheck } from './src/db/index.js'
+import {
+  getNeonRestaurantById,
+  getNeonRestaurantBySlug,
+  getNeonRestaurantByUid,
+  createNeonRestaurant,
+  patchNeonRestaurant,
+} from './src/db/neon-restaurants.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const app = express()
@@ -986,6 +993,51 @@ app.post('/api/about/save', async (req, res) => {
     console.error('[about/save] Error:', err.message)
     return res.status(500).json({ error: err.message })
   }
+})
+
+// ── Neon restaurant API routes ────────────────────────────────────────────────
+
+// GET /api/neon/restaurant/by-slug/:slug
+app.get('/api/neon/restaurant/by-slug/:slug', async (req, res) => {
+  try {
+    const row = await getNeonRestaurantBySlug(req.params.slug)
+    return row ? res.json(row) : res.status(404).json({ error: 'Not found' })
+  } catch (err) { return res.status(500).json({ error: err.message }) }
+})
+
+// GET /api/neon/restaurant/by-uid/:uid
+app.get('/api/neon/restaurant/by-uid/:uid', async (req, res) => {
+  try {
+    const row = await getNeonRestaurantByUid(req.params.uid)
+    return row ? res.json(row) : res.status(404).json({ error: 'Not found' })
+  } catch (err) { return res.status(500).json({ error: err.message }) }
+})
+
+// POST /api/neon/restaurant/create
+app.post('/api/neon/restaurant/create', async (req, res) => {
+  try {
+    const row = await createNeonRestaurant(req.body)
+    return res.status(201).json(row)
+  } catch (err) {
+    const status = err.message.includes('already taken') ? 409 : 500
+    return res.status(status).json({ error: err.message })
+  }
+})
+
+// PATCH /api/neon/restaurant/:id
+app.patch('/api/neon/restaurant/:id', async (req, res) => {
+  try {
+    const row = await patchNeonRestaurant(req.params.id, req.body)
+    return row ? res.json(row) : res.status(404).json({ error: 'Not found or no valid fields' })
+  } catch (err) { return res.status(500).json({ error: err.message }) }
+})
+
+// GET /api/neon/restaurant/:id  (must be last — after named sub-routes)
+app.get('/api/neon/restaurant/:id', async (req, res) => {
+  try {
+    const row = await getNeonRestaurantById(req.params.id)
+    return row ? res.json(row) : res.status(404).json({ error: 'Not found' })
+  } catch (err) { return res.status(500).json({ error: err.message }) }
 })
 
 // ── Neon health check ─────────────────────────────────────────────────────────

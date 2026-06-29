@@ -8,6 +8,13 @@
       "when": 1782727306749,
       "tag": "0000_burly_preak",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1782732102942,
+      "tag": "0001_thick_smasher",
+      "breakpoints": true
     }
   ]
 }

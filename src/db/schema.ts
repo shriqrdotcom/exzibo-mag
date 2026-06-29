@@ -58,6 +58,9 @@ export const restaurants = pgTable(
     images:            jsonb('images').default([]),
     // Logo stored as an object-storage key, not a URL
     logoKey:           text('logo_key'),
+    // Compatibility columns — mirrors Supabase field names so frontend response shape is unchanged
+    logo:              text('logo'),
+    tableNumbers:      jsonb('table_numbers').default([]),
 
     menuFilters:       jsonb('menu_filters').default({}),
     filtersEnabled:    jsonb('filters_enabled').default({}),
