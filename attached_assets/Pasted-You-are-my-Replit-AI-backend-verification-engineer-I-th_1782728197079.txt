@@ -1,0 +1,97 @@
+You are my Replit AI backend verification engineer.
+
+I think the previous Neon + Drizzle setup may have connected to the wrong Neon database.
+
+Your first task:
+Ask me to provide my correct Neon PostgreSQL connection string safely.
+
+Important security rule:
+Do NOT ask me to paste the connection string into normal chat if it will be visible in logs.
+Guide me to add or replace it in Replit Secrets / Environment Variables as:
+
+DATABASE_URL= my correct Neon connection string
+
+After I confirm that I added the correct "DATABASE_URL", verify the connection.
+
+Do NOT run migrations yet.
+Do NOT create new tables yet.
+Do NOT drop tables.
+Do NOT modify data.
+Do NOT remove Supabase.
+Do NOT replace Supabase code.
+Do NOT change UI.
+Do NOT change business logic.
+Do NOT print the full "DATABASE_URL".
+Do NOT expose password, token, or secret values.
+
+Verification steps after I add the correct Neon connection string:
+
+1. Read "DATABASE_URL" from environment variables.
+
+2. Safely report only non-secret parts:
+   
+   - database host
+   - database name
+   - masked username
+   - SSL mode if available
+   - whether host contains "neon.tech"
+
+3. Confirm that the database host and database name match the Neon connection string I added in Replit Secrets.
+
+4. Run only safe read-only SQL checks:
+   
+   - "select current_database();"
+   - "select current_user;"
+   - "select current_schema();"
+   - "select now();"
+
+5. Check whether these Exzibo tables exist in the connected Neon database:
+   
+   - restaurants
+   - restaurant_members
+   - menu_categories
+   - menu_items
+   - orders
+   - order_items
+   - bookings
+   - restaurant_about
+   - restaurant_settings
+   - table_numbers
+   - audit_logs
+
+6. Test the route:
+   
+   GET /api/health/neon
+
+Confirm that this route is using the same "DATABASE_URL".
+
+7. Report clearly:
+   
+   - Is "DATABASE_URL" found? yes/no
+   - Is the connected host Neon? yes/no
+   - What is the connected database name?
+   - Do all 11 Exzibo tables exist? yes/no
+   - Does "/api/health/neon" return success? yes/no
+   - Was Supabase untouched? yes/no
+   - Is this definitely the correct Neon database? yes/no
+   - Any warnings?
+
+8. If the current "DATABASE_URL" points to a wrong database:
+   
+   - Stop immediately
+   - Do not migrate
+   - Tell me to replace "DATABASE_URL" in Replit Secrets with the correct Neon connection string
+   - After I replace it, verify again
+
+9. If the connection is correct but the 11 tables do not exist:
+   
+   - Stop and report:
+     “Correct Neon database connected, but schema is not applied yet. Waiting for user approval before running migrations.”
+
+10. If the connection is correct and the 11 tables exist:
+
+- Stop and report:
+  “Connection verified. Correct Neon database is connected and Neon + Drizzle foundation is ready for the next step after user approval.”
+
+Final rule:
+This task is only for asking me to add the correct Neon connection string and confirming that the project is connected to the correct Neon database. Do not make any migration or feature changes.
