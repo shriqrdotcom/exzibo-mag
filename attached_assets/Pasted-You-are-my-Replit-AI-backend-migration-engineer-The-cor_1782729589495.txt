@@ -1,0 +1,84 @@
+You are my Replit AI backend migration engineer.
+
+The correct Neon "DATABASE_URL" is now connected and verified, but the schema is still not applied to Neon.
+
+Important:
+Do NOT remove Supabase.
+Do NOT change Supabase code.
+Do NOT replace existing "supabase.from()" calls.
+Do NOT change UI.
+Do NOT change business logic.
+Do NOT migrate old data.
+Do NOT create a new schema design.
+Do NOT create duplicate migration files unless absolutely required.
+Do NOT use Replit internal PostgreSQL.
+Do NOT expose or print the full "DATABASE_URL".
+
+Your task is to diagnose why the existing Drizzle schema/migration was not applied to the verified Neon database, then apply it correctly.
+
+Step 1 — Verify current connection before migration:
+
+- Read "DATABASE_URL" from environment variables.
+- Confirm host contains "neon.tech".
+- Report only safe non-secret details:
+  - masked host
+  - database name
+  - masked username
+  - SSL mode
+- Run:
+  - "select current_database();"
+  - "select current_user;"
+  - "select current_schema();"
+
+Step 2 — Inspect Drizzle setup:
+
+- Confirm "drizzle.config.ts" exists.
+- Confirm it uses "process.env.DATABASE_URL".
+- Confirm it does not use any Replit internal PostgreSQL variable.
+- Confirm schema path points to "src/db/schema.ts".
+- Confirm migration output path points to "drizzle/migrations".
+- Confirm migration file exists, for example "drizzle/migrations/0000_*.sql".
+- Confirm Drizzle journal/meta files are valid.
+
+Step 3 — Apply existing migration to the verified Neon database:
+
+- Run the correct Drizzle migration command using the verified Neon "DATABASE_URL".
+- Use the existing migration files.
+- Do not regenerate schema unless the existing migration files are missing or invalid.
+
+Step 4 — Verify after migration:
+Check that these 11 tables now exist in the connected Neon database:
+
+- restaurants
+- restaurant_members
+- menu_categories
+- menu_items
+- orders
+- order_items
+- bookings
+- restaurant_about
+- restaurant_settings
+- table_numbers
+- audit_logs
+
+Also check whether Drizzle migration tracking table exists.
+
+Step 5 — Test:
+
+- Test "GET /api/health/neon".
+- Confirm it still returns success from the same Neon database.
+
+Step 6 — Report:
+Clearly report:
+
+1. Was "DATABASE_URL" Neon? yes/no
+2. Was Drizzle config using the correct "DATABASE_URL"? yes/no
+3. Did the existing migration file exist? yes/no
+4. Was migration applied successfully? yes/no
+5. Do all 11 Exzibo tables exist now? yes/no
+6. Does "/api/health/neon" work? yes/no
+7. Was Supabase untouched? yes/no
+8. If migration failed, show the exact error message and stop.
+
+Final rule:
+Only apply the existing Drizzle migration to the verified correct Neon database. Do not migrate any app feature yet.
