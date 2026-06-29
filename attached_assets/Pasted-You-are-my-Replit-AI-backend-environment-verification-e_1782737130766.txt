@@ -1,0 +1,81 @@
+You are my Replit AI backend environment verification engineer.
+
+Before Phase D read switchover, I need to fix and verify the Supabase environment issue found during Phase C verification.
+
+Important:
+Do NOT switch reads to Neon.
+Do NOT remove Supabase.
+Do NOT remove Supabase env variables.
+Do NOT change Auth.
+Do NOT change Realtime.
+Do NOT change Storage.
+Do NOT add Better Auth.
+Do NOT add Ably.
+Do NOT add Cloudflare R2.
+Do NOT add Upstash.
+Do NOT change UI/design.
+Do NOT move menu, orders, bookings, staff, or notifications.
+
+Goal:
+Verify that the app has the correct Supabase environment variables and that the real app flow can write to Supabase, then shadow-write to Neon.
+
+Tasks:
+
+1. Check the environment variables safely:
+   
+   - SUPABASE_URL
+   - SUPABASE_ANON_KEY
+   - SUPABASE_SERVICE_ROLE_KEY
+   - DATABASE_URL
+
+2. Do not print full secret values.
+
+3. For SUPABASE_URL, report only:
+   
+   - whether it exists
+   - whether it starts with "https://"
+   - whether it contains ".supabase.co"
+   - whether it incorrectly points to GitHub or any non-Supabase URL
+
+4. For DATABASE_URL, report only:
+   
+   - whether it exists
+   - whether host contains "neon.tech"
+   - database name
+   - masked username
+
+5. If SUPABASE_URL is wrong:
+   
+   - stop
+   - tell me to replace it in Replit Secrets with the correct Supabase Project URL
+   - do not run tests
+
+6. If SUPABASE_URL is correct:
+   
+   - run a safe Supabase connection check
+   - run a safe Neon connection check
+   - do not modify data yet
+
+7. After both connections are correct, test Phase C again using the real existing createRestaurant/updateRestaurant flow:
+   
+   - create a test restaurant through the real app/data function
+   - confirm Supabase row exists
+   - confirm Neon shadow row exists
+   - confirm id, uid, slug, and name match
+   - update the test restaurant
+   - confirm Supabase updated
+   - confirm Neon shadow copy updated
+   - confirm all reads still come from Supabase
+
+8. Report:
+   
+   - Supabase env status
+   - Neon env status
+   - real app flow test result
+   - Supabase row result
+   - Neon shadow row result
+   - field comparison result
+   - whether Phase D is safe
+
+Final rule:
+This is verification only. Do not switch reads to Neon yet.
