@@ -5,7 +5,7 @@ import fs from 'fs'
 import { createHmac } from 'crypto'
 import bcrypt from 'bcryptjs'
 import pg from 'pg'
-import { patchNeonRestaurant } from './src/db/neon-restaurants.js'
+import { patchNeonRestaurant, getNeonRestaurantById } from './src/db/neon-restaurants.js'
 
 function previewAuthPlugin() {
   return {
@@ -557,12 +557,24 @@ function aboutApiPlugin() {
         }
       })
 
-      // GET /api/restaurant/:id — service-role fetch of a single restaurant row (bypasses RLS)
+      // GET /api/restaurant/:id — Phase D1: Neon-first, Supabase fallback
       server.middlewares.use('/api/restaurant', async (req, res, next) => {
         if (req.method !== 'GET') return next()
         const restaurantId = (req.url || '/').split('?')[0].replace(/^\//, '')
         if (!restaurantId || restaurantId.length < 10) return next()
         try {
+          // ── Neon first ──────────────────────────────────────────────────────
+          try {
+            const neonRow = await getNeonRestaurantById(restaurantId)
+            if (neonRow) {
+              console.log(`[restaurant/get] Neon hit: id=${restaurantId}`)
+              return json(res, 200, neonRow)
+            }
+            console.log(`[restaurant/get] Neon miss — falling back to Supabase: id=${restaurantId}`)
+          } catch (neonErr) {
+            console.warn(`[restaurant/get] Neon error — falling back to Supabase: id=${restaurantId} err=${neonErr.message}`)
+          }
+          // ── Supabase fallback (original logic, unchanged) ───────────────────
           const { url: supabaseUrl, headers } = getServiceHeaders()
           const r = await fetch(
             `${supabaseUrl}/rest/v1/restaurants?id=eq.${encodeURIComponent(restaurantId)}&limit=1`,

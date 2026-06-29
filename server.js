@@ -900,11 +900,25 @@ app.post('/api/about/upload-image', async (req, res) => {
   }
 })
 
-// GET /api/restaurant/:id — service-role single-row fetch, bypasses RLS
+// GET /api/restaurant/:id — Phase D1: Neon-first, Supabase fallback
 app.get('/api/restaurant/:id', async (req, res) => {
   try {
     const { id } = req.params
     if (!id) return res.status(400).json({ error: 'id required' })
+
+    // ── Neon first ────────────────────────────────────────────────────────────
+    try {
+      const neonRow = await getNeonRestaurantById(id)
+      if (neonRow) {
+        console.log(`[restaurant/get] Neon hit: id=${id}`)
+        return res.json(neonRow)
+      }
+      console.log(`[restaurant/get] Neon miss — falling back to Supabase: id=${id}`)
+    } catch (neonErr) {
+      console.warn(`[restaurant/get] Neon error — falling back to Supabase: id=${id} err=${neonErr.message}`)
+    }
+
+    // ── Supabase fallback (original logic, unchanged) ─────────────────────────
     const { url: supabaseUrl, headers } = getSupabaseServiceHeaders()
     const r = await fetch(
       `${supabaseUrl}/rest/v1/restaurants?id=eq.${encodeURIComponent(id)}&limit=1`,

@@ -1,0 +1,114 @@
+You are my Replit AI backend migration engineer.
+
+Phase C real verification passed:
+
+- Supabase connection works
+- Neon connection works
+- createRestaurant shadow-write to Neon works
+- updateRestaurant shadow-write to Neon works
+- Supabase and Neon share the same UUID
+- create fields matched
+- update fields matched
+- all reads still use Supabase
+- auth/realtime/storage/menu/orders/bookings/staff untouched
+
+Now proceed with Phase D1 only: restaurant profile read switchover.
+
+Important:
+Do NOT remove Supabase.
+Do NOT remove Supabase environment variables.
+Do NOT remove Supabase client.
+Do NOT change Auth.
+Do NOT add Better Auth.
+Do NOT change Realtime.
+Do NOT add Ably.
+Do NOT change Storage.
+Do NOT add Cloudflare R2.
+Do NOT add Upstash.
+Do NOT change UI/design.
+Do NOT move menu items, orders, bookings, staff, notifications, or images.
+Do NOT switch full dashboard restaurant list yet.
+Do NOT switch all database reads yet.
+
+Goal:
+Switch only safe restaurant profile read paths to Neon + Drizzle, with Supabase fallback.
+
+Scope:
+Only restaurant profile reads by:
+
+- id
+- slug
+- uid if currently used
+
+Allowed read behavior:
+
+1. Try Neon first.
+2. If Neon returns a restaurant row, return it.
+3. If Neon fails or row is missing, fallback to existing Supabase read.
+4. Keep response shape compatible with existing frontend.
+5. Do not break restaurants that exist only in Supabase.
+
+Do not change create/update shadow-write logic except if needed for compatibility.
+
+Tasks:
+
+1. Inspect current read functions:
+   
+   - getRestaurantById()
+   - getRestaurantBySlug()
+   - any getRestaurant() function if it exists
+   - API route GET /api/restaurant/:id
+   - any public restaurant page fetch by slug
+
+2. Report which exact read paths will be changed before editing.
+
+3. Implement Neon-first, Supabase-fallback read logic only for single restaurant profile reads.
+
+4. Do not switch:
+   
+   - getRestaurants() full dashboard list
+   - menu category reads
+   - menu item reads
+   - order reads
+   - booking reads
+   - team/staff reads
+   - notification reads
+
+5. Add safe logging:
+   
+   - log when Neon read succeeds
+   - log when fallback to Supabase happens
+   - do not expose secrets
+
+6. Test with a restaurant that exists in both Supabase and Neon:
+   
+   - read by id returns correct row
+   - read by slug returns correct row
+   - id/uid/slug/name/logo/table_numbers match expected data
+   - UI still loads correctly
+
+7. Test fallback:
+   
+   - use a Supabase-only restaurant if available
+   - confirm read still works by falling back to Supabase
+
+8. Confirm:
+   
+   - create/update still shadow-write
+   - reads for single restaurant profile now use Neon first
+   - all other reads still use Supabase
+   - auth/realtime/storage/menu/orders/bookings/staff untouched
+
+9. Report:
+   
+   - files changed
+   - functions changed
+   - read paths switched
+   - fallback behavior
+   - test results
+   - any warnings
+   - whether Phase D2 is safe
+
+Final rule:
+Phase D1 only switches single restaurant profile reads to Neon-first with Supabase fallback.
+Do not migrate any other feature.

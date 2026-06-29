@@ -507,6 +507,31 @@ export async function checkLinkNameTakenInDB(name) {
 }
 
 export async function getRestaurantBySlug(slug) {
+  // ── Phase D1: Neon-first read, Supabase fallback ───────────────────────────
+  // Try Neon first via the server-side route (works in dev + prod).
+  // If Neon has the row, return it immediately.
+  // If Neon misses or errors, fall through to the existing Supabase logic so
+  // restaurants that have not yet been shadow-written continue to load.
+  try {
+    const neonRes = await fetch(`/api/neon/restaurant/by-slug/${encodeURIComponent(slug)}`)
+    if (neonRes.ok) {
+      const row = await neonRes.json()
+      if (row && row.id) {
+        console.log(`[getRestaurantBySlug] Neon hit: slug=${slug}`)
+        return row
+      }
+    }
+    // 404 means restaurant not in Neon yet — fall through to Supabase
+    if (neonRes.status !== 404) {
+      console.warn(`[getRestaurantBySlug] Neon returned ${neonRes.status} — falling back to Supabase: slug=${slug}`)
+    } else {
+      console.log(`[getRestaurantBySlug] Neon miss — falling back to Supabase: slug=${slug}`)
+    }
+  } catch (neonErr) {
+    console.warn(`[getRestaurantBySlug] Neon fetch error — falling back to Supabase: slug=${slug} err=${neonErr.message}`)
+  }
+
+  // ── Supabase fallback (original logic, unchanged) ──────────────────────────
   // Try with the anon client first — it uses the `anon` RLS role which allows
   // reading any restaurant. The authenticated client's RLS may restrict access
   // to owned restaurants only, causing 404s for super-admin restaurant lookups.
