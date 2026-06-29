@@ -1,0 +1,120 @@
+You are my Replit AI backend migration engineer.
+
+Phase A + Phase B are complete:
+
+- Neon + Drizzle foundation works
+- restaurants.logo column exists
+- restaurants.table_numbers JSONB column exists
+- Neon restaurant API routes work
+- test restaurant create/fetch/update passed
+- Supabase is untouched
+- no frontend reads have been switched
+- no dual-write has been added yet
+
+Now proceed with Phase C only: Shadow-write restaurant creation and restaurant profile updates to Neon.
+
+Important:
+Do NOT remove Supabase.
+Do NOT remove Supabase environment variables.
+Do NOT switch frontend reads to Neon.
+Do NOT replace all Supabase code.
+Do NOT change Auth.
+Do NOT add Better Auth.
+Do NOT change Realtime.
+Do NOT add Ably.
+Do NOT change Storage.
+Do NOT add Cloudflare R2.
+Do NOT add Upstash.
+Do NOT migrate old Supabase data.
+Do NOT change UI/design.
+Do NOT move menu items, orders, bookings, staff, notifications, or images.
+
+Goal:
+Keep Supabase as the main source of truth, but shadow-write restaurant profile create/update data to Neon.
+
+Scope:
+Only modify restaurant creation/profile update flow.
+
+Allowed files:
+
+- src/lib/db.js only if needed for createRestaurant() and updateRestaurant()
+- API route files only if needed to call existing Neon restaurant routes
+- Do not touch unrelated files
+
+Tasks:
+
+1. Inspect the current createRestaurant() and updateRestaurant() functions in src/lib/db.js.
+
+2. Add non-blocking shadow write to Neon after successful Supabase write:
+   
+   - After restaurant creation succeeds in Supabase, also create the same restaurant in Neon.
+   - After restaurant profile update succeeds in Supabase, also update the same restaurant in Neon.
+
+3. Supabase must remain authoritative:
+   
+   - If Supabase write fails, return the Supabase error as before.
+   - If Supabase write succeeds but Neon write fails, do not break the app.
+   - Log the Neon shadow-write error safely.
+   - Return the same response shape to frontend as before.
+
+4. Do not switch reads:
+   
+   - getRestaurant()
+   - getRestaurants()
+   - public restaurant page
+   - dashboard restaurant list
+     must still read from Supabase for now.
+
+5. Field mapping:
+   
+   - id → id if compatible
+   - owner_id → owner_id
+   - name → name
+   - slug → slug
+   - uid → uid
+   - logo → logo
+   - status → status
+   - plan → plan
+   - place → place
+   - phone → phone
+   - currency → currency
+   - accent_color → accent_color
+   - table_numbers → table_numbers
+   - social_links → social_links
+   - description → description
+   - location → location
+   - rating → rating
+   - digital_menu_link → digital_menu_link
+   - digital_service_bell → digital_service_bell
+   - plan_limits → plan_limits
+   - menu_filters → menu_filters
+   - filters_enabled → filters_enabled
+
+6. Do not upload images to Neon.
+   If logo is a Supabase Storage URL, store it as text in Neon for now.
+   Cloudflare R2 migration will happen later.
+
+7. Add safe test:
+   
+   - Create a new test restaurant from the existing app flow.
+   - Confirm it appears in Supabase.
+   - Confirm a shadow copy appears in Neon.
+   - Update restaurant profile from existing app flow.
+   - Confirm Supabase updates.
+   - Confirm Neon shadow copy updates.
+   - Confirm the app UI still works.
+   - Confirm no reads switched to Neon.
+
+8. Report:
+   
+   - files changed
+   - exact functions modified
+   - what data is shadow-written
+   - what still reads from Supabase
+   - test result
+   - any Neon shadow-write errors
+   - confirmation Supabase is still authoritative
+
+Final rule:
+Only add non-blocking shadow-write for restaurant create/update.
+Do not switch live reads to Neon yet.

@@ -814,6 +814,13 @@ app.post('/api/restaurant/update-profile', async (req, res) => {
     )
     const data = await r.json()
     if (!r.ok) return res.status(r.status).json({ error: data })
+    // ── Neon shadow-write (non-blocking) ──────────────────────────────────
+    patchNeonRestaurant(restaurantId, safePatch).then(row => {
+      if (row) console.log('[restaurant/update-profile] Neon shadow-write ✅ id:', restaurantId)
+      else console.warn('[restaurant/update-profile] Neon shadow-write: row not found in Neon id:', restaurantId)
+    }).catch(neonErr =>
+      console.warn('[restaurant/update-profile] Neon shadow-write error (non-blocking):', neonErr.message)
+    )
     return res.json(Array.isArray(data) ? (data[0] ?? {}) : data)
   } catch (err) {
     console.error('[restaurant/update-profile] Error:', err.message)
@@ -841,6 +848,13 @@ app.post('/api/restaurant/update-social', async (req, res) => {
     )
     const data = await r.json()
     if (!r.ok) return res.status(r.status).json({ error: data })
+    // ── Neon shadow-write (non-blocking) ──────────────────────────────────
+    patchNeonRestaurant(restaurantId, { social_links }).then(row => {
+      if (row) console.log('[restaurant/update-social] Neon shadow-write ✅ id:', restaurantId)
+      else console.warn('[restaurant/update-social] Neon shadow-write: row not found in Neon id:', restaurantId)
+    }).catch(neonErr =>
+      console.warn('[restaurant/update-social] Neon shadow-write error (non-blocking):', neonErr.message)
+    )
     return res.json(Array.isArray(data) ? (data[0] ?? {}) : data)
   } catch (err) {
     console.error('[restaurant/update-social] Error:', err.message)

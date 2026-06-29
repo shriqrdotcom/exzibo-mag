@@ -5,6 +5,7 @@ import fs from 'fs'
 import { createHmac } from 'crypto'
 import bcrypt from 'bcryptjs'
 import pg from 'pg'
+import { patchNeonRestaurant } from './src/db/neon-restaurants.js'
 
 function previewAuthPlugin() {
   return {
@@ -323,6 +324,13 @@ function menuApiPlugin() {
           )
           const data = await r.json()
           if (!r.ok) return json(res, r.status, { error: data })
+          // ── Neon shadow-write (non-blocking) ────────────────────────────
+          patchNeonRestaurant(restaurantId, safePatch).then(row => {
+            if (row) console.log('[update-profile] Neon shadow-write ✅ id:', restaurantId)
+            else console.warn('[update-profile] Neon shadow-write: row not found in Neon id:', restaurantId)
+          }).catch(neonErr =>
+            console.warn('[update-profile] Neon shadow-write error (non-blocking):', neonErr.message)
+          )
           return json(res, 200, Array.isArray(data) ? (data[0] ?? {}) : data)
         } catch (e) {
           console.error('[update-profile] Exception:', e.message)
@@ -353,6 +361,13 @@ function menuApiPlugin() {
           const data = await r.json()
           console.log('[update-social] Supabase status:', r.status, 'response:', JSON.stringify(data))
           if (!r.ok) return json(res, r.status, { error: data })
+          // ── Neon shadow-write (non-blocking) ────────────────────────────
+          patchNeonRestaurant(restaurantId, { social_links }).then(row => {
+            if (row) console.log('[update-social] Neon shadow-write ✅ id:', restaurantId)
+            else console.warn('[update-social] Neon shadow-write: row not found in Neon id:', restaurantId)
+          }).catch(neonErr =>
+            console.warn('[update-social] Neon shadow-write error (non-blocking):', neonErr.message)
+          )
           return json(res, 200, Array.isArray(data) ? (data[0] ?? {}) : data)
         } catch (e) {
           console.error('[update-social] Exception:', e.message)

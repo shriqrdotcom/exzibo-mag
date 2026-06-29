@@ -235,6 +235,50 @@ export async function createRestaurant(payload) {
   }
   console.log('[createRestaurant] created id:', data.id)
 
+  // ── Neon shadow-write (non-blocking) ──────────────────────────────────────
+  // Mirror the created restaurant to Neon using the same UUID. Failures are
+  // logged but never thrown — Supabase remains the source of truth.
+  ;(async () => {
+    try {
+      const res = await fetch('/api/neon/restaurant/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id:                   data.id,
+          owner_id:             data.owner_id,
+          uid:                  data.uid,
+          slug:                 data.slug,
+          name:                 data.name,
+          logo:                 data.logo ?? null,
+          status:               data.status,
+          plan:                 data.plan,
+          place:                data.place,
+          phone:                data.phone,
+          currency:             data.currency,
+          accent_color:         data.accent_color,
+          table_numbers:        data.table_numbers ?? [],
+          social_links:         data.social_links ?? {},
+          description:          data.description,
+          location:             data.location,
+          rating:               data.rating,
+          digital_menu_link:    data.digital_menu_link,
+          digital_service_bell: data.digital_service_bell ?? false,
+          plan_limits:          data.plan_limits ?? {},
+          menu_filters:         data.menu_filters ?? {},
+          filters_enabled:      data.filters_enabled ?? {},
+        }),
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        console.warn('[createRestaurant] Neon shadow-write failed:', err?.error ?? res.status)
+      } else {
+        console.log('[createRestaurant] Neon shadow-write ✅ id:', data.id)
+      }
+    } catch (neonErr) {
+      console.warn('[createRestaurant] Neon shadow-write error (non-blocking):', neonErr.message)
+    }
+  })()
+
   // ── Provision a dedicated database schema for this restaurant ─────────────
   // Runs server-side via Vite middleware — creates an isolated PostgreSQL schema
   // (r_<shortId>) with its own orders, bookings, menu_items, menu_categories tables.
@@ -266,6 +310,27 @@ export async function updateRestaurant(id, patch) {
     .select()
     .single()
   if (error) throw error
+
+  // ── Neon shadow-write (non-blocking) ──────────────────────────────────────
+  // Mirror the Supabase patch to Neon. Failures never break the caller.
+  ;(async () => {
+    try {
+      const res = await fetch(`/api/neon/restaurant/${encodeURIComponent(id)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(patch),
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        console.warn('[updateRestaurant] Neon shadow-write failed:', err?.error ?? res.status)
+      } else {
+        console.log('[updateRestaurant] Neon shadow-write ✅ id:', id)
+      }
+    } catch (neonErr) {
+      console.warn('[updateRestaurant] Neon shadow-write error (non-blocking):', neonErr.message)
+    }
+  })()
+
   return data
 }
 

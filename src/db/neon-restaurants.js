@@ -75,9 +75,11 @@ export async function createNeonRestaurant(payload) {
   const [uidTaken] = await sql`SELECT id FROM restaurants WHERE uid = ${uid} LIMIT 1`
   if (uidTaken) throw new Error(`UID "${uid}" is already taken in Neon`)
 
+  // If caller provides an id (shadow-write from Supabase), reuse it so both
+  // databases share the same UUID. Otherwise Neon auto-generates one.
   const rows = await sql`
     INSERT INTO restaurants (
-      uid, slug, name, owner_id,
+      id, uid, slug, name, owner_id,
       status, plan, place, note,
       accent_color, currency,
       phone, gst, description, chef_info, servant_info,
@@ -85,6 +87,7 @@ export async function createNeonRestaurant(payload) {
       digital_menu_link, digital_service_bell,
       plan_limits, images, logo, table_numbers
     ) VALUES (
+      COALESCE(${payload.id ?? null}::uuid, gen_random_uuid()),
       ${uid},
       ${slug},
       ${name},
