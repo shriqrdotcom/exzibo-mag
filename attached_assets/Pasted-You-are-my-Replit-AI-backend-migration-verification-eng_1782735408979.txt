@@ -1,0 +1,86 @@
+You are my Replit AI backend migration verification engineer.
+
+Phase C shadow-write is now implemented.
+
+Before moving to read switchover, I want a real verification only.
+
+Important:
+Do NOT switch reads to Neon.
+Do NOT remove Supabase.
+Do NOT remove Supabase env variables.
+Do NOT change Auth.
+Do NOT change Realtime.
+Do NOT change Storage.
+Do NOT add Better Auth.
+Do NOT add Ably.
+Do NOT add Cloudflare R2.
+Do NOT add Upstash.
+Do NOT change UI/design.
+Do NOT move menu, orders, bookings, staff, or notifications.
+
+Goal:
+Verify that restaurant create/update shadow-write works correctly in the real app flow.
+
+Tasks:
+
+1. Inspect the implemented Phase C changes and confirm:
+   
+   - Supabase is still authoritative.
+   - Neon write happens only after Supabase success.
+   - Neon failure is non-blocking and only logged.
+   - All reads still come from Supabase.
+
+2. Test restaurant creation using the existing createRestaurant flow:
+   
+   - Create a new test restaurant through the existing app/data function.
+   - Confirm Supabase row exists.
+   - Confirm Neon row exists.
+   - Confirm both rows share the same id, uid, slug, and name.
+
+3. Test restaurant profile update:
+   
+   - Update the test restaurant using the existing updateRestaurant flow or update-profile route.
+   - Confirm Supabase row updated.
+   - Confirm Neon row updated.
+   - Confirm fields like name, logo, phone, table_numbers, social_links, description update correctly where applicable.
+
+4. Add or run a safe comparison check:
+   Compare Supabase and Neon for the same restaurant id and report:
+   
+   - id match
+   - uid match
+   - slug match
+   - name match
+   - logo match
+   - table_numbers match
+   - social_links match
+   - updated fields match
+
+5. Confirm the frontend still reads from Supabase:
+   
+   - getRestaurant()
+   - getRestaurants()
+   - dashboard restaurant list
+   - public restaurant page
+
+6. Confirm no unrelated areas changed:
+   
+   - auth untouched
+   - realtime untouched
+   - storage untouched
+   - menu untouched
+   - orders untouched
+   - bookings untouched
+
+7. Report:
+   
+   - test restaurant id
+   - Supabase write result
+   - Neon shadow-write result
+   - comparison result
+   - any mismatched fields
+   - any warnings
+   - final recommendation for whether Phase D read switchover is safe
+
+Final rule:
+Verification only. Do not switch any reads to Neon yet.
