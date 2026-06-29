@@ -4,6 +4,7 @@ import { fileURLToPath } from 'url'
 import { createHmac } from 'crypto'
 import bcrypt from 'bcryptjs'
 import pg from 'pg'
+import { neonHealthCheck } from './src/db/index.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const app = express()
@@ -984,6 +985,17 @@ app.post('/api/about/save', async (req, res) => {
   } catch (err) {
     console.error('[about/save] Error:', err.message)
     return res.status(500).json({ error: err.message })
+  }
+})
+
+// ── Neon health check ─────────────────────────────────────────────────────────
+app.get('/api/health/neon', async (_req, res) => {
+  try {
+    const result = await neonHealthCheck()
+    return res.json(result)
+  } catch (err) {
+    console.error('[health/neon] Error:', err.message)
+    return res.status(500).json({ ok: false, database: 'neon', error: err.message })
   }
 })
 

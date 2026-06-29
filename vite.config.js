@@ -1010,6 +1010,36 @@ function tableValidationPlugin() {
   }
 }
 
+function neonHealthPlugin() {
+  return {
+    name: 'neon-health',
+    configureServer(server) {
+      server.middlewares.use('/api/health/neon', async (req, res) => {
+        if (req.method !== 'GET') {
+          res.statusCode = 405
+          res.setHeader('Content-Type', 'application/json')
+          res.end(JSON.stringify({ error: 'Method Not Allowed' }))
+          return
+        }
+        try {
+          const { neon } = await import('@neondatabase/serverless')
+          const url = process.env.DATABASE_URL
+          if (!url) throw new Error('DATABASE_URL is not set')
+          const sql = neon(url)
+          const start = Date.now()
+          await sql`SELECT 1`
+          res.setHeader('Content-Type', 'application/json')
+          res.end(JSON.stringify({ ok: true, database: 'neon', drizzle: 'connected', latencyMs: Date.now() - start }))
+        } catch (err) {
+          res.statusCode = 500
+          res.setHeader('Content-Type', 'application/json')
+          res.end(JSON.stringify({ ok: false, database: 'neon', error: err.message }))
+        }
+      })
+    },
+  }
+}
+
 function spaFallbackPlugin() {
   return {
     name: 'spa-fallback',
@@ -1049,7 +1079,7 @@ function spaFallbackPlugin() {
 }
 
 export default defineConfig(({ mode }) => ({
-  plugins: [react(), previewAuthPlugin(), menuApiPlugin(), aboutApiPlugin(), restaurantDbPlugin(), tableValidationPlugin(), spaFallbackPlugin()],
+  plugins: [react(), previewAuthPlugin(), menuApiPlugin(), aboutApiPlugin(), restaurantDbPlugin(), tableValidationPlugin(), neonHealthPlugin(), spaFallbackPlugin()],
   appType: 'spa',
   define: {},
   resolve: {

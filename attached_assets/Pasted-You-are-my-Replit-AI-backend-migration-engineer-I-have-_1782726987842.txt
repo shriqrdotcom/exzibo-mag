@@ -1,0 +1,119 @@
+You are my Replit AI backend migration engineer.
+
+I have created a new Neon PostgreSQL database and added "DATABASE_URL" in environment variables.
+
+My goal in this step is ONLY to add the new Neon + Drizzle database structure in the background.
+
+Important:
+Do NOT remove Supabase.
+Do NOT delete Supabase environment variables.
+Do NOT replace all existing "supabase.from()" calls yet.
+Do NOT change Auth.
+Do NOT change Realtime.
+Do NOT change Storage.
+Do NOT add Better Auth yet.
+Do NOT add Ably yet.
+Do NOT add Upstash yet.
+Do NOT add Cloudflare R2 yet.
+Do NOT migrate old customer/restaurant/user/order data.
+Do NOT change UI/design.
+Do NOT modify business logic.
+
+Current app must continue working with Supabase while Neon + Drizzle is added beside it.
+
+New stack for this step:
+
+- Neon PostgreSQL for database hosting
+- Drizzle ORM for schema, migrations, and database queries
+
+Your tasks:
+
+1. Inspect the current project structure safely.
+2. Identify the current Supabase database tables and fields used in the project code.
+3. Use the existing Supabase structure only as a reference.
+4. Do not blindly copy Supabase internal/auth/storage/realtime schemas.
+5. Create a clean new Drizzle schema for Neon.
+
+Install required packages:
+
+- drizzle-orm
+- @neondatabase/serverless
+- drizzle-kit as dev dependency
+
+Create these files/folders:
+
+- "src/db/schema.ts"
+- "src/db/index.ts"
+- "src/db/relations.ts"
+- "drizzle.config.ts"
+- "drizzle/migrations/"
+
+Use "DATABASE_URL" from environment variables only.
+Do not hardcode the Neon connection string.
+
+Create these initial core Exzibo tables in Drizzle:
+
+- restaurants
+- restaurant_members
+- menu_categories
+- menu_items
+- orders
+- order_items
+- bookings
+- restaurant_about
+- restaurant_settings
+- table_numbers
+- audit_logs
+
+Schema rules:
+
+- Use shared tables with "restaurant_id".
+- Do not create separate schemas per restaurant.
+- Do not copy old MVP data.
+- Make restaurant slug globally unique.
+- Keep restaurant UID unique.
+- Add proper foreign keys.
+- Add useful indexes for "restaurant_id", "slug", "uid", "order_number", "status", and "created_at".
+- Add "created_at" and "updated_at" fields.
+- Use "image_key" fields for future image storage.
+- Do not store Supabase Storage URLs in the new Neon schema.
+- Use "order_items" table for order item details instead of storing all order details only in JSON.
+- Keep "user_id" nullable for now because Better Auth is not added yet.
+
+Create Drizzle database connection in "src/db/index.ts".
+
+Create "drizzle.config.ts" for PostgreSQL and migration output.
+
+Generate Drizzle migration files.
+
+Apply the migrations to Neon using "DATABASE_URL".
+
+Create one safe test API route:
+
+"GET /api/health/neon"
+
+The route should:
+
+- connect to Neon through Drizzle
+- run a simple database check/query
+- return JSON like:
+
+{
+"ok": true,
+"database": "neon",
+"drizzle": "connected"
+}
+
+After completing, report clearly:
+
+1. Packages installed
+2. Files created
+3. Migration files generated
+4. Tables created in Neon
+5. Test route result
+6. Any errors or warnings
+7. Confirmation that Supabase was not removed or modified
+
+Final rule:
+This step is only for creating the Neon + Drizzle background database structure.
+The existing Supabase-based app must continue working exactly like before.
