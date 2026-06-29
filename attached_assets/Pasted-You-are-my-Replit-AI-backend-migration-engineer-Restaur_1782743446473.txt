@@ -1,0 +1,69 @@
+You are my Replit AI backend migration engineer.
+
+Restaurant profile/list migration is complete:
+
+- D1 single restaurant reads use Neon-first with Supabase fallback.
+- D2A soft-delete sync and Neon restaurant list route are complete.
+- D2B getRestaurants() now uses Neon-first with Supabase fallback.
+- Restaurant create/update/soft-delete still shadow-write to Neon.
+- Old Supabase-only restaurants still work through fallback.
+- Auth, realtime, storage, menu, orders, bookings, staff, and notifications are still untouched.
+
+Now I want to prepare the next migration module carefully.
+
+Goal:
+Analyze ONLY the menu categories data flow before moving it to Neon + Drizzle.
+
+Important:
+Do NOT change code yet.
+Do NOT migrate menu categories yet.
+Do NOT remove Supabase.
+Do NOT remove Supabase env variables.
+Do NOT change Auth.
+Do NOT change Realtime.
+Do NOT change Storage.
+Do NOT add Better Auth.
+Do NOT add Ably.
+Do NOT add Cloudflare R2.
+Do NOT add Upstash.
+Do NOT change UI/design.
+Do NOT move menu items, orders, bookings, staff, or notifications yet.
+
+Analysis scope:
+Only inspect menu category flow.
+
+Tasks:
+
+1. Find every file using menu category data.
+2. Find every "supabase.from("menu_categories")" usage.
+3. Find all functions related to:
+   - get menu categories
+   - create category
+   - update category
+   - delete category
+   - reorder/sort category if exists
+4. Find all pages/components that display or edit categories.
+5. List every field currently used in "menu_categories".
+6. Compare current Supabase category fields with the Neon + Drizzle "menu_categories" table.
+7. Identify missing fields, indexes, constraints, or compatibility issues.
+8. Check how categories connect to:
+   - restaurants
+   - menu_items
+   - public restaurant page
+   - admin menu editor
+9. Recommend the safest migration plan:
+   - shadow-write first?
+   - Neon-first reads with Supabase fallback?
+   - any schema patch needed first?
+10. Report:
+
+- files using menu categories
+- functions/routes involved
+- fields used
+- schema match/mismatch
+- risks
+- exact implementation phases
+- whether E1 implementation is safe
+
+Final rule:
+Analysis only. Do not edit code. Stop after the report and wait for my approval.
