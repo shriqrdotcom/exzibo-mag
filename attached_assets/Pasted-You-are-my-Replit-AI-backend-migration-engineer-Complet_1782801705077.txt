@@ -1,0 +1,194 @@
+You are my Replit AI backend migration engineer.
+
+Completed migration:
+
+- Restaurants/profile/list migrated with Supabase-first writes, Neon shadow-write, Neon-first reads with Supabase fallback.
+- Menu categories migrated.
+- Menu items migrated.
+- Bookings migrated.
+- Supabase remains active for Auth, Realtime, Storage, Staff, Notifications.
+- Supabase Realtime must stay unchanged.
+
+Now proceed with Phase G: Orders migration.
+
+Important:
+Do NOT remove Supabase.
+Do NOT remove Supabase env variables.
+Do NOT remove Supabase client.
+Do NOT change Auth.
+Do NOT change Realtime.
+Do NOT add Ably.
+Do NOT change Storage.
+Do NOT add Cloudflare R2.
+Do NOT add Upstash.
+Do NOT change UI/design.
+Do NOT move staff, notifications, auth, or analytics.
+Do NOT change Supabase realtime order channels.
+Do NOT create a separate "order_items" migration now because the current app stores order items in "orders.items" JSONB.
+Do NOT include "updated_at" in Supabase insert/update payloads.
+
+Goal:
+Migrate orders using the same safe pattern:
+
+- Supabase-first writes with non-blocking Neon shadow-write.
+- Neon-first reads with Supabase fallback.
+- Supabase Realtime remains unchanged.
+
+Process:
+
+1. Re-check the orders schema quickly.
+2. If a new blocker is found, stop and report.
+3. If safe, implement all Phase G steps below.
+
+G1 — Create public Neon orders table:
+Update Drizzle schema and migration to create a shared/public "orders" table with:
+
+- "id" TEXT PRIMARY KEY
+- "restaurant_id" TEXT NOT NULL
+- "table_number" TEXT
+- "customer_name" TEXT
+- "customer_phone" TEXT
+- "customer_location" TEXT
+- "items" JSONB DEFAULT '[]'
+- "status" TEXT NOT NULL DEFAULT 'pending'
+- "total" DECIMAL(10,2) DEFAULT 0
+- "notes" TEXT
+- "created_at" TIMESTAMPTZ DEFAULT now()
+- "updated_at" TIMESTAMPTZ DEFAULT now()
+
+Add indexes:
+
+- "orders_restaurant_id_idx" on "restaurant_id"
+- "orders_created_at_idx" on "created_at DESC"
+- add status index if useful
+
+Use Drizzle migration. Do not run manual SQL unless Drizzle fails and you report why.
+
+G2 — Create Neon helper:
+Create "src/db/neon-orders.js" with:
+
+- "upsertNeonOrder(restaurantId, order)"
+- "updateNeonOrderStatus(orderId, status)"
+- "getNeonOrders(restaurantId)"
+- "deleteOldNeonOrdersIfNeeded(...)" or matching cleanup helper if needed for auto-cleanup
+
+Map fields:
+
+- "id"
+- "restaurant_id"
+- "table_number"
+- "customer_name"
+- "customer_phone"
+- "customer_location"
+- "items"
+- "status"
+- "total"
+- "notes"
+- "created_at"
+
+Keep "items" as JSONB array exactly like current Supabase behavior.
+
+G3 — Add create order API:
+Add in both "server.js" and "vite.config.js":
+
+"POST /api/orders"
+
+Behavior:
+
+- Insert into Supabase "orders" first.
+- After Supabase success, fire non-blocking Neon shadow-write.
+- Return Supabase result shape as before.
+- If Supabase fails, return same error as before.
+- If Neon fails, only "console.warn", do not break app.
+
+Update customer checkout flow in "RestaurantWebsite.jsx":
+
+- Replace direct "supabase.from("orders").insert(...)" with "fetch("/api/orders", { method: "POST" ... })".
+- Preserve existing localStorage behavior.
+- Preserve order ID generation.
+- Preserve cart and UI behavior.
+- Preserve realtime behavior.
+
+G4 — Add GET orders API:
+Add in both "server.js" and "vite.config.js":
+
+"GET /api/orders/:restaurantId"
+
+Behavior:
+
+- Try Neon first.
+- If Neon returns one or more rows, return Neon rows.
+- If Neon returns 0 rows or errors, fallback to existing Supabase orders read.
+- Order by "created_at DESC".
+- Keep "normalizeOrder()" compatible.
+
+Update "getOrders(restaurantId)" in "src/lib/db.js" to call this API route.
+
+G5 — Add status update shadow-write:
+Existing route:
+
+"POST /api/orders/update-status"
+
+Keep Supabase status update first.
+After Supabase success, fire non-blocking Neon status update:
+
+- "status"
+- "updated_at"
+
+Do not change Supabase realtime/broadcast behavior.
+
+Also keep existing "updateOrderStatus()" fallback behavior in "db.js".
+
+G6 — Add auto-cleanup shadow-delete:
+Existing route:
+
+"POST /api/orders/auto-cleanup"
+
+After Supabase cleanup/delete succeeds, also delete matching old orders from Neon in a non-blocking way.
+If Neon cleanup fails, warn only.
+
+Do not change cleanup settings UI.
+
+Testing:
+
+1. Create an order through the real customer checkout flow.
+2. Confirm Supabase order row exists.
+3. Confirm Neon shadow order row exists.
+4. Confirm order fields match:
+   - id
+   - restaurant_id
+   - table_number
+   - customer_name
+   - customer_phone
+   - customer_location
+   - items
+   - status
+   - total
+   - notes
+   - created_at
+5. Confirm "GET /api/orders/:restaurantId" returns Neon rows when Neon has rows.
+6. Confirm fallback returns Supabase rows when Neon has 0 rows.
+7. Confirm status update writes to Supabase and shadow-updates Neon.
+8. Confirm order realtime channels remain unchanged and still reference Supabase.
+9. Confirm active order tracking still works.
+10. Confirm admin orders dashboard still works.
+11. Confirm analytics/localStorage behavior unchanged.
+12. Confirm menu items/categories/bookings/restaurants still work.
+13. Confirm auth, realtime, storage, staff, notifications untouched.
+
+Report:
+
+- files changed
+- migration file created
+- helper functions created
+- API routes created/updated
+- frontend direct Supabase insert replaced or not
+- new order read/write/status/cleanup flow
+- test results
+- realtime confirmation
+- fallback behavior
+- any warnings
+- whether orders migration is complete
+
+Final rule:
+Only migrate orders. If any blocker appears, stop and report instead of touching unrelated modules.

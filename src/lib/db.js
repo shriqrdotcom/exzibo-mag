@@ -1034,6 +1034,15 @@ export async function getRestaurantsCreatedThisMonth() {
 }
 
 export async function getOrders(restaurantId) {
+  try {
+    const r = await fetch(`/api/orders/${encodeURIComponent(restaurantId)}`)
+    if (r.ok) {
+      const data = await r.json()
+      return (data ?? []).map(normalizeOrder)
+    }
+  } catch (apiErr) {
+    console.warn('[getOrders] API route failed, falling back to Supabase:', apiErr.message)
+  }
   const { data, error } = await supabase
     .from('orders')
     .select('*')

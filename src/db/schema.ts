@@ -176,6 +176,9 @@ export const orders = pgTable(
     customerName:     text('customer_name'),
     customerPhone:    text('customer_phone'),
     customerLocation: text('customer_location'),
+    // JSONB array of {name, qty, price} — mirrors Supabase orders.items column.
+    // Added in migration 0003 to enable full shadow-writes from the app.
+    items:            jsonb('items').default([]),
     status:           text('status').notNull().default('pending'),
     total:            numeric('total', { precision: 10, scale: 2 }).notNull().default('0'),
     notes:            text('notes'),

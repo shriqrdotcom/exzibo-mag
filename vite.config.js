@@ -9,6 +9,7 @@ import { patchNeonRestaurant, getNeonRestaurantById } from './src/db/neon-restau
 import { upsertNeonMenuCategory, deleteNeonMenuCategory, getNeonMenuCategories } from './src/db/neon-menu-categories.js'
 import { upsertNeonMenuItem, upsertNeonMenuItems, deleteNeonMenuItem, getNeonMenuItems, getNeonPublishedMenuItems } from './src/db/neon-menu-items.js'
 import { upsertNeonBooking, updateNeonBookingStatus, getNeonBookings } from './src/db/neon-bookings.js'
+import { upsertNeonOrder, updateNeonOrderStatus as updateNeonOrderStatusFn, getNeonOrders, deleteOldNeonOrders } from './src/db/neon-orders.js'
 
 function previewAuthPlugin() {
   return {
@@ -472,6 +473,12 @@ function menuApiPlugin() {
           )
           const data = await r.json()
           if (!r.ok) return json(res, r.status, { error: data })
+          // ── Neon shadow-write (non-blocking) ──────────────────────────────────
+          updateNeonOrderStatusFn(orderId, status).then(() => {
+            console.log('[orders/update-status] Neon shadow ✅ id:', orderId, 'status:', status)
+          }).catch(neonErr => {
+            console.warn('[orders/update-status] Neon shadow error (non-blocking):', neonErr.message)
+          })
           return json(res, 200, Array.isArray(data) ? (data[0] ?? {}) : data)
         } catch (e) { return json(res, 500, { error: e.message }) }
       })
@@ -505,8 +512,73 @@ function menuApiPlugin() {
           const deletedConfirmed = Array.isArray(d1) ? d1.length : 0
           const deletedRejected  = Array.isArray(d2) ? d2.length : 0
           console.log(`[auto-cleanup] Removed ${deletedConfirmed} completed + ${deletedRejected} rejected orders`)
+          // ── Neon shadow-deletes (non-blocking) ────────────────────────────────
+          deleteOldNeonOrders(confirmedCutoff, rejectedCutoff).then(({ deletedConfirmed: dc, deletedRejected: dr }) => {
+            console.log(`[auto-cleanup] Neon shadow ✅ deleted ${dc} completed + ${dr} rejected`)
+          }).catch(neonErr => {
+            console.warn('[auto-cleanup] Neon shadow error (non-blocking):', neonErr.message)
+          })
           return json(res, 200, { success: true, deletedConfirmed, deletedRejected })
         } catch (e) { return json(res, 500, { error: e.message }) }
+      })
+
+      // ── Order routes ──────────────────────────────────────────────────────────
+      // NOTE: /api/orders/update-status and /api/orders/auto-cleanup are registered
+      // above as exact-path middlewares and will be matched first by Connect.
+      // This generic /api/orders handler catches POST (create) and GET (list).
+      server.middlewares.use('/api/orders', async (req, res, next) => {
+        const pathname = (req.url || '').split('?')[0].replace(/\/$/, '')
+        const { url: supabaseUrl, headers } = getServiceHeaders()
+
+        // GET /api/orders/:restaurantId — Neon-first, Supabase fallback
+        if (req.method === 'GET') {
+          const m = pathname.match(/^\/([^/]+)$/)
+          if (!m) return next()
+          const restaurantId = m[1]
+          try {
+            try {
+              const neonRows = await getNeonOrders(restaurantId)
+              if (neonRows.length > 0) {
+                console.log('[orders GET] Neon ✅ rows:', neonRows.length, 'for', restaurantId)
+                return json(res, 200, neonRows)
+              }
+            } catch (neonErr) {
+              console.warn('[orders GET] Neon error (falling back to Supabase):', neonErr.message)
+            }
+            const r = await fetch(
+              `${supabaseUrl}/rest/v1/orders?restaurant_id=eq.${encodeURIComponent(restaurantId)}&order=created_at.desc`,
+              { headers }
+            )
+            const data = await r.json()
+            return json(res, r.ok ? 200 : r.status, data)
+          } catch (e) { return json(res, 500, { error: e.message }) }
+        }
+
+        if (req.method !== 'POST') return next()
+
+        try {
+          const body = await readBody(req)
+
+          // POST /api/orders — create order (Supabase first, Neon shadow-write)
+          if (pathname === '' || pathname === '/') {
+            const r = await fetch(`${supabaseUrl}/rest/v1/orders`, {
+              method: 'POST',
+              headers: { ...headers, 'Content-Type': 'application/json', Prefer: 'return=representation' },
+              body: JSON.stringify(body),
+            })
+            const data = await r.json()
+            if (!r.ok) return json(res, r.status, { error: data })
+            const saved = Array.isArray(data) ? data[0] : data
+            // ── Neon shadow-write (non-blocking) ────────────────────────────────
+            upsertNeonOrder(body.restaurant_id, saved).then(() => {
+              console.log('[orders POST] Neon shadow ✅ id:', saved.id)
+            }).catch(neonErr => {
+              console.warn('[orders POST] Neon shadow error (non-blocking):', neonErr.message)
+            })
+            return json(res, 201, saved)
+          }
+        } catch (e) { return json(res, 500, { error: e.message }) }
+        return next()
       })
 
       // ── Booking routes ────────────────────────────────────────────────────────

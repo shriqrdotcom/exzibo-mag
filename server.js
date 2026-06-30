@@ -30,6 +30,12 @@ import {
   updateNeonBookingStatus,
   getNeonBookings,
 } from './src/db/neon-bookings.js'
+import {
+  upsertNeonOrder,
+  updateNeonOrderStatus as updateNeonOrderStatusFn,
+  getNeonOrders,
+  deleteOldNeonOrders,
+} from './src/db/neon-orders.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const app = express()
@@ -729,9 +735,75 @@ app.post('/api/orders/update-status', async (req, res) => {
     )
     const data = await r.json()
     if (!r.ok) return res.status(r.status).json({ error: data })
+    // ── Neon shadow-write (non-blocking) ────────────────────────────────────────
+    updateNeonOrderStatusFn(orderId, status).then(() => {
+      console.log('[orders/update-status] Neon shadow ✅ id:', orderId, 'status:', status)
+    }).catch(neonErr => {
+      console.warn('[orders/update-status] Neon shadow error (non-blocking):', neonErr.message)
+    })
     return res.json(Array.isArray(data) ? (data[0] ?? {}) : data)
   } catch (err) {
     console.error('[orders/update-status] Error:', err.message)
+    return res.status(500).json({ error: err.message })
+  }
+})
+
+// ── Order routes ─────────────────────────────────────────────────────────────
+
+// POST /api/orders
+// Creates an order in Supabase first, then shadow-writes to Neon (non-blocking).
+app.post('/api/orders', async (req, res) => {
+  try {
+    const { url: supabaseUrl, headers } = getSupabaseServiceHeaders()
+    const body = req.body
+    const r = await fetch(`${supabaseUrl}/rest/v1/orders`, {
+      method: 'POST',
+      headers: { ...headers, 'Content-Type': 'application/json', Prefer: 'return=representation' },
+      body: JSON.stringify(body),
+    })
+    const data = await r.json()
+    if (!r.ok) return res.status(r.status).json({ error: data })
+    const saved = Array.isArray(data) ? data[0] : data
+    // ── Neon shadow-write (non-blocking) ────────────────────────────────────────
+    upsertNeonOrder(body.restaurant_id, saved).then(() => {
+      console.log('[orders POST] Neon shadow ✅ id:', saved.id)
+    }).catch(neonErr => {
+      console.warn('[orders POST] Neon shadow error (non-blocking):', neonErr.message)
+    })
+    return res.status(201).json(saved)
+  } catch (err) {
+    console.error('[orders POST] Error:', err.message)
+    return res.status(500).json({ error: err.message })
+  }
+})
+
+// GET /api/orders/:restaurantId
+// Neon-first, Supabase fallback. Ordered by created_at DESC.
+app.get('/api/orders/:restaurantId', async (req, res) => {
+  try {
+    const { restaurantId } = req.params
+    if (!restaurantId) return res.status(400).json({ error: 'restaurantId required' })
+    // ── Try Neon first ────────────────────────────────────────────────────────
+    try {
+      const neonRows = await getNeonOrders(restaurantId)
+      if (neonRows.length > 0) {
+        console.log('[orders GET] Neon ✅ rows:', neonRows.length, 'for', restaurantId)
+        return res.json(neonRows)
+      }
+    } catch (neonErr) {
+      console.warn('[orders GET] Neon error (falling back to Supabase):', neonErr.message)
+    }
+    // ── Supabase fallback ─────────────────────────────────────────────────────
+    const { url: supabaseUrl, headers } = getSupabaseServiceHeaders()
+    const r = await fetch(
+      `${supabaseUrl}/rest/v1/orders?restaurant_id=eq.${encodeURIComponent(restaurantId)}&order=created_at.desc`,
+      { headers }
+    )
+    const data = await r.json()
+    if (!r.ok) return res.status(r.status).json({ error: data })
+    return res.json(data)
+  } catch (err) {
+    console.error('[orders GET] Error:', err.message)
     return res.status(500).json({ error: err.message })
   }
 })
@@ -948,6 +1020,14 @@ app.post('/api/orders/auto-cleanup', async (req, res) => {
     const deletedRejected  = Array.isArray(d2) ? d2.length : 0
 
     console.log(`[auto-cleanup] Removed ${deletedConfirmed} completed + ${deletedRejected} rejected orders`)
+
+    // ── Neon shadow-deletes (non-blocking) ──────────────────────────────────────
+    deleteOldNeonOrders(confirmedCutoff, rejectedCutoff).then(({ deletedConfirmed: dc, deletedRejected: dr }) => {
+      console.log(`[auto-cleanup] Neon shadow ✅ deleted ${dc} completed + ${dr} rejected`)
+    }).catch(neonErr => {
+      console.warn('[auto-cleanup] Neon shadow error (non-blocking):', neonErr.message)
+    })
+
     return res.json({ success: true, deletedConfirmed, deletedRejected })
   } catch (err) {
     console.error('[auto-cleanup] Error:', err.message)

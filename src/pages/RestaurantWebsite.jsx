@@ -891,20 +891,26 @@ export default function RestaurantWebsite() {
       return next
     })
 
-    // Also persist to Supabase so admin dashboards on ALL devices see it instantly
+    // Also persist via API (Supabase-first + Neon shadow-write) so admin dashboards on ALL devices see it instantly
     const isSupabaseRestaurant = restaurantId && restaurantId !== 'demo' &&
       /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(restaurantId)
     if (isSupabaseRestaurant) {
-      supabase.from('orders').insert({
-        id:            orderId,
-        restaurant_id: restaurantId,
-        table_number:  tableNum,
-        items:         orderItems,
-        status:        'pending',
-        total:         grandTotal,
-      }).then(({ error }) => {
-        if (error) console.warn('[Order] Supabase insert skipped (localStorage backup active):', error.message)
-        else console.log('[Order] Persisted to Supabase:', orderId)
+      fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id:            orderId,
+          restaurant_id: restaurantId,
+          table_number:  tableNum,
+          items:         orderItems,
+          status:        'pending',
+          total:         grandTotal,
+        }),
+      }).then(r => r.json()).then(saved => {
+        if (saved?.error) console.warn('[Order] API insert skipped (localStorage backup active):', saved.error)
+        else console.log('[Order] Persisted via API:', orderId)
+      }).catch(err => {
+        console.warn('[Order] API insert failed (localStorage backup active):', err.message)
       })
     }
 
