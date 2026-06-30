@@ -1,0 +1,102 @@
+You are my Replit AI backend migration engineer.
+
+Restaurant profile/list migration is complete.
+Menu categories migration is complete:
+
+- E1A: menu category create/update/delete shadow-writes to Neon.
+- E1B: menu category reads are Neon-first with Supabase fallback.
+- Supabase is still present and fallback remains active.
+- Auth, realtime, storage, orders, bookings, staff, and notifications are untouched.
+
+Now I want to prepare the next module carefully.
+
+Goal:
+Analyze ONLY the menu items data flow before moving it to Neon + Drizzle.
+
+Important:
+Do NOT change code yet.
+Do NOT migrate menu items yet.
+Do NOT remove Supabase.
+Do NOT remove Supabase environment variables.
+Do NOT remove Supabase client.
+Do NOT change Auth.
+Do NOT add Better Auth.
+Do NOT change Realtime.
+Do NOT add Ably.
+Do NOT change Storage.
+Do NOT add Cloudflare R2.
+Do NOT add Upstash.
+Do NOT change UI/design.
+Do NOT move orders, bookings, staff, or notifications yet.
+
+Analysis scope:
+Only inspect menu item flow.
+
+Tasks:
+
+1. Find every file using menu item data.
+
+2. Find every "supabase.from("menu_items")" usage.
+
+3. Find all functions related to:
+   
+   - get menu items
+   - create/upsert menu item
+   - update menu item
+   - delete menu item
+   - publish/unpublish item
+   - availability toggle
+   - best-selling/popular/offers/special filters if connected to menu items
+
+4. Find all API routes related to menu items:
+   
+   - GET routes
+   - POST upsert routes
+   - PATCH routes
+   - delete routes
+   - image-related routes if they touch menu item records
+
+5. Find all pages/components that display or edit menu items:
+   
+   - admin menu editor
+   - public restaurant menu page
+   - best selling food section
+   - special offers section
+   - filters/search
+   - cart/order flow if it reads item data
+
+6. List every field currently used in "menu_items".
+
+7. Compare current Supabase menu_items fields with the Neon + Drizzle "menu_items" table.
+
+8. Identify missing fields, indexes, constraints, defaults, or compatibility issues.
+
+9. Check how menu items connect to:
+   
+   - restaurants
+   - menu_categories
+   - orders/order_items
+   - public restaurant page
+   - admin dashboard/menu editor
+   - Supabase Storage image URLs
+
+10. Recommend the safest migration plan:
+
+- schema patch needed first?
+- shadow-write create/update/delete first?
+- Neon-first reads with Supabase fallback later?
+- how to handle image fields while storage is still Supabase
+- how to avoid breaking orders/cart
+
+11. Report:
+
+- files using menu items
+- functions/routes involved
+- fields used
+- schema match/mismatch
+- risks
+- exact implementation phases
+- whether E2 implementation is safe
+
+Final rule:
+Analysis only. Do not edit code. Stop after the report and wait for my approval.
