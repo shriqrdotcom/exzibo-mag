@@ -18,6 +18,11 @@ import {
   deleteNeonMenuCategory,
   getNeonMenuCategories,
 } from './src/db/neon-menu-categories.js'
+import {
+  upsertNeonMenuItem,
+  upsertNeonMenuItems,
+  deleteNeonMenuItem,
+} from './src/db/neon-menu-items.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const app = express()
@@ -483,7 +488,14 @@ app.post('/api/menu/items', async (req, res) => {
     })
 
     if (!ok) return res.status(status).json({ error: data })
-    return res.json(Array.isArray(data) ? data[0] : data)
+    const saved = Array.isArray(data) ? data[0] : data
+    // ── Neon shadow-write (non-blocking) ──────────────────────────────────────
+    upsertNeonMenuItem(restaurantId, saved).then(() => {
+      console.log('[menu/items POST] Neon shadow-write ✅ id:', saved.id)
+    }).catch(neonErr => {
+      console.warn('[menu/items POST] Neon shadow-write error (non-blocking):', neonErr.message)
+    })
+    return res.json(saved)
   } catch (err) {
     console.error('[menu/items POST] Error:', err.message)
     return res.status(500).json({ error: err.message })
@@ -505,7 +517,16 @@ app.patch('/api/menu/items/:id', async (req, res) => {
 
     const json = await r.json()
     if (!r.ok) return res.status(r.status).json({ error: json })
-    return res.json(Array.isArray(json) ? json[0] : json)
+    const saved = Array.isArray(json) ? json[0] : json
+    // ── Neon shadow-write (non-blocking) ──────────────────────────────────────
+    if (saved?.id) {
+      upsertNeonMenuItem(saved.restaurant_id, saved).then(() => {
+        console.log('[menu/items PATCH] Neon shadow-write ✅ id:', saved.id)
+      }).catch(neonErr => {
+        console.warn('[menu/items PATCH] Neon shadow-write error (non-blocking):', neonErr.message)
+      })
+    }
+    return res.json(saved)
   } catch (err) {
     console.error('[menu/items PATCH] Error:', err.message)
     return res.status(500).json({ error: err.message })
@@ -527,6 +548,12 @@ app.delete('/api/menu/items/:id', async (req, res) => {
       const err = await r.text()
       return res.status(r.status).json({ error: err })
     }
+    // ── Neon shadow-delete (non-blocking) ─────────────────────────────────────
+    deleteNeonMenuItem(id).then(() => {
+      console.log('[menu/items DELETE] Neon shadow-delete ✅ id:', id)
+    }).catch(neonErr => {
+      console.warn('[menu/items DELETE] Neon shadow-delete error (non-blocking):', neonErr.message)
+    })
     return res.json({ success: true })
   } catch (err) {
     console.error('[menu/items DELETE] Error:', err.message)
@@ -550,7 +577,16 @@ app.post('/api/menu/item-patch', async (req, res) => {
       }
     )
     if (!ok) return res.status(status).json({ error: data })
-    return res.json(Array.isArray(data) ? data[0] : data)
+    const saved = Array.isArray(data) ? data[0] : data
+    // ── Neon shadow-write (non-blocking) ──────────────────────────────────────
+    if (saved?.id) {
+      upsertNeonMenuItem(saved.restaurant_id, saved).then(() => {
+        console.log('[menu/item-patch] Neon shadow-write ✅ id:', saved.id)
+      }).catch(neonErr => {
+        console.warn('[menu/item-patch] Neon shadow-write error (non-blocking):', neonErr.message)
+      })
+    }
+    return res.json(saved)
   } catch (err) {
     console.error('[menu/item-patch] Error:', err.message)
     return res.status(500).json({ error: err.message })
@@ -569,6 +605,12 @@ app.post('/api/menu/item-delete', async (req, res) => {
       headers,
     })
     if (!r.ok) { const err = await r.text(); return res.status(r.status).json({ error: err }) }
+    // ── Neon shadow-delete (non-blocking) ─────────────────────────────────────
+    deleteNeonMenuItem(id).then(() => {
+      console.log('[menu/item-delete] Neon shadow-delete ✅ id:', id)
+    }).catch(neonErr => {
+      console.warn('[menu/item-delete] Neon shadow-delete error (non-blocking):', neonErr.message)
+    })
     return res.json({ success: true })
   } catch (err) {
     console.error('[menu/item-delete] Error:', err.message)
@@ -647,6 +689,14 @@ app.post('/api/menu/items/upsert', async (req, res) => {
     })
 
     if (!ok) return res.status(status).json({ error: data })
+    // ── Neon shadow-write (non-blocking) ──────────────────────────────────────
+    if (Array.isArray(data) && data.length > 0) {
+      upsertNeonMenuItems(restaurantId, data).then(() => {
+        console.log('[menu/items/upsert] Neon shadow-write ✅', data.length, 'items')
+      }).catch(neonErr => {
+        console.warn('[menu/items/upsert] Neon shadow-write error (non-blocking):', neonErr.message)
+      })
+    }
     return res.json(data)
   } catch (err) {
     console.error('[menu/items/upsert] Error:', err.message)

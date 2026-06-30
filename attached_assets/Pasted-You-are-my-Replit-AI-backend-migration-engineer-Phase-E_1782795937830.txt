@@ -1,0 +1,118 @@
+You are my Replit AI backend migration engineer.
+
+Phase E2A is complete:
+
+- Neon "menu_items.image" TEXT compatibility column has been added.
+- Neon "menu_items.image_key" still exists and is reserved for future Cloudflare R2.
+- No menu item reads were switched to Neon.
+- No menu item writes were switched to Neon.
+- Supabase remains authoritative.
+- Menu categories migration is complete.
+- Restaurant profile/list migration is complete.
+- Auth, realtime, storage, orders, bookings, staff, and notifications are untouched.
+
+Now proceed with Phase E2B only: menu item shadow-write.
+
+Important:
+Do NOT remove Supabase.
+Do NOT remove Supabase environment variables.
+Do NOT remove Supabase client.
+Do NOT switch menu item reads to Neon yet.
+Do NOT change Auth.
+Do NOT add Better Auth.
+Do NOT change Realtime.
+Do NOT add Ably.
+Do NOT change Storage.
+Do NOT add Cloudflare R2.
+Do NOT add Upstash.
+Do NOT change UI/design.
+Do NOT move orders, bookings, staff, or notifications.
+Do NOT change image upload/storage behavior.
+Do NOT migrate old Supabase data.
+Do NOT run backfill SQL unless I approve separately.
+
+Goal:
+Keep Supabase as the main source of truth for menu item mutations, but add non-blocking Neon shadow-write for menu item create/update/delete.
+
+Scope:
+Only menu_items mutation routes.
+
+Create a new helper file if needed:
+
+- "src/db/neon-menu-items.js"
+
+Helper functions needed:
+
+- "upsertNeonMenuItem(restaurantId, item)"
+- "upsertNeonMenuItems(restaurantId, items)"
+- "deleteNeonMenuItem(id)"
+- "getNeonMenuItems(restaurantId)" only for testing
+- "getNeonPublishedMenuItems(restaurantId)" only for future reads/testing
+
+Add non-blocking Neon shadow-writes to these mutation routes in both "server.js" and "vite.config.js" if they exist there:
+
+- "POST /api/menu/items"
+- "POST /api/menu/item-patch"
+- "PATCH /api/menu/items/:id"
+- "POST /api/menu/item-delete"
+- "DELETE /api/menu/items/:id"
+- "POST /api/menu/items/upsert"
+
+Rules:
+
+1. Supabase must remain authoritative.
+2. If Supabase write fails, return the same Supabase error as before.
+3. If Supabase succeeds but Neon fails, do not break the app.
+4. Neon failure should only be logged with "console.warn".
+5. Do not throw Neon errors to the frontend.
+6. Do not switch any reads to Neon.
+7. Do not change upload image behavior.
+
+Field mapping from Supabase row to Neon:
+
+- "id" → "id"
+- "restaurant_id" → "restaurant_id"
+- "category_id" → "category_id"
+- "name" → "name"
+- "description" → "description"
+- "price" → "price", coerce null/undefined to 0
+- "image" → "image", store current Supabase Storage URL as plain text
+- "available" → "available", coerce null/undefined to true
+- "veg" → "veg", coerce null/undefined to true
+- "tags" → "tags", preserve JSON array
+- "add_ons" → "add_ons", preserve JSON array
+- "is_published" → "is_published"
+- "image_shape" → "image_shape"
+- "created_at" → "created_at" if available
+- "image_key" → keep null for now
+
+Testing:
+
+1. Create a new menu item through the existing flow.
+2. Confirm Supabase row exists.
+3. Confirm Neon shadow row exists.
+4. Confirm "id", "restaurant_id", "category_id", "name", "price", "image", "available", "veg", "tags", "add_ons", "is_published", and "image_shape" match.
+5. Update a menu item and confirm both Supabase and Neon update.
+6. Bulk upsert/save-all menu items and confirm Neon mirrors the final rows.
+7. Delete a menu item and confirm Supabase deletes and Neon shadow delete happens.
+8. Confirm menu item reads still use Supabase.
+9. Confirm public restaurant menu still loads.
+10. Confirm admin menu editor still loads.
+11. Confirm menu categories still work.
+12. Confirm orders, bookings, staff, auth, realtime, storage, and notifications are untouched.
+
+Report:
+
+- files changed
+- helper functions created
+- routes modified
+- exact fields mapped
+- test results
+- any mismatches
+- confirmation that menu item reads still use Supabase
+- confirmation that image upload/storage was untouched
+- whether Phase E2C read switchover is safe next
+
+Final rule:
+Phase E2B only adds non-blocking Neon shadow-write for menu item mutations.
+Do not switch menu item reads to Neon yet.
