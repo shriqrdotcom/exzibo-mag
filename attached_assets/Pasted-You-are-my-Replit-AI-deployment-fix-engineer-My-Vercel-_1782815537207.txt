@@ -1,0 +1,88 @@
+You are my Replit AI deployment fix engineer.
+
+My Vercel deploy is still failing during dependency installation, before npm run build starts.
+
+I already tried in Vercel:
+Install Command: npm install --legacy-peer-deps
+Redeploy with Clear Build Cache
+
+But Vercel still fails with:
+Command "npm install --legacy-peer-deps" exited with 1
+
+The Vercel log still shows:
+Warning: Detected "engines": { "node": ">=20.19.0" } in package.json
+
+This means the previous fix was incomplete.
+
+Hard rules:
+- Do NOT change database logic.
+- Do NOT change Neon logic.
+- Do NOT remove Supabase.
+- Do NOT remove Supabase env variables.
+- Do NOT remove Supabase client.
+- Do NOT change Auth.
+- Do NOT add Better Auth.
+- Do NOT change Realtime.
+- Do NOT change Storage.
+- Do NOT refactor unrelated files.
+- Do NOT use npm audit fix --force.
+- Do NOT upgrade major package versions unless absolutely required.
+
+Task:
+Find and fix the exact reason npm install fails on Vercel.
+
+Required actions:
+1. Open package.json.
+2. Change engines from:
+   "node": ">=20.19.0"
+   to:
+   "node": "20.x"
+
+3. Check package manager consistency:
+   - Use npm only.
+   - If yarn.lock, pnpm-lock.yaml, bun.lockb, or bun.lock exists, do not use them.
+   - Keep only package-lock.json for npm.
+
+4. Check package-lock.json:
+   - Confirm it matches package.json.
+   - If it is corrupted or out of sync, regenerate it safely.
+
+5. Add a root .npmrc file with:
+   legacy-peer-deps=true
+   audit=false
+   fund=false
+
+6. Clean install locally in Replit:
+   rm -rf node_modules
+   npm cache verify
+   npm install --legacy-peer-deps --no-audit --no-fund
+
+7. If install fails, run:
+   npm install --legacy-peer-deps --no-audit --no-fund --verbose
+
+8. Read the verbose error and fix the real package/dependency problem.
+   Do not guess.
+
+9. After npm install passes, run:
+   npm run build
+
+10. Commit only required files:
+   - package.json
+   - package-lock.json
+   - .npmrc
+   - only other dependency config files if truly required
+
+11. Final report must include:
+   - Exact root cause
+   - Exact command that was failing
+   - Exact command that now passes
+   - Whether npm install passed
+   - Whether npm run build passed
+   - Which files changed and why
+
+Important:
+Do not say fixed unless both commands pass:
+npm install --legacy-peer-deps --no-audit --no-fund
+npm run build
+
+Only fix the Vercel dependency installation/build setup.
