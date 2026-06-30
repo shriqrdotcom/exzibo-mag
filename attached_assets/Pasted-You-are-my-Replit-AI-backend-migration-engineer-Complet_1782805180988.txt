@@ -1,0 +1,97 @@
+You are my Replit AI backend migration engineer.
+
+Completed migration:
+
+- Restaurants/profile/list migrated.
+- Menu categories migrated.
+- Menu items migrated.
+- Bookings migrated.
+- Orders migrated.
+- Staff/team migrated.
+- restaurant_about migrated.
+- Supabase remains active for Auth, Realtime, Storage, global_settings, user_settings, and unmigrated modules.
+- Supabase Realtime must stay unchanged.
+
+Now proceed with Phase K: global_settings restaurant-scoped entries.
+
+Important:
+Do NOT remove Supabase.
+Do NOT remove Supabase env variables.
+Do NOT remove Supabase client.
+Do NOT change Auth.
+Do NOT add Better Auth.
+Do NOT change Supabase Realtime.
+Do NOT add Ably.
+Do NOT change Storage.
+Do NOT add Cloudflare R2.
+Do NOT add Upstash.
+Do NOT change UI/design.
+Do NOT touch user_settings.
+Do NOT migrate app-level/global keys like image_compression_limits unless clearly safe and reported first.
+Do NOT run SQL/backfill unless a blocker is found and reported first.
+
+Goal:
+Migrate ONLY restaurant-scoped global_settings entries safely.
+
+Known restaurant-scoped keys:
+
+- menu_filters_<restaurantId>
+- restaurant_hours_<restaurantId>
+
+Target:
+Shadow-write these restaurant-scoped settings into Neon "restaurant_settings.global_config" for the matching restaurant.
+
+Supabase must remain authoritative because realtime subscriptions currently depend on Supabase global_settings.
+
+Process:
+
+1. Inspect all global_settings usage.
+2. Classify each key as:
+   - app-level/global
+   - restaurant-scoped
+   - unknown/unsafe
+3. If any uncertainty/blocker appears, stop and report.
+4. If safe, implement Phase K:
+   - create Neon helper for restaurant_settings if needed
+   - after Supabase global_settings write succeeds for restaurant-scoped keys, shadow-write into Neon "restaurant_settings.global_config"
+   - keep Supabase reads unchanged if realtime depends on them
+   - do not switch live reads unless clearly safe and fallback is preserved
+5. Preserve existing Supabase Realtime subscriptions exactly.
+
+Mapping idea:
+
+- key "menu_filters_<restaurantId>" → restaurant_settings.global_config.menu_filters
+- key "restaurant_hours_<restaurantId>" → restaurant_settings.global_config.restaurant_hours
+- preserve existing JSON value exactly
+- update existing global_config object without deleting other keys
+
+Tests:
+
+1. Update menu filters through existing UI/flow.
+2. Confirm Supabase global_settings row updates.
+3. Confirm Neon restaurant_settings.global_config.menu_filters shadow-updates.
+4. Update restaurant opening hours through existing UI/flow.
+5. Confirm Supabase global_settings row updates.
+6. Confirm Neon restaurant_settings.global_config.restaurant_hours shadow-updates.
+7. Confirm Supabase Realtime subscriptions remain unchanged.
+8. Confirm public restaurant page still sees filters/hours correctly.
+9. Confirm admin dashboard still works.
+10. Confirm restaurants/menu/orders/bookings/staff/about still work.
+11. Confirm Auth, Storage, Realtime, user_settings untouched.
+
+Report:
+
+- files inspected
+- global_settings keys found
+- which keys were migrated
+- which keys were left untouched
+- files changed
+- helper functions created
+- write/read flow after migration
+- realtime confirmation
+- test results
+- warnings
+- whether Phase K is complete
+
+Final rule:
+Only migrate restaurant-scoped global_settings shadow copies. Keep Supabase global_settings authoritative and realtime unchanged.

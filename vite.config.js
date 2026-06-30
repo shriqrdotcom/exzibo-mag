@@ -12,6 +12,7 @@ import { upsertNeonBooking, updateNeonBookingStatus, getNeonBookings } from './s
 import { upsertNeonOrder, updateNeonOrderStatus as updateNeonOrderStatusFn, getNeonOrders, deleteOldNeonOrders } from './src/db/neon-orders.js'
 import { upsertNeonRestaurantMember, deleteNeonRestaurantMember, getNeonRestaurantMembers } from './src/db/neon-restaurant-members.js'
 import { upsertNeonRestaurantAbout, getNeonRestaurantAbout } from './src/db/neon-restaurant-about.js'
+import { upsertNeonRestaurantSettingsKey } from './src/db/neon-restaurant-settings.js'
 
 function previewAuthPlugin() {
   return {
@@ -720,6 +721,20 @@ function menuApiPlugin() {
           }
         } catch (e) { return json(res, 500, { error: e.message }) }
         return next()
+      })
+
+      // POST /api/neon/restaurant-settings/shadow-upsert
+      // Merges a single restaurant-scoped key into Neon restaurant_settings.global_config.
+      // Body: { restaurantId, key: 'menu_filters' | 'restaurant_hours', value: <JSON> }
+      server.middlewares.use('/api/neon/restaurant-settings/shadow-upsert', async (req, res, next) => {
+        if (req.method !== 'POST') return next()
+        try {
+          const { restaurantId, key, value } = await readBody(req)
+          if (!restaurantId || !key) return json(res, 400, { error: 'restaurantId and key required' })
+          await upsertNeonRestaurantSettingsKey(restaurantId, key, value)
+          console.log(`[restaurant-settings shadow-upsert] Neon ✅ restaurantId=${restaurantId} key=${key}`)
+          return json(res, 200, { ok: true })
+        } catch (e) { return json(res, 500, { error: e.message }) }
       })
 
       // POST /api/migrate — idempotent schema migration (add missing columns)

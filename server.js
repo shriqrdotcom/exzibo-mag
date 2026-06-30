@@ -42,6 +42,7 @@ import {
   getNeonRestaurantMembers,
 } from './src/db/neon-restaurant-members.js'
 import { upsertNeonRestaurantAbout, getNeonRestaurantAbout } from './src/db/neon-restaurant-about.js'
+import { upsertNeonRestaurantSettingsKey } from './src/db/neon-restaurant-settings.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const app = express()
@@ -1393,6 +1394,23 @@ app.post('/api/about/save', async (req, res) => {
     return res.json({ success: true, data: savedData })
   } catch (err) {
     console.error('[about/save] Error:', err.message)
+    return res.status(500).json({ error: err.message })
+  }
+})
+
+// POST /api/neon/restaurant-settings/shadow-upsert
+// Merges a single restaurant-scoped key into Neon restaurant_settings.global_config.
+// Body: { restaurantId, key: 'menu_filters' | 'restaurant_hours', value: <JSON> }
+// Called non-blocking from saveMenuFilters() and saveRestaurantHours() in db.js.
+app.post('/api/neon/restaurant-settings/shadow-upsert', async (req, res) => {
+  try {
+    const { restaurantId, key, value } = req.body
+    if (!restaurantId || !key) return res.status(400).json({ error: 'restaurantId and key required' })
+    await upsertNeonRestaurantSettingsKey(restaurantId, key, value)
+    console.log(`[restaurant-settings shadow-upsert] Neon ✅ restaurantId=${restaurantId} key=${key}`)
+    return res.json({ ok: true })
+  } catch (err) {
+    console.error('[restaurant-settings shadow-upsert] Error:', err.message)
     return res.status(500).json({ error: err.message })
   }
 })

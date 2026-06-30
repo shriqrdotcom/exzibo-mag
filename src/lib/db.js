@@ -1468,6 +1468,12 @@ export async function saveMenuFilters(restaurantId, filters, filtersEnabled) {
     .from('global_settings')
     .upsert({ key, value, updated_at: new Date().toISOString() }, { onConflict: 'key' })
   if (error) throw error
+  // Non-blocking Neon shadow-write
+  fetch('/api/neon/restaurant-settings/shadow-upsert', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ restaurantId, key: 'menu_filters', value }),
+  }).catch(e => console.warn('[saveMenuFilters] Neon shadow failed (non-fatal):', e.message))
 }
 
 /**
@@ -1509,6 +1515,12 @@ export async function saveRestaurantHours(restaurantId, hours) {
     .from('global_settings')
     .upsert({ key, value: hours, updated_at: new Date().toISOString() }, { onConflict: 'key' })
   if (error) throw error
+  // Non-blocking Neon shadow-write
+  fetch('/api/neon/restaurant-settings/shadow-upsert', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ restaurantId, key: 'restaurant_hours', value: hours }),
+  }).catch(e => console.warn('[saveRestaurantHours] Neon shadow failed (non-fatal):', e.message))
 }
 
 export async function loadRestaurantHours(restaurantId) {
