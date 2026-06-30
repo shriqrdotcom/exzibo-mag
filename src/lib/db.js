@@ -1158,6 +1158,16 @@ export async function updateBookingStatus(bookingId, status) {
 // ── Team Members ─────────────────────────────────────────────
 
 export async function getTeamMembers(restaurantId) {
+  // Neon-first via API; Supabase fallback preserves auth/RLS context for reads
+  try {
+    const r = await fetch(`/api/team-members/${encodeURIComponent(restaurantId)}`)
+    if (r.ok) {
+      const data = await r.json()
+      return data ?? []
+    }
+  } catch (apiErr) {
+    console.warn('[getTeamMembers] API route failed, falling back to Supabase:', apiErr.message)
+  }
   const { data, error } = await supabase
     .from('team_members')
     .select('*')
@@ -1168,6 +1178,8 @@ export async function getTeamMembers(restaurantId) {
 }
 
 export async function createTeamMember(payload) {
+  // Auth stays in Supabase (owner_id = auth.uid(), RLS enforced).
+  // After Supabase confirms, non-blocking shadow-write mirrors to Neon.
   const { data: { user } } = await supabase.auth.getUser()
   const { data, error } = await supabase
     .from('team_members')
@@ -1175,6 +1187,12 @@ export async function createTeamMember(payload) {
     .select()
     .single()
   if (error) throw error
+  // ── Neon shadow-write (non-blocking) ───────────────────────────────────────
+  fetch('/api/team-members/shadow-upsert', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ restaurantId: data.restaurant_id, member: data }),
+  }).catch(e => console.warn('[createTeamMember] Neon shadow error (non-blocking):', e.message))
   return data
 }
 
@@ -1186,12 +1204,24 @@ export async function updateTeamMember(id, patch) {
     .select()
     .single()
   if (error) throw error
+  // ── Neon shadow-write (non-blocking) ───────────────────────────────────────
+  fetch('/api/team-members/shadow-upsert', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ restaurantId: data.restaurant_id, member: data }),
+  }).catch(e => console.warn('[updateTeamMember] Neon shadow error (non-blocking):', e.message))
   return data
 }
 
 export async function deleteTeamMember(id) {
   const { error } = await supabase.from('team_members').delete().eq('id', id)
   if (error) throw error
+  // ── Neon shadow-delete (non-blocking) ──────────────────────────────────────
+  fetch('/api/team-members/shadow-delete', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id }),
+  }).catch(e => console.warn('[deleteTeamMember] Neon shadow error (non-blocking):', e.message))
 }
 
 // ── User Settings ─────────────────────────────────────────────

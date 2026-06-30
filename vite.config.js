@@ -10,6 +10,7 @@ import { upsertNeonMenuCategory, deleteNeonMenuCategory, getNeonMenuCategories }
 import { upsertNeonMenuItem, upsertNeonMenuItems, deleteNeonMenuItem, getNeonMenuItems, getNeonPublishedMenuItems } from './src/db/neon-menu-items.js'
 import { upsertNeonBooking, updateNeonBookingStatus, getNeonBookings } from './src/db/neon-bookings.js'
 import { upsertNeonOrder, updateNeonOrderStatus as updateNeonOrderStatusFn, getNeonOrders, deleteOldNeonOrders } from './src/db/neon-orders.js'
+import { upsertNeonRestaurantMember, deleteNeonRestaurantMember, getNeonRestaurantMembers } from './src/db/neon-restaurant-members.js'
 
 function previewAuthPlugin() {
   return {
@@ -658,6 +659,63 @@ function menuApiPlugin() {
               console.warn('[bookings PATCH status] Neon shadow-write error (non-blocking):', neonErr.message)
             })
             return json(res, 200, updated)
+          }
+        } catch (e) { return json(res, 500, { error: e.message }) }
+        return next()
+      })
+
+      // ── Team Member routes ────────────────────────────────────────────────────
+      // Auth (owner_id, RLS) stays client-side Supabase for all writes.
+      // These routes only serve: GET (Neon-first read) + shadow-upsert/shadow-delete.
+      server.middlewares.use('/api/team-members', async (req, res, next) => {
+        const pathname = (req.url || '').split('?')[0].replace(/\/$/, '')
+        const { url: supabaseUrl, headers } = getServiceHeaders()
+
+        // GET /api/team-members/:restaurantId — Neon-first, Supabase fallback
+        if (req.method === 'GET') {
+          const m = pathname.match(/^\/([^/]+)$/)
+          if (!m) return next()
+          const restaurantId = m[1]
+          try {
+            try {
+              const neonRows = await getNeonRestaurantMembers(restaurantId)
+              if (neonRows.length > 0) {
+                console.log('[team-members GET] Neon ✅ rows:', neonRows.length, 'for', restaurantId)
+                return json(res, 200, neonRows)
+              }
+            } catch (neonErr) {
+              console.warn('[team-members GET] Neon error (falling back to Supabase):', neonErr.message)
+            }
+            const r = await fetch(
+              `${supabaseUrl}/rest/v1/team_members?restaurant_id=eq.${encodeURIComponent(restaurantId)}&order=created_at.asc`,
+              { headers }
+            )
+            const data = await r.json()
+            return json(res, r.ok ? 200 : r.status, data)
+          } catch (e) { return json(res, 500, { error: e.message }) }
+        }
+
+        if (req.method !== 'POST') return next()
+
+        try {
+          const body = await readBody(req)
+
+          // POST /api/team-members/shadow-upsert
+          if (pathname === '/shadow-upsert') {
+            const { restaurantId, member } = body
+            if (!restaurantId || !member?.id) return json(res, 400, { error: 'restaurantId and member.id required' })
+            await upsertNeonRestaurantMember(restaurantId, member)
+            console.log('[team-members shadow-upsert] Neon ✅ id:', member.id)
+            return json(res, 200, { ok: true })
+          }
+
+          // POST /api/team-members/shadow-delete
+          if (pathname === '/shadow-delete') {
+            const { id } = body
+            if (!id) return json(res, 400, { error: 'id required' })
+            await deleteNeonRestaurantMember(id)
+            console.log('[team-members shadow-delete] Neon ✅ id:', id)
+            return json(res, 200, { ok: true })
           }
         } catch (e) { return json(res, 500, { error: e.message }) }
         return next()

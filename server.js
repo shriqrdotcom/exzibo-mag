@@ -36,6 +36,11 @@ import {
   getNeonOrders,
   deleteOldNeonOrders,
 } from './src/db/neon-orders.js'
+import {
+  upsertNeonRestaurantMember,
+  deleteNeonRestaurantMember,
+  getNeonRestaurantMembers,
+} from './src/db/neon-restaurant-members.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const app = express()
@@ -981,6 +986,70 @@ app.patch('/api/bookings/:id/status', async (req, res) => {
     return res.json(updated)
   } catch (err) {
     console.error('[bookings PATCH status] Error:', err.message)
+    return res.status(500).json({ error: err.message })
+  }
+})
+
+// ── Team Member routes ───────────────────────────────────────────────────────
+// Auth (owner_id, RLS) stays in Supabase. These routes handle:
+//   GET    /api/team-members/:restaurantId  — Neon-first, Supabase fallback
+//   POST   /api/team-members/shadow-upsert  — Neon shadow-write only (called after Supabase confirms)
+//   POST   /api/team-members/shadow-delete  — Neon shadow-delete only
+
+// GET /api/team-members/:restaurantId
+app.get('/api/team-members/:restaurantId', async (req, res) => {
+  try {
+    const { restaurantId } = req.params
+    if (!restaurantId) return res.status(400).json({ error: 'restaurantId required' })
+    // ── Try Neon first ────────────────────────────────────────────────────────
+    try {
+      const neonRows = await getNeonRestaurantMembers(restaurantId)
+      if (neonRows.length > 0) {
+        console.log('[team-members GET] Neon ✅ rows:', neonRows.length, 'for', restaurantId)
+        return res.json(neonRows)
+      }
+    } catch (neonErr) {
+      console.warn('[team-members GET] Neon error (falling back to Supabase):', neonErr.message)
+    }
+    // ── Supabase fallback (service role — read-only, no RLS bypass risk) ──────
+    const { url: supabaseUrl, headers } = getSupabaseServiceHeaders()
+    const r = await fetch(
+      `${supabaseUrl}/rest/v1/team_members?restaurant_id=eq.${encodeURIComponent(restaurantId)}&order=created_at.asc`,
+      { headers }
+    )
+    const data = await r.json()
+    if (!r.ok) return res.status(r.status).json({ error: data })
+    return res.json(data)
+  } catch (err) {
+    console.error('[team-members GET] Error:', err.message)
+    return res.status(500).json({ error: err.message })
+  }
+})
+
+// POST /api/team-members/shadow-upsert — Neon mirror only, called client-side after Supabase confirms
+app.post('/api/team-members/shadow-upsert', async (req, res) => {
+  try {
+    const { restaurantId, member } = req.body
+    if (!restaurantId || !member?.id) return res.status(400).json({ error: 'restaurantId and member.id required' })
+    await upsertNeonRestaurantMember(restaurantId, member)
+    console.log('[team-members shadow-upsert] Neon ✅ id:', member.id)
+    return res.json({ ok: true })
+  } catch (err) {
+    console.error('[team-members shadow-upsert] Error:', err.message)
+    return res.status(500).json({ error: err.message })
+  }
+})
+
+// POST /api/team-members/shadow-delete — Neon mirror only, called client-side after Supabase confirms
+app.post('/api/team-members/shadow-delete', async (req, res) => {
+  try {
+    const { id } = req.body
+    if (!id) return res.status(400).json({ error: 'id required' })
+    await deleteNeonRestaurantMember(id)
+    console.log('[team-members shadow-delete] Neon ✅ id:', id)
+    return res.json({ ok: true })
+  } catch (err) {
+    console.error('[team-members shadow-delete] Error:', err.message)
     return res.status(500).json({ error: err.message })
   }
 })

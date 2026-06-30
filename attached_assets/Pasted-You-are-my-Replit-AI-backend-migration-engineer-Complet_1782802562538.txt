@@ -1,0 +1,104 @@
+You are my Replit AI backend migration engineer.
+
+Completed migration:
+
+- Restaurants/profile/list migrated.
+- Menu categories migrated.
+- Menu items migrated.
+- Bookings migrated.
+- Orders migrated.
+- Supabase still remains active for Auth, Realtime, Storage, Staff/roles, Notifications.
+- Do not remove Supabase yet.
+
+Now prepare the next module: Staff / Team / Roles.
+
+Important:
+Do NOT remove Supabase.
+Do NOT remove Supabase env variables.
+Do NOT remove Supabase client.
+Do NOT change Auth.
+Do NOT add Better Auth.
+Do NOT change Realtime.
+Do NOT add Ably.
+Do NOT change Storage.
+Do NOT add Cloudflare R2.
+Do NOT add Upstash.
+Do NOT change UI/design.
+Do NOT change login/session logic.
+Do NOT change restaurant owner/admin/manager/employee permissions unless clearly safe.
+Do NOT move notifications yet.
+Do NOT run SQL/backfill unless a blocker is found and reported first.
+
+Goal:
+Analyze staff/team/role data flow and, only if safe, prepare the Neon migration using the same pattern:
+
+- Supabase-first writes with non-blocking Neon shadow-write.
+- Neon-first reads with Supabase fallback.
+- Auth remains Supabase for now.
+
+Process:
+
+1. Inspect all staff/team/role code.
+2. Find every table used for staff/team/roles.
+3. Find every "supabase.from(...)" call related to:
+   - team members
+   - staff
+   - restaurant_members
+   - roles
+   - owner/admin/manager/employee access
+   - permissions
+4. Find all functions/routes/pages connected to:
+   - invite/add staff
+   - edit staff
+   - remove staff
+   - role assignment
+   - role-based dashboard access
+   - getTeamMembers()
+   - get_my_restaurant_ids RPC or similar permission logic
+5. Compare current Supabase staff/team schema with Neon "restaurant_members" schema.
+6. Identify schema gaps, missing fields, permissions risk, auth dependency, or RPC dependency.
+
+Conditional rule:
+
+- If staff/team migration is risky because of Auth/RPC/permission logic, STOP and report the blocker.
+- If schema and flow are safe, proceed only with a small Phase H1:
+  - create Neon helper for restaurant_members
+  - add non-blocking shadow-write for safe staff/team mutations
+  - add Neon-first read with Supabase fallback for team list only
+  - do not change login/auth/permission enforcement
+
+Allowed if safe:
+
+- Create "src/db/neon-restaurant-members.js"
+- Add helper functions:
+  - upsertNeonRestaurantMember(restaurantId, member)
+  - deleteNeonRestaurantMember(id)
+  - getNeonRestaurantMembers(restaurantId)
+- Add/patch API routes only for team list/create/update/delete if they already exist or are clearly safe.
+- Keep Supabase as authoritative.
+- Keep permission discovery/RPC in Supabase if currently used.
+
+Tests if implemented:
+
+1. Add/update/remove a test team member through existing flow.
+2. Confirm Supabase row changes.
+3. Confirm Neon shadow row changes.
+4. Confirm team list reads Neon-first when Neon rows exist.
+5. Confirm Supabase fallback works.
+6. Confirm dashboards and role access still work.
+7. Confirm Auth, Realtime, Storage, Orders, Bookings, Menu, Notifications untouched.
+
+Report:
+
+- files inspected
+- tables used
+- functions/routes/pages involved
+- schema match/mismatch
+- permission/auth/RPC risks
+- whether implementation was done or stopped
+- files changed if any
+- test results if implemented
+- exact next phase recommendation
+
+Final rule:
+Only work on Staff/Team/Roles. If permission/auth risk is high, stop after analysis and do not edit code.
