@@ -1,0 +1,109 @@
+You are my Replit AI backend migration engineer.
+
+Completed migration:
+- Restaurants/profile/list: Neon-first reads + Supabase fallback, Supabase-first writes + Neon shadow-write.
+- Menu categories: migrated with same pattern.
+- Menu items: migrated with same pattern.
+- FoodDetail direct menu_items Supabase query removed.
+- Bookings: POST/GET/PATCH migrated with Neon shadow-write and Neon-first reads.
+- Supabase remains active for Auth, Realtime, Storage, Orders, Staff, Notifications.
+- Supabase Realtime is intentionally untouched.
+
+Now prepare Phase G: Orders migration.
+
+Goal:
+Analyze ONLY the orders data flow before moving orders to Neon + Drizzle.
+
+Important:
+Do NOT change code yet.
+Do NOT migrate orders yet.
+Do NOT remove Supabase.
+Do NOT remove Supabase env variables.
+Do NOT change Auth.
+Do NOT change Realtime.
+Do NOT add Ably.
+Do NOT change Storage.
+Do NOT add Cloudflare R2.
+Do NOT add Upstash.
+Do NOT change UI/design.
+Do NOT move staff, notifications, auth, analytics, or payment logic.
+Do NOT run SQL unless a blocker is found and reported first.
+
+Analysis scope:
+Only inspect orders and order_items flow.
+
+Tasks:
+
+1. Find every file using order data.
+2. Find every `supabase.from("orders")` usage.
+3. Find every `supabase.from("order_items")` usage if it exists.
+4. Find all functions related to:
+   - create order
+   - get orders
+   - get active orders
+   - get order by id
+   - update order status
+   - confirm order
+   - cancel order
+   - delete order if exists
+   - live order tracking
+   - cart checkout
+   - income/analytics if order-based
+
+5. Find all API routes related to orders:
+   - GET routes
+   - POST routes
+   - PATCH/update routes
+   - delete routes
+   - realtime/status routes if any
+
+6. Find all pages/components using orders:
+   - customer cart/checkout
+   - active order tracking page
+   - admin order dashboard
+   - kitchen/staff/manager order view
+   - analytics/income dashboard
+   - notifications connected to new orders/status changes
+
+7. List every field currently used in Supabase `orders`.
+8. List every field currently used in Supabase `order_items` if present.
+9. Compare current Supabase order schema with Neon + Drizzle:
+   - orders table
+   - order_items table
+
+10. Identify schema gaps:
+   - missing columns
+   - JSON fields vs normalized order_items
+   - status values
+   - table number fields
+   - customer fields
+   - total/subtotal/tax fields
+   - created_at/updated_at fields
+   - indexes/foreign keys
+   - constraints/defaults
+
+11. Check realtime impact:
+   - which Supabase realtime channels watch orders
+   - whether realtime must remain Supabase for now
+   - whether Neon shadow-write can be added without breaking realtime
+
+12. Recommend the safest migration plan:
+   - schema patch needed first?
+   - should order create/status update use Supabase-first + Neon shadow-write?
+   - should order reads become Neon-first with Supabase fallback later?
+   - how to handle order_items safely?
+   - how to avoid breaking live order tracking?
+   - how to avoid breaking analytics/income?
+
+13. Report:
+   - files using orders
+   - functions/routes involved
+   - fields used
+   - schema match/mismatch
+   - realtime risks
+   - analytics risks
+   - exact migration phases for orders
+   - whether Phase G implementation is safe to start
+
+Final rule:
+Analysis only. Do not edit code. Stop after the report and wait for my approval.
