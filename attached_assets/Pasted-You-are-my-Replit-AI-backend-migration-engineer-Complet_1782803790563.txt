@@ -1,0 +1,99 @@
+You are my Replit AI backend migration engineer.
+
+Completed migration:
+
+- Restaurants/profile/list migrated.
+- Menu categories migrated.
+- Menu items migrated.
+- Bookings migrated.
+- Orders migrated.
+- Staff/team list migrated with Supabase-first writes, Neon shadow-write, and Neon-first reads with Supabase fallback.
+- Supabase Auth/RPC/RLS remains untouched and must stay untouched.
+
+Now prepare the next module: User Settings / Restaurant Settings.
+
+Important:
+Do NOT remove Supabase.
+Do NOT remove Supabase env variables.
+Do NOT remove Supabase client.
+Do NOT change Auth.
+Do NOT add Better Auth.
+Do NOT change Supabase RPCs.
+Do NOT change RLS policies.
+Do NOT change Realtime.
+Do NOT add Ably.
+Do NOT change Storage.
+Do NOT add Cloudflare R2.
+Do NOT add Upstash.
+Do NOT change UI/design.
+Do NOT move notifications yet.
+Do NOT change staff/team/auth permissions.
+Do NOT run SQL/backfill unless a blocker is found and reported first.
+
+Goal:
+Analyze user/settings data flow and, only if safe, migrate it using:
+
+- Supabase-first writes with non-blocking Neon shadow-write.
+- Neon-first reads with Supabase fallback.
+- Supabase Auth remains primary.
+
+Critical caution:
+Do NOT assume Supabase "user_settings" and Neon "restaurant_settings" are the same table.
+First verify whether current settings are:
+
+1. user-level settings keyed by "user_id = auth.uid()", or
+2. restaurant-level settings keyed by "restaurant_id", or
+3. both.
+
+Process:
+
+1. Inspect all settings-related code.
+2. Find every table used:
+   - user_settings
+   - restaurant_settings
+   - settings fields inside restaurants
+   - any localStorage settings
+3. Find every "supabase.from(...)" call related to settings.
+4. Find functions/routes/pages related to:
+   - user settings
+   - restaurant settings
+   - profile/settings page
+   - theme/settings
+   - opening hours
+   - social links
+   - contact/footer settings
+   - plan limits/settings
+   - owner/admin preferences
+5. Compare Supabase schema with Neon schema.
+6. Identify whether Neon already has the correct matching table.
+7. If Neon schema is missing or concept mismatch exists, STOP and report the exact blocker.
+8. If schema is safe, implement a small Phase I:
+   - create Neon helper for the correct settings table
+   - add non-blocking shadow-write after Supabase settings write succeeds
+   - add Neon-first read with Supabase fallback
+   - keep Supabase Auth/RLS as primary
+9. Do not change login/session logic.
+
+Tests if implemented:
+
+1. Read settings with Neon row present → Neon-first works.
+2. Read settings with no Neon row → Supabase fallback works.
+3. Update settings → Supabase updates first, Neon shadow updates after.
+4. UI settings page still works.
+5. Restaurant/profile/menu/orders/bookings/staff still work.
+6. Auth/RPC/RLS/realtime/storage untouched.
+
+Report:
+
+- files inspected
+- tables found
+- exact settings type: user-level or restaurant-level
+- schema match/mismatch
+- whether implementation was done or stopped
+- files changed if any
+- test results if implemented
+- warnings
+- next recommended phase
+
+Final rule:
+Only work on settings. If Supabase "user_settings" does not safely match Neon "restaurant_settings", stop and report instead of forcing the migration.
