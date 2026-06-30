@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { useMenuSubdomainRedirect } from '../lib/routeConfig'
 import { getRestaurantBySlug } from '../lib/db'
-import { supabase } from '../lib/supabase'
+
 import { toSlug, findBySlug } from '../lib/slug'
 import { getSubdomain } from '../lib/subdomain'
 import { ArrowLeft, Share2, Heart, Search, Star, ChevronRight, ChevronDown, Flame } from 'lucide-react'
@@ -104,15 +104,13 @@ export default function FoodDetail() {
         if (!cancelled && rest) {
           setRestaurant(rest)
 
-          // Fetch all items for this restaurant — used for both lookup and suggestions.
+          // Fetch all items for this restaurant via API (Neon-first, Supabase fallback).
           // Slug match (new URLs) and exact name match (legacy URL-encoded) are both handled.
-          const { data: allItems, error } = await supabase
-            .from('menu_items')
-            .select('*')
-            .eq('restaurant_id', rest.id)
+          const itemsRes = await fetch(`/api/menu/items/${rest.id}`)
+          const allItems = itemsRes.ok ? await itemsRes.json() : null
 
           // decoded can be a slug like 'chicken-malai-tikka' OR a raw name like 'Chicken Malai Tikka'
-          const dbItem = !error && allItems ? findBySlug(allItems, decoded) : null
+          const dbItem = Array.isArray(allItems) ? findBySlug(allItems, decoded) : null
 
           if (dbItem && !cancelled) {
             setItem(injectOldPrice({

@@ -1,0 +1,86 @@
+You are my Replit AI backend migration engineer.
+
+Phase E2C is complete:
+
+- Menu item API reads are Neon-first with Supabase fallback.
+- Menu item create/update/delete shadow-write to Neon is working.
+- "image" returns the current Supabase Storage URL string.
+- "image_key" stays null for future Cloudflare R2.
+- Menu categories migration is complete.
+- Restaurant profile/list migration is complete.
+- Auth, realtime, storage, orders, bookings, staff, and notifications are untouched.
+
+Now proceed with Phase E2D only: FoodDetail menu item read cleanup.
+
+Important:
+Do NOT remove Supabase.
+Do NOT remove Supabase environment variables.
+Do NOT remove Supabase client globally.
+Do NOT change Auth.
+Do NOT add Better Auth.
+Do NOT change Realtime.
+Do NOT add Ably.
+Do NOT change Storage.
+Do NOT add Cloudflare R2.
+Do NOT add Upstash.
+Do NOT change UI/design.
+Do NOT move orders, bookings, staff, or notifications.
+Do NOT change menu item create/update/delete shadow-write.
+Do NOT change image upload/storage behavior.
+Do NOT run backfill SQL.
+Do NOT change cart/order behavior.
+
+Goal:
+Remove the direct client-side "supabase.from("menu_items")" query from "FoodDetail.jsx" and make it use the existing API route that is already Neon-first with Supabase fallback.
+
+Scope:
+Only "FoodDetail.jsx" and only the menu item fetch logic inside it.
+
+Tasks:
+
+1. Inspect "FoodDetail.jsx".
+2. Find the direct "supabase.from("menu_items")" query.
+3. Replace that direct Supabase query with the existing menu item API route:
+   - Prefer "GET /api/menu/items/:restaurantId"
+   - This route is already Neon-first with Supabase fallback after E2C.
+4. Preserve the existing FoodDetail behavior:
+   - Find the selected item by URL/slug/name/id exactly as before.
+   - Keep suggestions logic the same.
+   - Keep localStorage fallback if it exists.
+   - Keep image display behavior unchanged.
+   - Keep price/name/description/tags/veg/add_ons/image_shape mapping unchanged.
+5. Do not use "image_key".
+   Use "image" only, because "image" currently stores the Supabase Storage URL.
+6. Do not change public menu page logic.
+7. Do not change admin menu editor logic.
+8. Do not change orders/cart logic.
+9. Do not add direct Neon calls inside the frontend.
+   The frontend should call the API route only.
+
+Testing:
+
+1. Open a FoodDetail page for a real menu item.
+2. Confirm the item loads correctly.
+3. Confirm item image still displays.
+4. Confirm price, description, veg/tags/add-ons still display correctly.
+5. Confirm suggestions still work.
+6. Confirm API route returns Neon-first when Neon rows exist.
+7. Confirm API route falls back to Supabase when Neon rows are missing.
+8. Confirm public restaurant menu still loads.
+9. Confirm admin menu editor still loads.
+10. Confirm menu item shadow-write still works.
+11. Confirm auth, realtime, storage, orders, bookings, staff, and notifications are untouched.
+
+Report:
+
+- files changed
+- exact direct Supabase query removed
+- replacement API route used
+- FoodDetail behavior preserved
+- test results
+- any warnings
+- confirmation that menu item migration is now fully complete except future Cloudflare R2 image migration
+
+Final rule:
+Phase E2D only removes FoodDetail’s direct "supabase.from("menu_items")" read and replaces it with the existing Neon-first API route.
+Do not migrate any other feature.
