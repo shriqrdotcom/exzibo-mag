@@ -1,0 +1,89 @@
+You are my Replit AI backend migration engineer.
+
+Completed migration:
+
+- Restaurants/profile/list migrated.
+- Menu categories migrated.
+- Menu items migrated.
+- Bookings migrated.
+- Orders migrated.
+- Staff/team list migrated.
+- Settings migration was analyzed and stopped correctly because user_settings, global_settings, and restaurant_settings are different systems.
+- Supabase remains active for Auth, Realtime, Storage, global_settings, Notifications, and unmigrated modules.
+
+Now proceed with Phase J: restaurant_about migration.
+
+Important:
+Do NOT remove Supabase.
+Do NOT remove Supabase env variables.
+Do NOT remove Supabase client.
+Do NOT change Auth.
+Do NOT add Better Auth.
+Do NOT change Realtime.
+Do NOT add Ably.
+Do NOT change Storage.
+Do NOT add Cloudflare R2.
+Do NOT change global_settings.
+Do NOT change user_settings.
+Do NOT change UI/design.
+Do NOT move notifications yet.
+Do NOT run SQL/backfill unless a blocker is found and reported first.
+
+Goal:
+Migrate ONLY restaurant_about using the safe pattern:
+
+- Supabase-first writes with non-blocking Neon shadow-write.
+- Neon-first reads with Supabase fallback.
+- Keep image URLs as plain text for now because Cloudflare R2 migration is later.
+
+Process:
+
+1. Inspect all restaurant_about / about-section code.
+2. Find every Supabase table used:
+   - restaurant_about
+   - any about fields inside restaurants
+   - any localStorage fallback if present
+3. Find every "supabase.from("restaurant_about")" usage.
+4. Find all functions/routes/pages related to:
+   - about section
+   - Our Story
+   - carousel images
+   - hero/about content
+   - restaurant website about display
+   - admin about editor
+5. Compare Supabase restaurant_about schema with Neon restaurant_about schema.
+6. If schema mismatch or missing table is found, stop and report the blocker.
+7. If safe, implement Phase J:
+   - create Neon helper for restaurant_about
+   - add non-blocking Neon shadow-write after Supabase create/update succeeds
+   - add Neon-first read with Supabase fallback
+   - keep Supabase as authoritative for writes
+   - keep image fields as current Supabase Storage URL strings
+8. Do not modify image upload/storage behavior.
+
+Tests:
+
+1. Read restaurant_about with Neon row present → Neon-first works.
+2. Read restaurant_about with no Neon row → Supabase fallback works.
+3. Create/update restaurant_about through existing flow → Supabase updates first, Neon shadow updates after.
+4. Image URLs still display correctly.
+5. Public restaurant website about section still works.
+6. Admin about editor still works.
+7. Restaurant/menu/orders/bookings/staff still work.
+8. Auth/realtime/storage/global_settings/user_settings untouched.
+
+Report:
+
+- files inspected
+- tables used
+- schema match/mismatch
+- files changed
+- helper functions created
+- routes/functions changed
+- read/write flow after migration
+- test results
+- warnings
+- whether restaurant_about migration is complete
+
+Final rule:
+Only migrate restaurant_about. If a blocker appears, stop and report instead of touching unrelated modules.

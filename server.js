@@ -41,6 +41,7 @@ import {
   deleteNeonRestaurantMember,
   getNeonRestaurantMembers,
 } from './src/db/neon-restaurant-members.js'
+import { upsertNeonRestaurantAbout, getNeonRestaurantAbout } from './src/db/neon-restaurant-about.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const app = express()
@@ -1285,11 +1286,25 @@ app.get('/api/restaurant/:id', async (req, res) => {
 })
 
 // GET /api/about/:restaurantId
-// Returns the restaurant_about row for a restaurant (service role — no RLS dependency)
+// Neon-first read with Supabase service-role fallback.
 app.get('/api/about/:restaurantId', async (req, res) => {
   try {
     const { restaurantId } = req.params
     if (!restaurantId) return res.status(400).json({ error: 'restaurantId required' })
+
+    // 1. Try Neon first
+    try {
+      const neonRow = await getNeonRestaurantAbout(restaurantId)
+      if (neonRow) {
+        console.log(`[about/get] Neon hit — restaurantId=${restaurantId} images=${[neonRow.image_1_url, neonRow.image_2_url, neonRow.image_3_url, neonRow.image_4_url].filter(Boolean).length}/4`)
+        return res.json(neonRow)
+      }
+      console.log(`[about/get] Neon miss (no row) — falling back to Supabase`)
+    } catch (neonErr) {
+      console.warn('[about/get] Neon error — falling back to Supabase:', neonErr.message)
+    }
+
+    // 2. Fallback: Supabase service role
     const { url: supabaseUrl, headers } = getSupabaseServiceHeaders()
     const r = await fetch(
       `${supabaseUrl}/rest/v1/restaurant_about?restaurant_id=eq.${encodeURIComponent(restaurantId)}&select=story_text,image_1_url,image_2_url,image_3_url,image_4_url&order=updated_at.desc&limit=1`,
@@ -1301,7 +1316,7 @@ app.get('/api/about/:restaurantId', async (req, res) => {
       return res.status(r.status).json({ error: data })
     }
     const row = Array.isArray(data) ? (data[0] ?? null) : data
-    console.log(`[about/get] restaurantId=${restaurantId} → images: ${row ? [row.image_1_url, row.image_2_url, row.image_3_url, row.image_4_url].filter(Boolean).length : 0}/4`)
+    console.log(`[about/get] Supabase fallback — restaurantId=${restaurantId} images: ${row ? [row.image_1_url, row.image_2_url, row.image_3_url, row.image_4_url].filter(Boolean).length : 0}/4`)
     return res.json(row)
   } catch (err) {
     console.error('[about/get] Error:', err.message)
@@ -1311,8 +1326,7 @@ app.get('/api/about/:restaurantId', async (req, res) => {
 
 // POST /api/about/save
 // Body: { restaurantId, story_text, image_1_url, image_2_url, image_3_url, image_4_url }
-// Uses PATCH-first (update existing row), then INSERT if no row exists.
-// This avoids relying on a UNIQUE constraint being present in the DB schema.
+// Supabase-first (PATCH then INSERT), then non-blocking Neon shadow-write.
 app.post('/api/about/save', async (req, res) => {
   try {
     const { restaurantId, story_text, image_1_url, image_2_url, image_3_url, image_4_url } = req.body
@@ -1331,7 +1345,7 @@ app.post('/api/about/save', async (req, res) => {
     const imageCount = [image_1_url, image_2_url, image_3_url, image_4_url].filter(Boolean).length
     console.log(`[about/save] restaurantId=${restaurantId} images=${imageCount}/4`)
 
-    // 1. Try to UPDATE existing row
+    // 1. Try to UPDATE existing Supabase row
     const patchRes = await fetch(
       `${supabaseUrl}/rest/v1/restaurant_about?restaurant_id=eq.${encodeURIComponent(restaurantId)}`,
       {
@@ -1345,6 +1359,8 @@ app.post('/api/about/save', async (req, res) => {
       console.error('[about/save] PATCH error:', JSON.stringify(patchData))
       return res.status(patchRes.status).json({ error: patchData })
     }
+
+    let savedData
 
     // 2. If PATCH returned empty array = no existing row → INSERT
     if (Array.isArray(patchData) && patchData.length === 0) {
@@ -1363,11 +1379,18 @@ app.post('/api/about/save', async (req, res) => {
         return res.status(insertRes.status).json({ error: insertData })
       }
       console.log('[about/save] Inserted successfully')
-      return res.json({ success: true, data: Array.isArray(insertData) ? insertData[0] : insertData })
+      savedData = Array.isArray(insertData) ? insertData[0] : insertData
+    } else {
+      console.log('[about/save] Updated successfully')
+      savedData = Array.isArray(patchData) ? patchData[0] : patchData
     }
 
-    console.log('[about/save] Updated successfully')
-    return res.json({ success: true, data: Array.isArray(patchData) ? patchData[0] : patchData })
+    // 3. Non-blocking Neon shadow-write (never throws to client)
+    upsertNeonRestaurantAbout(restaurantId, { story_text, image_1_url, image_2_url, image_3_url, image_4_url })
+      .then(() => console.log(`[about/save] Neon shadow-write OK — restaurantId=${restaurantId}`))
+      .catch(err => console.warn('[about/save] Neon shadow-write failed (non-fatal):', err.message))
+
+    return res.json({ success: true, data: savedData })
   } catch (err) {
     console.error('[about/save] Error:', err.message)
     return res.status(500).json({ error: err.message })

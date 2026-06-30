@@ -11,6 +11,7 @@ import { upsertNeonMenuItem, upsertNeonMenuItems, deleteNeonMenuItem, getNeonMen
 import { upsertNeonBooking, updateNeonBookingStatus, getNeonBookings } from './src/db/neon-bookings.js'
 import { upsertNeonOrder, updateNeonOrderStatus as updateNeonOrderStatusFn, getNeonOrders, deleteOldNeonOrders } from './src/db/neon-orders.js'
 import { upsertNeonRestaurantMember, deleteNeonRestaurantMember, getNeonRestaurantMembers } from './src/db/neon-restaurant-members.js'
+import { upsertNeonRestaurantAbout, getNeonRestaurantAbout } from './src/db/neon-restaurant-about.js'
 
 function previewAuthPlugin() {
   return {
@@ -878,12 +879,25 @@ function aboutApiPlugin() {
         } catch (e) { return json(res, 500, { error: e.message }) }
       })
 
-      // GET /api/about/:restaurantId
+      // GET /api/about/:restaurantId  — Neon-first, Supabase service-role fallback
       server.middlewares.use('/api/about', async (req, res, next) => {
         if (req.method !== 'GET') return next()
         const restaurantId = (req.url || '/').split('?')[0].replace(/^\//, '')
         if (!restaurantId) return next()
         try {
+          // 1. Try Neon first
+          try {
+            const neonRow = await getNeonRestaurantAbout(restaurantId)
+            if (neonRow) {
+              console.log(`[about/get] Neon hit — restaurantId=${restaurantId} images=${[neonRow.image_1_url, neonRow.image_2_url, neonRow.image_3_url, neonRow.image_4_url].filter(Boolean).length}/4`)
+              return json(res, 200, neonRow)
+            }
+            console.log(`[about/get] Neon miss (no row) — falling back to Supabase`)
+          } catch (neonErr) {
+            console.warn('[about/get] Neon error — falling back to Supabase:', neonErr.message)
+          }
+
+          // 2. Fallback: Supabase service role
           const { url: supabaseUrl, headers } = getServiceHeaders()
           const r = await fetch(
             `${supabaseUrl}/rest/v1/restaurant_about?restaurant_id=eq.${encodeURIComponent(restaurantId)}&select=story_text,image_1_url,image_2_url,image_3_url,image_4_url&order=updated_at.desc&limit=1`,
@@ -892,12 +906,12 @@ function aboutApiPlugin() {
           const data = await r.json()
           if (!r.ok) { console.error('[about/get] Supabase error:', JSON.stringify(data)); return json(res, r.status, { error: data }) }
           const row = Array.isArray(data) ? (data[0] ?? null) : data
-          console.log(`[about/get] restaurantId=${restaurantId} → images: ${row ? [row.image_1_url, row.image_2_url, row.image_3_url, row.image_4_url].filter(Boolean).length : 0}/4`)
+          console.log(`[about/get] Supabase fallback — restaurantId=${restaurantId} images: ${row ? [row.image_1_url, row.image_2_url, row.image_3_url, row.image_4_url].filter(Boolean).length : 0}/4`)
           return json(res, 200, row)
         } catch (e) { return json(res, 500, { error: e.message }) }
       })
 
-      // POST /api/about/save
+      // POST /api/about/save — Supabase-first, then non-blocking Neon shadow-write
       server.middlewares.use('/api/about/save', async (req, res, next) => {
         if (req.method !== 'POST') return next()
         try {
@@ -917,7 +931,7 @@ function aboutApiPlugin() {
           const imageCount = [image_1_url, image_2_url, image_3_url, image_4_url].filter(Boolean).length
           console.log(`[about/save] restaurantId=${restaurantId} images=${imageCount}/4`)
 
-          // 1. Try to UPDATE existing row
+          // 1. Try to UPDATE existing Supabase row
           const patchRes = await fetch(
             `${supabaseUrl}/rest/v1/restaurant_about?restaurant_id=eq.${encodeURIComponent(restaurantId)}`,
             {
@@ -928,6 +942,8 @@ function aboutApiPlugin() {
           )
           const patchData = await patchRes.json()
           if (!patchRes.ok) { console.error('[about/save] PATCH error:', JSON.stringify(patchData)); return json(res, patchRes.status, { error: patchData }) }
+
+          let savedData
 
           // 2. If PATCH returned empty array = no existing row → INSERT
           if (Array.isArray(patchData) && patchData.length === 0) {
@@ -943,11 +959,18 @@ function aboutApiPlugin() {
             const insertData = await insertRes.json()
             if (!insertRes.ok) { console.error('[about/save] INSERT error:', JSON.stringify(insertData)); return json(res, insertRes.status, { error: insertData }) }
             console.log('[about/save] Inserted successfully')
-            return json(res, 200, { success: true, data: Array.isArray(insertData) ? insertData[0] : insertData })
+            savedData = Array.isArray(insertData) ? insertData[0] : insertData
+          } else {
+            console.log('[about/save] Updated successfully')
+            savedData = Array.isArray(patchData) ? patchData[0] : patchData
           }
 
-          console.log('[about/save] Updated successfully')
-          return json(res, 200, { success: true, data: Array.isArray(patchData) ? patchData[0] : patchData })
+          // 3. Non-blocking Neon shadow-write (never throws to client)
+          upsertNeonRestaurantAbout(restaurantId, { story_text, image_1_url, image_2_url, image_3_url, image_4_url })
+            .then(() => console.log(`[about/save] Neon shadow-write OK — restaurantId=${restaurantId}`))
+            .catch(e => console.warn('[about/save] Neon shadow-write failed (non-fatal):', e.message))
+
+          return json(res, 200, { success: true, data: savedData })
         } catch (e) { return json(res, 500, { error: e.message }) }
       })
 
