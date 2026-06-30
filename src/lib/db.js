@@ -1096,12 +1096,12 @@ export async function updateOrderStatus(orderId, status) {
 // ── Bookings ─────────────────────────────────────────────────
 
 export async function getBookings(restaurantId) {
-  const { data, error } = await supabase
-    .from('bookings')
-    .select('*')
-    .eq('restaurant_id', restaurantId)
-    .order('created_at', { ascending: false })
-  if (error) throw error
+  const r = await fetch(`/api/bookings/${encodeURIComponent(restaurantId)}`)
+  if (!r.ok) {
+    const err = await r.json().catch(() => ({}))
+    throw new Error(err?.error || `getBookings HTTP ${r.status}`)
+  }
+  const data = await r.json()
   return (data ?? []).map(normalizeBooking)
 }
 
@@ -1120,24 +1120,30 @@ export async function createBooking(restaurantId, booking) {
     notes:           booking.notes    || null,
     status:          booking.status   || 'pending',
   }
-  const { data, error } = await supabase
-    .from('bookings')
-    .insert(payload)
-    .select()
-    .single()
-  if (error) throw error
+  const r = await fetch('/api/bookings', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  if (!r.ok) {
+    const err = await r.json().catch(() => ({}))
+    throw new Error(err?.error || `createBooking HTTP ${r.status}`)
+  }
+  const data = await r.json()
   return normalizeBooking(data)
 }
 
 export async function updateBookingStatus(bookingId, status) {
-  const { data, error } = await supabase
-    .from('bookings')
-    .update({ status })
-    .eq('id', bookingId)
-    .select()
-    .single()
-  if (error) throw error
-  return data
+  const r = await fetch(`/api/bookings/${encodeURIComponent(bookingId)}/status`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status }),
+  })
+  if (!r.ok) {
+    const err = await r.json().catch(() => ({}))
+    throw new Error(err?.error || `updateBookingStatus HTTP ${r.status}`)
+  }
+  return r.json()
 }
 
 // ── Team Members ─────────────────────────────────────────────

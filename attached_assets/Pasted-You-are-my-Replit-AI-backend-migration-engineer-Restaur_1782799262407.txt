@@ -1,0 +1,154 @@
+You are my Replit AI backend migration engineer.
+
+Restaurant profile/list, menu categories, and menu items migrations are complete.
+Now migrate ONLY bookings to Neon + Drizzle safely.
+
+Important:
+Do NOT remove Supabase.
+Do NOT remove Supabase env variables.
+Do NOT remove Supabase client.
+Do NOT change Auth.
+Do NOT change Realtime.
+Do NOT change Storage.
+Do NOT add Better Auth.
+Do NOT add Ably.
+Do NOT add Cloudflare R2.
+Do NOT add Upstash.
+Do NOT change UI/design.
+Do NOT move orders, staff, notifications, or analytics.
+Do NOT run SQL/backfill unless a blocker is found and reported first.
+
+Booking analysis summary:
+
+- Neon bookings schema already matches Supabase booking fields.
+- Neon has extra "updated_at", safe.
+- No schema patch is needed.
+- Current bookings use direct Supabase calls.
+- No booking API routes exist yet.
+- Supabase realtime on "public.bookings" must stay unchanged.
+- Supabase must remain authoritative for writes.
+
+Goal:
+Migrate bookings using the same safe pattern:
+
+- Supabase-first writes with non-blocking Neon shadow-write.
+- Neon-first reads with Supabase fallback.
+- Realtime remains Supabase.
+
+Scope:
+Only bookings.
+
+Process:
+
+1. Re-check booking schema quickly.
+2. If schema is safe, continue.
+3. If a schema blocker is found, stop and report.
+
+Create new helper:
+
+- "src/db/neon-bookings.js"
+
+Helper functions:
+
+- "upsertNeonBooking(restaurantId, booking)"
+- "updateNeonBookingStatus(id, status)"
+- "getNeonBookings(restaurantId)"
+
+Create booking API routes in both "server.js" and "vite.config.js":
+
+1. "POST /api/bookings"
+   
+   - Creates booking in Supabase first.
+   - After Supabase success, fire non-blocking Neon shadow-write.
+   - Return Supabase result shape as before.
+   - If Supabase fails, return error as before.
+   - If Neon fails, only "console.warn", do not break the app.
+
+2. "GET /api/bookings/:restaurantId"
+   
+   - Try Neon first.
+   - If Neon returns one or more rows, return Neon rows.
+   - If Neon returns 0 rows or errors, fallback to existing Supabase booking read.
+   - Order by "created_at" descending.
+   - Return same shape expected by frontend.
+
+3. "PATCH /api/bookings/:id/status"
+   
+   - Updates booking status in Supabase first.
+   - After Supabase success, fire non-blocking Neon status update.
+   - Return Supabase result as before.
+   - If Neon fails, only warn.
+
+Update existing booking functions:
+
+- "getBookings(restaurantId)" should call "GET /api/bookings/:restaurantId".
+- "createBooking(restaurantId, booking)" should call "POST /api/bookings".
+- "updateBookingStatus(bookingId, status)" should call "PATCH /api/bookings/:id/status".
+
+Update customer booking submit flow:
+
+- Replace direct "supabase.from("bookings").insert(...)" in "RestaurantWebsite.jsx" with "fetch("/api/bookings", { method: "POST" ... })".
+- Preserve client-generated booking ID format if currently used.
+- Preserve all booking UI behavior.
+
+Field mapping:
+
+- "id"
+- "restaurant_id"
+- "customer_name"
+- "customer_phone"
+- "customer_email"
+- "guests"
+- "date"
+- "time"
+- "occasion"
+- "seating"
+- "notes"
+- "status"
+- "created_at"
+
+Keep "normalizeBooking()" behavior compatible:
+
+- "customer_name" → "name"
+- "customer_phone" → "phone"
+- "customer_email" → "email"
+- "created_at" → "submittedAt"
+- keep defaults for date/time/occasion/seating/notes
+
+Do NOT change:
+
+- Supabase realtime subscription for bookings
+- booking UI/design
+- orders
+- menu items
+- restaurant profile/list
+- menu categories
+- auth/storage/realtime setup
+
+Tests:
+
+1. Create booking through existing customer booking flow.
+2. Confirm Supabase booking row exists.
+3. Confirm Neon shadow booking row exists if restaurant exists in Neon.
+4. If restaurant is Supabase-only and Neon FK rejects, confirm it logs warning only and app still succeeds.
+5. Read bookings for restaurant with Neon rows → Neon path works.
+6. Read bookings for Supabase-only restaurant → Supabase fallback works.
+7. Update booking status → Supabase updates and Neon shadow status updates when row exists.
+8. Confirm AdminDashboard booking list still works.
+9. Confirm Supabase realtime subscription still exists and is unchanged.
+10. Confirm restaurant/menu/orders/staff/auth/storage/notifications untouched.
+
+Report:
+
+- files changed
+- helper functions created
+- API routes created
+- functions changed
+- direct Supabase booking insert removed from RestaurantWebsite if replaced
+- read/write flow after migration
+- test results
+- any FK warnings
+- whether bookings migration is complete
+
+Final rule:
+Only migrate bookings. If any blocker appears, stop and report instead of touching unrelated modules.

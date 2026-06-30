@@ -25,6 +25,11 @@ import {
   getNeonMenuItems,
   getNeonPublishedMenuItems,
 } from './src/db/neon-menu-items.js'
+import {
+  upsertNeonBooking,
+  updateNeonBookingStatus,
+  getNeonBookings,
+} from './src/db/neon-bookings.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const app = express()
@@ -812,6 +817,98 @@ app.get('/api/menu/items/:restaurantId', async (req, res) => {
     return res.json(data)
   } catch (err) {
     console.error('[menu/items/get] Error:', err.message)
+    return res.status(500).json({ error: err.message })
+  }
+})
+
+// ── Booking routes ────────────────────────────────────────────────────────────
+
+// POST /api/bookings
+// Creates a booking in Supabase first, then shadow-writes to Neon (non-blocking).
+app.post('/api/bookings', async (req, res) => {
+  try {
+    const { url: supabaseUrl, headers } = getSupabaseServiceHeaders()
+    const body = req.body
+    const r = await fetch(`${supabaseUrl}/rest/v1/bookings`, {
+      method: 'POST',
+      headers: { ...headers, 'Content-Type': 'application/json', Prefer: 'return=representation' },
+      body: JSON.stringify(body),
+    })
+    const data = await r.json()
+    if (!r.ok) return res.status(r.status).json({ error: data })
+    const saved = Array.isArray(data) ? data[0] : data
+    // ── Neon shadow-write (non-blocking) ────────────────────────────────────────
+    upsertNeonBooking(body.restaurant_id, saved).then(() => {
+      console.log('[bookings POST] Neon shadow-write ✅ id:', saved.id)
+    }).catch(neonErr => {
+      console.warn('[bookings POST] Neon shadow-write error (non-blocking):', neonErr.message)
+    })
+    return res.status(201).json(saved)
+  } catch (err) {
+    console.error('[bookings POST] Error:', err.message)
+    return res.status(500).json({ error: err.message })
+  }
+})
+
+// GET /api/bookings/:restaurantId
+// Neon-first, Supabase fallback. Ordered by created_at DESC.
+app.get('/api/bookings/:restaurantId', async (req, res) => {
+  try {
+    const { restaurantId } = req.params
+    if (!restaurantId) return res.status(400).json({ error: 'restaurantId required' })
+    // Try Neon first
+    try {
+      const neonRows = await getNeonBookings(restaurantId)
+      if (neonRows.length > 0) {
+        console.log('[bookings GET] Neon ✅ rows:', neonRows.length, 'for', restaurantId)
+        return res.json(neonRows)
+      }
+    } catch (neonErr) {
+      console.warn('[bookings GET] Neon error (falling back to Supabase):', neonErr.message)
+    }
+    // Supabase fallback (0 Neon rows or Neon error)
+    const { url: supabaseUrl, headers } = getSupabaseServiceHeaders()
+    const r = await fetch(
+      `${supabaseUrl}/rest/v1/bookings?restaurant_id=eq.${encodeURIComponent(restaurantId)}&order=created_at.desc`,
+      { headers }
+    )
+    const data = await r.json()
+    if (!r.ok) return res.status(r.status).json({ error: data })
+    return res.json(data)
+  } catch (err) {
+    console.error('[bookings GET] Error:', err.message)
+    return res.status(500).json({ error: err.message })
+  }
+})
+
+// PATCH /api/bookings/:id/status
+// Updates booking status in Supabase first, then shadow-writes to Neon (non-blocking).
+app.patch('/api/bookings/:id/status', async (req, res) => {
+  try {
+    const { id } = req.params
+    const { status } = req.body || {}
+    if (!status) return res.status(400).json({ error: 'status required' })
+    const { url: supabaseUrl, headers } = getSupabaseServiceHeaders()
+    const r = await fetch(
+      `${supabaseUrl}/rest/v1/bookings?id=eq.${encodeURIComponent(id)}`,
+      {
+        method: 'PATCH',
+        headers: { ...headers, 'Content-Type': 'application/json', Prefer: 'return=representation' },
+        body: JSON.stringify({ status }),
+      }
+    )
+    const data = await r.json()
+    if (!r.ok) return res.status(r.status).json({ error: data })
+    const updated = Array.isArray(data) ? data[0] : data
+    // ── Neon shadow-write (non-blocking) ────────────────────────────────────────
+    updateNeonBookingStatus(id, status).then(() => {
+      console.log('[bookings PATCH status] Neon shadow-write ✅ id:', id, 'status:', status)
+    }).catch(neonErr => {
+      console.warn('[bookings PATCH status] Neon shadow-write error (non-blocking):', neonErr.message)
+    })
+    return res.json(updated)
+  } catch (err) {
+    console.error('[bookings PATCH status] Error:', err.message)
     return res.status(500).json({ error: err.message })
   }
 })

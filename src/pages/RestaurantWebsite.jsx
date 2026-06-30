@@ -638,26 +638,32 @@ export default function RestaurantWebsite() {
     localStorage.setItem(storageKey, JSON.stringify([newBooking, ...existing]))
     notifyAnalyticsUpdate()
 
-    // Also persist to Supabase so admin dashboards on ALL devices see it instantly
+    // Also persist via API (Neon-first shadow-write) so admin dashboards on ALL devices see it instantly
     const isSupabaseRestaurant = restaurantId && restaurantId !== 'demo' &&
       /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(restaurantId)
     if (isSupabaseRestaurant) {
-      supabase.from('bookings').insert({
-        id:              newBooking.id,
-        restaurant_id:   restaurantId,
-        customer_name:   newBooking.name,
-        customer_phone:  newBooking.phone,
-        customer_email:  newBooking.email,
-        guests:          newBooking.guests,
-        date:            newBooking.date,
-        time:            newBooking.time,
-        occasion:        newBooking.occasion || null,
-        seating:         newBooking.seating  || null,
-        notes:           newBooking.notes    || null,
-        status:          'pending',
-      }).then(({ error }) => {
-        if (error) console.warn('[Booking] Supabase insert skipped (localStorage backup active):', error.message)
-        else console.log('[Booking] Persisted to Supabase:', newBooking.id)
+      fetch('/api/bookings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id:              newBooking.id,
+          restaurant_id:   restaurantId,
+          customer_name:   newBooking.name,
+          customer_phone:  newBooking.phone,
+          customer_email:  newBooking.email,
+          guests:          newBooking.guests,
+          date:            newBooking.date,
+          time:            newBooking.time,
+          occasion:        newBooking.occasion || null,
+          seating:         newBooking.seating  || null,
+          notes:           newBooking.notes    || null,
+          status:          'pending',
+        }),
+      }).then(r => r.json()).then(saved => {
+        if (saved?.error) console.warn('[Booking] API insert skipped (localStorage backup active):', saved.error)
+        else console.log('[Booking] Persisted via API:', newBooking.id)
+      }).catch(err => {
+        console.warn('[Booking] API insert failed (localStorage backup active):', err.message)
       })
     }
 
