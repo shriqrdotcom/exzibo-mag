@@ -1,0 +1,104 @@
+You are my Replit AI backend migration engineer.
+
+Restaurant profile/list migration is complete.
+Menu categories migration is complete.
+Menu items migration is complete:
+
+- E2A: Neon "menu_items.image" compatibility column added.
+- E2B: menu item mutations shadow-write to Neon.
+- E2C: menu item API reads are Neon-first with Supabase fallback.
+- E2D: FoodDetail direct "supabase.from("menu_items")" query was removed and now uses the Neon-first API route.
+- Supabase Storage images are still intentionally used as plain URLs for now.
+- Auth, realtime, storage, orders, bookings, staff, and notifications are still untouched.
+
+Now I want to prepare the next module carefully.
+
+Goal:
+Analyze ONLY the bookings data flow before moving bookings to Neon + Drizzle.
+
+Important:
+Do NOT change code yet.
+Do NOT migrate bookings yet.
+Do NOT remove Supabase.
+Do NOT remove Supabase environment variables.
+Do NOT remove Supabase client.
+Do NOT change Auth.
+Do NOT add Better Auth.
+Do NOT change Realtime.
+Do NOT add Ably.
+Do NOT change Storage.
+Do NOT add Cloudflare R2.
+Do NOT add Upstash.
+Do NOT change UI/design.
+Do NOT move orders, staff, notifications, or auth yet.
+Do NOT run SQL unless I approve separately.
+
+Analysis scope:
+Only inspect booking flow.
+
+Tasks:
+
+1. Find every file using booking data.
+
+2. Find every "supabase.from("bookings")" usage.
+
+3. Find all functions related to:
+   
+   - get bookings
+   - create booking
+   - update booking
+   - confirm booking
+   - cancel booking
+   - delete booking
+   - table booking
+   - room booking if it exists
+
+4. Find all API routes related to bookings:
+   
+   - GET routes
+   - POST routes
+   - PATCH/update routes
+   - delete routes
+
+5. Find all pages/components that display or edit bookings:
+   
+   - customer booking page
+   - admin/manager booking dashboard
+   - booking confirmation UI
+   - notification/help areas if connected
+
+6. List every field currently used in the Supabase "bookings" table.
+
+7. Compare current Supabase booking fields with the Neon + Drizzle "bookings" table.
+
+8. Identify missing fields, indexes, constraints, defaults, or compatibility issues.
+
+9. Check how bookings connect to:
+   
+   - restaurants
+   - table_numbers
+   - customer details
+   - notifications
+   - staff/admin dashboard
+   - plan limits if any
+
+10. Recommend the safest migration plan:
+
+- schema patch needed first?
+- shadow-write create/update/delete first?
+- Neon-first reads with Supabase fallback later?
+- any special handling for booking status?
+- any risk with table/room booking separation?
+
+11. Report:
+
+- files using bookings
+- functions/routes involved
+- fields used
+- schema match/mismatch
+- risks
+- exact implementation phases
+- whether booking migration is safe to start
+
+Final rule:
+Analysis only. Do not edit code. Stop after the report and wait for my approval .
