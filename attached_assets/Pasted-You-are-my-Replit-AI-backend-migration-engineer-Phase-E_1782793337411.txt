@@ -1,0 +1,84 @@
+You are my Replit AI backend migration engineer.
+
+Phase E1A is complete:
+
+- Menu category create/update/delete still writes to Supabase first.
+- Menu category create/update/delete now shadow-writes to Neon.
+- Neon shadow-write is non-blocking.
+- Supabase remains authoritative.
+- Menu category reads still use Supabase.
+- Menu items, orders, bookings, staff, notifications, auth, realtime, and storage are untouched.
+
+Now proceed with Phase E1B only.
+
+Goal:
+Switch menu category reads to Neon-first with Supabase fallback.
+
+Important:
+Do NOT remove Supabase.
+Do NOT remove Supabase environment variables.
+Do NOT remove Supabase client.
+Do NOT change Auth.
+Do NOT add Better Auth.
+Do NOT change Realtime.
+Do NOT add Ably.
+Do NOT change Storage.
+Do NOT add Cloudflare R2.
+Do NOT add Upstash.
+Do NOT change UI/design.
+Do NOT move menu items, orders, bookings, staff, or notifications.
+Do NOT change category create/update/delete shadow-write except if needed for compatibility.
+Do NOT run backfill SQL unless I approve separately.
+
+Scope:
+Only menu category read flow.
+
+Tasks:
+
+1. Inspect the current category read flow:
+   
+   - getMenuCategories(restaurantId) in src/lib/db.js
+   - GET /api/menu/categories/:restaurantId in server.js
+   - same dev middleware route in vite.config.js
+   - any direct fallback supabase.from("menu_categories") read
+
+2. Implement Neon-first with Supabase fallback for category reads:
+   
+   - Try Neon first by restaurant_id.
+   - Order by position.
+   - If Neon returns one or more rows, return Neon rows.
+   - If Neon returns 0 rows, fallback to the existing Supabase read.
+   - If Neon errors, fallback to the existing Supabase read.
+   - Keep response shape exactly compatible with existing frontend.
+
+3. Keep fallback important because existing restaurants may still have categories only in Supabase.
+
+4. Do not change write behavior:
+   
+   - category upsert still Supabase first + Neon shadow-write
+   - category delete still Supabase first + Neon shadow-delete
+
+5. Test:
+   
+   - Category read for a restaurant with Neon categories returns Neon rows.
+   - Category read for a Supabase-only restaurant falls back to Supabase.
+   - Category ordering by position works.
+   - Public restaurant page categories still load.
+   - Admin menu editor categories still load.
+   - Category create/update/delete shadow-write still works.
+   - Menu items remain Supabase.
+   - Orders/bookings/staff/auth/realtime/storage untouched.
+
+6. Report:
+   
+   - files changed
+   - functions/routes changed
+   - new category read flow
+   - fallback behavior
+   - test results
+   - any warnings
+   - whether menu category migration is complete
+
+Final rule:
+Phase E1B only switches menu category reads to Neon-first with Supabase fallback.
+Do not migrate menu items yet.

@@ -16,6 +16,7 @@ import {
 import {
   upsertNeonMenuCategory,
   deleteNeonMenuCategory,
+  getNeonMenuCategories,
 } from './src/db/neon-menu-categories.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -679,11 +680,23 @@ app.post('/api/orders/update-status', async (req, res) => {
 })
 
 // GET /api/menu/categories/:restaurantId
-// Returns all categories for a restaurant (service role — no RLS dependency)
+// Neon-first with Supabase fallback.
+// Returns Neon rows when present; falls back to Supabase for restaurants not yet in Neon.
 app.get('/api/menu/categories/:restaurantId', async (req, res) => {
   try {
     const { restaurantId } = req.params
     if (!restaurantId) return res.status(400).json({ error: 'restaurantId required' })
+    // ── Try Neon first ────────────────────────────────────────────────────────
+    try {
+      const neonRows = await getNeonMenuCategories(restaurantId)
+      if (neonRows.length > 0) {
+        console.log('[menu/categories/get] Neon ✅ rows:', neonRows.length, 'for', restaurantId)
+        return res.json(neonRows)
+      }
+    } catch (neonErr) {
+      console.warn('[menu/categories/get] Neon error (falling back to Supabase):', neonErr.message)
+    }
+    // ── Supabase fallback (0 Neon rows or Neon error) ─────────────────────────
     const { url: supabaseUrl, headers } = getSupabaseServiceHeaders()
     const r = await fetch(`${supabaseUrl}/rest/v1/menu_categories?restaurant_id=eq.${encodeURIComponent(restaurantId)}&order=position`, { headers })
     const data = await r.json()

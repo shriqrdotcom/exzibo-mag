@@ -6,7 +6,7 @@ import { createHmac } from 'crypto'
 import bcrypt from 'bcryptjs'
 import pg from 'pg'
 import { patchNeonRestaurant, getNeonRestaurantById } from './src/db/neon-restaurants.js'
-import { upsertNeonMenuCategory, deleteNeonMenuCategory } from './src/db/neon-menu-categories.js'
+import { upsertNeonMenuCategory, deleteNeonMenuCategory, getNeonMenuCategories } from './src/db/neon-menu-categories.js'
 
 function previewAuthPlugin() {
   return {
@@ -148,10 +148,21 @@ function menuApiPlugin() {
           try {
             const { url: supabaseUrl, headers } = getServiceHeaders()
 
-            // GET /api/menu/categories/:restaurantId
+            // GET /api/menu/categories/:restaurantId — Neon-first, Supabase fallback
             const catMatch = pathname.match(/^\/categories\/([^/]+)$/)
             if (catMatch) {
               const restaurantId = catMatch[1]
+              // Try Neon first
+              try {
+                const neonRows = await getNeonMenuCategories(restaurantId)
+                if (neonRows.length > 0) {
+                  console.log('[menu/categories/get] Neon ✅ rows:', neonRows.length, 'for', restaurantId)
+                  return json(res, 200, neonRows)
+                }
+              } catch (neonErr) {
+                console.warn('[menu/categories/get] Neon error (falling back to Supabase):', neonErr.message)
+              }
+              // Supabase fallback (0 Neon rows or Neon error)
               const r = await fetch(`${supabaseUrl}/rest/v1/menu_categories?restaurant_id=eq.${encodeURIComponent(restaurantId)}&order=position`, { headers })
               const data = await r.json()
               return json(res, r.ok ? 200 : r.status, data)
