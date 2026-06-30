@@ -1,0 +1,69 @@
+You are my Replit AI deployment fix engineer.
+
+My Vercel production deploy is failing before the app build starts, during dependency installation.
+
+Vercel error:
+
+npm error Exit handler never called!
+npm error This is an error with npm itself.
+Error: Command "npm install" exited with 1
+
+Important context:
+This happened after Neon migration, but this current error is dependency-install level, not confirmed as a Neon database error.
+
+Hard rules:
+- Do NOT change database logic.
+- Do NOT change Neon migration logic.
+- Do NOT remove Supabase.
+- Do NOT remove Supabase env variables.
+- Do NOT remove Supabase client.
+- Do NOT change Auth.
+- Do NOT add Better Auth.
+- Do NOT change Supabase Realtime.
+- Do NOT change Supabase Storage.
+- Do NOT refactor unrelated files.
+- Do NOT upgrade major package versions unless absolutely required and explain why.
+- Do NOT use npm audit fix --force.
+- Do NOT delete features.
+
+Task:
+Fix only the dependency installation / Vercel build setup issue.
+
+Inspect these files:
+1. package.json
+2. package-lock.json
+3. npm dependency tree/conflicts
+4. Node engines setting
+5. package manager settings
+6. Vercel build/install compatibility
+
+Required checks:
+- Check if package-lock.json is missing, corrupted, or out of sync with package.json.
+- Check if npm peer dependency conflicts exist.
+- Check if Node engine is too loose:
+  "node": ">=20.19.0"
+- Check whether Vercel is using npm install and whether the project needs npm ci or npm install --legacy-peer-deps.
+- Check whether a .npmrc file is needed for stable Vercel installs.
+
+Allowed fixes:
+- Regenerate package-lock.json safely if it is inconsistent.
+- Add or update .npmrc only if needed, for example:
+  legacy-peer-deps=true
+- Pin Node engine to a stable Vercel-compatible version, for example:
+  "node": "20.x"
+  only if compatible with the project.
+- Keep package manager consistent. Do not mix npm, yarn, pnpm, or bun.
+- Make the minimum required changes only.
+
+Verification:
+1. Run npm install.
+2. Run npm run build.
+3. Confirm both pass.
+4. Report exactly:
+   - What caused the Vercel failure
+   - Which files changed
+   - Why each change was needed
+   - Whether I need to redeploy on Vercel with Clear Build Cache
+
+Do not continue into database migration work.
+Only fix the deployment dependency-install failure.
