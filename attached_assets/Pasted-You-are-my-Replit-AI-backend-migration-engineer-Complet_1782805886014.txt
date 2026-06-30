@@ -1,0 +1,99 @@
+You are my Replit AI backend migration engineer.
+
+Completed Neon database migration:
+- Restaurants/profile/list
+- Menu categories
+- Menu items
+- Bookings
+- Orders
+- Staff/team
+- restaurant_about
+- restaurant-scoped global_settings shadow copy into restaurant_settings.global_config
+
+Supabase still remains active for:
+- Auth
+- Realtime
+- Storage
+- app-level global_settings like image_compression_limits
+- user_settings if unused/dead
+- notification/help systems if not migrated yet
+
+Goal:
+Run the final Neon database audit and migrate notifications/help requests ONLY if they are safe database-only flows.
+
+Important:
+Do NOT remove Supabase.
+Do NOT remove Supabase env variables.
+Do NOT remove Supabase client.
+Do NOT change Auth.
+Do NOT add Better Auth.
+Do NOT change Supabase Realtime.
+Do NOT add Ably.
+Do NOT change Storage.
+Do NOT add Cloudflare R2.
+Do NOT add Upstash.
+Do NOT change UI/design.
+Do NOT touch image_compression_limits.
+Do NOT touch user_settings except reporting status.
+Do NOT force-migrate realtime-heavy notifications.
+Do NOT create new notification/help database schema unless it already exists or you report the exact schema needed first.
+
+Tasks:
+
+1. Audit all remaining database-related features:
+- notifications
+- help requests
+- service bell requests
+- active notifications
+- notification history
+- audit_logs
+- table_numbers
+- any remaining supabase.from(...) calls not already migrated
+
+2. For each feature, report:
+- current Supabase table/location
+- matching Neon table if exists
+- realtime dependency yes/no
+- auth/RLS dependency yes/no
+- safe to migrate now yes/no
+
+3. Notifications/help rules:
+- If notifications/help are database-only, migrate with:
+  - Supabase-first writes
+  - non-blocking Neon shadow-write
+  - Neon-first reads with Supabase fallback
+- If notifications/help depend on Supabase Realtime, keep realtime unchanged.
+- If migration would break live notification delivery, stop and report the blocker.
+- If notifications/help are realtime-heavy, mark them as “defer to Ably phase”.
+- Do not add Ably yet.
+
+4. table_numbers:
+- Check whether the live app uses a separate Supabase table or restaurants.table_numbers JSONB.
+- If already covered by restaurant migration, report “already covered” and do not change code.
+- If a separate live table is used, report the migration plan before editing.
+
+5. audit_logs:
+- Check whether the app currently writes audit logs.
+- If no Supabase audit_logs system exists, treat Neon audit_logs as additive only.
+- If safe, add non-blocking audit log writes to already-migrated server API routes only.
+- Audit log failure must never block the main action.
+- If audit_logs are the only safe remaining DB feature, implement only audit_logs and do not touch notifications/help.
+
+6. Tests:
+- Existing restaurant/menu/bookings/orders/staff/about/settings routes still work.
+- Notification/help flow still works if touched.
+- Supabase Realtime remains unchanged.
+- No UI break.
+- No auth/storage/realtime changes.
+
+7. Final report:
+- remaining Supabase database calls found
+- migrated items
+- items intentionally left for Auth/Realtime/Storage/Ably phases
+- files changed
+- test results
+- whether Neon database migration is complete: yes/no
+- exact remaining non-Neon infrastructure steps
+
+Final rule:
+This is the final Neon database audit. Migrate notifications/help only if safe. If they depend on realtime, do not force it; leave them for the Ably phase.

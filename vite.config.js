@@ -13,6 +13,7 @@ import { upsertNeonOrder, updateNeonOrderStatus as updateNeonOrderStatusFn, getN
 import { upsertNeonRestaurantMember, deleteNeonRestaurantMember, getNeonRestaurantMembers } from './src/db/neon-restaurant-members.js'
 import { upsertNeonRestaurantAbout, getNeonRestaurantAbout } from './src/db/neon-restaurant-about.js'
 import { upsertNeonRestaurantSettingsKey } from './src/db/neon-restaurant-settings.js'
+import { writeAuditLog } from './src/db/neon-audit-logs.js'
 
 function previewAuthPlugin() {
   return {
@@ -355,6 +356,7 @@ function menuApiPlugin() {
             }).catch(neonErr => {
               console.warn('[menu/categories/upsert] Neon shadow-write error (non-blocking):', neonErr.message)
             })
+            writeAuditLog({ restaurantId, action: 'upsert', entityType: 'menu_category', entityId: saved.id, newData: { name: saved.name } })
             return json(res, 200, saved)
           }
 
@@ -374,6 +376,7 @@ function menuApiPlugin() {
             }).catch(neonErr => {
               console.warn('[menu/categories/delete] Neon shadow-delete error (non-blocking):', neonErr.message)
             })
+            writeAuditLog({ action: 'delete', entityType: 'menu_category', entityId: id })
             return json(res, 200, { success: true })
           }
 
@@ -414,6 +417,7 @@ function menuApiPlugin() {
           }).catch(neonErr =>
             console.warn('[update-profile] Neon shadow-write error (non-blocking):', neonErr.message)
           )
+          writeAuditLog({ restaurantId, action: 'update', entityType: 'restaurant', entityId: restaurantId, newData: safePatch })
           return json(res, 200, Array.isArray(data) ? (data[0] ?? {}) : data)
         } catch (e) {
           console.error('[update-profile] Exception:', e.message)
@@ -451,6 +455,7 @@ function menuApiPlugin() {
           }).catch(neonErr =>
             console.warn('[update-social] Neon shadow-write error (non-blocking):', neonErr.message)
           )
+          writeAuditLog({ restaurantId, action: 'update', entityType: 'restaurant', entityId: restaurantId, newData: { social_links: Object.keys(social_links) } })
           return json(res, 200, Array.isArray(data) ? (data[0] ?? {}) : data)
         } catch (e) {
           console.error('[update-social] Exception:', e.message)
@@ -482,6 +487,7 @@ function menuApiPlugin() {
           }).catch(neonErr => {
             console.warn('[orders/update-status] Neon shadow error (non-blocking):', neonErr.message)
           })
+          writeAuditLog({ action: 'update_status', entityType: 'order', entityId: orderId, newData: { status } })
           return json(res, 200, Array.isArray(data) ? (data[0] ?? {}) : data)
         } catch (e) { return json(res, 500, { error: e.message }) }
       })
@@ -660,6 +666,7 @@ function menuApiPlugin() {
             }).catch(neonErr => {
               console.warn('[bookings PATCH status] Neon shadow-write error (non-blocking):', neonErr.message)
             })
+            writeAuditLog({ restaurantId: updated?.restaurant_id ?? null, action: 'update_status', entityType: 'booking', entityId: id, newData: { status } })
             return json(res, 200, updated)
           }
         } catch (e) { return json(res, 500, { error: e.message }) }
@@ -708,6 +715,7 @@ function menuApiPlugin() {
             if (!restaurantId || !member?.id) return json(res, 400, { error: 'restaurantId and member.id required' })
             await upsertNeonRestaurantMember(restaurantId, member)
             console.log('[team-members shadow-upsert] Neon ✅ id:', member.id)
+            writeAuditLog({ restaurantId, action: 'upsert', entityType: 'team_member', entityId: member.id, newData: { name: member.name, role: member.role } })
             return json(res, 200, { ok: true })
           }
 
@@ -717,6 +725,7 @@ function menuApiPlugin() {
             if (!id) return json(res, 400, { error: 'id required' })
             await deleteNeonRestaurantMember(id)
             console.log('[team-members shadow-delete] Neon ✅ id:', id)
+            writeAuditLog({ action: 'delete', entityType: 'team_member', entityId: id })
             return json(res, 200, { ok: true })
           }
         } catch (e) { return json(res, 500, { error: e.message }) }
@@ -984,6 +993,7 @@ function aboutApiPlugin() {
           upsertNeonRestaurantAbout(restaurantId, { story_text, image_1_url, image_2_url, image_3_url, image_4_url })
             .then(() => console.log(`[about/save] Neon shadow-write OK — restaurantId=${restaurantId}`))
             .catch(e => console.warn('[about/save] Neon shadow-write failed (non-fatal):', e.message))
+          writeAuditLog({ restaurantId, action: 'upsert', entityType: 'restaurant_about', entityId: restaurantId, newData: { story_text, images: [image_1_url, image_2_url, image_3_url, image_4_url].filter(Boolean).length } })
 
           return json(res, 200, { success: true, data: savedData })
         } catch (e) { return json(res, 500, { error: e.message }) }
