@@ -141,7 +141,11 @@ export const menuItems = pgTable(
     description:  text('description'),
     price:        numeric('price', { precision: 10, scale: 2 }).notNull().default('0'),
 
-    // Image stored as an object-storage key (not a URL) for future R2 migration
+    // Compatibility alias: full Supabase Storage URL (mirrors Supabase 'image' column).
+    // Written by shadow-writes so Neon rows are response-shape compatible with Supabase rows.
+    image:        text('image'),
+
+    // Reserved for future Cloudflare R2 migration (object-storage key, not a URL).
     imageKey:     text('image_key'),
 
     available:    boolean('available').notNull().default(true),

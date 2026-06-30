@@ -15,6 +15,13 @@
       "when": 1782732102942,
       "tag": "0001_thick_smasher",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1782795296886,
+      "tag": "0002_add_menu_items_image_compat",
+      "breakpoints": true
     }
   ]
 }

@@ -1,0 +1,90 @@
+You are my Replit AI backend migration engineer.
+
+Restaurant profile/list migration is complete.
+Menu categories migration is complete.
+Now we are preparing menu items migration.
+
+I reviewed the Phase E2 menu items analysis.
+
+Important finding:
+The current app reads menu item images from "item.image", but Neon "menu_items" currently has "image_key" and does not have "image". This is a critical compatibility issue.
+
+Proceed with Phase E2A only: Neon menu_items schema compatibility patch.
+
+Important:
+Do NOT remove Supabase.
+Do NOT remove Supabase environment variables.
+Do NOT remove Supabase client.
+Do NOT switch menu item reads to Neon.
+Do NOT add menu item shadow-write yet.
+Do NOT change Auth.
+Do NOT add Better Auth.
+Do NOT change Realtime.
+Do NOT add Ably.
+Do NOT change Storage.
+Do NOT add Cloudflare R2.
+Do NOT add Upstash.
+Do NOT change UI/design.
+Do NOT move orders, bookings, staff, or notifications.
+Do NOT migrate old Supabase data.
+Do NOT run manual SQL outside Drizzle unless absolutely necessary and reported first.
+
+Goal:
+Add compatibility column "image" to the Neon "menu_items" table so the current frontend response shape remains compatible.
+
+Tasks:
+
+1. Update "src/db/schema.ts".
+
+2. Add this column to Neon "menu_items":
+   
+   - "image" TEXT nullable
+
+3. Keep existing "image_key" column unchanged.
+   
+   - "image" will store the current Supabase Storage URL as plain text for now.
+   - "image_key" remains reserved for future Cloudflare R2 migration.
+
+4. Generate a new Drizzle migration file.
+
+5. Apply the migration to the verified Neon "DATABASE_URL".
+
+6. Verify in Neon that "menu_items.image" exists.
+
+7. Do not change any API route behavior yet.
+
+8. Do not modify:
+   
+   - getMenuItems()
+   - getPublishedMenuItems()
+   - insertMenuItem()
+   - updateMenuItem()
+   - upsertMenuItems()
+   - deleteMenuItem()
+   - uploadMenuImage()
+   - public menu page
+   - admin menu editor
+   - FoodDetail page
+
+9. Test:
+   
+   - Drizzle migration applies cleanly.
+   - Neon "menu_items" has both "image" and "image_key".
+   - Existing app still loads.
+   - Supabase menu item reads/writes still work.
+   - Menu categories still work.
+   - Restaurant profile/list still works.
+
+10. Report:
+
+- files changed
+- migration file created
+- exact column added
+- verification result
+- confirmation that no menu item reads/writes were switched
+- confirmation that Supabase remains untouched
+- whether Phase E2B shadow-write is safe next
+
+Final rule:
+Phase E2A only adds the "image" compatibility column to Neon "menu_items".
+Do not migrate menu items yet.
