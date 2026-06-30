@@ -22,6 +22,8 @@ import {
   upsertNeonMenuItem,
   upsertNeonMenuItems,
   deleteNeonMenuItem,
+  getNeonMenuItems,
+  getNeonPublishedMenuItems,
 } from './src/db/neon-menu-items.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -759,11 +761,22 @@ app.get('/api/menu/categories/:restaurantId', async (req, res) => {
 })
 
 // GET /api/menu/items/:restaurantId/published
-// Returns published items for a restaurant (service role — no RLS dependency)
+// Returns published items for a restaurant — Neon-first, Supabase fallback
 app.get('/api/menu/items/:restaurantId/published', async (req, res) => {
   try {
     const { restaurantId } = req.params
     if (!restaurantId) return res.status(400).json({ error: 'restaurantId required' })
+    // Try Neon first
+    try {
+      const neonRows = await getNeonPublishedMenuItems(restaurantId)
+      if (neonRows.length > 0) {
+        console.log('[menu/items/published/get] Neon ✅ rows:', neonRows.length, 'for', restaurantId)
+        return res.json(neonRows)
+      }
+    } catch (neonErr) {
+      console.warn('[menu/items/published/get] Neon error (falling back to Supabase):', neonErr.message)
+    }
+    // Supabase fallback (0 Neon rows or Neon error)
     const { url: supabaseUrl, headers } = getSupabaseServiceHeaders()
     const r = await fetch(`${supabaseUrl}/rest/v1/menu_items?restaurant_id=eq.${encodeURIComponent(restaurantId)}&is_published=eq.true&order=created_at`, { headers })
     const data = await r.json()
@@ -776,11 +789,22 @@ app.get('/api/menu/items/:restaurantId/published', async (req, res) => {
 })
 
 // GET /api/menu/items/:restaurantId
-// Returns all items for a restaurant (service role — for admin panel)
+// Returns all items for a restaurant (admin panel) — Neon-first, Supabase fallback
 app.get('/api/menu/items/:restaurantId', async (req, res) => {
   try {
     const { restaurantId } = req.params
     if (!restaurantId) return res.status(400).json({ error: 'restaurantId required' })
+    // Try Neon first
+    try {
+      const neonRows = await getNeonMenuItems(restaurantId)
+      if (neonRows.length > 0) {
+        console.log('[menu/items/get] Neon ✅ rows:', neonRows.length, 'for', restaurantId)
+        return res.json(neonRows)
+      }
+    } catch (neonErr) {
+      console.warn('[menu/items/get] Neon error (falling back to Supabase):', neonErr.message)
+    }
+    // Supabase fallback (0 Neon rows or Neon error)
     const { url: supabaseUrl, headers } = getSupabaseServiceHeaders()
     const r = await fetch(`${supabaseUrl}/rest/v1/menu_items?restaurant_id=eq.${encodeURIComponent(restaurantId)}&order=created_at`, { headers })
     const data = await r.json()

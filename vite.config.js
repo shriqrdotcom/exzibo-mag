@@ -7,7 +7,7 @@ import bcrypt from 'bcryptjs'
 import pg from 'pg'
 import { patchNeonRestaurant, getNeonRestaurantById } from './src/db/neon-restaurants.js'
 import { upsertNeonMenuCategory, deleteNeonMenuCategory, getNeonMenuCategories } from './src/db/neon-menu-categories.js'
-import { upsertNeonMenuItem, upsertNeonMenuItems, deleteNeonMenuItem } from './src/db/neon-menu-items.js'
+import { upsertNeonMenuItem, upsertNeonMenuItems, deleteNeonMenuItem, getNeonMenuItems, getNeonPublishedMenuItems } from './src/db/neon-menu-items.js'
 
 function previewAuthPlugin() {
   return {
@@ -169,19 +169,41 @@ function menuApiPlugin() {
               return json(res, r.ok ? 200 : r.status, data)
             }
 
-            // GET /api/menu/items/:restaurantId/published — must come before /items/:id
+            // GET /api/menu/items/:restaurantId/published — Neon-first, Supabase fallback
             const pubMatch = pathname.match(/^\/items\/([^/]+)\/published$/)
             if (pubMatch) {
               const restaurantId = pubMatch[1]
+              // Try Neon first
+              try {
+                const neonRows = await getNeonPublishedMenuItems(restaurantId)
+                if (neonRows.length > 0) {
+                  console.log('[menu/items/published/get] Neon ✅ rows:', neonRows.length, 'for', restaurantId)
+                  return json(res, 200, neonRows)
+                }
+              } catch (neonErr) {
+                console.warn('[menu/items/published/get] Neon error (falling back to Supabase):', neonErr.message)
+              }
+              // Supabase fallback (0 Neon rows or Neon error)
               const r = await fetch(`${supabaseUrl}/rest/v1/menu_items?restaurant_id=eq.${encodeURIComponent(restaurantId)}&is_published=eq.true&order=created_at`, { headers })
               const data = await r.json()
               return json(res, r.ok ? 200 : r.status, data)
             }
 
-            // GET /api/menu/items/:restaurantId
+            // GET /api/menu/items/:restaurantId — Neon-first, Supabase fallback
             const itemsMatch = pathname.match(/^\/items\/([^/]+)$/)
             if (itemsMatch) {
               const restaurantId = itemsMatch[1]
+              // Try Neon first
+              try {
+                const neonRows = await getNeonMenuItems(restaurantId)
+                if (neonRows.length > 0) {
+                  console.log('[menu/items/get] Neon ✅ rows:', neonRows.length, 'for', restaurantId)
+                  return json(res, 200, neonRows)
+                }
+              } catch (neonErr) {
+                console.warn('[menu/items/get] Neon error (falling back to Supabase):', neonErr.message)
+              }
+              // Supabase fallback (0 Neon rows or Neon error)
               const r = await fetch(`${supabaseUrl}/rest/v1/menu_items?restaurant_id=eq.${encodeURIComponent(restaurantId)}&order=created_at`, { headers })
               const data = await r.json()
               return json(res, r.ok ? 200 : r.status, data)

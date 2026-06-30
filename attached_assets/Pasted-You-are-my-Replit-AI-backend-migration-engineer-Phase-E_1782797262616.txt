@@ -1,0 +1,130 @@
+You are my Replit AI backend migration engineer.
+
+Phase E2B is complete:
+
+- Menu item create/update/delete still writes to Supabase first.
+- Menu item create/update/delete now shadow-writes to Neon.
+- Neon shadow-write is non-blocking.
+- Supabase remains authoritative.
+- Menu item reads still use Supabase.
+- Image upload/storage is untouched and still uses Supabase Storage.
+- "image" stores the current Supabase Storage URL as plain text in Neon.
+- "image_key" stays null for future Cloudflare R2.
+- Restaurant profile/list migration is complete.
+- Menu categories migration is complete.
+- Auth, realtime, storage, orders, bookings, staff, and notifications are untouched.
+
+Now proceed with Phase E2C only: menu item reads Neon-first with Supabase fallback.
+
+Important:
+Do NOT remove Supabase.
+Do NOT remove Supabase environment variables.
+Do NOT remove Supabase client.
+Do NOT change Auth.
+Do NOT add Better Auth.
+Do NOT change Realtime.
+Do NOT add Ably.
+Do NOT change Storage.
+Do NOT add Cloudflare R2.
+Do NOT add Upstash.
+Do NOT change UI/design.
+Do NOT move orders, bookings, staff, or notifications.
+Do NOT change image upload/storage behavior.
+Do NOT modify FoodDetail.jsx direct Supabase query yet.
+Do NOT run backfill SQL unless I approve separately.
+Do NOT change menu item mutation shadow-write except if needed for compatibility.
+
+Goal:
+Switch menu item read API routes to Neon-first with Supabase fallback.
+
+Scope:
+Only menu item read routes:
+
+- GET "/api/menu/items/:restaurantId"
+- GET "/api/menu/items/:restaurantId/published"
+
+Tasks:
+
+1. Before changing reads, verify Neon has at least one menu item row for a test restaurant.
+   
+   - If Neon has 0 menu item rows, do not backfill SQL.
+   - Instead, use the existing app/menu item flow or existing mutation route to create/update one test item so E2B shadow-write populates Neon.
+   - Confirm the test restaurant has Neon menu item rows.
+
+2. Update the GET menu item routes in both "server.js" and "vite.config.js":
+   
+   - Try Neon first.
+   - For admin/all items route, use "getNeonMenuItems(restaurantId)".
+   - For public/published route, use "getNeonPublishedMenuItems(restaurantId)".
+   - Order consistently with the existing app expectation.
+   - If Neon returns one or more rows, return Neon rows.
+   - If Neon returns 0 rows, fallback to the existing Supabase read.
+   - If Neon errors, fallback to the existing Supabase read.
+   - If Supabase also fails, return the same error behavior as before.
+
+3. Keep response shape compatible with existing frontend:
+   
+   - id
+   - restaurant_id
+   - category_id
+   - name
+   - description
+   - price
+   - image
+   - available
+   - veg
+   - tags
+   - add_ons
+   - is_published
+   - image_shape
+   - created_at
+   - updated_at if present
+
+4. Confirm "image" is returned as the current Supabase Storage URL string.
+   Do not use "image_key" yet.
+
+5. Do not change these:
+   
+   - insertMenuItem()
+   - updateMenuItem()
+   - upsertMenuItems()
+   - deleteMenuItem()
+   - toggleMenuItemPublish()
+   - uploadMenuImage()
+   - FoodDetail.jsx
+   - orders/cart logic
+   - realtime subscription logic
+
+6. Test:
+   
+   - Admin menu item read for a restaurant with Neon rows returns Neon rows.
+   - Published menu item read for a restaurant with Neon rows returns Neon published rows.
+   - Restaurant with 0 Neon items falls back to Supabase.
+   - Neon error falls back to Supabase.
+   - Public restaurant menu page still loads.
+   - Admin menu editor still loads.
+   - Category grouping still works using category_id.
+   - Image URLs still display.
+   - Cart/order flow still works with item data.
+   - E2B create/update/delete shadow-write still works.
+   - Menu categories still work.
+   - Restaurant profile/list still works.
+   - Auth, realtime, storage, orders, bookings, staff, and notifications are untouched.
+
+7. Report:
+   
+   - files changed
+   - routes changed
+   - new menu item read flow
+   - fallback behavior
+   - test restaurant/item used
+   - Neon row count
+   - Supabase fallback test result
+   - UI test result
+   - any warnings
+   - whether menu item migration is complete except FoodDetail direct query
+
+Final rule:
+Phase E2C only switches menu item API reads to Neon-first with Supabase fallback.
+Do not migrate FoodDetail direct Supabase query yet.
+Do not migrate orders, bookings, auth, realtime, or storage.
