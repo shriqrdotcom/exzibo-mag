@@ -1,0 +1,126 @@
+You are my Replit AI Vercel deployment diagnosis engineer.
+
+My Vercel deployment is failing before the app build starts.
+
+This is NOT a Neon runtime error.
+This is NOT a database error.
+This is a dependency installation failure.
+
+Current Vercel situation:
+- Node.js version is set to 22.x
+- Build cache was cleared
+- Vercel tried these install commands and all failed:
+
+1. npm install
+2. npm install --legacy-peer-deps --no-audit --no-fund
+3. npm ci --legacy-peer-deps --no-audit --no-fund
+
+Vercel error:
+npm error Exit handler never called!
+npm error This is an error with npm itself.
+Command "npm install / npm ci" exited with 1
+
+Important:
+Replit previously said npm install and npm run build passed, but Vercel still fails.
+So do NOT guess.
+Find the exact package, lockfile, npm, lifecycle-script, or root-directory cause.
+
+Hard rules:
+- Do NOT change database logic.
+- Do NOT change Neon logic.
+- Do NOT remove Supabase.
+- Do NOT remove Supabase env variables.
+- Do NOT remove Supabase client.
+- Do NOT change Auth.
+- Do NOT add Better Auth.
+- Do NOT change Realtime.
+- Do NOT change Storage.
+- Do NOT refactor unrelated files.
+- Do NOT use npm audit fix --force.
+- Do NOT randomly upgrade packages.
+- Do NOT switch from npm to pnpm/yarn/bun unless you report the reason first and wait for approval.
+- Do NOT say fixed unless the exact CI install command passes.
+
+Main task:
+Find why Vercel npm install fails even though Replit install passed.
+
+Required diagnosis:
+
+1. Confirm project root:
+- Check that package.json is in the exact root directory Vercel is deploying.
+- Check that .npmrc is in the same root.
+- Check that package-lock.json is committed in the same root.
+- Check there is no nested package.json causing Vercel to install from the wrong folder.
+
+2. Confirm package manager consistency:
+- Use npm only.
+- Check for competing lockfiles:
+  yarn.lock
+  pnpm-lock.yaml
+  bun.lock
+  bun.lockb
+- If they exist, report them before changing anything.
+
+3. Print environment:
+Run and show output:
+node -v
+npm -v
+npm config list
+
+4. Run exact Vercel-style clean install:
+rm -rf node_modules
+npm cache clean --force
+npm ci --legacy-peer-deps --no-audit --no-fund --foreground-scripts --loglevel verbose
+
+5. If it fails:
+- Read the full verbose npm error.
+- Identify the exact package, lifecycle script, or lockfile issue.
+- Do not stop at "Exit handler never called".
+- Find the real error before npm exits.
+
+6. Test if lifecycle scripts are the problem:
+rm -rf node_modules
+npm ci --legacy-peer-deps --no-audit --no-fund --ignore-scripts
+
+If this passes but normal npm ci fails, then a postinstall/prepare script is causing the problem.
+Find exactly which package/script causes it.
+
+7. Check lockfile consistency:
+npm install --package-lock-only --legacy-peer-deps --no-audit --no-fund
+
+Then check if package-lock.json changes.
+If it changes, the lockfile was out of sync.
+Commit the corrected package-lock.json.
+
+8. Check known dependency conflict area:
+Inspect versions of:
+vite
+esbuild
+drizzle-kit
+tsx
+@esbuild-kit/core-utils
+
+Run:
+npm ls vite esbuild drizzle-kit tsx @esbuild-kit/core-utils
+
+If there is a dependency conflict, fix the minimum required version only.
+Do not upgrade major versions unless required.
+
+9. Final verification required:
+The fix is complete only if these pass:
+
+npm ci --legacy-peer-deps --no-audit --no-fund
+npm run build
+
+Final report must include:
+- Exact root cause
+- Exact command that failed
+- Exact command that now passes
+- Whether .npmrc is committed
+- Whether package-lock.json is committed and synced
+- Whether any competing lockfiles existed
+- Whether the issue was lockfile, lifecycle script, dependency conflict, npm bug, or wrong root directory
+- List of files changed and why
+
+Only fix the dependency installation problem.
+Do not continue into Neon migration or app feature changes.
