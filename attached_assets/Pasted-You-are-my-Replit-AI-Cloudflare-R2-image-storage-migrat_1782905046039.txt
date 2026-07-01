@@ -1,0 +1,148 @@
+You are my Replit AI Cloudflare R2 image storage migration engineer.
+
+Context:
+Cloudflare R2 connection verification is complete.
+All R2 secrets are present and verified:
+- R2_ACCOUNT_ID
+- R2_ACCESS_KEY_ID
+- R2_SECRET_ACCESS_KEY
+- R2_BUCKET_NAME
+- R2_PUBLIC_URL
+
+The R2 test passed:
+- S3 upload works
+- Public read works
+- Delete cleanup works
+- No blockers found
+
+Goal:
+Analyze the current image upload and image URL system before migrating from Supabase Storage to Cloudflare R2.
+
+This is analysis only.
+Do not edit code yet.
+
+Important safety rules:
+- Do NOT change code.
+- Do NOT migrate image uploads yet.
+- Do NOT delete Supabase Storage files.
+- Do NOT remove Supabase.
+- Do NOT remove Supabase Storage code.
+- Do NOT change Auth.
+- Do NOT change Realtime.
+- Do NOT change Neon database logic.
+- Do NOT change UI/design.
+- Do NOT change routing.
+- Do NOT change existing image URLs.
+- Do NOT expose R2 secret values.
+- Do NOT create public/client-side R2 secret variables.
+- Do NOT install new packages during this analysis.
+- Do NOT modify environment variables.
+
+Tasks:
+
+1. Find every current image upload flow in the project.
+
+Check these image areas:
+- restaurant logo upload
+- menu item image upload
+- restaurant about section images
+- special offer images if any
+- carousel/banner/hero images if any
+- any other uploaded image area
+
+2. Find all Supabase Storage usage:
+- supabase.storage.from(...)
+- upload(...)
+- getPublicUrl(...)
+- remove(...)
+- any direct Supabase Storage client calls
+
+3. For every storage usage, report:
+- exact file path
+- function/component name
+- whether it runs on frontend/client or backend/server/API
+- Supabase bucket name
+- database field updated after upload
+- whether it stores full public URL or only path/key
+
+4. Identify every Supabase Storage bucket currently used.
+
+5. Identify whether uploads are handled:
+- directly from frontend/client
+- through API/server routes
+- mixed frontend + server logic
+
+6. Identify all database fields storing image URLs or image keys, including:
+- restaurants.logo
+- restaurants.logo_key if used
+- menu_items.image
+- menu_items.image_key
+- restaurant_about image_1_url / image_2_url / image_3_url / image_4_url
+- restaurant_about image_1_key / image_2_key / image_3_key / image_4_key
+- any special offer/banner/hero image fields
+
+7. Identify which fields currently store full Supabase public URLs.
+
+8. Identify which Neon fields are ready for R2 object keys.
+
+9. Check frontend image rendering:
+- where image URLs are displayed
+- whether frontend expects full public URL
+- whether frontend can continue working if public R2 URL is stored in the same image field
+- whether any frontend logic depends on Supabase URL format
+
+10. Check old image compatibility:
+- confirm old Supabase image URLs can remain unchanged
+- confirm frontend can display both old Supabase URLs and new R2 URLs
+- do not suggest deleting old Supabase images yet
+
+11. Recommend the safest migration plan:
+- old Supabase image URLs must continue working
+- new uploads should go to R2
+- store R2 object key in *_key fields where available
+- store public R2 URL in existing image URL fields for frontend compatibility
+- keep Supabase Storage code as fallback temporarily
+- do not bulk migrate old images yet
+
+12. Identify the safest first implementation phase:
+Example:
+Phase 1: create isolated server-side R2 upload helper
+Phase 2: migrate one low-risk image upload flow
+Phase 3: migrate menu item images
+Phase 4: migrate restaurant logo
+Phase 5: migrate about section images
+Phase 6: optional old Supabase image migration later
+
+13. Report risks:
+- direct frontend upload risk
+- server-side upload readiness
+- missing image_key fields
+- missing API routes
+- old Supabase URL compatibility
+- Vercel/Replit environment variable concerns
+- image deletion/replacement behavior
+- file size/type validation concerns
+
+14. If any upload flow is unclear or risky:
+- stop
+- report the blocker
+- do not guess
+- do not implement anything
+
+Final report format:
+1. Files using Supabase Storage
+2. Image upload flows found
+3. Supabase buckets used
+4. Database fields used
+5. Frontend image display dependencies
+6. Old Supabase image compatibility status
+7. R2 migration readiness
+8. Risks/blockers
+9. Safest implementation phases
+10. Exact recommended next prompt for implementation
+
+Final rule:
+Analysis only.
+Do not edit code.
+Do not migrate uploads yet.
+Stop after the report.
