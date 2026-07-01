@@ -13,6 +13,8 @@
     { "source": "/api/about/upload-image",                  "destination": "/api/media?action=uploadAboutImage"                            },
     { "source": "/api/about/save",                          "destination": "/api/content?action=saveAbout"                                 },
     { "source": "/api/about/:restaurantId",                 "destination": "/api/content?action=getAbout&restaurantId=:restaurantId"       },
+    { "source": "/api/restaurant/upload-logo",              "destination": "/api/media?action=uploadLogoImage"                            },
+    { "source": "/api/restaurant/upload-carousel",          "destination": "/api/media?action=uploadCarouselImage"                         },
     { "source": "/api/restaurant/update-social",            "destination": "/api/content?action=updateSocial"                             },
     { "source": "/api/orders/update-status",                "destination": "/api/orders?action=updateStatus"                              },
     { "source": "/api/orders/auto-cleanup",                 "destination": "/api/orders?action=autoCleanup"                               },
