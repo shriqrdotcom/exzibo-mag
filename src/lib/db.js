@@ -788,6 +788,49 @@ export async function uploadDataUrlToStorage(dataUrl, bucket, pathPrefix) {
   return publicUrl
 }
 
+// ── Server-side R2 Upload Helpers (via API, no client auth required) ──────────
+
+// Convert a File/Blob to a base64 data URL using FileReader.
+function fileToDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload  = () => resolve(reader.result)
+    reader.onerror = () => reject(new Error('[fileToDataUrl] FileReader failed'))
+    reader.readAsDataURL(file)
+  })
+}
+
+// Upload a File object as a restaurant logo via the server API (R2 primary, service-role).
+// Converts File → dataUrl then delegates to uploadLogoViaApi which handles compression.
+export async function uploadLogoFileViaApi(file, restaurantId) {
+  const dataUrl = await fileToDataUrl(file)
+  return uploadLogoViaApi(dataUrl, restaurantId)
+}
+
+// Upload a carousel/hero image File via the server API (R2 primary, service-role).
+// Compresses client-side then POSTs to /api/restaurant/upload-carousel.
+// Returns the full public URL to store in restaurants.images JSONB.
+export async function uploadCarouselImageViaApi(file, restaurantId) {
+  let dataUrl = await fileToDataUrl(file)
+  try {
+    const limits = await getCompressionLimits()
+    dataUrl = await compressDataUrl(dataUrl, limits)
+  } catch (err) {
+    console.warn('[uploadCarouselImageViaApi] Compression skipped (non-blocking):', err.message)
+  }
+  const res = await fetch('/api/restaurant/upload-carousel', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ dataUrl, restaurantId }),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }))
+    throw new Error(err.error || 'Carousel upload failed')
+  }
+  const { url } = await res.json()
+  return url
+}
+
 // ── Menu Image Upload ─────────────────────────────────────────
 //
 // Compresses the image to WebP then sends it to the server-side

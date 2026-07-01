@@ -12,7 +12,7 @@ const JSONB_FIELDS = new Set([
 
 // Allowed fields for PATCH — whitelist prevents arbitrary column writes
 const ALLOWED_PATCH = new Set([
-  'name', 'logo', 'status', 'plan', 'place', 'note',
+  'name', 'logo', 'logo_key', 'status', 'plan', 'place', 'note',
   'accent_color', 'currency', 'phone', 'gst', 'description',
   'chef_info', 'servant_info', 'social_links', 'rating', 'location',
   'additional_info', 'digital_menu_link', 'digital_service_bell',

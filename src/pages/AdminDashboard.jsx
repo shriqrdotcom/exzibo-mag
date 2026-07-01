@@ -4,7 +4,7 @@ import { ACTIVE_SUBDOMAIN } from '../lib/subdomain'
 import { getRouteConfig } from '../lib/routeConfig'
 import { useAnalytics, notifyAnalyticsUpdate } from '../context/AnalyticsContext'
 import { useRole } from '../context/RoleContext'
-import { getRestaurantById, getRestaurants, getOrders, getBookings, updateOrderStatus, updateBookingStatus, getMenuCategories, getMenuItems, insertMenuItem, updateMenuItem, deleteMenuItem, upsertMenuCategory, deleteMenuCategory, upsertMenuItems, uploadMenuImage, updateRestaurant, uploadToStorage, uploadDataUrlToStorage, toggleMenuItemPublish, normalizeOrder, normalizeBooking, sendMessage, getLatestSmsNotification, upsertSmsNotification, fetchActiveNotification, publishActiveNotification, confirmActiveNotification, insertNotificationHistory, fetchNotificationHistory, fetchNIELimits, subscribeToNIELimits, saveMenuFilters, loadMenuFilters, fetchRestaurantAbout, saveRestaurantAbout, uploadAboutImage } from '../lib/db'
+import { getRestaurantById, getRestaurants, getOrders, getBookings, updateOrderStatus, updateBookingStatus, getMenuCategories, getMenuItems, insertMenuItem, updateMenuItem, deleteMenuItem, upsertMenuCategory, deleteMenuCategory, upsertMenuItems, uploadMenuImage, updateRestaurant, uploadToStorage, uploadDataUrlToStorage, uploadCarouselImageViaApi, toggleMenuItemPublish, normalizeOrder, normalizeBooking, sendMessage, getLatestSmsNotification, upsertSmsNotification, fetchActiveNotification, publishActiveNotification, confirmActiveNotification, insertNotificationHistory, fetchNotificationHistory, fetchNIELimits, subscribeToNIELimits, saveMenuFilters, loadMenuFilters, fetchRestaurantAbout, saveRestaurantAbout, uploadAboutImage } from '../lib/db'
 import { processImageFile, isAcceptedImageType } from '../lib/processImage'
 import { toSlug } from '../lib/slug'
 import { supabase } from '../lib/supabase'
@@ -3085,7 +3085,7 @@ function SettingsPanel({ draft, setDraft, accentStart, accentEnd, onSave, saved,
     try {
       const results = await Promise.all(toProcess.map(async f => {
         if (isRealRestaurant) {
-          try { return await uploadToStorage(f, 'restaurant-images', `${restaurantId}/carousel`) }
+          try { return await uploadCarouselImageViaApi(f, restaurantId) }
           catch (e) { console.warn('[carousel] Storage upload failed, using base64:', e.message) }
         }
         return await processImageFile(f)

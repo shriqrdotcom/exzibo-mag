@@ -1,0 +1,232 @@
+You are my Replit AI Cloudflare R2 image storage migration engineer.
+
+Context:
+Cloudflare R2 Phase 1 + Phase 2 are complete.
+Already completed:
+- src/lib/r2.js exists as a server-only R2 helper.
+- Menu item image uploads now go to R2.
+- menu_items.image stores full public R2 URL.
+- menu_items.image_key stores R2 object key in Neon.
+- Old Supabase menu image URLs still work.
+- Supabase Storage fallback/legacy code remains intact.
+- R2 secrets are server-side only and verified.
+
+Goal:
+Implement the next safe R2 migration phases in one cost-effective pass:
+
+Phase 3:
+Migrate restaurant logo upload to R2.
+
+Phase 4:
+Migrate restaurant about section image uploads to R2.
+
+Phase 5:
+Close direct client-side Supabase upload gaps only if safe:
+- carousel/hero uploads
+- CreateWebsite initial images
+- EditProfile legacy logo path
+
+Important:
+Do not re-analyze the full project.
+Use the previous R2 analysis and current existing code.
+Only inspect files needed for these exact upload flows.
+
+Strict scope:
+You may touch only files required for:
+- POST /api/restaurant/upload-logo
+- POST /api/about/upload-image
+- any required new safe server upload route for carousel/CreateWebsite/EditProfile direct-upload replacement
+- frontend call patches only where needed to stop direct client-side Supabase Storage upload
+- existing src/lib/r2.js helper only if a small reusable improvement is needed
+
+Do NOT touch:
+- menu item image upload except regression testing
+- old Supabase image files
+- Auth
+- Realtime
+- Neon schema unless a proven missing field blocks this exact phase
+- UI/design
+- routing
+- unrelated database logic
+- order/booking/team/database migration logic
+
+Safety rules:
+- Do NOT remove Supabase.
+- Do NOT remove Supabase Storage code.
+- Do NOT delete Supabase Storage files.
+- Do NOT bulk migrate old images.
+- Keep old Supabase image URLs working.
+- Keep Supabase Storage code as fallback/legacy safety.
+- R2 credentials must stay server-side only.
+- Do NOT expose R2 secrets to frontend/client code.
+- Do NOT create VITE_R2_SECRET_ACCESS_KEY.
+- Do NOT create NEXT_PUBLIC_R2_SECRET_ACCESS_KEY.
+- Do NOT print secret values.
+- Do NOT install new packages unless absolutely necessary.
+- Use existing src/lib/r2.js helper.
+- If a flow is risky, skip only that flow and report it. Continue with other safe flows.
+
+Phase 3 tasks — restaurant logo:
+1. Patch POST /api/restaurant/upload-logo wherever active:
+   - server.js
+   - vite.config.js
+   Only patch both if both define the active route.
+
+2. Upload new restaurant logos to R2 using:
+   restaurants/{restaurantId}/logo/{timestamp-or-uuid}.webp
+
+3. Return the full R2 public URL for frontend compatibility.
+
+4. Continue storing full public URL in restaurants.logo.
+
+5. If safe, store R2 object key in Neon restaurants.logo_key.
+
+6. Keep old Supabase logo URLs working.
+
+7. Keep Supabase logo upload code as fallback/legacy path.
+
+Phase 4 tasks — restaurant about images:
+1. Patch POST /api/about/upload-image wherever active:
+   - server.js
+   - vite.config.js
+   Only patch both if both define the active route.
+
+2. Upload new about images to R2 using:
+   restaurants/{restaurantId}/about/image-{slot-or-index}-{timestamp-or-uuid}.webp
+
+3. Return the full R2 public URL for frontend compatibility.
+
+4. Existing frontend/database expects full public URL in:
+   image_1_url
+   image_2_url
+   image_3_url
+   image_4_url
+
+5. Continue storing full R2 public URLs in those URL fields.
+
+6. If safe, store R2 object keys in Neon:
+   image_1_key
+   image_2_key
+   image_3_key
+   image_4_key
+
+7. If URL/key mapping is unclear, keep URL working and report key storage as deferred.
+
+8. Keep old Supabase about image URLs working.
+
+9. Keep Supabase about image upload code as fallback/legacy path.
+
+Phase 5 tasks — direct client-side upload gaps:
+Previous analysis found direct client-side Supabase Storage uploads in:
+- CreateWebsite.jsx
+- EditProfile.jsx
+- AdminDashboard.jsx carousel upload path
+
+Goal:
+Move these direct browser Supabase Storage uploads behind safe server API routes only if the active flow is clear.
+
+Rules for Phase 5:
+1. Do not expose R2 credentials to frontend.
+2. Frontend must send image/file/base64/blob data to a server route.
+3. Server route uploads to R2 using src/lib/r2.js.
+4. Frontend receives full public R2 URL and continues using existing URL-based logic.
+5. Old Supabase URLs must still work.
+6. No UI/design changes.
+
+Use these R2 key patterns:
+- carousel/hero:
+  restaurants/{restaurantId}/carousel/{timestamp-or-uuid}.webp
+- CreateWebsite initial images:
+  restaurants/{restaurantId-or-uid}/initial/{timestamp-or-uuid}.webp
+- EditProfile legacy logo:
+  restaurants/{restaurantId}/logo/{timestamp-or-uuid}.webp
+
+If a Phase 5 flow is unclear:
+- Do not guess.
+- Do not force implementation.
+- Leave that specific flow unchanged.
+- Report it as deferred with the exact reason.
+
+Database behavior:
+- Store full public R2 URLs in the same existing URL fields for frontend compatibility.
+- Store R2 object keys in existing *_key fields only where already supported and safe.
+- Do not add new schema unless a small missing field is proven necessary and safe.
+- If key storage is not safe, keep URL storage working and mark key storage deferred.
+
+Error handling:
+- If R2 upload fails, fall back to existing Supabase Storage upload path if already available and safe.
+- Otherwise return a clear safe server error.
+- Do not expose secrets in errors.
+- Log only safe non-secret information.
+
+Deletion/replacement safety:
+- Do not delete old Supabase files.
+- Do not bulk migrate old images.
+- Do not change permanent restaurant delete logic in this phase.
+- Do not implement risky cleanup.
+- R2 object cleanup can be deferred unless simple and object-key based.
+
+Required tests:
+1. Restaurant logo upload:
+   - new logo uploads to R2
+   - returned URL starts with R2_PUBLIC_URL
+   - public URL opens successfully
+   - restaurants.logo stores full public URL
+   - restaurants.logo_key stores object key if implemented
+   - old Supabase logo URLs still display
+
+2. About image upload:
+   - new about image uploads to R2
+   - returned URL starts with R2_PUBLIC_URL
+   - public URL opens successfully
+   - URL field stores full public URL
+   - matching Neon key field stores object key if implemented
+   - old Supabase about URLs still display
+
+3. Phase 5 direct-upload gaps:
+   - each migrated direct-upload flow no longer calls Supabase Storage directly from frontend
+   - new upload returns R2 public URL
+   - old URLs still work
+   - skipped flows are clearly reported
+
+4. Regression tests:
+   - menu item image upload still works with R2
+   - old Supabase menu images still display
+   - no UI/design changed
+   - no routing changed
+   - no R2 secret appears in frontend/browser bundle
+   - Supabase fallback/legacy code remains available
+
+Stop conditions:
+Stop only the affected flow and report it if:
+- active route cannot be identified
+- request format is unclear
+- frontend upload format is unclear
+- R2 helper would need to expose secrets to frontend
+- key-field mapping is risky
+- implementation requires unrelated module changes
+- a new package is required and cannot be avoided
+
+Final report format:
+1. Files changed
+2. Phase 3 logo migration status
+3. Phase 4 about image migration status
+4. Phase 5 direct-upload gap status for each flow:
+   - CreateWebsite
+   - EditProfile
+   - AdminDashboard carousel/hero
+5. New R2 object key patterns used
+6. URL fields storing full public R2 URLs
+7. Key fields storing R2 object keys: yes/no/deferred
+8. Supabase fallback/legacy status
+9. Old Supabase image compatibility status
+10. Menu image regression test result
+11. Tests performed and results
+12. Skipped/deferred work with exact reasons
+13. Exact next recommended phase
+
+Final rule:
+Implement Phase 3 and Phase 4 if safe.
+Implement Phase 5 flows only where the active flow is clear and safe.
+Do not touch unrelated modules.
+Stop after the report.

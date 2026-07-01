@@ -6,7 +6,7 @@ import {
   ChefHat, Users, Zap, Bell
 } from 'lucide-react'
 import PlanSelector from '../components/PlanSelector'
-import { createRestaurant, getRestaurants, updateRestaurant, generateRestaurantUID, uploadToStorage, checkLinkNameTakenInDB } from '../lib/db'
+import { createRestaurant, getRestaurants, updateRestaurant, generateRestaurantUID, uploadLogoFileViaApi, uploadCarouselImageViaApi, checkLinkNameTakenInDB } from '../lib/db'
 import { processImageFile, isAcceptedImageType } from '../lib/processImage'
 
 export default function CreateWebsite() {
@@ -215,14 +215,14 @@ export default function CreateWebsite() {
         for (let i = 0; i < form.uploadedImages.length; i++) {
           const img = form.uploadedImages[i]
           if (img.file) {
-            const url = await uploadToStorage(img.file, 'restaurant-images', `${uid}/image-${i}`)
+            const url = await uploadCarouselImageViaApi(img.file, created.id)
             imageUrls.push(url)
           }
         }
 
         let logoUrl = null
         if (form.logo?.file) {
-          logoUrl = await uploadToStorage(form.logo.file, 'restaurant-images', `${uid}/logo`)
+          logoUrl = await uploadLogoFileViaApi(form.logo.file, created.id)
         }
 
         if (imageUrls.length > 0 || logoUrl) {

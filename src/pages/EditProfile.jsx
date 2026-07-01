@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Loader2, CheckCircle2, AlertCircle, Camera, ChevronLeft, User } from 'lucide-react'
-import { updateRestaurant, uploadDataUrlToStorage } from '../lib/db'
+import { updateRestaurant, uploadLogoViaApi } from '../lib/db'
 import { processImageFile, isAcceptedImageType } from '../lib/processImage'
 import { useRole } from '../context/RoleContext'
 
@@ -107,7 +107,7 @@ export default function EditProfile() {
 
       if (pendingImageUrl && restaurantId && restaurantId !== 'default' && restaurantId !== 'demo') {
         try {
-          finalLogoUrl = await uploadDataUrlToStorage(pendingImageUrl, 'restaurant-images', `${restaurantId}/logo`)
+          finalLogoUrl = await uploadLogoViaApi(pendingImageUrl, restaurantId)
           await updateRestaurant(restaurantId, { logo: finalLogoUrl, name: trimmedName })
         } catch (e) {
           console.warn('[EditProfile] Supabase save failed, using local fallback:', e.message)

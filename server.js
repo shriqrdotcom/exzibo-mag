@@ -1123,24 +1123,41 @@ app.post('/api/orders/auto-cleanup', async (req, res) => {
 
 // POST /api/restaurant/upload-logo
 // Body: { restaurantId, dataUrl }
-// Uploads WebP to restaurant-images bucket + patches logo field. Service-role, no client auth needed.
+// Uploads to Cloudflare R2 (falls back to Supabase Storage), patches restaurants.logo in
+// Supabase, and shadow-writes logo + logo_key to Neon.
+// Returns: { url: string, imageKey: string|null }
 app.post('/api/restaurant/upload-logo', async (req, res) => {
   try {
     const { restaurantId, dataUrl } = req.body
     if (!restaurantId || !dataUrl) return res.status(400).json({ error: 'restaurantId and dataUrl required' })
-    const { url: supabaseUrl, headers } = getSupabaseServiceHeaders()
     const base64 = dataUrl.replace(/^data:[^;]+;base64,/, '')
     const buf = Buffer.from(base64, 'base64')
-    const filePath = `${restaurantId}/logo/${Date.now()}.webp`
-    const uploadRes = await fetch(
-      `${supabaseUrl}/storage/v1/object/restaurant-images/${filePath}`,
-      { method: 'POST', headers: { ...headers, 'Content-Type': 'image/webp', 'x-upsert': 'true' }, body: buf }
-    )
-    if (!uploadRes.ok) {
-      const e = await uploadRes.text()
-      return res.status(500).json({ error: `Storage upload failed: ${e}` })
+    const { url: supabaseUrl, headers } = getSupabaseServiceHeaders()
+
+    // ── Primary: Cloudflare R2 ────────────────────────────────────────────────
+    let publicUrl, objectKey = null
+    try {
+      const objectKeyPath = `restaurants/${restaurantId}/logo/${Date.now()}.webp`
+      const r2Result = await r2Upload(buf, objectKeyPath, 'image/webp')
+      publicUrl  = r2Result.publicUrl
+      objectKey  = r2Result.objectKey
+      console.log('[restaurant/upload-logo] R2 upload ✅:', objectKey)
+    } catch (r2Err) {
+      console.warn('[restaurant/upload-logo] R2 upload failed, falling back to Supabase Storage:', r2Err.message)
+      // ── Fallback: Supabase Storage ──────────────────────────────────────────
+      const filePath = `${restaurantId}/logo/${Date.now()}.webp`
+      const uploadRes = await fetch(
+        `${supabaseUrl}/storage/v1/object/restaurant-images/${filePath}`,
+        { method: 'POST', headers: { ...headers, 'Content-Type': 'image/webp', 'x-upsert': 'true' }, body: buf }
+      )
+      if (!uploadRes.ok) {
+        const e = await uploadRes.text()
+        return res.status(500).json({ error: `Storage upload failed: ${e}` })
+      }
+      publicUrl = `${supabaseUrl}/storage/v1/object/public/restaurant-images/${filePath}`
     }
-    const publicUrl = `${supabaseUrl}/storage/v1/object/public/restaurant-images/${filePath}`
+
+    // ── Patch Supabase restaurants.logo ───────────────────────────────────────
     const patchRes = await fetch(
       `${supabaseUrl}/rest/v1/restaurants?id=eq.${encodeURIComponent(restaurantId)}`,
       { method: 'PATCH', headers: { ...headers, Prefer: 'return=representation' }, body: JSON.stringify({ logo: publicUrl }) }
@@ -1149,8 +1166,17 @@ app.post('/api/restaurant/upload-logo', async (req, res) => {
       const e = await patchRes.text()
       return res.status(500).json({ error: `DB update failed: ${e}` })
     }
+
+    // ── Neon shadow-write (non-blocking) ──────────────────────────────────────
+    const neonPatch = objectKey ? { logo: publicUrl, logo_key: objectKey } : { logo: publicUrl }
+    patchNeonRestaurant(restaurantId, neonPatch).then(() => {
+      console.log('[restaurant/upload-logo] Neon shadow-write ✅')
+    }).catch(neonErr => {
+      console.warn('[restaurant/upload-logo] Neon shadow-write error (non-blocking):', neonErr.message)
+    })
+
     console.log('[restaurant/upload-logo] Uploaded:', publicUrl)
-    return res.json({ url: publicUrl })
+    return res.json({ url: publicUrl, imageKey: objectKey })
   } catch (err) {
     console.error('[restaurant/upload-logo] Error:', err.message)
     return res.status(500).json({ error: err.message })
@@ -1235,17 +1261,30 @@ app.post('/api/restaurant/update-social', async (req, res) => {
 
 // POST /api/about/upload-image
 // Body: { dataUrl: string, restaurantId: string, slot: number (0-3) }
-// Uploads to restaurant-images/{restaurantId}/about/image_{slot+1}.webp with upsert.
-// Returns: { url: string }
+// Uploads to Cloudflare R2 (falls back to Supabase Storage).
+// Returns: { url: string, imageKey: string|null }
+// Note: Neon key storage happens via upsertNeonRestaurantAbout when saveRestaurantAbout is called.
 app.post('/api/about/upload-image', async (req, res) => {
   try {
     const { dataUrl, restaurantId, slot } = req.body
     if (!dataUrl || !restaurantId || slot == null) {
       return res.status(400).json({ error: 'dataUrl, restaurantId, and slot required' })
     }
-    const { url: supabaseUrl, headers } = getSupabaseServiceHeaders()
     const base64 = dataUrl.replace(/^data:[^;]+;base64,/, '')
     const buf    = Buffer.from(base64, 'base64')
+
+    // ── Primary: Cloudflare R2 ────────────────────────────────────────────────
+    try {
+      const objectKey = `restaurants/${restaurantId}/about/image-${slot + 1}-${Date.now()}.webp`
+      const { publicUrl, objectKey: returnedKey } = await r2Upload(buf, objectKey, 'image/webp')
+      console.log('[about/upload-image] R2 upload ✅:', returnedKey)
+      return res.json({ url: publicUrl, imageKey: returnedKey })
+    } catch (r2Err) {
+      console.warn('[about/upload-image] R2 upload failed, falling back to Supabase Storage:', r2Err.message)
+    }
+
+    // ── Fallback: Supabase Storage (legacy path — kept for safety) ────────────
+    const { url: supabaseUrl, headers } = getSupabaseServiceHeaders()
     const filePath = `${restaurantId}/about/image_${slot + 1}.webp`
     const uploadRes = await fetch(
       `${supabaseUrl}/storage/v1/object/restaurant-images/${filePath}`,
@@ -1257,14 +1296,56 @@ app.post('/api/about/upload-image', async (req, res) => {
     )
     if (!uploadRes.ok) {
       const err = await uploadRes.text()
-      console.error('[about/upload-image] Storage error:', err)
+      console.error('[about/upload-image] Supabase fallback error:', err)
       return res.status(500).json({ error: `Storage upload failed: ${err}` })
     }
     const publicUrl = `${supabaseUrl}/storage/v1/object/public/restaurant-images/${filePath}`
-    console.log('[about/upload-image] Uploaded:', publicUrl)
-    return res.json({ url: publicUrl })
+    console.log('[about/upload-image] Supabase fallback ✅:', publicUrl)
+    return res.json({ url: publicUrl, imageKey: null })
   } catch (err) {
     console.error('[about/upload-image] Error:', err.message)
+    return res.status(500).json({ error: err.message })
+  }
+})
+
+// POST /api/restaurant/upload-carousel
+// Body: { dataUrl: string, restaurantId: string }
+// Uploads a carousel/hero image to Cloudflare R2 (falls back to Supabase Storage).
+// Returns: { url: string, imageKey: string|null }
+app.post('/api/restaurant/upload-carousel', async (req, res) => {
+  try {
+    const { dataUrl, restaurantId } = req.body
+    if (!dataUrl || !restaurantId) return res.status(400).json({ error: 'dataUrl and restaurantId required' })
+    const base64 = dataUrl.replace(/^data:[^;]+;base64,/, '')
+    const buf    = Buffer.from(base64, 'base64')
+
+    // ── Primary: Cloudflare R2 ────────────────────────────────────────────────
+    try {
+      const objectKey = `restaurants/${restaurantId}/carousel/${Date.now()}.webp`
+      const { publicUrl, objectKey: returnedKey } = await r2Upload(buf, objectKey, 'image/webp')
+      console.log('[restaurant/upload-carousel] R2 upload ✅:', returnedKey)
+      return res.json({ url: publicUrl, imageKey: returnedKey })
+    } catch (r2Err) {
+      console.warn('[restaurant/upload-carousel] R2 upload failed, falling back to Supabase Storage:', r2Err.message)
+    }
+
+    // ── Fallback: Supabase Storage ────────────────────────────────────────────
+    const { url: supabaseUrl, headers } = getSupabaseServiceHeaders()
+    const filePath = `${restaurantId}/carousel/${Date.now()}.webp`
+    const r = await fetch(`${supabaseUrl}/storage/v1/object/restaurant-images/${filePath}`, {
+      method: 'POST',
+      headers: { ...headers, 'Content-Type': 'image/webp', 'x-upsert': 'true' },
+      body: buf,
+    })
+    if (!r.ok) {
+      const e = await r.text()
+      return res.status(500).json({ error: `Storage upload failed: ${e}` })
+    }
+    const publicUrl = `${supabaseUrl}/storage/v1/object/public/restaurant-images/${filePath}`
+    console.log('[restaurant/upload-carousel] Supabase fallback ✅:', publicUrl)
+    return res.json({ url: publicUrl, imageKey: null })
+  } catch (err) {
+    console.error('[restaurant/upload-carousel] Error:', err.message)
     return res.status(500).json({ error: err.message })
   }
 })
