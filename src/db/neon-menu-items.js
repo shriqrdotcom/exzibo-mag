@@ -4,6 +4,7 @@
 // Neon writes are non-blocking mirrors — failures are logged but never thrown.
 
 import { neon } from '@neondatabase/serverless'
+import { r2KeyFromUrl } from '../lib/r2.js'
 
 function getSql() {
   const url = process.env.DATABASE_URL
@@ -26,8 +27,8 @@ function toJsonb(val) {
 // Caller must already have the Supabase-assigned id in `item.id`.
 // Field coercions: price ?? 0, available ?? true, veg ?? true, is_published ?? false,
 //                  image_shape ?? 'vertical'.
-// `image` stores the current Supabase Storage public URL (compat column).
-// `image_key` is left NULL — reserved for future Cloudflare R2 migration.
+// `image` stores the full public URL (Supabase Storage or Cloudflare R2).
+// `image_key` is derived automatically: non-null only when `image` is an R2 URL.
 export async function upsertNeonMenuItem(restaurantId, item) {
   if (!restaurantId) throw new Error('restaurantId is required')
   if (!item?.id) throw new Error('item.id is required for Neon upsert (use Supabase-returned id)')
@@ -50,11 +51,15 @@ export async function upsertNeonMenuItem(restaurantId, item) {
     created_at:   createdAt,
   } = item
 
+  // Derive R2 object key from the image URL if it is an R2 URL.
+  // Returns null for existing Supabase Storage URLs — those keep image_key NULL.
+  const imageKey = r2KeyFromUrl(image ?? null)
+
   const rows = await sql`
     INSERT INTO menu_items (
       id, restaurant_id, category_id,
       name, description, price,
-      image,
+      image, image_key,
       available, veg,
       tags, add_ons,
       is_published, image_shape,
@@ -68,6 +73,7 @@ export async function upsertNeonMenuItem(restaurantId, item) {
       ${description ?? null},
       ${price ?? 0},
       ${image ?? null},
+      ${imageKey},
       ${available ?? true},
       ${veg ?? true},
       ${toJsonb(tags)}::jsonb,
@@ -82,6 +88,7 @@ export async function upsertNeonMenuItem(restaurantId, item) {
       description  = EXCLUDED.description,
       price        = EXCLUDED.price,
       image        = EXCLUDED.image,
+      image_key    = EXCLUDED.image_key,
       available    = EXCLUDED.available,
       veg          = EXCLUDED.veg,
       tags         = EXCLUDED.tags,

@@ -14,6 +14,7 @@ import { upsertNeonRestaurantMember, deleteNeonRestaurantMember, getNeonRestaura
 import { upsertNeonRestaurantAbout, getNeonRestaurantAbout } from './src/db/neon-restaurant-about.js'
 import { upsertNeonRestaurantSettingsKey } from './src/db/neon-restaurant-settings.js'
 import { writeAuditLog } from './src/db/neon-audit-logs.js'
+import { r2Upload } from './src/lib/r2.js'
 
 function previewAuthPlugin() {
   return {
@@ -124,14 +125,29 @@ function menuApiPlugin() {
       }
 
       // POST /api/menu/upload-image
+      // Uploads to Cloudflare R2. Falls back to Supabase Storage if R2 is unavailable.
+      // Returns: { url: string, imageKey: string|null }
       server.middlewares.use('/api/menu/upload-image', async (req, res, next) => {
         if (req.method !== 'POST') return next()
         try {
           const { dataUrl, restaurantId } = await readBody(req)
           if (!dataUrl || !restaurantId) return json(res, 400, { error: 'dataUrl and restaurantId required' })
-          const { url: supabaseUrl, headers } = getServiceHeaders()
+
           const base64 = dataUrl.replace(/^data:[^;]+;base64,/, '')
           const buf = Buffer.from(base64, 'base64')
+
+          // ── Primary: Cloudflare R2 ──────────────────────────────────────────
+          try {
+            const objectKey = `restaurants/${restaurantId}/menu-items/${Date.now()}.webp`
+            const { publicUrl, objectKey: returnedKey } = await r2Upload(buf, objectKey, 'image/webp')
+            console.log('[menu/upload-image] R2 upload ✅:', returnedKey)
+            return json(res, 200, { url: publicUrl, imageKey: returnedKey })
+          } catch (r2Err) {
+            console.warn('[menu/upload-image] R2 upload failed, falling back to Supabase Storage:', r2Err.message)
+          }
+
+          // ── Fallback: Supabase Storage (legacy path — kept for safety) ──────
+          const { url: supabaseUrl, headers } = getServiceHeaders()
           const filePath = `public/${restaurantId}/${Date.now()}.webp`
           const r = await fetch(`${supabaseUrl}/storage/v1/object/menu-images/${filePath}`, {
             method: 'POST',
@@ -140,8 +156,8 @@ function menuApiPlugin() {
           })
           if (!r.ok) { const e = await r.text(); return json(res, 500, { error: `Storage upload failed: ${e}` }) }
           const publicUrl = `${supabaseUrl}/storage/v1/object/public/menu-images/${filePath}`
-          console.log('[menu/upload-image] Uploaded:', publicUrl)
-          return json(res, 200, { url: publicUrl })
+          console.log('[menu/upload-image] Supabase fallback ✅:', publicUrl)
+          return json(res, 200, { url: publicUrl, imageKey: null })
         } catch (e) { return json(res, 500, { error: e.message }) }
       })
 

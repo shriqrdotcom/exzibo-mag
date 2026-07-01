@@ -1,0 +1,168 @@
+You are my Replit AI Cloudflare R2 image storage migration engineer.
+
+Context:
+Cloudflare R2 verification is already complete and successful.
+All R2 secrets are present and working:
+- R2_ACCOUNT_ID
+- R2_ACCESS_KEY_ID
+- R2_SECRET_ACCESS_KEY
+- R2_BUCKET_NAME
+- R2_PUBLIC_URL
+
+Previous R2 test passed:
+- S3 upload works
+- public read works
+- delete cleanup works
+- no blockers found
+
+Previous image storage analysis already found:
+- Frontend image rendering is URL-driven.
+- Old Supabase image URLs can continue working.
+- New R2 public URLs can be stored in the same existing image URL fields.
+- Menu item image upload is the safest first migration target.
+- Menu item upload uses:
+  POST /api/menu/upload-image
+- Existing Supabase buckets:
+  restaurant-images
+  menu-images
+- Do not re-analyze the full project unless needed for this exact implementation.
+
+Goal:
+Implement only Phase 1 and Phase 2 of R2 image migration.
+
+Phase 1:
+Create a server-only Cloudflare R2 helper.
+
+Phase 2:
+Migrate only menu item image upload to R2.
+
+Strict scope:
+Only touch files needed for:
+- server-only R2 helper
+- POST /api/menu/upload-image route
+- safe menu item image_key handling if already supported
+
+Do NOT touch:
+- restaurant logo upload
+- restaurant about image upload
+- carousel/hero image upload
+- CreateWebsite image upload
+- EditProfile legacy image upload
+- old Supabase images
+- Auth
+- Realtime
+- Neon schema unless a proven missing field blocks this phase
+- UI/design
+- routing
+- unrelated database logic
+
+Safety rules:
+- Do NOT remove Supabase.
+- Do NOT remove Supabase Storage code.
+- Do NOT delete Supabase Storage files.
+- Do NOT migrate old images.
+- Keep old Supabase image URLs working.
+- Keep Supabase Storage code as fallback/legacy safety.
+- R2 credentials must stay server-side only.
+- Do NOT expose R2 secrets to frontend/client code.
+- Do NOT create VITE_R2_SECRET_ACCESS_KEY.
+- Do NOT create NEXT_PUBLIC_R2_SECRET_ACCESS_KEY.
+- Do NOT print secret values in logs, console, files, or reports.
+- Do NOT install new packages unless absolutely necessary.
+- Prefer the already-tested native fetch + Node crypto + AWS Signature V4 method.
+
+Implementation tasks:
+
+1. Create this server-only helper:
+   src/lib/r2.js
+
+2. The helper must:
+   - read R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET_NAME, R2_PUBLIC_URL from server env only
+   - upload to Cloudflare R2 using S3-compatible API
+   - return:
+     publicUrl
+     objectKey
+   - normalize R2_PUBLIC_URL so no double slash happens
+   - never expose secrets
+   - never be imported by frontend/client files
+
+3. Use this R2 object key pattern for menu item images:
+   restaurants/{restaurantId}/menu-items/{timestamp-or-uuid}.webp
+
+4. Patch only:
+   POST /api/menu/upload-image
+
+5. Patch the route wherever it is active:
+   - server.js
+   - vite.config.js
+   Only patch both if both define the same active route for this project.
+
+6. The menu image upload route must:
+   - accept the same request format as before
+   - preserve the same response shape as much as possible
+   - upload new menu item images to R2 instead of Supabase Storage
+   - return the full R2 public URL for frontend compatibility
+   - return imageKey/objectKey if safe
+   - keep Supabase upload code available as fallback or clearly isolated legacy code
+
+7. Database behavior:
+   - Existing app expects full public URL in menu_items.image.
+   - Continue storing the full R2 public URL in menu_items.image.
+   - If the save/upsert flow already supports image_key safely, store the R2 object key in Neon menu_items.image_key.
+   - If image_key cannot be safely linked to the menu item, do not guess. Keep URL working and report image_key as deferred.
+
+8. Error handling:
+   - If R2 upload fails, do not break unrelated app logic.
+   - Either fall back to existing Supabase Storage upload path or return a clear safe server error.
+   - Do not expose secrets in errors.
+   - Log only safe non-secret information.
+
+9. Deletion/replacement safety:
+   - Do not delete old Supabase files.
+   - Do not bulk migrate old images.
+   - Do not change permanent restaurant delete logic in this phase.
+   - If delete/replacement logic depends on Supabase URL format, do not break it.
+   - R2 cleanup for new menu images can be deferred unless it is simple and object-key based.
+
+10. Required tests:
+   - Confirm R2 helper loads env variables without printing values.
+   - Upload one test menu item image through POST /api/menu/upload-image.
+   - Confirm returned image URL starts with R2_PUBLIC_URL.
+   - Confirm returned R2 public URL opens successfully.
+   - Confirm menu item create/update still saves full image URL in menu_items.image.
+   - Confirm new menu item image displays on the menu website.
+   - Confirm old Supabase menu images still display.
+   - Confirm no R2 secret appears in frontend/browser bundle.
+   - Confirm logo upload was not changed.
+   - Confirm about image upload was not changed.
+   - Confirm carousel/create-website uploads were not changed.
+   - Confirm no UI/design changed.
+
+Stop conditions:
+Stop and report instead of continuing if:
+- POST /api/menu/upload-image request format is unclear
+- active route cannot be identified
+- R2 helper would need to expose secrets to frontend
+- image_key handling is risky
+- implementation requires changing unrelated modules
+- new package installation is required and cannot be avoided
+
+Final report format:
+1. Files changed
+2. R2 helper status
+3. Menu upload route status
+4. New menu images upload to R2: yes/no
+5. Returned URL starts with R2_PUBLIC_URL: yes/no
+6. menu_items.image stores full public URL: yes/no
+7. menu_items.image_key stores R2 object key: yes/no/deferred
+8. Supabase fallback/legacy status
+9. Old Supabase image compatibility status
+10. Tests performed and results
+11. Blockers/deferred work
+12. Exact next recommended phase
+
+Final rule:
+Implement only Phase 1 and Phase 2.
+Only migrate menu item image uploads to R2.
+Do not touch any other image upload flow.
+Stop after the report.
