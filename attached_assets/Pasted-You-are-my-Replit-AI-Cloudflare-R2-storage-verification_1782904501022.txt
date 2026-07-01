@@ -1,0 +1,116 @@
+You are my Replit AI Cloudflare R2 storage verification engineer.
+
+Context:
+My app is a restaurant SaaS platform.
+The menu website currently runs normally.
+I am only preparing to shift image storage from Supabase Storage to Cloudflare R2 later.
+
+I have already created a Cloudflare R2 bucket and added these Replit Secrets:
+- R2_ACCOUNT_ID
+- R2_ACCESS_KEY_ID
+- R2_SECRET_ACCESS_KEY
+- R2_BUCKET_NAME
+- R2_PUBLIC_URL
+
+Goal:
+Verify that Cloudflare R2 is correctly connected and usable.
+This is verification only.
+Do not migrate image uploads yet.
+
+Very important safety rules:
+- Do NOT remove Supabase.
+- Do NOT remove Supabase Storage code.
+- Do NOT change current image upload behavior.
+- Do NOT migrate old images.
+- Do NOT delete any Supabase Storage files.
+- Do NOT change frontend UI/design.
+- Do NOT change menu routing.
+- Do NOT change Auth.
+- Do NOT change Realtime.
+- Do NOT change Neon database logic.
+- Do NOT change existing production image URLs.
+- Do NOT print or expose secret values in console, logs, responses, or files.
+- Do NOT create public client-side environment variables like VITE_R2_SECRET_ACCESS_KEY or NEXT_PUBLIC_R2_SECRET_ACCESS_KEY.
+- Keep all R2 credentials server-side only.
+
+Tasks:
+1. Verify that these server-side environment variables exist:
+   - R2_ACCOUNT_ID
+   - R2_ACCESS_KEY_ID
+   - R2_SECRET_ACCESS_KEY
+   - R2_BUCKET_NAME
+   - R2_PUBLIC_URL
+
+2. Report only whether each variable exists.
+   Do not print actual values.
+
+3. Validate basic format:
+   - R2_BUCKET_NAME is not empty.
+   - R2_PUBLIC_URL starts with https://
+   - R2_PUBLIC_URL does not end with an unnecessary trailing slash.
+   - R2_ACCOUNT_ID is present and used only for the R2 S3 endpoint.
+
+4. Create a safe temporary R2 connection test using Cloudflare R2 S3-compatible API.
+
+5. Use this temporary test object key only:
+   __r2-test/connection-test.txt
+
+6. Upload a tiny text file to R2 with content like:
+   R2 connection test
+
+7. After upload, test public access using:
+   R2_PUBLIC_URL + "/__r2-test/connection-test.txt"
+
+8. Confirm:
+   - S3 upload works.
+   - Public read/access works.
+   - The response content matches the test content.
+
+9. After successful verification, delete only this temporary test object:
+   __r2-test/connection-test.txt
+
+10. If upload works but public access fails:
+   - Do not make app changes.
+   - Report that R2 credentials work but bucket public access / R2_PUBLIC_URL may not be enabled or correct.
+
+11. If upload fails:
+   - Do not make app changes.
+   - Report the likely reason without exposing secrets:
+     - wrong Account ID
+     - wrong Access Key ID / Secret Access Key
+     - wrong bucket name
+     - token permission issue
+     - R2 endpoint issue
+
+12. If delete fails:
+   - Do not change app behavior.
+   - Report that upload/read worked but cleanup failed.
+   - Mention the exact temporary object key that may need manual deletion.
+
+Implementation rules:
+- If a temporary script is needed, keep it isolated and clearly named.
+- Do not connect this verification to the real image upload system.
+- Do not change restaurant logo upload.
+- Do not change menu item image upload.
+- Do not change restaurant about image upload.
+- Do not change special offers/banner image upload.
+- Do not change database fields.
+- Do not change Supabase fallback logic.
+- Do not deploy storage migration logic yet.
+
+Final report format:
+Give a clear report with:
+1. R2 env status
+2. Bucket name status
+3. Public URL status
+4. S3 upload test result
+5. Public read/access test result
+6. Delete cleanup result
+7. Whether R2 is ready for image upload migration
+8. Any blocker found
+9. Exact next recommended step
+
+Final rule:
+Only verify R2 connection.
+Do not modify app image upload behavior yet.
+Stop after the report.
