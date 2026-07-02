@@ -3,6 +3,7 @@ import OurStorySection from '../components/OurStorySection'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { notifyAnalyticsUpdate } from '../context/AnalyticsContext'
 import { getRestaurantBySlug, getMenuCategories, getMenuItems, getPublishedMenuItems, loadMenuFilters, fetchRestaurantAbout, loadRestaurantHours } from '../lib/db'
+import { getPublicImageUrl, getPublicImageUrls } from '../lib/imageUrl'
 import { supabase } from '../lib/supabase'
 import { useMenuSubdomainRedirect } from '../lib/routeConfig'
 import { toSlug } from '../lib/slug'
@@ -1015,8 +1016,8 @@ export default function RestaurantWebsite() {
           rating:          dbRow.rating          || '',
           googleReview:    dbRow.google_review   || dbRow.googleReview || '',
           tables:          dbRow.tables          || '',
-          images:          dbRow.images          || [],
-          logo:            dbRow.logo            || '',
+          images:          getPublicImageUrls(dbRow.images),
+          logo:            getPublicImageUrl(dbRow.logo || ''),
           social_links:    dbRow.social_links    || {},
           socialLinks:     dbRow.social_links    || {},
           chef_info:       dbRow.chef_info       || '',
@@ -1078,7 +1079,7 @@ export default function RestaurantWebsite() {
                   description: it.description || '',
                   desc: it.description || '',
                   price: parseFloat(it.price) || 0,
-                  img: it.image || null,
+                  img: getPublicImageUrl(it.image) || null,
                   veg: it.veg !== false,
                   available: it.available !== false,
                   tags: it.tags || [],
@@ -1135,7 +1136,7 @@ export default function RestaurantWebsite() {
                 description: it.description || '',
                 desc: it.description || '',
                 price: parseFloat(it.price) || 0,
-                img: it.image || null,
+                img: getPublicImageUrl(it.image) || null,
                 veg: it.veg !== false,
                 available: it.available !== false,
                 tags: it.tags || [],
@@ -1187,7 +1188,7 @@ export default function RestaurantWebsite() {
           description:  dbRow.description  || prev.description,
           location:     dbRow.location     || prev.location,
           phone:        dbRow.phone        || prev.phone,
-          logo:         dbRow.logo         || prev.logo,
+          logo:         getPublicImageUrl(dbRow.logo || prev.logo),
           googleReview: dbRow.google_review|| prev.googleReview,
         } : prev)
       } catch (e) {
@@ -1340,10 +1341,10 @@ export default function RestaurantWebsite() {
         if (data) {
           setAboutData({
             story_text:   data.story_text   || '',
-            image_1_url:  data.image_1_url  || '',
-            image_2_url:  data.image_2_url  || '',
-            image_3_url:  data.image_3_url  || '',
-            image_4_url:  data.image_4_url  || '',
+            image_1_url:  getPublicImageUrl(data.image_1_url  || ''),
+            image_2_url:  getPublicImageUrl(data.image_2_url  || ''),
+            image_3_url:  getPublicImageUrl(data.image_3_url  || ''),
+            image_4_url:  getPublicImageUrl(data.image_4_url  || ''),
           })
         }
       }).catch(() => {})

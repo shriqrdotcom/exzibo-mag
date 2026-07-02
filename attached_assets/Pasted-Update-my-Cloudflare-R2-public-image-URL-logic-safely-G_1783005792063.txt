@@ -1,0 +1,69 @@
+Update my Cloudflare R2 public image URL logic safely.
+
+Goal:
+All uploaded images should display using my custom R2 public domain:
+
+https://images.exzibo.online
+
+Important:
+Do not change unrelated features.
+Do not remove or break existing R2 upload, delete, database, or auth logic.
+Do not use images.exzibo.online for uploading. It is only for public image display.
+
+Environment variable:
+Use this env variable for public image display:
+
+R2_PUBLIC_BASE_URL=https://images.exzibo.online
+
+If the frontend needs a Vite public env variable, also support:
+
+VITE_R2_PUBLIC_BASE_URL=https://images.exzibo.online
+
+Main task:
+Create or update one safe image URL helper function, for example:
+
+getPublicImageUrl(imageValue)
+
+The helper should work like this:
+1. If imageValue is empty, return empty/null safely.
+2. If imageValue is already using https://images.exzibo.online, return it as-is.
+3. If imageValue is a saved R2 object key/path, build the public URL like:
+   R2_PUBLIC_BASE_URL + "/" + imageValue
+4. If imageValue is an old full R2 public URL, extract the object path and rebuild it with:
+   https://images.exzibo.online
+5. If imageValue is an unknown external URL, do not break it. Return it as-is.
+
+Correct example:
+Saved path:
+restaurants/the-taj/menu-items/paneer.webp
+
+Display URL:
+https://images.exzibo.online/restaurants/the-taj/menu-items/paneer.webp
+
+Upload logic:
+Keep using the existing R2 S3 endpoint, bucket name, access key, and secret key for upload/delete.
+New uploads should save the R2 object key/path in the database if possible, not the full public URL.
+
+Update all image display areas to use the helper:
+- food item images
+- category images
+- restaurant logo
+- banners
+- special offers
+- combo/offers
+- our story images
+- profile/settings images
+- dashboard image previews
+- public menu website images
+
+Do not manually rewrite all database records unless absolutely required.
+Existing old images must still display.
+New uploaded images should display with images.exzibo.online.
+
+After implementation, test:
+1. Existing images still load.
+2. Upload a new image.
+3. New image URL uses https://images.exzibo.online.
+4. Public menu website images load.
+5. Dashboard/admin preview images load.
+6. R2 upload and delete still work.

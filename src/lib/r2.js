@@ -14,12 +14,14 @@ function getConfig() {
   const accessKeyId = process.env.R2_ACCESS_KEY_ID
   const secretKey   = process.env.R2_SECRET_ACCESS_KEY
   const bucket      = process.env.R2_BUCKET_NAME
-  const publicUrl   = (process.env.R2_PUBLIC_URL || '').replace(/\/$/, '')
+  // R2_PUBLIC_BASE_URL takes priority (custom domain, e.g. https://images.exzibo.online)
+  // Falls back to legacy R2_PUBLIC_URL (pub-xxx.r2.dev) if not set.
+  const publicUrl   = (process.env.R2_PUBLIC_BASE_URL || process.env.R2_PUBLIC_URL || '').replace(/\/$/, '')
 
   if (!accountId || !accessKeyId || !secretKey || !bucket || !publicUrl) {
     throw new Error(
       '[r2] Missing required env vars. Check: R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, ' +
-      'R2_SECRET_ACCESS_KEY, R2_BUCKET_NAME, R2_PUBLIC_URL'
+      'R2_SECRET_ACCESS_KEY, R2_BUCKET_NAME, and R2_PUBLIC_BASE_URL (or R2_PUBLIC_URL)'
     )
   }
 
@@ -137,14 +139,18 @@ export async function r2Upload(buffer, objectKey, contentType = 'image/webp') {
 
 /**
  * Derive the R2 object key from a public R2 URL.
- * Returns null if the URL does not start with R2_PUBLIC_URL (i.e. it's a Supabase URL).
+ * Returns null if the URL is not an R2 URL (e.g. it's a Supabase URL).
+ * Recognises both the custom domain (R2_PUBLIC_BASE_URL / images.exzibo.online)
+ * and the legacy pub-xxx.r2.dev URL (R2_PUBLIC_URL).
  *
  * @param {string|null} url
  * @returns {string|null}
  */
 export function r2KeyFromUrl(url) {
   if (!url) return null
-  const base = (process.env.R2_PUBLIC_URL || '').replace(/\/$/, '')
-  if (!base || !url.startsWith(base + '/')) return null
-  return url.slice(base.length + 1)
+  const customBase = (process.env.R2_PUBLIC_BASE_URL || 'https://images.exzibo.online').replace(/\/$/, '')
+  const legacyBase = (process.env.R2_PUBLIC_URL || '').replace(/\/$/, '')
+  if (customBase && url.startsWith(customBase + '/')) return url.slice(customBase.length + 1)
+  if (legacyBase && url.startsWith(legacyBase + '/')) return url.slice(legacyBase.length + 1)
+  return null
 }

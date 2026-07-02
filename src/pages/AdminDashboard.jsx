@@ -6,6 +6,7 @@ import { useAnalytics, notifyAnalyticsUpdate } from '../context/AnalyticsContext
 import { useRole } from '../context/RoleContext'
 import { getRestaurantById, getRestaurants, getOrders, getBookings, updateOrderStatus, updateBookingStatus, getMenuCategories, getMenuItems, insertMenuItem, updateMenuItem, deleteMenuItem, upsertMenuCategory, deleteMenuCategory, upsertMenuItems, uploadMenuImage, updateRestaurant, uploadToStorage, uploadDataUrlToStorage, uploadCarouselImageViaApi, toggleMenuItemPublish, normalizeOrder, normalizeBooking, sendMessage, getLatestSmsNotification, upsertSmsNotification, fetchActiveNotification, publishActiveNotification, confirmActiveNotification, insertNotificationHistory, fetchNotificationHistory, fetchNIELimits, subscribeToNIELimits, saveMenuFilters, loadMenuFilters, fetchRestaurantAbout, saveRestaurantAbout, uploadAboutImage } from '../lib/db'
 import { processImageFile, isAcceptedImageType } from '../lib/processImage'
+import { getPublicImageUrl, getPublicImageUrls } from '../lib/imageUrl'
 import { toSlug } from '../lib/slug'
 import { supabase } from '../lib/supabase'
 import notificationIconImg from '@assets/image_1777373928129.png'
@@ -3139,10 +3140,10 @@ function SettingsPanel({ draft, setDraft, accentStart, accentEnd, onSave, saved,
         if (!data) return
         if (data.story_text) setAboutText(data.story_text)
         setAboutImages([
-          data.image_1_url || '',
-          data.image_2_url || '',
-          data.image_3_url || '',
-          data.image_4_url || '',
+          getPublicImageUrl(data.image_1_url || ''),
+          getPublicImageUrl(data.image_2_url || ''),
+          getPublicImageUrl(data.image_3_url || ''),
+          getPublicImageUrl(data.image_4_url || ''),
         ])
       }).catch(() => {
         try {
@@ -4605,7 +4606,7 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
                   name: it.name,
                   desc: it.description || '',
                   price: parseFloat(it.price) || 0,
-                  img: it.image || null,
+                  img: getPublicImageUrl(it.image) || null,
                   veg: it.veg !== false,
                   available: it.available !== false,
                   is_published: it.is_published === true,
