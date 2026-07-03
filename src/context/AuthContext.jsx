@@ -1,24 +1,17 @@
 import React, { createContext, useContext, useEffect, useState } from 'react'
-import { supabase } from '../lib/supabase'
 import { IS_PREVIEW, DISABLE_AUTH } from '../lib/env'
 import { verifyPreviewSession, clearPreviewSession } from '../lib/previewAuth'
-
-// ── Allowed Gmail accounts ────────────────────────────────────────────────────
-// Only these two emails can access the system.
-// Email check happens CLIENT-SIDE against the session returned by Google/Supabase.
-// No database query needed — this is the simplest, most reliable approach.
-const ALLOWED_EMAILS = [
-  'exzibonew@gmail.com',
-  'trisanu07.nandi@gmail.com',
-]
+import { authClient } from '../lib/auth-client'
+import { ACTIVE_SUBDOMAIN } from '../lib/subdomain'
+import { setCurrentAuthUser } from '../lib/current-user'
 
 // ── Mock user injected when DISABLE_AUTH=true ─────────────────────────────────
-// Used only in preview/dev. Never reaches production.
+// Used only in dev. Never reaches production.
 const MOCK_USER = {
-  id:             'preview-user-disable-auth',
-  email:          ALLOWED_EMAILS[0],
-  isPreviewUser:  true,
-  isDisableAuth:  true,
+  id:            'preview-user-disable-auth',
+  email:         'exzibonew@gmail.com',
+  isPreviewUser: true,
+  isDisableAuth: true,
 }
 
 const AuthContext = createContext(null)
@@ -30,121 +23,148 @@ export function AuthProvider({ children }) {
   const [isSuperAdmin, setIsSuperAdmin] = useState(false)
 
   useEffect(() => {
-    // ── DISABLE_AUTH mode — skip all authentication checks ────────────────
-    // Controlled by VITE_DISABLE_AUTH=true (development env var only).
-    // Production never has this set, so this branch is unreachable in prod.
+    // ── DISABLE_AUTH mode ─────────────────────────────────────────────────
     if (DISABLE_AUTH) {
       console.warn(
         '[auth] DISABLE_AUTH is active — authentication is bypassed. ' +
         'This should NEVER appear in production.'
       )
+      setCurrentAuthUser(MOCK_USER)
       setUser(MOCK_USER)
       setIsSuperAdmin(true)
       setLoading(false)
       return
     }
 
-    // ── Preview mode — bypass Supabase, use local session token ──────────
+    // ── Preview mode — bypass Better Auth, use local session token ────────
     if (IS_PREVIEW) {
       verifyPreviewSession().then(previewUser => {
+        setCurrentAuthUser(previewUser)
         setUser(previewUser)
         setLoading(false)
       })
       return
     }
 
-    // ── Production mode ───────────────────────────────────────────────────
+    // ── Production mode — Better Auth ─────────────────────────────────────
     let mounted = true
 
-    async function validateAndSetUser(session) {
-      // No session → not logged in
-      if (!session?.user) {
-        if (mounted) { setUser(null); setLoading(false) }
-        return
-      }
+    async function initSession() {
+      try {
+        const result = await authClient.getSession()
+        if (!mounted) return
 
-      const email = (session.user.email ?? '').toLowerCase().trim()
-      console.log('[auth] Signed in as:', email)
+        const sessionUser = result?.data?.user ?? null
 
-      // Check against the hardcoded allowlist
-      if (!ALLOWED_EMAILS.includes(email)) {
-        console.warn('[auth] Access denied for:', email)
-        try { await supabase.auth.signOut() } catch {}
-        if (mounted) {
+        if (!sessionUser) {
+          setCurrentAuthUser(null)
           setUser(null)
-          setAccessDenied(true)
-          setLoading(false)
-        }
-        return
-      }
-
-      // Allowed — grant full access
-      if (mounted) {
-        setUser(session.user)
-        setIsSuperAdmin(true) // Both accounts are super admins with identical access
-        setAccessDenied(false)
-        setLoading(false)
-      }
-
-      // Auto-link to any team_members row matching this email (best-effort)
-      supabase.rpc('link_team_member_on_login').catch(e =>
-        console.warn('[auth] link_team_member_on_login failed:', e.message)
-      )
-    }
-
-    // Single source of truth — INITIAL_SESSION fires after Supabase finishes
-    // processing any OAuth redirect tokens in the URL (no race condition).
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log('[auth] Event:', event, '| Email:', session?.user?.email ?? 'none')
-      if (
-        event === 'INITIAL_SESSION' ||
-        event === 'SIGNED_IN'       ||
-        event === 'TOKEN_REFRESHED'
-      ) {
-        validateAndSetUser(session)
-      } else if (event === 'SIGNED_OUT') {
-        if (mounted) {
-          setUser(null)
-          setAccessDenied(false)
           setIsSuperAdmin(false)
           setLoading(false)
+          return
+        }
+
+        const email = (sessionUser.email || '').toLowerCase().trim()
+        console.log('[auth] Signed in as:', email)
+
+        // On superadmin subdomain: verify against SUPERADMIN_ALLOWED_EMAILS
+        if (ACTIVE_SUBDOMAIN === 'superadmin') {
+          try {
+            const r = await fetch('/api/auth-check?type=superadmin', { credentials: 'include' })
+            const data = await r.json()
+            if (!data.allowed) {
+              console.warn('[auth] Superadmin access denied for:', email)
+              await authClient.signOut()
+              if (mounted) {
+                setCurrentAuthUser(null)
+                setUser(null)
+                setAccessDenied(true)
+                setLoading(false)
+              }
+              return
+            }
+          } catch (e) {
+            console.warn('[auth] Superadmin check failed:', e.message)
+          }
+
+          if (mounted) {
+            setCurrentAuthUser(sessionUser)
+            setUser(sessionUser)
+            setIsSuperAdmin(true)
+            setAccessDenied(false)
+            setLoading(false)
+          }
+          return
+        }
+
+        // On dashboard subdomain: session is valid; per-restaurant access
+        // check happens in RestaurantDashboard when the restaurant is known.
+        if (mounted) {
+          setCurrentAuthUser(sessionUser)
+          setUser(sessionUser)
+          setIsSuperAdmin(false)
+          setAccessDenied(false)
+          setLoading(false)
+        }
+      } catch (e) {
+        console.error('[auth] Session init error:', e)
+        if (mounted) {
+          setCurrentAuthUser(null)
+          setUser(null)
+          setLoading(false)
         }
       }
-    })
+    }
+
+    initSession()
+
+    // Refresh session on tab focus (keeps session alive across tabs)
+    const onFocus = () => initSession()
+    window.addEventListener('focus', onFocus)
 
     return () => {
       mounted = false
-      subscription.unsubscribe()
+      window.removeEventListener('focus', onFocus)
     }
   }, [])
 
   async function signInWithGoogle() {
     if (DISABLE_AUTH) return { data: null, error: { message: 'Auth is disabled in this environment.' } }
     if (IS_PREVIEW)   return { data: null, error: { message: 'Google sign-in is not available in preview mode.' } }
+
     setAccessDenied(false)
-    const { data, error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: `${window.location.origin}/` },
-    })
-    return { data, error }
+    try {
+      await authClient.signIn.social({
+        provider: 'google',
+        callbackURL: `${window.location.origin}/`,
+      })
+      return { data: {}, error: null }
+    } catch (e) {
+      return { data: null, error: { message: e.message || 'Sign-in failed' } }
+    }
   }
 
   async function signOut() {
-    // In disable-auth mode sign-out is a no-op — re-inject the mock user
     if (DISABLE_AUTH) {
+      setCurrentAuthUser(MOCK_USER)
       setUser(MOCK_USER)
       return
     }
     if (IS_PREVIEW) {
       clearPreviewSession()
+      setCurrentAuthUser(null)
       setUser(null)
       return
     }
     setAccessDenied(false)
-    await supabase.auth.signOut()
+    try { await authClient.signOut() } catch {}
+    setCurrentAuthUser(null)
+    setUser(null)
+    setIsSuperAdmin(false)
   }
 
   function setPreviewUser(previewUser) {
+    setCurrentAuthUser(previewUser)
     setUser(previewUser)
   }
 

@@ -12,7 +12,9 @@ import React, { useEffect, useState } from 'react'
 import { useParams, useNavigate, useSearchParams, Navigate } from 'react-router-dom'
 import { useRole } from '../context/RoleContext'
 import { useRestaurantRole } from '../hooks/useRestaurantRole'
+import { useAuth } from '../context/AuthContext'
 import { getRestaurantBySlug } from '../lib/db'
+import { DISABLE_AUTH } from '../lib/env'
 import AdminDashboard from './AdminDashboard'
 import ProfilePage from './ProfilePage'
 
@@ -281,6 +283,12 @@ export default function RestaurantDashboard() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const { activateRole } = useRole()
+  const { user, loading: authLoading, signOut } = useAuth()
+
+  // ── Production session auth state (not used in DISABLE_AUTH/dev mode) ──
+  const [sessionRole, setSessionRole]     = useState(null)
+  const [sessionChecked, setSessionChecked] = useState(DISABLE_AUTH)
+  const [sessionDenied, setSessionDenied]   = useState(false)
 
   // ── 0. Read ?role= and ?from=master URL params synchronously at init ────
   // navigation.js injects ?role=<normalizedRole> when opening a
@@ -321,8 +329,42 @@ export default function RestaurantDashboard() {
       .finally(() => setRestaurantLoading(false))
   }, [restaurantSlug])
 
+  // ── 1b. In production: check session + team membership once restaurant loads
+  useEffect(() => {
+    if (DISABLE_AUTH || !restaurant) return
+    if (sessionChecked) return
+
+    // No Better Auth session → redirect to login
+    if (!authLoading && !user) {
+      try { localStorage.setItem('auth_redirect', window.location.pathname) } catch {}
+      navigate('/auth', { replace: true })
+      return
+    }
+    if (authLoading || !user) return  // wait for session to resolve
+
+    fetch(`/api/auth-check?type=member&restaurantId=${encodeURIComponent(restaurant.id)}`, {
+      credentials: 'include',
+    })
+      .then(r => r.json())
+      .then(data => {
+        if (data.allowed && data.role) {
+          setSessionRole(data.role)
+        } else {
+          setSessionDenied(true)
+        }
+        setSessionChecked(true)
+      })
+      .catch(() => {
+        setSessionDenied(true)
+        setSessionChecked(true)
+      })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [restaurant, authLoading, user, sessionChecked])
+
   // ── 2. Get / set role via localStorage ─────────────────────────
-  const { role, setRole } = useRestaurantRole(restaurant?.id)
+  const { role: localRole, setRole } = useRestaurantRole(restaurant?.id)
+  // In production use DB-sourced role; in dev use localStorage
+  const role = DISABLE_AUTH ? localRole : sessionRole
 
   // ── 3. Persist URL role param once restaurant.id is known ──────
   // Saves the per-restaurant key in addition to the global fallback
@@ -342,8 +384,9 @@ export default function RestaurantDashboard() {
     if (role) activateRole(role)
   }, [role, activateRole])
 
-  // ── 5. Show picker when no role is stored at all ───────────────
+  // ── 5. Show picker when no role is stored (dev/DISABLE_AUTH only) ─
   useEffect(() => {
+    if (!DISABLE_AUTH) return  // in production, no picker — use session role
     if (!restaurantLoading && restaurant && !role) {
       setShowPicker(true)
     }
@@ -383,8 +426,36 @@ export default function RestaurantDashboard() {
   if (notFound) return <NotFoundPage slug={restaurantSlug} />
   if (pageSlug === 'roles' && restaurant && role) return <FullPageLoader />
 
+  // ── Production auth guards (skipped in DISABLE_AUTH/dev mode) ──────────
+  if (!DISABLE_AUTH) {
+    if (authLoading || !sessionChecked) return <FullPageLoader />
+    if (sessionDenied) {
+      return (
+        <div style={{
+          minHeight: '100vh', background: '#0A0A0A',
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+          fontFamily: "'Inter', sans-serif", gap: '16px',
+        }}>
+          <div style={{ fontSize: '40px' }}>🔒</div>
+          <div style={{ fontWeight: 800, fontSize: '22px', color: '#fff' }}>Access Denied</div>
+          <div style={{ color: '#555', fontSize: '14px', textAlign: 'center', maxWidth: '320px' }}>
+            Your account is not a member of this restaurant. Contact the restaurant owner to be added.
+          </div>
+          <button
+            onClick={() => { signOut(); window.location.href = '/auth' }}
+            style={{
+              marginTop: '8px', padding: '10px 24px', borderRadius: '10px',
+              background: '#E8321A', border: 'none', color: '#fff',
+              fontSize: '13px', fontWeight: 700, cursor: 'pointer',
+            }}
+          >Sign out</button>
+        </div>
+      )
+    }
+  }
+
   // Show role picker when no role is set and no URL param provided it
-  if (showPicker || (!role && !urlRoleParam && restaurant)) {
+  if (showPicker || (!role && !urlRoleParam && restaurant && DISABLE_AUTH)) {
     return (
       <>
         <div style={{ minHeight: '100vh', background: '#f8f9fa' }} />

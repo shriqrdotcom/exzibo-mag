@@ -24,6 +24,7 @@
     { "source": "/api/restaurant-db/drop",                  "destination": "/api/system?action=dropRestaurantDb"                          },
     { "source": "/api/restaurant-db/list",                  "destination": "/api/system?action=listRestaurantDb"                          },
     { "source": "/api/migrate",                             "destination": "/api/system?action=migrate"                                   },
+    { "source": "/api/auth/:path*",                         "destination": "/api/auth?_path=:path*"                                        },
     { "source": "/api/(.*)",                                "destination": "/api/$1"                                                       },
     { "source": "/(.*)",                                    "destination": "/index.html"                                                   }
   ]

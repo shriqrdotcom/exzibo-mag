@@ -2,6 +2,7 @@ import { supabase, supabaseAnon } from './supabase'
 import { DISABLE_AUTH } from './env'
 import { compressFile, compressDataUrl } from './imageCompressor'
 import { getCompressionLimits } from './imageCompressionSettings'
+import { getAuthUser } from './current-user'
 
 // ── Soft-delete localStorage fallback helpers ─────────────────
 // Used when the is_deleted column hasn't been migrated to Supabase yet.
@@ -196,7 +197,7 @@ export async function getRestaurants() {
   }
 
   // ── Authenticated path ────────────────────────────────────────────────────
-  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  const { data: { user }, error: authError } = getAuthUser()
   if (authError || !user) throw new Error('Not authenticated')
 
   // Permission discovery stays in Supabase — team-member RPC cannot move to
@@ -318,7 +319,7 @@ export async function softDeleteRestaurant(id) {
 }
 
 export async function createRestaurant(payload) {
-  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  const { data: { user }, error: authError } = getAuthUser()
   if (authError || !user) throw new Error('Not authenticated — please log in and try again')
   console.log('[createRestaurant] user.id:', user.id)
   console.log('[createRestaurant] payload keys:', Object.keys(payload))
@@ -729,11 +730,11 @@ export async function deleteMenuCategory(id) {
 
 // ── Storage Utilities ─────────────────────────────────────────
 
-// Resolve the Supabase user ID, falling back to 'dev' when DISABLE_AUTH is
+// Resolve the user ID, falling back to 'dev' when DISABLE_AUTH is
 // active (no real session) so storage uploads still work in development.
 async function resolveUserId() {
   if (DISABLE_AUTH) return 'dev'
-  const { data: { user }, error } = await supabase.auth.getUser()
+  const { data: { user }, error } = getAuthUser()
   if (error || !user) throw new Error('Not authenticated')
   return user.id
 }
@@ -1221,12 +1222,13 @@ export async function getTeamMembers(restaurantId) {
 }
 
 export async function createTeamMember(payload) {
-  // Auth stays in Supabase (owner_id = auth.uid(), RLS enforced).
+  // owner_id comes from the Better Auth session stored in current-user.js.
   // After Supabase confirms, non-blocking shadow-write mirrors to Neon.
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: { user } } = getAuthUser()
+  const ownerId = user?.id ?? 'system'
   const { data, error } = await supabase
     .from('team_members')
-    .insert({ ...payload, owner_id: user.id })
+    .insert({ ...payload, owner_id: ownerId })
     .select()
     .single()
   if (error) throw error
@@ -1270,7 +1272,8 @@ export async function deleteTeamMember(id) {
 // ── User Settings ─────────────────────────────────────────────
 
 export async function getUserSettings() {
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: { user } } = getAuthUser()
+  if (!user) return {}
   const { data, error } = await supabase
     .from('user_settings')
     .select('*')
@@ -1281,7 +1284,8 @@ export async function getUserSettings() {
 }
 
 export async function saveUserSettings(config) {
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: { user } } = getAuthUser()
+  if (!user) throw new Error('Not authenticated')
   const { error } = await supabase
     .from('user_settings')
     .upsert({ user_id: user.id, global_config: config })
