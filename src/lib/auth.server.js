@@ -12,6 +12,12 @@ const pool = new Pool({
   max: 2,
 })
 
+// Extra origins added via BETTER_AUTH_TRUSTED_ORIGINS env var (comma-separated).
+// On Vercel: add your *.vercel.app deployment URLs here so CSRF checks pass.
+// Example: BETTER_AUTH_TRUSTED_ORIGINS=https://exzibo-abc123.vercel.app,https://exzibo.vercel.app
+const extraTrustedOrigins = (process.env.BETTER_AUTH_TRUSTED_ORIGINS || '')
+  .split(',').map(s => s.trim()).filter(Boolean)
+
 export const auth = betterAuth({
   database: pool,
   baseURL: process.env.BETTER_AUTH_BASE_URL || 'https://superadmin.exzibo.online',
@@ -23,10 +29,12 @@ export const auth = betterAuth({
       clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
     },
   },
-  // Both subdomains are served from the same Vercel deployment
+  // Core production domains + any extra origins from env (e.g. Vercel preview URLs).
+  // To add origins without a code deploy, set BETTER_AUTH_TRUSTED_ORIGINS in Vercel.
   trustedOrigins: [
     'https://superadmin.exzibo.online',
     'https://dashboard.exzibo.online',
+    ...extraTrustedOrigins,
   ],
   advanced: {
     // Share session cookie across both *.exzibo.online subdomains

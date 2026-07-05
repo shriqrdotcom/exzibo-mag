@@ -208,9 +208,24 @@ export default function Auth() {
           onClick={async () => {
             setError('')
             setLoading(true)
-            const { error: err } = await signInWithGoogle()
-            if (err) { setError(err.message); setLoading(false) }
-            // On success: Supabase redirects to /dashboard; loading stays true
+            // Safety net: if the OAuth redirect never fires within 30 s, reset.
+            const safetyTimer = setTimeout(() => {
+              setLoading(false)
+              setError('Sign-in timed out. Please try again.')
+            }, 30000)
+            try {
+              const { error: err } = await signInWithGoogle()
+              if (err) {
+                clearTimeout(safetyTimer)
+                setError(err.message)
+                setLoading(false)
+              }
+              // On success the browser navigates away; safetyTimer is moot.
+            } catch {
+              clearTimeout(safetyTimer)
+              setError('Unexpected error. Please try again.')
+              setLoading(false)
+            }
           }}
           style={{
             width: '100%', padding: '15px',

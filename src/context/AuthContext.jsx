@@ -134,13 +134,20 @@ export function AuthProvider({ children }) {
 
     setAccessDenied(false)
     try {
-      await authClient.signIn.social({
+      // better-auth client returns { data, error } — it does NOT throw on failure.
+      // Always destructure the result; never assume success from absence of an exception.
+      const result = await authClient.signIn.social({
         provider: 'google',
         callbackURL: `${window.location.origin}/`,
       })
+      if (result?.error) {
+        const msg = result.error.message || result.error.statusText || 'Sign-in failed. Please try again.'
+        return { data: null, error: { message: msg } }
+      }
+      // Success: browser is being redirected to Google. Caller keeps loading=true.
       return { data: {}, error: null }
     } catch (e) {
-      return { data: null, error: { message: e.message || 'Sign-in failed' } }
+      return { data: null, error: { message: e.message || 'Sign-in failed. Please try again.' } }
     }
   }
 
