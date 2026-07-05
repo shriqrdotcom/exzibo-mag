@@ -7,7 +7,7 @@ import { previewLogin } from '../lib/previewAuth'
 
 export default function Auth() {
   const navigate = useNavigate()
-  const { user, signInWithGoogle, setPreviewUser, accessDenied } = useAuth()
+  const { user, signInWithGoogle, setPreviewUser, accessDenied, deniedEmail } = useAuth()
 
   const [email, setEmail]   = useState('')
   const [password, setPassword] = useState('')
@@ -197,6 +197,11 @@ export default function Auth() {
               <div style={{ fontSize: '12px', color: '#EF4444', opacity: 0.8 }}>
                 Your account is not authorized. Contact the system administrator.
               </div>
+              {accessDenied && deniedEmail && (
+                <div style={{ marginTop: '8px', fontSize: '11px', color: '#EF4444', opacity: 0.7, wordBreak: 'break-all' }}>
+                  Checked email: <span style={{ fontFamily: 'monospace', userSelect: 'all' }}>{deniedEmail}</span>
+                </div>
+              )}
             </div>
           </div>
         )}

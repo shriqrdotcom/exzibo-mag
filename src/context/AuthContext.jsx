@@ -20,6 +20,7 @@ export function AuthProvider({ children }) {
   const [user, setUser]                 = useState(null)
   const [loading, setLoading]           = useState(true)
   const [accessDenied, setAccessDenied] = useState(false)
+  const [deniedEmail, setDeniedEmail]   = useState(null)
   const [isSuperAdmin, setIsSuperAdmin] = useState(false)
 
   useEffect(() => {
@@ -79,6 +80,7 @@ export function AuthProvider({ children }) {
                 setCurrentAuthUser(null)
                 setUser(null)
                 setAccessDenied(true)
+                setDeniedEmail(email)
                 setLoading(false)
               }
               return
@@ -92,6 +94,7 @@ export function AuthProvider({ children }) {
             setUser(sessionUser)
             setIsSuperAdmin(true)
             setAccessDenied(false)
+            setDeniedEmail(null)
             setLoading(false)
           }
           return
@@ -133,6 +136,7 @@ export function AuthProvider({ children }) {
     if (IS_PREVIEW)   return { data: null, error: { message: 'Google sign-in is not available in preview mode.' } }
 
     setAccessDenied(false)
+    setDeniedEmail(null)
     try {
       // better-auth client returns { data, error } — it does NOT throw on failure.
       // Always destructure the result; never assume success from absence of an exception.
@@ -164,6 +168,7 @@ export function AuthProvider({ children }) {
       return
     }
     setAccessDenied(false)
+    setDeniedEmail(null)
     try { await authClient.signOut() } catch {}
     setCurrentAuthUser(null)
     setUser(null)
@@ -177,7 +182,7 @@ export function AuthProvider({ children }) {
 
   return (
     <AuthContext.Provider value={{
-      user, loading, accessDenied, isSuperAdmin,
+      user, loading, accessDenied, deniedEmail, isSuperAdmin,
       signOut, signInWithGoogle, setPreviewUser,
       isPreview: IS_PREVIEW,
       isDisableAuth: DISABLE_AUTH,

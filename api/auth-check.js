@@ -42,7 +42,8 @@ export default async function handler(req, res) {
 
   if (!session?.user) return res.status(401).json({ error: 'Not authenticated' })
 
-  const email = (session.user.email || '').toLowerCase().trim()
+  const rawEmail = session.user.email || ''
+  const email    = rawEmail.toLowerCase().trim()
 
   // ── Superadmin check ──────────────────────────────────────────────────────
   if (type === 'superadmin') {
@@ -53,14 +54,15 @@ export default async function handler(req, res) {
 
     // ── TEMPORARY DEBUG LOG (remove once access is confirmed working) ──────
     console.log('[auth-check/superadmin]', JSON.stringify({
-      host:           req.headers.host || '(none)',
-      loginEmail:     email,
+      host:              req.headers.host || '(none)',
+      loginEmailRaw:     rawEmail,
+      loginEmailNorm:    email,
       envExists,
-      allowedCount:   allowedEmails.length,
-      allowedEmails,              // shows normalized values — no secrets
+      allowedCount:      allowedEmails.length,
+      allowedEmailsNorm: allowedEmails,
       allowed,
-      denialReason:   allowed ? null : (
-        !envExists            ? 'SUPERADMIN_ALLOWED_EMAILS env var is not set' :
+      denialReason: allowed ? null : (
+        !envExists               ? 'SUPERADMIN_ALLOWED_EMAILS env var is not set' :
         allowedEmails.length === 0 ? 'SUPERADMIN_ALLOWED_EMAILS is set but empty' :
         `email "${email}" not found in list`
       ),
