@@ -26,5 +26,31 @@ export default async function handler(req, res) {
 
   req.url = `/api/auth/${subpath}${qs ? '?' + qs : ''}`
 
-  return betterAuthHandler(req, res)
+  // ── TEMPORARY DIAGNOSTIC LOG (remove once auth is confirmed working) ───────
+  // Check for sign-in attempts so we can see env var presence in Vercel logs.
+  if (subpath.startsWith('sign-in') || subpath.startsWith('callback')) {
+    console.log('[api/auth] diagnostic', JSON.stringify({
+      subpath,
+      method:              req.method,
+      origin:              req.headers.origin || '(none)',
+      host:                req.headers.host   || '(none)',
+      hasGoogleClientId:   !!process.env.GOOGLE_CLIENT_ID,
+      hasGoogleSecret:     !!process.env.GOOGLE_CLIENT_SECRET,
+      hasBetterAuthSecret: !!process.env.BETTER_AUTH_SECRET,
+      hasDatabaseUrl:      !!process.env.DATABASE_URL,
+      betterAuthBaseUrl:   process.env.BETTER_AUTH_BASE_URL || '(using fallback: https://superadmin.exzibo.online)',
+      trustedOriginsEnv:   process.env.BETTER_AUTH_TRUSTED_ORIGINS || '(not set)',
+    }))
+  }
+  // ── END DIAGNOSTIC LOG ─────────────────────────────────────────────────────
+
+  try {
+    return await betterAuthHandler(req, res)
+  } catch (err) {
+    // Log any unhandled errors from Better Auth so they appear in Vercel logs.
+    console.error('[api/auth] unhandled error in betterAuthHandler:', err?.message, err?.stack?.split('\n')[1] || '')
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Auth handler error', detail: err?.message })
+    }
+  }
 }
