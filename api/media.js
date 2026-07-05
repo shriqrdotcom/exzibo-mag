@@ -1,5 +1,6 @@
 import { r2Upload } from '../src/lib/r2.js'
 import { getServiceHeaders, setCors } from './_lib/supabase.js'
+import { rateLimit, getClientIp, send429 } from '../src/lib/upstash.server.js'
 
 // ── /api/media — Merged Image Upload Handler ──────────────────────────────────
 //
@@ -13,6 +14,9 @@ import { getServiceHeaders, setCors } from './_lib/supabase.js'
 // POST ?action=uploadAboutImage    body: { dataUrl, restaurantId, slot (0-3) }
 // POST ?action=uploadLogoImage     body: { dataUrl, restaurantId }
 // POST ?action=uploadCarouselImage body: { dataUrl, restaurantId }
+//
+// Upstash protection:
+//   All upload actions — 15 req/min per IP (uploads are expensive, bandwidth-heavy)
 
 export const config = {
   api: {
@@ -50,6 +54,11 @@ export default async function handler(req, res) {
 
   const action = req.query.action
   if (!action) return res.status(400).json({ error: 'action query param required' })
+
+  // ── Rate limit all upload actions: 15 per minute per IP ──────────────────────
+  const ip = getClientIp(req)
+  const { allowed } = await rateLimit(`rl:upload:ip:${ip}`, 15, 60)
+  if (!allowed) return send429(res, 'Too many image uploads. Please wait before uploading again.')
 
   try {
 

@@ -45,6 +45,15 @@ import { upsertNeonRestaurantAbout, getNeonRestaurantAbout } from './src/db/neon
 import { upsertNeonRestaurantSettingsKey } from './src/db/neon-restaurant-settings.js'
 import { writeAuditLog } from './src/db/neon-audit-logs.js'
 import { r2Upload } from './src/lib/r2.js'
+import {
+  rateLimit,
+  preventDuplicate,
+  acquireLock,
+  releaseLock,
+  getClientIp,
+  hashBody,
+  send429,
+} from './src/lib/upstash.server.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const app = express()
@@ -463,6 +472,10 @@ app.post('/api/menu/upload-image', async (req, res) => {
     const { dataUrl, restaurantId } = req.body
     if (!dataUrl || !restaurantId) return res.status(400).json({ error: 'dataUrl and restaurantId required' })
 
+    // ── Rate limit: 15 uploads/min per IP ──────────────────────────────────────
+    const { allowed: uploadAllowed } = await rateLimit(`rl:upload:ip:${getClientIp(req)}`, 15, 60)
+    if (!uploadAllowed) return send429(res, 'Too many image uploads. Please wait before uploading again.')
+
     const base64 = dataUrl.replace(/^data:[^;]+;base64,/, '')
     const buf    = Buffer.from(base64, 'base64')
 
@@ -508,6 +521,10 @@ app.post('/api/menu/items', async (req, res) => {
   try {
     const { restaurantId, ...item } = req.body
     if (!restaurantId) return res.status(400).json({ error: 'restaurantId required' })
+
+    // ── Rate limit: 30 creates/min per IP ─────────────────────────────────────
+    const { allowed: menuCreateAllowed } = await rateLimit(`rl:menu-create:ip:${getClientIp(req)}`, 30, 60)
+    if (!menuCreateAllowed) return send429(res, 'Too many menu item creates. Please slow down.')
 
     const { url: supabaseUrl, headers } = getSupabaseServiceHeaders()
     const { ok, status, data } = await supabaseFetch(`${supabaseUrl}/rest/v1/menu_items`, {
@@ -566,24 +583,33 @@ app.patch('/api/menu/items/:id', async (req, res) => {
 app.delete('/api/menu/items/:id', async (req, res) => {
   try {
     const { id } = req.params
-    const { url: supabaseUrl, headers } = getSupabaseServiceHeaders()
 
-    const r = await fetch(`${supabaseUrl}/rest/v1/menu_items?id=eq.${encodeURIComponent(id)}`, {
-      method: 'DELETE',
-      headers,
-    })
+    // ── Rate limit: 20 deletes/min per IP + 5 s exclusive lock per item ───────
+    const { allowed: menuDeleteAllowed } = await rateLimit(`rl:menu-delete:ip:${getClientIp(req)}`, 20, 60)
+    if (!menuDeleteAllowed) return send429(res, 'Too many menu item deletes. Please slow down.')
+    const { acquired: menuDeleteLocked } = await acquireLock(`lock:menu-item:${id}`, 5)
+    if (!menuDeleteLocked) return res.status(409).json({ error: 'Delete already in progress for this item.' })
 
-    if (!r.ok) {
-      const err = await r.text()
-      return res.status(r.status).json({ error: err })
+    try {
+      const { url: supabaseUrl, headers } = getSupabaseServiceHeaders()
+      const r = await fetch(`${supabaseUrl}/rest/v1/menu_items?id=eq.${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+        headers,
+      })
+      if (!r.ok) {
+        const err = await r.text()
+        return res.status(r.status).json({ error: err })
+      }
+      // ── Neon shadow-delete (non-blocking) ───────────────────────────────────
+      deleteNeonMenuItem(id).then(() => {
+        console.log('[menu/items DELETE] Neon shadow-delete ✅ id:', id)
+      }).catch(neonErr => {
+        console.warn('[menu/items DELETE] Neon shadow-delete error (non-blocking):', neonErr.message)
+      })
+      return res.json({ success: true })
+    } finally {
+      await releaseLock(`lock:menu-item:${id}`)
     }
-    // ── Neon shadow-delete (non-blocking) ─────────────────────────────────────
-    deleteNeonMenuItem(id).then(() => {
-      console.log('[menu/items DELETE] Neon shadow-delete ✅ id:', id)
-    }).catch(neonErr => {
-      console.warn('[menu/items DELETE] Neon shadow-delete error (non-blocking):', neonErr.message)
-    })
-    return res.json({ success: true })
   } catch (err) {
     console.error('[menu/items DELETE] Error:', err.message)
     return res.status(500).json({ error: err.message })
@@ -628,19 +654,30 @@ app.post('/api/menu/item-delete', async (req, res) => {
   try {
     const { id } = req.body
     if (!id) return res.status(400).json({ error: 'id required' })
-    const { url: supabaseUrl, headers } = getSupabaseServiceHeaders()
-    const r = await fetch(`${supabaseUrl}/rest/v1/menu_items?id=eq.${encodeURIComponent(id)}`, {
-      method: 'DELETE',
-      headers,
-    })
-    if (!r.ok) { const err = await r.text(); return res.status(r.status).json({ error: err }) }
-    // ── Neon shadow-delete (non-blocking) ─────────────────────────────────────
-    deleteNeonMenuItem(id).then(() => {
-      console.log('[menu/item-delete] Neon shadow-delete ✅ id:', id)
-    }).catch(neonErr => {
-      console.warn('[menu/item-delete] Neon shadow-delete error (non-blocking):', neonErr.message)
-    })
-    return res.json({ success: true })
+
+    // ── Rate limit: 20/min per IP + 5 s lock per item ─────────────────────────
+    const { allowed: itemDelAllowed } = await rateLimit(`rl:menu-delete:ip:${getClientIp(req)}`, 20, 60)
+    if (!itemDelAllowed) return send429(res, 'Too many menu item deletes. Please slow down.')
+    const { acquired: itemDelLocked } = await acquireLock(`lock:menu-item:${id}`, 5)
+    if (!itemDelLocked) return res.status(409).json({ error: 'Delete already in progress for this item.' })
+
+    try {
+      const { url: supabaseUrl, headers } = getSupabaseServiceHeaders()
+      const r = await fetch(`${supabaseUrl}/rest/v1/menu_items?id=eq.${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+        headers,
+      })
+      if (!r.ok) { const err = await r.text(); return res.status(r.status).json({ error: err }) }
+      // ── Neon shadow-delete (non-blocking) ─────────────────────────────────────
+      deleteNeonMenuItem(id).then(() => {
+        console.log('[menu/item-delete] Neon shadow-delete ✅ id:', id)
+      }).catch(neonErr => {
+        console.warn('[menu/item-delete] Neon shadow-delete error (non-blocking):', neonErr.message)
+      })
+      return res.json({ success: true })
+    } finally {
+      await releaseLock(`lock:menu-item:${id}`)
+    }
   } catch (err) {
     console.error('[menu/item-delete] Error:', err.message)
     return res.status(500).json({ error: err.message })
@@ -653,6 +690,11 @@ app.post('/api/menu/categories/upsert', async (req, res) => {
   try {
     const { restaurantId, ...category } = req.body
     if (!restaurantId) return res.status(400).json({ error: 'restaurantId required' })
+
+    // ── Rate limit: 30 upserts/min per IP ─────────────────────────────────────
+    const { allowed: catUpsertAllowed } = await rateLimit(`rl:category-upsert:ip:${getClientIp(req)}`, 30, 60)
+    if (!catUpsertAllowed) return send429(res, 'Too many category saves. Please slow down.')
+
     const { url: supabaseUrl, headers } = getSupabaseServiceHeaders()
     const payload = { ...category, restaurant_id: restaurantId }
     const r = await fetch(`${supabaseUrl}/rest/v1/menu_categories?on_conflict=id`, {
@@ -683,20 +725,31 @@ app.post('/api/menu/categories/delete', async (req, res) => {
   try {
     const { id } = req.body
     if (!id) return res.status(400).json({ error: 'id required' })
-    const { url: supabaseUrl, headers } = getSupabaseServiceHeaders()
-    const r = await fetch(`${supabaseUrl}/rest/v1/menu_categories?id=eq.${encodeURIComponent(id)}`, {
-      method: 'DELETE',
-      headers,
-    })
-    if (!r.ok) { const err = await r.text(); return res.status(r.status).json({ error: err }) }
-    // ── Neon shadow-delete (non-blocking) ─────────────────────────────────────
-    deleteNeonMenuCategory(id).then(() => {
-      console.log('[menu/categories/delete] Neon shadow-delete ✅ id:', id)
-    }).catch(neonErr => {
-      console.warn('[menu/categories/delete] Neon shadow-delete error (non-blocking):', neonErr.message)
-    })
-    writeAuditLog({ action: 'delete', entityType: 'menu_category', entityId: id, ipAddress: req.ip })
-    return res.json({ success: true })
+
+    // ── Rate limit: 20 deletes/min per IP + 5 s lock per category ────────────
+    const { allowed: catDelAllowed } = await rateLimit(`rl:category-delete:ip:${getClientIp(req)}`, 20, 60)
+    if (!catDelAllowed) return send429(res, 'Too many category deletes. Please slow down.')
+    const { acquired: catDelLocked } = await acquireLock(`lock:menu-category:${id}`, 5)
+    if (!catDelLocked) return res.status(409).json({ error: 'Delete already in progress for this category.' })
+
+    try {
+      const { url: supabaseUrl, headers } = getSupabaseServiceHeaders()
+      const r = await fetch(`${supabaseUrl}/rest/v1/menu_categories?id=eq.${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+        headers,
+      })
+      if (!r.ok) { const err = await r.text(); return res.status(r.status).json({ error: err }) }
+      // ── Neon shadow-delete (non-blocking) ───────────────────────────────────
+      deleteNeonMenuCategory(id).then(() => {
+        console.log('[menu/categories/delete] Neon shadow-delete ✅ id:', id)
+      }).catch(neonErr => {
+        console.warn('[menu/categories/delete] Neon shadow-delete error (non-blocking):', neonErr.message)
+      })
+      writeAuditLog({ action: 'delete', entityType: 'menu_category', entityId: id, ipAddress: req.ip })
+      return res.json({ success: true })
+    } finally {
+      await releaseLock(`lock:menu-category:${id}`)
+    }
   } catch (err) {
     console.error('[menu/categories/delete] Error:', err.message)
     return res.status(500).json({ error: err.message })
@@ -709,6 +762,10 @@ app.post('/api/menu/items/upsert', async (req, res) => {
   try {
     const { restaurantId, items } = req.body
     if (!restaurantId || !Array.isArray(items)) return res.status(400).json({ error: 'restaurantId and items array required' })
+
+    // ── Rate limit: 10 bulk upserts/min per IP ────────────────────────────────
+    const { allowed: upsertAllowed } = await rateLimit(`rl:menu-upsert:ip:${getClientIp(req)}`, 10, 60)
+    if (!upsertAllowed) return send429(res, 'Too many bulk menu updates. Please slow down.')
 
     const { url: supabaseUrl, headers } = getSupabaseServiceHeaders()
     const rows = items.map(item => ({ ...item, restaurant_id: restaurantId }))
@@ -739,9 +796,16 @@ app.post('/api/menu/items/upsert', async (req, res) => {
 // Body: { orderId, status }
 // Uses the service-role key so RLS never blocks a legitimate status change.
 app.post('/api/orders/update-status', async (req, res) => {
+  const { orderId, status } = req.body
+  if (!orderId || !status) return res.status(400).json({ error: 'orderId and status required' })
+
+  // ── Rate limit: 60/min per IP + 5 s exclusive lock per orderId ───────────
+  const { allowed: orderStatusAllowed } = await rateLimit(`rl:order-status:ip:${getClientIp(req)}`, 60, 60)
+  if (!orderStatusAllowed) return send429(res, 'Too many order status updates. Please slow down.')
+  const { acquired: orderStatusLocked } = await acquireLock(`lock:order-status:${orderId}`, 5)
+  if (!orderStatusLocked) return res.status(409).json({ error: 'Order status update already in progress.' })
+
   try {
-    const { orderId, status } = req.body
-    if (!orderId || !status) return res.status(400).json({ error: 'orderId and status required' })
     const { url: supabaseUrl, headers } = getSupabaseServiceHeaders()
     const r = await fetch(
       `${supabaseUrl}/rest/v1/orders?id=eq.${encodeURIComponent(orderId)}`,
@@ -753,7 +817,7 @@ app.post('/api/orders/update-status', async (req, res) => {
     )
     const data = await r.json()
     if (!r.ok) return res.status(r.status).json({ error: data })
-    // ── Neon shadow-write (non-blocking) ────────────────────────────────────────
+    // ── Neon shadow-write (non-blocking) ──────────────────────────────────────
     updateNeonOrderStatusFn(orderId, status).then(() => {
       console.log('[orders/update-status] Neon shadow ✅ id:', orderId, 'status:', status)
     }).catch(neonErr => {
@@ -764,6 +828,8 @@ app.post('/api/orders/update-status', async (req, res) => {
   } catch (err) {
     console.error('[orders/update-status] Error:', err.message)
     return res.status(500).json({ error: err.message })
+  } finally {
+    await releaseLock(`lock:order-status:${orderId}`)
   }
 })
 
@@ -773,8 +839,16 @@ app.post('/api/orders/update-status', async (req, res) => {
 // Creates an order in Supabase first, then shadow-writes to Neon (non-blocking).
 app.post('/api/orders', async (req, res) => {
   try {
-    const { url: supabaseUrl, headers } = getSupabaseServiceHeaders()
     const body = req.body
+
+    // ── Rate limit: 10 orders/min per IP + 90 s duplicate prevention ─────────
+    const { allowed: orderAllowed } = await rateLimit(`rl:order-create:ip:${getClientIp(req)}`, 10, 60)
+    if (!orderAllowed) return send429(res, 'Too many orders submitted. Please wait a moment.')
+    const dedupKey = `dedup:order:${getClientIp(req)}:${hashBody(body)}`
+    const { isDuplicate: orderDup } = await preventDuplicate(dedupKey, 90)
+    if (orderDup) return res.status(409).json({ error: 'Duplicate order detected. Your previous order is being processed.' })
+
+    const { url: supabaseUrl, headers } = getSupabaseServiceHeaders()
     const r = await fetch(`${supabaseUrl}/rest/v1/orders`, {
       method: 'POST',
       headers: { ...headers, 'Content-Type': 'application/json', Prefer: 'return=representation' },
@@ -918,8 +992,16 @@ app.get('/api/menu/items/:restaurantId', async (req, res) => {
 // Creates a booking in Supabase first, then shadow-writes to Neon (non-blocking).
 app.post('/api/bookings', async (req, res) => {
   try {
-    const { url: supabaseUrl, headers } = getSupabaseServiceHeaders()
     const body = req.body
+
+    // ── Rate limit: 5 bookings/min per IP + 300 s duplicate prevention ────────
+    const { allowed: bookingAllowed } = await rateLimit(`rl:booking-create:ip:${getClientIp(req)}`, 5, 60)
+    if (!bookingAllowed) return send429(res, 'Too many booking requests. Please wait a moment.')
+    const bookingDedupKey = `dedup:booking:${getClientIp(req)}:${hashBody(body)}`
+    const { isDuplicate: bookingDup } = await preventDuplicate(bookingDedupKey, 300)
+    if (bookingDup) return res.status(409).json({ error: 'Duplicate booking detected. Your previous request is being processed.' })
+
+    const { url: supabaseUrl, headers } = getSupabaseServiceHeaders()
     const r = await fetch(`${supabaseUrl}/rest/v1/bookings`, {
       method: 'POST',
       headers: { ...headers, 'Content-Type': 'application/json', Prefer: 'return=representation' },
@@ -975,10 +1057,17 @@ app.get('/api/bookings/:restaurantId', async (req, res) => {
 // PATCH /api/bookings/:id/status
 // Updates booking status in Supabase first, then shadow-writes to Neon (non-blocking).
 app.patch('/api/bookings/:id/status', async (req, res) => {
+  const { id } = req.params
+  const { status } = req.body || {}
+  if (!status) return res.status(400).json({ error: 'status required' })
+
+  // ── Rate limit: 30 status updates/min per IP + 5 s lock per booking ─────
+  const { allowed: bkStatusAllowed } = await rateLimit(`rl:booking-status:ip:${getClientIp(req)}`, 30, 60)
+  if (!bkStatusAllowed) return send429(res, 'Too many booking status updates. Please slow down.')
+  const { acquired: bkStatusLocked } = await acquireLock(`lock:booking-status:${id}`, 5)
+  if (!bkStatusLocked) return res.status(409).json({ error: 'Booking status update already in progress.' })
+
   try {
-    const { id } = req.params
-    const { status } = req.body || {}
-    if (!status) return res.status(400).json({ error: 'status required' })
     const { url: supabaseUrl, headers } = getSupabaseServiceHeaders()
     const r = await fetch(
       `${supabaseUrl}/rest/v1/bookings?id=eq.${encodeURIComponent(id)}`,
@@ -991,7 +1080,7 @@ app.patch('/api/bookings/:id/status', async (req, res) => {
     const data = await r.json()
     if (!r.ok) return res.status(r.status).json({ error: data })
     const updated = Array.isArray(data) ? data[0] : data
-    // ── Neon shadow-write (non-blocking) ────────────────────────────────────────
+    // ── Neon shadow-write (non-blocking) ──────────────────────────────────────
     updateNeonBookingStatus(id, status).then(() => {
       console.log('[bookings PATCH status] Neon shadow-write ✅ id:', id, 'status:', status)
     }).catch(neonErr => {
@@ -1002,6 +1091,8 @@ app.patch('/api/bookings/:id/status', async (req, res) => {
   } catch (err) {
     console.error('[bookings PATCH status] Error:', err.message)
     return res.status(500).json({ error: err.message })
+  } finally {
+    await releaseLock(`lock:booking-status:${id}`)
   }
 })
 

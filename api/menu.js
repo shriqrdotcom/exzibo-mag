@@ -1,4 +1,5 @@
 import { getServiceHeaders, supabaseFetch, setCors } from './_lib/supabase.js'
+import { rateLimit, acquireLock, releaseLock, getClientIp, send429 } from '../src/lib/upstash.server.js'
 
 // ── /api/menu — Merged Menu CRUD Handler ─────────────────────────────────────
 //
@@ -15,6 +16,14 @@ import { getServiceHeaders, supabaseFetch, setCors } from './_lib/supabase.js'
 // POST ?action=deleteItem         body: { id }
 // POST ?action=upsertCategory     body: { restaurantId, ...category }
 // POST ?action=deleteCategory     body: { id }
+//
+// Upstash protection (POST actions only — no limits on GET reads):
+//   createItem      — 30 req/min per IP
+//   upsertItems     — 10 req/min per IP (bulk, more expensive)
+//   updateItem      — 60 req/min per IP (frequent edits)
+//   deleteItem      — 20 req/min per IP + 5 s lock per item id
+//   upsertCategory  — 30 req/min per IP
+//   deleteCategory  — 20 req/min per IP + 5 s lock per category id
 
 export default async function handler(req, res) {
   setCors(res)
@@ -27,7 +36,8 @@ export default async function handler(req, res) {
 
   try {
 
-    // ── GET: categories for a restaurant ─────────────────────────────────────
+    // ── GET actions — no rate limiting ────────────────────────────────────────
+
     if (action === 'getCategories') {
       if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' })
       const { restaurantId } = req.query
@@ -41,7 +51,6 @@ export default async function handler(req, res) {
       return res.json(data)
     }
 
-    // ── GET: ALL items for a restaurant (admin — includes unpublished) ────────
     if (action === 'getItems') {
       if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' })
       const { restaurantId } = req.query
@@ -55,7 +64,6 @@ export default async function handler(req, res) {
       return res.json(data)
     }
 
-    // ── GET: published items only (public customer menu) ──────────────────────
     if (action === 'getPublishedItems') {
       if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' })
       const { restaurantId } = req.query
@@ -72,8 +80,13 @@ export default async function handler(req, res) {
     // ── All POST actions ──────────────────────────────────────────────────────
     if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
-    // ── POST: insert a new menu item ──────────────────────────────────────────
+    const ip = getClientIp(req)
+
+    // ── POST: insert a new menu item — 30/min per IP ─────────────────────────
     if (action === 'createItem') {
+      const { allowed } = await rateLimit(`rl:menu-create:ip:${ip}`, 30, 60)
+      if (!allowed) return send429(res, 'Too many menu item creates. Please slow down.')
+
       const { restaurantId, ...item } = req.body
       if (!restaurantId) return res.status(400).json({ error: 'restaurantId required' })
       const { ok, status, data } = await supabaseFetch(
@@ -88,8 +101,11 @@ export default async function handler(req, res) {
       return res.json(Array.isArray(data) ? data[0] : data)
     }
 
-    // ── POST: bulk upsert menu items ──────────────────────────────────────────
+    // ── POST: bulk upsert menu items — 10/min per IP ─────────────────────────
     if (action === 'upsertItems') {
+      const { allowed } = await rateLimit(`rl:menu-upsert:ip:${ip}`, 10, 60)
+      if (!allowed) return send429(res, 'Too many bulk menu updates. Please slow down.')
+
       const { restaurantId, items } = req.body
       if (!restaurantId || !Array.isArray(items)) {
         return res.status(400).json({ error: 'restaurantId and items array required' })
@@ -107,8 +123,11 @@ export default async function handler(req, res) {
       return res.json(data)
     }
 
-    // ── POST: patch a single menu item (any fields, incl. publish toggle) ─────
+    // ── POST: patch a single menu item — 60/min per IP ───────────────────────
     if (action === 'updateItem') {
+      const { allowed } = await rateLimit(`rl:menu-update:ip:${ip}`, 60, 60)
+      if (!allowed) return send429(res, 'Too many menu item updates. Please slow down.')
+
       const { id, ...patch } = req.body
       if (!id) return res.status(400).json({ error: 'id required' })
       const { ok, status, data } = await supabaseFetch(
@@ -123,23 +142,40 @@ export default async function handler(req, res) {
       return res.json(Array.isArray(data) ? data[0] : data)
     }
 
-    // ── POST: delete a single menu item ───────────────────────────────────────
+    // ── POST: delete a single menu item — 20/min per IP + 5 s lock ──────────
     if (action === 'deleteItem') {
+      const { allowed } = await rateLimit(`rl:menu-delete:ip:${ip}`, 20, 60)
+      if (!allowed) return send429(res, 'Too many menu item deletes. Please slow down.')
+
       const { id } = req.body
       if (!id) return res.status(400).json({ error: 'id required' })
-      const r = await fetch(
-        `${supabaseUrl}/rest/v1/menu_items?id=eq.${encodeURIComponent(id)}`,
-        { method: 'DELETE', headers }
-      )
-      if (!r.ok) {
-        const err = await r.text()
-        return res.status(r.status).json({ error: err })
+
+      const lockKey = `lock:menu-item:${id}`
+      const { acquired } = await acquireLock(lockKey, 5)
+      if (!acquired) {
+        return res.status(409).json({ error: 'Delete already in progress for this item.' })
       }
-      return res.json({ success: true })
+
+      try {
+        const r = await fetch(
+          `${supabaseUrl}/rest/v1/menu_items?id=eq.${encodeURIComponent(id)}`,
+          { method: 'DELETE', headers }
+        )
+        if (!r.ok) {
+          const err = await r.text()
+          return res.status(r.status).json({ error: err })
+        }
+        return res.json({ success: true })
+      } finally {
+        await releaseLock(lockKey)
+      }
     }
 
-    // ── POST: create or update a menu category ────────────────────────────────
+    // ── POST: create or update a menu category — 30/min per IP ───────────────
     if (action === 'upsertCategory') {
+      const { allowed } = await rateLimit(`rl:category-upsert:ip:${ip}`, 30, 60)
+      if (!allowed) return send429(res, 'Too many category saves. Please slow down.')
+
       const { restaurantId, ...category } = req.body
       if (!restaurantId) return res.status(400).json({ error: 'restaurantId required' })
       const payload = { ...category, restaurant_id: restaurantId }
@@ -156,19 +192,33 @@ export default async function handler(req, res) {
       return res.json(Array.isArray(json) ? json[0] : json)
     }
 
-    // ── POST: delete a menu category ──────────────────────────────────────────
+    // ── POST: delete a menu category — 20/min per IP + 5 s lock ─────────────
     if (action === 'deleteCategory') {
+      const { allowed } = await rateLimit(`rl:category-delete:ip:${ip}`, 20, 60)
+      if (!allowed) return send429(res, 'Too many category deletes. Please slow down.')
+
       const { id } = req.body
       if (!id) return res.status(400).json({ error: 'id required' })
-      const r = await fetch(
-        `${supabaseUrl}/rest/v1/menu_categories?id=eq.${encodeURIComponent(id)}`,
-        { method: 'DELETE', headers }
-      )
-      if (!r.ok) {
-        const err = await r.text()
-        return res.status(r.status).json({ error: err })
+
+      const lockKey = `lock:menu-category:${id}`
+      const { acquired } = await acquireLock(lockKey, 5)
+      if (!acquired) {
+        return res.status(409).json({ error: 'Delete already in progress for this category.' })
       }
-      return res.json({ success: true })
+
+      try {
+        const r = await fetch(
+          `${supabaseUrl}/rest/v1/menu_categories?id=eq.${encodeURIComponent(id)}`,
+          { method: 'DELETE', headers }
+        )
+        if (!r.ok) {
+          const err = await r.text()
+          return res.status(r.status).json({ error: err })
+        }
+        return res.json({ success: true })
+      } finally {
+        await releaseLock(lockKey)
+      }
     }
 
     return res.status(400).json({ error: `Unknown action: ${action}` })

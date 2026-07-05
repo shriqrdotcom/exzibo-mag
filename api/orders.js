@@ -1,4 +1,5 @@
 import { getServiceHeaders, supabaseFetch, setCors } from './_lib/supabase.js'
+import { rateLimit, acquireLock, releaseLock, getClientIp, send429 } from '../src/lib/upstash.server.js'
 
 // ── /api/orders — Merged Order Operations Handler ────────────────────────────
 //
@@ -15,6 +16,9 @@ import { getServiceHeaders, supabaseFetch, setCors } from './_lib/supabase.js'
 //   → DELETE rejected/cancelled/failed orders older than rejectedDeleteMinutes (default 10)
 //   → returns { success, deletedConfirmed, deletedRejected }
 //   → triggered client-side by orderCleanup.js every 5 min via localStorage timer
+//
+// Upstash protection:
+//   updateStatus — 60 req/min per IP + 5 s exclusive lock per orderId
 
 export default async function handler(req, res) {
   setCors(res)
@@ -29,32 +33,42 @@ export default async function handler(req, res) {
   try {
 
     // ── POST: update a single order's status ──────────────────────────────────
-    // Uses supabaseFetch so missing-column errors are gracefully stripped.
-    // db.js falls back to direct anon Supabase write if this returns non-2xx.
     if (action === 'updateStatus') {
       const { orderId, status } = req.body
       if (!orderId || !status) {
         return res.status(400).json({ error: 'orderId and status required' })
       }
 
-      const { ok, status: httpStatus, data } = await supabaseFetch(
-        `${supabaseUrl}/rest/v1/orders?id=eq.${encodeURIComponent(orderId)}`,
-        {
-          method: 'PATCH',
-          headers: { ...headers, Prefer: 'return=representation' },
-          body: JSON.stringify({ status }),
-        }
-      )
+      // ── Rate limit: 60 status changes per minute per IP (admin action) ──────
+      const ip = getClientIp(req)
+      const { allowed } = await rateLimit(`rl:order-status:ip:${ip}`, 60, 60)
+      if (!allowed) return send429(res, 'Too many order status updates. Please slow down.')
 
-      if (!ok) return res.status(httpStatus).json({ error: data })
-      return res.json(Array.isArray(data) ? (data[0] ?? {}) : data)
+      // ── Lock: prevent double-click race on the same order (5 s) ─────────────
+      const lockKey = `lock:order-status:${orderId}`
+      const { acquired } = await acquireLock(lockKey, 5)
+      if (!acquired) {
+        return res.status(409).json({ error: 'Order status update already in progress. Please wait.' })
+      }
+
+      try {
+        const { ok, status: httpStatus, data } = await supabaseFetch(
+          `${supabaseUrl}/rest/v1/orders?id=eq.${encodeURIComponent(orderId)}`,
+          {
+            method: 'PATCH',
+            headers: { ...headers, Prefer: 'return=representation' },
+            body: JSON.stringify({ status }),
+          }
+        )
+        if (!ok) return res.status(httpStatus).json({ error: data })
+        return res.json(Array.isArray(data) ? (data[0] ?? {}) : data)
+      } finally {
+        await releaseLock(lockKey)
+      }
     }
 
     // ── POST: bulk delete old orders on configurable thresholds ───────────────
-    // Two separate DELETEs — one for completed/confirmed, one for rejected/etc.
-    // Defaults match CLEANUP_DEFAULTS in src/lib/orderCleanup.js:
-    //   confirmedDeleteHours  = 12  (completed or confirmed orders)
-    //   rejectedDeleteMinutes = 10  (rejected, cancelled, or failed orders)
+    // No rate limit — triggered by internal scheduler, not user action.
     if (action === 'autoCleanup') {
       const {
         confirmedDeleteHours  = 12,

@@ -1,0 +1,80 @@
+Integrate Upstash Redis safely into my SaaS.
+
+Do not change unrelated features.
+Do not refactor unrelated code.
+Do not remove or replace existing Neon/Drizzle database logic.
+Do not store permanent data in Upstash.
+Do not add QStash.
+Do not add Redis caching for public menu page views.
+Do not expose Upstash credentials to frontend code.
+
+Current stack:
+- Neon remains the main database.
+- Drizzle remains the ORM.
+- Better Auth remains the authentication system.
+- Cloudflare R2 remains image storage.
+- Upstash Redis should be used only as a temporary protection layer.
+
+Environment variables already added:
+UPSTASH_REDIS_REST_URL
+UPSTASH_REDIS_REST_TOKEN
+
+Goal:
+Use Upstash Redis only for:
+1. Rate limiting
+2. Abuse protection
+3. Duplicate prevention
+4. Short TTL keys
+5. Short-lived locks for critical write actions
+
+Implementation rules:
+1. First inspect the existing API routes and identify only the routes that are safe to protect.
+2. Install @upstash/redis and @upstash/ratelimit only if missing.
+3. Create one central server-only Upstash client file using Redis.fromEnv().
+4. Create reusable server-side helper functions for:
+   - rateLimit()
+   - preventDuplicate()
+   - withShortLock()
+5. Apply protection only to existing critical backend write routes, such as:
+   - order placement
+   - booking creation
+   - upload/image actions
+   - notification creation
+   - QR/token creation or refresh
+   - staff/admin sensitive actions
+   - confirm/cancel order
+   - accept/reject booking
+   - delete menu item
+   - change staff role
+   - delete table
+
+Important:
+- Do not rate limit normal public menu browsing.
+- Do not rate limit image loading.
+- Do not use Upstash for menu data, restaurant data, order history, booking history, analytics, or staff records.
+- Do not modify Better Auth internals. If auth route protection is needed, add a safe wrapper/middleware only where compatible.
+- Every Redis key must use TTL.
+- Use clean 429 responses for rate-limited requests.
+- If Upstash is temporarily unavailable, do not break the whole app. Log the error and rely on existing Neon/database validation where possible.
+- Keep all changes minimal and targeted.
+
+Suggested TTLs:
+- order duplicate prevention: 60–120 seconds
+- booking duplicate prevention: 2–10 minutes
+- notification dedupe: 30–300 seconds
+- QR/token abuse protection: 1–5 minutes
+- short locks: 5–15 seconds
+
+After implementation, report:
+1. All changed files
+2. All routes protected
+3. Redis key patterns added
+4. TTL values used
+5. How to test rate limits
+6. How to test duplicate order prevention
+7. How to test booking duplicate prevention
+8. How to test short locks
+
+Do not deploy automatically.
+Do not change unrelated UI.
+Do not break Better Auth, Neon/Drizzle, Cloudflare R2, orders, bookings, notifications, uploads, or dashboard logic.

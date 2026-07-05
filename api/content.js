@@ -1,4 +1,5 @@
 import { getServiceHeaders, supabaseFetch, setCors } from './_lib/supabase.js'
+import { rateLimit, getClientIp, send429 } from '../src/lib/upstash.server.js'
 
 // ── /api/content — Merged Restaurant Content Handler ─────────────────────────
 //
@@ -16,6 +17,10 @@ import { getServiceHeaders, supabaseFetch, setCors } from './_lib/supabase.js'
 // POST ?action=updateSocial  body: { restaurantId, social_links: { facebook, … } }
 //   → PATCH restaurants.social_links (service role, bypasses RLS)
 //   → returns updated restaurant row
+//
+// Upstash protection (POST actions only):
+//   saveAbout     — 10 req/min per IP (form save, rarely repeated fast)
+//   updateSocial  — 20 req/min per IP
 
 export default async function handler(req, res) {
   setCors(res)
@@ -29,7 +34,7 @@ export default async function handler(req, res) {
   try {
 
     // ── GET: fetch the "Our Story" about section for a restaurant ─────────────
-    // Public — no auth required. Returns the row or null.
+    // Public — no auth required. No rate limit on reads.
     if (action === 'getAbout') {
       if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' })
 
@@ -55,10 +60,13 @@ export default async function handler(req, res) {
     // ── All POST actions ──────────────────────────────────────────────────────
     if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
-    // ── POST: save about section (PATCH-first, INSERT if no existing row) ─────
-    // Protected — restaurant owner / admin.
-    // Two-step write avoids relying on a UNIQUE constraint being present in the schema.
+    const ip = getClientIp(req)
+
+    // ── POST: save about section — 10/min per IP ──────────────────────────────
     if (action === 'saveAbout') {
+      const { allowed } = await rateLimit(`rl:about-save:ip:${ip}`, 10, 60)
+      if (!allowed) return send429(res, 'Too many about-section saves. Please wait.')
+
       const { restaurantId, story_text, image_1_url, image_2_url, image_3_url, image_4_url } = req.body
       if (!restaurantId) return res.status(400).json({ error: 'restaurantId required' })
 
@@ -113,10 +121,11 @@ export default async function handler(req, res) {
       return res.json({ success: true, data: Array.isArray(patchData) ? patchData[0] : patchData })
     }
 
-    // ── POST: update a restaurant's social_links JSON field ───────────────────
-    // Protected — restaurant owner / admin.
-    // Uses supabaseFetch so missing-column errors are gracefully stripped.
+    // ── POST: update social links — 20/min per IP ─────────────────────────────
     if (action === 'updateSocial') {
+      const { allowed } = await rateLimit(`rl:social-update:ip:${ip}`, 20, 60)
+      if (!allowed) return send429(res, 'Too many social link updates. Please slow down.')
+
       const { restaurantId, social_links } = req.body
       if (!restaurantId || typeof social_links !== 'object') {
         return res.status(400).json({ error: 'restaurantId and social_links object required' })
