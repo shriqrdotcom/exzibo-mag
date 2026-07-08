@@ -1,0 +1,58 @@
+Fix only the Better Auth Google login start flow for the superadmin login.
+
+Problem:
+On https://superadmin.exzibo.online/login, when I click “Continue with Google”, it does not open the Google account chooser. It redirects back to /login. This means the OAuth flow is probably not starting or the auth route is being blocked.
+
+Current Google Cloud OAuth setup:
+Authorized JavaScript origins:
+- https://superadmin.exzibo.online
+- https://dashboard.exzibo.online
+
+Authorized redirect URIs:
+- https://superadmin.exzibo.online/api/auth/callback/google
+- https://dashboard.exzibo.online/api/auth/callback/google
+
+Current env variables exist in Vercel and Replit:
+- GOOGLE_CLIENT_ID
+- GOOGLE_CLIENT_SECRET
+- BETTER_AUTH_URL
+- BETTER_AUTH_SECRET
+- DATABASE_URL
+- SUPERADMIN_ALLOWED_EMAILS
+
+Task:
+1. Inspect the login page/button code for “Continue with Google”.
+2. Confirm the button actually starts Better Auth Google sign-in, not redirecting to /login.
+3. Inspect the Better Auth server config.
+4. Confirm the Google provider uses the exact env variables:
+   GOOGLE_CLIENT_ID
+   GOOGLE_CLIENT_SECRET
+5. Inspect the /api/auth route and confirm Better Auth is mounted correctly.
+6. Inspect middleware/auth guards.
+7. Make sure these paths are NOT blocked by login protection:
+   /login
+   /api/auth/*
+   /api/auth/callback/google
+8. If middleware is redirecting /api/auth/* to /login, fix it.
+9. Keep dashboard pages protected.
+10. Do not add restaurant owner/admin/staff role-based access yet.
+11. Do not change menu, orders, bookings, restaurant data, R2, Ably, Upstash, database schema, or unrelated features.
+12. Do not remove Supabase in this task.
+13. Do not create a new auth system.
+14. Do not expose or log secrets, tokens, cookies, DATABASE_URL, GOOGLE_CLIENT_SECRET, BETTER_AUTH_SECRET, or session tokens.
+
+Expected behavior:
+Click “Continue with Google”
+→ browser goes to accounts.google.com
+→ user selects Gmail
+→ Google redirects to https://superadmin.exzibo.online/api/auth/callback/google
+→ app checks SUPERADMIN_ALLOWED_EMAILS
+→ allowed email opens superadmin dashboard
+
+After changes, report:
+- Which login button file was checked
+- Which Better Auth config file was checked
+- Which API auth route file was checked
+- Whether middleware was blocking /api/auth/*
+- Exact login URL to test
+- Exact callback URL being used

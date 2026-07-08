@@ -29,6 +29,10 @@ export default async function handler(req, res) {
   // ── TEMPORARY DIAGNOSTIC LOG (remove once auth is confirmed working) ───────
   // Check for sign-in attempts so we can see env var presence in Vercel logs.
   if (subpath.startsWith('sign-in') || subpath.startsWith('callback')) {
+    const resolvedBaseUrl =
+      process.env.BETTER_AUTH_BASE_URL ||
+      process.env.BETTER_AUTH_URL ||
+      '(using fallback: https://superadmin.exzibo.online)'
     console.log('[api/auth] diagnostic', JSON.stringify({
       subpath,
       method:              req.method,
@@ -38,7 +42,9 @@ export default async function handler(req, res) {
       hasGoogleSecret:     !!process.env.GOOGLE_CLIENT_SECRET,
       hasBetterAuthSecret: !!process.env.BETTER_AUTH_SECRET,
       hasDatabaseUrl:      !!process.env.DATABASE_URL,
-      betterAuthBaseUrl:   process.env.BETTER_AUTH_BASE_URL || '(using fallback: https://superadmin.exzibo.online)',
+      betterAuthBaseUrl:   resolvedBaseUrl,
+      // The exact URL Google must have listed under "Authorized redirect URIs".
+      expectedGoogleCallbackUrl: `${resolvedBaseUrl.startsWith('http') ? resolvedBaseUrl : 'https://superadmin.exzibo.online'}/api/auth/callback/google`,
       trustedOriginsEnv:   process.env.BETTER_AUTH_TRUSTED_ORIGINS || '(not set)',
     }))
   }

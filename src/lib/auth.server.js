@@ -18,9 +18,17 @@ const pool = new Pool({
 const extraTrustedOrigins = (process.env.BETTER_AUTH_TRUSTED_ORIGINS || '')
   .split(',').map(s => s.trim()).filter(Boolean)
 
+// Accept either env var name — some deployments set BETTER_AUTH_URL instead
+// of BETTER_AUTH_BASE_URL. Both mean the same thing: the domain Google's
+// OAuth callback should return to (must match the Google Console redirect URI).
+const configuredBaseUrl =
+  process.env.BETTER_AUTH_BASE_URL ||
+  process.env.BETTER_AUTH_URL ||
+  'https://superadmin.exzibo.online'
+
 export const auth = betterAuth({
   database: pool,
-  baseURL: process.env.BETTER_AUTH_BASE_URL || 'https://superadmin.exzibo.online',
+  baseURL: configuredBaseUrl,
   basePath: '/api/auth',
   secret: process.env.BETTER_AUTH_SECRET || 'dev-secret-change-in-production-32chars!!',
   socialProviders: {
