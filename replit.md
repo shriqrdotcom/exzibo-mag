@@ -108,3 +108,7 @@ Run these in order in your Supabase Dashboard → SQL Editor:
 6. `supabase/super_admin_setup.sql` — sets up super admin role and RPC
 7. `supabase/multi_user_access.sql` — enables team member shared access
 8. `supabase/uid_and_publish_setup.sql` — UID system + menu publish control
+
+## Replit Import Notes
+- Imported into Replit: installed dependencies with pnpm, ran `npm run db:push` to sync the Drizzle schema to the Replit-managed Postgres database, and configured `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` / `SUPABASE_SERVICE_ROLE_KEY` as Replit Secrets.
+- Supabase remains the primary database/auth/realtime provider (per existing user preference above). Replit's built-in Postgres (`DATABASE_URL`) is used as the shadow-write layer via Drizzle (`src/db/*`), as already designed in this codebase.
