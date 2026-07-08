@@ -234,8 +234,8 @@ function SuperAdminApp() {
 
   return (
     <Routes>
-      {/* Public entry point */}
-      <Route path="/"    element={<Landing />} />
+      {/* Entry point: unauthenticated visitors go straight to the login screen */}
+      <Route path="/"    element={user ? <Landing /> : <Navigate to="/auth" replace />} />
       <Route path="/auth" element={<Auth />} />
 
       {/* Customer-facing pages: redirect to menu.exzibo.online/{slug}/home */}

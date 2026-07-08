@@ -1,5 +1,5 @@
 import { toNodeHandler } from 'better-auth/node'
-import { auth } from '../src/lib/auth.server.js'
+import { auth, ensureAuthSchema } from '../src/lib/auth.server.js'
 
 const betterAuthHandler = toNodeHandler(auth)
 
@@ -51,6 +51,9 @@ export default async function handler(req, res) {
   // ── END DIAGNOSTIC LOG ─────────────────────────────────────────────────────
 
   try {
+    // Make sure the Better Auth tables exist before handling any auth request
+    // (idempotent, memoized — only actually runs SQL on cold start).
+    await ensureAuthSchema()
     return await betterAuthHandler(req, res)
   } catch (err) {
     // Log any unhandled errors from Better Auth so they appear in Vercel logs.
