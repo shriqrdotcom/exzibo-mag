@@ -3,7 +3,7 @@
 // Supabase remains the authoritative source of truth.
 // Neon writes are non-blocking mirrors — failures are logged but never thrown.
 
-import { neon } from '@neondatabase/serverless'
+import { neon } from './pg-sql.js'
 import { r2KeyFromUrl } from '../lib/r2.js'
 
 function getSql() {

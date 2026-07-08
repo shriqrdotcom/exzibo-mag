@@ -2,7 +2,7 @@
 // Used exclusively by /api/neon/restaurant/* routes.
 // Uses @neondatabase/serverless HTTP driver directly — no Supabase involved.
 
-import { neon } from '@neondatabase/serverless'
+import { neon } from './pg-sql.js'
 
 // Fields that must be serialised as JSON strings for JSONB columns
 const JSONB_FIELDS = new Set([

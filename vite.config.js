@@ -1591,18 +1591,18 @@ function neonHealthPlugin() {
           return
         }
         try {
-          const { neon } = await import('@neondatabase/serverless')
+          const { neon } = await import('./src/db/pg-sql.js')
           const url = process.env.DATABASE_URL
           if (!url) throw new Error('DATABASE_URL is not set')
           const sql = neon(url)
           const start = Date.now()
           await sql`SELECT 1`
           res.setHeader('Content-Type', 'application/json')
-          res.end(JSON.stringify({ ok: true, database: 'neon', drizzle: 'connected', latencyMs: Date.now() - start }))
+          res.end(JSON.stringify({ ok: true, database: 'postgres', drizzle: 'connected', latencyMs: Date.now() - start }))
         } catch (err) {
           res.statusCode = 500
           res.setHeader('Content-Type', 'application/json')
-          res.end(JSON.stringify({ ok: false, database: 'neon', error: err.message }))
+          res.end(JSON.stringify({ ok: false, database: 'postgres', error: err.message }))
         }
       })
     },
