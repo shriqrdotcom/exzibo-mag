@@ -35,6 +35,13 @@ export const auth = betterAuth({
     google: {
       clientId: process.env.GOOGLE_CLIENT_ID || '',
       clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
+      // Force Google to always show the "Choose an account" screen instead of
+      // silently continuing with whichever Google account is already signed
+      // into the browser. Without this, a returning user with only one active
+      // Google session gets auto-logged-in with that account and never sees
+      // a chooser — which looks like "nothing happened" if that account isn't
+      // in SUPERADMIN_ALLOWED_EMAILS.
+      prompt: 'select_account',
     },
   },
   // Core production domains + any extra origins from env (e.g. Vercel preview URLs).
