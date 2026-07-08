@@ -47,10 +47,25 @@ export default async function handler(req, res) {
 
   // ── Superadmin check ──────────────────────────────────────────────────────
   if (type === 'superadmin') {
-    const rawEnv        = process.env.SUPERADMIN_ALLOWED_EMAILS
-    const envExists     = rawEnv !== undefined && rawEnv !== null
-    const allowedEmails = (rawEnv || '').split(',').map(e => e.trim().toLowerCase()).filter(Boolean)
-    const allowed       = allowedEmails.includes(email)
+    const rawEnv    = process.env.SUPERADMIN_ALLOWED_EMAILS
+    const envExists = rawEnv !== undefined && rawEnv !== null
+
+    // Be forgiving of common paste mistakes in the Vercel dashboard:
+    // - wrapping the whole value in quotes: "a@x.com,b@x.com"
+    // - using newlines or semicolons instead of commas between emails
+    // - stray zero-width / non-breaking-space characters from copy-paste
+    // - trailing commas / extra whitespace
+    const cleanedEnv = (rawEnv || '')
+      .trim()
+      .replace(/^["']|["']$/g, '')
+      .replace(/[\u200B-\u200D\uFEFF\u00A0]/g, '')
+
+    const allowedEmails = cleanedEnv
+      .split(/[,;\n]/)
+      .map(e => e.trim().replace(/^["']|["']$/g, '').toLowerCase())
+      .filter(Boolean)
+
+    const allowed = allowedEmails.includes(email)
 
     // ── TEMPORARY DEBUG LOG (remove once access is confirmed working) ──────
     console.log('[auth-check/superadmin]', JSON.stringify({
