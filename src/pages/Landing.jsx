@@ -166,7 +166,14 @@ export default function Landing() {
         </p>
 
         <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', justifyContent: 'center' }}>
-          <CTAButton onClick={() => navigate('/dashboard')} icon={<ArrowRight size={15} />} primary>
+          <CTAButton
+            onClick={() => navigate('/dashboard')}
+            icon={<ArrowRight size={15} />}
+            primary
+            accent="#2da3fa"
+            accentSoft="rgba(45,163,250,0.5)"
+            accentGlow="rgba(45,163,250,0.4)"
+          >
             OPEN DASHBOARD
           </CTAButton>
           <CTAButton onClick={() => navigate('/restaurants')} icon={<Store size={15} />}>
@@ -577,7 +584,7 @@ function ThemeCard({ theme, onClick, selected, onOpenTheme, onOpenAdmin }) {
   )
 }
 
-function CTAButton({ children, onClick, icon, primary, dashed }) {
+function CTAButton({ children, onClick, icon, primary, dashed, accent = '#E8321A', accentSoft = 'rgba(232,50,26,0.5)', accentGlow = 'rgba(232,50,26,0.4)' }) {
   const [hovered, setHovered] = useState(false)
   return (
     <button
@@ -587,13 +594,13 @@ function CTAButton({ children, onClick, icon, primary, dashed }) {
       style={{
         display: 'flex', alignItems: 'center', gap: '10px',
         padding: '16px 32px', borderRadius: '50px',
-        background: hovered || primary ? '#E8321A' : 'transparent',
+        background: hovered || primary ? accent : 'transparent',
         border: dashed
-          ? `2px dashed ${hovered ? '#E8321A' : 'rgba(232,50,26,0.5)'}`
-          : `2px solid ${hovered || primary ? '#E8321A' : 'rgba(232,50,26,0.5)'}`,
+          ? `2px dashed ${hovered ? accent : accentSoft}`
+          : `2px solid ${hovered || primary ? accent : accentSoft}`,
         color: '#fff', fontSize: '13px', fontWeight: 700, letterSpacing: '0.1em',
         cursor: 'pointer', transition: 'all 0.25s ease',
-        boxShadow: hovered || primary ? '0 0 30px rgba(232,50,26,0.4)' : 'none',
+        boxShadow: hovered || primary ? `0 0 30px ${accentGlow}` : 'none',
       }}
     >
       {children}
