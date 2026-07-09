@@ -1,0 +1,63 @@
+Implement the ADD BOOKING page flow directly without asking confirmation.
+
+Task:
+Make the “+ ADD BOOKING” floating button functional.
+
+Flow:
+1. On the Booking Received page:
+- Keep the same top navigation.
+- Keep the same bottom navigation.
+- Keep page title as “Bookings”.
+- Keep floating button as “+ ADD BOOKING”.
+- On click, navigate to a new Add Booking page.
+
+2. On the Add Booking page:
+- Use the same top navigation.
+- Use the same bottom navigation.
+- Change page title to “ADD BOOKING”.
+- Replace the floating “+ ADD BOOKING” button with a “BACK” button.
+- BACK button should return to the normal Booking Received page.
+- Bottom navigation Booking icon must always open the normal Booking Received page, not the Add Booking page.
+
+Add Booking page form structure:
+- Create a clean booking form inspired by the provided reference image.
+- Fields:
+  - Full Name
+  - Phone Number
+  - Email Address
+  - Date selector
+  - Time selector
+  - Number of Guests with minus and plus controls
+  - Occasion dropdown
+  - Seating Preference options: Indoor, Outdoor, Private
+  - Optional note/special request field
+- Add a large bottom button: “CONFIRM BOOKING”
+
+Design rules:
+- White clean background.
+- Rounded input boxes.
+- Proper spacing between fields.
+- Mobile-first responsive layout.
+- Date and Time should be side-by-side on desktop, stacked or responsive on mobile if needed.
+- Number of guests section should show minus button, guest count, and plus button.
+- Seating preference should work like selectable pills/cards.
+- Keep all fields inside the viewport with no horizontal scroll.
+
+Functionality:
+- Reuse existing booking creation API/logic if available.
+- If manual booking source/type exists, mark this booking as staff/manual added.
+- If API is not available, create the UI and add a clear TODO comment only.
+- Do not change database schema unless absolutely required.
+
+Rules:
+- Do not change top navigation design.
+- Do not change bottom navigation design.
+- Do not change backend/database logic unless required for existing booking API connection.
+- Do not break existing booking received page.
+- Keep the same fixed mobile layout system already used on admin pages.
+
+Expected result:
+Clicking “+ ADD BOOKING” opens a new ADD BOOKING page with a full booking form.
+The floating button becomes “BACK”.
+The page includes a “CONFIRM BOOKING” button at the end.
+The Booking bottom nav icon always returns to the normal Booking Received page.

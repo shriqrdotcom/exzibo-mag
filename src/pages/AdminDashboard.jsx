@@ -33,6 +33,7 @@ import {
 } from 'lucide-react'
 import FloatingActionButton from '../components/FloatingActionButton'
 import AddOrdersPanel from '../components/AddOrdersPanel'
+import AddBookingPanel from '../components/AddBookingPanel'
 
 const MAX_GALLERY = 10
 
@@ -347,8 +348,8 @@ export default function AdminDashboard({ restaurantId: restaurantIdProp, initial
   const visibleNavItems = NAV_ITEMS.filter(item => hasPermission(item.permission))
 
   useEffect(() => {
-    // 'profile' and 'add-orders' are valid sections NOT in NAV_ITEMS — never auto-reset them
-    if (activeNav === 'profile' || activeNav === 'add-orders') return
+    // 'profile', 'add-orders', 'add-booking' are valid sections NOT in NAV_ITEMS — never auto-reset them
+    if (activeNav === 'profile' || activeNav === 'add-orders' || activeNav === 'add-booking') return
     if (visibleNavItems.length > 0 && !visibleNavItems.find(item => item.id === activeNav)) {
       setActiveNav(visibleNavItems[0].id)
     }
@@ -1813,13 +1814,9 @@ export default function AdminDashboard({ restaurantId: restaurantIdProp, initial
                 }
               </div>
             )}
-            {/* TODO: Wire to existing add-booking flow when available */}
             <FloatingActionButton
               text="ADD BOOKING"
-              onClick={() => {
-                // Placeholder: open add-booking modal / route here
-                console.log('[FAB] Add booking clicked')
-              }}
+              onClick={() => setActiveNav('add-booking')}
             />
           </>
         ) : activeNav === 'add-orders' ? (
@@ -1835,6 +1832,20 @@ export default function AdminDashboard({ restaurantId: restaurantIdProp, initial
             <FloatingActionButton
               text="BACK"
               onClick={() => setActiveNav('orders')}
+            />
+          </>
+        ) : activeNav === 'add-booking' ? (
+          <>
+            <AddBookingPanel
+              restaurantId={isDefault ? 'demo' : id}
+              accentStart={accentStart}
+              accentEnd={accentEnd}
+              onBack={() => setActiveNav('bookings')}
+              showToast={showToast}
+            />
+            <FloatingActionButton
+              text="BACK"
+              onClick={() => setActiveNav('bookings')}
             />
           </>
         ) : activeNav === 'customers' ? (
@@ -1860,6 +1871,8 @@ export default function AdminDashboard({ restaurantId: restaurantIdProp, initial
           // Orders icon stays active on both orders and add-orders pages
           const active = item.id === 'orders'
             ? (activeNav === 'orders' || activeNav === 'add-orders')
+            : item.id === 'bookings'
+            ? (activeNav === 'bookings' || activeNav === 'add-booking')
             : activeNav === item.id
           return (
             <button
@@ -1871,6 +1884,11 @@ export default function AdminDashboard({ restaurantId: restaurantIdProp, initial
                   setActiveNav('orders')
                   if (isDashboardSubdomain && restaurant?.slug) {
                     navigate(`/${restaurant.slug}/orders`, { replace: true })
+                  }
+                } else if (item.id === 'bookings') {
+                  setActiveNav('bookings')
+                  if (isDashboardSubdomain && restaurant?.slug) {
+                    navigate(`/${restaurant.slug}/booking`, { replace: true })
                   }
                 } else {
                   navigateSection(item.id)
