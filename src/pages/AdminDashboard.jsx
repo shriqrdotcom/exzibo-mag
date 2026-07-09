@@ -1221,21 +1221,24 @@ export default function AdminDashboard({ restaurantId: restaurantIdProp, initial
         )
       })()}
 
-      <div style={{ width: '100%', maxWidth: '480px', padding: '0 16px', boxSizing: 'border-box' }}>
+      <div style={{ width: '100%', maxWidth: '480px', padding: '0', boxSizing: 'border-box' }}>
 
         {/* ── HEADER ── */}
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           padding: '20px 20px 16px',
-          margin: '16px 0 0',
+          margin: '0',
           background: 'rgba(255,255,255,0.7)',
           backdropFilter: 'blur(16px)',
           WebkitBackdropFilter: 'blur(16px)',
           borderRadius: '20px',
           boxShadow: '0 4px 24px rgba(0,0,0,0.07), inset 0 1px 0 rgba(255,255,255,0.8)',
           border: '1px solid rgba(255,255,255,0.6)',
-          position: 'sticky',
+          position: 'fixed',
           top: 0,
+          left: 0,
+          right: 0,
+          width: '100%',
           zIndex: 1000,
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, minWidth: 0 }}>
@@ -1414,6 +1417,9 @@ export default function AdminDashboard({ restaurantId: restaurantIdProp, initial
             )}
           </div>
         </div>
+
+        {/* Spacer to push content below fixed header */}
+        <div style={{ height: '78px' }} />
 
         {/* ── CONTENT ── */}
         {activeNav === 'settings' ? (
