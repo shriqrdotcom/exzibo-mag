@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Users } from 'lucide-react'
+import { Users } from 'lucide-react'
 import { getTeamMembers } from '../lib/db'
 
 const ACCENT_START = '#6366F1'
@@ -126,21 +126,6 @@ export default function TeamMembers() {
       }}>
         <div style={{ position: 'absolute', top: '-40px', right: '-40px', width: '180px', height: '180px', borderRadius: '50%', background: 'rgba(255,255,255,0.08)' }} />
         <div style={{ position: 'absolute', bottom: '-20px', left: '60px', width: '100px', height: '100px', borderRadius: '50%', background: 'rgba(255,255,255,0.06)' }} />
-
-        {/* Top bar */}
-        <div style={{ display: 'flex', alignItems: 'center', padding: '16px 20px 0' }}>
-          <button
-            onClick={() => navigate(-1)}
-            style={{
-              width: '40px', height: '40px', borderRadius: '12px',
-              background: 'rgba(255,255,255,0.2)', border: '1px solid rgba(255,255,255,0.3)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              cursor: 'pointer', color: '#fff', backdropFilter: 'blur(8px)',
-            }}
-          >
-            <ArrowLeft size={18} />
-          </button>
-        </div>
 
         {/* Title */}
         <div style={{ padding: '16px 20px 0' }}>

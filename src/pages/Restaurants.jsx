@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Plus, Store, ExternalLink, Settings, Globe, Utensils } from 'lucide-react'
+import { Plus, Store, ExternalLink, Settings, Globe, Utensils } from 'lucide-react'
 import PlanBadge from '../components/PlanBadge'
 import { getRestaurants } from '../lib/db'
 import { supabase } from '../lib/supabase'
@@ -91,20 +91,6 @@ export default function Restaurants() {
         position: 'sticky', top: 0, zIndex: 50,
         backdropFilter: 'blur(12px)',
       }}>
-        <button
-          onClick={() => navigate('/')}
-          style={{
-            display: 'flex', alignItems: 'center', gap: '8px',
-            background: 'none', border: 'none', color: '#888',
-            cursor: 'pointer', fontSize: '13px', fontWeight: 600, letterSpacing: '0.05em',
-            transition: 'color 0.2s',
-          }}
-          onMouseEnter={e => e.currentTarget.style.color = '#fff'}
-          onMouseLeave={e => e.currentTarget.style.color = '#888'}
-        >
-          <ArrowLeft size={15} /> BACK
-        </button>
-
         <div style={{ fontSize: '18px', fontWeight: 900, letterSpacing: '0.05em' }}>
           EXZI<span style={{ color: '#E8321A' }}>BO</span>
         </div>

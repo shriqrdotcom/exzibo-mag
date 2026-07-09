@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { Loader2, CheckCircle2, AlertCircle, Camera, ChevronLeft, User } from 'lucide-react'
+import { Loader2, CheckCircle2, AlertCircle, Camera, User } from 'lucide-react'
 import { updateRestaurant, uploadLogoViaApi } from '../lib/db'
 import { processImageFile, isAcceptedImageType } from '../lib/processImage'
 import { useRole } from '../context/RoleContext'
@@ -143,7 +143,6 @@ export default function EditProfile() {
       }
 
       setSaveSuccess(true)
-      setTimeout(() => navigate(-1), 900)
     } catch (err) {
       setSaveError('Failed to save changes. Please try again.')
     } finally {
@@ -192,18 +191,6 @@ export default function EditProfile() {
           gap: '12px',
           flexShrink: 0,
         }}>
-          <button
-            onClick={() => navigate(-1)}
-            style={{
-              width: '36px', height: '36px', borderRadius: '50%',
-              background: 'rgba(0,0,0,0.06)', border: 'none',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              cursor: 'pointer', flexShrink: 0,
-            }}
-            aria-label="Go back"
-          >
-            <ChevronLeft size={18} color="#333" strokeWidth={2.5} />
-          </button>
           <span style={{
             fontWeight: 800, fontSize: '20px', color: '#111',
             letterSpacing: '-0.01em', lineHeight: 1,

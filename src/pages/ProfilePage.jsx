@@ -141,28 +141,6 @@ export default function ProfilePage({ restaurantId: propRestaurantId } = {}) {
           flexShrink: 0,
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            {/* Back arrow */}
-            <button
-              onClick={() => navigate(-1)}
-              style={{
-                width: '36px',
-                height: '36px',
-                borderRadius: '50%',
-                background: 'rgba(0,0,0,0.06)',
-                border: 'none',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-                flexShrink: 0,
-              }}
-              aria-label="Go back"
-            >
-              <svg width="10" height="16" viewBox="0 0 10 16" fill="none">
-                <polyline points="8 1 1 8 8 15" stroke="#333" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </button>
-
             {/* Title */}
             <span style={{
               fontWeight: 800,

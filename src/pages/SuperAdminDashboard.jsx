@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { processImageFile, isAcceptedImageType } from '../lib/processImage'
 import { useNavigate } from 'react-router-dom'
 import {
-  ArrowLeft, Plus, Pencil, Trash2, X, Check,
+  Plus, Pencil, Trash2, X, Check,
   Loader2, AlertCircle, Users, ChevronDown, Camera,
   UtensilsCrossed, Shield, Crown,
 } from 'lucide-react'
@@ -130,15 +130,7 @@ export default function SuperAdminDashboard() {
         <div style={{ position: 'absolute', top: '-50px', right: '-50px', width: '200px', height: '200px', borderRadius: '50%', background: 'rgba(255,255,255,0.08)' }} />
         <div style={{ position: 'absolute', bottom: '-20px', left: '40px', width: '120px', height: '120px', borderRadius: '50%', background: 'rgba(255,255,255,0.05)' }} />
 
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px 0' }}>
-          <button onClick={() => navigate(-1)} style={{
-            width: '40px', height: '40px', borderRadius: '12px',
-            background: 'rgba(255,255,255,0.2)', border: '1px solid rgba(255,255,255,0.3)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            cursor: 'pointer', color: '#fff',
-          }}>
-            <ArrowLeft size={18} />
-          </button>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '16px 20px 0' }}>
           <div style={{
             background: 'rgba(255,255,255,0.2)', border: '1px solid rgba(255,255,255,0.3)',
             borderRadius: '10px', padding: '5px 12px',

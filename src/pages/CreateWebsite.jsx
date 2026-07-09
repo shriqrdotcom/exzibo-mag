@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  X, ArrowLeft, Upload, Plus, Trash2, Star,
+  X, Upload, Plus, Trash2, Star,
   Link, Link2, Globe, MapPin,
   ChefHat, Users, Zap, Bell
 } from 'lucide-react'
@@ -84,11 +84,6 @@ export default function CreateWebsite() {
     return () => clearTimeout(linkDebounceRef.current)
   }, [linkName])
 
-  useEffect(() => {
-    const handleKey = e => { if (e.key === 'Escape') navigate(-1) }
-    window.addEventListener('keydown', handleKey)
-    return () => window.removeEventListener('keydown', handleKey)
-  }, [])
 
   const set = (field, value) => setForm(p => ({ ...p, [field]: value }))
   const setSocial = (field, value) => setForm(p => ({ ...p, socialLinks: { ...p.socialLinks, [field]: value } }))
@@ -389,7 +384,7 @@ export default function CreateWebsite() {
       `}</style>
 
       <div style={{ animation: 'fadeScale 0.35s ease' }}>
-        <FormHeader onBack={() => navigate(-1)} />
+        <FormHeader />
 
         <div style={{
           maxWidth: '1120px',
@@ -482,7 +477,7 @@ export default function CreateWebsite() {
   )
 }
 
-function FormHeader({ onBack }) {
+function FormHeader() {
   return (
     <div style={{
       padding: '28px 40px',
@@ -505,21 +500,6 @@ function FormHeader({ onBack }) {
           Provide your details below to generate your bespoke noir-themed experience.
         </p>
       </div>
-      <button
-        onClick={onBack}
-        style={{
-          display: 'flex', alignItems: 'center', gap: '6px',
-          background: 'rgba(255,255,255,0.04)',
-          border: '1px solid rgba(255,255,255,0.08)',
-          borderRadius: '10px',
-          color: '#666', fontSize: '12px', fontWeight: 600, letterSpacing: '0.08em',
-          padding: '10px 16px', cursor: 'pointer', transition: 'all 0.2s',
-        }}
-        onMouseEnter={e => { e.currentTarget.style.color = '#fff'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)' }}
-        onMouseLeave={e => { e.currentTarget.style.color = '#666'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)' }}
-      >
-        <X size={14} /> ESC
-      </button>
     </div>
   )
 }

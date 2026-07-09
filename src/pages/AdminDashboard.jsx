@@ -25,7 +25,7 @@ import {
 } from '../lib/notifications'
 import {
   CheckCircle, XCircle,
-  ClipboardList, BookOpen, Users, Settings, ArrowLeft, BarChart2,
+  ClipboardList, BookOpen, Users, Settings, BarChart2,
   Palette, DollarSign, Type, Save, Check, CalendarDays, UtensilsCrossed,
   SlidersHorizontal, Plus, Pencil, Trash2, X, Search, ChevronDown,
   Tag, Info, Eye, EyeOff, Send, Bell, User, Copy,
@@ -1239,18 +1239,6 @@ export default function AdminDashboard({ restaurantId: restaurantIdProp, initial
           zIndex: 1000,
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, minWidth: 0 }}>
-            <button
-              onClick={() => isDefault ? navigate('/') : navigate('/restaurants')}
-              style={{
-                width: '38px', height: '38px', borderRadius: '12px',
-                background: `${accentStart}18`,
-                border: `1px solid ${accentStart}30`,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                cursor: 'pointer', color: accentStart, flexShrink: 0,
-              }}
-            >
-              <ArrowLeft size={16} />
-            </button>
             <div
               onClick={() => {
                 if (!hasPermission('profile')) return
@@ -2736,17 +2724,6 @@ function CreateCouponModal({ onClose, coupons = [], onCreateCoupon, onDeleteCoup
         {/* ── HEADER ── */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '22px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <button
-              onClick={view === 'history' ? () => setView('form') : onClose}
-              style={{
-                width: '34px', height: '34px', borderRadius: '50%',
-                background: '#EFF6FF', border: 'none',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                cursor: 'pointer', color: '#2E5BFF',
-              }}
-            >
-              <ArrowLeft size={16} />
-            </button>
             <span style={{ fontSize: '17px', fontWeight: 800, color: '#0f172a' }}>
               {view === 'history' ? 'Coupon History' : 'Create New Coupon'}
             </span>
@@ -3893,15 +3870,6 @@ function AdminCouponManagement({ accentStart, restaurantId }) {
         border: '1px solid rgba(226,232,240,0.8)',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '18px' }}>
-          <div style={{
-            width: '32px', height: '32px', borderRadius: '50%',
-            background: 'rgba(37,99,235,0.12)',
-            border: '1px solid rgba(37,99,235,0.25)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: '#2563EB', cursor: 'pointer', flexShrink: 0,
-          }}>
-            <ArrowLeft size={15} />
-          </div>
           <span style={{ fontSize: '15px', fontWeight: 700, color: '#0f172a' }}>Edit Coupon</span>
         </div>
 
