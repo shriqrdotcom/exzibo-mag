@@ -131,11 +131,46 @@ export default function AddOrdersPanel({
   const shadow = '0 4px 24px rgba(0,0,0,0.07), inset 0 1px 0 rgba(255,255,255,0.8)'
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', paddingBottom: '140px' }}>
+    <>
+      <style>{`
+        .add-orders-root {
+          width: 100%;
+          max-width: 100%;
+          box-sizing: border-box;
+          overflow-x: hidden;
+        }
+        @media (max-width: 768px) {
+          .add-orders-root {
+            padding-left: 16px !important;
+            padding-right: 16px !important;
+          }
+          .add-orders-title {
+            font-size: 22px !important;
+          }
+          .add-orders-inputs {
+            flex-direction: column !important;
+          }
+          .add-orders-inputs input {
+            font-size: 16px !important;
+            width: 100% !important;
+            min-width: 0 !important;
+          }
+          .add-orders-grid {
+            grid-template-columns: 1fr !important;
+          }
+        }
+      `}</style>
+      <div
+        className="add-orders-root"
+        style={{ display: 'flex', flexDirection: 'column', gap: '16px', paddingBottom: '140px', paddingLeft: '4px', paddingRight: '4px' }}
+      >
 
       {/* Title */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '24px 4px 16px' }}>
-        <h1 style={{ fontSize: '28px', fontWeight: 900, color: '#0f172a', margin: 0, letterSpacing: '-0.02em' }}>
+        <h1
+          className="add-orders-title"
+          style={{ fontSize: '28px', fontWeight: 900, color: '#0f172a', margin: 0, letterSpacing: '-0.02em' }}
+        >
           ADD ORDERS
         </h1>
         {itemCount > 0 && (
@@ -152,11 +187,14 @@ export default function AddOrdersPanel({
       </div>
 
       {/* Inputs */}
-      <div style={{
-        display: 'flex', gap: '12px',
-        background: cardBg, backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
-        borderRadius: '18px', padding: '14px 16px', border, boxShadow: shadow,
-      }}>
+      <div
+        className="add-orders-inputs"
+        style={{
+          display: 'flex', gap: '12px',
+          background: cardBg, backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
+          borderRadius: '18px', padding: '14px 16px', border, boxShadow: shadow,
+        }}
+      >
         <input
           placeholder="Table number"
           value={tableNumber}
@@ -165,7 +203,7 @@ export default function AddOrdersPanel({
             flex: 1, padding: '10px 14px', borderRadius: '12px',
             border: '1px solid rgba(226,232,240,0.8)', fontSize: '14px', fontWeight: 600,
             background: 'rgba(255,255,255,0.6)', color: '#0f172a',
-            outline: 'none',
+            outline: 'none', boxSizing: 'border-box', minWidth: 0,
           }}
         />
         <input
@@ -176,7 +214,7 @@ export default function AddOrdersPanel({
             flex: 2, padding: '10px 14px', borderRadius: '12px',
             border: '1px solid rgba(226,232,240,0.8)', fontSize: '14px', fontWeight: 600,
             background: 'rgba(255,255,255,0.6)', color: '#0f172a',
-            outline: 'none',
+            outline: 'none', boxSizing: 'border-box', minWidth: 0,
           }}
         />
       </div>
@@ -217,7 +255,7 @@ export default function AddOrdersPanel({
           No items in this category.
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '14px' }}>
+        <div className="add-orders-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '14px' }}>
           {filteredItems.map(item => {
             const cartEntry = cart[item.id]
             const qty = cartEntry ? cartEntry.qty : 0
@@ -324,5 +362,6 @@ export default function AddOrdersPanel({
         </div>
       )}
     </div>
+    </>
   )
 }

@@ -1222,10 +1222,10 @@ export default function AdminDashboard({ restaurantId: restaurantIdProp, initial
         )
       })()}
 
-      <div style={{ width: '100%', maxWidth: '480px', padding: '0', boxSizing: 'border-box' }}>
+      <div style={{ width: '100%', maxWidth: '480px', padding: '0', boxSizing: 'border-box', overflowX: 'hidden' }}>
 
         {/* ── HEADER ── */}
-        <div style={{
+        <div style={{ overflowX: 'hidden',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           padding: '20px 20px 16px',
           margin: '0',

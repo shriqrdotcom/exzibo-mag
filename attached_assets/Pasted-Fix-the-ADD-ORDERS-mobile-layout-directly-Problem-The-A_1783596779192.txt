@@ -1,0 +1,49 @@
+Fix the ADD ORDERS mobile layout directly.
+
+Problem:
+The ADD ORDERS page works on desktop, but on mobile it has layout overflow. The page looks zoomed/glitched, horizontal scrolling opens a black side area, form boxes overflow outside the screen, and the BACK floating button is partly outside the page.
+
+Task:
+Make the ADD ORDERS page fully responsive for mobile.
+
+Fix these issues:
+1. Remove horizontal overflow on the whole app/page.
+2. The page must fit exactly inside the mobile screen width.
+3. No black side area should appear when scrolling.
+4. No zoom-in/zoom-out layout glitch should happen.
+5. Header, form fields, content area, bottom navigation, and floating button must stay inside the viewport.
+6. Table number and Customer name inputs must wrap/resize correctly on mobile.
+7. BACK button must stay inside the screen and above the bottom navigation.
+
+Required technical fixes:
+- Check global layout, page wrapper, header wrapper, and ADD ORDERS page container.
+- Remove any fixed width/min-width causing mobile overflow.
+- Use width: 100%, max-width: 100%, box-sizing: border-box.
+- Add overflow-x: hidden only where needed.
+- Ensure mobile input fields use font-size: 16px to prevent browser auto-zoom.
+- Verify viewport meta is correct: width=device-width, initial-scale=1.
+- On mobile, form inputs should stack or use responsive grid so they never overflow.
+- Add proper padding inside the page, not outside the page width.
+
+Floating button fix:
+- Use the same reusable FloatingActionButton component for:
+  - “+ ADD ORDERS”
+  - “+ ADD BOOKING”
+  - “BACK”
+- All three buttons must have the exact same shape, height, border-radius, shadow, gradient, padding, and responsive width behavior.
+- Only the text should change.
+- BACK button text should be “BACK”, not “+ BACK”.
+- Keep all floating buttons fixed above the bottom navigation:
+  bottom: calc(95px + env(safe-area-inset-bottom))
+  right: 20px on mobile
+- Button must never go outside the viewport.
+
+Rules:
+- Do not change backend/database logic.
+- Do not change order creation logic.
+- Do not change top navigation design.
+- Do not change bottom navigation design.
+- Only fix responsive layout, overflow, input sizing, and floating button consistency.
+
+Expected result:
+ADD ORDERS page looks perfect on mobile, no zoom glitch, no horizontal scroll, no black side area, all fields stay inside the screen, and BACK / ADD ORDERS / ADD BOOKING buttons have the same professional shape.

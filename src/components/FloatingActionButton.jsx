@@ -3,6 +3,7 @@ import React from 'react'
 const FAB_CLASS = 'exzibo-fab'
 
 export default function FloatingActionButton({ text, onClick }) {
+  const isBack = text === 'BACK'
   return (
     <>
       <style>{`
@@ -12,8 +13,10 @@ export default function FloatingActionButton({ text, onClick }) {
         }
         @media (max-width: 768px) {
           .${FAB_CLASS} {
-            right: 20px;
-            bottom: calc(95px + env(safe-area-inset-bottom));
+            right: 16px;
+            bottom: calc(100px + env(safe-area-inset-bottom));
+            padding: 12px 20px !important;
+            font-size: 13px !important;
           }
         }
       `}</style>
@@ -40,6 +43,8 @@ export default function FloatingActionButton({ text, onClick }) {
           alignItems: 'center',
           gap: '8px',
           WebkitTapHighlightColor: 'transparent',
+          maxWidth: 'calc(100vw - 32px)',
+          whiteSpace: 'nowrap',
         }}
         onMouseEnter={(e) => {
           e.currentTarget.style.transform = 'translateY(-2px) scale(1.02)'
@@ -56,7 +61,7 @@ export default function FloatingActionButton({ text, onClick }) {
           e.currentTarget.style.transform = 'translateY(0) scale(1)'
         }}
       >
-        <span style={{ fontSize: '1.2em', lineHeight: 1 }}>+</span>
+        {!isBack && <span style={{ fontSize: '1.2em', lineHeight: 1 }}>+</span>}
         <span>{text}</span>
       </button>
     </>
