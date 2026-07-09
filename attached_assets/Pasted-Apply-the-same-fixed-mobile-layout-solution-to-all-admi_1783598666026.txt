@@ -1,0 +1,53 @@
+Apply the same fixed mobile layout solution to all admin pages directly.
+
+Problem:
+The ADD ORDERS page layout is now fixed correctly, but other admin pages still have the same mobile scrolling problem. The top navigation and bottom navigation move with the page, and the background/content scroll behavior is not clean.
+
+Apply this fix to these pages:
+- Booking page
+- Booking Received page
+- Edit Menu / Menu Admin page
+- Analytics page
+- Settings page
+- Orders page if needed
+- Any other admin page using the same top and bottom navigation layout
+
+Required behavior:
+- Top navigation must stay fixed at the top.
+- Bottom navigation must stay fixed at the bottom.
+- Only the middle page content should scroll.
+- Background must be one clean continuous white page.
+- No horizontal scroll.
+- No black side area.
+- No mobile zoom/glitch effect.
+- Page content must not hide behind the top navigation or bottom navigation.
+
+Layout rules:
+- Reuse one shared admin mobile layout wrapper if possible.
+- Do not fix each page separately with duplicate CSS.
+- Structure should be:
+  FixedHeader
+  ScrollableMainContent
+  FixedBottomNavigation
+  FloatingActionButton if that page has one
+
+CSS/layout requirements:
+- Main page wrapper: height: 100dvh or min-height: 100dvh
+- Page wrapper: overflow-x: hidden
+- Header: fixed top: 0 left: 0 right: 0 z-index high
+- Bottom nav: fixed bottom: 0 left/right centered z-index high
+- Main content: overflow-y: auto
+- Add correct padding-top for fixed header
+- Add correct padding-bottom for fixed bottom nav and floating buttons
+- Use width: 100% and max-width: 100%
+- Use box-sizing: border-box
+
+Important:
+- Do not change top navigation design.
+- Do not change bottom navigation design.
+- Do not change floating button design.
+- Do not change backend, database, routes, or page logic.
+- Only fix shared layout, scrolling, background, and mobile viewport behavior.
+
+Expected result:
+All admin pages have the same clean mobile app layout: fixed top navigation, fixed bottom navigation, white continuous background, and only the middle content scrolls smoothly.

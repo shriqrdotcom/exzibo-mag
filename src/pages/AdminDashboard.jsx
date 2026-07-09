@@ -1093,7 +1093,7 @@ export default function AdminDashboard({ restaurantId: restaurantIdProp, initial
   }
 
   return (
-    <div style={{
+    <div className="admin-shell" style={{
       minHeight: '100vh',
       background: 'linear-gradient(145deg, #eef0f5 0%, #e8eaf0 100%)',
       display: 'flex',
@@ -1126,6 +1126,37 @@ export default function AdminDashboard({ restaurantId: restaurantIdProp, initial
         .action-btn:active { transform: scale(0.96); }
         .nav-tab { transition: background 0.2s ease, transform 0.15s ease; }
         .nav-tab:hover { transform: scale(1.08); }
+
+        /* ── Shared mobile layout shell ── */
+        .admin-shell {
+          overflow-x: hidden;
+        }
+        @media (max-width: 768px) {
+          .admin-shell {
+            position: fixed !important;
+            inset: 0 !important;
+            height: 100dvh !important;
+            width: 100vw !important;
+            padding-bottom: 0 !important;
+            overflow: hidden !important;
+          }
+          .admin-scroll {
+            flex: 1 !important;
+            overflow-y: auto !important;
+            overflow-x: hidden !important;
+            -webkit-overflow-scrolling: touch !important;
+            overscroll-behavior-y: contain !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            padding-left: 16px !important;
+            padding-right: 16px !important;
+            padding-bottom: 140px !important;
+            padding-top: 78px !important;
+          }
+          .admin-spacer {
+            display: none !important;
+          }
+        }
       `}</style>
 
 
@@ -1222,7 +1253,7 @@ export default function AdminDashboard({ restaurantId: restaurantIdProp, initial
         )
       })()}
 
-      <div style={{ width: '100%', maxWidth: '480px', padding: '0', boxSizing: 'border-box', overflowX: 'hidden' }}>
+      <div className="admin-scroll" style={{ width: '100%', maxWidth: '480px', padding: '0', boxSizing: 'border-box', overflowX: 'hidden' }}>
 
         {/* ── HEADER ── */}
         <div style={{ overflowX: 'hidden',
@@ -1420,7 +1451,7 @@ export default function AdminDashboard({ restaurantId: restaurantIdProp, initial
         </div>
 
         {/* Spacer to push content below fixed header */}
-        <div style={{ height: '78px' }} />
+        <div className="admin-spacer" style={{ height: '78px' }} />
 
         {/* ── CONTENT ── */}
         {activeNav === 'settings' ? (
