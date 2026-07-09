@@ -69,3 +69,5 @@ run = ["node", "server.js"]
 
 [userenv.development]
 VITE_DISABLE_AUTH = "true"
+
+[userenv.shared]

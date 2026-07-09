@@ -31,6 +31,7 @@ import {
   Tag, Info, Eye, EyeOff, Send, Bell, User, Copy,
   Image as ImageIcon, AlertCircle, CheckCircle2,
 } from 'lucide-react'
+import FloatingActionButton from '../components/FloatingActionButton'
 
 const MAX_GALLERY = 10
 
@@ -1593,6 +1594,14 @@ export default function AdminDashboard({ restaurantId: restaurantIdProp, initial
                 ))}
               </div>
             )}
+            {/* TODO: Wire to existing add-order flow when available */}
+            <FloatingActionButton
+              text="ADD ORDERS"
+              onClick={() => {
+                // Placeholder: open add-order modal / route here
+                console.log('[FAB] Add orders clicked')
+              }}
+            />
           </>
         ) : activeNav === 'bookings' ? (
           <>
@@ -1775,6 +1784,14 @@ export default function AdminDashboard({ restaurantId: restaurantIdProp, initial
                 }
               </div>
             )}
+            {/* TODO: Wire to existing add-booking flow when available */}
+            <FloatingActionButton
+              text="ADD BOOKING"
+              onClick={() => {
+                // Placeholder: open add-booking modal / route here
+                console.log('[FAB] Add booking clicked')
+              }}
+            />
           </>
         ) : activeNav === 'customers' ? (
           <AnalyticsPanel accentStart={accentStart} accentEnd={accentEnd} restaurantId={isDefault ? 'demo' : id} />
