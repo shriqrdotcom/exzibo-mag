@@ -32,6 +32,7 @@ import {
   Image as ImageIcon, AlertCircle, CheckCircle2,
 } from 'lucide-react'
 import FloatingActionButton from '../components/FloatingActionButton'
+import AddOrdersPanel from '../components/AddOrdersPanel'
 
 const MAX_GALLERY = 10
 
@@ -346,8 +347,8 @@ export default function AdminDashboard({ restaurantId: restaurantIdProp, initial
   const visibleNavItems = NAV_ITEMS.filter(item => hasPermission(item.permission))
 
   useEffect(() => {
-    // 'profile' is a valid section that is NOT in NAV_ITEMS — never auto-reset it
-    if (activeNav === 'profile') return
+    // 'profile' and 'add-orders' are valid sections NOT in NAV_ITEMS — never auto-reset them
+    if (activeNav === 'profile' || activeNav === 'add-orders') return
     if (visibleNavItems.length > 0 && !visibleNavItems.find(item => item.id === activeNav)) {
       setActiveNav(visibleNavItems[0].id)
     }
@@ -1588,14 +1589,17 @@ export default function AdminDashboard({ restaurantId: restaurantIdProp, initial
                 ))}
               </div>
             )}
-            {/* TODO: Wire to existing add-order flow when available */}
-            <FloatingActionButton
-              text="ADD ORDERS"
-              onClick={() => {
-                // Placeholder: open add-order modal / route here
-                console.log('[FAB] Add orders clicked')
-              }}
-            />
+            {activeNav === 'add-orders' ? (
+              <FloatingActionButton
+                text="BACK"
+                onClick={() => setActiveNav('orders')}
+              />
+            ) : (
+              <FloatingActionButton
+                text="ADD ORDERS"
+                onClick={() => setActiveNav('add-orders')}
+              />
+            )}
           </>
         ) : activeNav === 'bookings' ? (
           <>
@@ -1787,6 +1791,21 @@ export default function AdminDashboard({ restaurantId: restaurantIdProp, initial
               }}
             />
           </>
+        ) : activeNav === 'add-orders' ? (
+          <>
+            <AddOrdersPanel
+              restaurantId={isDefault ? 'demo' : id}
+              accentStart={accentStart}
+              accentEnd={accentEnd}
+              currency={globalConfig.currency}
+              onBack={() => setActiveNav('orders')}
+              showToast={showToast}
+            />
+            <FloatingActionButton
+              text="BACK"
+              onClick={() => setActiveNav('orders')}
+            />
+          </>
         ) : activeNav === 'customers' ? (
           <AnalyticsPanel accentStart={accentStart} accentEnd={accentEnd} restaurantId={isDefault ? 'demo' : id} />
         ) : null}
@@ -1807,12 +1826,25 @@ export default function AdminDashboard({ restaurantId: restaurantIdProp, initial
         zIndex: 100,
       }}>
         {visibleNavItems.map(item => {
-          const active = activeNav === item.id
+          // Orders icon stays active on both orders and add-orders pages
+          const active = item.id === 'orders'
+            ? (activeNav === 'orders' || activeNav === 'add-orders')
+            : activeNav === item.id
           return (
             <button
               key={item.id}
               className="nav-tab"
-              onClick={() => navigateSection(item.id)}
+              onClick={() => {
+                // Bottom nav Orders must always go to the normal Orders page
+                if (item.id === 'orders') {
+                  setActiveNav('orders')
+                  if (isDashboardSubdomain && restaurant?.slug) {
+                    navigate(`/${restaurant.slug}/orders`, { replace: true })
+                  }
+                } else {
+                  navigateSection(item.id)
+                }
+              }}
               title={item.label}
               style={{
                 width: '48px', height: '48px', borderRadius: '18px',

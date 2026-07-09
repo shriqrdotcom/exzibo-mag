@@ -1,0 +1,79 @@
+Logic Replit must understand
+
+The Order Received page and the Add Orders page should be two different pages.
+
+When staff clicks “+ ADD ORDERS”, it should open a new ADD ORDERS page.
+
+On the ADD ORDERS page:
+
+Top navigation stays same.
+
+Bottom navigation stays same.
+
+Page title changes from Orders to ADD ORDERS.
+
+Floating button changes from “+ ADD ORDERS” to “BACK”.
+
+Clicking BACK returns to the normal Order Received page.
+
+Bottom navigation “Orders” icon must always open the normal Order Received page, not the Add Orders page.
+
+Add Orders page should show restaurant food items category-wise, like the menu, so staff can quickly select items and create a manual order.
+
+
+Copy this prompt:
+
+Implement the ADD ORDERS page flow directly without asking confirmation.
+
+Current problem:
+The “+ ADD ORDERS” button exists, but now it needs to be functional.
+
+Task:
+When clicking the “+ ADD ORDERS” floating button on the Order Received page, open a separate Add Orders page.
+
+Required flow:
+1. Order Received page:
+   - Keep existing top navigation.
+   - Keep existing bottom navigation.
+   - Keep page title as “Orders”.
+   - Keep floating button as “+ ADD ORDERS”.
+   - On click, navigate to the new Add Orders page.
+
+2. Add Orders page:
+   - Use the same top navigation design.
+   - Use the same bottom navigation design.
+   - Change page title from “Orders” to “ADD ORDERS”.
+   - Replace the floating “+ ADD ORDERS” button with a “BACK” button.
+   - BACK button should return to the normal Order Received page.
+
+Important navigation rule:
+- The bottom navigation Orders icon must always route to the normal Order Received page.
+- It must NOT route back to the Add Orders page.
+- Add Orders page should be accessible only from the “+ ADD ORDERS” button.
+
+Add Orders page content:
+- Show restaurant food/menu items category-wise.
+- Reuse existing menu/food item data and existing UI patterns where possible.
+- Staff should be able to select food items easily.
+- Add quantity controls for selected items if possible.
+- Show selected items in a simple order summary/cart section.
+- Reuse the existing order creation logic/API if already available.
+- Mark the order as staff/manual order if the existing system supports it.
+- Do not change database schema unless absolutely required.
+
+Code rules:
+- First inspect existing routes, order page files, menu item components, and order creation logic.
+- Reuse existing components as much as possible.
+- Do not break live orders dashboard.
+- Do not change bottom navigation design.
+- Do not change top navigation design.
+- Do not remove existing order logic.
+- Keep the design mobile-friendly.
+
+Expected result:
+- Clicking “+ ADD ORDERS” opens the new ADD ORDERS page.
+- The ADD ORDERS page has the same top and bottom navigation.
+- Page title shows “ADD ORDERS”.
+- Floating button becomes “BACK”.
+- Bottom nav Orders icon always returns to the normal Order Received page.
+- Food items are shown category-wise so staff can manually create an order.
