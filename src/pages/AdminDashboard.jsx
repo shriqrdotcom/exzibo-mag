@@ -28,7 +28,7 @@ import {
   ClipboardList, BookOpen, Users, Settings, BarChart2,
   Palette, DollarSign, Type, Save, Check, CalendarDays, UtensilsCrossed,
   SlidersHorizontal, Plus, Pencil, Trash2, X, Search, ChevronDown,
-  Tag, Info, Eye, EyeOff, Send, Bell, User, Copy,
+  Tag, Info, Eye, EyeOff, Send, Bell, User, Copy, Clock, Receipt, Hourglass,
   Image as ImageIcon, AlertCircle, CheckCircle2,
 } from 'lucide-react'
 import FloatingActionButton from '../components/FloatingActionButton'
@@ -76,13 +76,16 @@ const NAV_ITEMS = [
 
 const DEMO_ORDERS = [
   {
-    id: 'EX8821', table: '08', status: 'preparing',
+    id: 'NEO81256U7', table: '07', status: 'pending',
     customerName: 'Rahul Sharma', phone: '+91 98765 43210', location: '12-A, Connaught Place, New Delhi',
     items: [
-      { name: 'Paneer Tikka Platter', qty: 1, price: 450 },
-      { name: 'Dal Makhani Special',  qty: 1, price: 600 },
-      { name: 'Butter Garlic Naan',   qty: 4, price: 400 },
+      { name: 'Margherita Pizza', qty: 2, price: 650, note: 'Extra cheese, thin crust' },
+      { name: 'Veg Burger',       qty: 1, price: 320, note: 'No onion, extra mayo' },
+      { name: 'Pasta Alfredo',    qty: 1, price: 480, note: 'Medium spicy, add mushrooms' },
     ],
+    grandTotal: 1850,
+    notes: 'Please serve quickly.\nOne item should be packed separately.',
+    created_at: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
   },
   {
     id: 'EX8824', table: '14', status: 'pending',
@@ -92,6 +95,7 @@ const DEMO_ORDERS = [
       { name: 'Mint Lime Soda',       qty: 2, price: 240 },
       { name: 'Gulab Jamun',          qty: 1, price: 160 },
     ],
+    created_at: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
   },
   {
     id: 'EX8819', table: '03', status: 'completed',
@@ -100,6 +104,7 @@ const DEMO_ORDERS = [
       { name: 'Masala Dosa',   qty: 2, price: 340 },
       { name: 'Filter Coffee', qty: 2, price: 180 },
     ],
+    created_at: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
   },
 ]
 
@@ -391,7 +396,12 @@ export default function AdminDashboard({ restaurantId: restaurantIdProp, initial
   useEffect(() => {
     async function init() {
       if (isDefault) {
-        setOrders(cleanAndPersistOrders('demo'))
+        let demoOrders = cleanAndPersistOrders('demo')
+        if (demoOrders.length === 0) {
+          demoOrders = makeRestaurantOrders('Demo')
+          try { localStorage.setItem('exzibo_orders_demo', JSON.stringify(demoOrders)) } catch {}
+        }
+        setOrders(demoOrders)
         setBookings(loadBookings('demo'))
         return
       }
@@ -6791,62 +6801,127 @@ const ORDER_ACTIONS = {
   rejected:   [],
 }
 
+const CURRENCY_SYMBOLS = {
+  INR: '₹', USD: '$', EUR: '€', GBP: '£', JPY: '¥',
+  CAD: 'C$', AUD: 'A$', SGD: 'S$', AED: 'AED ',
+}
+
 /* ─── Order Card ─── */
 function OrderCard({ order, index, accentStart, currency, onStatusChange, orderSettings = {} }) {
+  const currencySym = CURRENCY_SYMBOLS[currency] || currency
   const subtotal = order.grandTotal != null
     ? order.grandTotal
-    : order.items.reduce((s, it) => s + (it.price * (it.qty || 1)), 0)
+    : order.items.reduce((s, it) => s + ((it.price || 0) * (it.qty || 1)), 0)
   const cfg = STATUS_CONFIG[order.status] || STATUS_CONFIG.pending
   const actions = ORDER_ACTIONS[order.status] || []
   const isTerminal = actions.length === 0
   const showCustomerDetails = orderSettings.showName || orderSettings.showPhone || orderSettings.showLocation
+
+  // Format order time from created_at / submittedAt
+  const orderTime = order.submittedAt || order.createdAt || order.created_at || ''
+  let timeLabel = ''
+  try {
+    if (orderTime) {
+      const d = new Date(orderTime)
+      if (!isNaN(d)) {
+        timeLabel = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
+      }
+    }
+  } catch {}
+  if (!timeLabel) timeLabel = 'Just now'
+
+  const itemCount = order.items.reduce((s, it) => s + (it.qty || 1), 0)
 
   return (
     <div
       className="order-card"
       style={{
         animationDelay: `${index * 0.07}s`,
-        background: 'rgba(255,255,255,0.75)',
-        backdropFilter: 'blur(12px)',
-        WebkitBackdropFilter: 'blur(12px)',
-        borderRadius: '20px', padding: '20px',
-        border: '1px solid rgba(255,255,255,0.7)',
-        boxShadow: '0 4px 24px rgba(0,0,0,0.07), inset 0 1px 0 rgba(255,255,255,0.8)',
+        background: '#fff',
+        borderRadius: '20px',
+        padding: '18px',
+        border: '1px solid rgba(226,232,240,0.6)',
+        boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
         transition: 'box-shadow 0.25s ease, transform 0.25s ease',
         opacity: isTerminal ? 0.7 : 1,
       }}
       onMouseEnter={e => {
         if (!isTerminal) {
-          e.currentTarget.style.boxShadow = '0 12px 36px rgba(0,0,0,0.11), inset 0 1px 0 rgba(255,255,255,0.8)'
-          e.currentTarget.style.transform = 'translateY(-2px)'
+          e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.10)'
+          e.currentTarget.style.transform = 'translateY(-1px)'
         }
       }}
       onMouseLeave={e => {
-        e.currentTarget.style.boxShadow = '0 4px 24px rgba(0,0,0,0.07), inset 0 1px 0 rgba(255,255,255,0.8)'
+        e.currentTarget.style.boxShadow = '0 2px 12px rgba(0,0,0,0.06)'
         e.currentTarget.style.transform = 'translateY(0)'
       }}
     >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
-        <div>
-          <div style={{ fontSize: '13px', fontWeight: 800, color: accentStart, letterSpacing: '0.02em', lineHeight: 1.3 }}>
-            ORDERS FROM TABLE NO — {order.table}
+      {/* ── Header row ── */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div style={{
+            width: '36px', height: '36px', borderRadius: '50%',
+            background: '#E8F5E9',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <Bell size={16} color="#4CAF50" />
           </div>
-          <div style={{ fontSize: '12px', color: '#94A3B8', marginTop: '3px', fontWeight: 500 }}>
-            ORDER ID #{order.id}
-          </div>
+          <span style={{ fontSize: '15px', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.01em' }}>
+            NEW ORDER RECEIVED
+          </span>
         </div>
-        <div style={{ textAlign: 'right' }}>
-          <div style={{ fontSize: '11px', fontWeight: 700, color: '#94A3B8', letterSpacing: '0.06em' }}>GRAND TOTAL</div>
-          <div style={{ fontSize: '22px', fontWeight: 900, color: '#0f172a', letterSpacing: '-0.02em', lineHeight: 1.1 }}>
-            {subtotal.toLocaleString()} <span style={{ fontSize: '13px', fontWeight: 700 }}>{currency}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: '6px',
+            padding: '6px 12px', borderRadius: '10px',
+            background: '#F3E5F5', color: '#7B1FA2',
+            fontSize: '12px', fontWeight: 700,
+          }}>
+            <Clock size={13} />
+            {timeLabel}
           </div>
-          <div style={{ fontSize: '10px', fontWeight: 800, letterSpacing: '0.1em', color: cfg.color, marginTop: '4px' }}>
-            {cfg.label.toUpperCase()}
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: '6px',
+            padding: '6px 12px', borderRadius: '10px',
+            background: '#FFF3E0', color: '#E65100',
+            fontSize: '12px', fontWeight: 700,
+          }}>
+            <Hourglass size={13} />
+            Pending
           </div>
         </div>
       </div>
 
-      {/* Customer details (shown when toggles are on) */}
+      {/* ── Table + Order ID + Dine-in ── */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{
+            background: '#0B1F3A', color: '#fff',
+            padding: '10px 20px', borderRadius: '12px',
+            fontSize: '22px', fontWeight: 900, letterSpacing: '0.06em',
+            minWidth: '70px', textAlign: 'center',
+          }}>
+            T {order.table || '—'}
+          </div>
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: '6px',
+            padding: '8px 14px', borderRadius: '10px',
+            background: '#E3F2FD', color: '#1565C0',
+            fontSize: '13px', fontWeight: 700,
+          }}>
+            <UtensilsCrossed size={14} />
+            Dine in
+          </div>
+        </div>
+        <div style={{ textAlign: 'right' }}>
+          <div style={{ fontSize: '12px', color: '#94A3B8', fontWeight: 500 }}>Order ID</div>
+          <div style={{ fontSize: '16px', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.01em' }}>
+            #{order.id}
+          </div>
+        </div>
+      </div>
+
+      {/* ── Customer details (shown when toggles are on) ── */}
       {showCustomerDetails && (
         <div style={{
           display: 'flex', flexDirection: 'column', gap: '5px',
@@ -6874,33 +6949,129 @@ function OrderCard({ order, index, accentStart, currency, onStatusChange, orderS
         </div>
       )}
 
-      <div style={{ height: '1px', background: `linear-gradient(90deg, ${accentStart}20, transparent)`, marginBottom: '14px' }} />
-
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '18px' }}>
+      {/* ── Items list ── */}
+      <div style={{
+        border: '1px solid rgba(226,232,240,0.6)',
+        borderRadius: '16px',
+        overflow: 'hidden',
+        marginBottom: '12px',
+      }}>
         {order.items.map((item, idx) => (
           <div key={idx} style={{
-            display: 'flex', alignItems: 'center', gap: '10px',
-            padding: '9px 12px',
-            background: 'rgba(248,250,252,0.8)',
-            borderRadius: '12px',
-            border: '1px solid rgba(226,232,240,0.6)',
+            display: 'flex', alignItems: 'center', gap: '12px',
+            padding: '12px 14px',
+            borderBottom: idx < order.items.length - 1 ? '1px solid rgba(226,232,240,0.5)' : 'none',
           }}>
+            {/* Serial number circle */}
             <div style={{
-              width: '22px', height: '22px', borderRadius: '8px',
-              background: `linear-gradient(135deg, ${accentStart}25, ${accentStart}15)`,
+              width: '32px', height: '32px', borderRadius: '50%',
+              background: '#F1F5F9',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '11px', fontWeight: 800, color: accentStart, flexShrink: 0,
+              fontSize: '13px', fontWeight: 700, color: '#64748b',
+              flexShrink: 0,
             }}>
               {idx + 1}
             </div>
-            <div style={{ flex: 1, fontSize: '13px', color: '#334155', fontWeight: 500 }}>
-              {item.name}{item.qty > 1 ? ` (x${item.qty})` : ''}
+            {/* Item info */}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: '14px', fontWeight: 700, color: '#0f172a' }}>
+                {item.name}
+              </div>
+              {item.note && (
+                <div style={{ fontSize: '12px', color: '#94A3B8', marginTop: '2px' }}>
+                  {item.note}
+                </div>
+              )}
             </div>
-            <div style={{ fontSize: '13px', fontWeight: 700, color: '#0f172a' }}>{item.price}</div>
+            {/* Quantity */}
+            <div style={{ fontSize: '15px', fontWeight: 800, color: '#0f172a', flexShrink: 0 }}>
+              {item.qty}x
+            </div>
           </div>
         ))}
       </div>
 
+      {/* ── Extra Note ── */}
+      {order.notes && (
+        <div style={{
+          display: 'flex', alignItems: 'flex-start', gap: '10px',
+          padding: '12px 14px',
+          background: '#FAFAFA',
+          borderRadius: '14px',
+          marginBottom: '12px',
+        }}>
+          <div style={{
+            width: '32px', height: '32px', borderRadius: '10px',
+            background: '#FFF3E0',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            flexShrink: 0,
+          }}>
+            <Receipt size={15} color="#E65100" />
+          </div>
+          <div>
+            <div style={{ fontSize: '13px', fontWeight: 700, color: '#0f172a', marginBottom: '3px' }}>
+              Extra Note
+            </div>
+            <div style={{ fontSize: '12px', color: '#64748b', lineHeight: 1.5, whiteSpace: 'pre-line' }}>
+              {order.notes}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── View Bill + Subtotal row ── */}
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '12px 14px',
+        background: '#FAFAFA',
+        borderRadius: '14px',
+        marginBottom: '10px',
+      }}>
+        <button style={{
+          display: 'flex', alignItems: 'center', gap: '6px',
+          padding: '8px 14px',
+          borderRadius: '10px',
+          border: '1px solid rgba(226,232,240,0.8)',
+          background: '#fff',
+          fontSize: '13px', fontWeight: 700, color: '#334155',
+          cursor: 'pointer',
+        }}>
+          <Receipt size={14} />
+          View Bill
+        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '11px', color: '#94A3B8', fontWeight: 600 }}>Subtotal</div>
+            <div style={{ fontSize: '15px', fontWeight: 800, color: '#0f172a' }}>
+              {currencySym}{subtotal.toLocaleString()}
+            </div>
+          </div>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '11px', color: '#94A3B8', fontWeight: 600 }}>Tax</div>
+            <div style={{ fontSize: '13px', fontWeight: 700, color: '#64748b' }}>Included</div>
+          </div>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '11px', color: '#94A3B8', fontWeight: 600 }}>Items</div>
+            <div style={{ fontSize: '15px', fontWeight: 800, color: '#0f172a' }}>{itemCount}</div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Total row ── */}
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '12px 14px',
+        background: '#FAFAFA',
+        borderRadius: '14px',
+        marginBottom: '14px',
+      }}>
+        <span style={{ fontSize: '14px', fontWeight: 700, color: '#0f172a' }}>Total</span>
+        <span style={{ fontSize: '22px', fontWeight: 900, color: '#0f172a', letterSpacing: '-0.02em' }}>
+          {currencySym}{subtotal.toLocaleString()}
+        </span>
+      </div>
+
+      {/* ── Bottom actions ── */}
       {isTerminal ? (
         <div style={{
           textAlign: 'center', padding: '10px',
@@ -6912,37 +7083,54 @@ function OrderCard({ order, index, accentStart, currency, onStatusChange, orderS
           {cfg.label.toUpperCase()}
         </div>
       ) : (
-        <div style={{ display: 'flex', gap: '10px' }}>
+        <div style={{ display: 'flex', gap: '12px' }}>
           {actions.map(({ label, nextStatus, style }) => {
             const isPrimary = style === 'primary'
             const isDanger  = style === 'danger'
+            const btnText = isDanger ? 'Cancel order' : 'Confirm Order'
             return (
               <button
                 key={nextStatus}
                 className="action-btn"
                 onClick={() => onStatusChange(nextStatus)}
                 style={{
-                  flex: 1, padding: '12px',
+                  flex: 1, padding: '14px 12px',
                   background: isPrimary
-                    ? 'linear-gradient(135deg, #10B981, #059669)'
+                    ? '#fff'
                     : isDanger
-                      ? 'rgba(254,242,242,0.9)'
+                      ? '#fff'
                       : 'rgba(248,250,252,0.9)',
-                  border: isPrimary ? 'none' : isDanger ? '1.5px solid #FECACA' : '1.5px solid #E2E8F0',
-                  borderRadius: '50px',
-                  color: isPrimary ? '#fff' : isDanger ? '#EF4444' : '#64748B',
-                  fontSize: '13px', fontWeight: 800,
-                  letterSpacing: '0.06em', cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '7px',
-                  boxShadow: isPrimary
-                    ? '0 4px 16px rgba(16,185,129,0.35)'
+                  border: isPrimary
+                    ? '2px solid #10B981'
                     : isDanger
-                      ? '0 4px 12px rgba(239,68,68,0.12)'
-                      : '0 2px 8px rgba(0,0,0,0.06)',
+                      ? '2px solid #EF4444'
+                      : '1.5px solid #E2E8F0',
+                  borderRadius: '14px',
+                  color: isPrimary ? '#10B981' : isDanger ? '#EF4444' : '#64748B',
+                  fontSize: '14px', fontWeight: 800,
+                  letterSpacing: '0.02em', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                  transition: 'all 0.2s ease',
                 }}
               >
-                {isPrimary ? <CheckCircle size={15} /> : isDanger ? <XCircle size={15} /> : null}
-                {label}
+                {isPrimary ? (
+                  <div style={{
+                    width: '24px', height: '24px', borderRadius: '50%',
+                    background: '#E8F5E9',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    <Check size={14} color="#10B981" />
+                  </div>
+                ) : isDanger ? (
+                  <div style={{
+                    width: '24px', height: '24px', borderRadius: '50%',
+                    background: '#FEE2E2',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    <X size={14} color="#EF4444" />
+                  </div>
+                ) : null}
+                {btnText}
               </button>
             )
           })}
