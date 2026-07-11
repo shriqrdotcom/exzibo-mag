@@ -5,7 +5,7 @@ import fs from 'fs'
 import { createHmac } from 'crypto'
 import bcrypt from 'bcryptjs'
 import pg from 'pg'
-import { patchNeonRestaurant, getNeonRestaurantById } from './src/db/neon-restaurants.js'
+import { patchNeonRestaurant, getNeonRestaurantById, getNeonRestaurantBySlug } from './src/db/neon-restaurants.js'
 import { upsertNeonMenuCategory, deleteNeonMenuCategory, getNeonMenuCategories } from './src/db/neon-menu-categories.js'
 import { upsertNeonMenuItem, upsertNeonMenuItems, deleteNeonMenuItem, getNeonMenuItems, getNeonPublishedMenuItems } from './src/db/neon-menu-items.js'
 import { upsertNeonBooking, updateNeonBookingStatus, getNeonBookings } from './src/db/neon-bookings.js'
@@ -102,15 +102,6 @@ function menuApiPlugin() {
     name: 'menu-api',
     configureServer(server) {
 
-      function getServiceHeaders() {
-        const raw = process.env.VITE_SUPABASE_URL
-        const key = process.env.SUPABASE_SERVICE_ROLE_KEY
-        if (!raw || !key) throw new Error('Supabase service role not configured')
-        // Strip any trailing path components (e.g. /rest/v1/) that may be in the secret
-        const url = raw.trim().replace(/\/+$/, '').replace(/\/(rest\/v1|graphql\/v1|auth\/v1|storage\/v1)(\/.*)?$/, '')
-        return { url, headers: { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json', Prefer: 'return=representation' } }
-      }
-
       function readBody(req) {
         return new Promise((resolve, reject) => {
           let data = ''
@@ -147,18 +138,7 @@ function menuApiPlugin() {
             console.warn('[menu/upload-image] R2 upload failed, falling back to Supabase Storage:', r2Err.message)
           }
 
-          // ── Fallback: Supabase Storage (legacy path — kept for safety) ──────
-          const { url: supabaseUrl, headers } = getServiceHeaders()
-          const filePath = `public/${restaurantId}/${Date.now()}.webp`
-          const r = await fetch(`${supabaseUrl}/storage/v1/object/menu-images/${filePath}`, {
-            method: 'POST',
-            headers: { ...headers, 'Content-Type': 'image/webp', 'x-upsert': 'true' },
-            body: buf,
-          })
-          if (!r.ok) { const e = await r.text(); return json(res, 500, { error: `Storage upload failed: ${e}` }) }
-          const publicUrl = `${supabaseUrl}/storage/v1/object/public/menu-images/${filePath}`
-          console.log('[menu/upload-image] Supabase fallback ✅:', publicUrl)
-          return json(res, 200, { url: publicUrl, imageKey: null })
+          return json(res, 500, { error: 'R2 upload failed; no fallback configured' })
         } catch (e) { return json(res, 500, { error: e.message }) }
       })
 
@@ -167,69 +147,24 @@ function menuApiPlugin() {
       server.middlewares.use('/api/menu', async (req, res, next) => {
         const pathname = (req.url || '/').split('?')[0].replace(/\/$/, '')
 
-        // ── GET routes (service role reads — no RLS dependency) ─────────────
         if (req.method === 'GET') {
           try {
-            const { url: supabaseUrl, headers } = getServiceHeaders()
-
-            // GET /api/menu/categories/:restaurantId — Neon-first, Supabase fallback
+            // GET /api/menu/categories/:restaurantId
             const catMatch = pathname.match(/^\/categories\/([^/]+)$/)
             if (catMatch) {
-              const restaurantId = catMatch[1]
-              // Try Neon first
-              try {
-                const neonRows = await getNeonMenuCategories(restaurantId)
-                if (neonRows.length > 0) {
-                  console.log('[menu/categories/get] Neon ✅ rows:', neonRows.length, 'for', restaurantId)
-                  return json(res, 200, neonRows)
-                }
-              } catch (neonErr) {
-                console.warn('[menu/categories/get] Neon error (falling back to Supabase):', neonErr.message)
-              }
-              // Supabase fallback (0 Neon rows or Neon error)
-              const r = await fetch(`${supabaseUrl}/rest/v1/menu_categories?restaurant_id=eq.${encodeURIComponent(restaurantId)}&order=position`, { headers })
-              const data = await r.json()
-              return json(res, r.ok ? 200 : r.status, data)
+              return json(res, 200, await getNeonMenuCategories(catMatch[1]))
             }
 
-            // GET /api/menu/items/:restaurantId/published — Neon-first, Supabase fallback
+            // GET /api/menu/items/:restaurantId/published
             const pubMatch = pathname.match(/^\/items\/([^/]+)\/published$/)
             if (pubMatch) {
-              const restaurantId = pubMatch[1]
-              // Try Neon first
-              try {
-                const neonRows = await getNeonPublishedMenuItems(restaurantId)
-                if (neonRows.length > 0) {
-                  console.log('[menu/items/published/get] Neon ✅ rows:', neonRows.length, 'for', restaurantId)
-                  return json(res, 200, neonRows)
-                }
-              } catch (neonErr) {
-                console.warn('[menu/items/published/get] Neon error (falling back to Supabase):', neonErr.message)
-              }
-              // Supabase fallback (0 Neon rows or Neon error)
-              const r = await fetch(`${supabaseUrl}/rest/v1/menu_items?restaurant_id=eq.${encodeURIComponent(restaurantId)}&is_published=eq.true&order=created_at`, { headers })
-              const data = await r.json()
-              return json(res, r.ok ? 200 : r.status, data)
+              return json(res, 200, await getNeonPublishedMenuItems(pubMatch[1]))
             }
 
-            // GET /api/menu/items/:restaurantId — Neon-first, Supabase fallback
+            // GET /api/menu/items/:restaurantId
             const itemsMatch = pathname.match(/^\/items\/([^/]+)$/)
             if (itemsMatch) {
-              const restaurantId = itemsMatch[1]
-              // Try Neon first
-              try {
-                const neonRows = await getNeonMenuItems(restaurantId)
-                if (neonRows.length > 0) {
-                  console.log('[menu/items/get] Neon ✅ rows:', neonRows.length, 'for', restaurantId)
-                  return json(res, 200, neonRows)
-                }
-              } catch (neonErr) {
-                console.warn('[menu/items/get] Neon error (falling back to Supabase):', neonErr.message)
-              }
-              // Supabase fallback (0 Neon rows or Neon error)
-              const r = await fetch(`${supabaseUrl}/rest/v1/menu_items?restaurant_id=eq.${encodeURIComponent(restaurantId)}&order=created_at`, { headers })
-              const data = await r.json()
-              return json(res, r.ok ? 200 : r.status, data)
+              return json(res, 200, await getNeonMenuItems(itemsMatch[1]))
             }
           } catch (e) { return json(res, 500, { error: e.message }) }
           return next()
@@ -238,76 +173,22 @@ function menuApiPlugin() {
         if (req.method !== 'POST') return next()
 
         try {
-          // POST /api/menu/upload-image — already handled above, skip
           if (pathname === '/upload-image') return next()
 
-          // Shared helper: fetch Supabase, auto-retry stripping any 42703 column.
-          async function sbFetch(url, opts) {
-            const r = await fetch(url, opts)
-            if (r.ok) return { ok: true, status: r.status, data: await r.json() }
-            let errData
-            try { errData = await r.json() } catch { errData = { error: r.statusText } }
-            if (errData?.code === '42703' && opts.body) {
-              const badCol = (errData.message || '').match(/column "([\w]+)"/)?.[1]
-              if (badCol) {
-                try {
-                  const b = JSON.parse(opts.body)
-                  if (badCol in b) {
-                    const stripped = { ...b }
-                    delete stripped[badCol]
-                    console.warn(`[menu] Column "${badCol}" missing in Supabase schema — retrying without it. Run uid_and_publish_setup.sql to add it.`)
-                    const r2 = await fetch(url, { ...opts, body: JSON.stringify(stripped) })
-                    const d2 = r2.ok ? await r2.json() : await r2.json().catch(() => ({ error: r2.statusText }))
-                    return { ok: r2.ok, status: r2.status, data: d2 }
-                  }
-                } catch {}
-              }
-            }
-            console.error(`[menu] Supabase ${opts.method} → ${r.status}:`, errData)
-            return { ok: false, status: r.status, data: errData }
-          }
-
-          // POST /api/menu/items/upsert — must be checked before /items
+          // POST /api/menu/items/upsert
           if (pathname === '/items/upsert') {
             const { restaurantId, items } = await readBody(req)
             if (!restaurantId || !Array.isArray(items)) return json(res, 400, { error: 'restaurantId and items[] required' })
-            const { url: supabaseUrl, headers } = getServiceHeaders()
             const rows = items.map(item => ({ ...item, restaurant_id: restaurantId }))
-            const { ok, status, data } = await sbFetch(`${supabaseUrl}/rest/v1/menu_items?on_conflict=id`, {
-              method: 'POST',
-              headers: { ...headers, Prefer: 'resolution=merge-duplicates,return=representation' },
-              body: JSON.stringify(rows),
-            })
-            if (!ok) return json(res, status, { error: data })
-            // ── Neon shadow-write (non-blocking) ──────────────────────────────────────
-            if (Array.isArray(data) && data.length > 0) {
-              upsertNeonMenuItems(restaurantId, data).then(() => {
-                console.log('[menu/items/upsert] Neon shadow-write ✅', data.length, 'items')
-              }).catch(neonErr => {
-                console.warn('[menu/items/upsert] Neon shadow-write error (non-blocking):', neonErr.message)
-              })
-            }
-            return json(res, 200, data)
+            const saved = await upsertNeonMenuItems(restaurantId, rows)
+            return json(res, 200, saved)
           }
 
           // POST /api/menu/items — insert new item
           if (pathname === '/items') {
             const { restaurantId, ...item } = await readBody(req)
             if (!restaurantId) return json(res, 400, { error: 'restaurantId required' })
-            const { url: supabaseUrl, headers } = getServiceHeaders()
-            const { ok, status, data } = await sbFetch(`${supabaseUrl}/rest/v1/menu_items`, {
-              method: 'POST',
-              headers: { ...headers, Prefer: 'return=representation' },
-              body: JSON.stringify({ ...item, restaurant_id: restaurantId }),
-            })
-            if (!ok) return json(res, status, { error: data })
-            const saved = Array.isArray(data) ? data[0] : data
-            // ── Neon shadow-write (non-blocking) ──────────────────────────────────────
-            upsertNeonMenuItem(restaurantId, saved).then(() => {
-              console.log('[menu/items POST] Neon shadow-write ✅ id:', saved.id)
-            }).catch(neonErr => {
-              console.warn('[menu/items POST] Neon shadow-write error (non-blocking):', neonErr.message)
-            })
+            const saved = await upsertNeonMenuItem(restaurantId, { ...item, restaurant_id: restaurantId })
             return json(res, 200, saved)
           }
 
@@ -315,22 +196,7 @@ function menuApiPlugin() {
           if (pathname === '/item-patch') {
             const { id, ...patch } = await readBody(req)
             if (!id) return json(res, 400, { error: 'id required' })
-            const { url: supabaseUrl, headers } = getServiceHeaders()
-            const { ok, status, data } = await sbFetch(`${supabaseUrl}/rest/v1/menu_items?id=eq.${encodeURIComponent(id)}`, {
-              method: 'PATCH',
-              headers: { ...headers, Prefer: 'return=representation' },
-              body: JSON.stringify(patch),
-            })
-            if (!ok) return json(res, status, { error: data })
-            const saved = Array.isArray(data) ? data[0] : data
-            // ── Neon shadow-write (non-blocking) ──────────────────────────────────────
-            if (saved?.id) {
-              upsertNeonMenuItem(saved.restaurant_id, saved).then(() => {
-                console.log('[menu/item-patch] Neon shadow-write ✅ id:', saved.id)
-              }).catch(neonErr => {
-                console.warn('[menu/item-patch] Neon shadow-write error (non-blocking):', neonErr.message)
-              })
-            }
+            const saved = await upsertNeonMenuItem(patch.restaurant_id, { id, ...patch })
             return json(res, 200, saved)
           }
 
@@ -338,61 +204,24 @@ function menuApiPlugin() {
           if (pathname === '/item-delete') {
             const { id } = await readBody(req)
             if (!id) return json(res, 400, { error: 'id required' })
-            const { url: supabaseUrl, headers } = getServiceHeaders()
-            const r = await fetch(`${supabaseUrl}/rest/v1/menu_items?id=eq.${encodeURIComponent(id)}`, {
-              method: 'DELETE',
-              headers,
-            })
-            if (!r.ok) { const e = await r.text(); return json(res, r.status, { error: e }) }
-            // ── Neon shadow-delete (non-blocking) ─────────────────────────────────────
-            deleteNeonMenuItem(id).then(() => {
-              console.log('[menu/item-delete] Neon shadow-delete ✅ id:', id)
-            }).catch(neonErr => {
-              console.warn('[menu/item-delete] Neon shadow-delete error (non-blocking):', neonErr.message)
-            })
+            await deleteNeonMenuItem(id)
             return json(res, 200, { success: true })
           }
 
-          // POST /api/menu/categories/upsert — insert or update a menu category
+          // POST /api/menu/categories/upsert
           if (pathname === '/categories/upsert') {
             const { restaurantId, ...category } = await readBody(req)
             if (!restaurantId) return json(res, 400, { error: 'restaurantId required' })
-            const { url: supabaseUrl, headers } = getServiceHeaders()
-            const payload = { ...category, restaurant_id: restaurantId }
-            const r = await fetch(`${supabaseUrl}/rest/v1/menu_categories?on_conflict=id`, {
-              method: 'POST',
-              headers: { ...headers, Prefer: 'resolution=merge-duplicates,return=representation' },
-              body: JSON.stringify(payload),
-            })
-            const data = await r.json()
-            if (!r.ok) return json(res, r.status, { error: data })
-            const saved = Array.isArray(data) ? data[0] : data
-            // ── Neon shadow-write (non-blocking) ──────────────────────────────
-            upsertNeonMenuCategory(restaurantId, saved).then(() => {
-              console.log('[menu/categories/upsert] Neon shadow-write ✅ id:', saved.id)
-            }).catch(neonErr => {
-              console.warn('[menu/categories/upsert] Neon shadow-write error (non-blocking):', neonErr.message)
-            })
-            writeAuditLog({ restaurantId, action: 'upsert', entityType: 'menu_category', entityId: saved.id, newData: { name: saved.name } })
+            const saved = await upsertNeonMenuCategory(restaurantId, { ...category, restaurant_id: restaurantId })
+            writeAuditLog({ restaurantId, action: 'upsert', entityType: 'menu_category', entityId: saved?.id, newData: { name: saved?.name } })
             return json(res, 200, saved)
           }
 
-          // POST /api/menu/categories/delete — delete a menu category by id
+          // POST /api/menu/categories/delete
           if (pathname === '/categories/delete') {
             const { id } = await readBody(req)
             if (!id) return json(res, 400, { error: 'id required' })
-            const { url: supabaseUrl, headers } = getServiceHeaders()
-            const r = await fetch(`${supabaseUrl}/rest/v1/menu_categories?id=eq.${encodeURIComponent(id)}`, {
-              method: 'DELETE',
-              headers,
-            })
-            if (!r.ok) { const e = await r.text(); return json(res, r.status, { error: e }) }
-            // ── Neon shadow-delete (non-blocking) ─────────────────────────────
-            deleteNeonMenuCategory(id).then(() => {
-              console.log('[menu/categories/delete] Neon shadow-delete ✅ id:', id)
-            }).catch(neonErr => {
-              console.warn('[menu/categories/delete] Neon shadow-delete error (non-blocking):', neonErr.message)
-            })
+            await deleteNeonMenuCategory(id)
             writeAuditLog({ action: 'delete', entityType: 'menu_category', entityId: id })
             return json(res, 200, { success: true })
           }
@@ -402,78 +231,35 @@ function menuApiPlugin() {
       })
 
 
-      // POST /api/restaurant/update-profile — service-role PATCH on name/logo fields, bypasses RLS
+      // POST /api/restaurant/update-profile
       server.middlewares.use('/api/restaurant/update-profile', async (req, res) => {
         if (req.method === 'OPTIONS') return json(res, 200, {})
         if (req.method !== 'POST') return json(res, 405, { error: 'Method not allowed' })
         try {
           const { restaurantId, patch } = await readBody(req)
-          if (!restaurantId || typeof patch !== 'object') {
-            return json(res, 400, { error: 'restaurantId and patch object required' })
-          }
+          if (!restaurantId || typeof patch !== 'object') return json(res, 400, { error: 'restaurantId and patch object required' })
           const allowed = ['name', 'logo']
           const safePatch = Object.fromEntries(Object.entries(patch).filter(([k]) => allowed.includes(k)))
-          if (Object.keys(safePatch).length === 0) {
-            return json(res, 400, { error: 'patch must include at least one of: name, logo' })
-          }
-          const { url: supabaseUrl, headers } = getServiceHeaders()
-          const r = await fetch(
-            `${supabaseUrl}/rest/v1/restaurants?id=eq.${encodeURIComponent(restaurantId)}`,
-            {
-              method: 'PATCH',
-              headers: { ...headers, Prefer: 'return=representation' },
-              body: JSON.stringify(safePatch),
-            }
-          )
-          const data = await r.json()
-          if (!r.ok) return json(res, r.status, { error: data })
-          // ── Neon shadow-write (non-blocking) ────────────────────────────
-          patchNeonRestaurant(restaurantId, safePatch).then(row => {
-            if (row) console.log('[update-profile] Neon shadow-write ✅ id:', restaurantId)
-            else console.warn('[update-profile] Neon shadow-write: row not found in Neon id:', restaurantId)
-          }).catch(neonErr =>
-            console.warn('[update-profile] Neon shadow-write error (non-blocking):', neonErr.message)
-          )
+          if (Object.keys(safePatch).length === 0) return json(res, 400, { error: 'patch must include at least one of: name, logo' })
+          const row = await patchNeonRestaurant(restaurantId, safePatch)
           writeAuditLog({ restaurantId, action: 'update', entityType: 'restaurant', entityId: restaurantId, newData: safePatch })
-          return json(res, 200, Array.isArray(data) ? (data[0] ?? {}) : data)
+          return json(res, 200, row ?? {})
         } catch (e) {
           console.error('[update-profile] Exception:', e.message)
           return json(res, 500, { error: e.message })
         }
       })
 
-      // POST /api/restaurant/update-social — service-role PATCH on social_links, bypasses RLS
+      // POST /api/restaurant/update-social
       server.middlewares.use('/api/restaurant/update-social', async (req, res) => {
         if (req.method === 'OPTIONS') return json(res, 200, {})
         if (req.method !== 'POST') return json(res, 405, { error: 'Method not allowed' })
         try {
           const { restaurantId, social_links } = await readBody(req)
-          console.log('[update-social] restaurantId:', restaurantId, 'links:', JSON.stringify(social_links))
-          if (!restaurantId || typeof social_links !== 'object') {
-            return json(res, 400, { error: 'restaurantId and social_links object required' })
-          }
-          const { url: supabaseUrl, headers } = getServiceHeaders()
-          console.log('[update-social] PATCH →', `${supabaseUrl}/rest/v1/restaurants?id=eq.${restaurantId}`)
-          const r = await fetch(
-            `${supabaseUrl}/rest/v1/restaurants?id=eq.${encodeURIComponent(restaurantId)}`,
-            {
-              method: 'PATCH',
-              headers: { ...headers, Prefer: 'return=representation' },
-              body: JSON.stringify({ social_links }),
-            }
-          )
-          const data = await r.json()
-          console.log('[update-social] Supabase status:', r.status, 'response:', JSON.stringify(data))
-          if (!r.ok) return json(res, r.status, { error: data })
-          // ── Neon shadow-write (non-blocking) ────────────────────────────
-          patchNeonRestaurant(restaurantId, { social_links }).then(row => {
-            if (row) console.log('[update-social] Neon shadow-write ✅ id:', restaurantId)
-            else console.warn('[update-social] Neon shadow-write: row not found in Neon id:', restaurantId)
-          }).catch(neonErr =>
-            console.warn('[update-social] Neon shadow-write error (non-blocking):', neonErr.message)
-          )
+          if (!restaurantId || typeof social_links !== 'object') return json(res, 400, { error: 'restaurantId and social_links object required' })
+          const row = await patchNeonRestaurant(restaurantId, { social_links })
           writeAuditLog({ restaurantId, action: 'update', entityType: 'restaurant', entityId: restaurantId, newData: { social_links: Object.keys(social_links) } })
-          return json(res, 200, Array.isArray(data) ? (data[0] ?? {}) : data)
+          return json(res, 200, row ?? {})
         } catch (e) {
           console.error('[update-social] Exception:', e.message)
           return json(res, 500, { error: e.message })
@@ -503,61 +289,22 @@ function menuApiPlugin() {
             })
           }
 
-          // ── Supabase shadow-write (non-blocking — temporary fallback) ──────
-          const { url: supabaseUrl, headers } = getServiceHeaders()
-          fetch(
-            `${supabaseUrl}/rest/v1/orders?id=eq.${encodeURIComponent(orderId)}`,
-            {
-              method: 'PATCH',
-              headers: { ...headers, Prefer: 'return=representation' },
-              body: JSON.stringify({ status }),
-            }
-          ).then(r => r.json()).then(() => {
-            console.log('[orders/update-status] Supabase shadow ✅ id:', orderId)
-          }).catch(supabaseErr => {
-            console.warn('[orders/update-status] Supabase shadow error (non-blocking):', supabaseErr.message)
-          })
-
           writeAuditLog({ action: 'update_status', entityType: 'order', entityId: orderId, newData: { status } })
           return json(res, 200, { id: orderId, status, restaurant_id: resolvedRestaurantId })
         } catch (e) { return json(res, 500, { error: e.message }) }
       })
 
-      // POST /api/orders/auto-cleanup — delete stale completed/rejected orders (service role)
+      // POST /api/orders/auto-cleanup — Neon-only
       server.middlewares.use('/api/orders/auto-cleanup', async (req, res) => {
         if (req.method === 'OPTIONS') return json(res, 200, {})
         if (req.method !== 'POST') return json(res, 405, { error: 'Method not allowed' })
         try {
-          const {
-            confirmedDeleteHours  = 12,
-            rejectedDeleteMinutes = 10,
-          } = await readBody(req)
-          const { url: supabaseUrl, headers } = getServiceHeaders()
+          const { confirmedDeleteHours = 12, rejectedDeleteMinutes = 10 } = await readBody(req)
           const now = Date.now()
           const confirmedCutoff = new Date(now - confirmedDeleteHours  * 60 * 60 * 1000).toISOString()
           const rejectedCutoff  = new Date(now - rejectedDeleteMinutes * 60        * 1000).toISOString()
-
-          const r1 = await fetch(
-            `${supabaseUrl}/rest/v1/orders?status=in.(completed,confirmed)&created_at=lt.${confirmedCutoff}`,
-            { method: 'DELETE', headers: { ...headers, Prefer: 'return=representation' } }
-          )
-          const d1 = r1.ok ? await r1.json().catch(() => []) : []
-
-          const r2 = await fetch(
-            `${supabaseUrl}/rest/v1/orders?status=in.(rejected,cancelled,failed)&created_at=lt.${rejectedCutoff}`,
-            { method: 'DELETE', headers: { ...headers, Prefer: 'return=representation' } }
-          )
-          const d2 = r2.ok ? await r2.json().catch(() => []) : []
-
-          const deletedConfirmed = Array.isArray(d1) ? d1.length : 0
-          const deletedRejected  = Array.isArray(d2) ? d2.length : 0
-          console.log(`[auto-cleanup] Removed ${deletedConfirmed} completed + ${deletedRejected} rejected orders`)
-          // ── Neon shadow-deletes (non-blocking) ────────────────────────────────
-          deleteOldNeonOrders(confirmedCutoff, rejectedCutoff).then(({ deletedConfirmed: dc, deletedRejected: dr }) => {
-            console.log(`[auto-cleanup] Neon shadow ✅ deleted ${dc} completed + ${dr} rejected`)
-          }).catch(neonErr => {
-            console.warn('[auto-cleanup] Neon shadow error (non-blocking):', neonErr.message)
-          })
+          const { deletedConfirmed, deletedRejected } = await deleteOldNeonOrders(confirmedCutoff, rejectedCutoff)
+          console.log(`[auto-cleanup] Neon ✅ deleted ${deletedConfirmed} completed + ${deletedRejected} rejected`)
           return json(res, 200, { success: true, deletedConfirmed, deletedRejected })
         } catch (e) { return json(res, 500, { error: e.message }) }
       })
@@ -568,29 +315,12 @@ function menuApiPlugin() {
       // This generic /api/orders handler catches POST (create) and GET (list).
       server.middlewares.use('/api/orders', async (req, res, next) => {
         const pathname = (req.url || '').split('?')[0].replace(/\/$/, '')
-        const { url: supabaseUrl, headers } = getServiceHeaders()
 
-        // GET /api/orders/:restaurantId — Neon-first, Supabase fallback
         if (req.method === 'GET') {
           const m = pathname.match(/^\/([^/]+)$/)
           if (!m) return next()
-          const restaurantId = m[1]
           try {
-            try {
-              const neonRows = await getNeonOrders(restaurantId)
-              if (neonRows.length > 0) {
-                console.log('[orders GET] Neon ✅ rows:', neonRows.length, 'for', restaurantId)
-                return json(res, 200, neonRows)
-              }
-            } catch (neonErr) {
-              console.warn('[orders GET] Neon error (falling back to Supabase):', neonErr.message)
-            }
-            const r = await fetch(
-              `${supabaseUrl}/rest/v1/orders?restaurant_id=eq.${encodeURIComponent(restaurantId)}&order=created_at.desc`,
-              { headers }
-            )
-            const data = await r.json()
-            return json(res, r.ok ? 200 : r.status, data)
+            return json(res, 200, await getNeonOrders(m[1]))
           } catch (e) { return json(res, 500, { error: e.message }) }
         }
 
@@ -598,32 +328,9 @@ function menuApiPlugin() {
 
         try {
           const body = await readBody(req)
-
-          // POST /api/orders — create order (Neon primary, Supabase shadow-write)
           if (pathname === '' || pathname === '/') {
-            // ── Neon primary save (blocking — source of truth) ─────────────────
             await upsertNeonOrder(body.restaurant_id, body)
-            console.log('[orders POST] Neon primary ✅ id:', body.id)
-
-            // ── Realtime publish to Cloudflare Worker (after Neon succeeds) ─────
-            publishOrderRealtimeEvent({
-              type: 'ORDER_CREATED',
-              restaurantId: body.restaurant_id,
-              orderId: body.id,
-              status: body.status || 'pending',
-            })
-
-            // ── Supabase shadow-write (non-blocking — temporary fallback) ──────
-            fetch(`${supabaseUrl}/rest/v1/orders`, {
-              method: 'POST',
-              headers: { ...headers, 'Content-Type': 'application/json', Prefer: 'return=representation' },
-              body: JSON.stringify(body),
-            }).then(r => r.json()).then(() => {
-              console.log('[orders POST] Supabase shadow ✅ id:', body.id)
-            }).catch(supabaseErr => {
-              console.warn('[orders POST] Supabase shadow error (non-blocking):', supabaseErr.message)
-            })
-
+            publishOrderRealtimeEvent({ type: 'ORDER_CREATED', restaurantId: body.restaurant_id, orderId: body.id, status: body.status || 'pending' })
             return json(res, 201, body)
           }
         } catch (e) { return json(res, 500, { error: e.message }) }
@@ -633,30 +340,12 @@ function menuApiPlugin() {
       // ── Booking routes ────────────────────────────────────────────────────────
       server.middlewares.use('/api/bookings', async (req, res, next) => {
         const pathname = (req.url || '').split('?')[0].replace(/\/$/, '')
-        const { url: supabaseUrl, headers } = getServiceHeaders()
 
-        // GET /api/bookings/:restaurantId — Neon-first, Supabase fallback
         if (req.method === 'GET') {
           const m = pathname.match(/^\/([^/]+)$/)
           if (!m) return next()
-          const restaurantId = m[1]
-          try {
-            try {
-              const neonRows = await getNeonBookings(restaurantId)
-              if (neonRows.length > 0) {
-                console.log('[bookings GET] Neon ✅ rows:', neonRows.length, 'for', restaurantId)
-                return json(res, 200, neonRows)
-              }
-            } catch (neonErr) {
-              console.warn('[bookings GET] Neon error (falling back to Supabase):', neonErr.message)
-            }
-            const r = await fetch(
-              `${supabaseUrl}/rest/v1/bookings?restaurant_id=eq.${encodeURIComponent(restaurantId)}&order=created_at.desc`,
-              { headers }
-            )
-            const data = await r.json()
-            return json(res, r.ok ? 200 : r.status, data)
-          } catch (e) { return json(res, 500, { error: e.message }) }
+          try { return json(res, 200, await getNeonBookings(m[1])) }
+          catch (e) { return json(res, 500, { error: e.message }) }
         }
 
         if (req.method !== 'POST' && req.method !== 'PATCH') return next()
@@ -664,84 +353,33 @@ function menuApiPlugin() {
         try {
           const body = await readBody(req)
 
-          // POST /api/bookings — create booking (Supabase first, Neon shadow-write)
           if (req.method === 'POST' && (pathname === '' || pathname === '/')) {
-            const r = await fetch(`${supabaseUrl}/rest/v1/bookings`, {
-              method: 'POST',
-              headers: { ...headers, 'Content-Type': 'application/json', Prefer: 'return=representation' },
-              body: JSON.stringify(body),
-            })
-            const data = await r.json()
-            if (!r.ok) return json(res, r.status, { error: data })
-            const saved = Array.isArray(data) ? data[0] : data
-            // ── Neon shadow-write (non-blocking) ──────────────────────────────────
-            upsertNeonBooking(body.restaurant_id, saved).then(() => {
-              console.log('[bookings POST] Neon shadow-write ✅ id:', saved.id)
-            }).catch(neonErr => {
-              console.warn('[bookings POST] Neon shadow-write error (non-blocking):', neonErr.message)
-            })
-            return json(res, 201, saved)
+            const saved = await upsertNeonBooking(body.restaurant_id, body)
+            return json(res, 201, saved ?? body)
           }
 
-          // PATCH /api/bookings/:id/status — update status (Supabase first, Neon shadow)
           const statusMatch = pathname.match(/^\/([^/]+)\/status$/)
           if (req.method === 'PATCH' && statusMatch) {
             const id = statusMatch[1]
             const { status } = body
             if (!status) return json(res, 400, { error: 'status required' })
-            const r = await fetch(
-              `${supabaseUrl}/rest/v1/bookings?id=eq.${encodeURIComponent(id)}`,
-              {
-                method: 'PATCH',
-                headers: { ...headers, 'Content-Type': 'application/json', Prefer: 'return=representation' },
-                body: JSON.stringify({ status }),
-              }
-            )
-            const data = await r.json()
-            if (!r.ok) return json(res, r.status, { error: data })
-            const updated = Array.isArray(data) ? data[0] : data
-            // ── Neon shadow-write (non-blocking) ──────────────────────────────────
-            updateNeonBookingStatus(id, status).then(() => {
-              console.log('[bookings PATCH status] Neon shadow-write ✅ id:', id, 'status:', status)
-            }).catch(neonErr => {
-              console.warn('[bookings PATCH status] Neon shadow-write error (non-blocking):', neonErr.message)
-            })
+            const updated = await updateNeonBookingStatus(id, status)
             writeAuditLog({ restaurantId: updated?.restaurant_id ?? null, action: 'update_status', entityType: 'booking', entityId: id, newData: { status } })
-            return json(res, 200, updated)
+            return json(res, 200, updated ?? { id, status })
           }
         } catch (e) { return json(res, 500, { error: e.message }) }
         return next()
       })
 
       // ── Team Member routes ────────────────────────────────────────────────────
-      // Auth (owner_id, RLS) stays client-side Supabase for all writes.
-      // These routes only serve: GET (Neon-first read) + shadow-upsert/shadow-delete.
       server.middlewares.use('/api/team-members', async (req, res, next) => {
         const pathname = (req.url || '').split('?')[0].replace(/\/$/, '')
-        const { url: supabaseUrl, headers } = getServiceHeaders()
 
-        // GET /api/team-members/:restaurantId — Neon-first, Supabase fallback
         if (req.method === 'GET') {
           const m = pathname.match(/^\/([^/]+)$/)
           if (!m) return next()
-          const restaurantId = m[1]
-          try {
-            try {
-              const neonRows = await getNeonRestaurantMembers(restaurantId)
-              if (neonRows.length > 0) {
-                console.log('[team-members GET] Neon ✅ rows:', neonRows.length, 'for', restaurantId)
-                return json(res, 200, neonRows)
-              }
-            } catch (neonErr) {
-              console.warn('[team-members GET] Neon error (falling back to Supabase):', neonErr.message)
-            }
-            const r = await fetch(
-              `${supabaseUrl}/rest/v1/team_members?restaurant_id=eq.${encodeURIComponent(restaurantId)}&order=created_at.asc`,
-              { headers }
-            )
-            const data = await r.json()
-            return json(res, r.ok ? 200 : r.status, data)
-          } catch (e) { return json(res, 500, { error: e.message }) }
+          try { return json(res, 200, await getNeonRestaurantMembers(m[1])) }
+          catch (e) { return json(res, 500, { error: e.message }) }
         }
 
         if (req.method !== 'POST') return next()
@@ -786,47 +424,10 @@ function menuApiPlugin() {
         } catch (e) { return json(res, 500, { error: e.message }) }
       })
 
-      // POST /api/migrate — idempotent schema migration (add missing columns)
-      server.middlewares.use('/api/migrate', async (req, res) => {
+      // POST /api/migrate — no-op (Supabase migration removed; Neon uses Drizzle migrations)
+      server.middlewares.use('/api/migrate', (req, res) => {
         if (req.method === 'OPTIONS') return json(res, 200, {})
-        if (req.method !== 'POST') return json(res, 405, { error: 'Method not allowed' })
-        try {
-          const { url: supabaseUrl, headers } = getServiceHeaders()
-
-          // Check if image_shape column exists
-          const check = await fetch(
-            `${supabaseUrl}/rest/v1/menu_items?select=image_shape&limit=0`,
-            { headers }
-          )
-          if (check.ok) {
-            return json(res, 200, { ok: true, message: 'image_shape column already exists' })
-          }
-          const checkErr = await check.json().catch(() => ({}))
-          if (checkErr?.code !== '42703') {
-            return json(res, 200, { ok: true, message: 'table not ready yet or unexpected error', detail: checkErr })
-          }
-
-          // Try to add the column via exec_sql RPC
-          const migrate = await fetch(`${supabaseUrl}/rest/v1/rpc/exec_sql`, {
-            method: 'POST',
-            headers,
-            body: JSON.stringify({ query: "ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS image_shape TEXT NOT NULL DEFAULT 'vertical'" }),
-          })
-          if (migrate.ok) {
-            console.log('[migrate] image_shape column added via exec_sql ✓')
-            return json(res, 200, { ok: true, message: 'image_shape column added successfully' })
-          }
-
-          // exec_sql not available — return instructions
-          console.warn('[migrate] exec_sql not available — manual SQL needed')
-          return json(res, 200, {
-            ok: false,
-            message: 'exec_sql RPC not available. Run this in Supabase SQL Editor:',
-            sql: "ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS image_shape TEXT NOT NULL DEFAULT 'vertical';"
-          })
-        } catch (e) {
-          return json(res, 500, { error: e.message })
-        }
+        return json(res, 200, { ok: true, message: 'Neon schema is managed via Drizzle migrations' })
       })
 
     },
@@ -837,14 +438,6 @@ function aboutApiPlugin() {
   return {
     name: 'about-api',
     configureServer(server) {
-
-      function getServiceHeaders() {
-        const raw = process.env.VITE_SUPABASE_URL
-        const key = process.env.SUPABASE_SERVICE_ROLE_KEY
-        if (!raw || !key) throw new Error('Supabase service role not configured')
-        const url = raw.trim().replace(/\/+$/, '').replace(/\/(rest\/v1|graphql\/v1|auth\/v1|storage\/v1)(\/.*)?$/, '')
-        return { url, headers: { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json', Prefer: 'return=representation' } }
-      }
 
       function readBody(req) {
         return new Promise((resolve, reject) => {
@@ -881,18 +474,7 @@ function aboutApiPlugin() {
             console.warn('[about/upload-image] R2 upload failed, falling back to Supabase Storage:', r2Err.message)
           }
 
-          // ── Fallback: Supabase Storage (legacy path — kept for safety) ──────
-          const { url: supabaseUrl, headers } = getServiceHeaders()
-          const filePath = `${restaurantId}/about/image_${slot + 1}.webp`
-          const r = await fetch(`${supabaseUrl}/storage/v1/object/restaurant-images/${filePath}`, {
-            method: 'POST',
-            headers: { ...headers, 'Content-Type': 'image/webp', 'x-upsert': 'true' },
-            body: buf,
-          })
-          if (!r.ok) { const e = await r.text(); return json(res, 500, { error: `Storage upload failed: ${e}` }) }
-          const publicUrl = `${supabaseUrl}/storage/v1/object/public/restaurant-images/${filePath}`
-          console.log('[about/upload-image] Supabase fallback ✅:', publicUrl)
-          return json(res, 200, { url: publicUrl, imageKey: null })
+          return json(res, 500, { error: 'R2 upload failed; no fallback configured' })
         } catch (e) { return json(res, 500, { error: e.message }) }
       })
 
@@ -907,44 +489,9 @@ function aboutApiPlugin() {
           if (!restaurantId || !dataUrl) return json(res, 400, { error: 'restaurantId and dataUrl required' })
           const base64 = dataUrl.replace(/^data:[^;]+;base64,/, '')
           const buf = Buffer.from(base64, 'base64')
-          const { url: supabaseUrl, headers } = getServiceHeaders()
-
-          // ── Primary: Cloudflare R2 ──────────────────────────────────────────
-          let publicUrl, objectKey = null
-          try {
-            const objectKeyPath = `restaurants/${restaurantId}/logo/${Date.now()}.webp`
-            const r2Result = await r2Upload(buf, objectKeyPath, 'image/webp')
-            publicUrl = r2Result.publicUrl
-            objectKey = r2Result.objectKey
-            console.log('[restaurant/upload-logo] R2 upload ✅:', objectKey)
-          } catch (r2Err) {
-            console.warn('[restaurant/upload-logo] R2 upload failed, falling back to Supabase Storage:', r2Err.message)
-            // ── Fallback: Supabase Storage ────────────────────────────────────
-            const filePath = `${restaurantId}/logo/${Date.now()}.webp`
-            const uploadRes = await fetch(`${supabaseUrl}/storage/v1/object/restaurant-images/${filePath}`, {
-              method: 'POST',
-              headers: { ...headers, 'Content-Type': 'image/webp', 'x-upsert': 'true' },
-              body: buf,
-            })
-            if (!uploadRes.ok) { const e = await uploadRes.text(); return json(res, 500, { error: `Storage upload failed: ${e}` }) }
-            publicUrl = `${supabaseUrl}/storage/v1/object/public/restaurant-images/${filePath}`
-          }
-
-          // ── Patch Supabase restaurants.logo ───────────────────────────────────
-          const patchRes = await fetch(
-            `${supabaseUrl}/rest/v1/restaurants?id=eq.${encodeURIComponent(restaurantId)}`,
-            { method: 'PATCH', headers: { ...headers, Prefer: 'return=representation' }, body: JSON.stringify({ logo: publicUrl }) }
-          )
-          if (!patchRes.ok) { const e = await patchRes.text(); return json(res, 500, { error: `DB update failed: ${e}` }) }
-
-          // ── Neon shadow-write (non-blocking) ────────────────────────────────
-          const neonPatch = objectKey ? { logo: publicUrl, logo_key: objectKey } : { logo: publicUrl }
-          patchNeonRestaurant(restaurantId, neonPatch).then(() => {
-            console.log('[restaurant/upload-logo] Neon shadow-write ✅')
-          }).catch(neonErr => {
-            console.warn('[restaurant/upload-logo] Neon shadow-write error (non-blocking):', neonErr.message)
-          })
-
+          const objectKeyPath = `restaurants/${restaurantId}/logo/${Date.now()}.webp`
+          const { publicUrl, objectKey } = await r2Upload(buf, objectKeyPath, 'image/webp')
+          await patchNeonRestaurant(restaurantId, { logo: publicUrl, logo_key: objectKey })
           console.log('[restaurant/upload-logo] Uploaded:', publicUrl)
           return json(res, 200, { url: publicUrl, imageKey: objectKey })
         } catch (e) {
@@ -974,143 +521,40 @@ function aboutApiPlugin() {
             console.warn('[restaurant/upload-carousel] R2 upload failed, falling back to Supabase Storage:', r2Err.message)
           }
 
-          // ── Fallback: Supabase Storage ────────────────────────────────────
-          const { url: supabaseUrl, headers } = getServiceHeaders()
-          const filePath = `${restaurantId}/carousel/${Date.now()}.webp`
-          const r = await fetch(`${supabaseUrl}/storage/v1/object/restaurant-images/${filePath}`, {
-            method: 'POST',
-            headers: { ...headers, 'Content-Type': 'image/webp', 'x-upsert': 'true' },
-            body: buf,
-          })
-          if (!r.ok) { const e = await r.text(); return json(res, 500, { error: `Storage upload failed: ${e}` }) }
-          const publicUrl = `${supabaseUrl}/storage/v1/object/public/restaurant-images/${filePath}`
-          console.log('[restaurant/upload-carousel] Supabase fallback ✅:', publicUrl)
-          return json(res, 200, { url: publicUrl, imageKey: null })
+          return json(res, 500, { error: 'R2 upload failed; no fallback configured' })
         } catch (e) { return json(res, 500, { error: e.message }) }
       })
 
-      // GET /api/restaurant/:id — Phase D1: Neon-first, Supabase fallback
+      // GET /api/restaurant/:id
       server.middlewares.use('/api/restaurant', async (req, res, next) => {
         if (req.method !== 'GET') return next()
         const restaurantId = (req.url || '/').split('?')[0].replace(/^\//, '')
         if (!restaurantId || restaurantId.length < 10) return next()
         try {
-          // ── Neon first ──────────────────────────────────────────────────────
-          try {
-            const neonRow = await getNeonRestaurantById(restaurantId)
-            if (neonRow) {
-              console.log(`[restaurant/get] Neon hit: id=${restaurantId}`)
-              return json(res, 200, neonRow)
-            }
-            console.log(`[restaurant/get] Neon miss — falling back to Supabase: id=${restaurantId}`)
-          } catch (neonErr) {
-            console.warn(`[restaurant/get] Neon error — falling back to Supabase: id=${restaurantId} err=${neonErr.message}`)
-          }
-          // ── Supabase fallback (original logic, unchanged) ───────────────────
-          const { url: supabaseUrl, headers } = getServiceHeaders()
-          const r = await fetch(
-            `${supabaseUrl}/rest/v1/restaurants?id=eq.${encodeURIComponent(restaurantId)}&limit=1`,
-            { headers }
-          )
-          const data = await r.json()
-          if (!r.ok) return json(res, r.status, { error: data })
-          const row = Array.isArray(data) ? (data[0] ?? null) : data
-          return json(res, 200, row)
+          const neonRow = await getNeonRestaurantById(restaurantId)
+          return json(res, 200, neonRow ?? null)
         } catch (e) { return json(res, 500, { error: e.message }) }
       })
 
-      // GET /api/about/:restaurantId  — Neon-first, Supabase service-role fallback
+      // GET /api/about/:restaurantId
       server.middlewares.use('/api/about', async (req, res, next) => {
         if (req.method !== 'GET') return next()
         const restaurantId = (req.url || '/').split('?')[0].replace(/^\//, '')
         if (!restaurantId) return next()
         try {
-          // 1. Try Neon first
-          try {
-            const neonRow = await getNeonRestaurantAbout(restaurantId)
-            if (neonRow) {
-              console.log(`[about/get] Neon hit — restaurantId=${restaurantId} images=${[neonRow.image_1_url, neonRow.image_2_url, neonRow.image_3_url, neonRow.image_4_url].filter(Boolean).length}/4`)
-              return json(res, 200, neonRow)
-            }
-            console.log(`[about/get] Neon miss (no row) — falling back to Supabase`)
-          } catch (neonErr) {
-            console.warn('[about/get] Neon error — falling back to Supabase:', neonErr.message)
-          }
-
-          // 2. Fallback: Supabase service role
-          const { url: supabaseUrl, headers } = getServiceHeaders()
-          const r = await fetch(
-            `${supabaseUrl}/rest/v1/restaurant_about?restaurant_id=eq.${encodeURIComponent(restaurantId)}&select=story_text,image_1_url,image_2_url,image_3_url,image_4_url&order=updated_at.desc&limit=1`,
-            { headers }
-          )
-          const data = await r.json()
-          if (!r.ok) { console.error('[about/get] Supabase error:', JSON.stringify(data)); return json(res, r.status, { error: data }) }
-          const row = Array.isArray(data) ? (data[0] ?? null) : data
-          console.log(`[about/get] Supabase fallback — restaurantId=${restaurantId} images: ${row ? [row.image_1_url, row.image_2_url, row.image_3_url, row.image_4_url].filter(Boolean).length : 0}/4`)
-          return json(res, 200, row)
+          const neonRow = await getNeonRestaurantAbout(restaurantId)
+          return json(res, 200, neonRow ?? null)
         } catch (e) { return json(res, 500, { error: e.message }) }
       })
 
-      // POST /api/about/save — Supabase-first, then non-blocking Neon shadow-write
+      // POST /api/about/save — Neon-only
       server.middlewares.use('/api/about/save', async (req, res, next) => {
         if (req.method !== 'POST') return next()
         try {
           const { restaurantId, story_text, image_1_url, image_2_url, image_3_url, image_4_url } = await readBody(req)
           if (!restaurantId) return json(res, 400, { error: 'restaurantId required' })
-          const { url: supabaseUrl, headers } = getServiceHeaders()
-
-          const payload = {
-            story_text:  story_text  ?? null,
-            image_1_url: image_1_url ?? null,
-            image_2_url: image_2_url ?? null,
-            image_3_url: image_3_url ?? null,
-            image_4_url: image_4_url ?? null,
-            updated_at:  new Date().toISOString(),
-          }
-
-          const imageCount = [image_1_url, image_2_url, image_3_url, image_4_url].filter(Boolean).length
-          console.log(`[about/save] restaurantId=${restaurantId} images=${imageCount}/4`)
-
-          // 1. Try to UPDATE existing Supabase row
-          const patchRes = await fetch(
-            `${supabaseUrl}/rest/v1/restaurant_about?restaurant_id=eq.${encodeURIComponent(restaurantId)}`,
-            {
-              method: 'PATCH',
-              headers: { ...headers, Prefer: 'return=representation' },
-              body: JSON.stringify(payload),
-            }
-          )
-          const patchData = await patchRes.json()
-          if (!patchRes.ok) { console.error('[about/save] PATCH error:', JSON.stringify(patchData)); return json(res, patchRes.status, { error: patchData }) }
-
-          let savedData
-
-          // 2. If PATCH returned empty array = no existing row → INSERT
-          if (Array.isArray(patchData) && patchData.length === 0) {
-            console.log('[about/save] No existing row — inserting new row')
-            const insertRes = await fetch(
-              `${supabaseUrl}/rest/v1/restaurant_about`,
-              {
-                method: 'POST',
-                headers: { ...headers, Prefer: 'return=representation' },
-                body: JSON.stringify({ restaurant_id: restaurantId, ...payload }),
-              }
-            )
-            const insertData = await insertRes.json()
-            if (!insertRes.ok) { console.error('[about/save] INSERT error:', JSON.stringify(insertData)); return json(res, insertRes.status, { error: insertData }) }
-            console.log('[about/save] Inserted successfully')
-            savedData = Array.isArray(insertData) ? insertData[0] : insertData
-          } else {
-            console.log('[about/save] Updated successfully')
-            savedData = Array.isArray(patchData) ? patchData[0] : patchData
-          }
-
-          // 3. Non-blocking Neon shadow-write (never throws to client)
-          upsertNeonRestaurantAbout(restaurantId, { story_text, image_1_url, image_2_url, image_3_url, image_4_url })
-            .then(() => console.log(`[about/save] Neon shadow-write OK — restaurantId=${restaurantId}`))
-            .catch(e => console.warn('[about/save] Neon shadow-write failed (non-fatal):', e.message))
+          const savedData = await upsertNeonRestaurantAbout(restaurantId, { story_text, image_1_url, image_2_url, image_3_url, image_4_url })
           writeAuditLog({ restaurantId, action: 'upsert', entityType: 'restaurant_about', entityId: restaurantId, newData: { story_text, images: [image_1_url, image_2_url, image_3_url, image_4_url].filter(Boolean).length } })
-
           return json(res, 200, { success: true, data: savedData })
         } catch (e) { return json(res, 500, { error: e.message }) }
       })
@@ -1422,38 +866,18 @@ function tableValidationPlugin() {
     const hit = cache.get(cacheKey)
     if (hit && hit.exp > Date.now()) return hit.valid
 
-    const supabaseUrl = process.env.VITE_SUPABASE_URL
-    const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY
-
-    // No credentials → server misconfigured; deny access
-    if (!supabaseUrl || !supabaseKey) return false
-
     const store = (valid) => {
       cache.set(cacheKey, { valid, exp: Date.now() + CACHE_TTL })
       return valid
     }
 
     try {
-      const ctrl  = new AbortController()
-      const timer = setTimeout(() => ctrl.abort(), 4000)
-      const res = await fetch(
-        `${supabaseUrl}/rest/v1/restaurants?slug=eq.${encodeURIComponent(slug)}&select=table_numbers&limit=1`,
-        {
-          headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}` },
-          signal: ctrl.signal,
-        }
-      )
-      clearTimeout(timer)
-
-      // Supabase returned an error status → deny access (fail closed)
-      if (!res.ok) return store(false)
-
-      const rows = await res.json()
+      const row = await getNeonRestaurantBySlug(slug)
 
       // Restaurant not found → deny access (fail closed)
-      if (!rows?.length) return store(false)
+      if (!row) return store(false)
 
-      const tableNumbers = rows[0].table_numbers
+      const tableNumbers = row.table_numbers
 
       // No tables created yet → deny access (fail closed)
       if (!Array.isArray(tableNumbers) || tableNumbers.length === 0) return store(false)
@@ -1462,9 +886,7 @@ function tableValidationPlugin() {
       return store(tableNumbers.map(String).includes(String(tn)))
 
     } catch {
-      // Any error (network, parse, timeout) → fail CLOSED for security.
-      // An invalid table number must never reach the menu page.
-      console.warn(`[table-validation] Supabase error for ${slug}:${tn} — failing closed`)
+      console.warn(`[table-validation] Neon error for ${slug}:${tn} — failing closed`)
       return store(false)
     }
   }
