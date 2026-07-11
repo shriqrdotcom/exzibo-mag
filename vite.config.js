@@ -480,43 +480,46 @@ function menuApiPlugin() {
         }
       })
 
-      // POST /api/orders/update-status — service-role PATCH on orders, bypasses RLS
+      // POST /api/orders/update-status — Neon primary update, Supabase shadow-write
       server.middlewares.use('/api/orders/update-status', async (req, res) => {
         if (req.method === 'OPTIONS') return json(res, 200, {})
         if (req.method !== 'POST') return json(res, 405, { error: 'Method not allowed' })
         try {
-          const { orderId, status } = await readBody(req)
+          const { orderId, status, restaurantId } = await readBody(req)
           if (!orderId || !status) return json(res, 400, { error: 'orderId and status required' })
+
+          // ── Neon primary update (blocking — source of truth) ────────────────
+          const neonRow = await updateNeonOrderStatusFn(orderId, status)
+          const resolvedRestaurantId = restaurantId || neonRow?.restaurant_id || null
+          console.log('[orders/update-status] Neon primary ✅ id:', orderId, 'status:', status)
+
+          // ── Realtime publish to Cloudflare Worker (after Neon succeeds) ──────
+          if (resolvedRestaurantId) {
+            publishOrderRealtimeEvent({
+              type: status === 'cancelled' ? 'ORDER_CANCELLED' : 'ORDER_STATUS_CHANGED',
+              restaurantId: resolvedRestaurantId,
+              orderId,
+              status,
+            })
+          }
+
+          // ── Supabase shadow-write (non-blocking — temporary fallback) ──────
           const { url: supabaseUrl, headers } = getServiceHeaders()
-          const r = await fetch(
+          fetch(
             `${supabaseUrl}/rest/v1/orders?id=eq.${encodeURIComponent(orderId)}`,
             {
               method: 'PATCH',
               headers: { ...headers, Prefer: 'return=representation' },
               body: JSON.stringify({ status }),
             }
-          )
-          const data = await r.json()
-          if (!r.ok) return json(res, r.status, { error: data })
-          const updated = Array.isArray(data) ? (data[0] ?? {}) : data
-          const restaurantId = updated.restaurant_id || updated.restaurantId || null
-          // ── Neon shadow-write (non-blocking) ──────────────────────────────────
-          updateNeonOrderStatusFn(orderId, status).then(() => {
-            console.log('[orders/update-status] Neon shadow ✅ id:', orderId, 'status:', status)
-          }).catch(neonErr => {
-            console.warn('[orders/update-status] Neon shadow error (non-blocking):', neonErr.message)
+          ).then(r => r.json()).then(() => {
+            console.log('[orders/update-status] Supabase shadow ✅ id:', orderId)
+          }).catch(supabaseErr => {
+            console.warn('[orders/update-status] Supabase shadow error (non-blocking):', supabaseErr.message)
           })
-          // ── Realtime publish to Cloudflare Worker (non-blocking) ────────────────
-          if (restaurantId) {
-            publishOrderRealtimeEvent({
-              type: status === 'cancelled' ? 'ORDER_CANCELLED' : 'ORDER_STATUS_CHANGED',
-              restaurantId,
-              orderId,
-              status,
-            })
-          }
+
           writeAuditLog({ action: 'update_status', entityType: 'order', entityId: orderId, newData: { status } })
-          return json(res, 200, updated)
+          return json(res, 200, { id: orderId, status, restaurant_id: resolvedRestaurantId })
         } catch (e) { return json(res, 500, { error: e.message }) }
       })
 
@@ -596,30 +599,32 @@ function menuApiPlugin() {
         try {
           const body = await readBody(req)
 
-          // POST /api/orders — create order (Supabase first, Neon shadow-write)
+          // POST /api/orders — create order (Neon primary, Supabase shadow-write)
           if (pathname === '' || pathname === '/') {
-            const r = await fetch(`${supabaseUrl}/rest/v1/orders`, {
-              method: 'POST',
-              headers: { ...headers, 'Content-Type': 'application/json', Prefer: 'return=representation' },
-              body: JSON.stringify(body),
-            })
-            const data = await r.json()
-            if (!r.ok) return json(res, r.status, { error: data })
-            const saved = Array.isArray(data) ? data[0] : data
-            // ── Neon shadow-write (non-blocking) ────────────────────────────────
-            upsertNeonOrder(body.restaurant_id, saved).then(() => {
-              console.log('[orders POST] Neon shadow ✅ id:', saved.id)
-            }).catch(neonErr => {
-              console.warn('[orders POST] Neon shadow error (non-blocking):', neonErr.message)
-            })
-            // ── Realtime publish to Cloudflare Worker (non-blocking) ──────────────
+            // ── Neon primary save (blocking — source of truth) ─────────────────
+            await upsertNeonOrder(body.restaurant_id, body)
+            console.log('[orders POST] Neon primary ✅ id:', body.id)
+
+            // ── Realtime publish to Cloudflare Worker (after Neon succeeds) ─────
             publishOrderRealtimeEvent({
               type: 'ORDER_CREATED',
               restaurantId: body.restaurant_id,
-              orderId: saved.id,
-              status: saved.status || 'pending',
+              orderId: body.id,
+              status: body.status || 'pending',
             })
-            return json(res, 201, saved)
+
+            // ── Supabase shadow-write (non-blocking — temporary fallback) ──────
+            fetch(`${supabaseUrl}/rest/v1/orders`, {
+              method: 'POST',
+              headers: { ...headers, 'Content-Type': 'application/json', Prefer: 'return=representation' },
+              body: JSON.stringify(body),
+            }).then(r => r.json()).then(() => {
+              console.log('[orders POST] Supabase shadow ✅ id:', body.id)
+            }).catch(supabaseErr => {
+              console.warn('[orders POST] Supabase shadow error (non-blocking):', supabaseErr.message)
+            })
+
+            return json(res, 201, body)
           }
         } catch (e) { return json(res, 500, { error: e.message }) }
         return next()

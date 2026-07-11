@@ -892,7 +892,7 @@ export default function RestaurantWebsite() {
       return next
     })
 
-    // Also persist via API (Supabase-first + Neon shadow-write) so admin dashboards on ALL devices see it instantly
+    // Also persist via API (Neon primary + Supabase shadow-write) so admin dashboards on ALL devices see it instantly
     const isSupabaseRestaurant = restaurantId && restaurantId !== 'demo' &&
       /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(restaurantId)
     if (isSupabaseRestaurant) {

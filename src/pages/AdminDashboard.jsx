@@ -1041,8 +1041,9 @@ export default function AdminDashboard({ restaurantId: restaurantIdProp, initial
     if (isDefault) return
 
     // ── Side effects run AFTER the state update, outside the updater ─────────
-    // 1. Persist to Supabase (service role → never blocked by RLS)
-    updateOrderStatus(orderId, newStatus).catch(e => {
+    // 1. Persist to Neon (primary → server-side API routes through service role)
+    const targetRestaurantId = isDefault ? 'demo' : id
+    updateOrderStatus(orderId, newStatus, targetRestaurantId).catch(e => {
       console.error('[handleOrderStatus] DB write failed:', e.message)
     })
     // 2. Broadcast to the customer menu page instantly

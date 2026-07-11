@@ -66,11 +66,13 @@ export async function upsertNeonOrder(restaurantId, order) {
 // Partial update — only touches status + updated_at.
 export async function updateNeonOrderStatus(orderId, status) {
   if (!orderId) throw new Error('updateNeonOrderStatus: orderId is required')
-  await sql`
+  const rows = await sql`
     UPDATE orders
     SET status = ${status}, updated_at = now()
     WHERE id = ${orderId}
+    RETURNING id, restaurant_id, status
   `
+  return rows[0] ?? null
 }
 
 // ── getNeonOrders ─────────────────────────────────────────────────────────

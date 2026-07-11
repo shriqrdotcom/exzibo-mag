@@ -1109,6 +1109,20 @@ export async function createOrder(restaurantId, order) {
     total:             order.grandTotal ?? order.total ?? 0,
     notes:             order.notes      || null,
   }
+  // Route through the server-side API so Neon is the primary store.
+  try {
+    const res = await fetch('/api/orders', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+    if (res.ok) return await res.json()
+    const err = await res.json().catch(() => ({}))
+    console.warn('[createOrder] server route failed:', err)
+  } catch (e) {
+    console.warn('[createOrder] server route unreachable:', e.message)
+  }
+  // Fallback to direct Supabase write if server route is unreachable.
   const { data, error } = await supabase
     .from('orders')
     .insert(payload)
@@ -1118,15 +1132,14 @@ export async function createOrder(restaurantId, order) {
   return normalizeOrder(data)
 }
 
-export async function updateOrderStatus(orderId, status) {
-  // Route through the server-side API (service role key) so RLS on the
-  // `orders` table never silently blocks a legitimate status change.
-  // Falls back to a direct anon-key write for legacy localStorage-only orders.
+export async function updateOrderStatus(orderId, status, restaurantId) {
+  // Route through the server-side API (Neon is the primary store).
+  // Falls back to a direct Supabase write for legacy localStorage-only orders.
   try {
     const res = await fetch('/api/orders/update-status', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ orderId, status }),
+      body: JSON.stringify({ orderId, status, restaurantId }),
     })
     if (res.ok) return await res.json()
     // Non-2xx → fall through to direct write below

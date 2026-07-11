@@ -794,10 +794,10 @@ app.post('/api/menu/items/upsert', async (req, res) => {
 })
 
 // POST /api/orders/update-status
-// Body: { orderId, status }
-// Uses the service-role key so RLS never blocks a legitimate status change.
+// Body: { orderId, status, restaurantId }
+// Neon is the source of truth for orders. Supabase gets a non-blocking shadow-write.
 app.post('/api/orders/update-status', async (req, res) => {
-  const { orderId, status } = req.body
+  const { orderId, status, restaurantId } = req.body
   if (!orderId || !status) return res.status(400).json({ error: 'orderId and status required' })
 
   // ── Rate limit: 60/min per IP + 5 s exclusive lock per orderId ───────────
@@ -807,36 +807,38 @@ app.post('/api/orders/update-status', async (req, res) => {
   if (!orderStatusLocked) return res.status(409).json({ error: 'Order status update already in progress.' })
 
   try {
+    // ── Neon primary update (blocking — source of truth) ─────────────────────
+    const neonRow = await updateNeonOrderStatusFn(orderId, status)
+    const resolvedRestaurantId = restaurantId || neonRow?.restaurant_id || null
+    console.log('[orders/update-status] Neon primary ✅ id:', orderId, 'status:', status)
+
+    // ── Realtime publish to Cloudflare Worker (after Neon succeeds) ──────────
+    if (resolvedRestaurantId) {
+      publishOrderRealtimeEvent({
+        type: status === 'cancelled' ? 'ORDER_CANCELLED' : 'ORDER_STATUS_CHANGED',
+        restaurantId: resolvedRestaurantId,
+        orderId,
+        status,
+      })
+    }
+
+    // ── Supabase shadow-write (non-blocking — temporary fallback) ────────────
     const { url: supabaseUrl, headers } = getSupabaseServiceHeaders()
-    const r = await fetch(
+    fetch(
       `${supabaseUrl}/rest/v1/orders?id=eq.${encodeURIComponent(orderId)}`,
       {
         method: 'PATCH',
         headers: { ...headers, Prefer: 'return=representation' },
         body: JSON.stringify({ status }),
       }
-    )
-    const data = await r.json()
-    if (!r.ok) return res.status(r.status).json({ error: data })
-    const updated = Array.isArray(data) ? (data[0] ?? {}) : data
-    const restaurantId = updated.restaurant_id || updated.restaurantId || null
-    // ── Neon shadow-write (non-blocking) ──────────────────────────────────────
-    updateNeonOrderStatusFn(orderId, status).then(() => {
-      console.log('[orders/update-status] Neon shadow ✅ id:', orderId, 'status:', status)
-    }).catch(neonErr => {
-      console.warn('[orders/update-status] Neon shadow error (non-blocking):', neonErr.message)
+    ).then(r => r.json()).then(data => {
+      console.log('[orders/update-status] Supabase shadow ✅ id:', orderId)
+    }).catch(supabaseErr => {
+      console.warn('[orders/update-status] Supabase shadow error (non-blocking):', supabaseErr.message)
     })
-    // ── Realtime publish to Cloudflare Worker (non-blocking) ──────────────────
-    if (restaurantId) {
-      publishOrderRealtimeEvent({
-        type: status === 'cancelled' ? 'ORDER_CANCELLED' : 'ORDER_STATUS_CHANGED',
-        restaurantId,
-        orderId,
-        status,
-      })
-    }
+
     writeAuditLog({ action: 'update_status', entityType: 'order', entityId: orderId, newData: { status }, ipAddress: req.ip })
-    return res.json(updated)
+    return res.json({ id: orderId, status, restaurant_id: resolvedRestaurantId })
   } catch (err) {
     console.error('[orders/update-status] Error:', err.message)
     return res.status(500).json({ error: err.message })
@@ -848,7 +850,7 @@ app.post('/api/orders/update-status', async (req, res) => {
 // ── Order routes ─────────────────────────────────────────────────────────────
 
 // POST /api/orders
-// Creates an order in Supabase first, then shadow-writes to Neon (non-blocking).
+// Creates an order in Neon first (source of truth), then shadow-writes to Supabase.
 app.post('/api/orders', async (req, res) => {
   try {
     const body = req.body
@@ -860,29 +862,31 @@ app.post('/api/orders', async (req, res) => {
     const { isDuplicate: orderDup } = await preventDuplicate(dedupKey, 90)
     if (orderDup) return res.status(409).json({ error: 'Duplicate order detected. Your previous order is being processed.' })
 
-    const { url: supabaseUrl, headers } = getSupabaseServiceHeaders()
-    const r = await fetch(`${supabaseUrl}/rest/v1/orders`, {
-      method: 'POST',
-      headers: { ...headers, 'Content-Type': 'application/json', Prefer: 'return=representation' },
-      body: JSON.stringify(body),
-    })
-    const data = await r.json()
-    if (!r.ok) return res.status(r.status).json({ error: data })
-    const saved = Array.isArray(data) ? data[0] : data
-    // ── Neon shadow-write (non-blocking) ────────────────────────────────────────
-    upsertNeonOrder(body.restaurant_id, saved).then(() => {
-      console.log('[orders POST] Neon shadow ✅ id:', saved.id)
-    }).catch(neonErr => {
-      console.warn('[orders POST] Neon shadow error (non-blocking):', neonErr.message)
-    })
-    // ── Realtime publish to Cloudflare Worker (non-blocking) ───────────────────
+    // ── Neon primary save (blocking — source of truth) ────────────────────────
+    await upsertNeonOrder(body.restaurant_id, body)
+    console.log('[orders POST] Neon primary ✅ id:', body.id)
+
+    // ── Realtime publish to Cloudflare Worker (after Neon succeeds) ───────────
     publishOrderRealtimeEvent({
       type: 'ORDER_CREATED',
       restaurantId: body.restaurant_id,
-      orderId: saved.id,
-      status: saved.status || 'pending',
+      orderId: body.id,
+      status: body.status || 'pending',
     })
-    return res.status(201).json(saved)
+
+    // ── Supabase shadow-write (non-blocking — temporary fallback) ────────────
+    const { url: supabaseUrl, headers } = getSupabaseServiceHeaders()
+    fetch(`${supabaseUrl}/rest/v1/orders`, {
+      method: 'POST',
+      headers: { ...headers, 'Content-Type': 'application/json', Prefer: 'return=representation' },
+      body: JSON.stringify(body),
+    }).then(r => r.json()).then(data => {
+      console.log('[orders POST] Supabase shadow ✅ id:', body.id)
+    }).catch(supabaseErr => {
+      console.warn('[orders POST] Supabase shadow error (non-blocking):', supabaseErr.message)
+    })
+
+    return res.status(201).json(body)
   } catch (err) {
     console.error('[orders POST] Error:', err.message)
     return res.status(500).json({ error: err.message })
