@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { ACTIVE_SUBDOMAIN } from '../lib/subdomain'
 import { getRouteConfig } from '../lib/routeConfig'
@@ -9,6 +9,7 @@ import { processImageFile, isAcceptedImageType } from '../lib/processImage'
 import { getPublicImageUrl, getPublicImageUrls } from '../lib/imageUrl'
 import { toSlug } from '../lib/slug'
 import { supabase } from '../lib/supabase'
+import { useRealtimeOrders } from '../hooks/useRealtimeOrders'
 import notificationIconImg from '@assets/image_1777373928129.png'
 import {
   NOTIFY_ROLES,
@@ -520,6 +521,34 @@ export default function AdminDashboard({ restaurantId: restaurantIdProp, initial
 
     return () => { supabase.removeChannel(channel); clearInterval(poll) }
   }, [id, isDefault])
+
+  // ── Cloudflare Realtime: WebSocket listener (receive-only, role=staff) ────
+  // Connects to wss://rt.exzibo.online/ws/restaurant/{id}?role=staff.
+  // On any ORDER_CREATED / ORDER_STATUS_CHANGED / ORDER_CANCELLED event, refetch
+  // the full orders list from the Neon API (Neon is the source of truth).
+  // Safe reconnect (2 s), duplicate-connection guard, and cleanup on unmount
+  // are all handled inside the hook.
+  const TERMINAL_STATUSES = new Set(['confirmed', 'cancelled', 'rejected', 'completed', 'ready'])
+  const handleCfOrderEvent = useCallback(async (_type, _msg) => {
+    try {
+      const data = await getOrders(id)
+      setOrders(prev => {
+        const prevMap = new Map(prev.map(o => [o.id, o]))
+        const merged = data.map(o => {
+          const local = prevMap.get(o.id)
+          if (local && TERMINAL_STATUSES.has(local.status) && o.status !== local.status) {
+            return { ...o, status: local.status }
+          }
+          return o
+        })
+        try { localStorage.setItem(`exzibo_orders_${id}`, JSON.stringify(merged)) } catch {}
+        notifyAnalyticsUpdate()
+        return merged
+      })
+    } catch { /* noop */ }
+  }, [id])
+
+  useRealtimeOrders(isDefault ? null : id, handleCfOrderEvent)
 
   // ── Realtime: live bookings across all devices ────────────────────────────
   useEffect(() => {
