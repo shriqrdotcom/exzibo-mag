@@ -47,7 +47,9 @@ export default async function handler(req, res) {
       console.log('[orders POST] Neon ✅ id:', body.id)
 
       // ── Realtime publish to Cloudflare Worker (after Neon succeeds) ───────
-      publishOrderRealtimeEvent({
+      // Must be awaited: Vercel terminates the function context as soon as
+      // res.json() is called, so an unawaited async publish never completes.
+      await publishOrderRealtimeEvent({
         type: 'ORDER_CREATED',
         restaurantId: body.restaurant_id,
         orderId: body.id,
@@ -105,8 +107,8 @@ export default async function handler(req, res) {
         )
         if (!ok) return res.status(httpStatus).json({ error: data })
 
-        // Non-blocking realtime publish after DB confirms
-        publishOrderRealtimeEvent({
+        // Awaited: Vercel terminates function context on res.json(), so fire-and-forget never completes.
+        await publishOrderRealtimeEvent({
           type: 'ORDER_STATUS_CHANGED',
           restaurantId: restaurantId || null,
           orderId,
