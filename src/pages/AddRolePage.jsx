@@ -3,7 +3,6 @@ import { ShieldPlus, Shield, Check, Lock, Search, ExternalLink, UserCheck, Crown
 import { useNavigate } from 'react-router-dom'
 import Sidebar from '../components/Sidebar'
 import AdminHeader from '../components/AdminHeader'
-import { supabase } from '../lib/supabase'
 import { useRole } from '../context/RoleContext'
 import { openRoleDashboard } from '../lib/navigation'
 import { stripRoleSuffix, generateRoleUID } from '../lib/uid'
@@ -188,18 +187,13 @@ function AssignRoleSection() {
     setNotFound(false)
     setAssignedRoles({})
 
-    const { data, error } = await supabase
-      .from('restaurants')
-      .select('id, uid, name, slug')
-      .eq('uid', trimmed)
-      .maybeSingle()
-
+    const r = await fetch(`/api/neon/restaurant/by-uid/${encodeURIComponent(trimmed)}`)
     setLoading(false)
-
-    if (error || !data) {
+    if (!r.ok) {
       setNotFound(true)
     } else {
-      setRestaurant(data)
+      const data = await r.json()
+      if (!data) { setNotFound(true) } else { setRestaurant(data) }
     }
   }
 

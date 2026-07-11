@@ -8,7 +8,6 @@ import { getRestaurantById, getRestaurants, getOrders, getBookings, updateOrderS
 import { processImageFile, isAcceptedImageType } from '../lib/processImage'
 import { getPublicImageUrl, getPublicImageUrls } from '../lib/imageUrl'
 import { toSlug } from '../lib/slug'
-import { supabase } from '../lib/supabase'
 import { useRealtimeOrders } from '../hooks/useRealtimeOrders'
 import notificationIconImg from '@assets/image_1777373928129.png'
 import {
@@ -455,42 +454,7 @@ export default function AdminDashboard({ restaurantId: restaurantIdProp, initial
   useEffect(() => {
     if (isDefault || !id) return
 
-    const channel = supabase
-      .channel(`rt-orders-${id}`)
-      .on('postgres_changes',
-        { event: '*', schema: 'public', table: 'orders', filter: `restaurant_id=eq.${id}` },
-        (payload) => {
-          if (payload.eventType === 'INSERT') {
-            const normalized = normalizeOrder(payload.new)
-            setOrders(prev => {
-              if (prev.some(o => o.id === normalized.id)) return prev
-              const updated = [normalized, ...prev]
-              try { localStorage.setItem(`exzibo_orders_${id}`, JSON.stringify(updated)) } catch {}
-              notifyAnalyticsUpdate()
-              return updated
-            })
-          } else if (payload.eventType === 'UPDATE') {
-            const normalized = normalizeOrder(payload.new)
-            setOrders(prev => {
-              const updated = prev.map(o => o.id === normalized.id ? { ...o, ...normalized } : o)
-              try { localStorage.setItem(`exzibo_orders_${id}`, JSON.stringify(updated)) } catch {}
-              notifyAnalyticsUpdate()
-              return updated
-            })
-          } else if (payload.eventType === 'DELETE') {
-            setOrders(prev => {
-              const updated = prev.filter(o => o.id !== payload.old.id)
-              try { localStorage.setItem(`exzibo_orders_${id}`, JSON.stringify(updated)) } catch {}
-              return updated
-            })
-          }
-        }
-      )
-      .subscribe((status) => {
-        if (status === 'SUBSCRIBED') console.log('[rt] orders subscribed:', id)
-      })
-
-    // Fallback poll — refetch every 30 s in case realtime misses an event.
+    // Poll — refetch every 30 s in case realtime misses an event.
     // Uses a MERGE strategy: DB is the source of truth for existing rows, but
     // any optimistic update that is already in a "terminal" state (confirmed /
     // cancelled / rejected / completed) is preserved so the UI never reverts
@@ -519,7 +483,7 @@ export default function AdminDashboard({ restaurantId: restaurantIdProp, initial
       } catch { /* noop */ }
     }, 30_000)
 
-    return () => { supabase.removeChannel(channel); clearInterval(poll) }
+    return () => { clearInterval(poll) }
   }, [id, isDefault])
 
   // ── Cloudflare Realtime: WebSocket listener (receive-only, role=staff) ────
@@ -554,38 +518,7 @@ export default function AdminDashboard({ restaurantId: restaurantIdProp, initial
   useEffect(() => {
     if (isDefault || !id) return
 
-    const channel = supabase
-      .channel(`rt-bookings-${id}`)
-      .on('postgres_changes',
-        { event: '*', schema: 'public', table: 'bookings', filter: `restaurant_id=eq.${id}` },
-        (payload) => {
-          if (payload.eventType === 'INSERT') {
-            const normalized = normalizeBooking(payload.new)
-            setBookings(prev => {
-              if (prev.some(b => b.id === normalized.id)) return prev
-              const updated = [normalized, ...prev]
-              try { localStorage.setItem(`exzibo_bookings_${id}`, JSON.stringify(updated)) } catch {}
-              notifyAnalyticsUpdate()
-              return updated
-            })
-          } else if (payload.eventType === 'UPDATE') {
-            const normalized = normalizeBooking(payload.new)
-            setBookings(prev => {
-              const updated = prev.map(b => b.id === normalized.id ? { ...b, ...normalized } : b)
-              try { localStorage.setItem(`exzibo_bookings_${id}`, JSON.stringify(updated)) } catch {}
-              notifyAnalyticsUpdate()
-              return updated
-            })
-          } else if (payload.eventType === 'DELETE') {
-            setBookings(prev => prev.filter(b => b.id !== payload.old.id))
-          }
-        }
-      )
-      .subscribe((status) => {
-        if (status === 'SUBSCRIBED') console.log('[rt] bookings subscribed:', id)
-      })
-
-    // Fallback poll — refetch every 15 s
+    // Poll — refetch every 15 s
     const poll = setInterval(async () => {
       try {
         const data = await getBookings(id)
@@ -595,7 +528,7 @@ export default function AdminDashboard({ restaurantId: restaurantIdProp, initial
       } catch { /* noop */ }
     }, 15_000)
 
-    return () => { supabase.removeChannel(channel); clearInterval(poll) }
+    return () => { clearInterval(poll) }
   }, [id, isDefault])
 
   useEffect(() => {
@@ -748,73 +681,6 @@ export default function AdminDashboard({ restaurantId: restaurantIdProp, initial
   useEffect(() => { fromMasterRef.current = fromMaster },  [fromMaster])
   useEffect(() => { activeRoleRef.current = activeRole },  [activeRole])
 
-  // ── Broadcast channel: instant cross-device delivery (no DB needed) ─────────
-  // Created ONCE on mount so the WebSocket stays open and sends are always ready.
-  // The handler reads fromMasterRef / activeRoleRef to avoid stale closures.
-  useEffect(() => {
-    const ch = supabase
-      .channel('exzibo-master-alerts', { config: { broadcast: { ack: false } } })
-      .on('broadcast', { event: 'master-alert' }, ({ payload }) => {
-        if (fromMasterRef.current) return   // master never shows its own popups
-        const role = effectiveRole(activeRoleRef.current)
-        if (Array.isArray(payload.send_to) && !payload.send_to.includes(role)) return
-        showLiveNotification(payload.topic, payload.message, payload.send_to || NOTIFY_ROLES, payload.id || null)
-      })
-      .subscribe((status, err) => {
-        if (status === 'SUBSCRIBED') {
-          broadcastChannelRef.current = ch
-          console.log('[broadcast] ready ✓')
-        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-          console.warn('[broadcast] channel error:', err)
-          broadcastChannelRef.current = null
-        } else if (status === 'CLOSED') {
-          broadcastChannelRef.current = null
-        }
-      })
-
-    return () => {
-      broadcastChannelRef.current = null
-      supabase.removeChannel(ch)
-    }
-  }, []) // ← empty deps: subscribe once, stay connected for the component's lifetime
-
-  // ── Order-status broadcast: push status changes to menu.exzibo.online instantly ──
-  // Uses a per-restaurant Supabase broadcast channel so the customer's orders page
-  // reflects confirmation the moment it happens — no RLS, no polling delay.
-  useEffect(() => {
-    if (isDefault || !id) return
-    const ch = supabase
-      .channel(`order-updates-${id}`, { config: { broadcast: { ack: false } } })
-      .subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
-          orderBroadcastRef.current = ch
-          console.log('[order-broadcast] ready ✓', id)
-        } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-          orderBroadcastRef.current = null
-        }
-      })
-    return () => {
-      orderBroadcastRef.current = null
-      supabase.removeChannel(ch)
-    }
-  }, [id, isDefault])
-
-  // ── Messages Realtime subscription (non-master only, DB-backed fallback) ────
-  useEffect(() => {
-    if (fromMaster) return
-    const role = effectiveRole(activeRole)
-
-    const channel = supabase
-      .channel(`rt-messages-${role}`)
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, payload => {
-        const msg = payload.new
-        if (!Array.isArray(msg.send_to) || !msg.send_to.includes(role)) return
-        showLiveNotification(msg.topic, msg.message, msg.send_to)
-      })
-      .subscribe()
-
-    return () => { supabase.removeChannel(channel) }
-  }, [fromMaster, activeRole])
 
   // ── SMS Notifications: persistent cross-device broadcasts ─────────────────
   // Helpers to track which notifications this browser has already seen
@@ -837,19 +703,6 @@ export default function AdminDashboard({ restaurantId: restaurantIdProp, initial
     }
     fetchLatest()
 
-    // Realtime: show popup immediately when a new notification is inserted on any device
-    const smsChannel = supabase
-      .channel('rt-sms-notifications-global')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'sms_notifications' }, payload => {
-        const notif = payload.new
-        if (!isSmsNotifSeen(notif.id)) {
-          markSmsNotifSeen(notif.id)
-          showLiveNotification(notif.title, notif.message, NOTIFY_ROLES)
-        }
-      })
-      .subscribe()
-
-    return () => { supabase.removeChannel(smsChannel) }
   }, [fromMaster])
 
   // ── Active Notification: cross-device sync (single source of truth) ────────
@@ -894,62 +747,6 @@ export default function AdminDashboard({ restaurantId: restaurantIdProp, initial
       // If confirmed, notification_history fetch above already populated the bell
     }).catch(e => console.warn('[active_notification] initial fetch failed (non-fatal):', e.message))
 
-    const channel = supabase
-      .channel('rt-active-notification')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'active_notification' }, ({ new: notif }) => {
-        const role = effectiveRole(activeRoleRef.current)
-        const roles = Array.isArray(notif.target_roles) ? notif.target_roles : []
-        if (roles.length > 0 && !roles.includes(role)) return
-        showLiveNotification(notif.title, notif.message, roles, notif.id)
-      })
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'active_notification' }, ({ new: notif }) => {
-        if (!notif.confirmed_at) return
-        const role = effectiveRole(activeRoleRef.current)
-        const roles = Array.isArray(notif.target_roles) ? notif.target_roles : []
-        if (roles.length > 0 && !roles.includes(role)) return
-        // Confirmed on another device — sync locally via localStorage bridge
-        confirmNotification(notif.id, activeRoleRef.current)
-        setBellItems(getConfirmedForRole(activeRoleRef.current))
-        setUnreadCount(getUnreadCount(activeRoleRef.current))
-        setActivePopup(prev => {
-          if (prev?.id === notif.id) {
-            markPopupShownThisSession(notif.id)
-            return null
-          }
-          return prev
-        })
-      })
-      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'active_notification' }, () => {
-        // Previous notification deleted — a new one is about to arrive.
-        // Do NOT clear bell items here — history is preserved in notification_history.
-        setActivePopup(null)
-      })
-      .subscribe((status, err) => {
-        if (status === 'CHANNEL_ERROR') console.warn('[active_notification] channel error:', err)
-      })
-
-    // ── 3. Realtime on notification_history INSERT ─────────────────────────────
-    // When any device confirms a popup it inserts into notification_history.
-    // This fires on ALL other connected devices so their bells update instantly.
-    const historyChannel = supabase
-      .channel('rt-notification-history')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notification_history' }, ({ new: item }) => {
-        const role = effectiveRole(activeRoleRef.current)
-        const roles = Array.isArray(item.target_roles) ? item.target_roles : []
-        if (roles.length > 0 && !roles.includes(role)) return
-        addNotification({ id: item.id, title: item.title, message: item.message, target_roles: roles })
-        confirmNotification(item.id, activeRoleRef.current)
-        setBellItems(getConfirmedForRole(activeRoleRef.current))
-        setUnreadCount(getUnreadCount(activeRoleRef.current))
-      })
-      .subscribe((status, err) => {
-        if (status === 'CHANNEL_ERROR') console.warn('[notification_history] channel error:', err)
-      })
-
-    return () => {
-      supabase.removeChannel(channel)
-      supabase.removeChannel(historyChannel)
-    }
   }, [fromMaster])
 
   async function handleSendMasterMessage() {
@@ -4594,19 +4391,7 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
   // REPLICA IDENTITY FULL on the table to be delivered through column-level filters).
   const menuBroadcastRef = useRef(null)
   const menuChannelReadyRef = useRef(false)
-  useEffect(() => {
-    if (!restaurantId || restaurantId === 'demo') return
-    const ch = supabase
-      .channel(`menu-updates-${restaurantId}`, { config: { broadcast: { ack: false } } })
-      .subscribe((status) => {
-        if (status === 'SUBSCRIBED') { menuBroadcastRef.current = ch; menuChannelReadyRef.current = true }
-        else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') { menuBroadcastRef.current = null; menuChannelReadyRef.current = false }
-      })
-    // Store the channel ref immediately so sends can be queued/retried even
-    // if the SUBSCRIBED callback hasn't fired yet.
-    menuBroadcastRef.current = ch
-    return () => { menuBroadcastRef.current = null; menuChannelReadyRef.current = false; supabase.removeChannel(ch) }
-  }, [restaurantId])
+  // Broadcast channel removed — menuBroadcastRef stays null (no-op sends)
 
   // Reliably fire a menu-refresh broadcast. Retries once after 2 s if the
   // channel has not yet subscribed (covers the race where the admin acts

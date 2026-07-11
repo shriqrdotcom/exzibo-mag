@@ -1,12 +1,9 @@
 import { createHmac } from 'crypto'
 import bcrypt from 'bcryptjs'
 import pg from 'pg'
-import { getServiceHeaders, supabaseFetch, setCors } from './_lib/supabase.js'
+import { setCors } from './_lib/cors.js'
 
-// ── /api/system — System, Auth, Compatibility & Migration Handler ─────────────
-//
-// Centralises missing, legacy, and Replit-only endpoints into one function.
-// Dispatches via the `action` query param.
+// ── /api/system — System, Auth & DB Management Handler ───────────────────────
 //
 // GET  ?action=previewVerify     header: Authorization: Bearer <token>
 // POST ?action=previewLogin      body:   { email, password }
@@ -15,13 +12,6 @@ import { getServiceHeaders, supabaseFetch, setCors } from './_lib/supabase.js'
 // POST ?action=createRestaurantDb body: { restaurant_id, restaurant_name? }
 // POST ?action=dropRestaurantDb   body: { restaurant_id }
 //   ↳ All three: graceful no-op when DATABASE_URL is unavailable (Vercel env)
-//
-// POST ?action=migrate            (idempotent — adds missing image_shape column)
-//
-// PATCH  ?action=legacyPatchItem  &id=<itemId>   body: patch object
-// DELETE ?action=legacyDeleteItem &id=<itemId>
-//   ↳ Backward-compat wrappers for PATCH/DELETE /api/menu/items/:id
-//   ↳ Note: zero frontend callers confirmed; kept for external API compatibility
 
 export default async function handler(req, res) {
   setCors(res)
@@ -231,102 +221,6 @@ export default async function handler(req, res) {
       )
       await client.end()
       return res.json({ databases: result.rows })
-    }
-
-    // ════════════════════════════════════════════════════════════
-    // MIGRATION
-    // ════════════════════════════════════════════════════════════
-
-    // ── POST: idempotent schema migration (adds image_shape column) ───────────
-    // AdminDashboard fires this on mount as a fire-and-forget call.
-    // Tries exec_sql RPC first; if unavailable, returns the manual SQL to run.
-    if (action === 'migrate') {
-      if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
-
-      const { url: supabaseUrl, headers } = getServiceHeaders()
-
-      // Check if column already exists
-      const check = await fetch(
-        `${supabaseUrl}/rest/v1/menu_items?select=image_shape&limit=0`,
-        { headers }
-      )
-      if (check.ok) {
-        return res.json({ ok: true, message: 'image_shape column already exists' })
-      }
-
-      const checkErr = await check.json().catch(() => ({}))
-      if (checkErr?.code !== '42703') {
-        return res.json({ ok: true, message: 'table not ready yet or unexpected error', detail: checkErr })
-      }
-
-      // Column missing — try to add it via exec_sql RPC
-      const migrate = await fetch(`${supabaseUrl}/rest/v1/rpc/exec_sql`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          query: "ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS image_shape TEXT NOT NULL DEFAULT 'vertical'",
-        }),
-      })
-
-      if (migrate.ok) {
-        console.log('[system][migrate] image_shape column added via exec_sql ✓')
-        return res.json({ ok: true, message: 'image_shape column added successfully' })
-      }
-
-      console.warn('[system][migrate] exec_sql not available — manual SQL needed')
-      return res.json({
-        ok: false,
-        message: 'exec_sql RPC not available. Run this in Supabase SQL Editor:',
-        sql: "ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS image_shape TEXT NOT NULL DEFAULT 'vertical';",
-      })
-    }
-
-    // ════════════════════════════════════════════════════════════
-    // LEGACY COMPATIBILITY ROUTES
-    // ════════════════════════════════════════════════════════════
-    // These mirror PATCH /api/menu/items/:id and DELETE /api/menu/items/:id
-    // from server.js. Zero confirmed frontend callers — kept for external API
-    // backward compatibility. The :id value is forwarded as ?id= by the rewrite.
-
-    // ── PATCH: update a menu item by id (legacy REST-style) ───────────────────
-    if (action === 'legacyPatchItem') {
-      if (req.method !== 'PATCH') return res.status(405).json({ error: 'Method not allowed' })
-
-      const id = req.query.id
-      if (!id) return res.status(400).json({ error: 'id required' })
-
-      const { url: supabaseUrl, headers } = getServiceHeaders()
-      const { ok, status, data } = await supabaseFetch(
-        `${supabaseUrl}/rest/v1/menu_items?id=eq.${encodeURIComponent(id)}`,
-        {
-          method: 'PATCH',
-          headers: { ...headers, Prefer: 'return=representation' },
-          body: JSON.stringify(req.body),
-        }
-      )
-
-      if (!ok) return res.status(status).json({ error: data })
-      return res.json(Array.isArray(data) ? data[0] : data)
-    }
-
-    // ── DELETE: delete a menu item by id (legacy REST-style) ─────────────────
-    if (action === 'legacyDeleteItem') {
-      if (req.method !== 'DELETE') return res.status(405).json({ error: 'Method not allowed' })
-
-      const id = req.query.id
-      if (!id) return res.status(400).json({ error: 'id required' })
-
-      const { url: supabaseUrl, headers } = getServiceHeaders()
-      const r = await fetch(
-        `${supabaseUrl}/rest/v1/menu_items?id=eq.${encodeURIComponent(id)}`,
-        { method: 'DELETE', headers }
-      )
-
-      if (!r.ok) {
-        const err = await r.text()
-        return res.status(r.status).json({ error: err })
-      }
-      return res.json({ success: true })
     }
 
     return res.status(400).json({ error: `Unknown action: ${action}` })

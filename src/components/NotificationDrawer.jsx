@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { X, CheckCircle2, Clock, ChevronRight, Bell, Trash2 } from 'lucide-react'
-import { supabase } from '../lib/supabase'
 
 const FONT = "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif"
 
@@ -32,16 +31,12 @@ export default function NotificationDrawer({ isOpen, onClose, onUnreadChange }) 
 
   const fetchNotifications = useCallback(async () => {
     try {
-      const { data, error } = await supabase
-        .from('help_notifications')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(50)
-      if (!error && data) {
-        setNotifications(data)
-        const unread = data.filter(n => n.status === 'unread').length
-        onUnreadChange?.(unread)
-      }
+      const r = await fetch('/api/notifications?action=getHelp')
+      if (!r.ok) throw new Error(`HTTP ${r.status}`)
+      const data = await r.json()
+      setNotifications(data)
+      const unread = data.filter(n => n.status === 'unread').length
+      onUnreadChange?.(unread)
     } catch (e) {
       console.warn('[NotificationDrawer] fetch error:', e.message)
     } finally {
@@ -49,7 +44,6 @@ export default function NotificationDrawer({ isOpen, onClose, onUnreadChange }) 
     }
   }, [onUnreadChange])
 
-  // Open/close animation
   useEffect(() => {
     if (isOpen) {
       setVisible(true)
@@ -62,31 +56,16 @@ export default function NotificationDrawer({ isOpen, onClose, onUnreadChange }) 
     }
   }, [isOpen, fetchNotifications])
 
-  // Realtime subscription — always active so badge updates even when drawer is closed
   useEffect(() => {
-    const channel = supabase
-      .channel('rt-help-notifications')
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'help_notifications',
-      }, () => {
-        fetchNotifications()
-      })
-      .subscribe()
     fetchNotifications()
-    return () => { supabase.removeChannel(channel) }
+    const poll = setInterval(fetchNotifications, 30_000)
+    return () => clearInterval(poll)
   }, [fetchNotifications])
 
   async function markRead(id) {
-    setNotifications(prev =>
-      prev.map(n => n.id === id ? { ...n, status: 'read' } : n)
-    )
+    setNotifications(prev => prev.map(n => n.id === id ? { ...n, status: 'read' } : n))
     try {
-      await supabase
-        .from('help_notifications')
-        .update({ status: 'read' })
-        .eq('id', id)
+      await fetch('/api/notifications?action=updateHelpStatus', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, status: 'read' }) })
     } catch (e) {
       console.warn('[NotificationDrawer] markRead error:', e.message)
     }
@@ -95,14 +74,9 @@ export default function NotificationDrawer({ isOpen, onClose, onUnreadChange }) 
   }
 
   async function resolveNotification(id) {
-    setNotifications(prev =>
-      prev.map(n => n.id === id ? { ...n, status: 'resolved' } : n)
-    )
+    setNotifications(prev => prev.map(n => n.id === id ? { ...n, status: 'resolved' } : n))
     try {
-      await supabase
-        .from('help_notifications')
-        .update({ status: 'resolved' })
-        .eq('id', id)
+      await fetch('/api/notifications?action=updateHelpStatus', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, status: 'resolved' }) })
     } catch (e) {
       console.warn('[NotificationDrawer] resolve error:', e.message)
     }
@@ -116,10 +90,7 @@ export default function NotificationDrawer({ isOpen, onClose, onUnreadChange }) 
     setNotifications(prev => prev.map(n => n.status === 'unread' ? { ...n, status: 'read' } : n))
     onUnreadChange?.(0)
     try {
-      await supabase
-        .from('help_notifications')
-        .update({ status: 'read' })
-        .in('id', unreadIds)
+      await fetch('/api/notifications?action=markAllHelpRead', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ids: unreadIds }) })
     } catch (e) {
       console.warn('[NotificationDrawer] markAllRead error:', e.message)
     }

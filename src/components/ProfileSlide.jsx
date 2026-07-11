@@ -13,7 +13,6 @@ import { FaXTwitter } from 'react-icons/fa6'
 import AddMembersModal from './AddMembersModal'
 import RemainingDaysModal from './RemainingDaysModal'
 import { updateRestaurant, updateRestaurantProfile, updateRestaurantSocial, uploadLogoViaApi, getTeamMembers, getRestaurantById, saveRestaurantHours } from '../lib/db'
-import { supabase } from '../lib/supabase'
 import { processImageFile, isAcceptedImageType } from '../lib/processImage'
 
 
@@ -335,21 +334,7 @@ export default function ProfileSlide({
     loadSocialLinks()
   }, [restaurantId])
 
-  // Persistent broadcast channel — subscribes once, stays ready to send
-  useEffect(() => {
-    if (!restaurantId || restaurantId === 'default') return
-    const ch = supabase
-      .channel(`restaurant-updates-${restaurantId}`, { config: { broadcast: { ack: false } } })
-      .subscribe((status) => {
-        restaurantChannelReadyRef.current = status === 'SUBSCRIBED'
-        restaurantBroadcastRef.current = ch
-      })
-    return () => {
-      restaurantBroadcastRef.current = null
-      restaurantChannelReadyRef.current = false
-      supabase.removeChannel(ch)
-    }
-  }, [restaurantId])
+  // Broadcast channel removed — restaurantBroadcastRef stays null (no-op sends)
 
   async function sendRestaurantRefresh() {
     const ch = restaurantBroadcastRef.current

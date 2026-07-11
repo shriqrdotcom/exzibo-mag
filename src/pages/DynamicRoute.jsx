@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import Sidebar from '../components/Sidebar'
 import { getRouteConfig, setRouteConfig } from '../lib/routeConfig'
-import { supabase } from '../lib/supabase'
 
 const ACCENT = '#E8321A'
 
@@ -86,11 +85,9 @@ function RestaurantSlugList() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    supabase
-      .from('restaurants')
-      .select('id, name, uid')
-      .order('name')
-      .then(({ data }) => { setRestaurants(data || []); setLoading(false) })
+    fetch('/api/neon/restaurants')
+      .then(r => r.json())
+      .then(data => { setRestaurants(Array.isArray(data) ? data : []); setLoading(false) })
       .catch(() => setLoading(false))
   }, [])
 
@@ -139,11 +136,9 @@ function TableNumberList() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    supabase
-      .from('restaurants')
-      .select('id, name, table_numbers')
-      .order('name')
-      .then(({ data }) => { setRestaurants(data || []); setLoading(false) })
+    fetch('/api/neon/restaurants')
+      .then(r => r.json())
+      .then(data => { setRestaurants(Array.isArray(data) ? data : []); setLoading(false) })
       .catch(() => setLoading(false))
   }, [])
 

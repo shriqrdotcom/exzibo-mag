@@ -4,7 +4,6 @@ import Sidebar from '../components/Sidebar'
 import AdminHeader from '../components/AdminHeader'
 import HelpRequestsDrawer from '../components/HelpRequestsDrawer'
 import { LogIn, ShieldCheck, X, ArrowRight, AlertCircle, BellRing } from 'lucide-react'
-import { supabase, supabaseAnon, isSupabaseConfigured } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { getRouteConfig } from '../lib/routeConfig'
 import { getSubdomain } from '../lib/subdomain'
@@ -31,92 +30,33 @@ async function resolveAdminTargetByUID(uid) {
     }
   } catch { /* noop */ }
 
-  // ── Guard: Supabase must be properly configured ───────────────────────────
-  // VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY are baked into the bundle at
-  // build time. If the secrets were not set when the deployment was built, all
-  // queries below will fail. Add them to Vercel Environment Variables and redeploy.
-  if (!isSupabaseConfigured) {
-    console.error(
-      '[MasterControl] Supabase is not configured in this build. ' +
-      'VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY must be set as Environment Variables ' +
-      'in your Vercel project settings BEFORE deploying. Redeploy after setting them.'
-    )
-    throw new Error(
-      'Supabase is not configured in this build. ' +
-      'Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to your Vercel Environment Variables and redeploy.'
-    )
-  }
-
-  // ── Supabase RPC lookup (preferred — bypasses RLS via SECURITY DEFINER) ──
-  // Run supabase/resolve_restaurant_uid.sql in your Supabase SQL Editor first.
+  // ── Neon API lookup ───────────────────────────────────────────────────────
   try {
-    const { data, error } = await supabaseAnon.rpc('resolve_restaurant_by_uid', { p_uid: trimmed })
-    if (!error && data?.length > 0) {
-      const row = data[0]
-      console.log('[MasterControl] UID resolved via RPC:', row.id)
-      return { id: String(row.id), slug: row.slug || null }
-    }
-    if (error) console.warn('[MasterControl] RPC resolve_restaurant_by_uid error (run the SQL migration to enable it):', error.message)
-  } catch (err) {
-    console.warn('[MasterControl] RPC lookup threw (falling back to direct query):', err.message)
-  }
-
-  // ── Direct Supabase lookup via supabaseAnon (anon RLS role — reads all restaurants) ─
-  // We use the session-free anon client so RLS evaluates as `anon` role.
-  // The `anon` policy allows reading all restaurants (required for public restaurant websites).
-  // The `authenticated` policy restricts reads to owned restaurants, which would block
-  // a super-admin from looking up any arbitrary restaurant UID in production.
-
-  // Strategy 1: exact string match on the uid (TEXT) column
-  try {
-    const { data, error } = await supabaseAnon
-      .from('restaurants')
-      .select('id, uid, slug')
-      .eq('uid', trimmed)
-      .maybeSingle()
-    if (!error && data) {
-      console.log('[MasterControl] UID resolved via anon uid-string match:', data.id)
-      return { id: String(data.id), slug: data.slug || null }
-    }
-    if (error) console.warn('[MasterControl] anon uid-string query error:', error.message)
-  } catch (err) {
-    console.error('[MasterControl] anon uid-string lookup threw:', err)
-  }
-
-  // Strategy 2: uid stored as numeric — cast before comparing
-  const numericUid = Number(trimmed)
-  if (!isNaN(numericUid) && String(numericUid) === trimmed) {
-    try {
-      const { data, error } = await supabaseAnon
-        .from('restaurants')
-        .select('id, uid, slug')
-        .eq('uid', numericUid)
-        .maybeSingle()
-      if (!error && data) {
-        console.log('[MasterControl] UID resolved via anon uid-numeric match:', data.id)
+    const r = await fetch(`/api/neon/restaurant/by-uid/${encodeURIComponent(trimmed)}`)
+    if (r.ok) {
+      const data = await r.json()
+      if (data) {
+        console.log('[MasterControl] UID resolved via Neon API:', data.id)
         return { id: String(data.id), slug: data.slug || null }
       }
-      if (error) console.warn('[MasterControl] anon uid-numeric query error:', error.message)
-    } catch (err) {
-      console.error('[MasterControl] anon uid-numeric lookup threw:', err)
     }
+  } catch (err) {
+    console.warn('[MasterControl] Neon UID lookup threw:', err.message)
   }
 
-  // Strategy 3: caller may have pasted the internal UUID (id) directly
+  // Strategy 2: caller may have pasted the internal UUID (id) directly
   if (trimmed.includes('-') && trimmed.length === 36) {
     try {
-      const { data, error } = await supabaseAnon
-        .from('restaurants')
-        .select('id, uid, slug')
-        .eq('id', trimmed)
-        .maybeSingle()
-      if (!error && data) {
-        console.log('[MasterControl] UID resolved via anon direct id match:', data.id)
-        return { id: String(data.id), slug: data.slug || null }
+      const r = await fetch(`/api/neon/restaurant/${encodeURIComponent(trimmed)}`)
+      if (r.ok) {
+        const data = await r.json()
+        if (data) {
+          console.log('[MasterControl] UID resolved via Neon direct id:', data.id)
+          return { id: String(data.id), slug: data.slug || null }
+        }
       }
-      if (error) console.warn('[MasterControl] anon id-direct query error:', error.message)
     } catch (err) {
-      console.error('[MasterControl] anon id-direct lookup threw:', err)
+      console.error('[MasterControl] Neon direct id lookup threw:', err)
     }
   }
 
@@ -157,27 +97,17 @@ export default function MasterControl() {
   }, [authLoading])
 
   // ── Production cache pre-warm ─────────────────────────────────────────────
-  // On first load, fetch all restaurants via the session-free anon client and
-  // cache them in localStorage. This ensures UID lookups succeed in production
-  // even before the user has opened individual restaurant admin panels.
-  // The anon client bypasses the restrictive authenticated-user RLS policy.
   useEffect(() => {
-    if (!isSupabaseConfigured) return
     const cached = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
-    if (cached.length > 0) return // already warmed
-    console.log('[MasterControl] Pre-warming restaurant cache via anon client…')
-    supabaseAnon
-      .from('restaurants')
-      .select('id, uid, slug, name')
-      .limit(300)
-      .then(({ data, error }) => {
-        if (error) { console.warn('[MasterControl] Cache pre-warm error:', error.message); return }
-        if (data?.length > 0) {
-          console.log('[MasterControl] Pre-warmed cache with', data.length, 'restaurants')
+    if (cached.length > 0) return
+    fetch('/api/neon/restaurants')
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data) && data.length > 0) {
           localStorage.setItem('exzibo_restaurants', JSON.stringify(data))
         }
       })
-      .catch(err => console.warn('[MasterControl] Cache pre-warm threw:', err.message))
+      .catch(() => {})
   }, [])
 
   // Auto-navigate when a UID is passed via URL param (e.g. /master-control/6920307970)
@@ -271,14 +201,7 @@ export default function MasterControl() {
       goToDest(dest)
     } catch (err) {
       console.error('[MasterControl] accessPanel error:', err)
-      if (!isSupabaseConfigured) {
-        setErr(
-          'Supabase is not configured in this build. ' +
-          'Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to your Vercel Environment Variables and redeploy.'
-        )
-      } else {
-        setErr(`Search failed: ${err.message || 'check your connection and try again'}`)
-      }
+      setErr(`Search failed: ${err.message || 'check your connection and try again'}`)
     } finally {
       setAccessLoading(false)
     }
@@ -358,31 +281,6 @@ export default function MasterControl() {
 
         <main style={{ flex: 1, overflowY: 'auto', padding: '32px', position: 'relative' }}>
 
-          {/* ── Production: Supabase not configured warning ───────────────── */}
-          {!isSupabaseConfigured && (
-            <div style={{
-              marginBottom: '24px',
-              padding: '14px 18px',
-              borderRadius: '10px',
-              background: 'rgba(232,50,26,0.08)',
-              border: '1px solid rgba(232,50,26,0.35)',
-              display: 'flex',
-              alignItems: 'flex-start',
-              gap: '12px',
-            }}>
-              <AlertCircle size={18} color="#E8321A" style={{ flexShrink: 0, marginTop: '1px' }} />
-              <div>
-                <div style={{ color: '#E8321A', fontWeight: 700, fontSize: '13px', marginBottom: '4px' }}>
-                  Supabase not configured in this build
-                </div>
-                <div style={{ color: '#aaa', fontSize: '12px', lineHeight: 1.5 }}>
-                  Add <code style={{ background: 'rgba(255,255,255,0.08)', padding: '1px 5px', borderRadius: '4px' }}>VITE_SUPABASE_URL</code> and{' '}
-                  <code style={{ background: 'rgba(255,255,255,0.08)', padding: '1px 5px', borderRadius: '4px' }}>VITE_SUPABASE_ANON_KEY</code>{' '}
-                  to your Vercel Environment Variables, then redeploy. UID lookup will not work until this is fixed.
-                </div>
-              </div>
-            </div>
-          )}
 
           <div style={{ position: 'absolute', top: '24px', right: '32px', display: 'flex', alignItems: 'center', gap: '10px' }}>
             {/* NOTIFICATION button */}

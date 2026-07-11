@@ -1,119 +1,89 @@
 /**
- * Image Compression Settings — Supabase-backed singleton
+ * Image Compression Settings — Neon-backed singleton
  *
- * Reads the `image_compression_limits` row from the `global_settings` table
- * on first use, then subscribes to Supabase Realtime so every open dashboard
- * picks up limit changes instantly without a page refresh.
+ * Reads the `image_compression_limits` key from the global_settings table
+ * on first use. Also caches in localStorage so subsequent synchronous reads
+ * are always warm.
  *
  * Usage (anywhere in the app):
  *   import { getCompressionLimits } from './imageCompressionSettings'
  *   const { minKB, maxKB } = await getCompressionLimits()
  */
 
-import { supabase } from './supabase'
-
-const SETTINGS_KEY = 'image_compression_limits'
+const SETTINGS_KEY  = 'image_compression_limits'
 const DEFAULTS      = { minKB: 60, maxKB: 200 }
+const LS_KEY        = 'exzibo_img_compressor_limits'
 
-// ── Module-level cache ────────────────────────────────────────────────────
-// Shared across all callers within the same page lifetime.
-let cached          = null   // { minKB, maxKB } once loaded
-let fetchPromise    = null   // in-flight fetch promise (deduplicate concurrent callers)
-let realtimeChannel = null   // Supabase Realtime subscription
+// ── Module-level cache ────────────────────────────────────────────────────────
+let cached       = null  // { minKB, maxKB } once loaded
+let fetchPromise = null  // in-flight fetch (deduplicates concurrent callers)
 
-// ── Internal helpers ──────────────────────────────────────────────────────
+// ── Internal helpers ──────────────────────────────────────────────────────────
 
-function parseRow(value) {
+function parseValue(value) {
   if (!value || typeof value !== 'object') return { ...DEFAULTS }
-  return {
-    minKB: typeof value.minKB === 'number' ? value.minKB : DEFAULTS.minKB,
-    maxKB: typeof value.maxKB === 'number' ? value.maxKB : DEFAULTS.maxKB,
-  }
+  const min = parseInt(value.minKB, 10)
+  const max = parseInt(value.maxKB, 10)
+  if (isNaN(min) || isNaN(max) || min < 1 || max <= min) return { ...DEFAULTS }
+  return { minKB: min, maxKB: max }
 }
 
-async function fetchFromSupabase() {
+function readCache() {
   try {
-    const { data, error } = await supabase
-      .from('global_settings')
-      .select('value')
-      .eq('key', SETTINGS_KEY)
-      .single()
+    const raw = localStorage.getItem(LS_KEY)
+    if (!raw) return null
+    return parseValue(JSON.parse(raw))
+  } catch { return null }
+}
 
-    if (error || !data) {
-      console.warn('[compression-settings] Row not found — using defaults:', DEFAULTS)
-      return { ...DEFAULTS }
-    }
-
-    return parseRow(data.value)
-  } catch (err) {
-    console.warn('[compression-settings] Fetch failed — using defaults:', err)
-    return { ...DEFAULTS }
+async function fetchFromApi() {
+  try {
+    const res = await fetch(`/api/settings?action=getGlobal&key=${encodeURIComponent(SETTINGS_KEY)}`)
+    if (!res.ok) return readCache() ?? { ...DEFAULTS }
+    const value = await res.json()
+    const lim = parseValue(value)
+    try { localStorage.setItem(LS_KEY, JSON.stringify(lim)) } catch {}
+    return lim
+  } catch {
+    return readCache() ?? { ...DEFAULTS }
   }
 }
 
-/** Subscribe to realtime UPDATE events so the cache stays live. */
-function subscribeRealtime() {
-  if (realtimeChannel) return
-
-  realtimeChannel = supabase
-    .channel('rt-compression-limits')
-    .on(
-      'postgres_changes',
-      {
-        event:  'UPDATE',
-        schema: 'public',
-        table:  'global_settings',
-        filter: `key=eq.${SETTINGS_KEY}`,
-      },
-      payload => {
-        const next = parseRow(payload.new?.value)
-        cached = next
-        console.log('[compression-settings] Realtime update →', cached)
-      },
-    )
-    .subscribe()
-}
-
-// ── Public API ────────────────────────────────────────────────────────────
+// ── Public API ────────────────────────────────────────────────────────────────
 
 /**
  * Return the current compression limits.
- * First call fetches from Supabase; subsequent calls are instant (cached).
+ * First call fetches from API; subsequent calls are instant (in-memory cached).
  */
 export async function getCompressionLimits() {
   if (cached) return cached
-
-  if (!fetchPromise) fetchPromise = fetchFromSupabase()
+  if (!fetchPromise) fetchPromise = fetchFromApi()
   cached = await fetchPromise
-
-  subscribeRealtime()
   return cached
 }
 
 /**
- * Persist new limits to Supabase and immediately update the local cache.
- * Triggers a Realtime broadcast so all other open sessions update too.
+ * Persist new limits via the API and update the local cache immediately.
  */
 export async function saveCompressionLimits(minKB, maxKB) {
   const value = { minKB, maxKB }
-
-  const { error } = await supabase
-    .from('global_settings')
-    .upsert(
-      { key: SETTINGS_KEY, value, updated_at: new Date().toISOString() },
-      { onConflict: 'key' },
-    )
-
-  if (error) throw error
-
-  // Update local cache immediately (Realtime fires too, but this is instant)
+  const res = await fetch('/api/settings?action=setGlobal', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ key: SETTINGS_KEY, value }),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err?.error || 'Failed to save compression limits')
+  }
   cached       = { minKB, maxKB }
   fetchPromise = null
+  try { localStorage.setItem(LS_KEY, JSON.stringify(cached)) } catch {}
   console.log('[compression-settings] Saved →', cached)
 }
 
 /**
- * Force the next call to getCompressionLimits() to re-fetch from Supabase.
+ * Force the next getCompressionLimits() call to re-fetch from the API.
  */
 export function invalidateCompressionCache() {
   cached       = null

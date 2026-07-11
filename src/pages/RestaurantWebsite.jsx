@@ -4,7 +4,6 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { notifyAnalyticsUpdate } from '../context/AnalyticsContext'
 import { getRestaurantBySlug, getMenuCategories, getMenuItems, getPublishedMenuItems, loadMenuFilters, fetchRestaurantAbout, loadRestaurantHours } from '../lib/db'
 import { getPublicImageUrl, getPublicImageUrls } from '../lib/imageUrl'
-import { supabase } from '../lib/supabase'
 import { useMenuSubdomainRedirect } from '../lib/routeConfig'
 import { toSlug } from '../lib/slug'
 import {
@@ -1153,29 +1152,7 @@ export default function RestaurantWebsite() {
       }
     }
 
-    const channel = supabase
-      .channel(`rt-menu-${rid}`)
-      .on('postgres_changes',
-        { event: '*', schema: 'public', table: 'menu_categories', filter: `restaurant_id=eq.${rid}` },
-        refetchMenu
-      )
-      .on('postgres_changes',
-        { event: '*', schema: 'public', table: 'menu_items', filter: `restaurant_id=eq.${rid}` },
-        refetchMenu
-      )
-      .subscribe((status) => {
-        if (status === 'SUBSCRIBED') console.log('[rt] menu subscribed:', rid)
-      })
-
-    // Broadcast channel — receives instant push notifications from dashboard
-    // when menu items are added, edited, or deleted (bypasses realtime RLS limits
-    // that can block DELETE events when REPLICA IDENTITY FULL is not set).
-    const broadcastCh = supabase
-      .channel(`menu-updates-${rid}`, { config: { broadcast: { ack: false } } })
-      .on('broadcast', { event: 'menu-refresh' }, () => refetchMenu())
-      .subscribe()
-
-    // ── Realtime: restaurant profile changes (social links, name, etc.) ──────
+    // ── Restaurant profile changes (social links, name, etc.) ────────────────
     async function refetchRestaurant() {
       try {
         const dbRow = await getRestaurantBySlug(slug)
@@ -1196,32 +1173,10 @@ export default function RestaurantWebsite() {
       }
     }
 
-    const restaurantCh = supabase
-      .channel(`rt-restaurant-${rid}`)
-      .on('postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'restaurants', filter: `id=eq.${rid}` },
-        refetchRestaurant
-      )
-      .subscribe((status) => {
-        if (status === 'SUBSCRIBED') console.log('[rt] restaurant subscribed:', rid)
-      })
-
-    // Broadcast channel — admin side sends a push after saving social/profile fields
-    const restaurantBroadcastCh = supabase
-      .channel(`restaurant-updates-${rid}`, { config: { broadcast: { ack: false } } })
-      .on('broadcast', { event: 'restaurant-refresh' }, () => refetchRestaurant())
-      .subscribe()
-
-    // Fallback poll — refetch menu AND restaurant profile every 20 s
+    // Poll — refetch menu AND restaurant profile every 20 s
     const poll = setInterval(() => { refetchMenu(); refetchRestaurant() }, 20_000)
 
-    return () => {
-      supabase.removeChannel(channel)
-      supabase.removeChannel(broadcastCh)
-      supabase.removeChannel(restaurantCh)
-      supabase.removeChannel(restaurantBroadcastCh)
-      clearInterval(poll)
-    }
+    return () => { clearInterval(poll) }
   }, [restaurant?.id])
 
   // ── Realtime: order status updates → customer page reflects instantly ────
@@ -1253,27 +1208,6 @@ export default function RestaurantWebsite() {
       })
     }
 
-    const channel = supabase
-      .channel(`order-updates-${rid}`, { config: { broadcast: { ack: false } } })
-      // ── Primary: direct broadcast from admin dashboard (cross-origin, instant) ──
-      .on('broadcast', { event: 'order_status_changed' }, ({ payload }) => {
-        const { orderId, status } = payload || {}
-        console.log('[order-broadcast] status update received:', orderId, status)
-        applyStatusUpdate(orderId, status)
-      })
-      // ── Fallback: postgres_changes (requires public_read_orders RLS policy) ──
-      .on('postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'orders', filter: `restaurant_id=eq.${rid}` },
-        (payload) => {
-          const { id: orderId, status } = payload.new || {}
-          applyStatusUpdate(orderId, status)
-        }
-      )
-      .subscribe((status) => {
-        if (status === 'SUBSCRIBED') console.log('[rt] order-updates subscribed:', rid)
-      })
-
-    return () => { supabase.removeChannel(channel) }
   }, [restaurant?.id])
 
   // ── Polling fallback: fetch order status from Supabase every 15 s ────────
@@ -1300,13 +1234,12 @@ export default function RestaurantWebsite() {
 
     async function pollStatus() {
       try {
-        const { data } = await supabase
-          .from('orders')
-          .select('status')
-          .eq('id', orderId)
-          .maybeSingle()
-        if (!data) return
-        const dbStatus = data.status
+        const r = await fetch(`/api/orders/${encodeURIComponent(restaurantId)}`)
+        if (!r.ok) return
+        const allOrders = await r.json()
+        const orderRow = Array.isArray(allOrders) ? allOrders.find(o => o.id === orderId) : null
+        if (!orderRow) return
+        const dbStatus = orderRow.status
         setCustomerOrders(prev => {
           let changed = false
           const next = prev.map(co => {

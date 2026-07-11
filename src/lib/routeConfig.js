@@ -1,5 +1,4 @@
 import { useEffect, useRef } from 'react'
-import { supabase } from './supabase'
 
 const DEFAULT_MENU_SUBDOMAIN = 'menu'
 
@@ -37,23 +36,19 @@ export function useMenuSubdomainRedirect(targetPath) {
 }
 
 export async function getRouteConfig(key) {
-  const { data, error } = await supabase
-    .from('route_config')
-    .select('config_value')
-    .eq('config_key', key)
-    .maybeSingle()
-  if (error) throw error
-  return data?.config_value ?? null
+  const r = await fetch(`/api/settings?action=getGlobal&key=${encodeURIComponent(key)}`)
+  if (!r.ok) throw new Error(`getRouteConfig(${key}) failed: ${r.status}`)
+  const data = await r.json()
+  return data?.value ?? null
 }
 
 export async function setRouteConfig(key, value) {
-  const { error } = await supabase
-    .from('route_config')
-    .upsert(
-      { config_key: key, config_value: value, updated_at: new Date().toISOString() },
-      { onConflict: 'config_key' }
-    )
-  if (error) throw error
+  const r = await fetch('/api/settings?action=setGlobal', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ key, value }),
+  })
+  if (!r.ok) throw new Error(`setRouteConfig(${key}) failed: ${r.status}`)
 }
 
 export async function getMenuSubdomain() {

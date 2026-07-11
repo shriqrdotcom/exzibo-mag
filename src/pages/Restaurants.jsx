@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom'
 import { Plus, Store, ExternalLink, Settings, Globe, Utensils } from 'lucide-react'
 import PlanBadge from '../components/PlanBadge'
 import { getRestaurants } from '../lib/db'
-import { supabase } from '../lib/supabase'
 import { openRoleDashboard } from '../lib/navigation'
 import { getSubdomain } from '../lib/subdomain'
 
@@ -28,15 +27,8 @@ export default function Restaurants() {
     setLoading(true)
     fetchAll().finally(() => setLoading(false))
 
-    const channel = supabase
-      .channel('rt-restaurants')
-      .on('postgres_changes',
-        { event: '*', schema: 'public', table: 'restaurants' },
-        () => { fetchAll() }
-      )
-      .subscribe()
-
-    return () => { supabase.removeChannel(channel) }
+    const poll = setInterval(fetchAll, 30_000)
+    return () => clearInterval(poll)
   }, [])
 
   const liveList = restaurants.filter(r => r.status === 'active')

@@ -13,7 +13,6 @@
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",
-    "@supabase/supabase-js": "^2.105.1",
     "@upstash/ratelimit": "^2.0.8",
     "@upstash/redis": "^1.38.0",
     "autoprefixer": "^10.5.0",
@@ -41,6 +40,8 @@
     "node": "22.x"
   },
   "pnpm": {
-    "onlyBuiltDependencies": ["esbuild"]
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
   }
 }

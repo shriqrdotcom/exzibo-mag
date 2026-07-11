@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback } from 'react'
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom'
 import { LayoutDashboard, Settings, Zap, Users, Table2, ShieldCheck, Bell, Info, Trash2, Play, ImageDown, Route, ShieldPlus, Clock } from 'lucide-react'
 import PermissionGate from './PermissionGate'
-import { supabase } from '../lib/supabase'
 
 const navItems = [
   { icon: LayoutDashboard, label: 'Dashboard',      path: '/dashboard',       permission: 'dashboard' },
@@ -22,25 +21,17 @@ export default function Sidebar() {
 
   const refreshUnread = useCallback(async () => {
     try {
-      const { count } = await supabase
-        .from('help_notifications')
-        .select('id', { count: 'exact', head: true })
-        .eq('status', 'unread')
-      setUnreadCount(count ?? 0)
-    } catch { /* table may not exist yet */ }
+      const r = await fetch('/api/notifications?action=getHelp')
+      if (!r.ok) return
+      const rows = await r.json()
+      setUnreadCount(rows.filter(n => n.status === 'unread').length)
+    } catch { /* silent */ }
   }, [])
 
   useEffect(() => {
     refreshUnread()
-    const channel = supabase
-      .channel('rt-help-badge')
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'help_notifications',
-      }, () => refreshUnread())
-      .subscribe()
-    return () => { supabase.removeChannel(channel) }
+    const poll = setInterval(refreshUnread, 30_000)
+    return () => clearInterval(poll)
   }, [refreshUnread])
 
   const notifActive = location.pathname === '/notifications'

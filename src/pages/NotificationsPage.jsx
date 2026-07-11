@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback } from 'react'
 import Sidebar from '../components/Sidebar'
 import AdminHeader from '../components/AdminHeader'
 import { Bell, CheckCircle2, Clock, Trash2, X, ThumbsUp, ThumbsDown, Copy, Check } from 'lucide-react'
-import { supabase } from '../lib/supabase'
 
 const FONT = "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif"
 
@@ -51,12 +50,10 @@ export default function NotificationsPage() {
 
   const fetchNotifications = useCallback(async () => {
     try {
-      const { data, error } = await supabase
-        .from('help_notifications')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(50)
-      if (!error && data) setNotifications(data)
+      const r = await fetch('/api/notifications?action=getHelp')
+      if (!r.ok) throw new Error(`HTTP ${r.status}`)
+      const data = await r.json()
+      setNotifications(data)
     } catch (e) {
       console.warn('[NotificationsPage] fetch error:', e.message)
     } finally {
@@ -66,41 +63,30 @@ export default function NotificationsPage() {
 
   useEffect(() => {
     fetchNotifications()
-    const channel = supabase
-      .channel('rt-notifications-page')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'help_notifications' }, payload => {
-        if (payload.eventType === 'INSERT') {
-          setNotifications(prev => [payload.new, ...prev])
-          setPulse(true)
-          setTimeout(() => setPulse(false), 800)
-        } else {
-          fetchNotifications()
-        }
-      })
-      .subscribe()
-    return () => { supabase.removeChannel(channel) }
+    const poll = setInterval(fetchNotifications, 20_000)
+    return () => clearInterval(poll)
   }, [fetchNotifications])
 
   async function markRead(id) {
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, status: 'read' } : n))
-    await supabase.from('help_notifications').update({ status: 'read' }).eq('id', id)
+    await fetch('/api/notifications?action=updateHelpStatus', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, status: 'read' }) })
   }
 
   async function resolveNotification(id) {
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, status: 'resolved' } : n))
-    await supabase.from('help_notifications').update({ status: 'resolved' }).eq('id', id)
+    await fetch('/api/notifications?action=updateHelpStatus', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, status: 'resolved' }) })
   }
 
   async function markAllRead() {
     const ids = notifications.filter(n => n.status === 'unread').map(n => n.id)
     if (!ids.length) return
     setNotifications(prev => prev.map(n => n.status === 'unread' ? { ...n, status: 'read' } : n))
-    await supabase.from('help_notifications').update({ status: 'read' }).in('id', ids)
+    await fetch('/api/notifications?action=markAllHelpRead', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ids }) })
   }
 
   async function deleteNotification(id) {
     setNotifications(prev => prev.filter(n => n.id !== id))
-    await supabase.from('help_notifications').delete().eq('id', id)
+    await fetch('/api/notifications?action=deleteHelp', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) })
   }
 
   const filtered = notifications.filter(n => {
