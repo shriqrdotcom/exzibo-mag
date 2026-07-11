@@ -1,5 +1,6 @@
 import { getServiceHeaders, supabaseFetch, setCors } from './_lib/supabase.js'
 import { rateLimit, acquireLock, releaseLock, getClientIp, send429 } from '../src/lib/upstash.server.js'
+import { publishOrderRealtimeEvent } from '../src/lib/realtime-publisher.js'
 
 // ── /api/orders — Merged Order Operations Handler ────────────────────────────
 //
@@ -34,7 +35,7 @@ export default async function handler(req, res) {
 
     // ── POST: update a single order's status ──────────────────────────────────
     if (action === 'updateStatus') {
-      const { orderId, status } = req.body
+      const { orderId, status, restaurantId } = req.body
       if (!orderId || !status) {
         return res.status(400).json({ error: 'orderId and status required' })
       }
@@ -61,6 +62,13 @@ export default async function handler(req, res) {
           }
         )
         if (!ok) return res.status(httpStatus).json({ error: data })
+        // Non-blocking realtime publish — fire-and-forget after DB confirms
+        publishOrderRealtimeEvent({
+          type: 'ORDER_STATUS_CHANGED',
+          restaurantId: restaurantId || null,
+          orderId,
+          status,
+        })
         return res.json(Array.isArray(data) ? (data[0] ?? {}) : data)
       } finally {
         await releaseLock(lockKey)
