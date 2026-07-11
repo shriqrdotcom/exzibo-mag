@@ -1,0 +1,81 @@
+Fix superadmin access to all restaurant dashboards.
+
+Current setup:
+
+- Superadmin login: https://superadmin.exzibo.online
+- Restaurant dashboard: https://dashboard.exzibo.online/{restaurantSlug}/...
+- Authentication: Better Auth
+- Global superadmin email is stored in SUPERADMIN_ALLOWED_EMAILS
+- Normal restaurant users are checked through restaurant_members
+
+Problem:
+I can log in successfully on superadmin.exzibo.online, but when I open:
+
+https://dashboard.exzibo.online/namaste/orders
+
+it shows “Access Denied”.
+
+Required fix:
+
+1. Use one shared Better Auth session for both:
+   
+   - superadmin.exzibo.online
+   - dashboard.exzibo.online
+
+2. Enable secure cross-subdomain cookies for:
+   
+   - .exzibo.online
+
+3. Add both production domains to Better Auth trustedOrigins.
+
+4. Keep cookies:
+   
+   - Secure
+   - HttpOnly
+   - SameSite=Lax
+
+5. Do not store authentication tokens in localStorage or URLs.
+
+6. Update the restaurant access check:
+   
+   - First, verify the Better Auth session on the server.
+   - Read the logged-in user’s email.
+   - Convert the email to lowercase and remove extra spaces.
+   - Check whether it exists in SUPERADMIN_ALLOWED_EMAILS.
+   - If it is a global superadmin, allow access to every restaurant dashboard without checking restaurant_members.
+   - If it is not a superadmin, continue checking restaurant_members normally.
+   - Unauthorized users must still see Access Denied.
+
+7. Apply the same permission check to:
+   
+   - Restaurant dashboard pages
+   - Orders APIs
+   - Bookings APIs
+   - Menu APIs
+   - Settings APIs
+   - Staff APIs
+
+8. Both domains must use the same:
+   
+   - BETTER_AUTH_SECRET
+   - Better Auth database
+   - User table
+   - Session table
+
+9. Do not change the working Google OAuth credentials or existing normal staff access system.
+
+10. Add an “OPEN DASHBOARD” button inside the superadmin restaurant list. It should open:
+
+https://dashboard.exzibo.online/{restaurantSlug}/dashboard
+
+After completing the work, report:
+
+- Files changed
+- Shared cookie configuration
+- Superadmin authorization logic
+- Protected routes updated
+- Environment variables I need to verify
+- Testing steps
+
+Expected result:
+After logging in once at superadmin.exzibo.online, I should be able to open any restaurant dashboard without logging in again and without adding the superadmin to restaurant_members.

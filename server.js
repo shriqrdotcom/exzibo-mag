@@ -55,6 +55,7 @@ import {
   hashBody,
   send429,
 } from './src/lib/upstash.server.js'
+import { getSessionEmail } from './api/_lib/authz.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const app = express()
@@ -200,6 +201,87 @@ async function _isTableValid(slug, tableNumber) {
 }
 
 app.use(express.json({ limit: '15mb' }))
+
+// ── Private admin API session guard ──────────────────────────────────────────
+// Any route in _PRIVATE_EXACT or matching _PRIVATE_PATTERNS requires a valid
+// Better Auth session. Public customer routes are intentionally excluded.
+// No-op when DISABLE_AUTH / VITE_DISABLE_AUTH = 'true' (dev mode).
+const _PRIVATE_EXACT = new Set([
+  '/api/orders/update-status',
+  '/api/orders/auto-cleanup',
+  '/api/menu/upload-image',
+  '/api/menu/items',
+  '/api/menu/item-patch',
+  '/api/menu/item-delete',
+  '/api/menu/categories/upsert',
+  '/api/menu/categories/delete',
+  '/api/menu/items/upsert',
+  '/api/team-members/shadow-upsert',
+  '/api/team-members/shadow-delete',
+  '/api/about/save',
+  '/api/about/upload-image',
+  '/api/restaurant/upload-logo',
+  '/api/restaurant/update-profile',
+  '/api/restaurant/update-social',
+  '/api/restaurant/upload-carousel',
+  '/api/neon/restaurant-settings/shadow-upsert',
+])
+
+// UUID pattern (both hyphenated and solid)
+const _UUID_RE = /^[0-9a-f]{8}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{12}$/i
+
+function _isPrivateAdminPath(path, method) {
+  if (_PRIVATE_EXACT.has(path)) return true
+
+  const segs = path.split('/').filter(Boolean)  // ['api', resource, id, ...]
+
+  if (segs[0] !== 'api') return false
+
+  // PATCH/DELETE /api/menu/items/:id (admin menu mutations, no restaurantId in path)
+  if (segs[1] === 'menu' && segs[2] === 'items' && segs[3] && _UUID_RE.test(segs[3])) {
+    if (method === 'PATCH' || method === 'DELETE') return true
+  }
+
+  // PATCH /api/bookings/:id/status
+  if (segs[1] === 'bookings' && segs[3] === 'status' && method === 'PATCH') return true
+
+  // GET /api/orders/:restaurantId — admin reads orders
+  if (segs[1] === 'orders' && segs[2] && _UUID_RE.test(segs[2]) && method === 'GET') return true
+
+  // GET /api/bookings/:restaurantId — admin reads bookings
+  if (segs[1] === 'bookings' && segs[2] && _UUID_RE.test(segs[2]) && !segs[3] && method === 'GET') return true
+
+  // GET /api/team-members/:restaurantId — admin reads team
+  if (segs[1] === 'team-members' && segs[2] && _UUID_RE.test(segs[2]) && method === 'GET') return true
+
+  // GET /api/menu/items/:restaurantId — admin reads all items (NOT /published which is public)
+  if (segs[1] === 'menu' && segs[2] === 'items' && segs[3] && _UUID_RE.test(segs[3]) && !segs[4] && method === 'GET') return true
+
+  // GET /api/menu/categories/:restaurantId — admin reads categories
+  if (segs[1] === 'menu' && segs[2] === 'categories' && segs[3] && _UUID_RE.test(segs[3]) && method === 'GET') return true
+
+  return false
+}
+
+app.use(async (req, res, next) => {
+  if (req.method === 'OPTIONS') return next()
+  if (!_isPrivateAdminPath(req.path, req.method)) return next()
+
+  if (process.env.DISABLE_AUTH === 'true' || process.env.VITE_DISABLE_AUTH === 'true') {
+    return next()
+  }
+
+  try {
+    const session = await getSessionEmail(req)
+    if (!session) return res.status(401).json({ error: 'Not authenticated' })
+    req.authEmail = session.email
+    req.authUser  = session.user
+    next()
+  } catch (e) {
+    console.error('[private-api-guard] Session error:', e.message)
+    return res.status(401).json({ error: 'Session error', detail: e.message })
+  }
+})
 
 // ── Table validation middleware ───────────────────────────────────────────────
 // Runs BEFORE static file serving. Invalid table numbers receive a proper 404

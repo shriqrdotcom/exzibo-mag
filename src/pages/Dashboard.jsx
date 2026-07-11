@@ -1887,17 +1887,18 @@ function DemoWebsitesPanel({ restaurants, onEdit, onDelete }) {
                       <td style={{ padding: '16px 28px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                           {[
-                            { label: 'VIEW',   color: '#22c55e', onClick: () => r.slug ? window.open(`https://menu.exzibo.online/${r.slug}/home/1`, '_blank', 'noopener,noreferrer') : null },
-                            { label: 'ADMIN',  color: '#3B82F6', onClick: () => openRoleDashboard(navigate, r, 'owner') },
-                            { label: 'MASTER', color: '#A855F7', onClick: () => openRoleDashboard(navigate, r, 'master') },
-                          ].map(({ label, color, onClick }) => (
+                            { label: 'VIEW',   color: '#22c55e', rgb: '34,197,94',  onClick: () => r.slug ? window.open(`https://menu.exzibo.online/${r.slug}/home/1`, '_blank', 'noopener,noreferrer') : null },
+                            { label: 'ADMIN',  color: '#3B82F6', rgb: '59,130,246', onClick: () => openRoleDashboard(navigate, r, 'owner') },
+                            { label: 'MASTER', color: '#A855F7', rgb: '168,85,247', onClick: () => openRoleDashboard(navigate, r, 'master') },
+                            { label: 'OPEN',   color: '#E8321A', rgb: '232,50,26',  onClick: () => r.slug ? window.open(`https://dashboard.exzibo.online/${r.slug}/dashboard`, '_blank', 'noopener,noreferrer') : null },
+                          ].map(({ label, color, rgb, onClick }) => (
                             <button
                               key={label}
                               onClick={onClick}
                               style={{
                                 display: 'inline-flex', alignItems: 'center',
                                 padding: '7px 13px',
-                                background: `rgba(${color === '#22c55e' ? '34,197,94' : color === '#3B82F6' ? '59,130,246' : '168,85,247'},0.08)`,
+                                background: `rgba(${rgb},0.08)`,
                                 border: `1px solid ${color}44`,
                                 borderRadius: '8px',
                                 color,
@@ -1911,7 +1912,7 @@ function DemoWebsitesPanel({ restaurants, onEdit, onDelete }) {
                                 e.currentTarget.style.boxShadow = `0 0 14px ${color}66`
                               }}
                               onMouseLeave={e => {
-                                e.currentTarget.style.background = `rgba(${color === '#22c55e' ? '34,197,94' : color === '#3B82F6' ? '59,130,246' : '168,85,247'},0.08)`
+                                e.currentTarget.style.background = `rgba(${rgb},0.08)`
                                 e.currentTarget.style.color = color
                                 e.currentTarget.style.boxShadow = 'none'
                               }}

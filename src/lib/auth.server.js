@@ -190,7 +190,7 @@ export const auth = betterAuth({
       domain: '.exzibo.online',
     },
     defaultCookieAttributes: {
-      sameSite: 'none',
+      sameSite: 'lax',
       secure: true,
     },
   },

@@ -12,6 +12,11 @@ import React, { createContext, useContext, useState } from 'react'
 // activateRole('menuStudio') calls.
 
 const PERMISSIONS = {
+  superadmin: [
+    'dashboard', 'menuEdit', 'settings', 'profile',
+    'teamManagement', 'orders', 'bookings', 'analytics',
+    'subscription', 'roles',
+  ],
   menu_studio: [
     'dashboard', 'menuEdit', 'settings', 'profile',
     'teamManagement', 'orders', 'bookings', 'analytics',

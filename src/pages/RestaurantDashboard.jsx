@@ -18,7 +18,7 @@ import { DISABLE_AUTH } from '../lib/env'
 import AdminDashboard from './AdminDashboard'
 import ProfilePage from './ProfilePage'
 
-const VALID_ROLES = new Set(['menu_studio', 'owner', 'admin', 'staff'])
+const VALID_ROLES = new Set(['menu_studio', 'owner', 'admin', 'staff', 'superadmin'])
 
 // Page slugs that are actually role names — redirect them to /orders.
 // These arrive when the dynamic /:restaurantSlug/:pageSlug route catches URLs
@@ -28,20 +28,20 @@ const ROLE_SLUG_PAGES = new Set(['owner', 'admin', 'staff', 'menu_studio', 'mana
 
 // ── Access control matrix ─────────────────────────────────────────────────
 const PAGE_ACCESS = {
-  orders:       ['menu_studio', 'owner', 'admin', 'staff'],
-  bookings:     ['menu_studio', 'owner', 'admin', 'staff'],
-  booking:      ['menu_studio', 'owner', 'admin', 'staff'],
-  menu:         ['menu_studio', 'owner', 'admin'],
-  tables:       ['menu_studio', 'owner', 'admin'],
-  analytics:    ['menu_studio', 'owner', 'admin'],
-  settings:     ['menu_studio', 'owner', 'admin'],
-  roles:        ['menu_studio', 'owner', 'admin'],
-  subscription: ['menu_studio', 'owner'],
-  profile:      ['menu_studio', 'owner', 'admin', 'staff'],
-  dashboard:    ['menu_studio', 'owner', 'admin', 'staff'],
-  admin:        ['menu_studio', 'owner', 'admin', 'staff'],
-  manager:      ['menu_studio', 'owner', 'admin'],
-  employee:     ['menu_studio', 'owner', 'admin', 'staff'],
+  orders:       ['superadmin', 'menu_studio', 'owner', 'admin', 'staff'],
+  bookings:     ['superadmin', 'menu_studio', 'owner', 'admin', 'staff'],
+  booking:      ['superadmin', 'menu_studio', 'owner', 'admin', 'staff'],
+  menu:         ['superadmin', 'menu_studio', 'owner', 'admin'],
+  tables:       ['superadmin', 'menu_studio', 'owner', 'admin'],
+  analytics:    ['superadmin', 'menu_studio', 'owner', 'admin'],
+  settings:     ['superadmin', 'menu_studio', 'owner', 'admin'],
+  roles:        ['superadmin', 'menu_studio', 'owner', 'admin'],
+  subscription: ['superadmin', 'menu_studio', 'owner'],
+  profile:      ['superadmin', 'menu_studio', 'owner', 'admin', 'staff'],
+  dashboard:    ['superadmin', 'menu_studio', 'owner', 'admin', 'staff'],
+  admin:        ['superadmin', 'menu_studio', 'owner', 'admin', 'staff'],
+  manager:      ['superadmin', 'menu_studio', 'owner', 'admin'],
+  employee:     ['superadmin', 'menu_studio', 'owner', 'admin', 'staff'],
 }
 
 // Map URL page slugs → AdminDashboard internal section IDs
