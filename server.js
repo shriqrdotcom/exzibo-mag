@@ -36,6 +36,7 @@ import {
   getNeonOrders,
   deleteOldNeonOrders,
 } from './src/db/neon-orders.js'
+import { publishOrderRealtimeEvent } from './src/lib/realtime-publisher.js'
 import {
   upsertNeonRestaurantMember,
   deleteNeonRestaurantMember,
@@ -817,14 +818,25 @@ app.post('/api/orders/update-status', async (req, res) => {
     )
     const data = await r.json()
     if (!r.ok) return res.status(r.status).json({ error: data })
+    const updated = Array.isArray(data) ? (data[0] ?? {}) : data
+    const restaurantId = updated.restaurant_id || updated.restaurantId || null
     // ── Neon shadow-write (non-blocking) ──────────────────────────────────────
     updateNeonOrderStatusFn(orderId, status).then(() => {
       console.log('[orders/update-status] Neon shadow ✅ id:', orderId, 'status:', status)
     }).catch(neonErr => {
       console.warn('[orders/update-status] Neon shadow error (non-blocking):', neonErr.message)
     })
+    // ── Realtime publish to Cloudflare Worker (non-blocking) ──────────────────
+    if (restaurantId) {
+      publishOrderRealtimeEvent({
+        type: status === 'cancelled' ? 'ORDER_CANCELLED' : 'ORDER_STATUS_CHANGED',
+        restaurantId,
+        orderId,
+        status,
+      })
+    }
     writeAuditLog({ action: 'update_status', entityType: 'order', entityId: orderId, newData: { status }, ipAddress: req.ip })
-    return res.json(Array.isArray(data) ? (data[0] ?? {}) : data)
+    return res.json(updated)
   } catch (err) {
     console.error('[orders/update-status] Error:', err.message)
     return res.status(500).json({ error: err.message })
@@ -862,6 +874,13 @@ app.post('/api/orders', async (req, res) => {
       console.log('[orders POST] Neon shadow ✅ id:', saved.id)
     }).catch(neonErr => {
       console.warn('[orders POST] Neon shadow error (non-blocking):', neonErr.message)
+    })
+    // ── Realtime publish to Cloudflare Worker (non-blocking) ───────────────────
+    publishOrderRealtimeEvent({
+      type: 'ORDER_CREATED',
+      restaurantId: body.restaurant_id,
+      orderId: saved.id,
+      status: saved.status || 'pending',
     })
     return res.status(201).json(saved)
   } catch (err) {

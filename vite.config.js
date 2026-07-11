@@ -10,6 +10,7 @@ import { upsertNeonMenuCategory, deleteNeonMenuCategory, getNeonMenuCategories }
 import { upsertNeonMenuItem, upsertNeonMenuItems, deleteNeonMenuItem, getNeonMenuItems, getNeonPublishedMenuItems } from './src/db/neon-menu-items.js'
 import { upsertNeonBooking, updateNeonBookingStatus, getNeonBookings } from './src/db/neon-bookings.js'
 import { upsertNeonOrder, updateNeonOrderStatus as updateNeonOrderStatusFn, getNeonOrders, deleteOldNeonOrders } from './src/db/neon-orders.js'
+import { publishOrderRealtimeEvent } from './src/lib/realtime-publisher.js'
 import { upsertNeonRestaurantMember, deleteNeonRestaurantMember, getNeonRestaurantMembers } from './src/db/neon-restaurant-members.js'
 import { upsertNeonRestaurantAbout, getNeonRestaurantAbout } from './src/db/neon-restaurant-about.js'
 import { upsertNeonRestaurantSettingsKey } from './src/db/neon-restaurant-settings.js'
@@ -497,14 +498,25 @@ function menuApiPlugin() {
           )
           const data = await r.json()
           if (!r.ok) return json(res, r.status, { error: data })
+          const updated = Array.isArray(data) ? (data[0] ?? {}) : data
+          const restaurantId = updated.restaurant_id || updated.restaurantId || null
           // ── Neon shadow-write (non-blocking) ──────────────────────────────────
           updateNeonOrderStatusFn(orderId, status).then(() => {
             console.log('[orders/update-status] Neon shadow ✅ id:', orderId, 'status:', status)
           }).catch(neonErr => {
             console.warn('[orders/update-status] Neon shadow error (non-blocking):', neonErr.message)
           })
+          // ── Realtime publish to Cloudflare Worker (non-blocking) ────────────────
+          if (restaurantId) {
+            publishOrderRealtimeEvent({
+              type: status === 'cancelled' ? 'ORDER_CANCELLED' : 'ORDER_STATUS_CHANGED',
+              restaurantId,
+              orderId,
+              status,
+            })
+          }
           writeAuditLog({ action: 'update_status', entityType: 'order', entityId: orderId, newData: { status } })
-          return json(res, 200, Array.isArray(data) ? (data[0] ?? {}) : data)
+          return json(res, 200, updated)
         } catch (e) { return json(res, 500, { error: e.message }) }
       })
 
@@ -599,6 +611,13 @@ function menuApiPlugin() {
               console.log('[orders POST] Neon shadow ✅ id:', saved.id)
             }).catch(neonErr => {
               console.warn('[orders POST] Neon shadow error (non-blocking):', neonErr.message)
+            })
+            // ── Realtime publish to Cloudflare Worker (non-blocking) ──────────────
+            publishOrderRealtimeEvent({
+              type: 'ORDER_CREATED',
+              restaurantId: body.restaurant_id,
+              orderId: saved.id,
+              status: saved.status || 'pending',
             })
             return json(res, 201, saved)
           }

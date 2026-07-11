@@ -1,0 +1,78 @@
+Connect the main app order system to the Cloudflare realtime Worker.
+
+Realtime Worker:
+REALTIME_URL=https://rt.exzibo.online
+
+Environment variables already added:
+REALTIME_URL
+REALTIME_PUBLISH_SECRET
+
+Goal:
+When an order is created or its status changes, the backend should publish a realtime event to the Cloudflare Worker after the Neon database operation succeeds.
+
+Tasks:
+
+1. Find the backend/API route or server action where a new order is created and saved in Neon.
+
+2. After the new order is successfully saved in Neon, call:
+${process.env.REALTIME_URL}/publish/order-event
+
+Method:
+POST
+
+Headers:
+Content-Type: application/json
+Authorization: Bearer ${process.env.REALTIME_PUBLISH_SECRET}
+
+Body for new order:
+{
+  "type": "ORDER_CREATED",
+  "restaurantId": "<internal restaurant id from saved order>",
+  "orderId": "<created order id>",
+  "status": "<created order status>",
+  "version": 1,
+  "eventId": "<unique event id>",
+  "time": "<current ISO timestamp>"
+}
+
+3. Find the backend/API route or server action where order status is updated, confirmed, cancelled, rejected, accepted, ready, served, completed, or changed in any way.
+
+4. After the Neon order update succeeds, call the same realtime endpoint.
+
+Body for status update:
+{
+  "type": "ORDER_STATUS_CHANGED",
+  "restaurantId": "<internal restaurant id>",
+  "orderId": "<order id>",
+  "status": "<new order status>",
+  "version": "<updated order version if available, otherwise increment safely or use Date.now()>",
+  "eventId": "<unique event id>",
+  "time": "<current ISO timestamp>"
+}
+
+5. If the order is cancelled, publish:
+{
+  "type": "ORDER_CANCELLED",
+  "restaurantId": "<internal restaurant id>",
+  "orderId": "<order id>",
+  "status": "<cancelled status>",
+  "version": "<updated order version if available>",
+  "eventId": "<unique event id>",
+  "time": "<current ISO timestamp>"
+}
+
+6. Create a reusable backend-only helper function named:
+publishOrderRealtimeEvent()
+
+Rules:
+- Neon database remains the source of truth.
+- Realtime publish must happen only after successful Neon create/update.
+- If realtime publish fails, do not fail the order create/update request.
+- Log realtime publish errors on the server only.
+- Never expose REALTIME_PUBLISH_SECRET to frontend/client components.
+- Never call /publish/order-event from frontend.
+- Do not change existing order business logic.
+- Do not change database schema unless absolutely required.
+- Do not remove existing order create/confirm/cancel behavior.
+- Keep the implementation simple and production-safe.
+- After changes, report exactly which files were modified and where the realtime publish was added.
