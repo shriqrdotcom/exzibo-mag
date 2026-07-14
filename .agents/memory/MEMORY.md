@@ -8,3 +8,4 @@
 - [DISABLE_AUTH mock user must be a real UUID](disable-auth-mock-user-uuid.md) — any mock/preview user id used as a Postgres uuid FK (e.g. owner_id) must be a valid UUID string, not a slug-like id.
 - [Better Auth default IDs are not UUIDs](better-auth-uuid-owner-id.md) — Better Auth's default generateId is a random alphanumeric string, not a UUID; any column storing a Better Auth user id must be typed `text`, not `uuid`.
 - [Dev workflow caches env at start](dev-workflow-stale-env-after-secret-change.md) — restart the workflow after secrets change mid-session, or you'll debug against a stale DATABASE_URL/env.
+- [menu item-patch is a full upsert](menu-item-patch-full-upsert.md) — sending only the changed field (e.g. a toggle) to `/api/menu/item-patch` blanks out the item's other columns; always send the full item + restaurant_id.

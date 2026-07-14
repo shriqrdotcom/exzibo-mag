@@ -4796,18 +4796,14 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
     }
   }
 
-  function toggleAvailability(id) {
-    const updated = {
-      ...menu,
-      [activeCategory]: menu[activeCategory].map(i =>
-        i.id === id ? { ...i, available: i.available === false ? true : false } : i
-      ),
-    }
-    setMenu(updated)
-    setSavedAll(false)
-    setHasDraftChanges(true)
-  }
-
+  // Single PUBLISH toggle — replaces the old separate AVAILABLE + DRAFT toggles.
+  // Turning it on both publishes the item AND marks it available, so nothing
+  // else can silently keep a "published" item hidden from the customer menu.
+  //
+  // NOTE: /api/menu/item-patch does a full upsert (ON CONFLICT DO UPDATE) keyed
+  // on the destructured patch fields — sending only { id, is_published } would
+  // reset name/price/description/image/etc back to blank defaults. We must
+  // always send the full current item fields, same as saveEdit() does.
   async function togglePublish(id) {
     const currentItems = menu[activeCategory] || []
     const item = currentItems.find(i => i.id === id)
@@ -4816,22 +4812,39 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
       return
     }
     const newVal = !item.is_published
+    const newAvailable = newVal ? true : (item.available !== false)
     setMenu(prev => ({
       ...prev,
       [activeCategory]: (prev[activeCategory] || []).map(i =>
-        i.id === id ? { ...i, is_published: newVal } : i
+        i.id === id ? { ...i, is_published: newVal, available: newAvailable } : i
       ),
     }))
     try {
-      await toggleMenuItemPublish(String(item.dbId), newVal)
+      const currentTab = categoryTabs.find(t => t.key === activeCategory)
+      const patch = {
+        restaurant_id: restaurantId,
+        name: item.name,
+        description: item.desc || '',
+        price: item.price,
+        image: item.img,
+        veg: item.veg !== false,
+        available: newAvailable,
+        is_published: newVal,
+        tags: item.tags || [],
+        add_ons: item.addOns || [],
+        image_shape: item.imageShape || 'vertical',
+      }
+      if (currentTab?.dbId) patch.category_id = currentTab.dbId
+      await updateMenuItem(String(item.dbId), patch)
       showToast(newVal ? '✅ Published to customer menu' : '📦 Moved back to draft')
+      sendMenuRefresh()
     } catch (e) {
       console.error('Failed to toggle publish:', e)
       showToast('❌ Failed to update publish status')
       setMenu(prev => ({
         ...prev,
         [activeCategory]: (prev[activeCategory] || []).map(i =>
-          i.id === id ? { ...i, is_published: !newVal } : i
+          i.id === id ? { ...i, is_published: !newVal, available: item.available } : i
         ),
       }))
     }
@@ -6459,39 +6472,12 @@ function MenuPanel({ restaurantId, accentStart, accentEnd, currency, showToast, 
             ) : (
               /* ── View Mode ── */
               <>
-                {/* Availability toggle row */}
+                {/* Publish toggle row — single merged control (replaces the old
+                    separate AVAILABLE + DRAFT toggles). ON = visible on the
+                    customer menu, OFF = hidden/draft. */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', marginBottom: '10px', gap: '8px' }}>
-                  <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.06em', color: item.available === false ? '#EF4444' : '#22c55e', textTransform: 'uppercase' }}>
-                    {item.available === false ? 'Unavailable' : 'Available'}
-                  </span>
-                  <div
-                    onClick={() => toggleAvailability(item.id)}
-                    title={item.available === false ? 'Mark as available' : 'Mark as unavailable'}
-                    style={{
-                      width: '40px', height: '22px', borderRadius: '11px',
-                      background: item.available === false ? '#e2e8f0' : `linear-gradient(135deg, ${accentStart}, ${accentEnd})`,
-                      position: 'relative', cursor: 'pointer',
-                      transition: 'background 0.25s ease',
-                      flexShrink: 0,
-                      boxShadow: item.available === false ? 'none' : `0 2px 8px ${accentStart}50`,
-                    }}
-                  >
-                    <div style={{
-                      position: 'absolute',
-                      top: '3px',
-                      left: item.available === false ? '3px' : '19px',
-                      width: '16px', height: '16px',
-                      borderRadius: '8px', background: '#fff',
-                      transition: 'left 0.25s ease',
-                      boxShadow: '0 1px 4px rgba(0,0,0,0.2)',
-                    }} />
-                  </div>
-                </div>
-
-                {/* Publish toggle row */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', marginBottom: '10px', gap: '8px' }}>
-                  <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.06em', color: item.is_published ? '#22c55e' : '#f59e0b', textTransform: 'uppercase' }}>
-                    {item.is_published ? 'Published' : 'Draft'}
+                  <span style={{ fontSize: '10px', fontWeight: 800, letterSpacing: '0.08em', color: item.is_published ? '#22c55e' : '#94A3B8', textTransform: 'uppercase' }}>
+                    PUBLISH
                   </span>
                   <div
                     onClick={() => togglePublish(item.id)}

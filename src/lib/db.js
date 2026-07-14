@@ -400,11 +400,14 @@ export async function getPublishedMenuItems(restaurantId) {
   return []
 }
 
-export async function toggleMenuItemPublish(id, isPublished) {
+export async function toggleMenuItemPublish(id, isPublished, restaurantId) {
+  const body = { id, is_published: isPublished }
+  if (isPublished) body.available = true
+  if (restaurantId) body.restaurant_id = restaurantId
   const res = await fetch('/api/menu/item-patch', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ id, is_published: isPublished }),
+    body: JSON.stringify(body),
   })
   if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(JSON.stringify(err.error || err)) }
   return res.json()
