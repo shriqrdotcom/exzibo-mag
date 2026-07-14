@@ -71,3 +71,4 @@ run = ["node", "server.js"]
 VITE_DISABLE_AUTH = "true"
 
 [userenv.shared]
+REALTIME_URL = "https://rt.exzibo.online"
