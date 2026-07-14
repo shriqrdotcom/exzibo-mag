@@ -32,6 +32,7 @@ import RestaurantDashboard  from './pages/RestaurantDashboard'
 import TeamMembers          from './pages/TeamMembers'
 import SuperAdminDashboard  from './pages/SuperAdminDashboard'
 import TeamMembersAdmin     from './pages/TeamMembersAdmin'
+import LiveOrder            from './pages/LiveOrder'
 import TablePage            from './pages/TablePage'
 import MenuLinkRoute        from './pages/MenuLinkRoute'
 import MasterControl        from './pages/MasterControl'
@@ -250,6 +251,8 @@ function SuperAdminApp() {
         element={<SuperAdminRoute><Dashboard /></SuperAdminRoute>} />
 
       {/* Sidebar nav items */}
+      <Route path="/live-order"
+        element={<SuperAdminRoute><LiveOrder /></SuperAdminRoute>} />
       <Route path="/team-members"
         element={<SuperAdminRoute><TeamMembersAdmin /></SuperAdminRoute>} />
       <Route path="/table"
@@ -473,6 +476,7 @@ function DefaultApp() {
       <Route path="/admin/:id/profile"       element={<ProfilePage />} />
       <Route path="/profile"                 element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
       <Route path="/super-admin"             element={<ProtectedRoute><SuperAdminDashboard /></ProtectedRoute>} />
+      <Route path="/live-order"              element={<ProtectedRoute><LiveOrder /></ProtectedRoute>} />
       <Route path="/team-members"            element={<ProtectedRoute><TeamMembersAdmin /></ProtectedRoute>} />
       <Route path="/settings"               element={<ProtectedRoute><Settings /></ProtectedRoute>} />
       <Route path="/create-website"          element={<ProtectedRoute><CreateWebsite /></ProtectedRoute>} />

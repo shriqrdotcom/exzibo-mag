@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom'
-import { LayoutDashboard, Settings, Zap, Users, Table2, ShieldCheck, Bell, Info, Trash2, Play, ImageDown, Route, ShieldPlus, Clock } from 'lucide-react'
+import { LayoutDashboard, Settings, Zap, Users, Table2, ShieldCheck, Bell, Info, Trash2, Play, ImageDown, Route, ShieldPlus, Clock, Radio } from 'lucide-react'
 import PermissionGate from './PermissionGate'
 
 const navItems = [
   { icon: LayoutDashboard, label: 'Dashboard',      path: '/dashboard',       permission: 'dashboard' },
+  { icon: Radio,           label: 'Live Order',     path: '/live-order',      permission: 'dashboard' },
   { icon: Users,           label: 'Team Members',   path: '/team-members',    permission: 'teamManagement' },
   { icon: Table2,          label: 'Table',          path: '/table',           permission: 'dashboard' },
   { icon: ShieldCheck,     label: 'Menu Studio', path: '/master-control',  permission: 'dashboard' },
