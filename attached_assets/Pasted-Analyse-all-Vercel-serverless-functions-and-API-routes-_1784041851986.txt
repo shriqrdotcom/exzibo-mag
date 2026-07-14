@@ -1,0 +1,275 @@
+Analyse all Vercel serverless functions and API routes in the project, then create a safe serverless-function consolidation plan.
+
+This task is analysis only.
+
+Do not modify, merge, delete, rename, refactor, install, deploy, or generate code.
+
+Goal
+
+I want to understand:
+
+- How many serverless functions currently exist
+- Which source files generate them
+- Which functions are required
+- Which functions are duplicated or unnecessarily separated
+- Which functions can be safely merged
+- Which functions must remain separate
+- How to create a clean, scalable API structure without breaking the application
+
+1. Find every serverless function
+
+Inspect the complete codebase and identify every:
+
+- Next.js App Router "route.ts" or "route.js"
+- Pages Router API file
+- Server action
+- Authentication route
+- OAuth callback
+- Webhook
+- Upload endpoint
+- Health-check endpoint
+- Cron endpoint
+- Internal backend endpoint
+- Edge function
+- Middleware file
+
+For each function, report:
+
+- Current API method
+- Current public API path
+- Exact source file path
+- Runtime: Node.js, Edge, middleware, or unknown
+- Purpose
+- Authentication required
+- Required user role
+- Request parameters or body
+- Response format
+- Database tables used
+- External services used
+- Environment variables required
+- Frontend files that call it
+- Whether it is active, unused, duplicated, incomplete, or broken
+
+2. Explain the current serverless structure
+
+Create a clear directory tree showing only:
+
+- API routes
+- Server actions
+- Authentication handlers
+- Middleware
+- Database files
+- Service integrations
+- Shared backend utilities
+
+Explain how Next.js and Vercel convert these files into deployed serverless or edge functions.
+
+Clearly state whether the database migration created additional serverless functions or only changed the database code used by existing functions.
+
+3. Find merge opportunities
+
+Compare all functions and identify functions that:
+
+- Perform the same operation
+- Use the same database tables
+- Repeat authentication logic
+- Repeat authorization logic
+- Repeat validation
+- Repeat database queries
+- Repeat response formatting
+- Use different routes for nearly identical work
+- Exist only because of old Supabase migration code
+- Are no longer called by the frontend
+- Can be handled through one dynamic route
+- Can be handled through one resource-based API route
+- Can share common service or utility logic without merging public endpoints
+
+For every possible merge, provide:
+
+- Functions involved
+- Current file paths
+- Current API paths
+- Why they appear duplicated
+- Recommended merged API structure
+- Recommended destination file path
+- HTTP methods that should remain
+- Dynamic route parameters required
+- Frontend callers that would need updating
+- Authentication and authorization requirements
+- Database tables affected
+- Risk level: Low, Medium, High, or Critical
+- Whether merging is recommended
+
+4. Identify functions that must not be merged
+
+Clearly identify functions that should remain separate, especially:
+
+- Better Auth handlers
+- Google OAuth callbacks
+- Webhooks
+- Cloudflare Worker endpoints
+- Cloudflare Durable Object logic
+- R2 upload or signed URL operations
+- Cron jobs
+- Health checks
+- Public customer APIs
+- Protected dashboard APIs
+- Superadmin APIs
+- Long-running or real-time connections
+
+For each one, explain technically why merging would create security, runtime, deployment, or maintenance risks.
+
+5. Separate route merging from code deduplication
+
+Do not assume that similar code means the public API routes must be merged.
+
+Classify every recommendation as one of these:
+
+A. Merge API routes
+
+Multiple public routes can safely become one resource-based or dynamic API route.
+
+B. Keep API routes separate but share backend logic
+
+The public endpoints should remain separate, but repeated code should move into shared services, validators, database queries, or authorization utilities.
+
+C. Remove obsolete function
+
+The function is unused, duplicated, or belongs to the removed Supabase architecture.
+
+D. Keep unchanged
+
+The function has a separate responsibility and should remain independent.
+
+6. Design the recommended API structure
+
+Create a clean proposed API tree using the existing project requirements.
+
+Organize APIs by resources, for example:
+
+- "/api/auth/..."
+- "/api/restaurants"
+- "/api/restaurants/[restaurantId]"
+- "/api/restaurants/[restaurantId]/members"
+- "/api/restaurants/[restaurantId]/menu/categories"
+- "/api/restaurants/[restaurantId]/menu/items"
+- "/api/restaurants/[restaurantId]/orders"
+- "/api/restaurants/[restaurantId]/orders/[orderId]"
+- "/api/restaurants/[restaurantId]/bookings"
+- "/api/restaurants/[restaurantId]/bookings/[bookingId]"
+- "/api/restaurants/[restaurantId]/settings"
+- "/api/uploads/..."
+- "/api/webhooks/..."
+- "/api/health/..."
+
+Use the actual project code and existing frontend routes. Do not invent unnecessary endpoints.
+
+For every proposed endpoint, provide:
+
+- HTTP method
+- API path
+- Recommended source file
+- Purpose
+- Authentication
+- Permission
+- Request format
+- Response format
+- Database tables
+- External services
+- Existing endpoints it replaces
+
+7. Check serverless compatibility
+
+Identify any function containing:
+
+- Persistent WebSocket connections
+- Long-running loops
+- Background processing after the response
+- In-memory state
+- Large file processing
+- Excessive database connections
+- Multiple unnecessary database queries
+- Node.js-only packages inside Edge runtime
+- Cloudflare-specific code inside Vercel functions
+- Vercel-specific code inside Cloudflare Workers
+- Missing timeout handling
+- Missing idempotency
+- Missing rate limiting
+
+Explain whether each function is safe for Vercel serverless execution.
+
+8. Database and transaction safety
+
+For every proposed merge, verify:
+
+- Neon connection handling remains serverless-safe
+- Drizzle transactions remain correct
+- Restaurant isolation is preserved
+- Authentication is checked on the server
+- Role authorization is preserved
+- Duplicate order or booking protection remains active
+- Upstash locks and idempotency keys remain correct
+- No cross-restaurant data access becomes possible
+- No public route gains access to protected operations
+
+9. Migration plan
+
+Provide a safe implementation order for consolidating the functions.
+
+For every step include:
+
+- Files to inspect
+- Functions involved
+- Recommended change
+- Frontend callers affected
+- Tests required
+- Rollback condition
+- Risk level
+
+The plan must avoid changing all APIs at once.
+
+Prefer this order:
+
+1. Remove confirmed dead or obsolete functions
+2. Extract shared validation and authorization
+3. Extract shared database service logic
+4. Merge low-risk duplicate routes
+5. Update frontend API callers
+6. Test authentication and restaurant isolation
+7. Merge higher-risk routes only when necessary
+8. Verify production deployment behaviour
+
+Final report format
+
+Return the report in this exact order:
+
+1. Executive summary
+2. Current serverless-function count
+3. Current API and serverless directory tree
+4. Complete serverless-function inventory
+5. Frontend-to-API dependency map
+6. Duplicate and overlapping function analysis
+7. Functions that can be merged
+8. Functions that should share logic but remain separate
+9. Functions that must not be merged
+10. Obsolete functions that may be removed
+11. Recommended final API structure
+12. Vercel serverless compatibility risks
+13. Database and security risks
+14. Step-by-step consolidation plan
+15. Final recommendation
+
+Important rules
+
+- Inspect the actual codebase before making conclusions.
+- Use exact source file paths and API paths.
+- Do not expose secret values.
+- Do not modify the project.
+- Do not merge functions only to reduce the displayed Vercel function count.
+- Do not combine unrelated business operations into one large endpoint.
+- Do not replace multiple clear REST endpoints with one generic action endpoint.
+- Do not merge public and protected operations.
+- Do not merge different authentication or permission boundaries.
+- Do not move WebSocket or Durable Object logic into Vercel serverless functions.
+- Clearly separate confirmed facts, inferred findings, and recommendations.
+- Every recommendation must include technical evidence from the codebase.
