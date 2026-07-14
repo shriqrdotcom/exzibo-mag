@@ -1,5 +1,6 @@
 import { betterAuth } from 'better-auth'
 import pg from 'pg'
+import crypto from 'node:crypto'
 
 const { Pool } = pg
 
@@ -184,6 +185,13 @@ export const auth = betterAuth({
     ...extraTrustedOrigins,
   ],
   advanced: {
+    // Generate real UUIDs for user/session/account/verification ids instead of
+    // Better Auth's default 32-char alphanumeric id. Several tables elsewhere
+    // in this schema (e.g. restaurants.owner_id) are typed `uuid` and store the
+    // Better Auth user id as a foreign key — a non-UUID id fails Postgres with
+    // "invalid input syntax for type uuid" on insert. The "user" table's `id`
+    // column itself is TEXT, so switching to UUID strings needs no migration.
+    generateId: () => crypto.randomUUID(),
     // Share session cookie across both *.exzibo.online subdomains
     crossSubDomainCookies: {
       enabled: true,
