@@ -1,59 +1,65 @@
 # Exzibo — Restaurant Management SaaS
 
 ## Overview
-A full-stack restaurant management SaaS platform. Features a cinematic dark theme (obsidian black + crimson red) with interfaces for Super Admins, Restaurant Owners, and customers. Backed by Supabase for auth, database, and real-time data.
+A full-stack restaurant management SaaS platform. Features a cinematic dark theme (obsidian black + crimson red) with interfaces for Super Admins, Restaurant Owners, and customers.
 
 ## Tech Stack
 - **Framework**: React 19 + Vite 8
 - **Routing**: React Router DOM v7
-- **Backend**: Supabase (PostgreSQL + Auth + Realtime + Storage)
+- **Backend**: Express (`server.js` in production, Vite dev middlewares in dev) + Neon PostgreSQL via Drizzle ORM
+- **Auth**: Better Auth (Google OAuth in production; `VITE_DISABLE_AUTH=true` bypass in dev)
+- **Rate limiting / dedup**: Upstash Redis
+- **File storage**: R2 (`src/lib/r2.js`)
 - **Icons**: Lucide React, React Icons
 - **Styling**: Plain CSS / inline styles (glassmorphism, dark theme, crimson accents)
 - **Other**: Leaflet (maps), react-image-crop
 
+Note: Supabase (auth/DB/realtime/storage) has been fully removed from this codebase. All data now flows through Neon Postgres via Drizzle (`src/db/*`), auth through Better Auth (`src/lib/auth.server.js`, `src/lib/auth-client.js`), and file uploads through R2.
+
 ## Project Structure
 - `src/pages/` — Main view components (Landing, Auth, AdminDashboard, SuperAdminDashboard, RestaurantWebsite, etc.)
 - `src/components/` — Reusable UI elements (Sidebar, AdminHeader, PermissionGate, modals)
-- `src/context/` — React Context providers (AuthContext for Supabase auth, RoleContext for RBAC, AnalyticsContext)
-- `src/lib/` — Utilities: `supabase.js` (client), `db.js` (service layer), `notifications.js`, `previewAuth.js`, `env.js`
-- `supabase/` — SQL migration files for Supabase (schema, RLS policies, storage, realtime setup)
+- `src/context/` — React Context providers (RBAC, Analytics)
+- `src/db/` — Drizzle schema + Neon query modules (`neon-restaurants.js`, `neon-menu-items.js`, `neon-orders.js`, `neon-bookings.js`, etc.)
+- `src/lib/` — Utilities: `auth.server.js`/`auth-client.js` (Better Auth), `db.js` (service layer), `upstash.server.js` (rate limiting), `r2.js` (file storage), `env.js`
+- `api/` — Vercel-style API handlers (auth, auth-check) used in production
 - `public/` — Static assets (menu images, icons)
+- `supabase/` — Legacy SQL migration files, retained for historical reference only; no longer used
 
 ## Environment Variables (Secrets)
-All secrets are stored in Replit Secrets (never in code):
-- `VITE_SUPABASE_URL` — Supabase project URL (used by Vite/browser bundle)
-- `VITE_SUPABASE_ANON_KEY` — Supabase anonymous/public key (used by Vite/browser bundle)
-- `SUPABASE_SERVICE_ROLE_KEY` — Supabase service role key (server-side only, never exposed to browser)
-- `DATABASE_URL` — Replit PostgreSQL connection string (auto-provisioned)
-- `PREVIEW_EMAIL` — (optional) Email for dev preview login bypass
-- `PREVIEW_PASSWORD_HASH` — (optional) bcrypt hash of preview password
-- `PREVIEW_SECRET` — (optional) HMAC secret for preview session tokens
+Configured in Replit Secrets:
+- `DATABASE_URL` — Neon/Replit PostgreSQL connection string (set; schema pushed via `npm run db:push`)
 
-Note: `server.js` (production) reads `SUPABASE_URL`/`SUPABASE_ANON_KEY` first, falling back to `VITE_SUPABASE_URL`/`VITE_SUPABASE_ANON_KEY`. Since both are set as Replit Secrets, the fallback covers production.
+Referenced by the app but not yet set in this Replit environment (dev mode works without them thanks to `VITE_DISABLE_AUTH=true`; needed for real Google sign-in, production, or rate limiting):
+- `BETTER_AUTH_SECRET` — random 32+ char string
+- `BETTER_AUTH_BASE_URL` / `BETTER_AUTH_TRUSTED_ORIGINS` — OAuth callback + allowed origins
+- `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` — Google OAuth
+- `SUPERADMIN_ALLOWED_EMAILS` — comma-separated allowlist for the superadmin panel
+- `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` — rate limiting + duplicate prevention
+
+See `.env.example` for the full reference (that file also lists Vercel-specific deployment values not relevant to Replit dev).
 
 ## Running
-- Dev server: `npm run dev` (uses locally installed vite, port 5000, host 0.0.0.0)
+- Dev server: `npm run dev` (Vite, port 5000, host 0.0.0.0) — bound to the "Start application" workflow
 - Build: `npm run build`
 - Production: `npm start` (Express server serves built `dist/` + API routes)
+- DB schema sync: `npm run db:push` (Drizzle Kit push against `DATABASE_URL`)
 - Vite config: `allowedHosts: true` for Replit proxy compatibility
 
 ## Auth & Data
-- **Auth**: Supabase Auth (Google OAuth in production). Only allowlisted emails (`exzibonew@gmail.com`, `trisanu07.nandi@gmail.com`) can access the system.
+- **Auth**: Better Auth, Google OAuth in production. Only allowlisted emails can access the superadmin panel (`SUPERADMIN_ALLOWED_EMAILS`).
 - **Dev mode**: `VITE_DISABLE_AUTH=true` (set in `.replit` development env) bypasses auth and injects a mock super-admin user — never set in production.
-- **Preview login**: A separate email+password bypass is built into `vite.config.js` (middleware at `/api/preview-login` and `/api/preview-verify`). Set `PREVIEW_EMAIL` and `PREVIEW_PASSWORD_HASH` secrets to use it. Since Replit is detected as a preview environment (`IS_PREVIEW=true`), the login page shows the preview credentials form instead of Google OAuth.
-- **Database**: Supabase PostgreSQL with Row Level Security. Tables: `restaurants`, `menu_items`, `menu_categories`, `orders`, `bookings`, `team_members`, `user_settings`, `allowed_users`.
-- **Service layer**: `src/lib/db.js` — typed functions for all Supabase CRUD operations.
+- **Database**: Neon PostgreSQL via Drizzle ORM. Tables include `restaurants`, `menu_items`, `menu_categories`, `orders`, `bookings`, `team_members`, `restaurant_about`, `audit_logs`, plus Better Auth's own session/user/account tables.
+- **Service layer**: `src/db/*` — per-entity Neon query modules; `server.js` and `vite.config.js` dev middlewares route `/api/*` to them.
+- **Real-time**: `src/lib/realtime-publisher.js` (replaces the old Supabase Realtime channels; polling-based on the client).
 
 ## Replit Compatibility Notes
 - `vite.config.js` has `server.allowedHosts: true` — required for Replit's proxy iframe
-- `src/lib/env.js` detects Replit/localhost (`.replit.app`, `.replit.dev`, `.repl.co`, `localhost`) and sets `IS_PREVIEW=true`, enabling the preview login bypass
-- The app is a pure frontend SPA — all Supabase calls happen client-side using the anon key with Row Level Security
+- `src/lib/env.js` detects Replit/localhost and sets preview-mode flags
 - `npm run dev` uses the locally installed `vite` binary (not `npx vite`) to avoid install prompts
-- Replit PostgreSQL (`DATABASE_URL`) is used alongside Supabase for isolated per-restaurant schemas (`r_<shortId>`)
-- API routes in `vite.config.js` (dev) and `server.js` (prod) handle restaurant DB provisioning (`/api/restaurant-db/*`)
+- API routes in `vite.config.js` (dev) and `server.js` (prod) handle all `/api/*` traffic (menu, orders, bookings, restaurant CRUD, restaurant-db provisioning, etc.)
 
 ## User Preferences
-- Keep Supabase for auth, database, and realtime — it is deeply integrated and holds live data
 - `VITE_DISABLE_AUTH=true` is the correct dev workflow on Replit (bypasses Google OAuth which requires a redirect URI)
 
 ## Routes
@@ -77,38 +83,7 @@ Note: `server.js` (production) reads `SUPABASE_URL`/`SUPABASE_ANON_KEY` first, f
 - `/create-website` — Restaurant website builder
 - `/restaurants` — Restaurant listing
 
-## Image Storage Architecture
-All images are stored in Supabase Storage buckets.
-
-| Image type | Bucket | Path pattern |
-|---|---|---|
-| Restaurant logo | `restaurant-images` | `{restaurantId}/logo/{ts}-{rand}.{ext}` |
-| About section image | `restaurant-images` | `{restaurantId}/about/{ts}-{rand}.{ext}` |
-| Carousel / hero images | `restaurant-images` | `{restaurantId}/carousel/{ts}-{rand}.{ext}` |
-| Menu item images | `menu-images` | `{userId}/{restaurantId}/{ts}.{ext}` |
-
-## Real-Time Architecture
-Supabase Realtime channels for cross-device live sync:
-
-| Page | Channel | Tables subscribed |
-|---|---|---|
-| AdminDashboard | `rt-orders-{id}` | `orders` |
-| AdminDashboard | `rt-bookings-{id}` | `bookings` |
-| RestaurantWebsite | `rt-menu-{id}` | `menu_items`, `menu_categories` |
-| RestaurantWebsite | `rt-order-status-{id}` | `orders` (UPDATE only) |
-| Restaurants list | `rt-restaurants` | `restaurants` |
-
-## Database Setup (Supabase SQL Editor)
-Run these in order in your Supabase Dashboard → SQL Editor:
-1. `supabase/schema.sql` — creates all tables and RLS policies
-2. `supabase/realtime_setup.sql` — enables Postgres logical replication
-3. `supabase/realtime_public_access.sql` — adds public SELECT policies on orders/bookings
-4. `supabase/storage_setup.sql` — creates storage buckets and access policies
-5. `supabase/allowed_users_setup.sql` — creates the allowlist table and validation function
-6. `supabase/super_admin_setup.sql` — sets up super admin role and RPC
-7. `supabase/multi_user_access.sql` — enables team member shared access
-8. `supabase/uid_and_publish_setup.sql` — UID system + menu publish control
-
-## Replit Import Notes
-- Imported into Replit: installed dependencies with pnpm, ran `npm run db:push` to sync the Drizzle schema to the Replit-managed Postgres database, and configured `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` / `SUPABASE_SERVICE_ROLE_KEY` as Replit Secrets.
-- Supabase remains the primary database/auth/realtime provider (per existing user preference above). Replit's built-in Postgres (`DATABASE_URL`) is used as the shadow-write layer via Drizzle (`src/db/*`), as already designed in this codebase.
+## Replit Import Setup Notes
+- Installed dependencies with `pnpm install` (this project uses pnpm; `vite` was missing until this ran, which is why the workflow initially failed with `vite: not found`).
+- Ran `npm run db:push` to push the Drizzle schema to the Replit-provisioned Neon/Postgres database (the `restaurants` table etc. didn't exist yet, causing 500s on load).
+- `DATABASE_URL` is set; Better Auth / Google OAuth / Upstash secrets are not set yet — not required for the dev workflow since `VITE_DISABLE_AUTH=true`, but will be needed before enabling real auth or rate limiting.
