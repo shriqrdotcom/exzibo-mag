@@ -6,4 +6,5 @@
 - [Supabase fully removed](supabase-removal.md) — @supabase/supabase-js uninstalled; all reads/writes go through Neon via api/*.js handlers; src/lib/supabase.js and api/_lib/supabase.js deleted; all channels replaced with polling.
 - [Fresh import needs pnpm install + db:push](exzibo-fresh-import-setup.md) — a re-import of this repo has no node_modules and an unmigrated Neon DB; both steps are required before the dev workflow works.
 - [DISABLE_AUTH mock user must be a real UUID](disable-auth-mock-user-uuid.md) — any mock/preview user id used as a Postgres uuid FK (e.g. owner_id) must be a valid UUID string, not a slug-like id.
-- [Better Auth default IDs are not UUIDs](better-auth-uuid-owner-id.md) — Better Auth's default generateId is a random alphanumeric string, not a UUID; breaks any `uuid`-typed FK column storing a user id unless `advanced.generateId` is set.
+- [Better Auth default IDs are not UUIDs](better-auth-uuid-owner-id.md) — Better Auth's default generateId is a random alphanumeric string, not a UUID; any column storing a Better Auth user id must be typed `text`, not `uuid`.
+- [Dev workflow caches env at start](dev-workflow-stale-env-after-secret-change.md) — restart the workflow after secrets change mid-session, or you'll debug against a stale DATABASE_URL/env.

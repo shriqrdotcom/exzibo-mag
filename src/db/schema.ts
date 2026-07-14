@@ -31,8 +31,11 @@ export const restaurants = pgTable(
     slug:              text('slug').notNull(),
     name:              text('name').notNull(),
 
-    // Auth — nullable until Better Auth is added
-    ownerId:           uuid('owner_id'),
+    // Auth — stores the Better Auth user id. Better Auth ids are TEXT (its
+    // default generator is a random alphanumeric string, not a UUID), so this
+    // must be `text`, not `uuid` — a `uuid` column rejects real Better Auth
+    // ids with "invalid input syntax for type uuid".
+    ownerId:           text('owner_id'),
 
     status:            text('status').notNull().default('active'),
     plan:              text('plan').notNull().default('STARTER'),
