@@ -1,10 +1,11 @@
 import { setCors } from './_lib/cors.js'
 import { rateLimit, acquireLock, releaseLock, getClientIp, send429 } from '../src/lib/upstash.server.js'
 import { publishOrderRealtimeEvent } from '../src/lib/realtime-publisher.js'
-import { upsertNeonOrder, updateNeonOrderStatus, deleteOldNeonOrders } from '../src/db/neon-orders.js'
+import { upsertNeonOrder, updateNeonOrderStatus, deleteOldNeonOrders, getNeonOrders } from '../src/db/neon-orders.js'
 
 // ── /api/orders — Order Operations Handler (Neon-only) ───────────────────────
 //
+// GET  ?restaurantId=<id>    → list orders for restaurant (used by Live Order / dashboard)
 // POST (no action)          body: { id, restaurant_id, ... } → create order
 // POST ?action=updateStatus body: { orderId, status, restaurantId }
 // POST ?action=autoCleanup  body: { confirmedDeleteHours?, rejectedDeleteMinutes? }
@@ -12,6 +13,19 @@ import { upsertNeonOrder, updateNeonOrderStatus, deleteOldNeonOrders } from '../
 export default async function handler(req, res) {
   setCors(res)
   if (req.method === 'OPTIONS') return res.status(200).end()
+
+  if (req.method === 'GET') {
+    const { restaurantId } = req.query
+    if (!restaurantId) return res.status(400).json({ error: 'restaurantId is required' })
+    try {
+      const rows = await getNeonOrders(restaurantId)
+      return res.status(200).json(rows)
+    } catch (err) {
+      console.error('[orders GET] Error:', err.message)
+      return res.status(500).json({ error: err.message })
+    }
+  }
+
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
   const action = req.query.action
