@@ -92,9 +92,11 @@ export const restaurantMembers = pgTable(
     id:           uuid('id').primaryKey().default(sql`gen_random_uuid()`),
     restaurantId: uuid('restaurant_id').notNull().references(() => restaurants.id, { onDelete: 'cascade' }),
 
-    // Auth — nullable until Better Auth is added
-    userId:       uuid('user_id'),
-    ownerId:      uuid('owner_id'),
+    // Auth — stores Better Auth user ids, which are TEXT (see restaurants.ownerId
+    // comment). Must stay `text`, not `uuid`, or any real membership lookup by
+    // user id throws "invalid input syntax for type uuid".
+    userId:       text('user_id'),
+    ownerId:      text('owner_id'),
 
     name:         text('name').notNull(),
     email:        text('email'),
