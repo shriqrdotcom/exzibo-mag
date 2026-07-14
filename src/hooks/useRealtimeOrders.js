@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 /**
  * Connects to the Cloudflare realtime WebSocket for a restaurant and calls
@@ -11,11 +11,18 @@ import { useEffect, useRef } from 'react'
  *
  * The frontend never calls /publish/order-event and never uses
  * REALTIME_PUBLISH_SECRET — this hook is receive-only (role=staff).
+ *
+ * Returns live connection telemetry so UI can render a "monitor" of the
+ * Cloudflare Worker / Durable Object pipeline: { status, lastEvent, wsHost }.
+ * Existing callers that ignore the return value are unaffected.
  */
 export function useRealtimeOrders(restaurantId, onOrderEvent) {
   const socketRef = useRef(null)
   const destroyedRef = useRef(false)
   const retryTimerRef = useRef(null)
+  const [status, setStatus] = useState('idle') // idle | connecting | open | closed | reconnecting
+  const [lastEvent, setLastEvent] = useState(null) // { type, time }
+  const [wsHost, setWsHost] = useState('')
 
   useEffect(() => {
     if (!restaurantId || restaurantId === 'demo') return
@@ -29,6 +36,9 @@ export function useRealtimeOrders(restaurantId, onOrderEvent) {
       .replace(/^https?:\/\//, '')
       .replace(/\/$/, '')
     const wsUrl = `wss://${base}/ws/restaurant/${restaurantId}?role=staff`
+    setWsHost(base)
+
+    let hasConnectedBefore = false
 
     function connect() {
       // Guard: don't open if already open for this restaurantId
@@ -37,11 +47,14 @@ export function useRealtimeOrders(restaurantId, onOrderEvent) {
         return
       }
 
+      setStatus(hasConnectedBefore ? 'reconnecting' : 'connecting')
       console.log('[cf-rt] connecting:', wsUrl)
       const ws = new WebSocket(wsUrl)
       socketRef.current = ws
 
       ws.onopen = () => {
+        hasConnectedBefore = true
+        setStatus('open')
         console.log('[cf-rt] connected — restaurant:', restaurantId)
       }
 
@@ -55,6 +68,7 @@ export function useRealtimeOrders(restaurantId, onOrderEvent) {
             type === 'ORDER_CANCELLED'
           ) {
             console.log('[cf-rt] event received:', type)
+            setLastEvent({ type, time: Date.now(), orderId: msg.orderId })
             onOrderEvent(type, msg)
           }
         } catch {
@@ -66,6 +80,7 @@ export function useRealtimeOrders(restaurantId, onOrderEvent) {
         console.log('[cf-rt] closed — code:', evt.code, 'clean:', evt.wasClean)
         socketRef.current = null
         if (destroyedRef.current) return  // unmounted — do not retry
+        setStatus('closed')
         // Reconnect after 2 s for any non-clean close (server restart, network
         // blip, etc.). Code 1000 is a normal intentional close — also retry
         // because the worker may have restarted.
@@ -88,6 +103,9 @@ export function useRealtimeOrders(restaurantId, onOrderEvent) {
         socketRef.current.close(1000, 'component unmount')
         socketRef.current = null
       }
+      setStatus('idle')
     }
   }, [restaurantId]) // re-run only if restaurantId changes; onOrderEvent is stable via useCallback
+
+  return { status, lastEvent, wsHost }
 }
