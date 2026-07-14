@@ -6,3 +6,9 @@ id = "66uKLUXb86B5dL3qMkALu"
 uri = "file://exzibo-restaurant-profile-analysis.pdf"
 type = "pdf"
 title = "Exzibo — Restaurant Profile Analysis Report"
+
+[[outputs]]
+id = "lKIKnkjSK9jIOcTFsFCt6"
+uri = "file://docs/serverless-function-analysis.pdf"
+type = "pdf"
+title = "Serverless Function Consolidation Analysis (PDF)"

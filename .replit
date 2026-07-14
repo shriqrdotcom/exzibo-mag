@@ -1,4 +1,4 @@
-modules = ["web", "nodejs-22", "postgresql-16"]
+modules = ["web", "nodejs-22", "postgresql-16", "python-3.11"]
 [agent]
 expertMode = true
 stack = "BEST_EFFORT_FALLBACK"
@@ -6,6 +6,7 @@ integrations = ["javascript_database:1.0.0"]
 
 [nix]
 channel = "stable-25_05"
+packages = ["fontconfig", "ghostscript", "glib", "harfbuzz", "pango"]
 
 [workflows]
 runButton = "Project"
