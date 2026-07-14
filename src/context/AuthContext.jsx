@@ -8,7 +8,7 @@ import { setCurrentAuthUser } from '../lib/current-user'
 // ── Mock user injected when DISABLE_AUTH=true ─────────────────────────────────
 // Used only in dev. Never reaches production.
 const MOCK_USER = {
-  id:            'preview-user-disable-auth',
+  id:            '00000000-0000-4000-8000-000000000001',
   email:         'exzibonew@gmail.com',
   isPreviewUser: true,
   isDisableAuth: true,
