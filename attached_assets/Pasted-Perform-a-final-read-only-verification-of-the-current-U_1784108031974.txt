@@ -1,0 +1,114 @@
+Perform a final read-only verification of the current Unoneo API and Vercel serverless-function structure.
+
+Do not modify, create, delete, rename, merge, refactor, install, or deploy anything.
+
+Goal:
+Confirm whether the current code can safely move from 12 to exactly 11 physical Vercel functions by merging only:
+
+api/menu.js
+api/content.js
+
+into:
+
+api/menu-content.js
+
+Do not implement the merge yet.
+
+Inspect the current source code, especially:
+
+- api/*.js and api/_lib/*
+- vercel.json
+- vite.config.js
+- server.js
+- src/lib/db.js and src/db/*
+- all frontend/direct fetch() API calls
+- Better Auth authorization logic
+- Upstash rate limits and locks
+
+Verify:
+
+1. The exact current physical Vercel function count and list all physical functions.
+
+2. Every route and action handled by menu.js and content.js, including:
+- HTTP method
+- public API URL
+- rewrite destination
+- action
+- request and response format
+- frontend caller
+- database tables
+- authorization
+- Upstash rate limits, locks and TTLs
+
+3. Whether menu.js and content.js can safely share one thin menu-content.js router without changing any existing public API URL or API contract.
+
+Check for:
+- action or method conflicts
+- request/response conflicts
+- CORS differences
+- runtime or body-size differences
+- authorization differences
+- Upstash key/TTL collisions
+- dependency conflicts
+- vercel.json rewrite conflicts
+
+4. Identify menu/content write actions that lack proper server-side session, restaurant-membership, or role authorization.
+
+Keep legitimate public menu/about reads public.
+
+5. Find duplicated menu/content business logic across api/*.js, vite.config.js, and server.js.
+
+Confirm whether the logic should first be separated into:
+
+- menuService.js
+- restaurantContentService.js
+
+Do not combine them into one service.
+
+6. Confirm whether the correct immediate target is exactly:
+
+1. auth.js
+2. auth-check.js
+3. restaurants.js
+4. settings.js
+5. team.js
+6. menu-content.js
+7. media.js
+8. orders.js
+9. bookings.js
+10. notifications.js
+11. system.js
+
+7. Provide the exact safe implementation order and affected files.
+
+The expected order is:
+
+A. Fix menu/content authorization blockers.
+B. Extract the two shared services while existing handlers still work.
+C. Verify no behavior or API contract changed.
+D. Create thin api/menu-content.js.
+E. Update affected vercel.json rewrites atomically.
+F. Test in Vercel Preview.
+G. Confirm exactly 11 physical functions.
+H. Stop.
+
+Also provide a concise regression test checklist for routes, methods, responses, authorization, database operations, Upstash behavior, rewrites, and Vite/Express/Vercel parity.
+
+Important:
+- Analysis only. Make no code changes.
+- Base the report on the exact current source code, not previous audits.
+- Do not analyse or merge settings + team.
+- Do not analyse or merge orders + bookings.
+- Do not change public API URLs.
+- Do not modify unrelated functions.
+- Do not add dependencies or database migrations.
+
+Finish with exactly one verdict:
+
+SAFE TO PROCEED TO IMPLEMENTATION
+
+or
+
+NOT SAFE TO PROCEED
+
+If not safe, list the exact blockers and affected files.
