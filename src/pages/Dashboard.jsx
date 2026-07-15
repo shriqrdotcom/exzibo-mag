@@ -157,11 +157,107 @@ function mapRow(r) {
   }
 }
 
+function DashboardSkeleton() {
+  return (
+    <div>
+      <style>{`
+        @keyframes dskShimmer {
+          0%   { background-position: -800px 0; }
+          100% { background-position:  800px 0; }
+        }
+        .dsk {
+          background: linear-gradient(90deg, #1c1c1c 25%, #272727 50%, #1c1c1c 75%);
+          background-size: 1600px 100%;
+          animation: dskShimmer 1.6s infinite linear;
+          border-radius: 8px;
+        }
+      `}</style>
+
+      {/* ── KPI cards row ── */}
+      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '16px', marginBottom: '32px' }}>
+        {/* Card 1 — large */}
+        <div style={{ background: '#111', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '20px', padding: '28px' }}>
+          <div className="dsk" style={{ width: '140px', height: '11px', marginBottom: '20px' }} />
+          <div className="dsk" style={{ width: '90px', height: '48px', borderRadius: '10px' }} />
+        </div>
+        {/* Card 2 */}
+        <div style={{ background: '#111', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '20px', padding: '28px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+            <div className="dsk" style={{ width: '110px', height: '11px' }} />
+            <div className="dsk" style={{ width: '70px', height: '26px', borderRadius: '6px' }} />
+          </div>
+          <div className="dsk" style={{ width: '100px', height: '48px', borderRadius: '10px' }} />
+        </div>
+        {/* Card 3 */}
+        <div style={{ background: '#111', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '20px', padding: '28px' }}>
+          <div className="dsk" style={{ width: '130px', height: '11px', marginBottom: '12px' }} />
+          <div className="dsk" style={{ width: '60px', height: '11px', marginBottom: '16px' }} />
+          <div className="dsk" style={{ width: '80px', height: '48px', borderRadius: '10px' }} />
+        </div>
+      </div>
+
+      {/* ── Table area ── */}
+      <div style={{ background: '#111', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '20px', overflow: 'hidden' }}>
+        {/* Table header bar */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '24px 28px' }}>
+          <div className="dsk" style={{ width: '180px', height: '18px', borderRadius: '6px' }} />
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <div className="dsk" style={{ width: '80px', height: '34px', borderRadius: '8px' }} />
+            <div className="dsk" style={{ width: '80px', height: '34px', borderRadius: '8px' }} />
+          </div>
+        </div>
+
+        {/* Column header row */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 0.8fr 1.4fr 0.8fr 0.6fr 1fr', gap: '0', padding: '14px 28px', borderTop: '1px solid rgba(255,255,255,0.05)', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+          {[80, 60, 100, 50, 55, 65].map((w, i) => (
+            <div key={i} className="dsk" style={{ width: `${w}px`, height: '10px', borderRadius: '4px' }} />
+          ))}
+        </div>
+
+        {/* Skeleton rows */}
+        {[1, 2, 3, 4, 5].map(i => (
+          <div key={i} style={{ display: 'grid', gridTemplateColumns: '1.4fr 0.8fr 1.4fr 0.8fr 0.6fr 1fr', gap: '0', padding: '20px 28px', borderBottom: i < 5 ? '1px solid rgba(255,255,255,0.04)' : 'none', alignItems: 'center' }}>
+            {/* UID + name */}
+            <div>
+              <div className="dsk" style={{ width: '110px', height: '13px', marginBottom: '6px' }} />
+              <div className="dsk" style={{ width: '80px', height: '10px' }} />
+            </div>
+            {/* Status badge */}
+            <div className="dsk" style={{ width: '72px', height: '22px', borderRadius: '50px' }} />
+            {/* Timeline */}
+            <div className="dsk" style={{ width: '140px', height: '12px' }} />
+            {/* Plan */}
+            <div className="dsk" style={{ width: '60px', height: '22px', borderRadius: '50px' }} />
+            {/* Place */}
+            <div className="dsk" style={{ width: '38px', height: '28px', borderRadius: '8px' }} />
+            {/* Actions */}
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <div className="dsk" style={{ width: '32px', height: '32px', borderRadius: '8px' }} />
+              <div className="dsk" style={{ width: '32px', height: '32px', borderRadius: '8px' }} />
+            </div>
+          </div>
+        ))}
+
+        {/* Footer */}
+        <div style={{ padding: '18px 28px', borderTop: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div className="dsk" style={{ width: '90px', height: '11px' }} />
+          <div style={{ display: 'flex', gap: '6px' }}>
+            {[1, 2, 3, 4].map(i => (
+              <div key={i} className="dsk" style={{ width: '36px', height: '36px', borderRadius: '50%' }} />
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function Dashboard() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const activeSection = searchParams.get('section')
   const { exitRoleView } = useRole()
+  const [loading, setLoading] = useState(true)
   const [currentPage, setCurrentPage] = useState(1)
   const [restaurants, setRestaurants] = useState([])
   const [deleteTarget, setDeleteTarget] = useState(null)
@@ -288,9 +384,8 @@ export default function Dashboard() {
   }, [])
 
   useEffect(() => {
-    fetchRestaurants()
-    fetchOrderCount()
     setRevenueEntries(syncRevenueLedger())
+    Promise.all([fetchRestaurants(), fetchOrderCount()]).finally(() => setLoading(false))
     const onFocus = () => {
       setRevenueEntries(syncRevenueLedger())
       fetchOrderCount()
@@ -337,7 +432,9 @@ export default function Dashboard() {
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <AdminHeader />
         <main style={{ flex: 1, overflowY: 'auto', padding: '32px' }}>
-          {activeSection === 'image-compressor' ? (
+          {loading && !activeSection ? (
+            <DashboardSkeleton />
+          ) : activeSection === 'image-compressor' ? (
             <ImageCompressor />
           ) : activeSection === 'demo' ? (
             <DemoWebsitesPanel
