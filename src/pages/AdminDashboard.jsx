@@ -406,9 +406,15 @@ export default function AdminDashboard({ restaurantId: restaurantIdProp, initial
         return
       }
       // Try Supabase first (public query — no auth needed), fall back to localStorage
+      // Fetch restaurant, orders, and bookings in parallel — all three only need `id`
       let found = null
       try {
-        found = await getRestaurantById(id)
+        const [restaurantResult, orderRows, bookingRows] = await Promise.all([
+          getRestaurantById(id).catch(() => null),
+          getOrders(id).catch(() => []),
+          getBookings(id).catch(() => []),
+        ])
+        found = restaurantResult
         // Keep this restaurant in localStorage in sync
         if (found) {
           try {
@@ -419,6 +425,12 @@ export default function AdminDashboard({ restaurantId: restaurantIdProp, initial
             localStorage.setItem('exzibo_restaurants', JSON.stringify(updated))
           } catch { /* noop */ }
         }
+        if (orderRows.length > 0) {
+          try { localStorage.setItem(`exzibo_orders_${id}`, JSON.stringify(orderRows)) } catch {}
+        }
+        if (bookingRows.length > 0) {
+          try { localStorage.setItem(`exzibo_bookings_${id}`, JSON.stringify(bookingRows)) } catch {}
+        }
       } catch { /* noop */ }
       if (!found) {
         const all = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
@@ -426,25 +438,7 @@ export default function AdminDashboard({ restaurantId: restaurantIdProp, initial
       }
       if (!found) { setNotFound(true); return }
       setRestaurant(found)
-      // Load orders
-      let orderRows = []
-      try {
-        orderRows = await getOrders(id)
-        if (orderRows.length > 0) {
-          const key = `exzibo_orders_${id}`
-          localStorage.setItem(key, JSON.stringify(orderRows))
-        }
-      } catch { /* noop */ }
       setOrders(cleanAndPersistOrders(id))
-      // Load bookings
-      let bookingRows = []
-      try {
-        bookingRows = await getBookings(id)
-        if (bookingRows.length > 0) {
-          const key = `exzibo_bookings_${id}`
-          localStorage.setItem(key, JSON.stringify(bookingRows))
-        }
-      } catch { /* noop */ }
       setBookings(loadBookings(id))
     }
     init()
@@ -454,11 +448,8 @@ export default function AdminDashboard({ restaurantId: restaurantIdProp, initial
   useEffect(() => {
     if (isDefault || !id) return
 
-    // Poll — refetch every 30 s in case realtime misses an event.
-    // Uses a MERGE strategy: DB is the source of truth for existing rows, but
-    // any optimistic update that is already in a "terminal" state (confirmed /
-    // cancelled / rejected / completed) is preserved so the UI never reverts
-    // between the optimistic write and the Supabase round-trip completing.
+    // Poll — fallback every 60 s in case the WebSocket misses an event.
+    // (WebSocket handles real-time; polling is a safety net only.)
     const TERMINAL = new Set(['confirmed', 'cancelled', 'rejected', 'completed', 'ready'])
     const poll = setInterval(async () => {
       try {
@@ -481,7 +472,7 @@ export default function AdminDashboard({ restaurantId: restaurantIdProp, initial
           return merged
         })
       } catch { /* noop */ }
-    }, 30_000)
+    }, 60_000)
 
     return () => { clearInterval(poll) }
   }, [id, isDefault])
@@ -518,7 +509,7 @@ export default function AdminDashboard({ restaurantId: restaurantIdProp, initial
   useEffect(() => {
     if (isDefault || !id) return
 
-    // Poll — refetch every 15 s
+    // Poll — fallback every 60 s (bookings have no WebSocket; this is the only refresh path)
     const poll = setInterval(async () => {
       try {
         const data = await getBookings(id)
@@ -526,7 +517,7 @@ export default function AdminDashboard({ restaurantId: restaurantIdProp, initial
         try { localStorage.setItem(`exzibo_bookings_${id}`, JSON.stringify(data)) } catch {}
         notifyAnalyticsUpdate()
       } catch { /* noop */ }
-    }, 15_000)
+    }, 60_000)
 
     return () => { clearInterval(poll) }
   }, [id, isDefault])

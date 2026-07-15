@@ -89,6 +89,7 @@ export async function getNeonBookings(restaurantId) {
     FROM bookings
     WHERE restaurant_id = ${restaurantId}::uuid
     ORDER BY created_at DESC
+    LIMIT 500
   `
   return rows
 }

@@ -326,64 +326,64 @@ app.post('/api/restaurant-db/create', async (req, res) => {
 
     await client.query(`CREATE SCHEMA IF NOT EXISTS "${schemaName}"`)
 
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS "${schemaName}".orders (
-        id                TEXT PRIMARY KEY,
-        table_number      TEXT,
-        customer_name     TEXT,
-        customer_phone    TEXT,
-        customer_location TEXT,
-        items             JSONB        DEFAULT '[]',
-        status            TEXT         DEFAULT 'pending',
-        total             DECIMAL(10,2) DEFAULT 0,
-        notes             TEXT,
-        created_at        TIMESTAMPTZ  DEFAULT NOW()
-      )
-    `)
-
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS "${schemaName}".bookings (
-        id              TEXT PRIMARY KEY,
-        customer_name   TEXT         NOT NULL DEFAULT '',
-        customer_phone  TEXT,
-        customer_email  TEXT,
-        guests          INTEGER      DEFAULT 1,
-        date            TEXT,
-        time            TEXT,
-        occasion        TEXT,
-        seating         TEXT,
-        notes           TEXT,
-        status          TEXT         DEFAULT 'pending',
-        created_at      TIMESTAMPTZ  DEFAULT NOW()
-      )
-    `)
-
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS "${schemaName}".menu_categories (
-        id         TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
-        name       TEXT        NOT NULL DEFAULT '',
-        emoji      TEXT        DEFAULT '🍽️',
-        position   INTEGER     DEFAULT 0,
-        created_at TIMESTAMPTZ DEFAULT NOW()
-      )
-    `)
-
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS "${schemaName}".menu_items (
-        id           TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
-        category_id  TEXT,
-        name         TEXT         NOT NULL DEFAULT '',
-        description  TEXT,
-        price        DECIMAL(10,2) DEFAULT 0,
-        image        TEXT,
-        available    BOOLEAN      DEFAULT true,
-        veg          BOOLEAN      DEFAULT true,
-        tags         JSONB        DEFAULT '[]',
-        add_ons      JSONB        DEFAULT '[]',
-        is_published BOOLEAN      DEFAULT false,
-        created_at   TIMESTAMPTZ  DEFAULT NOW()
-      )
-    `)
+    // Create all four tables in parallel — they are independent within the schema
+    await Promise.all([
+      client.query(`
+        CREATE TABLE IF NOT EXISTS "${schemaName}".orders (
+          id                TEXT PRIMARY KEY,
+          table_number      TEXT,
+          customer_name     TEXT,
+          customer_phone    TEXT,
+          customer_location TEXT,
+          items             JSONB        DEFAULT '[]',
+          status            TEXT         DEFAULT 'pending',
+          total             DECIMAL(10,2) DEFAULT 0,
+          notes             TEXT,
+          created_at        TIMESTAMPTZ  DEFAULT NOW()
+        )
+      `),
+      client.query(`
+        CREATE TABLE IF NOT EXISTS "${schemaName}".bookings (
+          id              TEXT PRIMARY KEY,
+          customer_name   TEXT         NOT NULL DEFAULT '',
+          customer_phone  TEXT,
+          customer_email  TEXT,
+          guests          INTEGER      DEFAULT 1,
+          date            TEXT,
+          time            TEXT,
+          occasion        TEXT,
+          seating         TEXT,
+          notes           TEXT,
+          status          TEXT         DEFAULT 'pending',
+          created_at      TIMESTAMPTZ  DEFAULT NOW()
+        )
+      `),
+      client.query(`
+        CREATE TABLE IF NOT EXISTS "${schemaName}".menu_categories (
+          id         TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+          name       TEXT        NOT NULL DEFAULT '',
+          emoji      TEXT        DEFAULT '🍽️',
+          position   INTEGER     DEFAULT 0,
+          created_at TIMESTAMPTZ DEFAULT NOW()
+        )
+      `),
+      client.query(`
+        CREATE TABLE IF NOT EXISTS "${schemaName}".menu_items (
+          id           TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+          category_id  TEXT,
+          name         TEXT         NOT NULL DEFAULT '',
+          description  TEXT,
+          price        DECIMAL(10,2) DEFAULT 0,
+          image        TEXT,
+          available    BOOLEAN      DEFAULT true,
+          veg          BOOLEAN      DEFAULT true,
+          tags         JSONB        DEFAULT '[]',
+          add_ons      JSONB        DEFAULT '[]',
+          is_published BOOLEAN      DEFAULT false,
+          created_at   TIMESTAMPTZ  DEFAULT NOW()
+        )
+      `),
+    ])
 
     await client.query(`
       INSERT INTO public.restaurant_databases (restaurant_id, schema_name, restaurant_name)

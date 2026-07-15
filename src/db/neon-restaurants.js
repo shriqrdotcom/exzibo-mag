@@ -68,12 +68,13 @@ export async function createNeonRestaurant(payload) {
 
   const sql = getSql()
 
-  // Uniqueness guards
-  const [slugTaken] = await sql`SELECT id FROM restaurants WHERE slug = ${slug} LIMIT 1`
+  // Uniqueness guards — run both checks in parallel
+  const [[slugTaken], [uidTaken]] = await Promise.all([
+    sql`SELECT id FROM restaurants WHERE slug = ${slug} LIMIT 1`,
+    sql`SELECT id FROM restaurants WHERE uid  = ${uid}  LIMIT 1`,
+  ])
   if (slugTaken) throw new Error(`Slug "${slug}" is already taken in Neon`)
-
-  const [uidTaken] = await sql`SELECT id FROM restaurants WHERE uid = ${uid} LIMIT 1`
-  if (uidTaken) throw new Error(`UID "${uid}" is already taken in Neon`)
+  if (uidTaken)  throw new Error(`UID "${uid}" is already taken in Neon`)
 
   // If caller provides an id (shadow-write from Supabase), reuse it so both
   // databases share the same UUID. Otherwise Neon auto-generates one.

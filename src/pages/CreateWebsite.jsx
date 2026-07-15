@@ -206,19 +206,17 @@ export default function CreateWebsite() {
       // If the 'restaurant-images' bucket doesn't exist yet, this
       // block is skipped and the restaurant still saves successfully.
       try {
-        const imageUrls = []
-        for (let i = 0; i < form.uploadedImages.length; i++) {
-          const img = form.uploadedImages[i]
-          if (img.file) {
-            const url = await uploadCarouselImageViaApi(img.file, created.id)
-            imageUrls.push(url)
-          }
-        }
-
-        let logoUrl = null
-        if (form.logo?.file) {
-          logoUrl = await uploadLogoFileViaApi(form.logo.file, created.id)
-        }
+        // Upload all carousel images in parallel, then the logo alongside them
+        const [imageUrls, logoUrl] = await Promise.all([
+          Promise.all(
+            form.uploadedImages
+              .filter(img => img.file)
+              .map(img => uploadCarouselImageViaApi(img.file, created.id))
+          ),
+          form.logo?.file
+            ? uploadLogoFileViaApi(form.logo.file, created.id)
+            : Promise.resolve(null),
+        ])
 
         if (imageUrls.length > 0 || logoUrl) {
           await updateRestaurant(created.id, {
