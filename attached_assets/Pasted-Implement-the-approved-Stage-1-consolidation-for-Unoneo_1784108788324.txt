@@ -1,0 +1,225 @@
+Implement the approved Stage 1 consolidation for Unoneo.
+
+Goal:
+Reduce the current Vercel serverless-function count from 12 to exactly 11 by merging only:
+
+api/menu.js
+api/content.js
+
+into:
+
+api/menu-content.js
+
+The verification report confirmed that this merge is technically compatible, but two blockers must be completed first:
+
+1. Add proper server-side authorization to all protected menu and content write actions.
+2. Extract shared menu and restaurant-content services so Vercel, Vite, and Express use the same business logic.
+
+Do not merge settings + team or orders + bookings.
+
+Required implementation order:
+
+1. Protect the 8 write actions
+
+Menu writes:
+- createItem
+- upsertItems
+- updateItem
+- deleteItem
+- upsertCategory
+- deleteCategory
+
+Content writes:
+- saveAbout
+- updateSocial
+
+For each protected write:
+- Require a valid Better Auth session.
+- Require access to the target restaurant using the existing authorization helpers in api/_lib/authz.js.
+- Return 401 when no valid session exists.
+- Return 403 when the user does not have access to that restaurant.
+- Keep legitimate public menu, published-menu, category, and about reads public.
+- Do not treat CORS, rate limits, locks, or knowledge of restaurantId as authorization.
+
+2. Extract shared services
+
+Create two separate server-only services:
+
+- src/services/menuService.js
+- src/services/restaurantContentService.js
+
+menuService.js must own only:
+- menu categories
+- menu items
+- published menu reads
+- menu writes
+- menu-specific Upstash rate limits and locks
+
+restaurantContentService.js must own only:
+- about/story content
+- social-link updates
+- content-specific validation and rate limits
+
+Do not create one combined service.
+
+3. Remove duplicated runtime logic
+
+Update these current adapters to call the shared services:
+
+- api/menu.js
+- api/content.js
+- vite.config.js
+- server.js
+
+Do not keep separate SQL, validation, rate-limit, or lock implementations in Vite or Express.
+
+Before merging the physical handlers, verify that the existing public routes still return the same successful response shapes, status codes, and side effects.
+
+4. Create the merged thin router
+
+Create:
+
+api/menu-content.js
+
+It must:
+- Set the existing CORS headers.
+- Validate HTTP methods.
+- Require the existing action parameter.
+- Dispatch explicitly to menuService or restaurantContentService.
+- Reject unknown actions.
+- Return 400 when action is missing.
+- Return 405 for unsupported methods where the current handlers do so.
+- Never infer menu versus restaurant content from request-body fields.
+- Contain routing and response handling only, not duplicated database business logic.
+
+5. Preserve every public API contract
+
+Keep these public routes unchanged:
+
+Menu:
+- GET /api/menu/categories/:restaurantId
+- GET /api/menu/items/:restaurantId
+- GET /api/menu/items/:restaurantId/published
+- POST /api/menu/items
+- POST /api/menu/items/upsert
+- POST /api/menu/item-patch
+- POST /api/menu/item-delete
+- POST /api/menu/categories/upsert
+- POST /api/menu/categories/delete
+
+Content:
+- GET /api/about/:restaurantId
+- POST /api/about/save
+- POST /api/restaurant/update-social
+
+Preserve:
+- HTTP methods
+- query parameters
+- request bodies
+- action names
+- status codes
+- JSON response shapes
+- error behavior
+- CORS headers
+- database operations
+- Upstash rate-limit prefixes and thresholds
+- lock prefixes and TTLs
+
+Existing Upstash namespaces must remain unchanged, including:
+
+- rl:menu-create
+- rl:menu-upsert
+- rl:menu-update
+- rl:menu-delete
+- rl:category-upsert
+- rl:category-delete
+- rl:about-save
+- rl:social-update
+- lock:menu-item:*
+- lock:menu-category:*
+
+Do not introduce realtime publishing. Neither menu nor content routes should publish Cloudflare realtime events.
+
+6. Update Vercel rewrites atomically
+
+Update all 12 affected vercel.json rewrites:
+
+- 9 menu rewrites
+- 3 about/social rewrites
+
+All must point to api/menu-content.js.
+
+Do not change their public source URLs.
+
+Confirm that no rewrite remains pointed at api/menu.js or api/content.js.
+
+7. Remove old physical handlers
+
+Only after the shared services work and every rewrite points to the merged router:
+
+- Delete api/menu.js
+- Delete api/content.js
+
+Do not delete or rename any other api/*.js file.
+
+8. Verify the final structure
+
+The final physical Vercel functions must be exactly:
+
+1. auth.js
+2. auth-check.js
+3. restaurants.js
+4. settings.js
+5. team.js
+6. menu-content.js
+7. media.js
+8. orders.js
+9. bookings.js
+10. notifications.js
+11. system.js
+
+9. Required verification
+
+Verify:
+
+- All 12 existing public menu/content URLs still work.
+- Missing action returns the same 400 behavior.
+- Wrong methods return the expected 405 behavior.
+- Public reads remain public.
+- Protected writes return 401 without a session.
+- Cross-restaurant or unauthorized writes return 403.
+- Authorized restaurant users can still perform permitted writes.
+- Response status codes and JSON shapes remain compatible.
+- Database results remain unchanged.
+- Upstash limits still trigger at the same thresholds.
+- Menu item and category locks still prevent concurrent destructive actions.
+- CORS headers remain identical.
+- Vite, Express, and Vercel use the same shared services.
+- settings.js, team.js, orders.js, and bookings.js remain untouched.
+- Vercel detects exactly 11 physical functions.
+
+Do not:
+
+- Merge settings.js with team.js.
+- Merge orders.js with bookings.js.
+- Modify auth.js, auth-check.js, restaurants.js, media.js, notifications.js, or system.js.
+- Modify Cloudflare Worker, Durable Object, realtime publishing, or R2 upload behavior.
+- Change frontend public API URLs.
+- Change the database schema or migrations.
+- Install dependencies.
+- Refactor unrelated code.
+- Continue to another consolidation stage.
+
+After completion, report:
+
+- Files created
+- Files modified
+- Files deleted
+- Authorization added to each write action
+- All preserved public routes
+- Upstash limits and locks verified
+- Vite/Express/Vercel parity result
+- Final physical function count
+- Failed tests or remaining risks
+
+Complete only this 12-to-11 function consolidation and stop.

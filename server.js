@@ -13,18 +13,8 @@ import {
   patchNeonRestaurant,
   getNeonRestaurants,
 } from './src/db/neon-restaurants.js'
-import {
-  upsertNeonMenuCategory,
-  deleteNeonMenuCategory,
-  getNeonMenuCategories,
-} from './src/db/neon-menu-categories.js'
-import {
-  upsertNeonMenuItem,
-  upsertNeonMenuItems,
-  deleteNeonMenuItem,
-  getNeonMenuItems,
-  getNeonPublishedMenuItems,
-} from './src/db/neon-menu-items.js'
+import * as menuService from './src/services/menuService.js'
+import * as contentService from './src/services/restaurantContentService.js'
 import {
   upsertNeonBooking,
   updateNeonBookingStatus,
@@ -42,7 +32,6 @@ import {
   deleteNeonRestaurantMember,
   getNeonRestaurantMembers,
 } from './src/db/neon-restaurant-members.js'
-import { upsertNeonRestaurantAbout, getNeonRestaurantAbout } from './src/db/neon-restaurant-about.js'
 import { upsertNeonRestaurantSettingsKey } from './src/db/neon-restaurant-settings.js'
 import { writeAuditLog } from './src/db/neon-audit-logs.js'
 import { r2Upload } from './src/lib/r2.js'
@@ -461,7 +450,7 @@ app.get('/api/restaurant-db/list', async (req, res) => {
 })
 
 // ── Menu API ──────────────────────────────────────────────────────────────────
-// All menu CRUD goes through these server endpoints (dev) / api/menu.js (prod).
+// All menu CRUD goes through these server endpoints (dev) / api/menu-content.js (prod).
 
 // POST /api/menu/upload-image
 // Body: { dataUrl: string, restaurantId: string }
@@ -492,19 +481,11 @@ app.post('/api/menu/upload-image', async (req, res) => {
 // POST /api/menu/items
 // Body: { restaurantId, name, description, price, image, veg, tags, add_ons, available, is_published, category_id }
 // Returns: the inserted row
+// Delegates to menuService (shared with api/menu-content.js and vite.config.js).
 app.post('/api/menu/items', async (req, res) => {
   try {
-    const { restaurantId, ...item } = req.body
-    if (!restaurantId) return res.status(400).json({ error: 'restaurantId required' })
-
-    // ── Rate limit: 30 creates/min per IP ─────────────────────────────────────
-    const { allowed: menuCreateAllowed } = await rateLimit(`rl:menu-create:ip:${getClientIp(req)}`, 30, 60)
-    if (!menuCreateAllowed) return send429(res, 'Too many menu item creates. Please slow down.')
-
-    const row = { ...item, id: item.id || crypto.randomUUID(), restaurant_id: restaurantId }
-    const saved = await upsertNeonMenuItem(restaurantId, row)
-    console.log('[menu/items POST] Neon ✅ id:', saved?.id || row.id)
-    return res.json(saved ?? row)
+    const result = await menuService.createItem(req, getClientIp(req), req.body)
+    return res.status(result.status).json(result.body)
   } catch (err) {
     console.error('[menu/items POST] Error:', err.message)
     return res.status(500).json({ error: err.message })
@@ -516,11 +497,8 @@ app.post('/api/menu/items', async (req, res) => {
 app.patch('/api/menu/items/:id', async (req, res) => {
   try {
     const { id } = req.params
-    const patch = req.body
-    if (!patch.restaurant_id) return res.status(400).json({ error: 'restaurant_id required in body' })
-    const saved = await upsertNeonMenuItem(patch.restaurant_id, { id, ...patch })
-    console.log('[menu/items PATCH] Neon ✅ id:', id)
-    return res.json(saved ?? { id, ...patch })
+    const result = await menuService.updateItem(req, getClientIp(req), { id, ...req.body })
+    return res.status(result.status).json(result.body)
   } catch (err) {
     console.error('[menu/items PATCH] Error:', err.message)
     return res.status(500).json({ error: err.message })
@@ -531,20 +509,8 @@ app.patch('/api/menu/items/:id', async (req, res) => {
 app.delete('/api/menu/items/:id', async (req, res) => {
   try {
     const { id } = req.params
-
-    // ── Rate limit: 20 deletes/min per IP + 5 s exclusive lock per item ───────
-    const { allowed: menuDeleteAllowed } = await rateLimit(`rl:menu-delete:ip:${getClientIp(req)}`, 20, 60)
-    if (!menuDeleteAllowed) return send429(res, 'Too many menu item deletes. Please slow down.')
-    const { acquired: menuDeleteLocked } = await acquireLock(`lock:menu-item:${id}`, 5)
-    if (!menuDeleteLocked) return res.status(409).json({ error: 'Delete already in progress for this item.' })
-
-    try {
-      await deleteNeonMenuItem(id)
-      console.log('[menu/items DELETE] Neon ✅ id:', id)
-      return res.json({ success: true })
-    } finally {
-      await releaseLock(`lock:menu-item:${id}`)
-    }
+    const result = await menuService.deleteItem(req, getClientIp(req), { id })
+    return res.status(result.status).json(result.body)
   } catch (err) {
     console.error('[menu/items DELETE] Error:', err.message)
     return res.status(500).json({ error: err.message })
@@ -555,13 +521,8 @@ app.delete('/api/menu/items/:id', async (req, res) => {
 // Body: { id, ...patch }
 app.post('/api/menu/item-patch', async (req, res) => {
   try {
-    const { id, ...patch } = req.body
-    if (!id) return res.status(400).json({ error: 'id required' })
-    const restaurantId = patch.restaurant_id
-    if (!restaurantId) return res.status(400).json({ error: 'restaurant_id required' })
-    const saved = await upsertNeonMenuItem(restaurantId, { id, ...patch })
-    console.log('[menu/item-patch] Neon ✅ id:', id)
-    return res.json(saved ?? { id, ...patch })
+    const result = await menuService.updateItem(req, getClientIp(req), req.body)
+    return res.status(result.status).json(result.body)
   } catch (err) {
     console.error('[menu/item-patch] Error:', err.message)
     return res.status(500).json({ error: err.message })
@@ -572,22 +533,8 @@ app.post('/api/menu/item-patch', async (req, res) => {
 // Body: { id }
 app.post('/api/menu/item-delete', async (req, res) => {
   try {
-    const { id } = req.body
-    if (!id) return res.status(400).json({ error: 'id required' })
-
-    // ── Rate limit: 20/min per IP + 5 s lock per item ─────────────────────────
-    const { allowed: itemDelAllowed } = await rateLimit(`rl:menu-delete:ip:${getClientIp(req)}`, 20, 60)
-    if (!itemDelAllowed) return send429(res, 'Too many menu item deletes. Please slow down.')
-    const { acquired: itemDelLocked } = await acquireLock(`lock:menu-item:${id}`, 5)
-    if (!itemDelLocked) return res.status(409).json({ error: 'Delete already in progress for this item.' })
-
-    try {
-      await deleteNeonMenuItem(id)
-      console.log('[menu/item-delete] Neon ✅ id:', id)
-      return res.json({ success: true })
-    } finally {
-      await releaseLock(`lock:menu-item:${id}`)
-    }
+    const result = await menuService.deleteItem(req, getClientIp(req), req.body)
+    return res.status(result.status).json(result.body)
   } catch (err) {
     console.error('[menu/item-delete] Error:', err.message)
     return res.status(500).json({ error: err.message })
@@ -598,18 +545,8 @@ app.post('/api/menu/item-delete', async (req, res) => {
 // Body: { restaurantId, name, emoji, position, id? }
 app.post('/api/menu/categories/upsert', async (req, res) => {
   try {
-    const { restaurantId, ...category } = req.body
-    if (!restaurantId) return res.status(400).json({ error: 'restaurantId required' })
-
-    // ── Rate limit: 30 upserts/min per IP ─────────────────────────────────────
-    const { allowed: catUpsertAllowed } = await rateLimit(`rl:category-upsert:ip:${getClientIp(req)}`, 30, 60)
-    if (!catUpsertAllowed) return send429(res, 'Too many category saves. Please slow down.')
-
-    if (!category.id) category.id = crypto.randomUUID()
-    const saved = await upsertNeonMenuCategory(restaurantId, category)
-    console.log('[menu/categories/upsert] Neon ✅ id:', saved?.id || category.id)
-    writeAuditLog({ restaurantId, action: 'upsert', entityType: 'menu_category', entityId: saved?.id, newData: { name: category.name }, ipAddress: req.ip })
-    return res.json(saved ?? { ...category, restaurant_id: restaurantId })
+    const result = await menuService.upsertCategory(req, getClientIp(req), req.body)
+    return res.status(result.status).json(result.body)
   } catch (err) {
     console.error('[menu/categories/upsert] Error:', err.message)
     return res.status(500).json({ error: err.message })
@@ -620,23 +557,8 @@ app.post('/api/menu/categories/upsert', async (req, res) => {
 // Body: { id }
 app.post('/api/menu/categories/delete', async (req, res) => {
   try {
-    const { id } = req.body
-    if (!id) return res.status(400).json({ error: 'id required' })
-
-    // ── Rate limit: 20 deletes/min per IP + 5 s lock per category ────────────
-    const { allowed: catDelAllowed } = await rateLimit(`rl:category-delete:ip:${getClientIp(req)}`, 20, 60)
-    if (!catDelAllowed) return send429(res, 'Too many category deletes. Please slow down.')
-    const { acquired: catDelLocked } = await acquireLock(`lock:menu-category:${id}`, 5)
-    if (!catDelLocked) return res.status(409).json({ error: 'Delete already in progress for this category.' })
-
-    try {
-      await deleteNeonMenuCategory(id)
-      console.log('[menu/categories/delete] Neon ✅ id:', id)
-      writeAuditLog({ action: 'delete', entityType: 'menu_category', entityId: id, ipAddress: req.ip })
-      return res.json({ success: true })
-    } finally {
-      await releaseLock(`lock:menu-category:${id}`)
-    }
+    const result = await menuService.deleteCategory(req, getClientIp(req), req.body)
+    return res.status(result.status).json(result.body)
   } catch (err) {
     console.error('[menu/categories/delete] Error:', err.message)
     return res.status(500).json({ error: err.message })
@@ -647,17 +569,8 @@ app.post('/api/menu/categories/delete', async (req, res) => {
 // Body: { restaurantId, items: [...] }
 app.post('/api/menu/items/upsert', async (req, res) => {
   try {
-    const { restaurantId, items } = req.body
-    if (!restaurantId || !Array.isArray(items)) return res.status(400).json({ error: 'restaurantId and items array required' })
-
-    // ── Rate limit: 10 bulk upserts/min per IP ────────────────────────────────
-    const { allowed: upsertAllowed } = await rateLimit(`rl:menu-upsert:ip:${getClientIp(req)}`, 10, 60)
-    if (!upsertAllowed) return send429(res, 'Too many bulk menu updates. Please slow down.')
-
-    const rows = items.map(item => ({ ...item, restaurant_id: restaurantId, id: item.id || crypto.randomUUID() }))
-    const data = await upsertNeonMenuItems(restaurantId, rows)
-    console.log('[menu/items/upsert] Neon ✅', rows.length, 'items')
-    return res.json(data ?? rows)
+    const result = await menuService.upsertItems(req, getClientIp(req), req.body)
+    return res.status(result.status).json(result.body)
   } catch (err) {
     console.error('[menu/items/upsert] Error:', err.message)
     return res.status(500).json({ error: err.message })
@@ -753,10 +666,8 @@ app.get('/api/orders/:restaurantId', async (req, res) => {
 
 app.get('/api/menu/categories/:restaurantId', async (req, res) => {
   try {
-    const { restaurantId } = req.params
-    if (!restaurantId) return res.status(400).json({ error: 'restaurantId required' })
-    const rows = await getNeonMenuCategories(restaurantId)
-    return res.json(rows)
+    const result = await menuService.getCategories(req.params.restaurantId)
+    return res.status(result.status).json(result.body)
   } catch (err) {
     console.error('[menu/categories/get] Error:', err.message)
     return res.status(500).json({ error: err.message })
@@ -765,10 +676,8 @@ app.get('/api/menu/categories/:restaurantId', async (req, res) => {
 
 app.get('/api/menu/items/:restaurantId/published', async (req, res) => {
   try {
-    const { restaurantId } = req.params
-    if (!restaurantId) return res.status(400).json({ error: 'restaurantId required' })
-    const rows = await getNeonPublishedMenuItems(restaurantId)
-    return res.json(rows)
+    const result = await menuService.getPublishedItems(req.params.restaurantId)
+    return res.status(result.status).json(result.body)
   } catch (err) {
     console.error('[menu/items/published/get] Error:', err.message)
     return res.status(500).json({ error: err.message })
@@ -777,10 +686,8 @@ app.get('/api/menu/items/:restaurantId/published', async (req, res) => {
 
 app.get('/api/menu/items/:restaurantId', async (req, res) => {
   try {
-    const { restaurantId } = req.params
-    if (!restaurantId) return res.status(400).json({ error: 'restaurantId required' })
-    const rows = await getNeonMenuItems(restaurantId)
-    return res.json(rows)
+    const result = await menuService.getItems(req.params.restaurantId)
+    return res.status(result.status).json(result.body)
   } catch (err) {
     console.error('[menu/items/get] Error:', err.message)
     return res.status(500).json({ error: err.message })
@@ -941,14 +848,11 @@ app.post('/api/restaurant/update-profile', async (req, res) => {
   }
 })
 
+// Delegates to restaurantContentService (shared with api/menu-content.js and vite.config.js).
 app.post('/api/restaurant/update-social', async (req, res) => {
   try {
-    const { restaurantId, social_links } = req.body
-    if (!restaurantId || typeof social_links !== 'object') {
-      return res.status(400).json({ error: 'restaurantId and social_links object required' })
-    }
-    const row = await patchNeonRestaurant(restaurantId, { social_links })
-    return res.json(row ?? { id: restaurantId, social_links })
+    const result = await contentService.updateSocial(req, getClientIp(req), req.body)
+    return res.status(result.status).json(result.body)
   } catch (err) {
     console.error('[restaurant/update-social] Error:', err.message)
     return res.status(500).json({ error: err.message })
@@ -1004,24 +908,19 @@ app.get('/api/restaurant/:id', async (req, res) => {
 
 app.get('/api/about/:restaurantId', async (req, res) => {
   try {
-    const { restaurantId } = req.params
-    if (!restaurantId) return res.status(400).json({ error: 'restaurantId required' })
-    const row = await getNeonRestaurantAbout(restaurantId)
-    return res.json(row ?? null)
+    const result = await contentService.getAbout(req.params.restaurantId)
+    return res.status(result.status).json(result.body)
   } catch (err) {
     console.error('[about/get] Error:', err.message)
     return res.status(500).json({ error: err.message })
   }
 })
 
+// Delegates to restaurantContentService (shared with api/menu-content.js and vite.config.js).
 app.post('/api/about/save', async (req, res) => {
   try {
-    const { restaurantId, story_text, image_1_url, image_2_url, image_3_url, image_4_url } = req.body
-    if (!restaurantId) return res.status(400).json({ error: 'restaurantId required' })
-    const savedData = await upsertNeonRestaurantAbout(restaurantId, { story_text, image_1_url, image_2_url, image_3_url, image_4_url })
-    console.log(`[about/save] Neon ✅ restaurantId=${restaurantId}`)
-    writeAuditLog({ restaurantId, action: 'upsert', entityType: 'restaurant_about', entityId: restaurantId, newData: { story_text, images: [image_1_url, image_2_url, image_3_url, image_4_url].filter(Boolean).length }, ipAddress: req.ip })
-    return res.json({ success: true, data: savedData })
+    const result = await contentService.saveAbout(req, getClientIp(req), req.body)
+    return res.status(result.status).json(result.body)
   } catch (err) {
     console.error('[about/save] Error:', err.message)
     return res.status(500).json({ error: err.message })

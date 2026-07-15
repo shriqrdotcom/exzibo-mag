@@ -6,16 +6,16 @@ import { createHmac } from 'crypto'
 import bcrypt from 'bcryptjs'
 import pg from 'pg'
 import { patchNeonRestaurant, getNeonRestaurantById, getNeonRestaurantBySlug } from './src/db/neon-restaurants.js'
-import { upsertNeonMenuCategory, deleteNeonMenuCategory, getNeonMenuCategories } from './src/db/neon-menu-categories.js'
-import { upsertNeonMenuItem, upsertNeonMenuItems, deleteNeonMenuItem, getNeonMenuItems, getNeonPublishedMenuItems } from './src/db/neon-menu-items.js'
 import { upsertNeonBooking, updateNeonBookingStatus, getNeonBookings } from './src/db/neon-bookings.js'
 import { upsertNeonOrder, updateNeonOrderStatus as updateNeonOrderStatusFn, getNeonOrders, deleteOldNeonOrders } from './src/db/neon-orders.js'
 import { publishOrderRealtimeEvent } from './src/lib/realtime-publisher.js'
 import { upsertNeonRestaurantMember, deleteNeonRestaurantMember, getNeonRestaurantMembers } from './src/db/neon-restaurant-members.js'
-import { upsertNeonRestaurantAbout, getNeonRestaurantAbout } from './src/db/neon-restaurant-about.js'
 import { upsertNeonRestaurantSettingsKey } from './src/db/neon-restaurant-settings.js'
 import { writeAuditLog } from './src/db/neon-audit-logs.js'
 import { r2Upload } from './src/lib/r2.js'
+import { getClientIp } from './src/lib/upstash.server.js'
+import * as menuService from './src/services/menuService.js'
+import * as contentService from './src/services/restaurantContentService.js'
 
 function previewAuthPlugin() {
   return {
@@ -144,27 +144,34 @@ function menuApiPlugin() {
 
       // Route all /api/menu/* requests through a single dispatcher to avoid
       // Connect middleware prefix-matching issues (e.g. /api/menu/items matching /api/menu/items/upsert).
+      // All business logic (DB, rate limits/locks, authorization) lives in
+      // src/services/menuService.js — the same service api/menu-content.js
+      // and server.js call, so dev/Express/Vercel behavior stays identical.
       server.middlewares.use('/api/menu', async (req, res, next) => {
         const pathname = (req.url || '/').split('?')[0].replace(/\/$/, '')
+        const ip = getClientIp(req)
 
         if (req.method === 'GET') {
           try {
             // GET /api/menu/categories/:restaurantId
             const catMatch = pathname.match(/^\/categories\/([^/]+)$/)
             if (catMatch) {
-              return json(res, 200, await getNeonMenuCategories(catMatch[1]))
+              const result = await menuService.getCategories(catMatch[1])
+              return json(res, result.status, result.body)
             }
 
             // GET /api/menu/items/:restaurantId/published
             const pubMatch = pathname.match(/^\/items\/([^/]+)\/published$/)
             if (pubMatch) {
-              return json(res, 200, await getNeonPublishedMenuItems(pubMatch[1]))
+              const result = await menuService.getPublishedItems(pubMatch[1])
+              return json(res, result.status, result.body)
             }
 
             // GET /api/menu/items/:restaurantId
             const itemsMatch = pathname.match(/^\/items\/([^/]+)$/)
             if (itemsMatch) {
-              return json(res, 200, await getNeonMenuItems(itemsMatch[1]))
+              const result = await menuService.getItems(itemsMatch[1])
+              return json(res, result.status, result.body)
             }
           } catch (e) { return json(res, 500, { error: e.message }) }
           return next()
@@ -177,53 +184,38 @@ function menuApiPlugin() {
 
           // POST /api/menu/items/upsert
           if (pathname === '/items/upsert') {
-            const { restaurantId, items } = await readBody(req)
-            if (!restaurantId || !Array.isArray(items)) return json(res, 400, { error: 'restaurantId and items[] required' })
-            const rows = items.map(item => ({ ...item, restaurant_id: restaurantId }))
-            const saved = await upsertNeonMenuItems(restaurantId, rows)
-            return json(res, 200, saved)
+            const result = await menuService.upsertItems(req, ip, await readBody(req))
+            return json(res, result.status, result.body)
           }
 
           // POST /api/menu/items — insert new item
           if (pathname === '/items') {
-            const { restaurantId, ...item } = await readBody(req)
-            if (!restaurantId) return json(res, 400, { error: 'restaurantId required' })
-            const saved = await upsertNeonMenuItem(restaurantId, { ...item, restaurant_id: restaurantId })
-            return json(res, 200, saved)
+            const result = await menuService.createItem(req, ip, await readBody(req))
+            return json(res, result.status, result.body)
           }
 
           // POST /api/menu/item-patch — update existing item
           if (pathname === '/item-patch') {
-            const { id, ...patch } = await readBody(req)
-            if (!id) return json(res, 400, { error: 'id required' })
-            const saved = await upsertNeonMenuItem(patch.restaurant_id, { id, ...patch })
-            return json(res, 200, saved)
+            const result = await menuService.updateItem(req, ip, await readBody(req))
+            return json(res, result.status, result.body)
           }
 
           // POST /api/menu/item-delete
           if (pathname === '/item-delete') {
-            const { id } = await readBody(req)
-            if (!id) return json(res, 400, { error: 'id required' })
-            await deleteNeonMenuItem(id)
-            return json(res, 200, { success: true })
+            const result = await menuService.deleteItem(req, ip, await readBody(req))
+            return json(res, result.status, result.body)
           }
 
           // POST /api/menu/categories/upsert
           if (pathname === '/categories/upsert') {
-            const { restaurantId, ...category } = await readBody(req)
-            if (!restaurantId) return json(res, 400, { error: 'restaurantId required' })
-            const saved = await upsertNeonMenuCategory(restaurantId, { ...category, restaurant_id: restaurantId })
-            writeAuditLog({ restaurantId, action: 'upsert', entityType: 'menu_category', entityId: saved?.id, newData: { name: saved?.name } })
-            return json(res, 200, saved)
+            const result = await menuService.upsertCategory(req, ip, await readBody(req))
+            return json(res, result.status, result.body)
           }
 
           // POST /api/menu/categories/delete
           if (pathname === '/categories/delete') {
-            const { id } = await readBody(req)
-            if (!id) return json(res, 400, { error: 'id required' })
-            await deleteNeonMenuCategory(id)
-            writeAuditLog({ action: 'delete', entityType: 'menu_category', entityId: id })
-            return json(res, 200, { success: true })
+            const result = await menuService.deleteCategory(req, ip, await readBody(req))
+            return json(res, result.status, result.body)
           }
 
           return next()
@@ -250,16 +242,15 @@ function menuApiPlugin() {
         }
       })
 
-      // POST /api/restaurant/update-social
+      // POST /api/restaurant/update-social — delegates to restaurantContentService
+      // (shared with api/menu-content.js and server.js).
       server.middlewares.use('/api/restaurant/update-social', async (req, res) => {
         if (req.method === 'OPTIONS') return json(res, 200, {})
         if (req.method !== 'POST') return json(res, 405, { error: 'Method not allowed' })
         try {
-          const { restaurantId, social_links } = await readBody(req)
-          if (!restaurantId || typeof social_links !== 'object') return json(res, 400, { error: 'restaurantId and social_links object required' })
-          const row = await patchNeonRestaurant(restaurantId, { social_links })
-          writeAuditLog({ restaurantId, action: 'update', entityType: 'restaurant', entityId: restaurantId, newData: { social_links: Object.keys(social_links) } })
-          return json(res, 200, row ?? {})
+          const body = await readBody(req)
+          const result = await contentService.updateSocial(req, getClientIp(req), body)
+          return json(res, result.status, result.body)
         } catch (e) {
           console.error('[update-social] Exception:', e.message)
           return json(res, 500, { error: e.message })
@@ -536,26 +527,25 @@ function aboutApiPlugin() {
         } catch (e) { return json(res, 500, { error: e.message }) }
       })
 
-      // GET /api/about/:restaurantId
+      // GET /api/about/:restaurantId — delegates to restaurantContentService
       server.middlewares.use('/api/about', async (req, res, next) => {
         if (req.method !== 'GET') return next()
         const restaurantId = (req.url || '/').split('?')[0].replace(/^\//, '')
         if (!restaurantId) return next()
         try {
-          const neonRow = await getNeonRestaurantAbout(restaurantId)
-          return json(res, 200, neonRow ?? null)
+          const result = await contentService.getAbout(restaurantId)
+          return json(res, result.status, result.body)
         } catch (e) { return json(res, 500, { error: e.message }) }
       })
 
-      // POST /api/about/save — Neon-only
+      // POST /api/about/save — delegates to restaurantContentService
+      // (shared with api/menu-content.js and server.js).
       server.middlewares.use('/api/about/save', async (req, res, next) => {
         if (req.method !== 'POST') return next()
         try {
-          const { restaurantId, story_text, image_1_url, image_2_url, image_3_url, image_4_url } = await readBody(req)
-          if (!restaurantId) return json(res, 400, { error: 'restaurantId required' })
-          const savedData = await upsertNeonRestaurantAbout(restaurantId, { story_text, image_1_url, image_2_url, image_3_url, image_4_url })
-          writeAuditLog({ restaurantId, action: 'upsert', entityType: 'restaurant_about', entityId: restaurantId, newData: { story_text, images: [image_1_url, image_2_url, image_3_url, image_4_url].filter(Boolean).length } })
-          return json(res, 200, { success: true, data: savedData })
+          const body = await readBody(req)
+          const result = await contentService.saveAbout(req, getClientIp(req), body)
+          return json(res, result.status, result.body)
         } catch (e) { return json(res, 500, { error: e.message }) }
       })
 

@@ -120,6 +120,15 @@ export async function deleteNeonMenuItem(id) {
 
 // ── Read (testing / future E2C reads — reads still go through Supabase in E2B) ──
 
+// Used by menuService's deleteItem to resolve the owning restaurant for a
+// write-authorization check, since the public delete contract only sends `id`.
+export async function getNeonMenuItemById(id) {
+  if (!id) throw new Error('id is required')
+  const sql = getSql()
+  const rows = await sql`SELECT * FROM menu_items WHERE id = ${id}::uuid LIMIT 1`
+  return rows[0] ?? null
+}
+
 export async function getNeonMenuItems(restaurantId) {
   if (!restaurantId) throw new Error('restaurantId is required')
   const sql = getSql()

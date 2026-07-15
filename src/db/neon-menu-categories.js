@@ -52,6 +52,15 @@ export async function deleteNeonMenuCategory(id) {
 
 // ── Read (testing only — reads still go through Supabase in E1) ───────────────
 
+// Used by menuService's deleteCategory to resolve the owning restaurant for a
+// write-authorization check, since the public delete contract only sends `id`.
+export async function getNeonMenuCategoryById(id) {
+  if (!id) throw new Error('id is required')
+  const sql = getSql()
+  const rows = await sql`SELECT * FROM menu_categories WHERE id = ${id}::uuid LIMIT 1`
+  return rows[0] ?? null
+}
+
 export async function getNeonMenuCategories(restaurantId) {
   if (!restaurantId) throw new Error('restaurantId is required')
   const sql = getSql()

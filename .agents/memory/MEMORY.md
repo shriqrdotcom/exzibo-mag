@@ -9,3 +9,4 @@
 - [Better Auth default IDs are not UUIDs](better-auth-uuid-owner-id.md) — Better Auth's default generateId is a random alphanumeric string, not a UUID; any column storing a Better Auth user id must be typed `text`, not `uuid`.
 - [Dev workflow caches env at start](dev-workflow-stale-env-after-secret-change.md) — restart the workflow after secrets change mid-session, or you'll debug against a stale DATABASE_URL/env.
 - [menu item-patch is a full upsert](menu-item-patch-full-upsert.md) — sending only the changed field (e.g. a toggle) to `/api/menu/item-patch` blanks out the item's other columns; always send the full item + restaurant_id.
+- [Service consolidation pattern](service-consolidation-pattern.md) — merging Vercel/Express/Vite duplicate route logic: services return {status,body} only, Vercel is the canonical contract, resolve missing parent-ids via DB lookup for auth.
