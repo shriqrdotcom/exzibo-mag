@@ -307,6 +307,116 @@ const SPECIAL_OFFERS_DATA = [
   },
 ]
 
+// ── Menu Skeleton — shown immediately while restaurant + menu data loads ──────
+function MenuSkeleton() {
+  return (
+    <div style={{
+      background: '#0A0A0A',
+      minHeight: '100vh',
+      maxWidth: '480px',
+      margin: '0 auto',
+      paddingBottom: '80px',
+      fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+      overflow: 'hidden',
+    }}>
+      <style>{`
+        @keyframes skShimmer {
+          0%   { background-position: -600px 0; }
+          100% { background-position:  600px 0; }
+        }
+        .sk {
+          background: linear-gradient(90deg, #1c1c1c 25%, #2a2a2a 50%, #1c1c1c 75%);
+          background-size: 1200px 100%;
+          animation: skShimmer 1.5s infinite linear;
+          border-radius: 6px;
+        }
+      `}</style>
+
+      {/* ── Header ── */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px 10px', background: '#0A0A0A' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div className="sk" style={{ width: '38px', height: '38px', borderRadius: '50%', flexShrink: 0 }} />
+          <div>
+            <div className="sk" style={{ width: '120px', height: '14px', marginBottom: '7px' }} />
+            <div className="sk" style={{ width: '80px', height: '11px' }} />
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <div className="sk" style={{ width: '32px', height: '32px', borderRadius: '50%' }} />
+          <div className="sk" style={{ width: '32px', height: '32px', borderRadius: '50%' }} />
+        </div>
+      </div>
+
+      {/* ── Search bar ── */}
+      <div style={{ padding: '4px 16px 10px' }}>
+        <div className="sk" style={{ width: '100%', height: '42px', borderRadius: '21px' }} />
+      </div>
+
+      {/* ── Hero carousel placeholder ── */}
+      <div className="sk" style={{ height: '300px', borderRadius: '0 0 20px 20px', margin: 0 }} />
+
+      {/* ── Category / sub-category bar ── */}
+      <div style={{ display: 'flex', gap: '16px', padding: '14px 16px 8px', alignItems: 'flex-start' }}>
+        {/* Filter button */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px', flexShrink: 0 }}>
+          <div className="sk" style={{ width: '44px', height: '44px', borderRadius: '50%' }} />
+          <div className="sk" style={{ width: '34px', height: '9px' }} />
+        </div>
+        {/* Category circles */}
+        {[1, 2, 3, 4, 5].map(i => (
+          <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px', flexShrink: 0 }}>
+            <div className="sk" style={{ width: '40px', height: '40px', borderRadius: '50%' }} />
+            <div className="sk" style={{ width: '38px', height: '9px' }} />
+          </div>
+        ))}
+      </div>
+
+      {/* ── Section header ── */}
+      <div style={{ padding: '10px 16px 4px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div className="sk" style={{ width: '100px', height: '13px' }} />
+        <div className="sk" style={{ width: '50px', height: '11px' }} />
+      </div>
+
+      {/* ── Menu item cards ── */}
+      <div style={{ padding: '4px 14px 8px' }}>
+        {[1, 2, 3, 4, 5].map(i => (
+          <div key={i} style={{ display: 'flex', gap: '12px', padding: '16px 0', borderBottom: '1px solid #181818', alignItems: 'flex-start' }}>
+            {/* Text block */}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div className="sk" style={{ width: '65%', height: '13px', marginBottom: '9px' }} />
+              <div className="sk" style={{ width: '85%', height: '11px', marginBottom: '6px' }} />
+              <div className="sk" style={{ width: '50%', height: '11px', marginBottom: '14px' }} />
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div className="sk" style={{ width: '55px', height: '16px' }} />
+                <div className="sk" style={{ width: '72px', height: '30px', borderRadius: '8px' }} />
+              </div>
+            </div>
+            {/* Image */}
+            <div className="sk" style={{ width: '88px', height: '88px', borderRadius: '12px', flexShrink: 0 }} />
+          </div>
+        ))}
+      </div>
+
+      {/* ── Bottom nav bar ── */}
+      <div style={{
+        position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)',
+        width: '100%', maxWidth: '480px',
+        background: '#111',
+        display: 'flex', justifyContent: 'space-around', alignItems: 'center',
+        padding: '12px 0 20px',
+        borderTop: '1px solid #1c1c1c',
+      }}>
+        {[1, 2, 3, 4, 5].map(i => (
+          <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px' }}>
+            <div className="sk" style={{ width: '22px', height: '22px', borderRadius: '5px' }} />
+            <div className="sk" style={{ width: '28px', height: '8px' }} />
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 export default function RestaurantWebsite() {
   const { slug, page, tableNumber: tableParam } = useParams()
   const navigate = useNavigate()
@@ -337,6 +447,7 @@ export default function RestaurantWebsite() {
     }
   }
 
+  const [menuDataLoaded, setMenuDataLoaded] = useState(false)
   const [restaurant, setRestaurant] = useState(null)
   const [aboutData, setAboutData] = useState({ story_text: '', image_1_url: '', image_2_url: '', image_3_url: '', image_4_url: '' })
   const [notFound, setNotFound] = useState(false)
@@ -970,6 +1081,7 @@ export default function RestaurantWebsite() {
       setActiveMenuTab(demoTabs[0]?.id || 'starters')
       const demoOrders = loadAndFilterCustomerOrders('demo')
       setCustomerOrders(demoOrders)
+      setMenuDataLoaded(true)
       return
     }
     // ── Try localStorage first for an instant initial render ─────────────────
@@ -1099,6 +1211,8 @@ export default function RestaurantWebsite() {
         } else if (!cancelled) {
           console.warn('[RestaurantWebsite] Supabase fetch failed (showing local data):', e.message)
         }
+      } finally {
+        if (!cancelled) setMenuDataLoaded(true)
       }
     }
     fetchFromSupabase()
@@ -1644,16 +1758,8 @@ export default function RestaurantWebsite() {
     )
   }
 
-  if (!restaurant) {
-    return (
-      <div style={{ minHeight: '100vh', background: '#f2f2f2', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Inter', sans-serif" }}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ width: '40px', height: '40px', border: '3px solid rgba(232,50,26,0.2)', borderTopColor: '#E8321A', borderRadius: '20px', animation: 'spin 0.8s linear infinite', margin: '0 auto 14px' }} />
-          <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
-          <div style={{ color: '#aaa', fontSize: '13px' }}>Loading…</div>
-        </div>
-      </div>
-    )
+  if (!menuDataLoaded) {
+    return <MenuSkeleton />
   }
 
   return (

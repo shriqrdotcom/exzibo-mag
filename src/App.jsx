@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, Suspense, lazy } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation, useParams } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { AnalyticsProvider } from './context/AnalyticsContext'
@@ -18,34 +18,37 @@ function MenuRedirect() {
   return <GlobalLoader />
 }
 
-import GroceryCategoryGrid  from './pages/GroceryCategoryGrid'
-import Landing              from './pages/Landing'
-import Auth                 from './pages/Auth'
-import Dashboard            from './pages/Dashboard'
-import Settings             from './pages/Settings'
-import CreateWebsite        from './pages/CreateWebsite'
-import Restaurants          from './pages/Restaurants'
+// Menu subdomain pages — eagerly loaded (always needed on menu.exzibo.online)
 import RestaurantWebsite    from './pages/RestaurantWebsite'
 import FoodDetail           from './pages/FoodDetail'
-import AdminDashboard       from './pages/AdminDashboard'
-import RestaurantDashboard  from './pages/RestaurantDashboard'
-import TeamMembers          from './pages/TeamMembers'
-import SuperAdminDashboard  from './pages/SuperAdminDashboard'
-import TeamMembersAdmin     from './pages/TeamMembersAdmin'
-import LiveOrder            from './pages/LiveOrder'
-import TablePage            from './pages/TablePage'
-import MenuLinkRoute        from './pages/MenuLinkRoute'
-import MasterControl        from './pages/MasterControl'
-import ProfilePage          from './pages/ProfilePage'
-import EditProfile          from './pages/EditProfile'
-import NotificationsPage    from './pages/NotificationsPage'
-import InformationPage      from './pages/InformationPage'
-import DeletedRestaurants   from './pages/DeletedRestaurants'
-import DynamicRoute         from './pages/DynamicRoute'
-import AddRolePage          from './pages/AddRolePage'
-import OrderTimePage        from './pages/OrderTimePage'
-import RestaurantListing    from './pages/RestaurantListing'
-import Favourites           from './pages/Favourites'
+
+// All other pages — lazy loaded so the menu subdomain never parses their code
+const GroceryCategoryGrid  = lazy(() => import('./pages/GroceryCategoryGrid'))
+const Landing              = lazy(() => import('./pages/Landing'))
+const Auth                 = lazy(() => import('./pages/Auth'))
+const Dashboard            = lazy(() => import('./pages/Dashboard'))
+const Settings             = lazy(() => import('./pages/Settings'))
+const CreateWebsite        = lazy(() => import('./pages/CreateWebsite'))
+const Restaurants          = lazy(() => import('./pages/Restaurants'))
+const AdminDashboard       = lazy(() => import('./pages/AdminDashboard'))
+const RestaurantDashboard  = lazy(() => import('./pages/RestaurantDashboard'))
+const TeamMembers          = lazy(() => import('./pages/TeamMembers'))
+const SuperAdminDashboard  = lazy(() => import('./pages/SuperAdminDashboard'))
+const TeamMembersAdmin     = lazy(() => import('./pages/TeamMembersAdmin'))
+const LiveOrder            = lazy(() => import('./pages/LiveOrder'))
+const TablePage            = lazy(() => import('./pages/TablePage'))
+const MenuLinkRoute        = lazy(() => import('./pages/MenuLinkRoute'))
+const MasterControl        = lazy(() => import('./pages/MasterControl'))
+const ProfilePage          = lazy(() => import('./pages/ProfilePage'))
+const EditProfile          = lazy(() => import('./pages/EditProfile'))
+const NotificationsPage    = lazy(() => import('./pages/NotificationsPage'))
+const InformationPage      = lazy(() => import('./pages/InformationPage'))
+const DeletedRestaurants   = lazy(() => import('./pages/DeletedRestaurants'))
+const DynamicRoute         = lazy(() => import('./pages/DynamicRoute'))
+const AddRolePage          = lazy(() => import('./pages/AddRolePage'))
+const OrderTimePage        = lazy(() => import('./pages/OrderTimePage'))
+const RestaurantListing    = lazy(() => import('./pages/RestaurantListing'))
+const Favourites           = lazy(() => import('./pages/Favourites'))
 import { FavouritesProvider } from './context/FavouritesContext'
 
 // ── Full-screen loader ──────────────────────────────────────────────────────
@@ -234,70 +237,72 @@ function SuperAdminApp() {
   if (loading) return <GlobalLoader />
 
   return (
-    <Routes>
-      {/* Entry point: unauthenticated visitors go straight to the login screen */}
-      <Route path="/"    element={user ? <Landing /> : <Navigate to="/auth" replace />} />
-      <Route path="/auth" element={<Auth />} />
+    <Suspense fallback={<GlobalLoader />}>
+      <Routes>
+        {/* Entry point: unauthenticated visitors go straight to the login screen */}
+        <Route path="/"    element={user ? <Landing /> : <Navigate to="/auth" replace />} />
+        <Route path="/auth" element={<Auth />} />
 
-      {/* Customer-facing pages: redirect to menu.exzibo.online/{slug}/home */}
-      <Route path="/restaurant/:slug"                element={<MenuRedirect />} />
-      <Route path="/restaurant/:slug/food/:itemName" element={<MenuRedirect />} />
-      <Route path="/r/:slug"                         element={<RestaurantWebsite />} />
+        {/* Customer-facing pages: redirect to menu.exzibo.online/{slug}/home */}
+        <Route path="/restaurant/:slug"                element={<MenuRedirect />} />
+        <Route path="/restaurant/:slug/food/:itemName" element={<MenuRedirect />} />
+        <Route path="/r/:slug"                         element={<RestaurantWebsite />} />
 
-      {/* ── Superadmin-protected routes ── */}
+        {/* ── Superadmin-protected routes ── */}
 
-      {/* Main dashboard — "OPEN DASHBOARD" from Landing leads here */}
-      <Route path="/dashboard"
-        element={<SuperAdminRoute><Dashboard /></SuperAdminRoute>} />
+        {/* Main dashboard — "OPEN DASHBOARD" from Landing leads here */}
+        <Route path="/dashboard"
+          element={<SuperAdminRoute><Dashboard /></SuperAdminRoute>} />
 
-      {/* Sidebar nav items */}
-      <Route path="/live-order"
-        element={<SuperAdminRoute><LiveOrder /></SuperAdminRoute>} />
-      <Route path="/team-members"
-        element={<SuperAdminRoute><TeamMembersAdmin /></SuperAdminRoute>} />
-      <Route path="/table"
-        element={<SuperAdminRoute><TablePage /></SuperAdminRoute>} />
-      <Route path="/settings"
-        element={<SuperAdminRoute><Settings /></SuperAdminRoute>} />
-      <Route path="/notifications"
-        element={<SuperAdminRoute><NotificationsPage /></SuperAdminRoute>} />
-      <Route path="/deleted-restaurants"
-        element={<SuperAdminRoute><DeletedRestaurants /></SuperAdminRoute>} />
-      <Route path="/information"
-        element={<SuperAdminRoute><InformationPage /></SuperAdminRoute>} />
+        {/* Sidebar nav items */}
+        <Route path="/live-order"
+          element={<SuperAdminRoute><LiveOrder /></SuperAdminRoute>} />
+        <Route path="/team-members"
+          element={<SuperAdminRoute><TeamMembersAdmin /></SuperAdminRoute>} />
+        <Route path="/table"
+          element={<SuperAdminRoute><TablePage /></SuperAdminRoute>} />
+        <Route path="/settings"
+          element={<SuperAdminRoute><Settings /></SuperAdminRoute>} />
+        <Route path="/notifications"
+          element={<SuperAdminRoute><NotificationsPage /></SuperAdminRoute>} />
+        <Route path="/deleted-restaurants"
+          element={<SuperAdminRoute><DeletedRestaurants /></SuperAdminRoute>} />
+        <Route path="/information"
+          element={<SuperAdminRoute><InformationPage /></SuperAdminRoute>} />
 
-      {/* Grocery category grid demo */}
-      <Route path="/grocery-grid" element={<GroceryCategoryGrid />} />
+        {/* Grocery category grid demo */}
+        <Route path="/grocery-grid" element={<GroceryCategoryGrid />} />
 
-      {/* Other linked pages */}
-      <Route path="/restaurants"
-        element={<SuperAdminRoute><Restaurants /></SuperAdminRoute>} />
-      <Route path="/create-website"
-        element={<SuperAdminRoute><CreateWebsite /></SuperAdminRoute>} />
-      <Route path="/profile"
-        element={<SuperAdminRoute><ProfilePage /></SuperAdminRoute>} />
-      <Route path="/edit-profile"
-        element={<SuperAdminRoute><EditProfile /></SuperAdminRoute>} />
-      <Route path="/dynamic-route"
-        element={<SuperAdminRoute><DynamicRoute /></SuperAdminRoute>} />
-      <Route path="/add-role"
-        element={<SuperAdminRoute><AddRolePage /></SuperAdminRoute>} />
-      <Route path="/order-time"
-        element={<SuperAdminRoute><OrderTimePage /></SuperAdminRoute>} />
+        {/* Other linked pages */}
+        <Route path="/restaurants"
+          element={<SuperAdminRoute><Restaurants /></SuperAdminRoute>} />
+        <Route path="/create-website"
+          element={<SuperAdminRoute><CreateWebsite /></SuperAdminRoute>} />
+        <Route path="/profile"
+          element={<SuperAdminRoute><ProfilePage /></SuperAdminRoute>} />
+        <Route path="/edit-profile"
+          element={<SuperAdminRoute><EditProfile /></SuperAdminRoute>} />
+        <Route path="/dynamic-route"
+          element={<SuperAdminRoute><DynamicRoute /></SuperAdminRoute>} />
+        <Route path="/add-role"
+          element={<SuperAdminRoute><AddRolePage /></SuperAdminRoute>} />
+        <Route path="/order-time"
+          element={<SuperAdminRoute><OrderTimePage /></SuperAdminRoute>} />
 
-      {/* Menu Studio */}
-      <Route path="/master-control"
-        element={<SuperAdminRoute><MasterControl /></SuperAdminRoute>} />
-      <Route path="/master-control/:uid"
-        element={<SuperAdminRoute><MasterControl /></SuperAdminRoute>} />
+        {/* Menu Studio */}
+        <Route path="/master-control"
+          element={<SuperAdminRoute><MasterControl /></SuperAdminRoute>} />
+        <Route path="/master-control/:uid"
+          element={<SuperAdminRoute><MasterControl /></SuperAdminRoute>} />
 
-      {/* Restaurant admin panel — destination after ACCESS PANEL resolves a UID */}
-      <Route path="/admin/:id"         element={<SuperAdminRoute><AdminDashboard /></SuperAdminRoute>} />
-      <Route path="/admin/:id/team"    element={<SuperAdminRoute><TeamMembers /></SuperAdminRoute>} />
-      <Route path="/admin/:id/profile" element={<SuperAdminRoute><ProfilePage /></SuperAdminRoute>} />
+        {/* Restaurant admin panel — destination after ACCESS PANEL resolves a UID */}
+        <Route path="/admin/:id"         element={<SuperAdminRoute><AdminDashboard /></SuperAdminRoute>} />
+        <Route path="/admin/:id/team"    element={<SuperAdminRoute><TeamMembers /></SuperAdminRoute>} />
+        <Route path="/admin/:id/profile" element={<SuperAdminRoute><ProfilePage /></SuperAdminRoute>} />
 
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </Suspense>
   )
 }
 
@@ -382,36 +387,38 @@ function DashboardApp() {
   // admin, menu_studio) is caught here and redirected to /:slug/orders.
 
   return (
-    <Routes>
-      {/* Auth page (still accessible for super-admin / internal use) */}
-      <Route path="/auth"  element={<Auth />} />
-      <Route path="/login" element={<Navigate to="/auth" replace />} />
+    <Suspense fallback={<GlobalLoader />}>
+      <Routes>
+        {/* Auth page (still accessible for super-admin / internal use) */}
+        <Route path="/auth"  element={<Auth />} />
+        <Route path="/login" element={<Navigate to="/auth" replace />} />
 
-      {/* Grocery category grid demo — must come before /:restaurantSlug wildcard */}
-      <Route path="/grocery-grid" element={<GroceryCategoryGrid />} />
+        {/* Grocery category grid demo — must come before /:restaurantSlug wildcard */}
+        <Route path="/grocery-grid" element={<GroceryCategoryGrid />} />
 
-      {/* ── Internal / direct-id routes (unchanged) ── */}
-      <Route path="/admin/:id"           element={<AdminDashboard />} />
-      <Route path="/admin/:id/team"      element={<TeamMembers />} />
-      <Route path="/admin/:id/profile"   element={<ProfilePage />} />
-      <Route path="/master-control"      element={<MasterControl />} />
-      <Route path="/master-control/:uid" element={<MasterControl />} />
+        {/* ── Internal / direct-id routes (unchanged) ── */}
+        <Route path="/admin/:id"           element={<AdminDashboard />} />
+        <Route path="/admin/:id/team"      element={<TeamMembers />} />
+        <Route path="/admin/:id/profile"   element={<ProfilePage />} />
+        <Route path="/master-control"      element={<MasterControl />} />
+        <Route path="/master-control/:uid" element={<MasterControl />} />
 
-      {/* ── Dynamic slug + page route — single source of truth ── */}
-      {/* /:restaurantSlug/:pageSlug exposes BOTH params via useParams() so  */}
-      {/* RestaurantDashboard always knows which section to display.          */}
-      {/* "master" is intercepted first because it needs a different handler. */}
-      <Route path="/:restaurantSlug/master"  element={<SlugResolver subPath="master" />} />
-      <Route path="/:restaurantSlug/:pageSlug" element={<RestaurantDashboard />} />
+        {/* ── Dynamic slug + page route — single source of truth ── */}
+        {/* /:restaurantSlug/:pageSlug exposes BOTH params via useParams() so  */}
+        {/* RestaurantDashboard always knows which section to display.          */}
+        {/* "master" is intercepted first because it needs a different handler. */}
+        <Route path="/:restaurantSlug/master"  element={<SlugResolver subPath="master" />} />
+        <Route path="/:restaurantSlug/:pageSlug" element={<RestaurantDashboard />} />
 
-      {/* ── Base slug (no page) → default to /orders ── */}
-      <Route path="/:restaurantSlug" element={<RoleSlugRedirect />} />
+        {/* ── Base slug (no page) → default to /orders ── */}
+        <Route path="/:restaurantSlug" element={<RoleSlugRedirect />} />
 
-      {/* Root */}
-      <Route path="/" element={<Navigate to="/auth" replace />} />
+        {/* Root */}
+        <Route path="/" element={<Navigate to="/auth" replace />} />
 
-      <Route path="*" element={<NotFound />} />
-    </Routes>
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </Suspense>
   )
 }
 
@@ -445,7 +452,8 @@ function DefaultApp() {
   if (loading) return <GlobalLoader />
 
   return (
-    <Routes>
+    <Suspense fallback={<GlobalLoader />}>
+      <Routes>
       {/* Public */}
       <Route path="/"     element={<Landing />} />
       <Route path="/auth" element={<Auth />} />
@@ -494,7 +502,8 @@ function DefaultApp() {
 
       {/* Catch-all */}
       <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+      </Routes>
+    </Suspense>
   )
 }
 
