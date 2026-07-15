@@ -1,0 +1,87 @@
+Implement the approved Unoneo Stage 1 serverless-function consolidation now.
+
+Do not ask for confirmation.
+
+Goal:
+Reduce the physical Vercel functions from 12 to exactly 11 by merging only:
+
+api/menu.js
+api/content.js
+
+into:
+
+api/menu-content.js
+
+Follow this order:
+
+1. Secure all 8 write actions:
+createItem, upsertItems, updateItem, deleteItem, upsertCategory, deleteCategory, saveAbout, updateSocial.
+
+Require a valid Better Auth session and restaurant access using the existing api/_lib/authz.js helpers.
+
+Return:
+- 401 for no valid session
+- 403 for no restaurant access
+
+Keep legitimate menu/category/published-menu/about reads public.
+
+2. Extract shared server-only business logic into:
+
+- src/services/menuService.js
+- src/services/restaurantContentService.js
+
+Keep the services separate.
+
+Update api handlers, vite.config.js, and server.js to use these shared services. Remove duplicated menu/content SQL, validation, rate-limit, and lock logic from runtime adapters.
+
+3. Create api/menu-content.js as a thin action router.
+
+It must:
+- preserve existing CORS and method checks
+- require the existing action parameter
+- explicitly dispatch actions to the correct service
+- reject missing or unknown actions
+- never infer routing from request-body fields
+
+4. Preserve all existing public URLs and API contracts:
+
+- /api/menu/*
+- /api/about/*
+- /api/restaurant/update-social
+
+Do not change methods, request bodies, query parameters, action names, status codes, JSON response shapes, database behaviour, or error behaviour.
+
+Preserve all existing Upstash rate-limit thresholds, key prefixes, locks, and TTLs, including the current rl:menu-*, rl:category-*, rl:about-save, rl:social-update, lock:menu-item:* and lock:menu-category:* namespaces.
+
+Do not add realtime publishing.
+
+5. Update all 12 affected vercel.json rewrites to api/menu-content.js without changing their public source URLs.
+
+After every rewrite is updated and verified, delete:
+
+- api/menu.js
+- api/content.js
+
+6. Verify:
+
+- all 12 existing menu/content public routes work
+- public reads remain public
+- unauthenticated writes return 401
+- unauthorized/cross-restaurant writes return 403
+- authorized writes still work
+- response contracts and CORS remain compatible
+- Upstash behaviour is preserved
+- Vite, Express, and Vercel use the same shared service logic
+- exactly 11 physical Vercel functions remain
+
+Do not merge or modify unrelated serverless functions, Cloudflare Worker/Durable Object realtime logic, R2 upload logic, database schema, migrations, or frontend public API URLs. Do not install dependencies or perform unrelated refactoring.
+
+Complete the implementation and verification without asking for confirmation. Stop after the 12 → 11 consolidation.
+
+Finally report:
+- files created, modified, and deleted
+- authorization changes
+- preserved routes
+- verification results
+- final physical Vercel function count
+- any failed checks or remaining risks
