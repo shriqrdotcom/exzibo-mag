@@ -97,7 +97,7 @@ export async function getRestaurants() {
   const ids = await apiFetch('/api/restaurants?action=myIds')
   if (!Array.isArray(ids) || ids.length === 0) return []
 
-  const rows = await apiFetch(`/api/neon/restaurants?ids=${ids.join(',')}`)
+  const rows = await apiFetch(`/api/restaurants?action=list&ids=${ids.join(',')}`)
   return applyForcedDemoStatus(filterActive(rows))
 }
 
