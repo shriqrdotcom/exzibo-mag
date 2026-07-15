@@ -12,3 +12,15 @@ id = "lKIKnkjSK9jIOcTFsFCt6"
 uri = "file://docs/serverless-function-analysis.pdf"
 type = "pdf"
 title = "Serverless Function Consolidation Analysis (PDF)"
+
+[[outputs]]
+id = "RK5SIc1WZ4nanofrwED3b"
+uri = "file://docs/pre-merge-audit-prompt.pdf"
+type = "pdf"
+title = "Pre-Merge Audit — Governing Prompt (PDF)"
+
+[[outputs]]
+id = "FYLmWHQACaW4AVU8i__hf"
+uri = "file://docs/pre-merge-audit-report.pdf"
+type = "pdf"
+title = "Pre-Merge Audit Report — EXZIBO Vercel Serverless Functions (PDF)"
