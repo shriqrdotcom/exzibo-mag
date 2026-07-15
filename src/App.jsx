@@ -18,9 +18,12 @@ function MenuRedirect() {
   return <GlobalLoader />
 }
 
-// Menu subdomain pages — eagerly loaded (always needed on menu.exzibo.online)
+// Menu subdomain pages
+// RestaurantWebsite is eagerly loaded — it IS the menu page and contains the
+// full MenuSkeleton, so it must be available before any network round-trip.
+// FoodDetail is lazy — it only loads when a user taps a specific menu item.
 import RestaurantWebsite    from './pages/RestaurantWebsite'
-import FoodDetail           from './pages/FoodDetail'
+const FoodDetail            = lazy(() => import('./pages/FoodDetail'))
 
 // All other pages — lazy loaded so the menu subdomain never parses their code
 const GroceryCategoryGrid  = lazy(() => import('./pages/GroceryCategoryGrid'))
@@ -337,19 +340,25 @@ function MenuSlugRedirect() {
 // ═══════════════════════════════════════════════════════════════════════════
 function MenuApp() {
   return (
-    <Routes>
-      {/* Food item detail — always has /item/ prefix and table number */}
-      <Route path="/:slug/item/:itemName/:tableNumber" element={<FoodDetail />} />
-      {/* Legacy food detail path — backward compatibility */}
-      <Route path="/:slug/food/:itemName"             element={<FoodDetail />} />
-      {/* Nav pages with table number: /:slug/:page/:tableNumber */}
-      <Route path="/:slug/:page/:tableNumber"         element={<RestaurantWebsite />} />
-      {/* Nav page without table — redirect to table 1 */}
-      <Route path="/:slug/:page"                      element={<MenuPageRedirect />} />
-      {/* Bare slug — go to home tab, table 1 */}
-      <Route path="/:slug"                            element={<MenuSlugRedirect />} />
-      <Route path="*"                                 element={<NotFound />} />
-    </Routes>
+    // Suspense is required here because FoodDetail is lazy-loaded.
+    // GlobalLoader (dark full-screen) is the fallback while the FoodDetail
+    // chunk downloads — this only triggers the very first time a user taps
+    // an item, not on the main menu page load.
+    <Suspense fallback={<GlobalLoader />}>
+      <Routes>
+        {/* Food item detail — always has /item/ prefix and table number */}
+        <Route path="/:slug/item/:itemName/:tableNumber" element={<FoodDetail />} />
+        {/* Legacy food detail path — backward compatibility */}
+        <Route path="/:slug/food/:itemName"             element={<FoodDetail />} />
+        {/* Nav pages with table number: /:slug/:page/:tableNumber */}
+        <Route path="/:slug/:page/:tableNumber"         element={<RestaurantWebsite />} />
+        {/* Nav page without table — redirect to table 1 */}
+        <Route path="/:slug/:page"                      element={<MenuPageRedirect />} />
+        {/* Bare slug — go to home tab, table 1 */}
+        <Route path="/:slug"                            element={<MenuSlugRedirect />} />
+        <Route path="*"                                 element={<NotFound />} />
+      </Routes>
+    </Suspense>
   )
 }
 

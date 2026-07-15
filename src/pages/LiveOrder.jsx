@@ -74,6 +74,18 @@ export default function LiveOrder() {
   // source of truth, same pattern used by AdminDashboard).
   const handleOrderEvent = useCallback(() => { fetchOrders(selectedId) }, [selectedId, fetchOrders])
   const { status: cfStatus, lastEvent: cfLastEvent, wsHost: cfWsHost } = useRealtimeOrders(selectedId, handleOrderEvent)
+
+  // Polling fallback — fires every 30 s when the WebSocket is not open.
+  // This ensures new orders appear without a page refresh even if the
+  // Cloudflare Worker is temporarily unreachable or the socket is
+  // still reconnecting. Has no effect while the socket is open because
+  // ORDER_CREATED events arrive immediately via the WebSocket above.
+  useEffect(() => {
+    if (!selectedId || cfStatus === 'open') return
+    const interval = setInterval(() => fetchOrders(selectedId), 30_000)
+    return () => clearInterval(interval)
+  }, [selectedId, cfStatus, fetchOrders])
+
   const [showArchitecture, setShowArchitecture] = useState(false)
 
   return (
