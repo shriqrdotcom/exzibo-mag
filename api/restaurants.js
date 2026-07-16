@@ -1,5 +1,5 @@
 import { setCors } from './_lib/cors.js'
-import { getSessionEmail } from './_lib/authz.js'
+import { getSessionEmail, isSuperadminEmail, checkRestaurantAccess } from './_lib/authz.js'
 import {
   getNeonRestaurants,
   getNeonRestaurantBySlug,
@@ -29,6 +29,28 @@ function getSql() {
   return neon(process.env.DATABASE_URL)
 }
 
+// ── Superadmin guard ──────────────────────────────────────────────────────────
+// Returns { ok: true, session } on success, or sends 401/403 and returns
+// { ok: false } so the caller can immediately `return`.
+// Skipped when DISABLE_AUTH / VITE_DISABLE_AUTH is set (dev mode).
+async function assertSuperadmin(req, res) {
+  const disableAuth =
+    process.env.VITE_DISABLE_AUTH === 'true' ||
+    process.env.DISABLE_AUTH === 'true'
+  if (disableAuth) return { ok: true }
+
+  const session = await getSessionEmail(req)
+  if (!session) {
+    res.status(401).json({ error: 'Not authenticated' })
+    return { ok: false }
+  }
+  if (!isSuperadminEmail(session.email)) {
+    res.status(403).json({ error: 'Superadmin access required' })
+    return { ok: false }
+  }
+  return { ok: true, session }
+}
+
 export default async function handler(req, res) {
   setCors(res)
   if (req.method === 'OPTIONS') return res.status(200).end()
@@ -47,6 +69,8 @@ export default async function handler(req, res) {
     }
 
     if (action === 'listDeleted') {
+      const guard = await assertSuperadmin(req, res)
+      if (!guard.ok) return
       const sql = getSql()
       const rows = await sql`
         SELECT * FROM restaurants
@@ -87,6 +111,14 @@ export default async function handler(req, res) {
       if (req.method === 'PATCH') {
         const patch = req.body
         if (!patch || Object.keys(patch).length === 0) return res.status(400).json({ error: 'patch body required' })
+        // Require superadmin or verified membership in the target restaurant.
+        // DISABLE_AUTH in dev bypasses the check.
+        const neonPatchDisableAuth = process.env.VITE_DISABLE_AUTH === 'true' || process.env.DISABLE_AUTH === 'true'
+        if (!neonPatchDisableAuth) {
+          const access = await checkRestaurantAccess(req, id)
+          if (access.error === 'Not authenticated') return res.status(401).json({ error: 'Not authenticated' })
+          if (!access.allowed) return res.status(403).json({ error: 'Access denied' })
+        }
         const row = await patchNeonRestaurant(id, patch)
         return res.json(row ?? { ok: true })
       }
@@ -107,6 +139,17 @@ export default async function handler(req, res) {
       }
       const session = await getSessionEmail(req)
       if (!session) return res.status(401).json({ error: 'Not authenticated' })
+
+      // ── Superadmin bypass: return ALL active restaurant IDs ───────────────
+      // Super admins must see the complete platform-wide list, not just the
+      // restaurants they personally created or are a member of.
+      if (isSuperadminEmail(session.email)) {
+        const sql = getSql()
+        const rows = await sql`SELECT id FROM restaurants WHERE is_deleted = false ORDER BY created_at DESC`
+        return res.json(rows.map(r => r.id))
+      }
+
+      // ── Normal user: filter by ownership and membership ───────────────────
       const sql = getSql()
       const rows = await sql`
         SELECT DISTINCT restaurant_id FROM (
@@ -124,17 +167,17 @@ export default async function handler(req, res) {
     if (req.method !== 'POST' && req.method !== 'PATCH') return res.status(405).json({ error: 'Method not allowed' })
 
     if (action === 'create') {
+      // Require an authenticated session — the creator becomes the owner.
+      const disableAuth = process.env.VITE_DISABLE_AUTH === 'true' || process.env.DISABLE_AUTH === 'true'
+      let createSession = null
+      if (!disableAuth) {
+        createSession = await getSessionEmail(req)
+        if (!createSession) return res.status(401).json({ error: 'Not authenticated' })
+      }
       const payload = req.body
       if (!payload?.slug || !payload?.name) return res.status(400).json({ error: 'slug and name required' })
-      // Generate UID if not provided
       if (!payload.uid) payload.uid = String(Math.floor(1000000000 + Math.random() * 9000000000))
-      // If owner_id not in payload, try session
-      if (!payload.owner_id) {
-        try {
-          const session = await getSessionEmail(req)
-          if (session) payload.owner_id = session.userId
-        } catch {}
-      }
+      if (!payload.owner_id && createSession) payload.owner_id = createSession.userId
       const row = await createNeonRestaurant(payload)
       return res.status(201).json(row)
     }
@@ -142,6 +185,14 @@ export default async function handler(req, res) {
     if (action === 'update') {
       const { id, ...patch } = req.body
       if (!id) return res.status(400).json({ error: 'id required' })
+      // Require superadmin or verified membership in the target restaurant.
+      // DISABLE_AUTH in dev bypasses the check.
+      const updateDisableAuth = process.env.VITE_DISABLE_AUTH === 'true' || process.env.DISABLE_AUTH === 'true'
+      if (!updateDisableAuth) {
+        const access = await checkRestaurantAccess(req, id)
+        if (access.error === 'Not authenticated') return res.status(401).json({ error: 'Not authenticated' })
+        if (!access.allowed) return res.status(403).json({ error: 'Access denied' })
+      }
       const row = await patchNeonRestaurant(id, patch)
       return res.json(row ?? { ok: true })
     }
@@ -149,11 +200,21 @@ export default async function handler(req, res) {
     if (action === 'updateProfile') {
       const { restaurantId, patch } = req.body
       if (!restaurantId || !patch) return res.status(400).json({ error: 'restaurantId and patch required' })
+      // Require superadmin or verified membership in the target restaurant.
+      // DISABLE_AUTH in dev bypasses the check.
+      const profileDisableAuth = process.env.VITE_DISABLE_AUTH === 'true' || process.env.DISABLE_AUTH === 'true'
+      if (!profileDisableAuth) {
+        const access = await checkRestaurantAccess(req, restaurantId)
+        if (access.error === 'Not authenticated') return res.status(401).json({ error: 'Not authenticated' })
+        if (!access.allowed) return res.status(403).json({ error: 'Access denied' })
+      }
       const row = await patchNeonRestaurant(restaurantId, patch)
       return res.json(row ?? { ok: true })
     }
 
     if (action === 'softDelete') {
+      const guard = await assertSuperadmin(req, res)
+      if (!guard.ok) return
       const { id } = req.body
       if (!id) return res.status(400).json({ error: 'id required' })
       await patchNeonRestaurant(id, { is_deleted: true, deleted_at: new Date().toISOString() })
@@ -161,6 +222,8 @@ export default async function handler(req, res) {
     }
 
     if (action === 'permanentDelete') {
+      const guard = await assertSuperadmin(req, res)
+      if (!guard.ok) return
       const { id } = req.body
       if (!id) return res.status(400).json({ error: 'id required' })
       const sql = getSql()
