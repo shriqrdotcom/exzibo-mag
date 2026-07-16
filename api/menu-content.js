@@ -1,4 +1,5 @@
 import { setCors } from './_lib/cors.js'
+import { checkRestaurantAccess, MANAGEMENT_ROLES } from './_lib/authz.js'
 import { getClientIp } from '../src/lib/upstash.server.js'
 import * as menuService from '../src/services/menuService.js'
 import * as contentService from '../src/services/restaurantContentService.js'
@@ -41,11 +42,25 @@ export default async function handler(req, res) {
   const action = req.query.action
   if (!action) return res.status(400).json({ error: 'action query param required' })
 
+  const isAuthDisabled = process.env.DISABLE_AUTH === 'true' || process.env.VITE_DISABLE_AUTH === 'true'
+
   try {
     // ── Menu — reads ─────────────────────────────────────────────────────────
     if (MENU_GET_ACTIONS.has(action)) {
       if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' })
       const { restaurantId } = req.query
+
+      // getPublishedItems is public (customer-facing menu).
+      // getItems and getCategories may include unpublished data — require membership.
+      if (action !== 'getPublishedItems' && !isAuthDisabled) {
+        const access = await checkRestaurantAccess(req, restaurantId)
+        if (access.error === 'Not authenticated') return res.status(401).json({ error: 'Not authenticated' })
+        if (!access.allowed) return res.status(403).json({ error: 'Access denied' })
+        if (!access.isSuperadmin && !MANAGEMENT_ROLES.includes(access.role)) {
+          return res.status(403).json({ error: 'Access denied' })
+        }
+      }
+
       const result =
         action === 'getCategories' ? await menuService.getCategories(restaurantId) :
         action === 'getItems' ? await menuService.getItems(restaurantId) :

@@ -1,22 +1,44 @@
 import { setCors } from './_lib/cors.js'
+import { checkRestaurantAccess, requireSuperadmin, ALL_ROLES, MANAGEMENT_ROLES } from './_lib/authz.js'
 import { rateLimit, acquireLock, releaseLock, getClientIp, send429 } from '../src/lib/upstash.server.js'
 import { publishOrderRealtimeEvent } from '../src/lib/realtime-publisher.js'
-import { upsertNeonOrder, updateNeonOrderStatus, deleteOldNeonOrders, getNeonOrders } from '../src/db/neon-orders.js'
+import {
+  upsertNeonOrder,
+  updateNeonOrderStatus,
+  deleteOldNeonOrders,
+  getNeonOrders,
+  getNeonOrderRestaurantId,
+} from '../src/db/neon-orders.js'
 
 // ── /api/orders — Order Operations Handler (Neon-only) ───────────────────────
 //
-// GET  ?restaurantId=<id>    → list orders for restaurant (used by Live Order / dashboard)
-// POST (no action)          body: { id, restaurant_id, ... } → create order
-// POST ?action=updateStatus body: { orderId, status, restaurantId }
-// POST ?action=autoCleanup  body: { confirmedDeleteHours?, rejectedDeleteMinutes? }
+// GET  ?restaurantId=<id>    → list orders for restaurant [ALL_ROLES membership]
+// POST (no action)          body: { id, restaurant_id, ... } → create order (public — customer flow)
+// POST ?action=updateStatus body: { orderId, status, restaurantId } [MANAGEMENT_ROLES membership]
+// POST ?action=autoCleanup  body: { confirmedDeleteHours?, rejectedDeleteMinutes? } [superadmin]
+
+function isAuthDisabled() {
+  return process.env.DISABLE_AUTH === 'true' || process.env.VITE_DISABLE_AUTH === 'true'
+}
 
 export default async function handler(req, res) {
   setCors(res)
   if (req.method === 'OPTIONS') return res.status(200).end()
 
+  // ── GET: list orders for a restaurant — requires restaurant membership ────────
   if (req.method === 'GET') {
     const { restaurantId } = req.query
     if (!restaurantId) return res.status(400).json({ error: 'restaurantId is required' })
+
+    if (!isAuthDisabled()) {
+      const access = await checkRestaurantAccess(req, restaurantId)
+      if (access.error === 'Not authenticated') return res.status(401).json({ error: 'Not authenticated' })
+      if (!access.allowed) return res.status(403).json({ error: 'Access denied' })
+      if (!access.isSuperadmin && !ALL_ROLES.includes(access.role)) {
+        return res.status(403).json({ error: 'Access denied' })
+      }
+    }
+
     try {
       const rows = await getNeonOrders(restaurantId)
       return res.status(200).json(rows)
@@ -30,6 +52,7 @@ export default async function handler(req, res) {
 
   const action = req.query.action
 
+  // ── POST (no action): create order — public customer flow ─────────────────────
   if (!action) {
     const body = req.body
     if (!body?.id || !body?.restaurant_id) return res.status(400).json({ error: 'id and restaurant_id required' })
@@ -44,9 +67,27 @@ export default async function handler(req, res) {
   }
 
   try {
+    // ── POST updateStatus — requires MANAGEMENT_ROLES membership ─────────────────
     if (action === 'updateStatus') {
-      const { orderId, status, restaurantId } = req.body
+      const { orderId, status } = req.body
       if (!orderId || !status) return res.status(400).json({ error: 'orderId and status required' })
+
+      // Resolve restaurantId from DB once — used for both auth and the realtime event.
+      // Never trust the caller-supplied restaurantId in the body: a member of
+      // restaurant A could otherwise change an order belonging to restaurant B.
+      let resolvedRestaurantId = null
+      if (!isAuthDisabled()) {
+        resolvedRestaurantId = await getNeonOrderRestaurantId(orderId)
+        if (!resolvedRestaurantId) return res.status(404).json({ error: 'Order not found' })
+
+        const access = await checkRestaurantAccess(req, resolvedRestaurantId)
+        if (access.error === 'Not authenticated') return res.status(401).json({ error: 'Not authenticated' })
+        if (!access.allowed) return res.status(403).json({ error: 'Access denied' })
+        if (!access.isSuperadmin && !MANAGEMENT_ROLES.includes(access.role)) {
+          return res.status(403).json({ error: 'Updating order status requires manager role or above' })
+        }
+      }
+
       const ip = getClientIp(req)
       const { allowed } = await rateLimit(`rl:order-status:ip:${ip}`, 60, 60)
       if (!allowed) return send429(res, 'Too many order status updates.')
@@ -55,12 +96,29 @@ export default async function handler(req, res) {
       if (!acquired) return res.status(409).json({ error: 'Status update already in progress.' })
       try {
         await updateNeonOrderStatus(orderId, status)
-        await publishOrderRealtimeEvent({ type: 'ORDER_STATUS_CHANGED', restaurantId: restaurantId || null, orderId, status })
+        await publishOrderRealtimeEvent({ type: 'ORDER_STATUS_CHANGED', restaurantId: resolvedRestaurantId, orderId, status })
         return res.json({ success: true, orderId, status })
       } finally { await releaseLock(lockKey) }
     }
 
+    // ── POST autoCleanup — superadmin only ────────────────────────────────────────
     if (action === 'autoCleanup') {
+      if (!isAuthDisabled()) {
+        // requireSuperadmin is an Express middleware — call it manually for Vercel handlers
+        const superadminResult = await new Promise((resolve) => {
+          const fakeNext = () => resolve({ ok: true })
+          const fakeRes = {
+            _status: null, _body: null,
+            status(s) { this._status = s; return this },
+            json(b) { this._body = b; resolve({ ok: false, status: this._status, body: b }); return this },
+          }
+          requireSuperadmin(req, fakeRes, fakeNext)
+        })
+        if (!superadminResult.ok) {
+          return res.status(superadminResult.status).json(superadminResult.body)
+        }
+      }
+
       const { confirmedDeleteHours = 12, rejectedDeleteMinutes = 10 } = req.body || {}
       const now = Date.now()
       const deletedCount = await deleteOldNeonOrders(

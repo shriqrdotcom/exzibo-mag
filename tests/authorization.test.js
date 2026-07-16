@@ -367,4 +367,32 @@ describe('C — cross-restaurant isolation [BLOCKED: requires real test sessions
   it('PATCH /api/neon/restaurant/:id requires membership (not just session)', () => {
     blockedMsg('membership check: non-member with session → PATCH /api/neon/restaurant/:id returns 403')
   })
+
+  it('forged member.id cannot write to a foreign restaurant via team upsert', () => {
+    blockedMsg(
+      'cross-tenant upsert: member of restaurant A sends member.id from restaurant B ' +
+      '→ POST /api/team-members/shadow-upsert returns 403 (not 200)'
+    )
+  })
+
+  it('forged member.id cannot change a foreign member role via team upsert', () => {
+    blockedMsg(
+      'cross-tenant role manipulation: member of restaurant A sends member.id from restaurant B ' +
+      'with role=owner → POST /api/team-members/shadow-upsert returns 403'
+    )
+  })
+
+  it('self-role-change is blocked even when member.email is omitted from the request body', () => {
+    blockedMsg(
+      'self-promotion bypass: shadow-upsert with member.id + new role but NO member.email ' +
+      '→ must still return 403 (DB-resolved identity, not caller-supplied email)'
+    )
+  })
+
+  it('last-owner demotion is blocked even when member.email is omitted from the request body', () => {
+    blockedMsg(
+      'last-owner bypass: shadow-upsert with owner member.id + role=admin but NO member.email ' +
+      '→ must still return 403 (DB-resolved role, not caller-supplied email)'
+    )
+  })
 })

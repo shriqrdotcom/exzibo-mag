@@ -2,16 +2,35 @@ import { createHmac } from 'crypto'
 import bcrypt from 'bcryptjs'
 import pg from 'pg'
 import { setCors } from './_lib/cors.js'
+import { checkSuperadmin } from './_lib/authz.js'
 
 // ── /api/system — System, Auth & DB Management Handler ───────────────────────
 //
-// GET  ?action=previewVerify     header: Authorization: Bearer <token>
-// POST ?action=previewLogin      body:   { email, password }
+// GET  ?action=previewVerify     header: Authorization: Bearer <token>   (public preview-auth)
+// POST ?action=previewLogin      body:   { email, password }             (public preview-auth)
 //
-// GET  ?action=listRestaurantDb
-// POST ?action=createRestaurantDb body: { restaurant_id, restaurant_name? }
-// POST ?action=dropRestaurantDb   body: { restaurant_id }
+// GET  ?action=listRestaurantDb                                          [superadmin]
+// POST ?action=createRestaurantDb body: { restaurant_id, restaurant_name? } [superadmin]
+// POST ?action=dropRestaurantDb   body: { restaurant_id }                [superadmin]
 //   ↳ All three: graceful no-op when DATABASE_URL is unavailable (Vercel env)
+
+function isAuthDisabled() {
+  return process.env.DISABLE_AUTH === 'true' || process.env.VITE_DISABLE_AUTH === 'true'
+}
+
+async function assertSuperadmin(req, res) {
+  if (isAuthDisabled()) return { ok: true }
+  const result = await checkSuperadmin(req)
+  if (result.error === 'Not authenticated') {
+    res.status(401).json({ error: 'Not authenticated' })
+    return { ok: false }
+  }
+  if (!result.allowed) {
+    res.status(403).json({ error: 'Superadmin access required' })
+    return { ok: false }
+  }
+  return { ok: true }
+}
 
 export default async function handler(req, res) {
   setCors(res)
@@ -23,12 +42,10 @@ export default async function handler(req, res) {
   try {
 
     // ════════════════════════════════════════════════════════════
-    // PREVIEW AUTH
+    // PREVIEW AUTH — no session required (uses its own HMAC token scheme)
     // ════════════════════════════════════════════════════════════
 
     // ── POST: email + password → HMAC-signed token ────────────────────────────
-    // Reads PREVIEW_EMAIL, PREVIEW_PASSWORD_HASH (bcrypt), PREVIEW_SECRET.
-    // IS_PREVIEW=true mode shows this form instead of Google OAuth on Replit.
     if (action === 'previewLogin') {
       if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
@@ -55,7 +72,6 @@ export default async function handler(req, res) {
     }
 
     // ── GET: verify HMAC token from Authorization header ─────────────────────
-    // Called on every page load in IS_PREVIEW mode. Returns { valid, email }.
     if (action === 'previewVerify') {
       if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' })
 
@@ -73,15 +89,15 @@ export default async function handler(req, res) {
     }
 
     // ════════════════════════════════════════════════════════════
-    // RESTAURANT DB (Replit PostgreSQL — graceful no-op on Vercel)
+    // RESTAURANT DB — superadmin only
+    // (Replit PostgreSQL — graceful no-op on Vercel)
     // ════════════════════════════════════════════════════════════
-    // These endpoints provision isolated per-restaurant PostgreSQL schemas
-    // in the Replit-managed DATABASE_URL database. On Vercel that env var
-    // doesn't exist, so we return a successful no-op to prevent crashes.
 
     // ── POST: create schema + tables for a new restaurant ─────────────────────
     if (action === 'createRestaurantDb') {
       if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
+      const guard = await assertSuperadmin(req, res)
+      if (!guard.ok) return
 
       const { restaurant_id, restaurant_name } = req.body
       if (!restaurant_id) return res.status(400).json({ error: 'restaurant_id is required' })
@@ -176,6 +192,8 @@ export default async function handler(req, res) {
     // ── POST: drop schema when a restaurant is permanently deleted ────────────
     if (action === 'dropRestaurantDb') {
       if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
+      const guard = await assertSuperadmin(req, res)
+      if (!guard.ok) return
 
       const { restaurant_id } = req.body
       if (!restaurant_id) return res.status(400).json({ error: 'restaurant_id is required' })
@@ -208,6 +226,8 @@ export default async function handler(req, res) {
     // ── GET: list all provisioned restaurant database schemas ─────────────────
     if (action === 'listRestaurantDb') {
       if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' })
+      const guard = await assertSuperadmin(req, res)
+      if (!guard.ok) return
 
       if (!process.env.DATABASE_URL) {
         return res.json({ databases: [], note: 'DATABASE_URL not configured — skipped' })

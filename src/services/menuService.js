@@ -17,8 +17,11 @@
 // (about/social) logic — see restaurantContentService.js for that.
 //
 // Authorization:
-//   - Reads (getCategories, getItems, getPublishedItems) are intentionally
-//     public — no session/membership check.
+//   - getPublishedItems: public — no session/membership check.
+//   - getCategories, getItems: private (may include unpublished data) — callers
+//     are responsible for enforcing restaurant membership before calling these.
+//     server.js applies requireRestaurantRole middleware; api/menu-content.js
+//     performs an inline checkRestaurantAccess check.
 //   - Writes require a valid Better Auth session AND restaurant
 //     membership/superadmin access, verified via api/_lib/authz.js's
 //     checkRestaurantAccess. This is enforced independently of — and before —
@@ -63,7 +66,9 @@ function isAuthDisabled() {
 // ── Authorization ─────────────────────────────────────────────────────────────
 // Requires a valid Better Auth session, restaurant membership, AND (optionally)
 // a matching role.  allowedRoles defaults to MANAGEMENT_ROLES (owner/admin/manager).
-// Superadmin (email allowlist) and elevated roles (menu_studio) always pass.
+// Superadmin (email allowlist) always passes.  menu_studio is a normal restaurant
+// role and is NOT elevated here — it must be explicitly included in allowedRoles
+// if menu_studio access is desired.
 // Returns null when authorized, or the `{ status, body }` error to return immediately.
 async function authorizeRestaurantWrite(req, restaurantId, allowedRoles = MANAGEMENT_ROLES) {
   if (isAuthDisabled()) return null
@@ -72,8 +77,9 @@ async function authorizeRestaurantWrite(req, restaurantId, allowedRoles = MANAGE
   if (result.error === 'Not authenticated') return bad(401, 'Not authenticated')
   if (result.error) return bad(500, result.error)
   if (!result.allowed) return bad(403, 'Access denied')
-  const isElevated = result.isSuperadmin || result.role === 'menu_studio'
-  if (!isElevated && allowedRoles && !allowedRoles.includes(result.role)) {
+  // Only superadmin (email allowlist) bypasses role restrictions.
+  // menu_studio is treated as a regular role subject to the allowedRoles check.
+  if (!result.isSuperadmin && allowedRoles && !allowedRoles.includes(result.role)) {
     return bad(403, 'Insufficient role for this action')
   }
   return null

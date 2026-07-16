@@ -32,8 +32,11 @@ export const MANAGEMENT_ROLES = Object.freeze(['owner', 'admin', 'manager'])
 export const SETTINGS_ROLES   = Object.freeze(['owner', 'admin'])
 export const TEAM_WRITE_ROLES = Object.freeze(['owner', 'admin'])
 
-// Roles that bypass the allowedRoles list (platform-level elevated access)
-const _ELEVATED_ROLES = new Set(['menu_studio', 'superadmin'])
+// Roles that bypass the allowedRoles list (platform-level elevated access).
+// NOTE: menu_studio is intentionally excluded — it is a regular restaurant role
+// that must be assigned only by the superadmin panel, not via restaurant team
+// endpoints.  Elevated bypass is reserved for the SUPERADMIN_ALLOWED_EMAILS list.
+const _ELEVATED_ROLES = new Set(['superadmin'])
 
 import { auth } from '../../src/lib/auth.server.js'
 import { fromNodeHeaders } from 'better-auth/node'
