@@ -1,0 +1,158 @@
+PROMPT 1 — FINAL MOBILE-READINESS AUDIT
+
+You are working inside the existing Exzibo main SaaS repository.
+
+GOAL
+
+Verify the remaining backend requirements before building the separate React Native/Expo restaurant app.
+
+This is analysis only. Do not modify files, install packages, generate code, run migrations, deploy changes or reveal secret values.
+
+Inspect only restaurant-dashboard code and shared backend services. Exclude superadmin, marketing and customer-only functionality unless it creates a restaurant-security risk.
+
+For every finding, provide the source file and line number when possible. Mark findings VERIFIED, INFERRED or UNKNOWN.
+
+1. ROLES AND PERMISSIONS
+
+Identify the actual roles used in:
+
+- restaurant_members
+- database schema
+- API authorization
+- frontend role guards
+
+The required mobile roles are:
+
+- owner
+- admin
+- manager
+- staff
+
+Explain:
+
+- whether manager currently exists
+- what menu_studio represents
+- which permissions are enforced by the server
+- which permissions depend only on frontend state
+
+Return a permission matrix using Yes, No or Limited. Keep superadmin/menu_studio outside the mobile app.
+
+2. MOBILE AUTHENTICATION
+
+Verify the current Better Auth configuration.
+
+Compare:
+
+- official @better-auth/expo integration using SecureStore and cookies
+- Better Auth Bearer plugin
+
+Recommend one approach for this project.
+
+Confirm the exact:
+
+- auth base URL
+- session endpoint
+- Google login/callback flow
+- logout endpoint
+- mobile deep-link requirement
+- trusted-origin changes
+- authenticated API-request method
+
+Do not assume bearer authentication is required.
+
+3. RESTAURANT API AND SECURITY CONTRACT
+
+Inspect every API used by the restaurant dashboard.
+
+For each endpoint report:
+
+- feature
+- HTTP method
+- exact external path
+- server handler
+- request parameters/body
+- response format
+- authentication
+- required role
+- restaurant-membership validation
+- mobile-ready: Yes or No
+- required backend change
+
+Resolve conflicting endpoint paths found in the previous report.
+
+Identify every endpoint that allows unauthorized:
+
+- restaurant-data access
+- order/booking modification
+- menu modification
+- team/role modification
+- profile modification
+- image upload
+- cross-restaurant access
+
+Classify findings:
+
+- P0: unauthorized access or modification
+- P1: required before mobile beta
+- P2: later improvement
+
+4. MOBILE BOOTSTRAP
+
+Check whether an authenticated endpoint already returns:
+
+- session user
+- authorized restaurants
+- restaurant ID and slug
+- server-verified role
+- permissions
+
+If missing, propose only the request and response contract for:
+
+GET /api/mobile/v1/bootstrap
+
+Do not implement it.
+
+5. REALTIME AND UPLOADS
+
+Verify:
+
+- WebSocket authentication
+- restaurant-channel isolation
+- reconnection and REST refetch
+- availability of the Cloudflare Worker source
+
+If the Worker source is unavailable, mark it MISSING ACCESS.
+
+For R2 uploads, recommend one V1 method:
+
+- compressed Base64
+- multipart/form-data
+- presigned R2 upload
+
+Consider Vercel’s 4.5 MB payload limit. Confirm authentication, restaurant validation, MIME validation and maximum image size.
+
+6. REPOSITORY SAFETY
+
+Without displaying values, verify:
+
+- environment files are ignored
+- secrets are not tracked
+- secrets were not committed in Git history
+- server secrets are not exposed to frontend code
+- credentials requiring rotation because the repository was previously public
+
+FINAL OUTPUT
+
+Return:
+
+1. Correct role-permission matrix
+2. Recommended mobile authentication method
+3. Mobile-ready endpoints
+4. Endpoints requiring changes
+5. P0/P1/P2 blockers
+6. Missing source access
+7. Required credential rotations
+8. Ordered backend-fix checklist for the next prompt
+9. Final verdict: GO, CONDITIONAL GO or NO-GO
+
+Do not implement anything. Return the report in chat only.
