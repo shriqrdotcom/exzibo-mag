@@ -61,6 +61,51 @@ export async function deleteNeonRestaurantMember(id) {
   await sql`DELETE FROM restaurant_members WHERE id = ${id}::uuid`
 }
 
+// ── getNeonRestaurantMemberById ───────────────────────────────────────────────
+// Returns the full member row (including restaurant_id) or null.
+// Used by shadow-delete to resolve the owning restaurant before auth checks.
+export async function getNeonRestaurantMemberById(memberId) {
+  if (!memberId) return null
+  const rows = await sql`
+    SELECT id, restaurant_id, user_id, owner_id, name, email, role, active
+    FROM restaurant_members
+    WHERE id = ${memberId}::uuid
+    LIMIT 1
+  `
+  return rows[0] ?? null
+}
+
+// ── getNeonRestaurantMemberByEmail ────────────────────────────────────────────
+// Returns an active member row for a restaurant + email, or null.
+// Used by shadow-upsert to detect self-role-change attempts.
+export async function getNeonRestaurantMemberByEmail(restaurantId, email) {
+  if (!restaurantId || !email) return null
+  const rows = await sql`
+    SELECT id, restaurant_id, role, email, active
+    FROM restaurant_members
+    WHERE restaurant_id = ${restaurantId}::uuid
+      AND lower(trim(email)) = ${email.toLowerCase().trim()}
+      AND active = true
+    LIMIT 1
+  `
+  return rows[0] ?? null
+}
+
+// ── countNeonActiveOwners ─────────────────────────────────────────────────────
+// Returns the count of active owners for a restaurant.
+// Used to prevent deleting or demoting the last owner.
+export async function countNeonActiveOwners(restaurantId) {
+  if (!restaurantId) return 0
+  const rows = await sql`
+    SELECT COUNT(*) AS cnt
+    FROM restaurant_members
+    WHERE restaurant_id = ${restaurantId}::uuid
+      AND role = 'owner'
+      AND active = true
+  `
+  return parseInt(rows[0]?.cnt ?? '0', 10)
+}
+
 // ── getNeonRestaurantMembers ──────────────────────────────────────────────────
 // Returns all active + inactive members for a restaurant ordered by created_at.
 // Column names match Supabase team_members so existing normalizers work as-is.

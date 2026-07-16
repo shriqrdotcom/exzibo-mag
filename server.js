@@ -19,18 +19,23 @@ import {
   upsertNeonBooking,
   updateNeonBookingStatus,
   getNeonBookings,
+  getNeonBookingRestaurantId,
 } from './src/db/neon-bookings.js'
 import {
   upsertNeonOrder,
   updateNeonOrderStatus as updateNeonOrderStatusFn,
   getNeonOrders,
   deleteOldNeonOrders,
+  getNeonOrderRestaurantId,
 } from './src/db/neon-orders.js'
 import { publishOrderRealtimeEvent } from './src/lib/realtime-publisher.js'
 import {
   upsertNeonRestaurantMember,
   deleteNeonRestaurantMember,
   getNeonRestaurantMembers,
+  getNeonRestaurantMemberById,
+  getNeonRestaurantMemberByEmail,
+  countNeonActiveOwners,
 } from './src/db/neon-restaurant-members.js'
 import { upsertNeonRestaurantSettingsKey } from './src/db/neon-restaurant-settings.js'
 import { writeAuditLog } from './src/db/neon-audit-logs.js'
@@ -44,7 +49,17 @@ import {
   hashBody,
   send429,
 } from './src/lib/upstash.server.js'
-import { getSessionEmail } from './api/_lib/authz.js'
+import {
+  getSessionEmail,
+  checkRestaurantAccess,
+  requireSuperadmin,
+  requireRestaurantRole,
+  requireSession,
+  ALL_ROLES,
+  MANAGEMENT_ROLES,
+  SETTINGS_ROLES,
+  TEAM_WRITE_ROLES,
+} from './api/_lib/authz.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const app = express()
@@ -153,6 +168,12 @@ async function _isTableValid(slug, tableNumber) {
 }
 
 app.use(express.json({ limit: '15mb' }))
+
+// ── Auth disable check helper ─────────────────────────────────────────────────
+// Single source of truth — used by inline auth blocks in complex route handlers.
+function _isAuthDisabled() {
+  return process.env.DISABLE_AUTH === 'true' || process.env.VITE_DISABLE_AUTH === 'true'
+}
 
 // ── Private admin API session guard ──────────────────────────────────────────
 // Any route in _PRIVATE_EXACT or matching _PRIVATE_PATTERNS requires a valid
@@ -301,7 +322,7 @@ app.get('/api/preview-verify', (req, res) => {
 
 // ── Restaurant DB API ─────────────────────────────────────────────────────────
 
-app.post('/api/restaurant-db/create', async (req, res) => {
+app.post('/api/restaurant-db/create', requireSuperadmin, async (req, res) => {
   try {
     const { restaurant_id, restaurant_name } = req.body
     if (!restaurant_id) {
@@ -401,7 +422,7 @@ app.post('/api/restaurant-db/create', async (req, res) => {
   }
 })
 
-app.post('/api/restaurant-db/drop', async (req, res) => {
+app.post('/api/restaurant-db/drop', requireSuperadmin, async (req, res) => {
   try {
     const { restaurant_id } = req.body
     if (!restaurant_id) {
@@ -434,7 +455,7 @@ app.post('/api/restaurant-db/drop', async (req, res) => {
   }
 })
 
-app.get('/api/restaurant-db/list', async (req, res) => {
+app.get('/api/restaurant-db/list', requireSuperadmin, async (req, res) => {
   try {
     const { Client } = pg
     const client = new Client({ connectionString: process.env.DATABASE_URL })
@@ -454,9 +475,9 @@ app.get('/api/restaurant-db/list', async (req, res) => {
 
 // POST /api/menu/upload-image
 // Body: { dataUrl: string, restaurantId: string }
-// Uploads to Cloudflare R2. Falls back to Supabase Storage if R2 is unavailable.
-// Returns: { url: string, imageKey: string|null }
-app.post('/api/menu/upload-image', async (req, res) => {
+// Requires owner/admin/manager restaurant membership.
+// Uploads to Cloudflare R2. Returns: { url: string, imageKey: string|null }
+app.post('/api/menu/upload-image', requireRestaurantRole(req => req.body.restaurantId, MANAGEMENT_ROLES), async (req, res) => {
   try {
     const { dataUrl, restaurantId } = req.body
     if (!dataUrl || !restaurantId) return res.status(400).json({ error: 'dataUrl and restaurantId required' })
@@ -579,9 +600,9 @@ app.post('/api/menu/items/upsert', async (req, res) => {
 
 // POST /api/orders/update-status
 // Body: { orderId, status, restaurantId }
-// Neon is the source of truth for orders. Supabase gets a non-blocking shadow-write.
+// Resolves restaurant from DB (never trusts body). Requires any restaurant membership.
 app.post('/api/orders/update-status', async (req, res) => {
-  const { orderId, status, restaurantId } = req.body
+  const { orderId, status } = req.body
   if (!orderId || !status) return res.status(400).json({ error: 'orderId and status required' })
 
   // ── Rate limit: 60/min per IP + 5 s exclusive lock per orderId ───────────
@@ -591,9 +612,24 @@ app.post('/api/orders/update-status', async (req, res) => {
   if (!orderStatusLocked) return res.status(409).json({ error: 'Order status update already in progress.' })
 
   try {
+    // ── Membership check: resolve restaurant_id from DB before updating ──────
+    // Never trust req.body.restaurantId — look it up from the authoritative DB row.
+    if (!_isAuthDisabled()) {
+      const restaurantId = await getNeonOrderRestaurantId(orderId)
+      if (!restaurantId) return res.status(404).json({ error: 'Order not found' })
+      const authResult = await checkRestaurantAccess(req, restaurantId)
+      if (authResult.error === 'Not authenticated') return res.status(401).json({ error: 'Not authenticated' })
+      if (authResult.error) return res.status(500).json({ error: authResult.error })
+      if (!authResult.allowed) return res.status(403).json({ error: 'Access denied' })
+      const isElevated = authResult.isSuperadmin || authResult.role === 'menu_studio'
+      if (!isElevated && !ALL_ROLES.includes(authResult.role)) {
+        return res.status(403).json({ error: 'Insufficient role' })
+      }
+    }
+
     // ── Neon primary update (blocking — source of truth) ─────────────────────
     const neonRow = await updateNeonOrderStatusFn(orderId, status)
-    const resolvedRestaurantId = restaurantId || neonRow?.restaurant_id || null
+    const resolvedRestaurantId = neonRow?.restaurant_id ?? null
     console.log('[orders/update-status] Neon primary ✅ id:', orderId, 'status:', status)
 
     // ── Realtime publish to Cloudflare Worker (after Neon succeeds) ──────────
@@ -651,8 +687,8 @@ app.post('/api/orders', async (req, res) => {
 })
 
 // GET /api/orders/:restaurantId
-// Neon-first, Supabase fallback. Ordered by created_at DESC.
-app.get('/api/orders/:restaurantId', async (req, res) => {
+// Neon-first. Requires authenticated restaurant membership (any role).
+app.get('/api/orders/:restaurantId', requireRestaurantRole(req => req.params.restaurantId, ALL_ROLES), async (req, res) => {
   try {
     const { restaurantId } = req.params
     if (!restaurantId) return res.status(400).json({ error: 'restaurantId required' })
@@ -664,7 +700,7 @@ app.get('/api/orders/:restaurantId', async (req, res) => {
   }
 })
 
-app.get('/api/menu/categories/:restaurantId', async (req, res) => {
+app.get('/api/menu/categories/:restaurantId', requireRestaurantRole(req => req.params.restaurantId, MANAGEMENT_ROLES), async (req, res) => {
   try {
     const result = await menuService.getCategories(req.params.restaurantId)
     return res.status(result.status).json(result.body)
@@ -684,7 +720,7 @@ app.get('/api/menu/items/:restaurantId/published', async (req, res) => {
   }
 })
 
-app.get('/api/menu/items/:restaurantId', async (req, res) => {
+app.get('/api/menu/items/:restaurantId', requireRestaurantRole(req => req.params.restaurantId, MANAGEMENT_ROLES), async (req, res) => {
   try {
     const result = await menuService.getItems(req.params.restaurantId)
     return res.status(result.status).json(result.body)
@@ -716,7 +752,7 @@ app.post('/api/bookings', async (req, res) => {
   }
 })
 
-app.get('/api/bookings/:restaurantId', async (req, res) => {
+app.get('/api/bookings/:restaurantId', requireRestaurantRole(req => req.params.restaurantId, ALL_ROLES), async (req, res) => {
   try {
     const { restaurantId } = req.params
     if (!restaurantId) return res.status(400).json({ error: 'restaurantId required' })
@@ -739,6 +775,20 @@ app.patch('/api/bookings/:id/status', async (req, res) => {
   if (!bkStatusLocked) return res.status(409).json({ error: 'Booking status update already in progress.' })
 
   try {
+    // ── Membership check: resolve restaurant_id from DB before updating ──────
+    if (!_isAuthDisabled()) {
+      const restaurantId = await getNeonBookingRestaurantId(id)
+      if (!restaurantId) return res.status(404).json({ error: 'Booking not found' })
+      const authResult = await checkRestaurantAccess(req, restaurantId)
+      if (authResult.error === 'Not authenticated') return res.status(401).json({ error: 'Not authenticated' })
+      if (authResult.error) return res.status(500).json({ error: authResult.error })
+      if (!authResult.allowed) return res.status(403).json({ error: 'Access denied' })
+      const isElevated = authResult.isSuperadmin || authResult.role === 'menu_studio'
+      if (!isElevated && !ALL_ROLES.includes(authResult.role)) {
+        return res.status(403).json({ error: 'Insufficient role' })
+      }
+    }
+
     const updated = await updateNeonBookingStatus(id, status)
     console.log('[bookings PATCH status] Neon ✅ id:', id, 'status:', status)
     writeAuditLog({ restaurantId: updated?.restaurant_id ?? null, action: 'update_status', entityType: 'booking', entityId: id, newData: { status }, ipAddress: req.ip })
@@ -753,7 +803,7 @@ app.patch('/api/bookings/:id/status', async (req, res) => {
 
 // ── Team Member routes ────────────────────────────────────────────────────────
 
-app.get('/api/team-members/:restaurantId', async (req, res) => {
+app.get('/api/team-members/:restaurantId', requireRestaurantRole(req => req.params.restaurantId, MANAGEMENT_ROLES), async (req, res) => {
   try {
     const { restaurantId } = req.params
     if (!restaurantId) return res.status(400).json({ error: 'restaurantId required' })
@@ -769,6 +819,54 @@ app.post('/api/team-members/shadow-upsert', async (req, res) => {
   try {
     const { restaurantId, member } = req.body
     if (!restaurantId || !member?.id) return res.status(400).json({ error: 'restaurantId and member.id required' })
+
+    if (!_isAuthDisabled()) {
+      const authResult = await checkRestaurantAccess(req, restaurantId)
+      if (authResult.error === 'Not authenticated') return res.status(401).json({ error: 'Not authenticated' })
+      if (authResult.error) return res.status(500).json({ error: authResult.error })
+      if (!authResult.allowed) return res.status(403).json({ error: 'Access denied' })
+
+      const callerRole = authResult.role
+      const isElevated = authResult.isSuperadmin || callerRole === 'menu_studio'
+
+      if (!isElevated) {
+        // Only owner/admin can manage team members
+        if (!TEAM_WRITE_ROLES.includes(callerRole)) {
+          return res.status(403).json({ error: 'Only owners and admins can manage team members' })
+        }
+
+        const targetRole = member.role
+        // No restaurant endpoint may assign menu_studio
+        if (targetRole === 'menu_studio') {
+          return res.status(403).json({ error: 'menu_studio role cannot be assigned via restaurant endpoints' })
+        }
+        // Admin cannot assign the owner role
+        if (callerRole === 'admin' && targetRole === 'owner') {
+          return res.status(403).json({ error: 'Admins cannot assign the owner role' })
+        }
+
+        // A user cannot change their own role (self-promotion prevention)
+        const callerEmail = authResult.email
+        if (member.email && member.email.toLowerCase().trim() === callerEmail && targetRole) {
+          const self = await getNeonRestaurantMemberByEmail(restaurantId, callerEmail)
+          if (self && self.role !== targetRole) {
+            return res.status(403).json({ error: 'You cannot change your own role' })
+          }
+        }
+
+        // Prevent demoting the last owner
+        if (targetRole && targetRole !== 'owner') {
+          const existing = await getNeonRestaurantMemberById(member.id)
+          if (existing && existing.role === 'owner' && existing.restaurant_id === restaurantId) {
+            const ownerCount = await countNeonActiveOwners(restaurantId)
+            if (ownerCount <= 1) {
+              return res.status(403).json({ error: 'Cannot demote the last owner of a restaurant' })
+            }
+          }
+        }
+      }
+    }
+
     await upsertNeonRestaurantMember(restaurantId, member)
     console.log('[team-members shadow-upsert] Neon ✅ id:', member.id)
     writeAuditLog({ restaurantId, action: 'upsert', entityType: 'team_member', entityId: member.id, newData: { name: member.name, role: member.role }, ipAddress: req.ip })
@@ -783,6 +881,43 @@ app.post('/api/team-members/shadow-delete', async (req, res) => {
   try {
     const { id } = req.body
     if (!id) return res.status(400).json({ error: 'id required' })
+
+    if (!_isAuthDisabled()) {
+      // Resolve the member to get restaurant_id — do not trust body
+      const member = await getNeonRestaurantMemberById(id)
+      if (!member) return res.status(404).json({ error: 'Team member not found' })
+
+      const authResult = await checkRestaurantAccess(req, member.restaurant_id)
+      if (authResult.error === 'Not authenticated') return res.status(401).json({ error: 'Not authenticated' })
+      if (authResult.error) return res.status(500).json({ error: authResult.error })
+      if (!authResult.allowed) return res.status(403).json({ error: 'Access denied' })
+
+      const callerRole = authResult.role
+      const isElevated = authResult.isSuperadmin || callerRole === 'menu_studio'
+
+      if (!isElevated) {
+        // Only owner/admin can remove team members
+        if (!TEAM_WRITE_ROLES.includes(callerRole)) {
+          return res.status(403).json({ error: 'Only owners and admins can remove team members' })
+        }
+        // Admin cannot remove an owner
+        if (callerRole === 'admin' && member.role === 'owner') {
+          return res.status(403).json({ error: 'Admins cannot remove owners' })
+        }
+        // A user cannot remove themselves
+        if (member.email && member.email.toLowerCase().trim() === authResult.email) {
+          return res.status(403).json({ error: 'You cannot remove yourself from the team' })
+        }
+        // Prevent deleting the last owner
+        if (member.role === 'owner') {
+          const ownerCount = await countNeonActiveOwners(member.restaurant_id)
+          if (ownerCount <= 1) {
+            return res.status(403).json({ error: 'Cannot delete the last owner of a restaurant' })
+          }
+        }
+      }
+    }
+
     await deleteNeonRestaurantMember(id)
     console.log('[team-members shadow-delete] Neon ✅ id:', id)
     writeAuditLog({ action: 'delete', entityType: 'team_member', entityId: id, ipAddress: req.ip })
@@ -793,7 +928,7 @@ app.post('/api/team-members/shadow-delete', async (req, res) => {
   }
 })
 
-app.post('/api/orders/auto-cleanup', async (req, res) => {
+app.post('/api/orders/auto-cleanup', requireSuperadmin, async (req, res) => {
   try {
     const { confirmedDeleteHours = 12, rejectedDeleteMinutes = 10 } = req.body || {}
     const now = Date.now()
@@ -808,7 +943,7 @@ app.post('/api/orders/auto-cleanup', async (req, res) => {
   }
 })
 
-app.post('/api/restaurant/upload-logo', async (req, res) => {
+app.post('/api/restaurant/upload-logo', requireRestaurantRole(req => req.body.restaurantId, MANAGEMENT_ROLES), async (req, res) => {
   try {
     const { restaurantId, dataUrl } = req.body
     if (!restaurantId || !dataUrl) return res.status(400).json({ error: 'restaurantId and dataUrl required' })
@@ -828,7 +963,7 @@ app.post('/api/restaurant/upload-logo', async (req, res) => {
   }
 })
 
-app.post('/api/restaurant/update-profile', async (req, res) => {
+app.post('/api/restaurant/update-profile', requireRestaurantRole(req => req.body.restaurantId, MANAGEMENT_ROLES), async (req, res) => {
   try {
     const { restaurantId, patch } = req.body
     if (!restaurantId || typeof patch !== 'object') {
@@ -861,7 +996,7 @@ app.post('/api/restaurant/update-social', async (req, res) => {
 
 // ── About Section API ─────────────────────────────────────────────────────────
 
-app.post('/api/about/upload-image', async (req, res) => {
+app.post('/api/about/upload-image', requireRestaurantRole(req => req.body.restaurantId, MANAGEMENT_ROLES), async (req, res) => {
   try {
     const { dataUrl, restaurantId, slot } = req.body
     if (!dataUrl || !restaurantId || slot == null) {
@@ -879,7 +1014,7 @@ app.post('/api/about/upload-image', async (req, res) => {
   }
 })
 
-app.post('/api/restaurant/upload-carousel', async (req, res) => {
+app.post('/api/restaurant/upload-carousel', requireRestaurantRole(req => req.body.restaurantId, MANAGEMENT_ROLES), async (req, res) => {
   try {
     const { dataUrl, restaurantId } = req.body
     if (!dataUrl || !restaurantId) return res.status(400).json({ error: 'dataUrl and restaurantId required' })
@@ -930,8 +1065,8 @@ app.post('/api/about/save', async (req, res) => {
 // POST /api/neon/restaurant-settings/shadow-upsert
 // Merges a single restaurant-scoped key into Neon restaurant_settings.global_config.
 // Body: { restaurantId, key: 'menu_filters' | 'restaurant_hours', value: <JSON> }
-// Called non-blocking from saveMenuFilters() and saveRestaurantHours() in db.js.
-app.post('/api/neon/restaurant-settings/shadow-upsert', async (req, res) => {
+// Requires owner/admin restaurant membership (settings are sensitive).
+app.post('/api/neon/restaurant-settings/shadow-upsert', requireRestaurantRole(req => req.body.restaurantId, SETTINGS_ROLES), async (req, res) => {
   try {
     const { restaurantId, key, value } = req.body
     if (!restaurantId || !key) return res.status(400).json({ error: 'restaurantId and key required' })
@@ -982,8 +1117,8 @@ app.get('/api/neon/restaurant/by-uid/:uid', async (req, res) => {
   } catch (err) { return res.status(500).json({ error: err.message }) }
 })
 
-// POST /api/neon/restaurant/create
-app.post('/api/neon/restaurant/create', async (req, res) => {
+// POST /api/neon/restaurant/create — requires authenticated session
+app.post('/api/neon/restaurant/create', requireSession, async (req, res) => {
   try {
     const row = await createNeonRestaurant(req.body)
     return res.status(201).json(row)
@@ -993,8 +1128,8 @@ app.post('/api/neon/restaurant/create', async (req, res) => {
   }
 })
 
-// PATCH /api/neon/restaurant/:id
-app.patch('/api/neon/restaurant/:id', async (req, res) => {
+// PATCH /api/neon/restaurant/:id — requires owner/admin/manager membership
+app.patch('/api/neon/restaurant/:id', requireRestaurantRole(req => req.params.id, MANAGEMENT_ROLES), async (req, res) => {
   try {
     const row = await patchNeonRestaurant(req.params.id, req.body)
     return row ? res.json(row) : res.status(404).json({ error: 'Not found or no valid fields' })

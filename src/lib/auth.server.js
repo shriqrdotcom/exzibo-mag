@@ -116,11 +116,32 @@ export function ensureAuthSchema() {
   return schemaReady
 }
 
+// ── BETTER_AUTH_SECRET startup guard ────────────────────────────────────────
+// Fail at startup when the secret is absent and auth is not explicitly disabled.
+// This prevents a misconfigured production deployment from silently using a
+// predictable fallback. In dev (DISABLE_AUTH=true) a random ephemeral value is
+// used — it is never persisted and auth is fully bypassed anyway.
+const _isDevAuthDisabled =
+  process.env.DISABLE_AUTH === 'true' || process.env.VITE_DISABLE_AUTH === 'true'
+const _authSecret = process.env.BETTER_AUTH_SECRET
+
+if (!_authSecret && !_isDevAuthDisabled) {
+  throw new Error(
+    '[auth] BETTER_AUTH_SECRET environment variable is required. ' +
+    'Generate a value with: openssl rand -base64 32 ' +
+    'and add it to Replit Secrets (dev) or your deployment environment (prod). ' +
+    'Never print or log its value.'
+  )
+}
+
 export const auth = betterAuth({
   database: pool,
   baseURL: configuredBaseUrl,
   basePath: '/api/auth',
-  secret: process.env.BETTER_AUTH_SECRET || 'dev-secret-change-in-production-32chars!!',
+  // _authSecret is guaranteed non-null in production by the guard above.
+  // In dev-only mode (DISABLE_AUTH=true) an ephemeral UUID stands in — it is
+  // never persisted and real auth calls never reach this code path.
+  secret: _authSecret ?? crypto.randomUUID(),
   // ── Column-name mapping ─────────────────────────────────────────────────────
   // The DB tables use snake_case columns but Better Auth defaults to camelCase
   // ("emailVerified", "createdAt", …). Without this mapping every DB query fails

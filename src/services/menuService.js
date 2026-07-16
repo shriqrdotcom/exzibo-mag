@@ -31,7 +31,7 @@
 //     `{ success: true }` the previous unauthenticated handler returned,
 //     preserving the exact existing contract for that case.
 
-import { checkRestaurantAccess } from '../../api/_lib/authz.js'
+import { checkRestaurantAccess, MANAGEMENT_ROLES } from '../../api/_lib/authz.js'
 import { rateLimit, acquireLock, releaseLock } from '../lib/upstash.server.js'
 import {
   getNeonMenuCategories,
@@ -61,16 +61,21 @@ function isAuthDisabled() {
 }
 
 // ── Authorization ─────────────────────────────────────────────────────────────
-// Requires a valid Better Auth session AND restaurant membership/superadmin
-// access to `restaurantId`. Returns null when authorized, or the
-// `{ status, body }` error to return immediately when not.
-async function authorizeRestaurantWrite(req, restaurantId) {
+// Requires a valid Better Auth session, restaurant membership, AND (optionally)
+// a matching role.  allowedRoles defaults to MANAGEMENT_ROLES (owner/admin/manager).
+// Superadmin (email allowlist) and elevated roles (menu_studio) always pass.
+// Returns null when authorized, or the `{ status, body }` error to return immediately.
+async function authorizeRestaurantWrite(req, restaurantId, allowedRoles = MANAGEMENT_ROLES) {
   if (isAuthDisabled()) return null
   if (!restaurantId) return bad(400, 'restaurantId required')
   const result = await checkRestaurantAccess(req, restaurantId)
   if (result.error === 'Not authenticated') return bad(401, 'Not authenticated')
   if (result.error) return bad(500, result.error)
   if (!result.allowed) return bad(403, 'Access denied')
+  const isElevated = result.isSuperadmin || result.role === 'menu_studio'
+  if (!isElevated && allowedRoles && !allowedRoles.includes(result.role)) {
+    return bad(403, 'Insufficient role for this action')
+  }
   return null
 }
 
@@ -117,12 +122,19 @@ export async function upsertItems(req, ip, { restaurantId, items }) {
 
 export async function updateItem(req, ip, { id, ...patch }) {
   if (!id) return bad(400, 'id required')
-  if (!patch.restaurant_id) return bad(400, 'restaurant_id required')
-  const authErr = await authorizeRestaurantWrite(req, patch.restaurant_id)
+
+  // Resolve the authoritative restaurant_id from the DB so a crafted
+  // body restaurant_id cannot redirect the auth check to a restaurant the
+  // caller belongs to while actually writing to a different one (Prompt 2 §4).
+  const existing = await getNeonMenuItemById(id)
+  const restaurantId = existing?.restaurant_id ?? patch.restaurant_id
+  if (!restaurantId) return bad(400, 'restaurant_id required')
+
+  const authErr = await authorizeRestaurantWrite(req, restaurantId)
   if (authErr) return authErr
   const { allowed } = await rateLimit(`rl:menu-update:ip:${ip}`, 60, 60)
   if (!allowed) return { status: 429, body: { error: 'Too many menu item updates.', retryAfter: 60 } }
-  return ok(await upsertNeonMenuItem(patch.restaurant_id, { id, ...patch }))
+  return ok(await upsertNeonMenuItem(restaurantId, { id, ...patch, restaurant_id: restaurantId }))
 }
 
 export async function deleteItem(req, ip, { id }) {

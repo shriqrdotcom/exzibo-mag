@@ -10,3 +10,4 @@
 - [Dev workflow caches env at start](dev-workflow-stale-env-after-secret-change.md) — restart the workflow after secrets change mid-session, or you'll debug against a stale DATABASE_URL/env.
 - [menu item-patch is a full upsert](menu-item-patch-full-upsert.md) — sending only the changed field (e.g. a toggle) to `/api/menu/item-patch` blanks out the item's other columns; always send the full item + restaurant_id.
 - [Service consolidation pattern](service-consolidation-pattern.md) — merging Vercel/Express/Vite duplicate route logic: services return {status,body} only, Vercel is the canonical contract, resolve missing parent-ids via DB lookup for auth.
+- [P0 auth hardening — session complete](p0-auth-hardening.md) — all P0 authorization gaps fixed: membership+role middleware on every admin route, resource-ID routes resolve restaurantId from DB (never body), team mutation rules, superadmin gate, BETTER_AUTH_SECRET startup guard.

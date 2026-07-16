@@ -1,0 +1,173 @@
+PROMPT 2 — FIX CRITICAL BACKEND AUTHORIZATION
+
+You are working inside the existing Exzibo main SaaS repository.
+
+GOAL
+
+Fix the verified P0 restaurant-isolation and role-authorization vulnerabilities without changing existing public customer functionality.
+
+Modify backend code and tests only.
+
+DO NOT
+
+- modify the mobile repository
+- change database schema
+- add Bearer or @better-auth/expo plugins
+- change Google OAuth or cookies
+- implement mobile bootstrap, presigned uploads or push notifications
+- redesign APIs or response formats
+- modify frontend UI
+- expose or log secrets
+- deploy changes
+
+1. CENTRALIZE RESTAURANT AUTHORIZATION
+
+Reuse the existing Better Auth session and restaurant_members data.
+
+Create or adapt shared server helpers that:
+
+- return 401 when no valid session exists
+- return 403 when the user is not an active member
+- read the user’s role from restaurant_members
+- validate access to the requested restaurant
+- accept an allowed-role list for restricted operations
+- never trust a role or restaurant membership supplied by the client
+
+Use existing helpers where possible. Do not create duplicate authorization systems.
+
+Keep menu_studio/superadmin access separate through the existing superadmin authorization helper.
+
+2. PROTECT RESTAURANT READ ENDPOINTS
+
+Require authenticated restaurant membership for the actual equivalents of:
+
+- GET /api/orders/:restaurantId
+- GET /api/bookings/:restaurantId
+- GET /api/menu/items/:restaurantId
+- GET /api/menu/categories/:restaurantId
+- GET /api/team-members/:restaurantId
+
+Role access:
+
+- Orders/bookings: owner, admin, manager and staff
+- Full menu-management data: owner, admin and manager
+- Team list: owner, admin and manager
+- Staff must not receive private menu-management or team data
+
+Before protecting menu/category reads, inspect their callers. Preserve separate public endpoints used by the customer QR menu.
+
+3. PROTECT RESTAURANT MUTATIONS
+
+Apply membership and server-side role checks to all actual route aliases and handler actions for:
+
+Orders and bookings:
+
+- order-status updates
+- booking-status updates
+- Allowed roles: owner, admin, manager and staff
+
+Menu, profile and images:
+
+- create/update/delete menu item
+- create/update/delete category
+- menu and restaurant image uploads
+- restaurant profile/about/social updates
+- Allowed roles: owner, admin and manager
+
+Settings:
+
+- restaurant-settings mutations
+- Allowed roles: owner and admin
+
+Team:
+
+- team-member create/update/delete
+- Owner can manage admin, manager and staff.
+- Admin can manage manager and staff only.
+- Manager and staff cannot change team roles.
+- No restaurant endpoint may assign menu_studio.
+- A user must not promote their own role.
+- Prevent deleting or demoting the final owner.
+
+4. DERIVE RESTAURANT OWNERSHIP SECURELY
+
+For routes containing only a resource ID, such as:
+
+- PATCH/DELETE /api/menu/items/:id
+- order-status update by order ID
+- booking-status update by booking ID
+
+Load the resource from the database, obtain its restaurant ID, and then validate membership and role.
+
+Do not trust a restaurantId included in the request body.
+
+Where possible, query using both resource ID and authorized restaurant ID.
+
+5. SECURE DATABASE-PROVISIONING ROUTES
+
+Require explicit server-side superadmin authorization for:
+
+- POST /api/restaurant-db/create
+- POST /api/restaurant-db/drop
+- GET /api/restaurant-db/list
+- every equivalent provisioning or destructive database action
+
+Unauthenticated and normal restaurant users must receive 401 or 403.
+
+Do not rely on hidden UI buttons or frontend route guards.
+
+6. PRESERVE INTENTIONAL PUBLIC ROUTES
+
+Do not require restaurant membership for legitimate customer operations, including their actual equivalents:
+
+- public published-menu reads
+- public restaurant profile/about reads
+- customer order creation
+- customer booking creation
+
+Confirm that public endpoints return only public fields and cannot perform administrative changes.
+
+7. REMOVE THE HARDCODED AUTH-SECRET FALLBACK
+
+Remove the hardcoded BETTER_AUTH_SECRET fallback from src/lib/auth.server.js.
+
+Requirements:
+
+- production and staging must fail closed when BETTER_AUTH_SECRET is missing
+- tests must provide an explicit test secret
+- never print the secret
+- do not change the current production secret value
+
+8. VERIFY THE FIXES
+
+Use the existing test tools. Do not install a new test framework solely for this task.
+
+Verify:
+
+- no session → protected endpoint returns 401
+- Restaurant A member accessing Restaurant B → 403
+- staff cannot modify menu, profile, settings or team
+- staff can update their own restaurant’s order/booking status
+- manager cannot change team roles
+- admin cannot create or modify an owner/menu_studio role
+- resource-ID requests cannot bypass restaurant isolation
+- normal users cannot access restaurant-db routes
+- public menu, customer order and customer booking flows still work
+- existing web dashboard owner/admin/manager/staff flows still work
+
+If integration testing requires unavailable credentials, do not invent them. Run all possible tests and report the blocked tests.
+
+FINAL RESPONSE
+
+Return:
+
+1. Files changed
+2. Authorization helper behaviour
+3. Protected endpoint and allowed-role matrix
+4. Public endpoints preserved
+5. Test commands and results
+6. Tests that could not run
+7. Remaining P0/P1 issues
+8. Confirmation that no deployment occurred
+
+Do not start mobile-app development in this prompt.

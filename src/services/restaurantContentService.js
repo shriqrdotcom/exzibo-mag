@@ -23,7 +23,7 @@
 //     `restaurantId` in their existing public request body, so no DB lookup
 //     is needed to resolve the owning restaurant.
 
-import { checkRestaurantAccess } from '../../api/_lib/authz.js'
+import { checkRestaurantAccess, MANAGEMENT_ROLES } from '../../api/_lib/authz.js'
 import { rateLimit } from '../lib/upstash.server.js'
 import { getNeonRestaurantAbout, upsertNeonRestaurantAbout } from '../db/neon-restaurant-about.js'
 import { patchNeonRestaurant } from '../db/neon-restaurants.js'
@@ -41,13 +41,20 @@ function isAuthDisabled() {
 }
 
 // ── Authorization ─────────────────────────────────────────────────────────────
-async function authorizeRestaurantWrite(req, restaurantId) {
+// Requires session, restaurant membership, AND a matching role.
+// allowedRoles defaults to MANAGEMENT_ROLES (owner/admin/manager).
+// Superadmin (email allowlist) and elevated roles (menu_studio) always pass.
+async function authorizeRestaurantWrite(req, restaurantId, allowedRoles = MANAGEMENT_ROLES) {
   if (isAuthDisabled()) return null
   if (!restaurantId) return bad(400, 'restaurantId required')
   const result = await checkRestaurantAccess(req, restaurantId)
   if (result.error === 'Not authenticated') return bad(401, 'Not authenticated')
   if (result.error) return bad(500, result.error)
   if (!result.allowed) return bad(403, 'Access denied')
+  const isElevated = result.isSuperadmin || result.role === 'menu_studio'
+  if (!isElevated && allowedRoles && !allowedRoles.includes(result.role)) {
+    return bad(403, 'Insufficient role for this action')
+  }
   return null
 }
 

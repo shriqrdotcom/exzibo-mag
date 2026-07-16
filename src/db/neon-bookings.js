@@ -66,15 +66,29 @@ export async function upsertNeonBooking(restaurantId, booking) {
   `
 }
 
+// ── getNeonBookingRestaurantId ────────────────────────────────────────────
+// Returns the restaurant_id for a given booking id, or null if not found.
+// Used by the booking-status update route to validate restaurant membership
+// BEFORE performing the update — never trust restaurant_id from the request body.
+export async function getNeonBookingRestaurantId(bookingId) {
+  if (!bookingId) return null
+  const rows = await sql`
+    SELECT restaurant_id FROM bookings WHERE id = ${bookingId} LIMIT 1
+  `
+  return rows[0]?.restaurant_id ?? null
+}
+
 // ── updateNeonBookingStatus ───────────────────────────────────────────────
-// Partial update — only touches status + updated_at.
+// Partial update — only touches status + updated_at. Returns updated row.
 export async function updateNeonBookingStatus(id, status) {
   if (!id) throw new Error('updateNeonBookingStatus: id is required')
-  await sql`
+  const rows = await sql`
     UPDATE bookings
     SET status = ${status}, updated_at = now()
     WHERE id = ${id}
+    RETURNING id, restaurant_id, status
   `
+  return rows[0] ?? null
 }
 
 // ── getNeonBookings ───────────────────────────────────────────────────────

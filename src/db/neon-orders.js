@@ -92,6 +92,18 @@ export async function getNeonOrders(restaurantId) {
   return rows
 }
 
+// ── getNeonOrderRestaurantId ──────────────────────────────────────────────
+// Returns the restaurant_id for a given order id, or null if not found.
+// Used by the order-status update route to validate restaurant membership
+// BEFORE performing the update — never trust restaurant_id from the request body.
+export async function getNeonOrderRestaurantId(orderId) {
+  if (!orderId) return null
+  const rows = await sql`
+    SELECT restaurant_id FROM orders WHERE id = ${orderId} LIMIT 1
+  `
+  return rows[0]?.restaurant_id ?? null
+}
+
 // ── deleteOldNeonOrders ───────────────────────────────────────────────────
 // Shadow-delete to mirror the auto-cleanup route.
 // Deletes completed/confirmed orders older than confirmedCutoff ISO string,

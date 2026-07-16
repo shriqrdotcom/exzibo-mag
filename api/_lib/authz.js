@@ -8,13 +8,32 @@
  * - SUPERADMIN_ALLOWED_EMAILS is parsed server-side only.
  *
  * Exports:
- *   getSessionEmail(req)           → { email, userId, user } | null
- *   isSuperadminEmail(email)       → boolean
- *   checkSuperadmin(req)           → { allowed, role, isSuperadmin, email, error? }
- *   checkRestaurantAccess(req, id) → { allowed, role, isSuperadmin, email, name?, error? }
- *   requireSession                 → Express middleware — 401 if no valid session
- *   requireRestaurantAccess(fn)    → Express middleware factory — 403 if not member/superadmin
+ *   getSessionEmail(req)                        → { email, userId, user } | null
+ *   isSuperadminEmail(email)                    → boolean
+ *   checkSuperadmin(req)                        → { allowed, role, isSuperadmin, email, error? }
+ *   checkRestaurantAccess(req, id)              → { allowed, role, isSuperadmin, email, name?, error? }
+ *   requireSession                              → Express middleware — 401 if no valid session
+ *   requireRestaurantAccess(fn)                 → Express middleware factory — 403 if not member/superadmin
+ *   requireSuperadmin                           → Express middleware — 403 if not superadmin
+ *   requireRestaurantRole(fn, allowedRoles)     → Express middleware factory — 403 if not member with matching role
+ *
+ * Role constants (exported):
+ *   ALL_ROLES          ['owner','admin','manager','staff']
+ *   MANAGEMENT_ROLES   ['owner','admin','manager']
+ *   SETTINGS_ROLES     ['owner','admin']
+ *   TEAM_WRITE_ROLES   ['owner','admin']
+ *
+ * Elevated roles (menu_studio, superadmin) bypass role-list checks.
  */
+
+// ── Role constant exports ─────────────────────────────────────────────────────
+export const ALL_ROLES        = Object.freeze(['owner', 'admin', 'manager', 'staff'])
+export const MANAGEMENT_ROLES = Object.freeze(['owner', 'admin', 'manager'])
+export const SETTINGS_ROLES   = Object.freeze(['owner', 'admin'])
+export const TEAM_WRITE_ROLES = Object.freeze(['owner', 'admin'])
+
+// Roles that bypass the allowedRoles list (platform-level elevated access)
+const _ELEVATED_ROLES = new Set(['menu_studio', 'superadmin'])
 
 import { auth } from '../../src/lib/auth.server.js'
 import { fromNodeHeaders } from 'better-auth/node'
@@ -196,6 +215,75 @@ export function requireRestaurantAccess(getRestaurantId) {
       if (result.error === 'Not authenticated') return res.status(401).json({ error: 'Not authenticated' })
       if (result.error) return res.status(500).json({ error: result.error })
       if (!result.allowed) return res.status(403).json({ error: 'Access denied' })
+      req.authEmail = result.email
+      req.authIsSuperadmin = result.isSuperadmin
+      req.authRole = result.role
+      next()
+    } catch (e) {
+      return res.status(500).json({ error: 'Authorization error', detail: e.message })
+    }
+  }
+}
+
+// ── requireSuperadmin ────────────────────────────────────────────────────────
+// Express middleware: 403 unless the session email is in SUPERADMIN_ALLOWED_EMAILS.
+// No-op when DISABLE_AUTH / VITE_DISABLE_AUTH = 'true'.
+export async function requireSuperadmin(req, res, next) {
+  if (process.env.DISABLE_AUTH === 'true' || process.env.VITE_DISABLE_AUTH === 'true') {
+    req.authEmail = 'dev@disable-auth.local'
+    req.authIsSuperadmin = true
+    req.authRole = 'superadmin'
+    return next()
+  }
+  try {
+    const result = await checkSuperadmin(req)
+    if (result.error === 'Not authenticated') return res.status(401).json({ error: 'Not authenticated' })
+    if (result.error) return res.status(500).json({ error: result.error })
+    if (!result.allowed) return res.status(403).json({ error: 'Superadmin access required' })
+    req.authEmail = result.email
+    req.authIsSuperadmin = true
+    req.authRole = 'superadmin'
+    next()
+  } catch (e) {
+    return res.status(500).json({ error: 'Authorization error', detail: e.message })
+  }
+}
+
+// ── requireRestaurantRole ────────────────────────────────────────────────────
+// Express middleware factory: verifies session, restaurant membership, AND role.
+// `getRestaurantId`: function(req) → restaurantId string, or a plain string.
+// `allowedRoles`: array of role strings (e.g. MANAGEMENT_ROLES).
+//   • Superadmin (email allowlist) always passes.
+//   • Elevated roles (menu_studio) always pass role checks.
+//   • All other roles must be in allowedRoles.
+// Returns 401 unauthenticated, 403 not a member or wrong role.
+// Attaches req.authEmail, req.authRole, req.authIsSuperadmin on success.
+export function requireRestaurantRole(getRestaurantId, allowedRoles) {
+  return async function (req, res, next) {
+    if (process.env.DISABLE_AUTH === 'true' || process.env.VITE_DISABLE_AUTH === 'true') {
+      req.authEmail = 'dev@disable-auth.local'
+      req.authIsSuperadmin = true
+      req.authRole = 'superadmin'
+      return next()
+    }
+
+    const restaurantId = typeof getRestaurantId === 'function'
+      ? getRestaurantId(req)
+      : getRestaurantId
+
+    try {
+      const result = await checkRestaurantAccess(req, restaurantId)
+      if (result.error === 'Not authenticated') return res.status(401).json({ error: 'Not authenticated' })
+      if (result.error === 'restaurantId required') return res.status(400).json({ error: 'restaurantId required' })
+      if (result.error) return res.status(500).json({ error: result.error })
+      if (!result.allowed) return res.status(403).json({ error: 'Access denied' })
+
+      // Superadmin (email allowlist) and elevated roles always pass.
+      const isElevated = result.isSuperadmin || _ELEVATED_ROLES.has(result.role)
+      if (!isElevated && allowedRoles && !allowedRoles.includes(result.role)) {
+        return res.status(403).json({ error: 'Insufficient role for this action' })
+      }
+
       req.authEmail = result.email
       req.authIsSuperadmin = result.isSuperadmin
       req.authRole = result.role
