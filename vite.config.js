@@ -1101,5 +1101,11 @@ export default defineConfig(({ mode }) => ({
     // which would bypass the tableValidationPlugin and serve index.html for invalid
     // table numbers. The spaFallbackPlugin (a post-hook) handles SPA routing instead,
     // so it always runs AFTER table validation has had a chance to block bad URLs.
-  }
+  },
+  optimizeDeps: {
+    // These are Node.js-only packages imported by server-side files under src/
+    // (pg-sql.js, auth.server.js, etc.). Vite must never try to bundle them for
+    // the browser — doing so creates a duplicate React copy that breaks all hooks.
+    exclude: ['pg', 'bcryptjs', 'better-auth', '@neondatabase/serverless'],
+  },
 }))
