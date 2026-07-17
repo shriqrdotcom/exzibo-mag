@@ -25,6 +25,7 @@
     { "source": "/api/restaurant-db/create",                "destination": "/api/system?action=createRestaurantDb"                        },
     { "source": "/api/restaurant-db/drop",                  "destination": "/api/system?action=dropRestaurantDb"                          },
     { "source": "/api/restaurant-db/list",                  "destination": "/api/system?action=listRestaurantDb"                          },
+    { "source": "/api/mobile/v1/bootstrap",                 "destination": "/api/mobile/bootstrap"                                         },
     { "source": "/api/auth/:path*",                         "destination": "/api/auth?_path=:path*"                                        },
     { "source": "/api/neon/restaurants",                    "destination": "/api/restaurants?action=list"                                  },
     { "source": "/api/neon/restaurant/create",              "destination": "/api/restaurants?action=create"                                },
