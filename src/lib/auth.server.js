@@ -1,4 +1,5 @@
 import { betterAuth } from 'better-auth'
+import { expo } from '@better-auth/expo'
 import pg from 'pg'
 import crypto from 'node:crypto'
 
@@ -17,6 +18,12 @@ const pool = new Pool({
 // On Vercel: add your *.vercel.app deployment URLs here so CSRF checks pass.
 // Example: BETTER_AUTH_TRUSTED_ORIGINS=https://exzibo-abc123.vercel.app,https://exzibo.vercel.app
 const extraTrustedOrigins = (process.env.BETTER_AUTH_TRUSTED_ORIGINS || '')
+  .split(',').map(s => s.trim()).filter(Boolean)
+
+// Mobile app origins added via MOBILE_APP_TRUSTED_ORIGINS (comma-separated).
+// Add your Expo / React Native app bundle IDs or custom-scheme origins here.
+// Example: MOBILE_APP_TRUSTED_ORIGINS=exzibo://,exp+exzibo://
+const mobileAppTrustedOrigins = (process.env.MOBILE_APP_TRUSTED_ORIGINS || '')
   .split(',').map(s => s.trim()).filter(Boolean)
 
 // Accept either env var name — some deployments set BETTER_AUTH_URL instead
@@ -200,10 +207,19 @@ export const auth = betterAuth({
   },
   // Core production domains + any extra origins from env (e.g. Vercel preview URLs).
   // To add origins without a code deploy, set BETTER_AUTH_TRUSTED_ORIGINS in Vercel.
+  // Mobile app origins are added via MOBILE_APP_TRUSTED_ORIGINS (Expo custom schemes).
   trustedOrigins: [
     'https://superadmin.exzibo.online',
     'https://dashboard.exzibo.online',
     ...extraTrustedOrigins,
+    ...mobileAppTrustedOrigins,
+  ],
+  plugins: [
+    // expo() enables Better Auth to accept requests from Expo / React Native
+    // clients: it relaxes the CSRF origin check for mobile app custom-scheme
+    // origins (listed in MOBILE_APP_TRUSTED_ORIGINS) while keeping all web
+    // origins subject to the normal CSRF policy.
+    expo(),
   ],
   advanced: {
     // Generate real UUIDs for user/session/account/verification ids instead of

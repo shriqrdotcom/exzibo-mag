@@ -93,6 +93,37 @@ function previewAuthPlugin() {
           res.end(JSON.stringify({ valid: false }))
         }
       })
+
+      // GET /api/mobile/v1/bootstrap — delegates to the Vercel handler
+      // The exact URL /api/mobile/v1/bootstrap must be registered before Vite's
+      // SPA fallback so it never returns HTML in development.
+      server.middlewares.use('/api/mobile/v1/bootstrap', async (req, res) => {
+        try {
+          const { default: handler } = await import('./api/mobile/bootstrap.js')
+          // Wrap the Node.js IncomingMessage/ServerResponse pair in a minimal
+          // Vercel-compatible shim (status + json helpers).
+          if (!res.status) {
+            res.status = (code) => { res.statusCode = code; return res }
+          }
+          if (!res.json) {
+            res.json = (body) => {
+              if (!res.getHeader('Content-Type')) {
+                res.setHeader('Content-Type', 'application/json')
+              }
+              res.end(JSON.stringify(body))
+            }
+          }
+          if (!res.getHeader('Cache-Control')) {
+            // handler sets it, but ensure it's present even on middleware short-circuits
+          }
+          await handler(req, res)
+        } catch (err) {
+          console.error('[dev] /api/mobile/v1/bootstrap error:', err.message)
+          res.statusCode = 500
+          res.setHeader('Content-Type', 'application/json')
+          res.end(JSON.stringify({ error: 'Internal server error' }))
+        }
+      })
     },
   }
 }
