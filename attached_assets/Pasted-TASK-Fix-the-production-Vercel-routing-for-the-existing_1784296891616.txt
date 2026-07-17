@@ -1,0 +1,109 @@
+TASK: Fix the production Vercel routing for the existing mobile bootstrap endpoint.
+
+REPOSITORY
+
+Run only in:
+
+shriqrdotcom/exzibo-mag
+
+Stop if this is App-Manager-07 or another mobile repository.
+
+1. Fetch origin.
+2. Confirm the working tree is clean.
+3. Inspect origin/main and origin/feature/mobile-auth-bootstrap.
+4. Determine whether the mobile bootstrap implementation has been merged into origin/main.
+
+If feature/mobile-auth-bootstrap is not merged:
+
+- do not recreate the implementation
+- make no code changes
+- report that the branch must be merged into main
+- stop
+
+If it is already merged, create this branch from origin/main:
+
+fix/mobile-bootstrap-vercel-route
+
+CURRENT PROBLEM
+
+GET https://dashboard.exzibo.online/api/mobile/v1/bootstrap
+
+currently returns the Vite HTML application with HTTP 200.
+
+It must return for unauthenticated requests:
+
+- HTTP 401
+- Content-Type application/json
+- Cache-Control: no-store
+
+INSPECT ONLY
+
+- vercel.json
+- the root api/ directory
+- the existing mobile bootstrap handler
+- relevant authentication/session helper
+- package.json and build configuration
+- focused mobile-bootstrap tests
+
+Do not perform a complete repository audit.
+
+REQUIREMENTS
+
+1. Confirm the bootstrap handler is included in the Vercel deployment.
+2. Confirm Vercel has a real function or specific rewrite for:
+   /api/mobile/v1/bootstrap
+3. Ensure the API route is handled before the Vite SPA fallback.
+4. Ensure the SPA catch-all does not capture /api/* routes.
+5. Preserve the existing secure bootstrap implementation.
+6. Do not redirect unauthenticated API requests to HTML.
+7. Preserve:
+   - 401 JSON for missing session
+   - 405 JSON for unsupported methods
+   - generic 500 JSON
+   - Cache-Control: no-store
+8. Do not modify unrelated APIs, database schema or authentication behaviour.
+9. Never print environment-variable values.
+
+If the repository routing is already correct, do not make speculative changes. Report that the active Vercel deployment or Project Root Directory is incorrect.
+
+VALIDATION
+
+Use the existing package manager and test framework.
+
+Verify:
+
+- unauthenticated bootstrap request returns 401 JSON locally
+- unsupported methods return 405
+- Cache-Control contains no-store
+- normal dashboard SPA routes continue working
+- existing authorization tests pass
+- production build passes
+
+GIT
+
+If a code fix is required:
+
+- show the changed files
+- do not commit .env files, secrets, attached_assets or prompt files
+- commit as:
+
+fix: expose mobile bootstrap through Vercel routing
+
+- push only to:
+
+origin/fix/mobile-bootstrap-vercel-route
+
+Do not merge, force-push or deploy.
+
+FINAL RESPONSE
+
+Return:
+
+1. whether feature/mobile-auth-bootstrap is merged
+2. confirmed cause
+3. files changed
+4. final Vercel route mapping
+5. tests and build results
+6. commit and push result
+7. required GitHub/Vercel actions
+8. final result: PASS, PARTIAL or FAIL
