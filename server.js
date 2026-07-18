@@ -40,6 +40,7 @@ import {
 import { upsertNeonRestaurantSettingsKey } from './src/db/neon-restaurant-settings.js'
 import { writeAuditLog } from './src/db/neon-audit-logs.js'
 import { r2Upload } from './src/lib/r2.js'
+import { decodeAndValidate } from './api/_lib/image-validate.js'
 import {
   rateLimit,
   preventDuplicate,
@@ -486,11 +487,12 @@ app.post('/api/menu/upload-image', requireRestaurantRole(req => req.body.restaur
     const { allowed: uploadAllowed } = await rateLimit(`rl:upload:ip:${getClientIp(req)}`, 15, 60)
     if (!uploadAllowed) return send429(res, 'Too many image uploads. Please wait before uploading again.')
 
-    const base64 = dataUrl.replace(/^data:[^;]+;base64,/, '')
-    const buf    = Buffer.from(base64, 'base64')
+    // ── Image validation — magic-byte check, size cap ──────────────────────────
+    const validation = decodeAndValidate(dataUrl)
+    if (!validation.ok) return res.status(400).json({ error: validation.error })
 
     const objectKey = `restaurants/${restaurantId}/menu-items/${Date.now()}.webp`
-    const { publicUrl, objectKey: returnedKey } = await r2Upload(buf, objectKey, 'image/webp')
+    const { publicUrl, objectKey: returnedKey } = await r2Upload(validation.buf, objectKey, 'image/webp')
     console.log('[menu/upload-image] R2 upload ✅:', returnedKey)
     return res.json({ url: publicUrl, imageKey: returnedKey })
   } catch (err) {
@@ -947,11 +949,12 @@ app.post('/api/restaurant/upload-logo', requireRestaurantRole(req => req.body.re
   try {
     const { restaurantId, dataUrl } = req.body
     if (!restaurantId || !dataUrl) return res.status(400).json({ error: 'restaurantId and dataUrl required' })
-    const base64 = dataUrl.replace(/^data:[^;]+;base64,/, '')
-    const buf = Buffer.from(base64, 'base64')
+
+    const validation = decodeAndValidate(dataUrl)
+    if (!validation.ok) return res.status(400).json({ error: validation.error })
 
     const objectKeyPath = `restaurants/${restaurantId}/logo/${Date.now()}.webp`
-    const { publicUrl, objectKey } = await r2Upload(buf, objectKeyPath, 'image/webp')
+    const { publicUrl, objectKey } = await r2Upload(validation.buf, objectKeyPath, 'image/webp')
     console.log('[restaurant/upload-logo] R2 ✅:', objectKey)
 
     await patchNeonRestaurant(restaurantId, { logo: publicUrl, logo_key: objectKey })
@@ -1002,10 +1005,12 @@ app.post('/api/about/upload-image', requireRestaurantRole(req => req.body.restau
     if (!dataUrl || !restaurantId || slot == null) {
       return res.status(400).json({ error: 'dataUrl, restaurantId, and slot required' })
     }
-    const base64 = dataUrl.replace(/^data:[^;]+;base64,/, '')
-    const buf    = Buffer.from(base64, 'base64')
+
+    const validation = decodeAndValidate(dataUrl)
+    if (!validation.ok) return res.status(400).json({ error: validation.error })
+
     const objectKey = `restaurants/${restaurantId}/about/image-${slot + 1}-${Date.now()}.webp`
-    const { publicUrl, objectKey: returnedKey } = await r2Upload(buf, objectKey, 'image/webp')
+    const { publicUrl, objectKey: returnedKey } = await r2Upload(validation.buf, objectKey, 'image/webp')
     console.log('[about/upload-image] R2 ✅:', returnedKey)
     return res.json({ url: publicUrl, imageKey: returnedKey })
   } catch (err) {
@@ -1018,10 +1023,12 @@ app.post('/api/restaurant/upload-carousel', requireRestaurantRole(req => req.bod
   try {
     const { dataUrl, restaurantId } = req.body
     if (!dataUrl || !restaurantId) return res.status(400).json({ error: 'dataUrl and restaurantId required' })
-    const base64 = dataUrl.replace(/^data:[^;]+;base64,/, '')
-    const buf    = Buffer.from(base64, 'base64')
+
+    const validation = decodeAndValidate(dataUrl)
+    if (!validation.ok) return res.status(400).json({ error: validation.error })
+
     const objectKey = `restaurants/${restaurantId}/carousel/${Date.now()}.webp`
-    const { publicUrl, objectKey: returnedKey } = await r2Upload(buf, objectKey, 'image/webp')
+    const { publicUrl, objectKey: returnedKey } = await r2Upload(validation.buf, objectKey, 'image/webp')
     console.log('[restaurant/upload-carousel] R2 ✅:', returnedKey)
     return res.json({ url: publicUrl, imageKey: returnedKey })
   } catch (err) {
