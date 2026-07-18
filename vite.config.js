@@ -13,6 +13,7 @@ import { upsertNeonRestaurantMember, deleteNeonRestaurantMember, getNeonRestaura
 import { upsertNeonRestaurantSettingsKey } from './src/db/neon-restaurant-settings.js'
 import { writeAuditLog } from './src/db/neon-audit-logs.js'
 import { r2Upload } from './src/lib/r2.js'
+import { decodeAndValidate } from './api/_lib/image-validate.js'
 import { getClientIp } from './src/lib/upstash.server.js'
 import * as menuService from './src/services/menuService.js'
 import * as contentService from './src/services/restaurantContentService.js'
@@ -156,13 +157,14 @@ function menuApiPlugin() {
           const { dataUrl, restaurantId } = await readBody(req)
           if (!dataUrl || !restaurantId) return json(res, 400, { error: 'dataUrl and restaurantId required' })
 
-          const base64 = dataUrl.replace(/^data:[^;]+;base64,/, '')
-          const buf = Buffer.from(base64, 'base64')
+          // ── Image validation — magic-byte check, size cap ──────────────────
+          const validation = decodeAndValidate(dataUrl)
+          if (!validation.ok) return json(res, 400, { error: validation.error })
 
           // ── Primary: Cloudflare R2 ──────────────────────────────────────────
           try {
             const objectKey = `restaurants/${restaurantId}/menu-items/${Date.now()}.webp`
-            const { publicUrl, objectKey: returnedKey } = await r2Upload(buf, objectKey, 'image/webp')
+            const { publicUrl, objectKey: returnedKey } = await r2Upload(validation.buf, objectKey, 'image/webp')
             console.log('[menu/upload-image] R2 upload ✅:', returnedKey)
             return json(res, 200, { url: publicUrl, imageKey: returnedKey })
           } catch (r2Err) {
@@ -483,13 +485,14 @@ function aboutApiPlugin() {
         try {
           const { dataUrl, restaurantId, slot } = await readBody(req)
           if (!dataUrl || !restaurantId || slot == null) return json(res, 400, { error: 'dataUrl, restaurantId, and slot required' })
-          const base64 = dataUrl.replace(/^data:[^;]+;base64,/, '')
-          const buf = Buffer.from(base64, 'base64')
+
+          const validation = decodeAndValidate(dataUrl)
+          if (!validation.ok) return json(res, 400, { error: validation.error })
 
           // ── Primary: Cloudflare R2 ──────────────────────────────────────────
           try {
             const objectKey = `restaurants/${restaurantId}/about/image-${slot + 1}-${Date.now()}.webp`
-            const { publicUrl, objectKey: returnedKey } = await r2Upload(buf, objectKey, 'image/webp')
+            const { publicUrl, objectKey: returnedKey } = await r2Upload(validation.buf, objectKey, 'image/webp')
             console.log('[about/upload-image] R2 upload ✅:', returnedKey)
             return json(res, 200, { url: publicUrl, imageKey: returnedKey })
           } catch (r2Err) {
@@ -509,10 +512,12 @@ function aboutApiPlugin() {
         try {
           const { restaurantId, dataUrl } = await readBody(req)
           if (!restaurantId || !dataUrl) return json(res, 400, { error: 'restaurantId and dataUrl required' })
-          const base64 = dataUrl.replace(/^data:[^;]+;base64,/, '')
-          const buf = Buffer.from(base64, 'base64')
+
+          const validation = decodeAndValidate(dataUrl)
+          if (!validation.ok) return json(res, 400, { error: validation.error })
+
           const objectKeyPath = `restaurants/${restaurantId}/logo/${Date.now()}.webp`
-          const { publicUrl, objectKey } = await r2Upload(buf, objectKeyPath, 'image/webp')
+          const { publicUrl, objectKey } = await r2Upload(validation.buf, objectKeyPath, 'image/webp')
           await patchNeonRestaurant(restaurantId, { logo: publicUrl, logo_key: objectKey })
           console.log('[restaurant/upload-logo] Uploaded:', publicUrl)
           return json(res, 200, { url: publicUrl, imageKey: objectKey })
@@ -530,13 +535,14 @@ function aboutApiPlugin() {
         try {
           const { dataUrl, restaurantId } = await readBody(req)
           if (!dataUrl || !restaurantId) return json(res, 400, { error: 'dataUrl and restaurantId required' })
-          const base64 = dataUrl.replace(/^data:[^;]+;base64,/, '')
-          const buf = Buffer.from(base64, 'base64')
+
+          const validation = decodeAndValidate(dataUrl)
+          if (!validation.ok) return json(res, 400, { error: validation.error })
 
           // ── Primary: Cloudflare R2 ──────────────────────────────────────────
           try {
             const objectKey = `restaurants/${restaurantId}/carousel/${Date.now()}.webp`
-            const { publicUrl, objectKey: returnedKey } = await r2Upload(buf, objectKey, 'image/webp')
+            const { publicUrl, objectKey: returnedKey } = await r2Upload(validation.buf, objectKey, 'image/webp')
             console.log('[restaurant/upload-carousel] R2 upload ✅:', returnedKey)
             return json(res, 200, { url: publicUrl, imageKey: returnedKey })
           } catch (r2Err) {
