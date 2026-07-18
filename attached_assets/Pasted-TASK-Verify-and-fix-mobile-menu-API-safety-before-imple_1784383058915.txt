@@ -1,0 +1,133 @@
+TASK: Verify and fix mobile menu API safety before implementing menu editing.
+
+Run only in:
+
+shriqrdotcom/exzibo-mag
+
+Do not modify the App-Manager-07 mobile repository.
+
+Create a branch from the latest origin/main:
+
+fix/mobile-menu-api-safety
+
+Inspect only:
+
+- api/menu-content.js
+- menu service and database modules
+- restaurant authorization helpers
+- menu image-upload handler
+- relevant menu and authorization tests
+
+Do not repeat the complete repository audit.
+
+GOAL
+
+Make the existing menu APIs safe for use by the Expo mobile application without changing the public customer menu.
+
+VERIFY AND FIX
+
+1. Item partial updates
+
+Ensure the mobile item update endpoint supports a real partial update.
+
+- Omitted fields must remain unchanged.
+- Do not replace omitted values with defaults.
+- Resolve the item’s restaurant ID from the database.
+- Do not trust restaurantId supplied by the client.
+- Availability and published toggles must not require resending the complete item.
+
+2. Category tenant isolation
+
+For an existing category ID:
+
+- resolve its restaurant from the database
+- verify authenticated membership and Manager-or-higher permission
+- reject a submitted restaurantId that does not match
+- prevent Restaurant A from modifying Restaurant B’s category
+
+3. Item and bulk-upsert isolation
+
+For every existing item ID:
+
+- resolve restaurant ownership from the database
+- verify access before updating
+- validate every item independently in bulk requests
+- reject the complete request safely if any item is unauthorized
+
+4. Category relationship
+
+When an item contains categoryId:
+
+- verify the category exists
+- verify it belongs to the same restaurant as the item
+- reject cross-restaurant category assignment
+
+5. Role separation
+
+Menu mutations may be performed only by:
+
+- owner
+- admin
+- manager
+
+Staff must receive 403.
+
+Do not allow menu_studio or superadmin to bypass normal restaurant authorization. Superadmin access must remain separate.
+
+6. Upload validation
+
+Verify that menu uploads:
+
+- require an authenticated Manager-or-higher restaurant member
+- validate actual decoded image bytes
+- reject unsupported or malformed files
+- enforce file-size and reasonable dimension limits
+- use server-generated R2 keys
+- never trust client filenames or MIME labels
+
+Report separately whether image replacement leaves orphaned R2 objects. Do not build a large media redesign in this task.
+
+7. Tests
+
+Use the existing test framework and add focused tests for:
+
+- partial update preserves omitted fields
+- availability-only update preserves all other item data
+- Restaurant A cannot update Restaurant B’s item
+- Restaurant A cannot update Restaurant B’s category
+- bulk upsert rejects a foreign item ID
+- foreign categoryId is rejected
+- staff mutation returns 403
+- owner, admin and manager permitted cases succeed
+- malformed image data is rejected
+- published customer-menu endpoints remain public
+
+Run the complete authorization/menu tests and production build.
+
+Do not:
+
+- change the database schema
+- implement ordering
+- modify the mobile app
+- deploy
+- merge into main
+- expose secrets
+- commit prompt or attached_assets files
+
+Commit as:
+
+fix: secure mobile menu mutations
+
+Push only to:
+
+origin/fix/mobile-menu-api-safety
+
+Return:
+
+1. verified vulnerabilities
+2. files changed
+3. final API behaviour
+4. test results
+5. build result
+6. remaining non-blocking issues
+7. final result: PASS or FAIL
