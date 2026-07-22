@@ -1,4 +1,4 @@
-import { setCors } from './_lib/cors.js'
+import { setPublicCors, setAdminCors } from './_lib/cors.js'
 import { getSessionEmail, isSuperadminEmail, checkRestaurantAccess, SETTINGS_ROLES } from './_lib/authz.js'
 import {
   getNeonRestaurants,
@@ -24,6 +24,8 @@ import { neon } from '../src/db/pg-sql.js'
 // POST ?action=updateProfile        body: { restaurantId, patch }
 // POST ?action=softDelete           body: { id }
 // POST ?action=permanentDelete      body: { id }
+//
+// Authorization is ALWAYS enforced — no environment-variable bypass.
 
 function getSql() {
   return neon(process.env.DATABASE_URL)
@@ -32,13 +34,7 @@ function getSql() {
 // ── Superadmin guard ──────────────────────────────────────────────────────────
 // Returns { ok: true, session } on success, or sends 401/403 and returns
 // { ok: false } so the caller can immediately `return`.
-// Skipped when DISABLE_AUTH / VITE_DISABLE_AUTH is set (dev mode).
 async function assertSuperadmin(req, res) {
-  const disableAuth =
-    process.env.VITE_DISABLE_AUTH === 'true' ||
-    process.env.DISABLE_AUTH === 'true'
-  if (disableAuth) return { ok: true }
-
   const session = await getSessionEmail(req)
   if (!session) {
     res.status(401).json({ error: 'Not authenticated' })
@@ -52,7 +48,7 @@ async function assertSuperadmin(req, res) {
 }
 
 export default async function handler(req, res) {
-  setCors(res)
+  setPublicCors(res)
   if (req.method === 'OPTIONS') return res.status(200).end()
 
   const action = req.query.action
@@ -112,14 +108,11 @@ export default async function handler(req, res) {
         const patch = req.body
         if (!patch || Object.keys(patch).length === 0) return res.status(400).json({ error: 'patch body required' })
         // Require superadmin or owner/admin membership — SETTINGS_ROLES.
-        const neonPatchDisableAuth = process.env.VITE_DISABLE_AUTH === 'true' || process.env.DISABLE_AUTH === 'true'
-        if (!neonPatchDisableAuth) {
-          const access = await checkRestaurantAccess(req, id)
-          if (access.error === 'Not authenticated') return res.status(401).json({ error: 'Not authenticated' })
-          if (!access.allowed) return res.status(403).json({ error: 'Access denied' })
-          if (!access.isSuperadmin && !SETTINGS_ROLES.includes(access.role)) {
-            return res.status(403).json({ error: 'Patching restaurant requires owner or admin role' })
-          }
+        const access = await checkRestaurantAccess(req, id)
+        if (access.error === 'Not authenticated') return res.status(401).json({ error: 'Not authenticated' })
+        if (!access.allowed) return res.status(403).json({ error: 'Access denied' })
+        if (!access.isSuperadmin && !SETTINGS_ROLES.includes(access.role)) {
+          return res.status(403).json({ error: 'Patching restaurant requires owner or admin role' })
         }
         const row = await patchNeonRestaurant(id, patch)
         return res.json(row ?? { ok: true })
@@ -132,13 +125,6 @@ export default async function handler(req, res) {
 
     // ── GET: myIds — restaurant IDs for the authenticated user ─────────────────
     if (action === 'myIds') {
-      const disableAuth = process.env.VITE_DISABLE_AUTH === 'true' || process.env.DISABLE_AUTH === 'true'
-      if (disableAuth) {
-        // Dev: return all active restaurant IDs
-        const sql = getSql()
-        const rows = await sql`SELECT id FROM restaurants WHERE is_deleted = false ORDER BY created_at DESC`
-        return res.json(rows.map(r => r.id))
-      }
       const session = await getSessionEmail(req)
       if (!session) return res.status(401).json({ error: 'Not authenticated' })
 
@@ -172,17 +158,13 @@ export default async function handler(req, res) {
       // Require an authenticated session — the creator becomes the owner.
       // The owner_id is ALWAYS set from the verified session; any caller-supplied
       // owner_id is ignored to prevent ownership hijacking.
-      const disableAuth = process.env.VITE_DISABLE_AUTH === 'true' || process.env.DISABLE_AUTH === 'true'
-      let createSession = null
-      if (!disableAuth) {
-        createSession = await getSessionEmail(req)
-        if (!createSession) return res.status(401).json({ error: 'Not authenticated' })
-      }
+      const createSession = await getSessionEmail(req)
+      if (!createSession) return res.status(401).json({ error: 'Not authenticated' })
       const payload = req.body
       if (!payload?.slug || !payload?.name) return res.status(400).json({ error: 'slug and name required' })
       if (!payload.uid) payload.uid = String(Math.floor(1000000000 + Math.random() * 9000000000))
       // Always force owner_id from session — never trust a submitted value.
-      if (createSession) payload.owner_id = createSession.userId
+      payload.owner_id = createSession.userId
       const row = await createNeonRestaurant(payload)
       return res.status(201).json(row)
     }
@@ -191,14 +173,11 @@ export default async function handler(req, res) {
       const { id, ...patch } = req.body
       if (!id) return res.status(400).json({ error: 'id required' })
       // Require superadmin or owner/admin membership — SETTINGS_ROLES.
-      const updateDisableAuth = process.env.VITE_DISABLE_AUTH === 'true' || process.env.DISABLE_AUTH === 'true'
-      if (!updateDisableAuth) {
-        const access = await checkRestaurantAccess(req, id)
-        if (access.error === 'Not authenticated') return res.status(401).json({ error: 'Not authenticated' })
-        if (!access.allowed) return res.status(403).json({ error: 'Access denied' })
-        if (!access.isSuperadmin && !SETTINGS_ROLES.includes(access.role)) {
-          return res.status(403).json({ error: 'Updating restaurant requires owner or admin role' })
-        }
+      const access = await checkRestaurantAccess(req, id)
+      if (access.error === 'Not authenticated') return res.status(401).json({ error: 'Not authenticated' })
+      if (!access.allowed) return res.status(403).json({ error: 'Access denied' })
+      if (!access.isSuperadmin && !SETTINGS_ROLES.includes(access.role)) {
+        return res.status(403).json({ error: 'Updating restaurant requires owner or admin role' })
       }
       const row = await patchNeonRestaurant(id, patch)
       return res.json(row ?? { ok: true })
@@ -208,14 +187,11 @@ export default async function handler(req, res) {
       const { restaurantId, patch } = req.body
       if (!restaurantId || !patch) return res.status(400).json({ error: 'restaurantId and patch required' })
       // Require superadmin or owner/admin membership — SETTINGS_ROLES.
-      const profileDisableAuth = process.env.VITE_DISABLE_AUTH === 'true' || process.env.DISABLE_AUTH === 'true'
-      if (!profileDisableAuth) {
-        const access = await checkRestaurantAccess(req, restaurantId)
-        if (access.error === 'Not authenticated') return res.status(401).json({ error: 'Not authenticated' })
-        if (!access.allowed) return res.status(403).json({ error: 'Access denied' })
-        if (!access.isSuperadmin && !SETTINGS_ROLES.includes(access.role)) {
-          return res.status(403).json({ error: 'Updating restaurant profile requires owner or admin role' })
-        }
+      const access = await checkRestaurantAccess(req, restaurantId)
+      if (access.error === 'Not authenticated') return res.status(401).json({ error: 'Not authenticated' })
+      if (!access.allowed) return res.status(403).json({ error: 'Access denied' })
+      if (!access.isSuperadmin && !SETTINGS_ROLES.includes(access.role)) {
+        return res.status(403).json({ error: 'Updating restaurant profile requires owner or admin role' })
       }
       const row = await patchNeonRestaurant(restaurantId, patch)
       return res.json(row ?? { ok: true })

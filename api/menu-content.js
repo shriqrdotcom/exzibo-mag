@@ -42,8 +42,6 @@ export default async function handler(req, res) {
   const action = req.query.action
   if (!action) return res.status(400).json({ error: 'action query param required' })
 
-  const isAuthDisabled = process.env.DISABLE_AUTH === 'true' || process.env.VITE_DISABLE_AUTH === 'true'
-
   try {
     // ── Menu — reads ─────────────────────────────────────────────────────────
     if (MENU_GET_ACTIONS.has(action)) {
@@ -52,7 +50,8 @@ export default async function handler(req, res) {
 
       // getPublishedItems is public (customer-facing menu).
       // getItems and getCategories may include unpublished data — require membership.
-      if (action !== 'getPublishedItems' && !isAuthDisabled) {
+      // Authorization is ALWAYS enforced — no environment-variable bypass.
+      if (action !== 'getPublishedItems') {
         const access = await checkRestaurantAccess(req, restaurantId)
         if (access.error === 'Not authenticated') return res.status(401).json({ error: 'Not authenticated' })
         if (!access.allowed) return res.status(403).json({ error: 'Access denied' })

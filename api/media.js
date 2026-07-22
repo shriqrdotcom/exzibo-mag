@@ -1,5 +1,5 @@
 import { r2Upload } from '../src/lib/r2.js'
-import { setCors } from './_lib/cors.js'
+import { setAdminCors, applySecurityHeaders } from './_lib/cors.js'
 import { checkRestaurantAccess, MANAGEMENT_ROLES } from './_lib/authz.js'
 import { rateLimit, getClientIp, send429 } from '../src/lib/upstash.server.js'
 import { decodeAndValidate } from './_lib/image-validate.js'
@@ -16,15 +16,14 @@ import { decodeAndValidate } from './_lib/image-validate.js'
 //  - dataUrl must decode to a valid JPEG, PNG, WebP, or GIF (magic-byte verified).
 //  - Decoded buffer must not exceed MAX_IMAGE_BYTES (see image-validate.js).
 //  - R2 keys are server-generated (timestamp-based) — client filenames are ignored.
+//
+// Authorization is ALWAYS enforced — no environment-variable bypass.
 
 export const config = { api: { bodyParser: { sizeLimit: '10mb' } } }
 
-function isAuthDisabled() {
-  return process.env.DISABLE_AUTH === 'true' || process.env.VITE_DISABLE_AUTH === 'true'
-}
-
 export default async function handler(req, res) {
-  setCors(res)
+  setAdminCors(req, res)
+  applySecurityHeaders(res)
   if (req.method === 'OPTIONS') return res.status(200).end()
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
@@ -40,76 +39,54 @@ export default async function handler(req, res) {
   const restaurantId = req.body?.restaurantId
   if (!restaurantId) return res.status(400).json({ error: 'restaurantId required' })
 
-  if (!isAuthDisabled()) {
-    const access = await checkRestaurantAccess(req, restaurantId)
-    if (access.error === 'Not authenticated') return res.status(401).json({ error: 'Not authenticated' })
-    if (!access.allowed) return res.status(403).json({ error: 'Access denied' })
-    if (!access.isSuperadmin && !MANAGEMENT_ROLES.includes(access.role)) {
-      return res.status(403).json({ error: 'Uploading images requires manager role or above' })
-    }
+  const access = await checkRestaurantAccess(req, restaurantId)
+  if (access.error === 'Not authenticated') return res.status(401).json({ error: 'Not authenticated' })
+  if (!access.allowed) return res.status(403).json({ error: 'Access denied' })
+  if (!access.isSuperadmin && !MANAGEMENT_ROLES.includes(access.role)) {
+    return res.status(403).json({ error: 'Uploading images requires manager role or above' })
   }
+
+  const { dataUrl, slot } = req.body
 
   try {
     if (action === 'uploadMenuImage') {
-      const { dataUrl } = req.body
       if (!dataUrl) return res.status(400).json({ error: 'dataUrl required' })
-
-      // Validate decoded bytes — reject unsupported formats and oversized images.
       const validation = decodeAndValidate(dataUrl)
       if (!validation.ok) return res.status(400).json({ error: validation.error })
 
-      // R2 key is server-generated — client filenames and MIME labels are ignored.
-      const { publicUrl, objectKey } = await r2Upload(
-        validation.buf,
-        `restaurants/${restaurantId}/menu-items/${Date.now()}.webp`,
-        'image/webp',
-      )
-      return res.json({ url: publicUrl, imageKey: objectKey })
+      const objectKey = `restaurants/${restaurantId}/menu-items/${Date.now()}.webp`
+      const { publicUrl, objectKey: returnedKey } = await r2Upload(validation.buf, objectKey, 'image/webp')
+      return res.json({ url: publicUrl, imageKey: returnedKey })
     }
 
     if (action === 'uploadAboutImage') {
-      const { dataUrl, slot } = req.body
       if (!dataUrl || slot == null) return res.status(400).json({ error: 'dataUrl and slot required' })
-
       const validation = decodeAndValidate(dataUrl)
       if (!validation.ok) return res.status(400).json({ error: validation.error })
 
-      const { publicUrl, objectKey } = await r2Upload(
-        validation.buf,
-        `restaurants/${restaurantId}/about/image-${slot + 1}-${Date.now()}.webp`,
-        'image/webp',
-      )
-      return res.json({ url: publicUrl, imageKey: objectKey })
+      const objectKey = `restaurants/${restaurantId}/about/image-${slot + 1}-${Date.now()}.webp`
+      const { publicUrl, objectKey: returnedKey } = await r2Upload(validation.buf, objectKey, 'image/webp')
+      return res.json({ url: publicUrl, imageKey: returnedKey })
     }
 
     if (action === 'uploadLogoImage') {
-      const { dataUrl } = req.body
       if (!dataUrl) return res.status(400).json({ error: 'dataUrl required' })
-
       const validation = decodeAndValidate(dataUrl)
       if (!validation.ok) return res.status(400).json({ error: validation.error })
 
-      const { publicUrl, objectKey } = await r2Upload(
-        validation.buf,
-        `restaurants/${restaurantId}/logo/${Date.now()}.webp`,
-        'image/webp',
-      )
-      return res.json({ url: publicUrl, imageKey: objectKey })
+      const objectKey = `restaurants/${restaurantId}/logo/${Date.now()}.webp`
+      const { publicUrl, objectKey: returnedKey } = await r2Upload(validation.buf, objectKey, 'image/webp')
+      return res.json({ url: publicUrl, imageKey: returnedKey })
     }
 
     if (action === 'uploadCarouselImage') {
-      const { dataUrl } = req.body
       if (!dataUrl) return res.status(400).json({ error: 'dataUrl required' })
-
       const validation = decodeAndValidate(dataUrl)
       if (!validation.ok) return res.status(400).json({ error: validation.error })
 
-      const { publicUrl, objectKey } = await r2Upload(
-        validation.buf,
-        `restaurants/${restaurantId}/carousel/${Date.now()}.webp`,
-        'image/webp',
-      )
-      return res.json({ url: publicUrl, imageKey: objectKey })
+      const objectKey = `restaurants/${restaurantId}/carousel/${Date.now()}.webp`
+      const { publicUrl, objectKey: returnedKey } = await r2Upload(validation.buf, objectKey, 'image/webp')
+      return res.json({ url: publicUrl, imageKey: returnedKey })
     }
 
     return res.status(400).json({ error: `Unknown action: ${action}` })

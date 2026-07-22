@@ -101,14 +101,10 @@ describe('A — ROLE_PERMISSIONS mapping', async () => {
 
 describe('A2 — Better Auth expo plugin', async () => {
   it('auth.server.js exports an auth object (no crash on import)', async () => {
-    // If BETTER_AUTH_SECRET is missing and auth is not disabled, the module throws
-    // at startup. In dev (DISABLE_AUTH=true) an ephemeral secret is used instead.
-    // Either way, the import must not throw due to the expo plugin addition.
-    if (process.env.DISABLE_AUTH !== 'true' && process.env.VITE_DISABLE_AUTH !== 'true' &&
-        !process.env.BETTER_AUTH_SECRET) {
-      console.log('    SKIP: BETTER_AUTH_SECRET not set — import would throw by design')
-      return
-    }
+    // The guard in auth.server.js only throws when VERCEL_ENV is set (deployed
+    // Vercel environment) AND BETTER_AUTH_SECRET is absent.  Locally (dev or
+    // test run) the guard is bypassed: an ephemeral secret is used instead,
+    // so the import must succeed regardless of DISABLE_AUTH settings.
     const mod = await import('../src/lib/auth.server.js')
     assert.ok(mod.auth, 'auth export must exist')
     assert.equal(typeof mod.auth.api?.getSession, 'function', 'auth.api.getSession must be a function')
@@ -119,10 +115,8 @@ describe('A2 — Better Auth expo plugin', async () => {
 
 describe('B — HTTP unauthenticated and method tests', async () => {
   it('unauthenticated GET returns 401 JSON', async () => {
-    if (process.env.DISABLE_AUTH === 'true' || process.env.VITE_DISABLE_AUTH === 'true') {
-      console.log('    SKIP: DISABLE_AUTH=true — 401 unreachable in dev mode (expected)')
-      return
-    }
+    // Auth is ALWAYS enforced — DISABLE_AUTH / VITE_DISABLE_AUTH have no effect
+    // on the server-side handler.  An unauthenticated request always returns 401.
     const res = await get('/api/mobile/v1/bootstrap')
     serverOnline(res)
     assert.equal(res.status, 401, `expected 401 got ${res.status}`)
@@ -133,7 +127,6 @@ describe('B — HTTP unauthenticated and method tests', async () => {
   it('unauthenticated GET has Cache-Control: no-store', async () => {
     const res = await get('/api/mobile/v1/bootstrap')
     serverOnline(res)
-    // In dev with DISABLE_AUTH the response is 200 (dev mock) — still needs no-store.
     const cc = res.headers.get('cache-control') || ''
     assert.ok(cc.includes('no-store'), `Cache-Control must contain no-store, got: "${cc}"`)
   })
@@ -169,18 +162,21 @@ describe('B — HTTP unauthenticated and method tests', async () => {
     assert.ok(ct.includes('application/json'), `Content-Type must be JSON, got: "${ct}"`)
   })
 
-  it('dev mode (DISABLE_AUTH) returns 200 with empty restaurants array', async () => {
-    if (process.env.DISABLE_AUTH !== 'true' && process.env.VITE_DISABLE_AUTH !== 'true') {
-      console.log('    SKIP: not in DISABLE_AUTH dev mode')
-      return
+  it('DISABLE_AUTH env var does NOT grant access — endpoint still returns 401', async () => {
+    // The DISABLE_AUTH bypass was removed from api/mobile/bootstrap.js as part of
+    // the auth-boundary-hardening pass.  Setting DISABLE_AUTH=true must no longer
+    // produce a 200 with a mock dev user.  The endpoint always requires a real
+    // Better Auth session; without one it always returns 401.
+    const orig = process.env.DISABLE_AUTH
+    process.env.DISABLE_AUTH = 'true'
+    try {
+      const res = await get('/api/mobile/v1/bootstrap')
+      serverOnline(res)
+      assert.equal(res.status, 401, `DISABLE_AUTH=true must not bypass auth; expected 401, got ${res.status}`)
+    } finally {
+      if (orig === undefined) delete process.env.DISABLE_AUTH
+      else process.env.DISABLE_AUTH = orig
     }
-    const res = await get('/api/mobile/v1/bootstrap')
-    serverOnline(res)
-    assert.equal(res.status, 200, `expected 200 in dev mode, got ${res.status}`)
-    const body = await res.json()
-    assert.equal(body.apiVersion, 'v1')
-    assert.ok(body.user, 'body must have a user field')
-    assert.ok(Array.isArray(body.restaurants), 'restaurants must be an array')
   })
 })
 

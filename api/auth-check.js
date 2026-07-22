@@ -9,16 +9,18 @@
  *
  * Both require a valid Better Auth session cookie.
  * Email is NEVER accepted from the request — always read from the session.
+ *
+ * CORS: Origin allowlist with credentials (needed for cross-subdomain auth
+ * checks between dashboard.exzibo.online and superadmin.exzibo.online).
+ * Untrusted origins receive no ACAO / ACAC headers.
  */
 
 import { checkSuperadmin, checkRestaurantAccess } from './_lib/authz.js'
+import { setCredentialedCors, applyAuthSecurityHeaders } from './_lib/cors.js'
 
 export default async function handler(req, res) {
-  const origin = req.headers.origin || ''
-  res.setHeader('Access-Control-Allow-Origin', origin || '*')
-  res.setHeader('Access-Control-Allow-Credentials', 'true')
-  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS')
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Cookie')
+  setCredentialedCors(req, res)
+  applyAuthSecurityHeaders(res)
 
   if (req.method === 'OPTIONS') return res.status(200).end()
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' })
@@ -39,7 +41,7 @@ export default async function handler(req, res) {
   }
 
   // ── Restaurant member check ───────────────────────────────────────────────
-  // Superadmin bypass happens inside checkRestaurantAccess — no Supabase involved.
+  // Superadmin bypass happens inside checkRestaurantAccess.
   // Membership is verified against Neon `restaurant_members` table.
   if (type === 'member') {
     try {

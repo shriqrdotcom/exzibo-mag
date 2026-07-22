@@ -65,19 +65,15 @@ function bad(status, error) {
   return { status, body: { error } }
 }
 
-function isAuthDisabled() {
-  return process.env.DISABLE_AUTH === 'true' || process.env.VITE_DISABLE_AUTH === 'true'
-}
-
 // ── Authorization ─────────────────────────────────────────────────────────────
 // Requires a valid Better Auth session, restaurant membership, AND a matching
 // role. allowedRoles defaults to MANAGEMENT_ROLES (owner/admin/manager).
 // Superadmin (email allowlist) always passes.
 // menu_studio is a regular restaurant role subject to the allowedRoles check —
 // it is NOT elevated here.
+// Authorization is ALWAYS enforced — no environment-variable bypass.
 // Returns null when authorized, or the { status, body } error to return immediately.
 async function authorizeRestaurantWrite(req, restaurantId, allowedRoles = MANAGEMENT_ROLES) {
-  if (isAuthDisabled()) return null
   if (!restaurantId) return bad(400, 'restaurantId required')
   const result = await checkRestaurantAccess(req, restaurantId)
   if (result.error === 'Not authenticated') return bad(401, 'Not authenticated')

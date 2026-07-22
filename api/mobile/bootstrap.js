@@ -58,28 +58,9 @@ export default async function handler(req, res) {
   }
 
   // ── Session validation ────────────────────────────────────────────────────
-  // DISABLE_AUTH bypass: in dev the workflow runs with VITE_DISABLE_AUTH=true.
-  // We return a safe empty response so dev builds don't crash; this path must
-  // NEVER be reached in production.
-  const isDevAuthDisabled =
-    process.env.DISABLE_AUTH === 'true' || process.env.VITE_DISABLE_AUTH === 'true'
-
-  let sessionUser
-  if (isDevAuthDisabled) {
-    // Predictable dev mock — not a real user, empty restaurant list.
-    sessionUser = {
-      id: '00000000-0000-0000-0000-000000000000',
-      name: 'Dev User (auth disabled)',
-      email: 'dev@disable-auth.local',
-      image: null,
-    }
-    return res.status(200).json({
-      apiVersion: 'v1',
-      user: sessionUser,
-      restaurants: [],
-    })
-  }
-
+  // Authorization is ALWAYS enforced — no environment-variable bypass.
+  // In local dev without a configured Better Auth secret or without being
+  // logged in, this returns 401 (correct fail-closed behavior).
   let session
   try {
     session = await getSessionEmail(req)

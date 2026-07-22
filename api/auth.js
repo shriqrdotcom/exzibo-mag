@@ -26,30 +26,6 @@ export default async function handler(req, res) {
 
   req.url = `/api/auth/${subpath}${qs ? '?' + qs : ''}`
 
-  // ── TEMPORARY DIAGNOSTIC LOG (remove once auth is confirmed working) ───────
-  // Check for sign-in attempts so we can see env var presence in Vercel logs.
-  if (subpath.startsWith('sign-in') || subpath.startsWith('callback')) {
-    const resolvedBaseUrl =
-      process.env.BETTER_AUTH_BASE_URL ||
-      process.env.BETTER_AUTH_URL ||
-      '(using fallback: https://superadmin.exzibo.online)'
-    console.log('[api/auth] diagnostic', JSON.stringify({
-      subpath,
-      method:              req.method,
-      origin:              req.headers.origin || '(none)',
-      host:                req.headers.host   || '(none)',
-      hasGoogleClientId:   !!process.env.GOOGLE_CLIENT_ID,
-      hasGoogleSecret:     !!process.env.GOOGLE_CLIENT_SECRET,
-      hasBetterAuthSecret: !!process.env.BETTER_AUTH_SECRET,
-      hasDatabaseUrl:      !!process.env.DATABASE_URL,
-      betterAuthBaseUrl:   resolvedBaseUrl,
-      // The exact URL Google must have listed under "Authorized redirect URIs".
-      expectedGoogleCallbackUrl: `${resolvedBaseUrl.startsWith('http') ? resolvedBaseUrl : 'https://superadmin.exzibo.online'}/api/auth/callback/google`,
-      trustedOriginsEnv:   process.env.BETTER_AUTH_TRUSTED_ORIGINS || '(not set)',
-    }))
-  }
-  // ── END DIAGNOSTIC LOG ─────────────────────────────────────────────────────
-
   try {
     // Make sure the Better Auth tables exist before handling any auth request
     // (idempotent, memoized — only actually runs SQL on cold start).
@@ -57,6 +33,7 @@ export default async function handler(req, res) {
     return await betterAuthHandler(req, res)
   } catch (err) {
     // Log any unhandled errors from Better Auth so they appear in Vercel logs.
+    // Do NOT log cookies, tokens, OAuth codes, or secret values.
     console.error('[api/auth] unhandled error in betterAuthHandler:', err?.message, err?.stack?.split('\n')[1] || '')
     if (!res.headersSent) {
       res.status(500).json({ error: 'Auth handler error', detail: err?.message })

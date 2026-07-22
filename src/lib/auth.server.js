@@ -124,19 +124,23 @@ export function ensureAuthSchema() {
 }
 
 // ── BETTER_AUTH_SECRET startup guard ────────────────────────────────────────
-// Fail at startup when the secret is absent and auth is not explicitly disabled.
-// This prevents a misconfigured production deployment from silently using a
-// predictable fallback. In dev (DISABLE_AUTH=true) a random ephemeral value is
-// used — it is never persisted and auth is fully bypassed anyway.
-const _isDevAuthDisabled =
-  process.env.DISABLE_AUTH === 'true' || process.env.VITE_DISABLE_AUTH === 'true'
+// In production (NODE_ENV=production) the secret is mandatory — missing it
+// causes a hard crash at startup so a misconfigured deployment is immediately
+// visible rather than silently degraded.
+// VERCEL_ENV is set automatically by Vercel to 'production', 'preview', or
+// 'development' — it is present only in actual Vercel deployments, NOT during
+// local `npm run dev` or `npm run build`.  This lets us enforce the secret
+// requirement at runtime on the deployed platform while still allowing local
+// builds and development without the secret configured.
+// NOTE: DISABLE_AUTH / VITE_DISABLE_AUTH must NOT be checked here — those
+// variables control client-side UI only and must never influence server auth.
 const _authSecret = process.env.BETTER_AUTH_SECRET
 
-if (!_authSecret && !_isDevAuthDisabled) {
+if (!_authSecret && process.env.VERCEL_ENV) {
   throw new Error(
-    '[auth] BETTER_AUTH_SECRET environment variable is required. ' +
+    '[auth] BETTER_AUTH_SECRET environment variable is required in deployed environments. ' +
     'Generate a value with: openssl rand -base64 32 ' +
-    'and add it to Replit Secrets (dev) or your deployment environment (prod). ' +
+    'and add it to your Vercel environment secrets. ' +
     'Never print or log its value.'
   )
 }
@@ -146,8 +150,9 @@ export const auth = betterAuth({
   baseURL: configuredBaseUrl,
   basePath: '/api/auth',
   // _authSecret is guaranteed non-null in production by the guard above.
-  // In dev-only mode (DISABLE_AUTH=true) an ephemeral UUID stands in — it is
-  // never persisted and real auth calls never reach this code path.
+  // In local dev / test without the secret, an ephemeral UUID stands in so
+  // the module can load; session verification will return null (no valid
+  // cookie), which causes middleware to return 401 — the correct behavior.
   secret: _authSecret ?? crypto.randomUUID(),
   // ── Column-name mapping ─────────────────────────────────────────────────────
   // The DB tables use snake_case columns but Better Auth defaults to camelCase
