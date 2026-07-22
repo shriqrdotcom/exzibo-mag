@@ -1,0 +1,111 @@
+TASK: Make restaurant authorization, My Restaurants, mobile bootstrap, and team invitations use one identity rule.
+
+REPOSITORY
+
+Work only in:
+
+shriqrdotcom/exzibo-mag
+
+START
+
+1. Switch to main and pull the latest changes.
+2. Confirm PR #7 is merged.
+3. Confirm the working tree is clean.
+4. Create branch:
+
+fix/membership-identity-alignment
+
+Do not push directly to main.
+
+PROBLEM
+
+The repository currently uses different identity rules:
+
+- protected restaurant APIs use email;
+- My Restaurants uses user_id;
+- mobile bootstrap uses user_id with email fallback.
+
+This can make the same user receive different restaurant access in different parts of the application.
+
+GOAL
+
+Use this rule everywhere:
+
+1. Match the authenticated Better Auth user_id first.
+2. Use normalized email only when the membership row has user_id IS NULL.
+3. Never allow an email match to override a different existing user_id.
+
+IMPLEMENTATION
+
+Inspect and update only:
+
+- api/_lib/authz.js
+- api/restaurants.js
+- api/mobile/bootstrap.js
+- api/team.js
+- src/db/neon-restaurant-members.js
+- related tests
+
+Required changes:
+
+1. Update checkRestaurantAccess to use:
+   - authenticated session userId as the primary identity;
+   - session email only when membership.user_id is NULL.
+
+2. Update My Restaurants to use the same rule.
+
+3. Confirm mobile bootstrap uses the same rule and returns each restaurant only once.
+
+4. When creating or inviting a team member:
+   - normalize the email;
+   - look for an existing Better Auth user with that email;
+   - set user_id from the server when a user exists;
+   - keep user_id NULL when the invited user does not exist yet.
+
+5. Do not trust caller-provided user_id or owner_id.
+
+6. Do not delete the legacy owner_id column in this task.
+
+7. Do not add uniqueness constraints or perform existing-data backfills yet.
+
+8. Do not apply migration 0005 or run db:push.
+
+TESTS
+
+Add tests proving:
+
+1. Matching user_id grants access even when the stored email is outdated.
+2. Email fallback works when user_id is NULL.
+3. Matching email does not grant access when the row belongs to another user_id.
+4. Protected APIs, My Restaurants, and mobile bootstrap return consistent access.
+5. Duplicate restaurant entries are not returned by mobile bootstrap.
+6. Team invitation resolves user_id from an existing Better Auth account.
+7. An unknown invited email remains an email-only pending membership.
+8. Caller-provided user_id and owner_id are ignored.
+9. Production build succeeds.
+
+RULES
+
+- Do not connect to or modify Neon.
+- Do not apply migrations.
+- Do not modify unrelated UI.
+- Do not reintroduce Supabase.
+- Do not request production secrets.
+- Do not push directly to main.
+
+FINAL REPORT
+
+Provide:
+
+- identity inconsistencies fixed;
+- files changed;
+- tests and build results;
+- remaining work requiring live-data checks;
+- confirmation that no database command was executed;
+- commit hash and branch name.
+
+Commit to:
+
+fix/membership-identity-alignment
+
+Push the branch and create a pull request.
