@@ -9,7 +9,10 @@
     "build": "vite build",
     "preview": "vite preview",
     "start": "node server.js",
-    "db:push": "drizzle-kit push"
+    "db:push": "drizzle-kit push",
+    "preflight": "node scripts/restaurant-preflight.js",
+    "backfill:dry": "node scripts/restaurant-backfill.js",
+    "backfill:apply": "node scripts/restaurant-backfill.js --apply"
   },
   "dependencies": {
     "@better-auth/expo": "1.6.23",
