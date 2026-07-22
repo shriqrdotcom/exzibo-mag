@@ -5,7 +5,14 @@ import fs from 'fs'
 import { createHmac, timingSafeEqual } from 'crypto'
 import bcrypt from 'bcryptjs'
 import pg from 'pg'
-import { patchNeonRestaurant, getNeonRestaurantById, getNeonRestaurantBySlug } from './src/db/neon-restaurants.js'
+import {
+  patchNeonRestaurant,
+  patchNeonRestaurantProfile,
+  patchNeonRestaurantPlatform,
+  toPublicRestaurant,
+  getNeonRestaurantById,
+  getNeonRestaurantBySlug,
+} from './src/db/neon-restaurants.js'
 import { upsertNeonBooking, updateNeonBookingStatus, getNeonBookings } from './src/db/neon-bookings.js'
 import { upsertNeonOrder, updateNeonOrderStatus as updateNeonOrderStatusFn, getNeonOrders, deleteOldNeonOrders } from './src/db/neon-orders.js'
 import { publishOrderRealtimeEvent } from './src/lib/realtime-publisher.js'
@@ -302,17 +309,17 @@ function menuApiPlugin() {
 
 
       // POST /api/restaurant/update-profile
+      // Profile-only update — enforces OWNER_ADMIN_PROFILE_PATCH allowlist.
       server.middlewares.use('/api/restaurant/update-profile', async (req, res) => {
         if (req.method === 'OPTIONS') return json(res, 200, {})
         if (req.method !== 'POST') return json(res, 405, { error: 'Method not allowed' })
         try {
           const { restaurantId, patch } = await readBody(req)
           if (!restaurantId || typeof patch !== 'object') return json(res, 400, { error: 'restaurantId and patch object required' })
-          const allowed = ['name', 'logo']
-          const safePatch = Object.fromEntries(Object.entries(patch).filter(([k]) => allowed.includes(k)))
-          if (Object.keys(safePatch).length === 0) return json(res, 400, { error: 'patch must include at least one of: name, logo' })
-          const row = await patchNeonRestaurant(restaurantId, safePatch)
-          writeAuditLog({ restaurantId, action: 'update', entityType: 'restaurant', entityId: restaurantId, newData: safePatch })
+          // patchNeonRestaurantProfile enforces the OWNER_ADMIN_PROFILE_PATCH allowlist.
+          // Platform fields (plan, status, lifecycle dates) are silently stripped.
+          const row = await patchNeonRestaurantProfile(restaurantId, patch)
+          writeAuditLog({ restaurantId, action: 'update', entityType: 'restaurant', entityId: restaurantId, newData: patch })
           return json(res, 200, row ?? {})
         } catch (e) {
           console.error('[update-profile] Exception:', e.message)
@@ -598,14 +605,14 @@ function aboutApiPlugin() {
         } catch (e) { return json(res, 500, { error: e.message }) }
       })
 
-      // GET /api/restaurant/:id
+      // GET /api/restaurant/:id — public; strip internal/platform fields
       server.middlewares.use('/api/restaurant', async (req, res, next) => {
         if (req.method !== 'GET') return next()
         const restaurantId = (req.url || '/').split('?')[0].replace(/^\//, '')
         if (!restaurantId || restaurantId.length < 10) return next()
         try {
           const neonRow = await getNeonRestaurantById(restaurantId)
-          return json(res, 200, neonRow ?? null)
+          return json(res, 200, neonRow ? toPublicRestaurant(neonRow) : null)
         } catch (e) { return json(res, 500, { error: e.message }) }
       })
 
@@ -1004,7 +1011,7 @@ function neonRestaurantPlugin() {
           res.end(JSON.stringify(body))
         }
 
-        const { getNeonRestaurants } = await import('./src/db/neon-restaurants.js')
+        const { getNeonRestaurants, toPublicRestaurant } = await import('./src/db/neon-restaurants.js')
 
         try {
           const qs = new URLSearchParams((req.url || '').split('?')[1] || '')
@@ -1013,7 +1020,8 @@ function neonRestaurantPlugin() {
             ? rawIds.split(',').map(s => s.trim()).filter(Boolean)
             : null
           const rows = await getNeonRestaurants(ids)
-          return json(200, rows)
+          // Public endpoint — strip internal/platform fields from every row.
+          return json(200, rows.map(toPublicRestaurant))
         } catch (err) {
           console.error('[neon-restaurants]', err.message)
           return json(500, { error: err.message })
@@ -1044,47 +1052,77 @@ function neonRestaurantPlugin() {
           getNeonRestaurantByUid,
           createNeonRestaurant,
           patchNeonRestaurant,
+          patchNeonRestaurantProfile,
+          patchNeonRestaurantPlatform,
+          toPublicRestaurant,
         } = await import('./src/db/neon-restaurants.js')
 
+        // Auth helpers for superadmin checks in dev server.
+        // In dev DISABLE_AUTH mode these will return null (no session) — that is
+        // intentional: the dev auth bypass is client-side only and does not grant
+        // server-side elevated privileges.
+        const { getSessionEmail, isSuperadminEmail, checkRestaurantAccess, SETTINGS_ROLES } =
+          await import('./api/_lib/authz.js')
+
+        const isAuthDisabled =
+          process.env.DISABLE_AUTH === 'true' || process.env.VITE_DISABLE_AUTH === 'true'
+
         try {
-          // GET /api/neon/restaurant/by-slug/:slug
+          // GET /api/neon/restaurant/by-slug/:slug — public
           if (method === 'GET' && url.startsWith('/by-slug/')) {
             const slug = decodeURIComponent(url.replace('/by-slug/', ''))
             if (!slug) return json(400, { error: 'slug required' })
             const row = await getNeonRestaurantBySlug(slug)
-            return row ? json(200, row) : json(404, { error: 'Not found' })
+            return row ? json(200, toPublicRestaurant(row)) : json(404, { error: 'Not found' })
           }
 
-          // GET /api/neon/restaurant/by-uid/:uid
+          // GET /api/neon/restaurant/by-uid/:uid — public
           if (method === 'GET' && url.startsWith('/by-uid/')) {
             const uid = decodeURIComponent(url.replace('/by-uid/', ''))
             if (!uid) return json(400, { error: 'uid required' })
             const row = await getNeonRestaurantByUid(uid)
-            return row ? json(200, row) : json(404, { error: 'Not found' })
+            return row ? json(200, toPublicRestaurant(row)) : json(404, { error: 'Not found' })
           }
 
-          // POST /api/neon/restaurant/create
+          // POST /api/neon/restaurant/create — superadmin only
           if (method === 'POST' && url === '/create') {
+            if (!isAuthDisabled) {
+              const session = await getSessionEmail(req)
+              if (!session) return json(401, { error: 'Not authenticated' })
+              if (!isSuperadminEmail(session.email)) return json(403, { error: 'Superadmin access required' })
+            }
             const body = await readBody()
-            const row = await createNeonRestaurant(body)
+            const payload = { ...body }
+            if (!payload.uid) payload.uid = String(Math.floor(1000000000 + Math.random() * 9000000000))
+            // id, plan, status, plan_limits are always forced to defaults inside createNeonRestaurant.
+            const row = await createNeonRestaurant(payload)
             return json(201, row)
           }
 
-          // PATCH /api/neon/restaurant/:id
+          // PATCH /api/neon/restaurant/:id — profile fields only (owner/admin/manager)
           if (method === 'PATCH' && url.length > 1) {
             const id = decodeURIComponent(url.replace(/^\//, ''))
             if (!id) return json(400, { error: 'id required' })
             const body = await readBody()
-            const row = await patchNeonRestaurant(id, body)
-            return row ? json(200, row) : json(404, { error: 'Not found or no valid fields' })
+            if (!isAuthDisabled) {
+              const access = await checkRestaurantAccess(req, id)
+              if (access.error === 'Not authenticated') return json(401, { error: 'Not authenticated' })
+              if (!access.allowed) return json(403, { error: 'Access denied' })
+              if (!access.isSuperadmin && !SETTINGS_ROLES.includes(access.role)) {
+                return json(403, { error: 'Patching restaurant requires owner or admin role' })
+              }
+            }
+            // Profile fields only — platform fields are rejected regardless of role.
+            const row = await patchNeonRestaurantProfile(id, body)
+            return row ? json(200, row) : json(404, { error: 'Not found or no valid profile fields' })
           }
 
-          // GET /api/neon/restaurant/:id
+          // GET /api/neon/restaurant/:id — public (used by restaurant website)
           if (method === 'GET' && url.length > 1) {
             const id = decodeURIComponent(url.replace(/^\//, ''))
             if (!id) return json(400, { error: 'id required' })
             const row = await getNeonRestaurantById(id)
-            return row ? json(200, row) : json(404, { error: 'Not found' })
+            return row ? json(200, toPublicRestaurant(row)) : json(404, { error: 'Not found' })
           }
 
           return next()
