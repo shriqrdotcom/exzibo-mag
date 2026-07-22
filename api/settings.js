@@ -1,4 +1,4 @@
-import { setCors } from './_lib/cors.js'
+import { setPublicCors, setAdminCors } from './_lib/cors.js'
 import { getSessionEmail, checkSuperadmin, checkRestaurantAccess, SETTINGS_ROLES, MANAGEMENT_ROLES } from './_lib/authz.js'
 import {
   getGlobalSetting,
@@ -17,13 +17,11 @@ import { neon } from '../src/db/pg-sql.js'
 // POST ?action=saveUserSettings     body: { config }                       (needs session)
 // GET  ?action=getRestaurantSettings &restaurantId=X &key=K → value or null [MANAGEMENT_ROLES]
 // POST ?action=setRestaurantSettings body: { restaurantId, key, value }    [SETTINGS_ROLES]
-
-function isAuthDisabled() {
-  return process.env.DISABLE_AUTH === 'true' || process.env.VITE_DISABLE_AUTH === 'true'
-}
+//
+// Authorization is ALWAYS enforced — no environment-variable bypass.
 
 export default async function handler(req, res) {
-  setCors(res)
+  setPublicCors(res)
   if (req.method === 'OPTIONS') return res.status(200).end()
 
   const action = req.query.action
@@ -42,11 +40,9 @@ export default async function handler(req, res) {
     // ── setGlobal — superadmin only ───────────────────────────────────────────
     if (action === 'setGlobal') {
       if (req.method !== 'POST') return res.status(405).json({ error: 'POST required' })
-      if (!isAuthDisabled()) {
-        const result = await checkSuperadmin(req)
-        if (result.error === 'Not authenticated') return res.status(401).json({ error: 'Not authenticated' })
-        if (!result.allowed) return res.status(403).json({ error: 'Superadmin access required' })
-      }
+      const result = await checkSuperadmin(req)
+      if (result.error === 'Not authenticated') return res.status(401).json({ error: 'Not authenticated' })
+      if (!result.allowed) return res.status(403).json({ error: 'Superadmin access required' })
       const { key, value } = req.body
       if (!key) return res.status(400).json({ error: 'key required' })
       await upsertGlobalSetting(key, value)
@@ -55,7 +51,6 @@ export default async function handler(req, res) {
 
     // ── getUserSettings — needs session ────────────────────────────────────────
     if (action === 'getUserSettings') {
-      if (isAuthDisabled()) return res.json({})
       const session = await getSessionEmail(req)
       if (!session) return res.status(401).json({ error: 'Not authenticated' })
       const config = await getUserSettingsNeon(session.userId)
@@ -65,7 +60,6 @@ export default async function handler(req, res) {
     // ── saveUserSettings — needs session ───────────────────────────────────────
     if (action === 'saveUserSettings') {
       if (req.method !== 'POST') return res.status(405).json({ error: 'POST required' })
-      if (isAuthDisabled()) return res.json({ success: true })
       const session = await getSessionEmail(req)
       if (!session) return res.status(401).json({ error: 'Not authenticated' })
       const { config } = req.body
@@ -77,13 +71,11 @@ export default async function handler(req, res) {
     if (action === 'getRestaurantSettings') {
       const { restaurantId, key } = req.query
       if (!restaurantId || !key) return res.status(400).json({ error: 'restaurantId and key required' })
-      if (!isAuthDisabled()) {
-        const access = await checkRestaurantAccess(req, restaurantId)
-        if (access.error === 'Not authenticated') return res.status(401).json({ error: 'Not authenticated' })
-        if (!access.allowed) return res.status(403).json({ error: 'Access denied' })
-        if (!access.isSuperadmin && !MANAGEMENT_ROLES.includes(access.role)) {
-          return res.status(403).json({ error: 'Access denied' })
-        }
+      const access = await checkRestaurantAccess(req, restaurantId)
+      if (access.error === 'Not authenticated') return res.status(401).json({ error: 'Not authenticated' })
+      if (!access.allowed) return res.status(403).json({ error: 'Access denied' })
+      if (!access.isSuperadmin && !MANAGEMENT_ROLES.includes(access.role)) {
+        return res.status(403).json({ error: 'Access denied' })
       }
       const sql = neon(process.env.DATABASE_URL)
       const rows = await sql`
@@ -99,13 +91,11 @@ export default async function handler(req, res) {
       if (req.method !== 'POST') return res.status(405).json({ error: 'POST required' })
       const { restaurantId, key, value } = req.body
       if (!restaurantId || !key) return res.status(400).json({ error: 'restaurantId and key required' })
-      if (!isAuthDisabled()) {
-        const access = await checkRestaurantAccess(req, restaurantId)
-        if (access.error === 'Not authenticated') return res.status(401).json({ error: 'Not authenticated' })
-        if (!access.allowed) return res.status(403).json({ error: 'Access denied' })
-        if (!access.isSuperadmin && !SETTINGS_ROLES.includes(access.role)) {
-          return res.status(403).json({ error: 'Changing restaurant settings requires owner or admin role' })
-        }
+      const access = await checkRestaurantAccess(req, restaurantId)
+      if (access.error === 'Not authenticated') return res.status(401).json({ error: 'Not authenticated' })
+      if (!access.allowed) return res.status(403).json({ error: 'Access denied' })
+      if (!access.isSuperadmin && !SETTINGS_ROLES.includes(access.role)) {
+        return res.status(403).json({ error: 'Changing restaurant settings requires owner or admin role' })
       }
       await upsertNeonRestaurantSettingsKey(restaurantId, key, value)
       return res.json({ success: true })

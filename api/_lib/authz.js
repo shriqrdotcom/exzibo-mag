@@ -6,6 +6,9 @@
  *   It is NEVER accepted from the request body, URL params, or frontend storage.
  * - All email comparisons normalize: lowercase + trim.
  * - SUPERADMIN_ALLOWED_EMAILS is parsed server-side only.
+ * - Authorization is ALWAYS enforced — no bypass via environment variables.
+ *   VITE_DISABLE_AUTH / DISABLE_AUTH control client-side UI only; they have
+ *   no effect on any server middleware in this module.
  *
  * Exports:
  *   getSessionEmail(req)                        → { email, userId, user } | null
@@ -103,19 +106,6 @@ export async function checkSuperadmin(req) {
   const emailSet = getSuperadminEmailSet()
   const allowed = emailSet.has(email)
 
-  console.log('[authz/checkSuperadmin]', JSON.stringify({
-    host: req.headers.host || '(none)',
-    email,
-    allowed,
-    envSet: !!process.env.SUPERADMIN_ALLOWED_EMAILS,
-    allowedCount: emailSet.size,
-    denialReason: allowed ? null : (
-      !process.env.SUPERADMIN_ALLOWED_EMAILS ? 'SUPERADMIN_ALLOWED_EMAILS not set' :
-      emailSet.size === 0 ? 'SUPERADMIN_ALLOWED_EMAILS is empty' :
-      `"${email}" not found in list`
-    ),
-  }))
-
   return { allowed, role: allowed ? 'superadmin' : null, isSuperadmin: allowed, email }
 }
 
@@ -177,12 +167,8 @@ export async function checkRestaurantAccess(req, restaurantId) {
 // ── requireSession ───────────────────────────────────────────────────────────
 // Express middleware: 401 if no valid Better Auth session.
 // Attaches req.authEmail, req.authUserId, req.authUser.
-// No-op when DISABLE_AUTH / VITE_DISABLE_AUTH = 'true'.
+// Authorization is ALWAYS enforced — no environment-variable bypass.
 export async function requireSession(req, res, next) {
-  if (process.env.DISABLE_AUTH === 'true' || process.env.VITE_DISABLE_AUTH === 'true') {
-    req.authEmail = 'dev@disable-auth.local'
-    return next()
-  }
   try {
     const session = await getSessionEmail(req)
     if (!session) return res.status(401).json({ error: 'Not authenticated' })
@@ -200,15 +186,9 @@ export async function requireSession(req, res, next) {
 // `getRestaurantId` is a function: req => restaurantId string.
 // Returns 401 unauthenticated, 403 not a member/superadmin.
 // Attaches req.authEmail, req.authRole, req.authIsSuperadmin on success.
+// Authorization is ALWAYS enforced — no environment-variable bypass.
 export function requireRestaurantAccess(getRestaurantId) {
   return async function (req, res, next) {
-    if (process.env.DISABLE_AUTH === 'true' || process.env.VITE_DISABLE_AUTH === 'true') {
-      req.authEmail = 'dev@disable-auth.local'
-      req.authIsSuperadmin = true
-      req.authRole = 'superadmin'
-      return next()
-    }
-
     const restaurantId = typeof getRestaurantId === 'function'
       ? getRestaurantId(req)
       : getRestaurantId
@@ -230,14 +210,8 @@ export function requireRestaurantAccess(getRestaurantId) {
 
 // ── requireSuperadmin ────────────────────────────────────────────────────────
 // Express middleware: 403 unless the session email is in SUPERADMIN_ALLOWED_EMAILS.
-// No-op when DISABLE_AUTH / VITE_DISABLE_AUTH = 'true'.
+// Authorization is ALWAYS enforced — no environment-variable bypass.
 export async function requireSuperadmin(req, res, next) {
-  if (process.env.DISABLE_AUTH === 'true' || process.env.VITE_DISABLE_AUTH === 'true') {
-    req.authEmail = 'dev@disable-auth.local'
-    req.authIsSuperadmin = true
-    req.authRole = 'superadmin'
-    return next()
-  }
   try {
     const result = await checkSuperadmin(req)
     if (result.error === 'Not authenticated') return res.status(401).json({ error: 'Not authenticated' })
@@ -261,15 +235,9 @@ export async function requireSuperadmin(req, res, next) {
 //   • All other roles must be in allowedRoles.
 // Returns 401 unauthenticated, 403 not a member or wrong role.
 // Attaches req.authEmail, req.authRole, req.authIsSuperadmin on success.
+// Authorization is ALWAYS enforced — no environment-variable bypass.
 export function requireRestaurantRole(getRestaurantId, allowedRoles) {
   return async function (req, res, next) {
-    if (process.env.DISABLE_AUTH === 'true' || process.env.VITE_DISABLE_AUTH === 'true') {
-      req.authEmail = 'dev@disable-auth.local'
-      req.authIsSuperadmin = true
-      req.authRole = 'superadmin'
-      return next()
-    }
-
     const restaurantId = typeof getRestaurantId === 'function'
       ? getRestaurantId(req)
       : getRestaurantId

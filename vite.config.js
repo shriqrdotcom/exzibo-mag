@@ -2,7 +2,7 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
 import fs from 'fs'
-import { createHmac } from 'crypto'
+import { createHmac, timingSafeEqual } from 'crypto'
 import bcrypt from 'bcryptjs'
 import pg from 'pg'
 import { patchNeonRestaurant, getNeonRestaurantById, getNeonRestaurantBySlug } from './src/db/neon-restaurants.js'
@@ -21,6 +21,18 @@ import * as contentService from './src/services/restaurantContentService.js'
 function previewAuthPlugin() {
   return {
     name: 'preview-auth',
+    // Preview authentication is available ONLY in the local Vite dev server.
+    // It is intentionally absent from api/system.js (Vercel) and server.js
+    // (Express production) — these routes do NOT exist in any deployed build.
+    //
+    // Security requirements for local-dev preview auth:
+    //  • PREVIEW_SECRET must be explicitly configured — no hardcoded fallback.
+    //  • Missing secret fails closed (500) instead of using a known value.
+    //  • Token lifetime is capped at 30 minutes.
+    //  • Signature comparison uses crypto.timingSafeEqual to prevent timing attacks.
+    //  • Preview tokens grant no session authority on normal protected APIs;
+    //    they are honoured only by the client-side preview gate UI.
+    //  • Tokens are scoped to a single configured PREVIEW_EMAIL address.
     configureServer(server) {
       server.middlewares.use('/api/preview-login', async (req, res) => {
         if (req.method !== 'POST') {
@@ -34,8 +46,11 @@ function previewAuthPlugin() {
         req.on('end', async () => {
           try {
             const { email, password } = JSON.parse(body)
-            const validEmail    = process.env.PREVIEW_EMAIL
-            const validHash     = process.env.PREVIEW_PASSWORD_HASH
+            const validEmail = process.env.PREVIEW_EMAIL
+            const validHash  = process.env.PREVIEW_PASSWORD_HASH
+            // PREVIEW_SECRET must be explicitly configured — fail closed.
+            // Using any hardcoded or environment-derived fallback would allow token forgery.
+            const secret     = process.env.PREVIEW_SECRET
 
             if (!validEmail || !validHash) {
               res.statusCode = 500
@@ -44,12 +59,19 @@ function previewAuthPlugin() {
               return
             }
 
+            if (!secret) {
+              res.statusCode = 500
+              res.setHeader('Content-Type', 'application/json')
+              res.end(JSON.stringify({ error: 'PREVIEW_SECRET is not configured. Set it in Replit Secrets.' }))
+              return
+            }
+
             const emailMatch    = email === validEmail
             const passwordMatch = await bcrypt.compare(password, validHash)
 
             if (emailMatch && passwordMatch) {
-              const secret  = process.env.PREVIEW_SECRET || process.env.REPL_ID || 'preview-hmac-secret'
-              const payload = JSON.stringify({ email, exp: Date.now() + 8 * 60 * 60 * 1000 })
+              // 30-minute token lifetime — short enough to limit exposure.
+              const payload = JSON.stringify({ email, exp: Date.now() + 30 * 60 * 1000 })
               const sig     = createHmac('sha256', secret).update(payload).digest('hex')
               const token   = Buffer.from(payload).toString('base64url') + '.' + sig
 
@@ -69,8 +91,8 @@ function previewAuthPlugin() {
       })
 
       server.middlewares.use('/api/preview-verify', (req, res) => {
-        const auth  = req.headers['authorization'] || ''
-        const token = auth.replace('Bearer ', '')
+        const authHeader = req.headers['authorization'] || ''
+        const token = authHeader.replace('Bearer ', '')
 
         if (!token) {
           res.statusCode = 401
@@ -80,11 +102,34 @@ function previewAuthPlugin() {
         }
 
         try {
+          const secret = process.env.PREVIEW_SECRET
+          // Fail closed when PREVIEW_SECRET is absent — no hardcoded fallback.
+          if (!secret) {
+            res.statusCode = 500
+            res.setHeader('Content-Type', 'application/json')
+            res.end(JSON.stringify({ valid: false, error: 'PREVIEW_SECRET is not configured.' }))
+            return
+          }
+
           const [payloadB64, sig] = token.split('.')
-          const payload   = JSON.parse(Buffer.from(payloadB64, 'base64url').toString())
-          const secret    = process.env.PREVIEW_SECRET || process.env.REPL_ID || 'preview-hmac-secret'
-          const expected  = createHmac('sha256', secret).update(JSON.stringify(payload)).digest('hex')
-          const valid     = sig === expected && payload.exp > Date.now()
+          if (!payloadB64 || !sig) {
+            res.statusCode = 401
+            res.setHeader('Content-Type', 'application/json')
+            res.end(JSON.stringify({ valid: false }))
+            return
+          }
+
+          const payload  = JSON.parse(Buffer.from(payloadB64, 'base64url').toString())
+          const expected = createHmac('sha256', secret).update(JSON.stringify(payload)).digest('hex')
+
+          // Timing-safe comparison prevents timing oracle attacks.
+          const sigBuf      = Buffer.from(sig)
+          const expectedBuf = Buffer.from(expected)
+          const signaturesMatch =
+            sigBuf.length === expectedBuf.length &&
+            timingSafeEqual(sigBuf, expectedBuf)
+
+          const valid = signaturesMatch && typeof payload.exp === 'number' && payload.exp > Date.now()
 
           res.setHeader('Content-Type', 'application/json')
           res.end(JSON.stringify({ valid, email: valid ? payload.email : null }))

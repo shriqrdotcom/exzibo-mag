@@ -65,12 +65,9 @@ import {
  * Verify a superadmin session.
  * Returns { ok: true, email } on success.
  * Writes the appropriate error response and returns { ok: false } on failure.
- * Skipped (always ok) when DISABLE_AUTH / VITE_DISABLE_AUTH = 'true' (dev only).
+ * Authorization is ALWAYS enforced — no environment-variable bypass.
  */
 async function assertSuperadmin(req, res) {
-  if (process.env.DISABLE_AUTH === 'true' || process.env.VITE_DISABLE_AUTH === 'true') {
-    return { ok: true, email: 'dev@disable-auth.local' }
-  }
   let result
   try {
     result = await checkSuperadmin(req)
@@ -99,9 +96,7 @@ async function assertSuperadmin(req, res) {
  * Writes the appropriate error response and returns { ok: false } on failure.
  */
 async function assertSession(req, res) {
-  if (process.env.DISABLE_AUTH === 'true' || process.env.VITE_DISABLE_AUTH === 'true') {
-    return { ok: true, email: 'dev@disable-auth.local', userId: 'dev-user' }
-  }
+  // Authorization is ALWAYS enforced — no environment-variable bypass.
   let session
   try {
     session = await getSessionEmail(req)

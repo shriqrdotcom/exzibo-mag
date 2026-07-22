@@ -1,25 +1,19 @@
-import { createHmac } from 'crypto'
-import bcrypt from 'bcryptjs'
 import pg from 'pg'
-import { setCors } from './_lib/cors.js'
+import { setAdminCors, applySecurityHeaders } from './_lib/cors.js'
 import { checkSuperadmin } from './_lib/authz.js'
 
-// ── /api/system — System, Auth & DB Management Handler ───────────────────────
-//
-// GET  ?action=previewVerify     header: Authorization: Bearer <token>   (public preview-auth)
-// POST ?action=previewLogin      body:   { email, password }             (public preview-auth)
+// ── /api/system — System & DB Management Handler ──────────────────────────────
 //
 // GET  ?action=listRestaurantDb                                          [superadmin]
 // POST ?action=createRestaurantDb body: { restaurant_id, restaurant_name? } [superadmin]
 // POST ?action=dropRestaurantDb   body: { restaurant_id }                [superadmin]
 //   ↳ All three: graceful no-op when DATABASE_URL is unavailable (Vercel env)
-
-function isAuthDisabled() {
-  return process.env.DISABLE_AUTH === 'true' || process.env.VITE_DISABLE_AUTH === 'true'
-}
+//
+// Preview authentication routes have been removed from this file.
+// They are available only in the Vite local-development server
+// (vite.config.js) and must not exist in production or Vercel deployments.
 
 async function assertSuperadmin(req, res) {
-  if (isAuthDisabled()) return { ok: true }
   const result = await checkSuperadmin(req)
   if (result.error === 'Not authenticated') {
     res.status(401).json({ error: 'Not authenticated' })
@@ -33,60 +27,14 @@ async function assertSuperadmin(req, res) {
 }
 
 export default async function handler(req, res) {
-  setCors(res)
+  setAdminCors(req, res)
+  applySecurityHeaders(res)
   if (req.method === 'OPTIONS') return res.status(200).end()
 
   const action = req.query.action
   if (!action) return res.status(400).json({ error: 'action query param required' })
 
   try {
-
-    // ════════════════════════════════════════════════════════════
-    // PREVIEW AUTH — no session required (uses its own HMAC token scheme)
-    // ════════════════════════════════════════════════════════════
-
-    // ── POST: email + password → HMAC-signed token ────────────────────────────
-    if (action === 'previewLogin') {
-      if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
-
-      const { email, password } = req.body
-      const validEmail = process.env.PREVIEW_EMAIL
-      const validHash  = process.env.PREVIEW_PASSWORD_HASH
-
-      if (!validEmail || !validHash) {
-        return res.status(500).json({ error: 'Preview credentials not configured on server.' })
-      }
-
-      const emailMatch    = email === validEmail
-      const passwordMatch = await bcrypt.compare(password, validHash)
-
-      if (emailMatch && passwordMatch) {
-        const secret  = process.env.PREVIEW_SECRET || process.env.REPL_ID || 'preview-hmac-secret'
-        const payload = JSON.stringify({ email, exp: Date.now() + 8 * 60 * 60 * 1000 })
-        const sig     = createHmac('sha256', secret).update(payload).digest('hex')
-        const token   = Buffer.from(payload).toString('base64url') + '.' + sig
-        return res.json({ success: true, token })
-      }
-
-      return res.status(401).json({ error: 'Invalid email or password.' })
-    }
-
-    // ── GET: verify HMAC token from Authorization header ─────────────────────
-    if (action === 'previewVerify') {
-      if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' })
-
-      const auth  = req.headers['authorization'] || ''
-      const token = auth.replace('Bearer ', '')
-
-      if (!token) return res.status(401).json({ valid: false })
-
-      const [payloadB64, sig] = token.split('.')
-      const payload  = JSON.parse(Buffer.from(payloadB64, 'base64url').toString())
-      const secret   = process.env.PREVIEW_SECRET || process.env.REPL_ID || 'preview-hmac-secret'
-      const expected = createHmac('sha256', secret).update(JSON.stringify(payload)).digest('hex')
-      const valid    = sig === expected && payload.exp > Date.now()
-      return res.json({ valid, email: valid ? payload.email : null })
-    }
 
     // ════════════════════════════════════════════════════════════
     // RESTAURANT DB — superadmin only
