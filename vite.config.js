@@ -16,7 +16,9 @@ import {
 import { upsertNeonBooking, updateNeonBookingStatus, getNeonBookings } from './src/db/neon-bookings.js'
 import { upsertNeonOrder, updateNeonOrderStatus as updateNeonOrderStatusFn, getNeonOrders, deleteOldNeonOrders } from './src/db/neon-orders.js'
 import { publishOrderRealtimeEvent } from './src/lib/realtime-publisher.js'
-import { upsertNeonRestaurantMember, deleteNeonRestaurantMember, getNeonRestaurantMembers } from './src/db/neon-restaurant-members.js'
+import { upsertNeonRestaurantMember, deleteNeonRestaurantMember, getNeonRestaurantMembers, filterNeonRestaurantMembersForRole } from './src/db/neon-restaurant-members.js'
+import { checkRestaurantAccess } from './api/_lib/authz.js'
+import { executeTeamList, executeTeamUpsert, executeTeamDelete } from './api/_lib/team-service.js'
 import { upsertNeonRestaurantSettingsKey } from './src/db/neon-restaurant-settings.js'
 import { writeAuditLog } from './src/db/neon-audit-logs.js'
 import { r2Upload } from './src/lib/r2.js'
@@ -451,38 +453,64 @@ function menuApiPlugin() {
       server.middlewares.use('/api/team-members', async (req, res, next) => {
         const pathname = (req.url || '').split('?')[0].replace(/\/$/, '')
 
+        async function getCaller(body) {
+          if (process.env.VITE_DISABLE_AUTH === 'true' || process.env.DISABLE_AUTH === 'true') {
+            // Dev-mode fallback: enforce business rules, skip session auth.
+            return { role: 'owner', email: null, userId: null, isSuperadmin: true }
+          }
+          let authRestaurantId
+          if (req.method === 'GET') {
+            const m = pathname.match(/^\/([^/]+)$/)
+            authRestaurantId = m ? m[1] : undefined
+          } else if (pathname === '/shadow-upsert') {
+            const { getNeonRestaurantMemberById } = await import('./src/db/neon-restaurant-members.js')
+            const existing = await getNeonRestaurantMemberById(body?.member?.id)
+            authRestaurantId = existing ? existing.restaurant_id : body?.restaurantId
+          } else if (pathname === '/shadow-delete') {
+            const { getNeonRestaurantMemberById } = await import('./src/db/neon-restaurant-members.js')
+            const target = await getNeonRestaurantMemberById(body?.id)
+            authRestaurantId = target ? target.restaurant_id : undefined
+          }
+          const result = await checkRestaurantAccess(req, authRestaurantId)
+          if (result.error) return { error: result.error }
+          if (!result.allowed) return { error: 'Access denied' }
+          return { role: result.role, email: result.email, userId: result.userId, isSuperadmin: result.isSuperadmin }
+        }
+
         if (req.method === 'GET') {
           const m = pathname.match(/^\/([^/]+)$/)
           if (!m) return next()
-          try { return json(res, 200, await getNeonRestaurantMembers(m[1])) }
-          catch (e) { return json(res, 500, { error: e.message }) }
+          try {
+            const caller = await getCaller()
+            if (caller.error) return json(res, caller.error === 'Not authenticated' ? 401 : (caller.error.includes('conflict') ? 409 : 403), { error: caller.error })
+            const { status, body } = await executeTeamList({ restaurantId: m[1], caller })
+            return json(res, status, body)
+          } catch (e) { return json(res, e.status || 500, { error: e.message, code: e.code }) }
         }
 
         if (req.method !== 'POST') return next()
 
         try {
           const body = await readBody(req)
+          const caller = await getCaller(body)
+          if (caller.error) return json(res, caller.error === 'Not authenticated' ? 401 : (caller.error.includes('conflict') ? 409 : 403), { error: caller.error })
 
           // POST /api/team-members/shadow-upsert
           if (pathname === '/shadow-upsert') {
             const { restaurantId, member } = body
-            if (!restaurantId || !member?.id) return json(res, 400, { error: 'restaurantId and member.id required' })
-            await upsertNeonRestaurantMember(restaurantId, member)
-            console.log('[team-members shadow-upsert] Neon ✅ id:', member.id)
-            writeAuditLog({ restaurantId, action: 'upsert', entityType: 'team_member', entityId: member.id, newData: { name: member.name, role: member.role } })
-            return json(res, 200, { ok: true })
+            const { status, body: responseBody } = await executeTeamUpsert({ restaurantId, member, caller })
+            if (status === 200) console.log('[team-members shadow-upsert] Neon ✅ id:', member.id)
+            return json(res, status, responseBody)
           }
 
           // POST /api/team-members/shadow-delete
           if (pathname === '/shadow-delete') {
             const { id } = body
-            if (!id) return json(res, 400, { error: 'id required' })
-            await deleteNeonRestaurantMember(id)
-            console.log('[team-members shadow-delete] Neon ✅ id:', id)
-            writeAuditLog({ action: 'delete', entityType: 'team_member', entityId: id })
-            return json(res, 200, { ok: true })
+            const { status, body: responseBody } = await executeTeamDelete({ id, caller })
+            if (status === 200) console.log('[team-members shadow-delete] Neon ✅ id:', id)
+            return json(res, status, responseBody)
           }
-        } catch (e) { return json(res, 500, { error: e.message }) }
+        } catch (e) { return json(res, e.status || 500, { error: e.message, code: e.code }) }
         return next()
       })
 

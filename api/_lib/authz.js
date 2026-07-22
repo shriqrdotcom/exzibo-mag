@@ -165,7 +165,8 @@ export async function checkRestaurantAccess(req, restaurantId) {
            (user_id IS NOT NULL AND user_id = $2)
            OR (user_id IS NULL AND lower(trim(email)) = $3)
          )
-         AND active = true`,
+         AND active = true
+       ORDER BY created_at ASC`,
       [restaurantId, userId, email]
     )
     if (!rows.length) {
@@ -180,7 +181,7 @@ export async function checkRestaurantAccess(req, restaurantId) {
         isSuperadmin: false,
         email,
         userId,
-        error: 'Conflicting membership records detected: contact an administrator to resolve duplicates',
+        error: 'Conflicting membership records detected: duplicate active memberships; contact an administrator to resolve duplicates',
       }
     }
     return { allowed: true, role: rows[0].role, isSuperadmin: false, email, userId, name: rows[0].name }
@@ -221,6 +222,12 @@ export function requireRestaurantAccess(getRestaurantId) {
     try {
       const result = await checkRestaurantAccess(req, restaurantId)
       if (result.error === 'Not authenticated') return res.status(401).json({ error: 'Not authenticated' })
+      if (result.error === 'restaurantId required') return res.status(400).json({ error: 'restaurantId required' })
+      // Conflicting duplicate memberships are a data-integrity issue that should
+      // fail closed with 409, not be silently treated as 500 or access-denied.
+      if (result.error && (result.error.includes('duplicate') || result.error.includes('conflict'))) {
+        return res.status(409).json({ error: result.error })
+      }
       if (result.error) return res.status(500).json({ error: result.error })
       if (!result.allowed) return res.status(403).json({ error: 'Access denied' })
       req.authEmail = result.email
@@ -272,6 +279,11 @@ export function requireRestaurantRole(getRestaurantId, allowedRoles) {
       const result = await checkRestaurantAccess(req, restaurantId)
       if (result.error === 'Not authenticated') return res.status(401).json({ error: 'Not authenticated' })
       if (result.error === 'restaurantId required') return res.status(400).json({ error: 'restaurantId required' })
+      // Conflicting duplicate memberships are a data-integrity issue that should
+      // fail closed with 409, not be silently treated as 500 or access-denied.
+      if (result.error && (result.error.includes('duplicate') || result.error.includes('conflict'))) {
+        return res.status(409).json({ error: result.error })
+      }
       if (result.error) return res.status(500).json({ error: result.error })
       if (!result.allowed) return res.status(403).json({ error: 'Access denied' })
 
