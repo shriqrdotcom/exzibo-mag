@@ -6,6 +6,9 @@ import {
   getNeonRestaurantById,
   createNeonRestaurant,
   patchNeonRestaurant,
+  patchNeonRestaurantProfile,
+  patchNeonRestaurantPlatform,
+  toPublicRestaurant,
   neonRowWithTables,
 } from '../src/db/neon-restaurants.js'
 import { neon } from '../src/db/pg-sql.js'
@@ -61,7 +64,8 @@ export default async function handler(req, res) {
       const idsParam = req.query.ids
       const ids = idsParam ? idsParam.split(',').filter(Boolean) : null
       const rows = await getNeonRestaurants(ids)
-      return res.json(rows)
+      // Public endpoint — strip internal/platform fields from every row.
+      return res.json(rows.map(toPublicRestaurant))
     }
 
     if (action === 'listDeleted') {
@@ -73,6 +77,7 @@ export default async function handler(req, res) {
         WHERE is_deleted = true
         ORDER BY deleted_at DESC NULLS LAST
       `
+      // Superadmin-only — return full rows (includes platform/lifecycle fields).
       return res.json(rows.map(neonRowWithTables))
     }
 
@@ -81,7 +86,8 @@ export default async function handler(req, res) {
       if (!slug) return res.status(400).json({ error: 'slug required' })
       const row = await getNeonRestaurantBySlug(slug)
       if (!row) return res.status(404).json({ error: 'Not found' })
-      return res.json(row)
+      // Public endpoint — strip internal/platform fields.
+      return res.json(toPublicRestaurant(row))
     }
 
     if (action === 'byId') {
@@ -89,7 +95,8 @@ export default async function handler(req, res) {
       if (!id) return res.status(400).json({ error: 'id required' })
       const row = await getNeonRestaurantById(id)
       if (!row) return res.status(404).json({ error: 'Not found' })
-      return res.json(row)
+      // Public endpoint — strip internal/platform fields.
+      return res.json(toPublicRestaurant(row))
     }
 
     if (action === 'checkSlug') {
@@ -114,10 +121,13 @@ export default async function handler(req, res) {
         if (!access.isSuperadmin && !SETTINGS_ROLES.includes(access.role)) {
           return res.status(403).json({ error: 'Patching restaurant requires owner or admin role' })
         }
-        const row = await patchNeonRestaurant(id, patch)
+        // Non-superadmin may only update profile fields.
+        // Superadmin may update profile fields via this endpoint; use
+        // action=platformUpdate for lifecycle/billing platform fields.
+        const row = await patchNeonRestaurantProfile(id, patch)
         return res.json(row ?? { ok: true })
       }
-      // GET
+      // GET — admin-gated; return full row (includes plan, status etc. for dashboard).
       const row = await getNeonRestaurantById(id)
       if (!row) return res.status(404).json({ error: 'Not found' })
       return res.json(row)
@@ -155,16 +165,20 @@ export default async function handler(req, res) {
     if (req.method !== 'POST' && req.method !== 'PATCH') return res.status(405).json({ error: 'Method not allowed' })
 
     if (action === 'create') {
-      // Require an authenticated session — the creator becomes the owner.
-      // The owner_id is ALWAYS set from the verified session; any caller-supplied
-      // owner_id is ignored to prevent ownership hijacking.
-      const createSession = await getSessionEmail(req)
-      if (!createSession) return res.status(401).json({ error: 'Not authenticated' })
+      // Restaurant creation requires superadmin.
+      // Only platform administrators may provision new restaurants; no
+      // authenticated-but-unprivileged user may self-provision.
+      const createGuard = await assertSuperadmin(req, res)
+      if (!createGuard.ok) return
       const payload = req.body
       if (!payload?.slug || !payload?.name) return res.status(400).json({ error: 'slug and name required' })
+      // Generate uid server-side when absent; never trust a caller-supplied value
+      // for platform fields.  id, plan, status, and plan_limits are always forced
+      // to their defaults inside createNeonRestaurant — they are ignored here even
+      // if present in the request body.
       if (!payload.uid) payload.uid = String(Math.floor(1000000000 + Math.random() * 9000000000))
-      // Always force owner_id from session — never trust a submitted value.
-      payload.owner_id = createSession.userId
+      // Set owner_id from the verified superadmin session.
+      payload.owner_id = createGuard.session.userId
       const row = await createNeonRestaurant(payload)
       return res.status(201).json(row)
     }
@@ -179,7 +193,9 @@ export default async function handler(req, res) {
       if (!access.isSuperadmin && !SETTINGS_ROLES.includes(access.role)) {
         return res.status(403).json({ error: 'Updating restaurant requires owner or admin role' })
       }
-      const row = await patchNeonRestaurant(id, patch)
+      // Non-superadmin: profile fields only.
+      // Superadmin wanting to change platform fields should use action=platformUpdate.
+      const row = await patchNeonRestaurantProfile(id, patch)
       return res.json(row ?? { ok: true })
     }
 
@@ -193,7 +209,20 @@ export default async function handler(req, res) {
       if (!access.isSuperadmin && !SETTINGS_ROLES.includes(access.role)) {
         return res.status(403).json({ error: 'Updating restaurant profile requires owner or admin role' })
       }
-      const row = await patchNeonRestaurant(restaurantId, patch)
+      // Profile fields only — platform fields are silently rejected.
+      const row = await patchNeonRestaurantProfile(restaurantId, patch)
+      return res.json(row ?? { ok: true })
+    }
+
+    // ── Superadmin-only: platform / lifecycle / billing update ─────────────────
+    // Separate from profile updates so platform fields are never accidentally
+    // exposed through a general-purpose patch endpoint.
+    if (action === 'platformUpdate') {
+      const guard = await assertSuperadmin(req, res)
+      if (!guard.ok) return
+      const { restaurantId, patch } = req.body
+      if (!restaurantId || !patch) return res.status(400).json({ error: 'restaurantId and patch required' })
+      const row = await patchNeonRestaurantPlatform(restaurantId, patch)
       return res.json(row ?? { ok: true })
     }
 

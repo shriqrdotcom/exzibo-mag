@@ -11,6 +11,9 @@ import {
   getNeonRestaurantByUid,
   createNeonRestaurant,
   patchNeonRestaurant,
+  patchNeonRestaurantProfile,
+  patchNeonRestaurantPlatform,
+  toPublicRestaurant,
   getNeonRestaurants,
 } from './src/db/neon-restaurants.js'
 import * as menuService from './src/services/menuService.js'
@@ -966,20 +969,18 @@ app.post('/api/restaurant/upload-logo', requireRestaurantRole(req => req.body.re
   }
 })
 
+// Profile-only update — owner/admin/manager may update only OWNER_ADMIN_PROFILE_PATCH fields.
+// Platform fields (plan, status, lifecycle dates) are silently stripped.
 app.post('/api/restaurant/update-profile', requireRestaurantRole(req => req.body.restaurantId, MANAGEMENT_ROLES), async (req, res) => {
   try {
     const { restaurantId, patch } = req.body
     if (!restaurantId || typeof patch !== 'object') {
       return res.status(400).json({ error: 'restaurantId and patch object required' })
     }
-    const allowed = ['name', 'logo']
-    const safePatch = Object.fromEntries(Object.entries(patch).filter(([k]) => allowed.includes(k)))
-    if (Object.keys(safePatch).length === 0) {
-      return res.status(400).json({ error: 'patch must include at least one of: name, logo' })
-    }
-    const row = await patchNeonRestaurant(restaurantId, safePatch)
-    writeAuditLog({ restaurantId, action: 'update', entityType: 'restaurant', entityId: restaurantId, newData: safePatch, ipAddress: req.ip })
-    return res.json(row ?? { id: restaurantId, ...safePatch })
+    // patchNeonRestaurantProfile enforces the OWNER_ADMIN_PROFILE_PATCH allowlist.
+    const row = await patchNeonRestaurantProfile(restaurantId, patch)
+    writeAuditLog({ restaurantId, action: 'update', entityType: 'restaurant', entityId: restaurantId, newData: patch, ipAddress: req.ip })
+    return res.json(row ?? { id: restaurantId })
   } catch (err) {
     console.error('[restaurant/update-profile] Error:', err.message)
     return res.status(500).json({ error: err.message })
@@ -1037,12 +1038,13 @@ app.post('/api/restaurant/upload-carousel', requireRestaurantRole(req => req.bod
   }
 })
 
+// Public endpoint — returns only safe public fields.
 app.get('/api/restaurant/:id', async (req, res) => {
   try {
     const { id } = req.params
     if (!id) return res.status(400).json({ error: 'id required' })
     const row = await getNeonRestaurantById(id)
-    return row ? res.json(row) : res.status(404).json({ error: 'Not found' })
+    return row ? res.json(toPublicRestaurant(row)) : res.status(404).json({ error: 'Not found' })
   } catch (err) {
     return res.status(500).json({ error: err.message })
   }
@@ -1089,11 +1091,7 @@ app.post('/api/neon/restaurant-settings/shadow-upsert', requireRestaurantRole(re
 // ── Neon restaurant API routes ────────────────────────────────────────────────
 
 // GET /api/neon/restaurants[?ids=uuid1,uuid2,...]
-// Returns active (non-deleted) restaurants ordered newest-first.
-// Accepts optional comma-separated "ids" query param to restrict to a specific
-// set of restaurant UUIDs — used when the caller already holds an access-scoped
-// ID list (e.g. from get_my_restaurant_ids RPC). Omitting ids returns all active
-// restaurants (DISABLE_AUTH / dev path). Does NOT replace current Supabase reads.
+// Public endpoint — returns only safe public fields.
 app.get('/api/neon/restaurants', async (req, res) => {
   try {
     const rawIds = req.query.ids
@@ -1101,33 +1099,40 @@ app.get('/api/neon/restaurants', async (req, res) => {
       ? String(rawIds).split(',').map(s => s.trim()).filter(Boolean)
       : null
     const rows = await getNeonRestaurants(ids)
-    return res.json(rows)
+    return res.json(rows.map(toPublicRestaurant))
   } catch (err) {
     console.error('[neon/restaurants]', err.message)
     return res.status(500).json({ error: err.message })
   }
 })
 
-// GET /api/neon/restaurant/by-slug/:slug
+// GET /api/neon/restaurant/by-slug/:slug — public, used by restaurant website
 app.get('/api/neon/restaurant/by-slug/:slug', async (req, res) => {
   try {
     const row = await getNeonRestaurantBySlug(req.params.slug)
-    return row ? res.json(row) : res.status(404).json({ error: 'Not found' })
+    return row ? res.json(toPublicRestaurant(row)) : res.status(404).json({ error: 'Not found' })
   } catch (err) { return res.status(500).json({ error: err.message }) }
 })
 
-// GET /api/neon/restaurant/by-uid/:uid
+// GET /api/neon/restaurant/by-uid/:uid — public
 app.get('/api/neon/restaurant/by-uid/:uid', async (req, res) => {
   try {
     const row = await getNeonRestaurantByUid(req.params.uid)
-    return row ? res.json(row) : res.status(404).json({ error: 'Not found' })
+    return row ? res.json(toPublicRestaurant(row)) : res.status(404).json({ error: 'Not found' })
   } catch (err) { return res.status(500).json({ error: err.message }) }
 })
 
-// POST /api/neon/restaurant/create — requires authenticated session
-app.post('/api/neon/restaurant/create', requireSession, async (req, res) => {
+// POST /api/neon/restaurant/create — requires superadmin
+// Only platform administrators may provision new restaurants.
+app.post('/api/neon/restaurant/create', requireSuperadmin, async (req, res) => {
   try {
-    const row = await createNeonRestaurant(req.body)
+    const payload = { ...req.body }
+    // Generate uid server-side when absent.  id, plan, status, plan_limits are
+    // always forced to defaults inside createNeonRestaurant.
+    if (!payload.uid) payload.uid = String(Math.floor(1000000000 + Math.random() * 9000000000))
+    // Set owner_id from the verified superadmin session.
+    payload.owner_id = req.authUserId ?? req.authUser?.id ?? null
+    const row = await createNeonRestaurant(payload)
     return res.status(201).json(row)
   } catch (err) {
     const status = err.message.includes('already taken') ? 409 : 500
@@ -1135,19 +1140,21 @@ app.post('/api/neon/restaurant/create', requireSession, async (req, res) => {
   }
 })
 
-// PATCH /api/neon/restaurant/:id — requires owner/admin/manager membership
+// PATCH /api/neon/restaurant/:id — profile fields only (owner/admin/manager)
+// Platform/lifecycle fields require superadmin and the platformUpdate endpoint.
 app.patch('/api/neon/restaurant/:id', requireRestaurantRole(req => req.params.id, MANAGEMENT_ROLES), async (req, res) => {
   try {
-    const row = await patchNeonRestaurant(req.params.id, req.body)
-    return row ? res.json(row) : res.status(404).json({ error: 'Not found or no valid fields' })
+    const row = await patchNeonRestaurantProfile(req.params.id, req.body)
+    return row ? res.json(row) : res.status(404).json({ error: 'Not found or no valid profile fields' })
   } catch (err) { return res.status(500).json({ error: err.message }) }
 })
 
 // GET /api/neon/restaurant/:id  (must be last — after named sub-routes)
+// Returns full row (admin-gated via restaurant membership in practice via dashboard).
 app.get('/api/neon/restaurant/:id', async (req, res) => {
   try {
     const row = await getNeonRestaurantById(req.params.id)
-    return row ? res.json(row) : res.status(404).json({ error: 'Not found' })
+    return row ? res.json(toPublicRestaurant(row)) : res.status(404).json({ error: 'Not found' })
   } catch (err) { return res.status(500).json({ error: err.message }) }
 })
 
