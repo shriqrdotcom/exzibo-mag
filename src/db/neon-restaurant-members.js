@@ -6,7 +6,9 @@ const sql = neon(process.env.DATABASE_URL)
 // INSERT … ON CONFLICT (id) DO UPDATE — safe for create and re-sync.
 // Supabase table is `team_members`; Neon table is `restaurant_members`.
 // Both share the same UUID PK so the id from Supabase can be used directly.
-// owner_id and user_id are stored as plain UUIDs — Neon has no auth.users FK.
+// user_id and owner_id store Better Auth user ids, which are TEXT — not native
+// Postgres UUIDs. The columns are typed TEXT in the schema; do NOT cast them
+// with ::uuid or inserts will fail for any user whose id is not UUID-shaped.
 export async function upsertNeonRestaurantMember(restaurantId, member) {
   if (!member?.id) throw new Error('upsertNeonRestaurantMember: member.id is required')
 
@@ -30,8 +32,8 @@ export async function upsertNeonRestaurantMember(restaurantId, member) {
     VALUES (
       ${id},
       ${restaurantId}::uuid,
-      ${userId}::uuid,
-      ${ownerId}::uuid,
+      ${userId},
+      ${ownerId},
       ${name},
       ${email},
       ${role},

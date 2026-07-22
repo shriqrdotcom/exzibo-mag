@@ -307,8 +307,11 @@ export const auditLogs = pgTable(
     id:           uuid('id').primaryKey().default(sql`gen_random_uuid()`),
     restaurantId: uuid('restaurant_id').references(() => restaurants.id, { onDelete: 'set null' }),
 
-    // Auth — nullable until Better Auth is added
-    userId:       uuid('user_id'),
+    // Auth — stores the Better Auth user id. Better Auth ids are TEXT (its
+    // default generator is a random alphanumeric string, not a UUID), so this
+    // must be `text`, not `uuid` — a `uuid` column rejects non-UUID Better
+    // Auth ids with "invalid input syntax for type uuid".
+    userId:       text('user_id'),
 
     action:       text('action').notNull(),      // e.g. 'create', 'update', 'delete'
     entityType:   text('entity_type').notNull(), // e.g. 'restaurant', 'menu_item'
