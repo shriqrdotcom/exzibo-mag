@@ -16,6 +16,7 @@ import {
   toPublicRestaurant,
   getNeonRestaurants,
 } from './src/db/neon-restaurants.js'
+import { createRestaurantAtomic } from './src/services/restaurantCreationService.js'
 import * as menuService from './src/services/menuService.js'
 import * as contentService from './src/services/restaurantContentService.js'
 import {
@@ -1126,17 +1127,47 @@ app.get('/api/neon/restaurant/by-uid/:uid', async (req, res) => {
 // Only platform administrators may provision new restaurants.
 app.post('/api/neon/restaurant/create', requireSuperadmin, async (req, res) => {
   try {
-    const payload = { ...req.body }
-    // Generate uid server-side when absent.  id, plan, status, plan_limits are
-    // always forced to defaults inside createNeonRestaurant.
-    if (!payload.uid) payload.uid = String(Math.floor(1000000000 + Math.random() * 9000000000))
-    // Set owner_id from the verified superadmin session.
-    payload.owner_id = req.authUserId ?? req.authUser?.id ?? null
-    const row = await createNeonRestaurant(payload)
+    const payload = req.body ?? {}
+    if (!payload.slug || !payload.name) {
+      return res.status(400).json({ error: 'slug and name required' })
+    }
+    // Generate uid server-side when absent.
+    // id, plan, status, plan_limits are always forced to defaults inside
+    // createRestaurantAtomic — caller values for these fields are ignored.
+    const uid = payload.uid || String(Math.floor(1000000000 + Math.random() * 9000000000))
+    const ownerUserId = req.authUserId ?? req.authUser?.id ?? null
+    const ownerEmail  = req.authEmail  ?? req.authUser?.email ?? null
+    const row = await createRestaurantAtomic({
+      slug: payload.slug,
+      name: payload.name,
+      uid,
+      ownerUserId,
+      ownerEmail,
+      ipAddress: req.headers['x-forwarded-for'] ?? req.socket?.remoteAddress ?? null,
+      // optional profile fields forwarded from the payload
+      place:               payload.place,
+      note:                payload.note,
+      accent_color:        payload.accent_color,
+      currency:            payload.currency,
+      phone:               payload.phone,
+      gst:                 payload.gst,
+      description:         payload.description,
+      chef_info:           payload.chef_info,
+      servant_info:        payload.servant_info,
+      social_links:        payload.social_links,
+      rating:              payload.rating,
+      location:            payload.location,
+      additional_info:     payload.additional_info,
+      digital_menu_link:   payload.digital_menu_link,
+      digital_service_bell: payload.digital_service_bell,
+      images:              payload.images,
+      logo:                payload.logo,
+      table_numbers:       payload.table_numbers,
+    })
     return res.status(201).json(row)
   } catch (err) {
-    const status = err.message.includes('already taken') ? 409 : 500
-    return res.status(status).json({ error: err.message })
+    if (err.code === 'DUPLICATE') return res.status(409).json({ error: err.message })
+    return res.status(500).json({ error: err.message })
   }
 })
 

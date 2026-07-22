@@ -4,13 +4,13 @@ import {
   getNeonRestaurants,
   getNeonRestaurantBySlug,
   getNeonRestaurantById,
-  createNeonRestaurant,
   patchNeonRestaurant,
   patchNeonRestaurantProfile,
   patchNeonRestaurantPlatform,
   toPublicRestaurant,
   neonRowWithTables,
 } from '../src/db/neon-restaurants.js'
+import { createRestaurantAtomic } from '../src/services/restaurantCreationService.js'
 import { neon } from '../src/db/pg-sql.js'
 
 // ── /api/restaurants — Restaurant CRUD (Neon-only Vercel function) ────────────
@@ -179,15 +179,43 @@ export default async function handler(req, res) {
       if (!createGuard.ok) return
       const payload = req.body
       if (!payload?.slug || !payload?.name) return res.status(400).json({ error: 'slug and name required' })
-      // Generate uid server-side when absent; never trust a caller-supplied value
-      // for platform fields.  id, plan, status, and plan_limits are always forced
-      // to their defaults inside createNeonRestaurant — they are ignored here even
-      // if present in the request body.
-      if (!payload.uid) payload.uid = String(Math.floor(1000000000 + Math.random() * 9000000000))
-      // Set owner_id from the verified superadmin session.
-      payload.owner_id = createGuard.session.userId
-      const row = await createNeonRestaurant(payload)
-      return res.status(201).json(row)
+      // Generate uid server-side when absent.
+      // id, plan, status, plan_limits are always forced to defaults inside
+      // createRestaurantAtomic — caller values for these fields are ignored.
+      const uid = payload.uid || String(Math.floor(1000000000 + Math.random() * 9000000000))
+      try {
+        const row = await createRestaurantAtomic({
+          slug: payload.slug,
+          name: payload.name,
+          uid,
+          ownerUserId: createGuard.session.userId,
+          ownerEmail:  createGuard.session.email,
+          ipAddress:   req.headers['x-forwarded-for'] ?? req.socket?.remoteAddress ?? null,
+          // optional profile fields forwarded from the payload
+          place:               payload.place,
+          note:                payload.note,
+          accent_color:        payload.accent_color,
+          currency:            payload.currency,
+          phone:               payload.phone,
+          gst:                 payload.gst,
+          description:         payload.description,
+          chef_info:           payload.chef_info,
+          servant_info:        payload.servant_info,
+          social_links:        payload.social_links,
+          rating:              payload.rating,
+          location:            payload.location,
+          additional_info:     payload.additional_info,
+          digital_menu_link:   payload.digital_menu_link,
+          digital_service_bell: payload.digital_service_bell,
+          images:              payload.images,
+          logo:                payload.logo,
+          table_numbers:       payload.table_numbers,
+        })
+        return res.status(201).json(row)
+      } catch (err) {
+        if (err.code === 'DUPLICATE') return res.status(409).json({ error: err.message })
+        throw err
+      }
     }
 
     if (action === 'update') {

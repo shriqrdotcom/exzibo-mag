@@ -1,0 +1,147 @@
+TASK: Make restaurant creation atomic and reliable.
+
+REPOSITORY
+
+shriqrdotcom/exzibo-mag
+
+START
+
+1. Switch to main.
+2. Pull the latest origin/main.
+3. Confirm the membership-team-safety changes are merged.
+4. Confirm the working tree is clean.
+5. Create branch:
+
+fix/transactional-restaurant-creation
+
+Do not push directly to main.
+
+PROBLEM
+
+Restaurant creation currently performs related database operations separately.
+
+A failure may create:
+
+- a restaurant without an owner membership;
+- missing default settings;
+- incomplete restaurant records;
+- inconsistent access in My Restaurants and mobile bootstrap.
+
+GOAL
+
+Create the restaurant, owner membership, required defaults, and audit record in one database transaction.
+
+INSPECT
+
+- api/restaurants.js
+- src/db/neon-restaurants.js
+- src/db/neon-restaurant-members.js
+- restaurant settings/default helpers
+- audit-log helper
+- src/db/pg-sql.js
+- server.js
+- vite.config.js
+- related tests
+
+IMPLEMENTATION
+
+1. Create one shared restaurant-creation service used by:
+   - Vercel
+   - Express
+   - Vite development
+
+2. Require an authenticated superadmin.
+
+3. Generate on the server:
+   - restaurant ID
+   - public UID
+   - default plan
+   - default status
+   - timestamps
+
+4. Do not trust caller-provided:
+   - id
+   - uid
+   - owner_id
+   - plan
+   - plan limits
+   - status
+   - deletion or lifecycle fields
+
+5. In one PostgreSQL transaction:
+
+   - create the restaurant;
+   - create one active owner membership;
+   - use the selected owner’s Better Auth user ID;
+   - create required default restaurant settings;
+   - create required initial records;
+   - create an audit-log entry.
+
+6. If any step fails, roll back everything.
+
+7. Return the canonical saved restaurant only after the transaction commits.
+
+8. Duplicate slug or UID must return HTTP 409.
+
+9. Do not upload images or call external services inside the transaction.
+
+10. Do not backfill existing restaurants in this task.
+
+11. Do not run db:push or apply migrations.
+
+TESTS
+
+Add tests proving:
+
+1. Successful creation produces:
+   - one restaurant;
+   - one active owner membership;
+   - required default records.
+
+2. The owner membership uses the correct Better Auth user ID.
+
+3. Caller-provided internal fields are ignored.
+
+4. Membership-creation failure rolls back the restaurant.
+
+5. Default-record failure rolls back the restaurant and membership.
+
+6. Duplicate slug or UID returns 409.
+
+7. Non-superadmin creation returns 403.
+
+8. Vercel, Express, and Vite use the same creation service.
+
+9. Existing membership security tests still pass.
+
+10. Production build succeeds.
+
+RULES
+
+- Do not connect to production Neon.
+- Do not apply migrations.
+- Do not modify unrelated UI.
+- Do not reintroduce Supabase.
+- Do not create fake-success fallbacks.
+- Do not push directly to main.
+
+FINAL REPORT
+
+Provide:
+
+- previous partial-creation risks;
+- transaction implementation;
+- records created inside the transaction;
+- files changed;
+- tests and build results;
+- confirmation that no migration or production database command ran;
+- remaining work for existing restaurants;
+- commit hash;
+- branch name;
+- pull-request URL.
+
+Commit and push only to:
+
+fix/transactional-restaurant-creation
+
+Create a pull request into main.
