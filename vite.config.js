@@ -1050,12 +1050,13 @@ function neonRestaurantPlugin() {
           getNeonRestaurantById,
           getNeonRestaurantBySlug,
           getNeonRestaurantByUid,
-          createNeonRestaurant,
           patchNeonRestaurant,
           patchNeonRestaurantProfile,
           patchNeonRestaurantPlatform,
           toPublicRestaurant,
         } = await import('./src/db/neon-restaurants.js')
+
+        const { createRestaurantAtomic } = await import('./src/services/restaurantCreationService.js')
 
         // Auth helpers for superadmin checks in dev server.
         // In dev DISABLE_AUTH mode these will return null (no session) — that is
@@ -1086,17 +1087,54 @@ function neonRestaurantPlugin() {
 
           // POST /api/neon/restaurant/create — superadmin only
           if (method === 'POST' && url === '/create') {
+            let ownerUserId = null
+            let ownerEmail  = null
             if (!isAuthDisabled) {
               const session = await getSessionEmail(req)
               if (!session) return json(401, { error: 'Not authenticated' })
               if (!isSuperadminEmail(session.email)) return json(403, { error: 'Superadmin access required' })
+              ownerUserId = session.userId
+              ownerEmail  = session.email
             }
             const body = await readBody()
-            const payload = { ...body }
-            if (!payload.uid) payload.uid = String(Math.floor(1000000000 + Math.random() * 9000000000))
-            // id, plan, status, plan_limits are always forced to defaults inside createNeonRestaurant.
-            const row = await createNeonRestaurant(payload)
-            return json(201, row)
+            const payload = body ?? {}
+            if (!payload.slug || !payload.name) return json(400, { error: 'slug and name required' })
+            // Generate uid server-side when absent.
+            // id, plan, status, plan_limits are always forced to defaults inside
+            // createRestaurantAtomic — caller values for these fields are ignored.
+            const uid = payload.uid || String(Math.floor(1000000000 + Math.random() * 9000000000))
+            try {
+              const row = await createRestaurantAtomic({
+                slug: payload.slug,
+                name: payload.name,
+                uid,
+                ownerUserId,
+                ownerEmail,
+                // optional profile fields forwarded from the payload
+                place:               payload.place,
+                note:                payload.note,
+                accent_color:        payload.accent_color,
+                currency:            payload.currency,
+                phone:               payload.phone,
+                gst:                 payload.gst,
+                description:         payload.description,
+                chef_info:           payload.chef_info,
+                servant_info:        payload.servant_info,
+                social_links:        payload.social_links,
+                rating:              payload.rating,
+                location:            payload.location,
+                additional_info:     payload.additional_info,
+                digital_menu_link:   payload.digital_menu_link,
+                digital_service_bell: payload.digital_service_bell,
+                images:              payload.images,
+                logo:                payload.logo,
+                table_numbers:       payload.table_numbers,
+              })
+              return json(201, row)
+            } catch (err) {
+              if (err.code === 'DUPLICATE') return json(409, { error: err.message })
+              throw err
+            }
           }
 
           // PATCH /api/neon/restaurant/:id — profile fields only (owner/admin/manager)
