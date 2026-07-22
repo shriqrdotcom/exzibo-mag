@@ -456,7 +456,7 @@ function menuApiPlugin() {
         async function getCaller(body) {
           if (process.env.VITE_DISABLE_AUTH === 'true' || process.env.DISABLE_AUTH === 'true') {
             // Dev-mode fallback: enforce business rules, skip session auth.
-            return { role: 'owner', email: null, isSuperadmin: true }
+            return { role: 'owner', email: null, userId: null, isSuperadmin: true }
           }
           let authRestaurantId
           if (req.method === 'GET') {
@@ -474,7 +474,7 @@ function menuApiPlugin() {
           const result = await checkRestaurantAccess(req, authRestaurantId)
           if (result.error) return { error: result.error }
           if (!result.allowed) return { error: 'Access denied' }
-          return { role: result.role, email: result.email, isSuperadmin: result.isSuperadmin }
+          return { role: result.role, email: result.email, userId: result.userId, isSuperadmin: result.isSuperadmin }
         }
 
         if (req.method === 'GET') {

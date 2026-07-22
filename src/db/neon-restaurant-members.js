@@ -42,54 +42,41 @@ export async function withRestaurantMemberTransaction(restaurantId, callback) {
   }
 }
 
-// ── findActiveNeonRestaurantMembersByIdentity ───────────────────────────────────
-// Returns every active row matching the supplied identity. Prefer user_id when
-// provided; otherwise fall back to normalized email. Used for duplicate detection
-// and conflict checks (length > 1 means a conflict exists).
-export async function findActiveNeonRestaurantMembersByIdentity(restaurantId, { email, userId }) {
-  if (!restaurantId) return []
-  const normalizedEmail = userId ? null : normalizeEmail(email)
-  if (!userId && !normalizedEmail) return []
-
-  if (userId) {
-    return sql`
-      SELECT id, restaurant_id, user_id, owner_id, name, email, role, category, department, phone, active, created_at, updated_at
-      FROM restaurant_members
-      WHERE restaurant_id = ${restaurantId}::uuid
-        AND user_id = ${userId}
-        AND active = true
-      ORDER BY created_at ASC
-    `
-  }
-
-  return sql`
-    SELECT id, restaurant_id, user_id, owner_id, name, email, role, category, department, phone, active, created_at, updated_at
-    FROM restaurant_members
-    WHERE restaurant_id = ${restaurantId}::uuid
-      AND lower(trim(email)) = ${normalizedEmail}
-      AND active = true
-    ORDER BY created_at ASC
+// ── lookupUserIdByEmail ────────────────────────────────────────────────────────
+// Resolves a Better Auth user id from an email address by querying the "user"
+// table directly. Returns the user's id string, or null if no account exists.
+//
+// Used during team invitations to server-assign user_id when a Better Auth
+// account already exists for the invited email — never trust caller-supplied
+// user_id values.
+export async function lookupUserIdByEmail(email) {
+  if (!email) return null
+  const normalizedEmail = email.toLowerCase().trim()
+  const rows = await sql`
+    SELECT id FROM "user"
+    WHERE lower(trim(email)) = ${normalizedEmail}
+    LIMIT 1
   `
-}
-
-export async function hasConflictingNeonRestaurantMembership(restaurantId, { email, userId }) {
-  const matches = await findActiveNeonRestaurantMembersByIdentity(restaurantId, { email, userId })
-  return matches.length > 1
+  return rows[0]?.id ?? null
 }
 
 // ── upsertNeonRestaurantMember ────────────────────────────────────────────────
 // INSERT … ON CONFLICT (id) DO UPDATE — safe for create and re-sync.
 // Supabase table is `team_members`; Neon table is `restaurant_members`.
 // Both share the same UUID PK so the id from Supabase can be used directly.
-// user_id and owner_id store Better Auth user ids, which are TEXT — not native
-// Postgres UUIDs. The columns are typed TEXT in the schema; do NOT cast them
-// with ::uuid or inserts will fail for any user whose id is not UUID-shaped.
-export async function upsertNeonRestaurantMember(restaurantId, member) {
+//
+// user_id is always server-resolved — never trusted from the caller.
+// Pass it via the `resolvedUserId` parameter (looked up from Better Auth).
+// owner_id is a legacy column kept for schema compatibility; it is always
+// written as null here — never from caller input.
+export async function upsertNeonRestaurantMember(restaurantId, member, resolvedUserId = null) {
   if (!member?.id) throw new Error('upsertNeonRestaurantMember: member.id is required')
 
   const id         = member.id
-  const userId     = member.user_id     ?? null
-  const ownerId    = member.owner_id    ?? null
+  // user_id: always server-resolved, never from caller body.
+  const userId     = resolvedUserId ?? null
+  // owner_id: legacy column — always null; never from caller input.
+  const ownerId    = null
   const name       = member.name
   const email      = member.email       ?? null
   const role       = member.role
@@ -132,36 +119,70 @@ export async function upsertNeonRestaurantMember(restaurantId, member) {
   `
 }
 
+// ── findActiveMemberByIdentity ─────────────────────────────────────────────────
+// Returns every active membership row for a given identity at a restaurant.
+// Applies the canonical identity-alignment rule:
+//   - If resolvedUserId is not null → match by user_id.
+//   - If resolvedUserId is null    → match by email on rows where user_id IS NULL.
+//
+// Normally returns 0 rows (no membership) or 1 row. More than 1 row indicates
+// conflicting duplicate records and must be treated as a data-integrity error.
+export async function findActiveMemberByIdentity(restaurantId, resolvedUserId, normalizedEmail) {
+  if (!restaurantId) return []
+  const rows = await sql.query(
+    `SELECT id, user_id, email, role, active
+     FROM restaurant_members
+     WHERE restaurant_id = $1::uuid
+       AND active = true
+       AND (
+         ($2::text IS NOT NULL AND user_id = $2)
+         OR ($2::text IS NULL AND user_id IS NULL AND lower(trim(email)) = $3)
+       )`,
+    [restaurantId, resolvedUserId ?? null, normalizedEmail ?? '']
+  )
+  return rows
+}
+
+// ── hasConflictingNeonRestaurantMembership ────────────────────────────────────
+// Boolean convenience probe for callers that just need to know whether more
+// than one active row matches the supplied identity.
+export async function hasConflictingNeonRestaurantMembership(restaurantId, { email, userId }) {
+  const matches = await findActiveMemberByIdentity(restaurantId, userId, normalizeEmail(email))
+  return matches.length > 1
+}
+
 // ── createNeonRestaurantMemberSafe ────────────────────────────────────────────
-// Prevent a second active membership for the same person. Fail closed if an
-// active membership already exists by user_id or normalized email.
+// Prevent a second active membership for the same person. Server-resolves the
+// user_id from the supplied email, never trusting caller-provided user_id or
+// owner_id. Fail closed if an active membership already exists for this identity.
 export async function createNeonRestaurantMemberSafe(restaurantId, member) {
   if (!member?.id) throw new Error('createNeonRestaurantMemberSafe: member.id is required')
   if (!member.role || !VALID_RESTAURANT_ROLES.has(member.role)) {
     throw Object.assign(new Error(`Invalid role: ${member.role}`), { code: 'INVALID_ROLE', status: 400 })
   }
 
-  const userId = member.user_id ?? null
-  const normalizedEmail = normalizeEmail(member.email)
-  const existing = await findActiveNeonRestaurantMembersByIdentity(restaurantId, { email: normalizedEmail, userId })
+  // Server-side identity resolution: caller-supplied user_id is ignored.
+  const resolvedUserId = await lookupUserIdByEmail(member.email)
+  const existing = await findActiveMemberByIdentity(restaurantId, resolvedUserId, normalizeEmail(member.email))
   if (existing.length > 0) {
-    throw Object.assign(new Error('Active membership already exists for this user'), { code: 'DUPLICATE_MEMBERSHIP', status: 409 })
+    throw Object.assign(new Error('An active membership already exists for this person at this restaurant'), { code: 'DUPLICATE_MEMBERSHIP', status: 409 })
   }
 
-  await upsertNeonRestaurantMember(restaurantId, member)
+  await upsertNeonRestaurantMember(restaurantId, member, resolvedUserId)
 }
 
 // ── updateNeonRestaurantMemberSafe ────────────────────────────────────────────
-// Atomic, conflict-aware update. Applies last-owner protection and admin/owner
-// hierarchy rules inside a transaction with a restaurant-scoped advisory lock.
+// Atomic, conflict-aware update. Applies last-owner protection, hierarchy rules
+// (admin cannot modify owner), and identity-alignment duplicate detection inside
+// a transaction with a restaurant-scoped advisory lock.
 export async function updateNeonRestaurantMemberSafe(restaurantId, member, { callerRole, callerIsSuperadmin }) {
   if (!member?.id) throw new Error('updateNeonRestaurantMemberSafe: member.id is required')
   if (!member.role || !VALID_RESTAURANT_ROLES.has(member.role)) {
     throw Object.assign(new Error(`Invalid role: ${member.role}`), { code: 'INVALID_ROLE', status: 400 })
   }
 
-  const normalizedEmail = normalizeEmail(member.email)
-  const userId = member.user_id ?? null
+  // Server-side identity resolution: caller-supplied user_id is ignored.
+  const resolvedUserId = await lookupUserIdByEmail(member.email)
 
   return await withRestaurantMemberTransaction(restaurantId, async (client) => {
     const currentRows = await client.query(
@@ -181,12 +202,16 @@ export async function updateNeonRestaurantMemberSafe(restaurantId, member, { cal
 
     // Hierarchy rule: admin cannot modify an owner.
     if (!callerIsSuperadmin && callerRole === 'admin' && current.role === 'owner') {
-      throw Object.assign(new Error('Admins cannot modify owners'), { code: 'FORBIDDEN', status: 403 })
+      throw Object.assign(new Error('Admin cannot modify an owner'), { code: 'FORBIDDEN', status: 403 })
     }
 
-    // Conflict check: if the update changes the identity, ensure no other active
-    // membership already uses the new identity.
-    const identityMatches = await findActiveNeonRestaurantMembersByIdentity(restaurantId, { email: normalizedEmail, userId })
+    // Identity-alignment duplicate detection: if the updated email resolves to
+    // a different identity than the current row, ensure no other active membership
+    // already uses that identity. Email alone must never override a different user_id.
+    const currentResolvedUserId = await lookupUserIdByEmail(current.email)
+    const identityUserId = resolvedUserId ?? currentResolvedUserId ?? null
+    const identityEmail = resolvedUserId ? null : normalizeEmail(member.email)
+    const identityMatches = await findActiveMemberByIdentity(restaurantId, identityUserId, identityEmail)
     const others = identityMatches.filter(m => m.id !== member.id)
     if (others.length > 0) {
       throw Object.assign(new Error('Another active membership already exists for this identity'), { code: 'DUPLICATE_MEMBERSHIP', status: 409 })
@@ -218,7 +243,7 @@ export async function updateNeonRestaurantMemberSafe(restaurantId, member, { cal
            active = $9,
            updated_at = now()
        WHERE id = $10::uuid`,
-      [userId, member.owner_id ?? null, member.name, normalizedEmail, member.role, member.category ?? null, member.department ?? null, member.phone ?? null, member.active ?? true, member.id]
+      [resolvedUserId, null, member.name, normalizeEmail(member.email), member.role, member.category ?? null, member.department ?? null, member.phone ?? null, member.active ?? true, member.id]
     )
 
     return { updated: true }
@@ -230,7 +255,7 @@ export async function updateNeonRestaurantMemberSafe(restaurantId, member, { cal
 // prevents the restaurant from being left with zero active owners.
 export async function deleteNeonRestaurantMemberSafe(id, { callerRole, callerIsSuperadmin }) {
   const targetRows = await sql`
-    SELECT id, restaurant_id, role
+    SELECT id, restaurant_id, role, email, user_id
     FROM restaurant_members
     WHERE id = ${id}::uuid
     LIMIT 1
@@ -240,7 +265,7 @@ export async function deleteNeonRestaurantMemberSafe(id, { callerRole, callerIsS
 
   // Hierarchy rule: admin cannot delete an owner.
   if (!callerIsSuperadmin && callerRole === 'admin' && target.role === 'owner') {
-    throw Object.assign(new Error('Admins cannot delete owners'), { code: 'FORBIDDEN', status: 403 })
+    throw Object.assign(new Error('Admin cannot delete an owner'), { code: 'FORBIDDEN', status: 403 })
   }
 
   return await withRestaurantMemberTransaction(target.restaurant_id, async (client) => {
@@ -266,6 +291,90 @@ export async function deleteNeonRestaurantMemberSafe(id, { callerRole, callerIsS
 
     await client.query(`DELETE FROM restaurant_members WHERE id = $1::uuid`, [id])
     return { deleted: true }
+  })
+}
+
+// ── atomicOwnerDemote ─────────────────────────────────────────────────────────
+// Atomically demote an owner to a new role. Uses a transaction protected by a
+// restaurant-scoped advisory lock plus a row-level FOR UPDATE lock so two
+// concurrent requests cannot both see count > 1 and proceed to leave zero active
+// owners.
+export async function atomicOwnerDemote(memberId, newRole, restaurantId) {
+  if (!memberId || !newRole || !restaurantId) throw new Error('atomicOwnerDemote: all params required')
+  return await withRestaurantMemberTransaction(restaurantId, async (client) => {
+    // Lock the target row — prevents concurrent demotions from racing.
+    const { rows: [target] } = await client.query(
+      `SELECT id, role, active FROM restaurant_members WHERE id = $1::uuid FOR UPDATE`,
+      [memberId]
+    )
+    if (!target || !target.active) {
+      return { ok: false, error: 'Member not found or already inactive' }
+    }
+
+    if (target.role !== 'owner') {
+      // Not an owner — straightforward update, no last-owner check needed.
+      await client.query(
+        `UPDATE restaurant_members SET role = $1, updated_at = now() WHERE id = $2::uuid`,
+        [newRole, memberId]
+      )
+      return { ok: true }
+    }
+
+    // Recheck owner count inside the transaction with a lock.
+    const { rows: [{ cnt }] } = await client.query(
+      `SELECT COUNT(*) AS cnt
+       FROM restaurant_members
+       WHERE restaurant_id = $1::uuid AND role = 'owner' AND active = true
+       FOR UPDATE`,
+      [restaurantId]
+    )
+    if (parseInt(cnt, 10) <= 1) {
+      return { ok: false, error: 'Cannot demote the last owner of a restaurant' }
+    }
+
+    await client.query(
+      `UPDATE restaurant_members SET role = $1, updated_at = now() WHERE id = $2::uuid`,
+      [newRole, memberId]
+    )
+    return { ok: true }
+  })
+}
+
+// ── atomicOwnerDelete ─────────────────────────────────────────────────────────
+// Atomically delete a member, applying the last-owner guard inside the
+// transaction so two concurrent delete requests cannot both succeed when only
+// one owner remains.
+export async function atomicOwnerDelete(memberId, restaurantId) {
+  if (!memberId || !restaurantId) throw new Error('atomicOwnerDelete: all params required')
+  return await withRestaurantMemberTransaction(restaurantId, async (client) => {
+    const { rows: [target] } = await client.query(
+      `SELECT id, role, active FROM restaurant_members WHERE id = $1::uuid FOR UPDATE`,
+      [memberId]
+    )
+    if (!target) {
+      // Idempotent: already gone.
+      return { ok: true }
+    }
+
+    if (target.role !== 'owner' || !target.active) {
+      // Not an active owner — straightforward delete.
+      await client.query(`DELETE FROM restaurant_members WHERE id = $1::uuid`, [memberId])
+      return { ok: true }
+    }
+
+    const { rows: [{ cnt }] } = await client.query(
+      `SELECT COUNT(*) AS cnt
+       FROM restaurant_members
+       WHERE restaurant_id = $1::uuid AND role = 'owner' AND active = true
+       FOR UPDATE`,
+      [restaurantId]
+    )
+    if (parseInt(cnt, 10) <= 1) {
+      return { ok: false, error: 'Cannot delete the last owner of a restaurant' }
+    }
+
+    await client.query(`DELETE FROM restaurant_members WHERE id = $1::uuid`, [memberId])
+    return { ok: true }
   })
 }
 

@@ -90,8 +90,13 @@ export async function executeTeamUpsert({ restaurantId, member, caller }) {
 
   if (existing) {
     // Self-promotion / self-demotion prevention: caller cannot change their own role.
+    // Identity rule: user_id match first; email fallback only when existing user_id IS NULL.
+    const existingUserId = existing.user_id
     const dbEmail = normalizeEmail(existing.email)
-    if (caller.email && dbEmail && caller.email === dbEmail && member.role !== existing.role) {
+    const isSelf =
+      (existingUserId && caller.userId && existingUserId === caller.userId) ||
+      (!existingUserId && caller.email && dbEmail && caller.email === dbEmail)
+    if (isSelf && member.role !== existing.role) {
       return { status: 403, body: { error: 'Cannot change your own role' } }
     }
 
@@ -142,7 +147,13 @@ export async function executeTeamDelete({ id, caller }) {
   }
 
   // Self-removal prevention.
-  if (caller.email && normalizeEmail(target.email) === caller.email) {
+  // Identity rule: user_id match first; email fallback only when target user_id IS NULL.
+  const targetUserId = target.user_id
+  const targetEmail = normalizeEmail(target.email)
+  const isSelf =
+    (targetUserId && caller.userId && targetUserId === caller.userId) ||
+    (!targetUserId && caller.email && targetEmail && caller.email === targetEmail)
+  if (isSelf) {
     return { status: 403, body: { error: 'You cannot remove yourself from the team' } }
   }
 

@@ -820,6 +820,7 @@ function teamAuthBypass(req, res, next) {
   if (process.env.DISABLE_AUTH === 'true' || process.env.VITE_DISABLE_AUTH === 'true') {
     req.authRole = 'owner'
     req.authEmail = null
+    req.authUserId = null
     req.authIsSuperadmin = true
     return next()
   }
@@ -834,7 +835,7 @@ app.get('/api/team-members/:restaurantId',
       const { restaurantId } = req.params
       const { status, body } = await executeTeamList({
         restaurantId,
-        caller: { role: req.authRole, email: req.authEmail, isSuperadmin: req.authIsSuperadmin },
+        caller: { role: req.authRole, email: req.authEmail, userId: req.authUserId, isSuperadmin: req.authIsSuperadmin },
       })
       return res.status(status).json(body)
     } catch (err) {
@@ -857,6 +858,7 @@ app.post('/api/team-members/shadow-upsert',
     if (!authResult.allowed) return res.status(403).json({ error: 'Access denied' })
     req.authRole = authResult.role
     req.authEmail = authResult.email
+    req.authUserId = authResult.userId
     req.authIsSuperadmin = authResult.isSuperadmin
     next()
   },
@@ -867,7 +869,7 @@ app.post('/api/team-members/shadow-upsert',
       const { status, body } = await executeTeamUpsert({
         restaurantId,
         member,
-        caller: { role: req.authRole, email: req.authEmail, isSuperadmin: req.authIsSuperadmin },
+        caller: { role: req.authRole, email: req.authEmail, userId: req.authUserId, isSuperadmin: req.authIsSuperadmin },
       })
       return res.status(status).json(body)
     } catch (err) {
@@ -890,6 +892,7 @@ app.post('/api/team-members/shadow-delete',
     if (!authResult.allowed) return res.status(403).json({ error: 'Access denied' })
     req.authRole = authResult.role
     req.authEmail = authResult.email
+    req.authUserId = authResult.userId
     req.authIsSuperadmin = authResult.isSuperadmin
     next()
   },
@@ -899,7 +902,7 @@ app.post('/api/team-members/shadow-delete',
       if (!id) return res.status(400).json({ error: 'id required' })
       const { status, body } = await executeTeamDelete({
         id,
-        caller: { role: req.authRole, email: req.authEmail, isSuperadmin: req.authIsSuperadmin },
+        caller: { role: req.authRole, email: req.authEmail, userId: req.authUserId, isSuperadmin: req.authIsSuperadmin },
       })
       return res.status(status).json(body)
     } catch (err) {
