@@ -11,7 +11,7 @@ const { Pool } = pg
 
 const pools = new Map()
 
-function getPool(url) {
+export function getPool(url) {
   if (!pools.has(url)) {
     pools.set(url, new Pool({ connectionString: url }))
   }

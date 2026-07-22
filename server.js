@@ -39,7 +39,13 @@ import {
   getNeonRestaurantMemberById,
   getNeonRestaurantMemberByEmail,
   countNeonActiveOwners,
+  filterNeonRestaurantMembersForRole,
 } from './src/db/neon-restaurant-members.js'
+import {
+  executeTeamList,
+  executeTeamUpsert,
+  executeTeamDelete,
+} from './api/_lib/team-service.js'
 import { upsertNeonRestaurantSettingsKey } from './src/db/neon-restaurant-settings.js'
 import { writeAuditLog } from './src/db/neon-audit-logs.js'
 import { r2Upload } from './src/lib/r2.js'
@@ -807,131 +813,101 @@ app.patch('/api/bookings/:id/status', async (req, res) => {
 })
 
 // ── Team Member routes ────────────────────────────────────────────────────────
+// All team operations are delegated to the canonical team-service so Vercel,
+// Express, and Vite dev middleware share the same business rules.
 
-app.get('/api/team-members/:restaurantId', requireRestaurantRole(req => req.params.restaurantId, MANAGEMENT_ROLES), async (req, res) => {
-  try {
-    const { restaurantId } = req.params
-    if (!restaurantId) return res.status(400).json({ error: 'restaurantId required' })
-    const rows = await getNeonRestaurantMembers(restaurantId)
-    return res.json(rows)
-  } catch (err) {
-    console.error('[team-members GET] Error:', err.message)
-    return res.status(500).json({ error: err.message })
+function teamAuthBypass(req, res, next) {
+  if (process.env.DISABLE_AUTH === 'true' || process.env.VITE_DISABLE_AUTH === 'true') {
+    req.authRole = 'owner'
+    req.authEmail = null
+    req.authIsSuperadmin = true
+    return next()
   }
-})
+  next()
+}
 
-app.post('/api/team-members/shadow-upsert', async (req, res) => {
-  try {
+app.get('/api/team-members/:restaurantId',
+  teamAuthBypass,
+  requireRestaurantRole(req => req.params.restaurantId, MANAGEMENT_ROLES),
+  async (req, res) => {
+    try {
+      const { restaurantId } = req.params
+      const { status, body } = await executeTeamList({
+        restaurantId,
+        caller: { role: req.authRole, email: req.authEmail, isSuperadmin: req.authIsSuperadmin },
+      })
+      return res.status(status).json(body)
+    } catch (err) {
+      console.error('[team-members GET] Error:', err.message)
+      return res.status(err.status || 500).json({ error: err.message, code: err.code })
+    }
+  }
+)
+
+app.post('/api/team-members/shadow-upsert',
+  teamAuthBypass,
+  async (req, res, next) => {
+    if (process.env.DISABLE_AUTH === 'true' || process.env.VITE_DISABLE_AUTH === 'true') return next()
     const { restaurantId, member } = req.body
-    if (!restaurantId || !member?.id) return res.status(400).json({ error: 'restaurantId and member.id required' })
-
-    if (!_isAuthDisabled()) {
-      const authResult = await checkRestaurantAccess(req, restaurantId)
-      if (authResult.error === 'Not authenticated') return res.status(401).json({ error: 'Not authenticated' })
-      if (authResult.error) return res.status(500).json({ error: authResult.error })
-      if (!authResult.allowed) return res.status(403).json({ error: 'Access denied' })
-
-      const callerRole = authResult.role
-      const isElevated = authResult.isSuperadmin || callerRole === 'menu_studio'
-
-      if (!isElevated) {
-        // Only owner/admin can manage team members
-        if (!TEAM_WRITE_ROLES.includes(callerRole)) {
-          return res.status(403).json({ error: 'Only owners and admins can manage team members' })
-        }
-
-        const targetRole = member.role
-        // No restaurant endpoint may assign menu_studio
-        if (targetRole === 'menu_studio') {
-          return res.status(403).json({ error: 'menu_studio role cannot be assigned via restaurant endpoints' })
-        }
-        // Admin cannot assign the owner role
-        if (callerRole === 'admin' && targetRole === 'owner') {
-          return res.status(403).json({ error: 'Admins cannot assign the owner role' })
-        }
-
-        // A user cannot change their own role (self-promotion prevention)
-        const callerEmail = authResult.email
-        if (member.email && member.email.toLowerCase().trim() === callerEmail && targetRole) {
-          const self = await getNeonRestaurantMemberByEmail(restaurantId, callerEmail)
-          if (self && self.role !== targetRole) {
-            return res.status(403).json({ error: 'You cannot change your own role' })
-          }
-        }
-
-        // Prevent demoting the last owner
-        if (targetRole && targetRole !== 'owner') {
-          const existing = await getNeonRestaurantMemberById(member.id)
-          if (existing && existing.role === 'owner' && existing.restaurant_id === restaurantId) {
-            const ownerCount = await countNeonActiveOwners(restaurantId)
-            if (ownerCount <= 1) {
-              return res.status(403).json({ error: 'Cannot demote the last owner of a restaurant' })
-            }
-          }
-        }
-      }
+    const existingMember = await getNeonRestaurantMemberById(member?.id)
+    const authRestaurantId = existingMember ? existingMember.restaurant_id : restaurantId
+    const authResult = await checkRestaurantAccess(req, authRestaurantId)
+    if (authResult.error === 'Not authenticated') return res.status(401).json({ error: 'Not authenticated' })
+    if (authResult.error) return res.status(409).json({ error: authResult.error })
+    if (!authResult.allowed) return res.status(403).json({ error: 'Access denied' })
+    req.authRole = authResult.role
+    req.authEmail = authResult.email
+    req.authIsSuperadmin = authResult.isSuperadmin
+    next()
+  },
+  async (req, res) => {
+    try {
+      const { restaurantId, member } = req.body
+      if (!restaurantId || !member?.id) return res.status(400).json({ error: 'restaurantId and member.id required' })
+      const { status, body } = await executeTeamUpsert({
+        restaurantId,
+        member,
+        caller: { role: req.authRole, email: req.authEmail, isSuperadmin: req.authIsSuperadmin },
+      })
+      return res.status(status).json(body)
+    } catch (err) {
+      console.error('[team-members shadow-upsert] Error:', err.message)
+      return res.status(err.status || 500).json({ error: err.message, code: err.code })
     }
-
-    await upsertNeonRestaurantMember(restaurantId, member)
-    console.log('[team-members shadow-upsert] Neon ✅ id:', member.id)
-    writeAuditLog({ restaurantId, action: 'upsert', entityType: 'team_member', entityId: member.id, newData: { name: member.name, role: member.role }, ipAddress: req.ip })
-    return res.json({ ok: true })
-  } catch (err) {
-    console.error('[team-members shadow-upsert] Error:', err.message)
-    return res.status(500).json({ error: err.message })
   }
-})
+)
 
-app.post('/api/team-members/shadow-delete', async (req, res) => {
-  try {
+app.post('/api/team-members/shadow-delete',
+  teamAuthBypass,
+  async (req, res, next) => {
+    if (process.env.DISABLE_AUTH === 'true' || process.env.VITE_DISABLE_AUTH === 'true') return next()
     const { id } = req.body
-    if (!id) return res.status(400).json({ error: 'id required' })
-
-    if (!_isAuthDisabled()) {
-      // Resolve the member to get restaurant_id — do not trust body
-      const member = await getNeonRestaurantMemberById(id)
-      if (!member) return res.status(404).json({ error: 'Team member not found' })
-
-      const authResult = await checkRestaurantAccess(req, member.restaurant_id)
-      if (authResult.error === 'Not authenticated') return res.status(401).json({ error: 'Not authenticated' })
-      if (authResult.error) return res.status(500).json({ error: authResult.error })
-      if (!authResult.allowed) return res.status(403).json({ error: 'Access denied' })
-
-      const callerRole = authResult.role
-      const isElevated = authResult.isSuperadmin || callerRole === 'menu_studio'
-
-      if (!isElevated) {
-        // Only owner/admin can remove team members
-        if (!TEAM_WRITE_ROLES.includes(callerRole)) {
-          return res.status(403).json({ error: 'Only owners and admins can remove team members' })
-        }
-        // Admin cannot remove an owner
-        if (callerRole === 'admin' && member.role === 'owner') {
-          return res.status(403).json({ error: 'Admins cannot remove owners' })
-        }
-        // A user cannot remove themselves
-        if (member.email && member.email.toLowerCase().trim() === authResult.email) {
-          return res.status(403).json({ error: 'You cannot remove yourself from the team' })
-        }
-        // Prevent deleting the last owner
-        if (member.role === 'owner') {
-          const ownerCount = await countNeonActiveOwners(member.restaurant_id)
-          if (ownerCount <= 1) {
-            return res.status(403).json({ error: 'Cannot delete the last owner of a restaurant' })
-          }
-        }
-      }
+    const target = await getNeonRestaurantMemberById(id)
+    if (!target) return res.json({ ok: true })
+    const authResult = await checkRestaurantAccess(req, target.restaurant_id)
+    if (authResult.error === 'Not authenticated') return res.status(401).json({ error: 'Not authenticated' })
+    if (authResult.error) return res.status(409).json({ error: authResult.error })
+    if (!authResult.allowed) return res.status(403).json({ error: 'Access denied' })
+    req.authRole = authResult.role
+    req.authEmail = authResult.email
+    req.authIsSuperadmin = authResult.isSuperadmin
+    next()
+  },
+  async (req, res) => {
+    try {
+      const { id } = req.body
+      if (!id) return res.status(400).json({ error: 'id required' })
+      const { status, body } = await executeTeamDelete({
+        id,
+        caller: { role: req.authRole, email: req.authEmail, isSuperadmin: req.authIsSuperadmin },
+      })
+      return res.status(status).json(body)
+    } catch (err) {
+      console.error('[team-members shadow-delete] Error:', err.message)
+      return res.status(err.status || 500).json({ error: err.message, code: err.code })
     }
-
-    await deleteNeonRestaurantMember(id)
-    console.log('[team-members shadow-delete] Neon ✅ id:', id)
-    writeAuditLog({ action: 'delete', entityType: 'team_member', entityId: id, ipAddress: req.ip })
-    return res.json({ ok: true })
-  } catch (err) {
-    console.error('[team-members shadow-delete] Error:', err.message)
-    return res.status(500).json({ error: err.message })
   }
-})
+)
 
 app.post('/api/orders/auto-cleanup', requireSuperadmin, async (req, res) => {
   try {

@@ -152,11 +152,21 @@ export async function checkRestaurantAccess(req, restaurantId) {
        WHERE restaurant_id = $1::uuid
          AND lower(trim(email)) = $2
          AND active = true
-       LIMIT 1`,
+       ORDER BY created_at ASC`,
       [restaurantId, email]
     )
     if (!rows.length) {
       return { allowed: false, role: null, isSuperadmin: false, email }
+    }
+    // Fail closed when duplicate active memberships exist; never pick an arbitrary row.
+    if (rows.length > 1) {
+      return {
+        allowed: false,
+        role: null,
+        isSuperadmin: false,
+        email,
+        error: 'Membership conflict: duplicate active memberships detected',
+      }
     }
     return { allowed: true, role: rows[0].role, isSuperadmin: false, email, name: rows[0].name }
   } catch (e) {
