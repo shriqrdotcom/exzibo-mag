@@ -1,0 +1,124 @@
+TASK: Prepare the canonical Better Auth identity type migration.
+
+REPOSITORY
+
+Work only in:
+
+shriqrdotcom/exzibo-mag
+
+START
+
+1. Switch to main.
+2. Pull the latest main.
+3. Confirm the restaurant-boundaries changes are merged.
+4. Confirm the working tree is clean.
+5. Create this branch:
+
+fix/canonical-identity-foundation
+
+Do not push directly to main.
+
+GOAL
+
+Make the repository consistently treat Better Auth user IDs as TEXT.
+
+Do not apply the migration to any database.
+
+IMPLEMENTATION
+
+1. In src/db/neon-restaurant-members.js:
+   - remove the incorrect ::uuid casts from userId and ownerId;
+   - update outdated UUID comments.
+
+2. In src/db/schema.ts:
+   - change audit_logs.user_id from uuid to text.
+
+3. Create a new reviewed Drizzle migration that converts these identity columns to TEXT:
+
+   - restaurants.owner_id
+   - restaurant_members.user_id
+   - restaurant_members.owner_id
+   - audit_logs.user_id
+
+Use safe PostgreSQL conversion:
+
+   ALTER COLUMN ... TYPE text USING ...::text
+
+The migration must work when rebuilding a fresh database from the existing migration history.
+
+4. Do not edit or rewrite migration 0000.
+
+5. Do not use db:push.
+
+6. Do not apply the new migration.
+
+7. Do not add membership uniqueness constraints yet.
+
+8. Do not perform membership backfills or duplicate deletion.
+
+9. Do not change checkRestaurantAccess, My Restaurants, mobile bootstrap, team invitations, or membership roles in this task.
+
+10. Do not drop restaurant_members.owner_id yet.
+
+TESTS
+
+Add focused tests proving:
+
+1. Better Auth identity columns are represented as TEXT in schema.ts.
+2. No ::uuid cast remains on restaurant member userId or ownerId.
+3. The new migration contains the required TEXT conversions.
+4. Existing UUID restaurant_id casts remain unchanged because restaurant IDs are still UUID.
+5. Production build succeeds.
+
+VALIDATION
+
+Run:
+
+- the new identity-foundation tests;
+- existing authorization tests;
+- existing mobile-bootstrap tests;
+- production build.
+
+Report unavailable live-server tests as blocked, not passed.
+
+RULES
+
+- Do not request production secrets.
+- Do not connect to Neon.
+- Do not run db:push.
+- Do not apply migrations.
+- Do not modify production data.
+- Do not change unrelated UI or features.
+- Do not reintroduce Supabase.
+- Do not push directly to main.
+
+STOP CONDITIONS
+
+Stop and report if:
+
+- the actual schema differs from the Prompt No. 5 report;
+- another migration already performs these conversions;
+- migration generation would modify unrelated tables;
+- the task requires live database access.
+
+FINAL REPORT
+
+Provide:
+
+1. Identity type problems fixed.
+2. Files changed.
+3. Migration filename and SQL summary.
+4. Tests executed.
+5. Exact pass, fail and blocked results.
+6. Confirmation that no database command was executed.
+7. Remaining work before migration execution.
+8. Rollback SQL.
+9. Commit hash and branch name.
+
+Commit to:
+
+fix/canonical-identity-foundation
+
+Push the branch and create a pull request.
+
+If GitHub credentials are unavailable, keep the local commit and report that it still needs to be pushed.
