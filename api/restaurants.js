@@ -148,16 +148,23 @@ export default async function handler(req, res) {
       }
 
       // ── Normal user: filter by ownership and membership ───────────────────
+      // Identity rule: user_id first; email fallback only when user_id IS NULL.
+      // This is the same rule used by checkRestaurantAccess and mobile bootstrap.
       const sql = getSql()
-      const rows = await sql`
-        SELECT DISTINCT restaurant_id FROM (
-          SELECT id AS restaurant_id FROM restaurants
-          WHERE owner_id = ${session.userId} AND is_deleted = false
-          UNION
-          SELECT restaurant_id FROM restaurant_members
-          WHERE user_id = ${session.userId}
-        ) AS r
-      `
+      const rows = await sql.query(
+        `SELECT DISTINCT restaurant_id FROM (
+           SELECT id AS restaurant_id FROM restaurants
+           WHERE owner_id = $1 AND is_deleted = false
+           UNION
+           SELECT restaurant_id FROM restaurant_members
+           WHERE (
+             (user_id IS NOT NULL AND user_id = $1)
+             OR (user_id IS NULL AND lower(trim(email)) = $2)
+           )
+           AND active = true
+         ) AS r`,
+        [session.userId, session.email]
+      )
       return res.json(rows.map(r => r.restaurant_id))
     }
 

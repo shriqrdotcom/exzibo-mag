@@ -9,8 +9,12 @@ import {
   getNeonRestaurantMemberById,
   getNeonRestaurantMemberByEmail,
   countNeonActiveOwners,
+  findActiveMemberByIdentity,
+  atomicOwnerDemote,
+  atomicOwnerDelete,
   upsertNeonRestaurantMember,
   deleteNeonRestaurantMember,
+  lookupUserIdByEmail,
 } from '../src/db/neon-restaurant-members.js'
 
 // ── /api/team — Team Members Handler (Neon-only) ──────────────────────────────
@@ -57,7 +61,26 @@ export default async function handler(req, res) {
       }
 
       const rows = await getNeonRestaurantMembers(restaurantId)
-      return res.json(rows)
+
+      // ── Role-scoped field filtering ────────────────────────────────────────
+      // Owner / admin / superadmin receive the full management view: all rows
+      // (active and inactive), all fields including internal IDs and contact data.
+      // Manager / staff receive a limited public-work view: only active members,
+      // no internal IDs, owner_id, phone, email, or user_id.
+      const isManagement = access.isSuperadmin || ['owner', 'admin'].includes(access.role)
+      if (isManagement) {
+        return res.json(rows)
+      }
+
+      const publicRows = rows
+        .filter(r => r.active)
+        .map(r => ({
+          name:       r.name,
+          role:       r.role,
+          department: r.department ?? null,
+          category:   r.category  ?? null,
+        }))
+      return res.json(publicRows)
     }
 
     if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
@@ -91,6 +114,7 @@ export default async function handler(req, res) {
       if (!access.allowed) return res.status(403).json({ error: 'Access denied' })
 
       const callerEmail = access.email
+      const callerUserId = access.userId
       const callerRole = access.role
       const callerIsSuperadmin = access.isSuperadmin
 
@@ -109,25 +133,61 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: `Invalid role: ${member.role}` })
       }
 
+      // ── Server-side user_id resolution ────────────────────────────────────
+      // Normalize email and look up Better Auth user_id server-side.
+      // The caller MUST NOT supply user_id or owner_id — they are always
+      // server-assigned. This prevents privilege escalation via forged identities.
+      const normalizedEmail = member.email ? member.email.toLowerCase().trim() : null
+      const resolvedUserId = normalizedEmail ? await lookupUserIdByEmail(normalizedEmail) : null
+
+      // ── Duplicate membership guard (create only) ──────────────────────────
+      // Before creating a new member, verify that no active membership already
+      // exists for the same identity at this restaurant. Do not silently create
+      // a duplicate row — two rows for the same person produce unpredictable
+      // authorization results.
+      if (action === 'create') {
+        const existing = await findActiveMemberByIdentity(authRestaurantId, resolvedUserId, normalizedEmail)
+        // Exclude the current member.id in case of a retry of the same create.
+        const conflicts = existing.filter(r => r.id !== member.id)
+        if (conflicts.length > 0) {
+          return res.status(409).json({
+            error: 'An active membership already exists for this person at this restaurant',
+          })
+        }
+      }
+
+      // ── Admin cannot modify an owner ──────────────────────────────────────
+      // Admin may manage staff/manager/admin members but must not be able to
+      // demote, deactivate, or otherwise modify an owner record. Only another
+      // owner (or superadmin) may make changes to an existing owner row.
+      if (existingMember && existingMember.role === 'owner' && !callerIsSuperadmin && callerRole === 'admin') {
+        return res.status(403).json({ error: 'Admin cannot modify an owner' })
+      }
+
       // Rules 3 & 5 use DB-resolved identity from existingMember, NOT caller-supplied
       // member.email.  A caller who omits member.email must not be able to bypass
       // self-promotion or last-owner demotion protections.
       if (existingMember) {
         // Rule 3 — Caller cannot change their own role.
-        // Compare against the email stored in the DB, not what the caller sent.
+        // Identity rule: userId match first (email fallback when member.user_id IS NULL).
+        const memberUserId = existingMember.user_id
         const dbEmail = (existingMember.email || '').toLowerCase().trim()
-        if (callerEmail && dbEmail && callerEmail === dbEmail &&
-            member.role && member.role !== existingMember.role) {
+        const isSelf =
+          (memberUserId && callerUserId && memberUserId === callerUserId) ||
+          (!memberUserId && callerEmail && dbEmail && callerEmail === dbEmail)
+        if (isSelf && member.role && member.role !== existingMember.role) {
           return res.status(403).json({ error: 'Cannot change your own role' })
         }
 
-        // Rule 5 — Block demotion of the last owner.
-        // Check the DB-stored current role, not the inferred role from member.email.
+        // Rule 5 — Block demotion of the last owner (atomic).
+        // Use a DB transaction to recheck the count under a row lock, preventing
+        // two concurrent requests from each seeing count > 1 and both succeeding.
         if (existingMember.role === 'owner' && member.role && member.role !== 'owner') {
-          const ownerCount = await countNeonActiveOwners(authRestaurantId)
-          if (ownerCount <= 1) {
-            return res.status(403).json({ error: 'Cannot demote the last owner of a restaurant' })
+          const result = await atomicOwnerDemote(member.id, member.role, authRestaurantId)
+          if (!result.ok) {
+            return res.status(403).json({ error: result.error })
           }
+          return res.json({ success: true })
         }
       }
 
@@ -136,7 +196,8 @@ export default async function handler(req, res) {
         return res.status(403).json({ error: 'Admin cannot assign the owner role' })
       }
 
-      await upsertNeonRestaurantMember(restaurantId, member)
+      // Pass server-resolved userId; upsert always ignores member.user_id and member.owner_id.
+      await upsertNeonRestaurantMember(restaurantId, member, resolvedUserId)
       return res.json({ success: true })
     }
 
@@ -167,12 +228,20 @@ export default async function handler(req, res) {
         return res.status(403).json({ error: 'Team management requires owner or admin role' })
       }
 
-      // Rule 5 — Cannot delete the last owner
+      // Admin cannot delete an owner — only another owner or superadmin may.
+      if (!callerIsSuperadmin && callerRole === 'admin' && targetMember.role === 'owner') {
+        return res.status(403).json({ error: 'Admin cannot delete an owner' })
+      }
+
+      // Rule 5 — Cannot delete the last owner (atomic).
+      // Use a DB transaction so two concurrent deletes cannot both see count > 1
+      // and both succeed, leaving zero active owners.
       if (targetMember.role === 'owner') {
-        const ownerCount = await countNeonActiveOwners(restaurantId)
-        if (ownerCount <= 1) {
-          return res.status(403).json({ error: 'Cannot delete the last owner of a restaurant' })
+        const result = await atomicOwnerDelete(id, restaurantId)
+        if (!result.ok) {
+          return res.status(403).json({ error: result.error })
         }
+        return res.json({ success: true })
       }
 
       await deleteNeonRestaurantMember(id)
