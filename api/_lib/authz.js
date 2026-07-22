@@ -154,6 +154,9 @@ export async function checkRestaurantAccess(req, restaurantId) {
     // Identity rule: match user_id first; email fallback only when user_id IS NULL.
     // This prevents an email match from granting access to a row owned by a
     // different user_id (e.g. after a user re-registers with the same address).
+    //
+    // No LIMIT — we fetch all matching rows so we can fail closed when
+    // conflicting duplicates exist rather than silently picking one arbitrarily.
     const { rows } = await getPool().query(
       `SELECT role, name
        FROM restaurant_members
@@ -162,12 +165,23 @@ export async function checkRestaurantAccess(req, restaurantId) {
            (user_id IS NOT NULL AND user_id = $2)
            OR (user_id IS NULL AND lower(trim(email)) = $3)
          )
-         AND active = true
-       LIMIT 1`,
+         AND active = true`,
       [restaurantId, userId, email]
     )
     if (!rows.length) {
       return { allowed: false, role: null, isSuperadmin: false, email, userId }
+    }
+    // Fail closed on conflicting duplicate memberships — do not silently pick
+    // the most privileged row or an arbitrary one.
+    if (rows.length > 1) {
+      return {
+        allowed: false,
+        role: null,
+        isSuperadmin: false,
+        email,
+        userId,
+        error: 'Conflicting membership records detected: contact an administrator to resolve duplicates',
+      }
     }
     return { allowed: true, role: rows[0].role, isSuperadmin: false, email, userId, name: rows[0].name }
   } catch (e) {
