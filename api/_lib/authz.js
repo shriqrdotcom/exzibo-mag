@@ -2,7 +2,7 @@
  * api/_lib/authz.js — Reusable server-side authorization helpers
  *
  * Rules:
- * - Email is ALWAYS read from the verified Better Auth session cookie.
+ * - Identity is ALWAYS read from the verified Better Auth session cookie.
  *   It is NEVER accepted from the request body, URL params, or frontend storage.
  * - All email comparisons normalize: lowercase + trim.
  * - SUPERADMIN_ALLOWED_EMAILS is parsed server-side only.
@@ -10,11 +10,16 @@
  *   VITE_DISABLE_AUTH / DISABLE_AUTH control client-side UI only; they have
  *   no effect on any server middleware in this module.
  *
+ * Identity rule (applied consistently in checkRestaurantAccess, myIds, and mobile bootstrap):
+ *   1. Match the authenticated Better Auth user_id first.
+ *   2. Use normalized email ONLY when the membership row has user_id IS NULL.
+ *   3. Never allow an email match to override a row that belongs to a different user_id.
+ *
  * Exports:
  *   getSessionEmail(req)                        → { email, userId, user } | null
  *   isSuperadminEmail(email)                    → boolean
- *   checkSuperadmin(req)                        → { allowed, role, isSuperadmin, email, error? }
- *   checkRestaurantAccess(req, id)              → { allowed, role, isSuperadmin, email, name?, error? }
+ *   checkSuperadmin(req)                        → { allowed, role, isSuperadmin, email, userId, error? }
+ *   checkRestaurantAccess(req, id)              → { allowed, role, isSuperadmin, email, userId, name?, error? }
  *   requireSession                              → Express middleware — 401 if no valid session
  *   requireRestaurantAccess(fn)                 → Express middleware factory — 403 if not member/superadmin
  *   requireSuperadmin                           → Express middleware — 403 if not superadmin
@@ -112,55 +117,61 @@ export async function checkSuperadmin(req) {
 // ── checkRestaurantAccess ────────────────────────────────────────────────────
 // Used by /api/auth-check?type=member&restaurantId=...
 //
-// Flow:
-//   1. Verify Better Auth session — email from DB, never from frontend
-//   2. If email is in SUPERADMIN_ALLOWED_EMAILS → full access immediately
-//   3. Otherwise query Neon `restaurant_members` by restaurant_id + email
+// Identity rule (mirrors mobile bootstrap and myIds):
+//   1. Match the authenticated Better Auth user_id first.
+//   2. Use normalized email ONLY when the membership row has user_id IS NULL.
+//   3. Never allow an email match to override a row that belongs to a different user_id.
 //
 // Returns:
-//   { allowed: true,  role: 'superadmin', isSuperadmin: true,  email }
-//   { allowed: true,  role: <member.role>, isSuperadmin: false, email, name }
-//   { allowed: false, role: null,          isSuperadmin: false, email }
+//   { allowed: true,  role: 'superadmin', isSuperadmin: true,  email, userId }
+//   { allowed: true,  role: <member.role>, isSuperadmin: false, email, userId, name }
+//   { allowed: false, role: null,          isSuperadmin: false, email, userId }
 //   { error: '...',  allowed: false, ... }   on failure
 export async function checkRestaurantAccess(req, restaurantId) {
   let session
   try {
     session = await getSessionEmail(req)
   } catch (e) {
-    return { allowed: false, role: null, isSuperadmin: false, email: null, error: 'Session error: ' + e.message }
+    return { allowed: false, role: null, isSuperadmin: false, email: null, userId: null, error: 'Session error: ' + e.message }
   }
   if (!session) {
-    return { allowed: false, role: null, isSuperadmin: false, email: null, error: 'Not authenticated' }
+    return { allowed: false, role: null, isSuperadmin: false, email: null, userId: null, error: 'Not authenticated' }
   }
 
-  const { email } = session
+  const { email, userId } = session
 
   // ── Superadmin bypass — no DB lookup required ────────────────────────────
   if (isSuperadminEmail(email)) {
-    return { allowed: true, role: 'superadmin', isSuperadmin: true, email }
+    return { allowed: true, role: 'superadmin', isSuperadmin: true, email, userId }
   }
 
   // ── Normal membership check against Neon restaurant_members ─────────────
   if (!restaurantId) {
-    return { allowed: false, role: null, isSuperadmin: false, email, error: 'restaurantId required' }
+    return { allowed: false, role: null, isSuperadmin: false, email, userId, error: 'restaurantId required' }
   }
 
   try {
+    // Identity rule: match user_id first; email fallback only when user_id IS NULL.
+    // This prevents an email match from granting access to a row owned by a
+    // different user_id (e.g. after a user re-registers with the same address).
     const { rows } = await getPool().query(
       `SELECT role, name
        FROM restaurant_members
        WHERE restaurant_id = $1::uuid
-         AND lower(trim(email)) = $2
+         AND (
+           (user_id IS NOT NULL AND user_id = $2)
+           OR (user_id IS NULL AND lower(trim(email)) = $3)
+         )
          AND active = true
        LIMIT 1`,
-      [restaurantId, email]
+      [restaurantId, userId, email]
     )
     if (!rows.length) {
-      return { allowed: false, role: null, isSuperadmin: false, email }
+      return { allowed: false, role: null, isSuperadmin: false, email, userId }
     }
-    return { allowed: true, role: rows[0].role, isSuperadmin: false, email, name: rows[0].name }
+    return { allowed: true, role: rows[0].role, isSuperadmin: false, email, userId, name: rows[0].name }
   } catch (e) {
-    return { allowed: false, role: null, isSuperadmin: false, email, error: 'DB lookup failed: ' + e.message }
+    return { allowed: false, role: null, isSuperadmin: false, email, userId, error: 'DB lookup failed: ' + e.message }
   }
 }
 
@@ -185,7 +196,7 @@ export async function requireSession(req, res, next) {
 // Express middleware factory for restaurant-scoped routes.
 // `getRestaurantId` is a function: req => restaurantId string.
 // Returns 401 unauthenticated, 403 not a member/superadmin.
-// Attaches req.authEmail, req.authRole, req.authIsSuperadmin on success.
+// Attaches req.authEmail, req.authUserId, req.authRole, req.authIsSuperadmin on success.
 // Authorization is ALWAYS enforced — no environment-variable bypass.
 export function requireRestaurantAccess(getRestaurantId) {
   return async function (req, res, next) {
@@ -199,6 +210,7 @@ export function requireRestaurantAccess(getRestaurantId) {
       if (result.error) return res.status(500).json({ error: result.error })
       if (!result.allowed) return res.status(403).json({ error: 'Access denied' })
       req.authEmail = result.email
+      req.authUserId = result.userId
       req.authIsSuperadmin = result.isSuperadmin
       req.authRole = result.role
       next()
@@ -234,7 +246,7 @@ export async function requireSuperadmin(req, res, next) {
 //   • Elevated roles (menu_studio) always pass role checks.
 //   • All other roles must be in allowedRoles.
 // Returns 401 unauthenticated, 403 not a member or wrong role.
-// Attaches req.authEmail, req.authRole, req.authIsSuperadmin on success.
+// Attaches req.authEmail, req.authUserId, req.authRole, req.authIsSuperadmin on success.
 // Authorization is ALWAYS enforced — no environment-variable bypass.
 export function requireRestaurantRole(getRestaurantId, allowedRoles) {
   return async function (req, res, next) {
@@ -256,6 +268,7 @@ export function requireRestaurantRole(getRestaurantId, allowedRoles) {
       }
 
       req.authEmail = result.email
+      req.authUserId = result.userId
       req.authIsSuperadmin = result.isSuperadmin
       req.authRole = result.role
       next()

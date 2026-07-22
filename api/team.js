@@ -11,6 +11,7 @@ import {
   countNeonActiveOwners,
   upsertNeonRestaurantMember,
   deleteNeonRestaurantMember,
+  lookupUserIdByEmail,
 } from '../src/db/neon-restaurant-members.js'
 
 // ── /api/team — Team Members Handler (Neon-only) ──────────────────────────────
@@ -91,6 +92,7 @@ export default async function handler(req, res) {
       if (!access.allowed) return res.status(403).json({ error: 'Access denied' })
 
       const callerEmail = access.email
+      const callerUserId = access.userId
       const callerRole = access.role
       const callerIsSuperadmin = access.isSuperadmin
 
@@ -109,15 +111,25 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: `Invalid role: ${member.role}` })
       }
 
+      // ── Server-side user_id resolution ────────────────────────────────────
+      // Normalize email and look up Better Auth user_id server-side.
+      // The caller MUST NOT supply user_id or owner_id — they are always
+      // server-assigned. This prevents privilege escalation via forged identities.
+      const normalizedEmail = member.email ? member.email.toLowerCase().trim() : null
+      const resolvedUserId = normalizedEmail ? await lookupUserIdByEmail(normalizedEmail) : null
+
       // Rules 3 & 5 use DB-resolved identity from existingMember, NOT caller-supplied
       // member.email.  A caller who omits member.email must not be able to bypass
       // self-promotion or last-owner demotion protections.
       if (existingMember) {
         // Rule 3 — Caller cannot change their own role.
-        // Compare against the email stored in the DB, not what the caller sent.
+        // Identity rule: userId match first (email fallback when member.user_id IS NULL).
+        const memberUserId = existingMember.user_id
         const dbEmail = (existingMember.email || '').toLowerCase().trim()
-        if (callerEmail && dbEmail && callerEmail === dbEmail &&
-            member.role && member.role !== existingMember.role) {
+        const isSelf =
+          (memberUserId && callerUserId && memberUserId === callerUserId) ||
+          (!memberUserId && callerEmail && dbEmail && callerEmail === dbEmail)
+        if (isSelf && member.role && member.role !== existingMember.role) {
           return res.status(403).json({ error: 'Cannot change your own role' })
         }
 
@@ -136,7 +148,8 @@ export default async function handler(req, res) {
         return res.status(403).json({ error: 'Admin cannot assign the owner role' })
       }
 
-      await upsertNeonRestaurantMember(restaurantId, member)
+      // Pass server-resolved userId; upsert always ignores member.user_id and member.owner_id.
+      await upsertNeonRestaurantMember(restaurantId, member, resolvedUserId)
       return res.json({ success: true })
     }
 

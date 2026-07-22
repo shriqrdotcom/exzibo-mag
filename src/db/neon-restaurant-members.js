@@ -2,19 +2,41 @@ import { neon } from './pg-sql.js'
 
 const sql = neon(process.env.DATABASE_URL)
 
+// ── lookupUserIdByEmail ────────────────────────────────────────────────────────
+// Resolves a Better Auth user id from an email address by querying the "user"
+// table directly. Returns the user's id string, or null if no account exists.
+//
+// Used during team invitations to server-assign user_id when a Better Auth
+// account already exists for the invited email — never trust caller-supplied
+// user_id values.
+export async function lookupUserIdByEmail(email) {
+  if (!email) return null
+  const normalizedEmail = email.toLowerCase().trim()
+  const rows = await sql`
+    SELECT id FROM "user"
+    WHERE lower(trim(email)) = ${normalizedEmail}
+    LIMIT 1
+  `
+  return rows[0]?.id ?? null
+}
+
 // ── upsertNeonRestaurantMember ────────────────────────────────────────────────
 // INSERT … ON CONFLICT (id) DO UPDATE — safe for create and re-sync.
 // Supabase table is `team_members`; Neon table is `restaurant_members`.
 // Both share the same UUID PK so the id from Supabase can be used directly.
-// user_id and owner_id store Better Auth user ids, which are TEXT — not native
-// Postgres UUIDs. The columns are typed TEXT in the schema; do NOT cast them
-// with ::uuid or inserts will fail for any user whose id is not UUID-shaped.
-export async function upsertNeonRestaurantMember(restaurantId, member) {
+//
+// user_id is always server-resolved — never trusted from the caller.
+// Pass it via the `resolvedUserId` parameter (looked up from Better Auth).
+// owner_id is a legacy column kept for schema compatibility; it is always
+// written as null here — never from caller input.
+export async function upsertNeonRestaurantMember(restaurantId, member, resolvedUserId = null) {
   if (!member?.id) throw new Error('upsertNeonRestaurantMember: member.id is required')
 
   const id         = member.id
-  const userId     = member.user_id     ?? null
-  const ownerId    = member.owner_id    ?? null
+  // user_id: always server-resolved, never from caller body.
+  const userId     = resolvedUserId ?? null
+  // owner_id: legacy column — always null; never from caller input.
+  const ownerId    = null
   const name       = member.name
   const email      = member.email       ?? null
   const role       = member.role
