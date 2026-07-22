@@ -1,0 +1,129 @@
+TASK: Fix team membership safety and last-owner protection.
+
+REPOSITORY
+
+Work only in:
+
+shriqrdotcom/exzibo-mag
+
+START
+
+1. Switch to main and pull the latest changes.
+2. Confirm the membership-identity-alignment PR is merged.
+3. Confirm the working tree is clean.
+4. Create branch:
+
+fix/membership-team-safety
+
+Do not push directly to main.
+
+PROBLEMS
+
+1. Duplicate membership rows may exist for the same restaurant and user.
+2. Authorization may return an arbitrary role when duplicate rows exist.
+3. Last-owner protection uses count-then-update logic and can fail during concurrent requests.
+4. Staff users may receive unnecessary private team-member information.
+
+GOAL
+
+Make team membership operations deterministic, safe under concurrent requests, and limited by role.
+
+IMPLEMENTATION
+
+Inspect:
+
+- api/team.js
+- api/_lib/authz.js
+- src/db/neon-restaurant-members.js
+- src/db/schema.ts
+- related authorization and team tests
+
+Make these changes:
+
+1. Validate roles using only:
+
+   owner
+   admin
+   manager
+   staff
+
+2. Reject invalid role values.
+
+3. Before creating a membership, check for an existing active membership using:
+
+   - restaurant_id + user_id when user_id exists;
+   - restaurant_id + normalized email when user_id is NULL.
+
+4. Do not create a second active membership for the same person.
+
+5. Do not use arbitrary LIMIT 1 behavior when conflicting memberships exist.
+
+6. When conflicting duplicate memberships are detected:
+   - fail closed;
+   - return a safe conflict error;
+   - do not silently choose the most privileged row.
+
+7. Make owner demotion and owner deletion atomic.
+
+8. Use one database transaction with an appropriate row lock or PostgreSQL advisory lock.
+
+9. Recheck the active-owner count inside the transaction before changing an owner.
+
+10. Never allow a restaurant to have zero active owners.
+
+11. Only owner/admin roles may manage team members.
+
+12. Admin must not demote, delete, or modify an owner unless the current permission policy explicitly allows it.
+
+13. Staff and manager team-list responses must contain only necessary public work information.
+
+14. Private fields such as internal IDs, owner IDs, inactive-member details, and unnecessary phone/email data must be limited to authorized owner/admin management responses.
+
+15. Do not add database uniqueness constraints in this task.
+
+16. Do not perform membership backfills or delete existing duplicate records.
+
+17. Do not apply migration 0005 or run db:push.
+
+TESTS
+
+Add focused tests proving:
+
+1. Invalid roles are rejected.
+2. Duplicate membership creation is rejected.
+3. Conflicting duplicate rows fail closed.
+4. Two simultaneous owner-removal requests cannot leave zero owners.
+5. The last active owner cannot be demoted or deleted.
+6. Unauthorized roles cannot manage team members.
+7. Staff and manager responses do not expose private management fields.
+8. Owner/admin management responses contain only required fields.
+9. Existing membership identity behavior still works.
+10. Production build succeeds.
+
+RULES
+
+- Do not connect to or modify production Neon.
+- Do not apply migrations.
+- Do not delete existing membership data.
+- Do not modify unrelated UI.
+- Do not reintroduce Supabase.
+- Do not push directly to main.
+
+FINAL REPORT
+
+Provide:
+
+1. Membership problems found.
+2. Solution implemented.
+3. Files changed.
+4. Transaction or locking method used.
+5. Tests and build results.
+6. Remaining database work.
+7. Confirmation that no database command was executed.
+8. Commit hash and branch name.
+
+Commit to:
+
+fix/membership-team-safety
+
+Push the branch and create a pull request.
