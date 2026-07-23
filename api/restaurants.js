@@ -11,6 +11,7 @@ import {
   neonRowWithTables,
 } from '../src/db/neon-restaurants.js'
 import { createRestaurantAtomic } from '../src/services/restaurantCreationService.js'
+import { getRestaurantAnalytics, authorizeAnalyticsAccess } from '../src/services/analyticsService.js'
 import { neon } from '../src/db/pg-sql.js'
 import { normalizeAndValidateSlug } from '../src/lib/slug-utils.js'
 import {
@@ -23,8 +24,6 @@ import {
   conflict,
   internalError,
   rejectUnknownFields,
-  validateUuid,
-  validateString,
 } from './_lib/validate.js'
 
 // ── /api/restaurants — Restaurant CRUD (Neon-only Vercel function) ────────────
@@ -34,6 +33,7 @@ import {
 // GET  ?action=bySlug    &slug=X                       → restaurant by slug
 // GET  ?action=byId      &id=X                         → restaurant by id
 // GET  ?action=checkSlug &name=X                       → { taken: bool }
+// GET  ?action=analytics &id=X                         → restaurant analytics (auth-gated)
 // GET  ?action=myIds                                   → [restaurantId,…] for session user
 // GET/PATCH ?action=neonRestaurant &id=X               → GET returns row; PATCH updates
 // POST ?action=create               body: restaurant payload
@@ -116,6 +116,34 @@ export default async function handler(req, res) {
       const row = await getNeonRestaurantById(id)
       if (!row) return notFound(res, 'Not found', requestId)
       return res.json(toPublicRestaurant(row))
+    }
+
+    if (action === 'byUid') {
+      const { uid } = req.query
+      if (!uid) return badInput(res, 'uid required', requestId)
+      const row = await getNeonRestaurantByUid(uid)
+      if (!row) return notFound(res, 'Not found', requestId)
+      return res.json(toPublicRestaurant(row))
+    }
+
+    // ── GET: analytics — restaurant analytics (management roles only) ─────────
+    if (action === 'analytics') {
+      const { id } = req.query
+      if (!id) return badInput(res, 'id required for analytics', requestId)
+
+      const auth = await authorizeAnalyticsAccess(req, id)
+      if (auth.error === 'Not authenticated') return unauthorized(res, null, requestId)
+      if (!auth.allowed) return forbidden(res, auth.error, requestId)
+
+      try {
+        const { startDate, endDate } = req.query
+        const result = await getRestaurantAnalytics(id, startDate, endDate)
+        return res.status(200).json(result)
+      } catch (err) {
+        if (err.status === 404) return notFound(res, 'Restaurant not found', requestId)
+        console.error(`[restaurants][analytics] Error:`, err.message)
+        return internalError(res, requestId)
+      }
     }
 
     if (action === 'checkSlug') {
