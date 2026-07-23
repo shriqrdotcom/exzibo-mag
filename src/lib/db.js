@@ -504,31 +504,32 @@ export async function getOrders(restaurantId) {
 }
 
 export async function createOrder(restaurantId, order) {
+  // Order creation is server-authoritative. The client may only supply:
+  //   restaurant_id, table/service ref, customer details, item list (menuItemId + quantity + selectedOptions),
+  //   and order notes. The server controls id, status, prices, totals, and timestamps.
   const payload = {
-    id:                order.id,
     restaurant_id:     restaurantId,
     table_number:      order.table      || order.table_number     || null,
     customer_name:     order.customerName || order.customer_name  || null,
     customer_phone:    order.phone      || order.customer_phone   || null,
     customer_location: order.location   || order.customer_location || null,
     items:             order.items      || [],
-    status:            order.status     || 'pending',
-    total:             order.grandTotal ?? order.total ?? 0,
     notes:             order.notes      || null,
   }
-  try {
-    const res = await fetch('/api/orders', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    })
-    if (res.ok) return await res.json()
+  const res = await fetch('/api/orders', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  if (!res.ok) {
     const err = await res.json().catch(() => ({}))
-    console.warn('[createOrder] server route failed:', err)
-  } catch (e) {
-    console.warn('[createOrder] server route unreachable:', e.message)
+    const message = err.error || err.message || `HTTP ${res.status}`
+    const error = new Error(message)
+    error.code = err.code || `HTTP_${res.status}`
+    error.status = res.status
+    throw error
   }
-  return normalizeOrder(payload)
+  return normalizeOrder(await res.json())
 }
 
 export async function updateOrderStatus(orderId, status, restaurantId) {

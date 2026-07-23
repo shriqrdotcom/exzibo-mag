@@ -505,6 +505,7 @@ export default function RestaurantWebsite() {
   const [showSuccessPopup, setShowSuccessPopup] = useState(false)
   const [orderNotes, setOrderNotes] = useState('')
   const [orderStatus, setOrderStatus] = useState(1)
+  const [orderError, setOrderError] = useState('')
   const [viewingHistoryOrder, setViewingHistoryOrder] = useState(null)
   const [showOrderConfirm, setShowOrderConfirm] = useState(false)
   useEffect(() => { setShowOrderConfirm(false); setShowHelpSheet(false) }, [activeNav])
@@ -927,24 +928,57 @@ export default function RestaurantWebsite() {
 
   function addToCart(item, e) {
     setCartItems(prev => {
-      const existing = prev.find(c => c.name === item.name)
-      if (existing) return prev.map(c => c.name === item.name ? { ...c, qty: c.qty + 1 } : c)
-      return [...prev, { id: Date.now(), name: item.name, price: item.price, qty: 1, img: item.img || '/menu/wagyu-ribeye.png' }]
+      const existing = prev.find(c => c.menuItemId === item.menuItemId)
+      if (existing) return prev.map(c => c.menuItemId === item.menuItemId ? { ...c, qty: c.qty + 1 } : c)
+      return [...prev, {
+        menuItemId: item.menuItemId || item.id,
+        id: item.id || item.menuItemId || Date.now(),
+        name: item.name,
+        price: item.price,
+        qty: 1,
+        img: item.img || '/menu/wagyu-ribeye.png',
+      }]
     })
 
     if (e) flyToCart(item.img || '/menu/wagyu-ribeye.png', e.currentTarget)
   }
 
-  function handlePlaceOrder() {
+  async function handlePlaceOrder() {
     if (cartItems.length === 0) return
+    setOrderError('')
+    const restaurantId = restaurant?.id || slug || 'demo'
+    const tableNum = tableNumber || String(Math.floor(Math.random() * 20) + 1).padStart(2, '0')
+    const isRealRestaurant = restaurantId && restaurantId !== 'demo' &&
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(restaurantId)
+
+    if (isRealRestaurant) {
+      const payload = {
+        restaurant_id: restaurantId,
+        table_number: tableNum,
+        items: cartItems.map(i => ({
+          menuItemId: i.menuItemId || i.id,
+          quantity: i.qty,
+        })),
+      }
+
+      try {
+        const saved = await createOrder(restaurantId, payload)
+        if (!saved || saved.error) {
+          console.warn('[Order] API insert failed:', saved?.error || 'No response')
+          setOrderError('Could not place your order. Please check your connection and try again.')
+          return
+        }
+        finalizeSuccessfulOrder(saved, tableNum, restaurantId)
+      } catch (err) {
+        console.warn('[Order] API insert failed:', err.message)
+        setOrderError('Could not place your order. Please check your connection and try again.')
+      }
+      return
+    }
+
     const orderId = String(Math.floor(100000000 + Math.random() * 900000000))
     const now = new Date()
     const dateStr = now.toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' })
-    const restaurantId = restaurant?.id || slug || 'demo'
-    // Use table number from URL param/query string; fall back to random if not present
-    const tableNum = tableNumber || String(Math.floor(Math.random() * 20) + 1).padStart(2, '0')
-    const orderItems = cartItems.map(i => ({ name: i.name, qty: i.qty, price: i.price }))
-
     const customerOrder = {
       id: orderId,
       items: [...cartItems],
@@ -959,20 +993,27 @@ export default function RestaurantWebsite() {
       placedAt: new Date().toISOString(),
       _restaurantId: restaurantId,
     }
+    finalizeSuccessfulOrder(customerOrder, tableNum, restaurantId)
+  }
+
+  function finalizeSuccessfulOrder(savedOrder, tableNum, restaurantId) {
+    const orderId = savedOrder.id
+    const orderItems = cartItems.map(i => ({ name: i.name, qty: i.qty, price: i.price }))
+
     setCustomerOrders(prev => {
-      const next = [customerOrder, ...prev]
+      const next = [savedOrder, ...prev]
       persistCustomerOrders(restaurantId, next)
       return next
     })
     setOrderStatus(0)
     setOrderNotes('')
+    setOrderError('')
     setViewingHistoryOrder(null)
     setShowSuccessPopup(true)
     setCartItems([])
     setCouponApplied(false)
     setCouponInput('')
 
-    // Write to localStorage for same-device admin dashboard
     const adminOrder = {
       id: orderId,
       table: tableNum,
@@ -982,7 +1023,7 @@ export default function RestaurantWebsite() {
       location: '',
       submittedAt: new Date().toISOString(),
       createdAt: new Date().toISOString(),
-      grandTotal,
+      grandTotal: savedOrder.total ?? grandTotal,
       items: orderItems,
     }
     const ordersKey = `exzibo_orders_${restaurantId}`
@@ -990,7 +1031,6 @@ export default function RestaurantWebsite() {
     localStorage.setItem(ordersKey, JSON.stringify([adminOrder, ...existing]))
     notifyAnalyticsUpdate()
 
-    // ── Update "Order Again" history in localStorage ──
     setReorderHistory(prev => {
       let updated = [...prev]
       cartItems.forEach(cartItem => {
@@ -1001,29 +1041,6 @@ export default function RestaurantWebsite() {
       saveReorderHistory(restaurantId, next)
       return next
     })
-
-    // Also persist via API (Neon primary + Supabase shadow-write) so admin dashboards on ALL devices see it instantly
-    const isSupabaseRestaurant = restaurantId && restaurantId !== 'demo' &&
-      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(restaurantId)
-    if (isSupabaseRestaurant) {
-      fetch('/api/orders', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id:            orderId,
-          restaurant_id: restaurantId,
-          table_number:  tableNum,
-          items:         orderItems,
-          status:        'pending',
-          total:         grandTotal,
-        }),
-      }).then(r => r.json()).then(saved => {
-        if (saved?.error) console.warn('[Order] API insert skipped (localStorage backup active):', saved.error)
-        else console.log('[Order] Persisted via API:', orderId)
-      }).catch(err => {
-        console.warn('[Order] API insert failed (localStorage backup active):', err.message)
-      })
-    }
 
     setTimeout(() => {
       setShowSuccessPopup(false)
@@ -4714,6 +4731,22 @@ export default function RestaurantWebsite() {
             </div>
             {/* Divider */}
             <div style={{ height: '1px', background: darkMode ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)', margin: '20px 0' }} />
+            {orderError && (
+              <div style={{
+                marginBottom: '16px',
+                padding: '12px 14px',
+                borderRadius: '10px',
+                background: 'rgba(229,57,53,0.10)',
+                border: '1px solid rgba(229,57,53,0.25)',
+                color: '#E53935',
+                fontSize: '13px',
+                fontWeight: 600,
+                textAlign: 'center',
+                lineHeight: 1.5,
+              }}>
+                {orderError}
+              </div>
+            )}
             {/* Buttons */}
             <div style={{ display: 'flex', gap: '12px' }}>
               <button

@@ -100,17 +100,13 @@ export default function AddOrdersPanel({
     setPlacing(true)
     try {
       const orderItems = cartEntries.map(({ item, qty }) => ({
-        name: item.name,
-        qty,
-        price: Number(item.price) || 0,
+        menuItemId: item.id,
+        quantity: qty,
       }))
       const order = {
-        id: `STAFF-${Date.now()}`,
         table: tableNumber.trim() || null,
         customerName: customerName.trim() || 'Staff Order',
         items: orderItems,
-        status: 'pending',
-        total,
         notes: 'Manual order created by staff',
       }
       await createOrder(restaurantId, order)
@@ -118,7 +114,7 @@ export default function AddOrdersPanel({
       onBack()
     } catch (e) {
       console.error('[AddOrders] place order failed:', e)
-      showToast('Failed to place order')
+      showToast(e.message || 'Failed to place order')
     } finally {
       setPlacing(false)
     }
