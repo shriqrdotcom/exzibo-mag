@@ -183,6 +183,7 @@ function previewAuthPlugin() {
       })
 
       // POST /api/realtime/ticket — issue signed WebSocket ticket
+      // Delegates to the shared realtimeTicketService (Vercel/Express/Vite parity).
       server.middlewares.use('/api/realtime/ticket', async (req, res) => {
         if (req.method !== 'POST') {
           res.statusCode = 405
@@ -196,77 +197,21 @@ function previewAuthPlugin() {
           req.on('data', chunk => { body += chunk })
           req.on('end', async () => {
             try {
-              const { restaurantId, role, orderId } = JSON.parse(body)
+              const params = JSON.parse(body)
+              const { getSessionEmail } = await import('./api/_lib/authz.js')
+              const { issueRealtimeTicket } = await import('./src/services/realtimeTicketService.js')
 
-              if (!restaurantId || !role) {
-                res.statusCode = 400
-                res.setHeader('Content-Type', 'application/json')
-                res.end(JSON.stringify({ error: 'restaurantId and role required' }))
-                return
-              }
-
-              if (role !== 'staff' && role !== 'customer') {
-                res.statusCode = 400
-                res.setHeader('Content-Type', 'application/json')
-                res.end(JSON.stringify({ error: 'role must be "staff" or "customer"' }))
-                return
-              }
-
-              const { getSessionEmail, checkRestaurantAccess } = await import('./api/_lib/authz.js')
-
-              // Verify session
               const session = await getSessionEmail(req)
-              if (!session) {
-                res.statusCode = 401
-                res.setHeader('Content-Type', 'application/json')
-                res.end(JSON.stringify({ error: 'Not authenticated' }))
-                return
-              }
-
-              // For staff access, verify restaurant membership
-              if (role === 'staff') {
-                const authResult = await checkRestaurantAccess(req, restaurantId)
-                if (!authResult.allowed) {
-                  res.statusCode = 403
-                  res.setHeader('Content-Type', 'application/json')
-                  res.end(JSON.stringify({ error: 'Not a member of this restaurant' }))
-                  return
-                }
-              }
-
-              const ticketSecret = process.env.REALTIME_TICKET_SECRET || ''
-              if (!ticketSecret) {
-                console.error('[realtime/ticket] REALTIME_TICKET_SECRET not configured')
-                res.statusCode = 500
-                res.setHeader('Content-Type', 'application/json')
-                res.end(JSON.stringify({ error: 'Realtime ticket secret not configured' }))
-                return
-              }
-
-              // Build ticket payload — all scope comes from the server
-              const ticketId = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
-              const expiry = Date.now() + 30_000 // 30 seconds
-
-              const payload = JSON.stringify({
-                sub: session.userId,
-                rid: restaurantId,
-                role,
-                exp: expiry,
-                tid: ticketId,
-                aud: role,
-                ...(role === 'customer' && orderId ? { oid: orderId } : {}),
+              const result = await issueRealtimeTicket(session, req, {
+                restaurantId: params.restaurantId,
+                role: params.role,
+                orderId: params.orderId,
+                orderToken: params.orderToken,
               })
 
-              const sig = createHmac('sha256', ticketSecret).update(payload).digest('hex')
-              const ticket = Buffer.from(payload).toString('base64url') + '.' + sig
-
+              res.statusCode = result.status
               res.setHeader('Content-Type', 'application/json')
-              res.end(JSON.stringify({
-                ticket,
-                expiresAt: expiry,
-                restaurantId,
-                role,
-              }))
+              res.end(JSON.stringify(result.body))
             } catch (parseErr) {
               res.statusCode = 400
               res.setHeader('Content-Type', 'application/json')

@@ -74,4 +74,3 @@ VITE_DISABLE_AUTH = "true"
 [userenv.shared]
 REALTIME_URL = "https://rt.exzibo.online"
 BETTER_AUTH_BASE_URL = "https://superadmin.exzibo.online"
-REALTIME_TICKET_SECRET = "70668be6d08af99b7211230cd320731b7cd8337d81b0cc695e8a015ab89f0434"

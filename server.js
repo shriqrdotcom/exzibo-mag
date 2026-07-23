@@ -69,6 +69,7 @@ import {
   SETTINGS_ROLES,
   TEAM_WRITE_ROLES,
 } from './api/_lib/authz.js'
+import { issueRealtimeTicket } from './src/services/realtimeTicketService.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const app = express()
@@ -331,72 +332,18 @@ app.get('/api/preview-verify', (req, res) => {
 
 // ── Realtime ticket endpoint ──────────────────────────────────────────────────
 // POST /api/realtime/ticket
-// Body: { restaurantId, role: "staff" | "customer", orderId?: string }
-// Requires authenticated Better Auth session.
-// For staff: requires active restaurant membership.
-// Returns a short-lived signed ticket for WebSocket connection.
+// Body: { restaurantId, role, orderId?, orderToken? }
+// Delegates to the shared realtimeTicketService (Vercel/Express/Vite parity).
 app.post('/api/realtime/ticket', async (req, res) => {
   try {
-    const { restaurantId, role, orderId } = req.body
-
-    if (!restaurantId || !role) {
-      return res.status(400).json({ error: 'restaurantId and role required' })
-    }
-
-    if (role !== 'staff' && role !== 'customer') {
-      return res.status(400).json({ error: 'role must be "staff" or "customer"' })
-    }
-
-    // Verify session
     const session = await getSessionEmail(req)
-    if (!session) {
-      return res.status(401).json({ error: 'Not authenticated' })
-    }
-
-    // For staff access, verify restaurant membership
-    if (role === 'staff') {
-      const authResult = await checkRestaurantAccess(req, restaurantId)
-      if (!authResult.allowed) {
-        return res.status(403).json({ error: 'Not a member of this restaurant' })
-      }
-    }
-
-    // For customer access, just verify they're logged in
-    if (role === 'customer') {
-      // Customer access is limited to their own orders
-      // No restaurant membership required
-    }
-
-    // Environment variable for the ticket signing secret
-    const ticketSecret = process.env.REALTIME_TICKET_SECRET || ''
-    if (!ticketSecret) {
-      console.error('[realtime/ticket] REALTIME_TICKET_SECRET not configured')
-      return res.status(500).json({ error: 'Realtime ticket secret not configured' })
-    }
-
-    // Build ticket payload — all scope comes from the server
-    const ticketId = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
-    const expiry = Date.now() + 30_000 // 30 seconds
-
-    const payload = JSON.stringify({
-      sub: session.userId,
-      rid: restaurantId,
-      role,
-      exp: expiry,
-      tid: ticketId,
-      aud: role,
-      ...(role === 'customer' && orderId ? { oid: orderId } : {}),
+    const result = await issueRealtimeTicket(session, req, {
+      restaurantId: req.body?.restaurantId,
+      role: req.body?.role,
+      orderId: req.body?.orderId,
+      orderToken: req.body?.orderToken,
     })
-
-    const sig = createHmac('sha256', ticketSecret).update(payload).digest('hex')
-    const ticket = Buffer.from(payload).toString('base64url') + '.' + sig
-
-    return res.json({
-      ticket,
-      expiresAt: expiry,
-      restaurantId,
-      role,
-    })
+    return res.status(result.status).json(result.body)
   } catch (err) {
     console.error('[realtime/ticket] Error:', err.message)
     return res.status(500).json({ error: err.message })
