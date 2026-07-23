@@ -225,24 +225,6 @@ export default function AdminDashboard({ restaurantId: restaurantIdProp, initial
   const [bookings, setBookings] = useState([])
   const [activeNav, setActiveNav] = useState(initialSection || 'orders')
 
-  // Run schema migration once per session (adds image_shape column if missing)
-  useEffect(() => {
-    const key = 'exzibo_migration_v1_done'
-    if (sessionStorage.getItem(key)) return
-    fetch('/api/migrate', { method: 'POST' })
-      .then(r => r.json())
-      .then(d => {
-        if (d?.ok === false && d?.sql) {
-          console.warn('[migrate] Manual SQL required in Supabase Dashboard:')
-          console.warn(d.sql)
-        } else {
-          console.log('[migrate]', d?.message || 'migration checked')
-        }
-        sessionStorage.setItem(key, '1')
-      })
-      .catch(() => {})
-  }, [])
-
   // Sync activeNav when initialSection prop changes (slug-based SPA navigation:
   // URL changes but AdminDashboard is not remounted, so useState won't re-run)
   useEffect(() => {

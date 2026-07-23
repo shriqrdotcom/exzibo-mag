@@ -4,7 +4,6 @@ import path from 'path'
 import fs from 'fs'
 import { createHmac, timingSafeEqual } from 'crypto'
 import bcrypt from 'bcryptjs'
-import pg from 'pg'
 import {
   patchNeonRestaurant,
   patchNeonRestaurantProfile,
@@ -528,12 +527,6 @@ function menuApiPlugin() {
         } catch (e) { return json(res, 500, { error: e.message }) }
       })
 
-      // POST /api/migrate — no-op (Supabase migration removed; Neon uses Drizzle migrations)
-      server.middlewares.use('/api/migrate', (req, res) => {
-        if (req.method === 'OPTIONS') return json(res, 200, {})
-        return json(res, 200, { ok: true, message: 'Neon schema is managed via Drizzle migrations' })
-      })
-
     },
   }
 }
@@ -669,257 +662,6 @@ function aboutApiPlugin() {
     },
   }
 }
-
-function restaurantDbPlugin() {
-  return {
-    name: 'restaurant-db',
-    configureServer(server) {
-
-      // ── POST /api/restaurant-db/create ─────────────────────────────────────
-      // Called right after a restaurant row is inserted into Supabase.
-      // Creates a dedicated PostgreSQL schema + tables in the Replit DB so every
-      // restaurant's operational data is physically isolated from all others.
-      server.middlewares.use('/api/restaurant-db/create', (req, res) => {
-        if (req.method !== 'POST') {
-          res.statusCode = 405
-          res.end('Method Not Allowed')
-          return
-        }
-
-        let body = ''
-        req.on('data', chunk => { body += chunk })
-        req.on('end', async () => {
-          try {
-            const { restaurant_id, restaurant_name } = JSON.parse(body)
-            if (!restaurant_id) {
-              res.statusCode = 400
-              res.setHeader('Content-Type', 'application/json')
-              res.end(JSON.stringify({ error: 'restaurant_id is required' }))
-              return
-            }
-
-            const { Client } = pg
-            const client = new Client({ connectionString: process.env.DATABASE_URL })
-            await client.connect()
-
-            // Schema name: r_ + first 12 hex chars of UUID (no hyphens)
-            const shortId    = restaurant_id.replace(/-/g, '').substring(0, 12)
-            const schemaName = `r_${shortId}`
-
-            // 1. Central registry — one row per restaurant
-            await client.query(`
-              CREATE TABLE IF NOT EXISTS public.restaurant_databases (
-                restaurant_id   TEXT PRIMARY KEY,
-                schema_name     TEXT NOT NULL UNIQUE,
-                restaurant_name TEXT,
-                created_at      TIMESTAMPTZ DEFAULT NOW()
-              )
-            `)
-
-            // 2. Dedicated schema for this restaurant
-            await client.query(`CREATE SCHEMA IF NOT EXISTS "${schemaName}"`)
-
-            // 3. orders
-            await client.query(`
-              CREATE TABLE IF NOT EXISTS "${schemaName}".orders (
-                id                TEXT PRIMARY KEY,
-                table_number      TEXT,
-                customer_name     TEXT,
-                customer_phone    TEXT,
-                customer_location TEXT,
-                items             JSONB        DEFAULT '[]',
-                status            TEXT         DEFAULT 'pending',
-                total             DECIMAL(10,2) DEFAULT 0,
-                notes             TEXT,
-                created_at        TIMESTAMPTZ  DEFAULT NOW()
-              )
-            `)
-
-            // 4. bookings
-            await client.query(`
-              CREATE TABLE IF NOT EXISTS "${schemaName}".bookings (
-                id              TEXT PRIMARY KEY,
-                customer_name   TEXT         NOT NULL DEFAULT '',
-                customer_phone  TEXT,
-                customer_email  TEXT,
-                guests          INTEGER      DEFAULT 1,
-                date            TEXT,
-                time            TEXT,
-                occasion        TEXT,
-                seating         TEXT,
-                notes           TEXT,
-                status          TEXT         DEFAULT 'pending',
-                created_at      TIMESTAMPTZ  DEFAULT NOW()
-              )
-            `)
-
-            // 5. menu_categories
-            await client.query(`
-              CREATE TABLE IF NOT EXISTS "${schemaName}".menu_categories (
-                id         TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
-                name       TEXT        NOT NULL DEFAULT '',
-                emoji      TEXT        DEFAULT '🍽️',
-                position   INTEGER     DEFAULT 0,
-                created_at TIMESTAMPTZ DEFAULT NOW()
-              )
-            `)
-
-            // 6. menu_items
-            await client.query(`
-              CREATE TABLE IF NOT EXISTS "${schemaName}".menu_items (
-                id           TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
-                category_id  TEXT,
-                name         TEXT         NOT NULL DEFAULT '',
-                description  TEXT,
-                price        DECIMAL(10,2) DEFAULT 0,
-                image        TEXT,
-                available    BOOLEAN      DEFAULT true,
-                veg          BOOLEAN      DEFAULT true,
-                tags         JSONB        DEFAULT '[]',
-                add_ons      JSONB        DEFAULT '[]',
-                is_published BOOLEAN      DEFAULT false,
-                created_at   TIMESTAMPTZ  DEFAULT NOW()
-              )
-            `)
-
-            // 7. Register in the central registry
-            await client.query(`
-              INSERT INTO public.restaurant_databases (restaurant_id, schema_name, restaurant_name)
-              VALUES ($1, $2, $3)
-              ON CONFLICT (restaurant_id) DO NOTHING
-            `, [restaurant_id, schemaName, restaurant_name || null])
-
-            await client.end()
-
-            console.log(`[restaurant-db] Schema "${schemaName}" created for restaurant ${restaurant_id}`)
-            res.setHeader('Content-Type', 'application/json')
-            res.end(JSON.stringify({ success: true, schema: schemaName }))
-
-          } catch (err) {
-            console.error('[restaurant-db/create] Error:', err.message)
-            res.statusCode = 500
-            res.setHeader('Content-Type', 'application/json')
-            res.end(JSON.stringify({ error: err.message }))
-          }
-        })
-      })
-
-      // ── DELETE /api/restaurant-db/drop ────────────────────────────────────
-      // Drops the dedicated PostgreSQL schema for a restaurant and removes its
-      // entry from the central registry. Called during permanent deletion.
-      server.middlewares.use('/api/restaurant-db/drop', (req, res) => {
-        if (req.method !== 'POST') {
-          res.statusCode = 405
-          res.end('Method Not Allowed')
-          return
-        }
-
-        let body = ''
-        req.on('data', chunk => { body += chunk })
-        req.on('end', async () => {
-          try {
-            const { restaurant_id } = JSON.parse(body)
-            if (!restaurant_id) {
-              res.statusCode = 400
-              res.setHeader('Content-Type', 'application/json')
-              res.end(JSON.stringify({ error: 'restaurant_id is required' }))
-              return
-            }
-
-            const { Client } = pg
-            const client = new Client({ connectionString: process.env.DATABASE_URL })
-            await client.connect()
-
-            const shortId    = restaurant_id.replace(/-/g, '').substring(0, 12)
-            const schemaName = `r_${shortId}`
-
-            // Drop the schema and all its tables
-            await client.query(`DROP SCHEMA IF EXISTS "${schemaName}" CASCADE`)
-
-            // Remove from central registry (ignore if table doesn't exist yet)
-            try {
-              await client.query(
-                'DELETE FROM public.restaurant_databases WHERE restaurant_id = $1',
-                [restaurant_id]
-              )
-            } catch {}
-
-            await client.end()
-
-            console.log(`[restaurant-db] Schema "${schemaName}" dropped for restaurant ${restaurant_id}`)
-            res.setHeader('Content-Type', 'application/json')
-            res.end(JSON.stringify({ success: true, schema: schemaName }))
-          } catch (err) {
-            console.error('[restaurant-db/drop] Error:', err.message)
-            res.statusCode = 500
-            res.setHeader('Content-Type', 'application/json')
-            res.end(JSON.stringify({ error: err.message }))
-          }
-        })
-      })
-
-      // ── GET /api/restaurant-db/list ────────────────────────────────────────
-      // Returns all restaurant schemas from the registry. Used by admin views.
-      server.middlewares.use('/api/restaurant-db/list', (req, res) => {
-        if (req.method !== 'GET') {
-          res.statusCode = 405
-          res.end('Method Not Allowed')
-          return
-        }
-        ;(async () => {
-          try {
-            const { Client } = pg
-            const client = new Client({ connectionString: process.env.DATABASE_URL })
-            await client.connect()
-            const result = await client.query(
-              'SELECT * FROM public.restaurant_databases ORDER BY created_at DESC'
-            )
-            await client.end()
-            res.setHeader('Content-Type', 'application/json')
-            res.end(JSON.stringify({ databases: result.rows }))
-          } catch (err) {
-            res.setHeader('Content-Type', 'application/json')
-            res.end(JSON.stringify({ databases: [] }))
-          }
-        })()
-      })
-    },
-  }
-}
-
-
-const INVALID_TABLE_HTML = `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Invalid Table | Exzibo</title>
-  <style>
-    *{margin:0;padding:0;box-sizing:border-box}
-    body{background:#0a0a0a;color:#fff;font-family:'Inter',system-ui,sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center}
-    .wrap{text-align:center;padding:40px 24px;max-width:420px}
-    .badge{display:inline-flex;align-items:center;gap:6px;background:rgba(232,50,26,0.15);border:1px solid rgba(232,50,26,0.35);color:#e8321a;font-size:11px;font-weight:700;letter-spacing:.1em;padding:5px 14px;border-radius:100px;margin-bottom:32px;text-transform:uppercase}
-    .dot{width:7px;height:7px;border-radius:50%;background:#e8321a;animation:pulse 1.4s ease-in-out infinite}
-    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
-    .num{font-size:88px;font-weight:900;color:#1c1c1c;line-height:1;letter-spacing:-.04em}
-    .title{font-size:22px;font-weight:700;color:#fff;margin:12px 0 10px;letter-spacing:.02em}
-    .sub{font-size:14px;color:#555;line-height:1.65}
-    .sub strong{color:#888}
-    .divider{width:40px;height:2px;background:rgba(232,50,26,0.4);margin:28px auto}
-    .hint{font-size:12px;color:#333;letter-spacing:.06em;text-transform:uppercase;font-weight:600}
-  </style>
-</head>
-<body>
-  <div class="wrap">
-    <div class="badge"><span class="dot"></span>Table Validation Failed</div>
-    <div class="num">404</div>
-    <div class="title">Invalid Table Number</div>
-    <div class="sub">This table number does not exist for this restaurant.<br><strong>Please scan the QR code at your table.</strong></div>
-    <div class="divider"></div>
-    <div class="hint">Exzibo &middot; Secure Table Access</div>
-  </div>
-</body>
-</html>`
 
 function tableValidationPlugin() {
   // In-memory TTL cache: avoids hitting Supabase on every request (60s TTL)
@@ -1270,7 +1012,7 @@ function spaFallbackPlugin() {
 }
 
 export default defineConfig(({ mode }) => ({
-  plugins: [react(), previewAuthPlugin(), menuApiPlugin(), aboutApiPlugin(), restaurantDbPlugin(), tableValidationPlugin(), neonRestaurantPlugin(), neonHealthPlugin(), spaFallbackPlugin()],
+  plugins: [react(), previewAuthPlugin(), menuApiPlugin(), aboutApiPlugin(), tableValidationPlugin(), neonRestaurantPlugin(), neonHealthPlugin(), spaFallbackPlugin()],
   appType: 'spa',
   define: {},
   resolve: {

@@ -144,13 +144,6 @@ export async function createRestaurant(payload) {
   const data = await res.json()
   console.log('[createRestaurant] created id:', data.id)
 
-  // Provision a dedicated DB schema (non-blocking)
-  fetch('/api/restaurant-db/create', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ restaurant_id: data.id, restaurant_name: data.name }),
-  }).catch(e => console.warn('[createRestaurant] Schema provisioning failed (non-blocking):', e.message))
-
   return data
 }
 
@@ -212,12 +205,6 @@ export async function permanentDeleteRestaurant(restaurant) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ id }),
   })
-  // Drop the isolated DB schema (non-blocking)
-  fetch('/api/restaurant-db/drop', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ restaurant_id: id }),
-  }).catch(() => {})
   removeSoftDeletedId(id)
 }
 
