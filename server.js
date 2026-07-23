@@ -32,7 +32,7 @@ import {
 } from './src/db/neon-orders.js'
 import { createOrderAtomic } from './src/services/orderCreationService.js'
 import { applyOrderStatusTransition } from './src/services/orderStatusService.js'
-import { publishOrderRealtimeEvent } from './src/lib/realtime-publisher.js'
+import { startOutboxProcessor } from './src/services/realtimeOutboxProcessor.js'
 import {
   upsertNeonRestaurantMember,
   deleteNeonRestaurantMember,
@@ -523,16 +523,6 @@ app.post('/api/orders/update-status', async (req, res) => {
     const resolvedRestaurantId = updatedRow.restaurant_id
     console.log('[orders/update-status] Neon primary ✅ id:', orderId, 'status:', status)
 
-    // ── Realtime publish to Cloudflare Worker (after Neon succeeds) ──────────
-    if (resolvedRestaurantId) {
-      publishOrderRealtimeEvent({
-        type: status === 'cancelled' ? 'ORDER_CANCELLED' : 'ORDER_STATUS_CHANGED',
-        restaurantId: resolvedRestaurantId,
-        orderId,
-        status,
-      })
-    }
-
     writeAuditLog({ action: 'update_status', entityType: 'order', entityId: orderId, newData: { status }, ipAddress: req.ip })
     return res.json({ id: orderId, status, restaurant_id: resolvedRestaurantId })
   } catch (err) {
@@ -577,14 +567,8 @@ app.post('/api/orders', async (req, res) => {
       })
       console.log('[orders POST] Neon primary ✅ id:', order.id)
 
-      // ── Realtime publish to Cloudflare Worker (after Neon succeeds) ───────────
-      publishOrderRealtimeEvent({
-        type: 'ORDER_CREATED',
-        restaurantId: order.restaurant_id,
-        orderId: order.id,
-        status: order.status,
-      })
-
+      // Realtime event is published asynchronously via the transactional outbox
+      // (inserted inside createOrderAtomic) — not here.
       return res.status(201).json(order)
     } catch (err) {
       console.error('[orders POST] Error:', err.message)
@@ -1133,3 +1117,9 @@ app.get('*', (req, res) => {
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on port ${PORT}`)
 })
+
+// ── Start the transactional outbox processor ─────────────────────────────────
+import pg from 'pg'
+const outboxPool = new pg.Pool({ connectionString: process.env.DATABASE_URL, max: 2 })
+const stopOutbox = startOutboxProcessor(outboxPool)
+console.log('[outbox] processor started (Express runtime)')

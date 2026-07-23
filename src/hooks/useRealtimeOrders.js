@@ -10,17 +10,24 @@ import { useEffect, useRef, useState } from 'react'
  * server-side — the client never supplies role or restaurantId directly.
  *
  * Safe reconnect: retries after 2 s on unexpected close.
+ * Reconnect recovery: calls `onReconnect()` after each successful reconnection
+ * so the caller can refetch canonical active orders from the REST API.
+ *
  * Duplicate-connection guard: only one socket per restaurantId at a time.
  * Cleanup: socket is closed on component unmount or when restaurantId changes.
  *
  * The frontend never calls /publish/order-event and never uses
  * REALTIME_PUBLISH_SECRET — this hook is receive-only (role=staff).
  *
+ * Realtime events are NOT treated as the database source of truth — they are
+ * ephemeral delivery notifications. On reconnection, callers must refetch the
+ * canonical order list from the REST API to reconcile any missed events.
+ *
  * Returns live connection telemetry so UI can render a "monitor" of the
  * Cloudflare Worker / Durable Object pipeline: { status, lastEvent, wsHost }.
  * Existing callers that ignore the return value are unaffected.
  */
-export function useRealtimeOrders(restaurantId, onOrderEvent) {
+export function useRealtimeOrders(restaurantId, onOrderEvent, onReconnect) {
   const socketRef = useRef(null)
   const destroyedRef = useRef(false)
   const retryTimerRef = useRef(null)
@@ -82,6 +89,11 @@ export function useRealtimeOrders(restaurantId, onOrderEvent) {
           hasConnectedBefore = true
           setStatus('open')
           console.log('[cf-rt] connected — restaurant:', restaurantId)
+          // On reconnection, trigger a canonical order refetch so the caller
+          // reconciles any events that were missed while disconnected.
+          if (typeof onReconnect === 'function') {
+            onReconnect()
+          }
         }
 
         ws.onmessage = (evt) => {

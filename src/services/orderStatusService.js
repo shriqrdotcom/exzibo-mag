@@ -147,8 +147,28 @@ export async function applyOrderStatusTransition(orderId, newStatus) {
       [newStatus, orderId]
     )
 
+    // ── Insert a realtime outbox event in the SAME transaction ──────────────
+    // The outbox processor will publish asynchronously. This guarantees the
+    // event is persisted even if the Worker is unavailable. The outbox event
+    // id serves as the realtime event id for downstream idempotency.
+    const updatedRow = updateResult.rows[0]
+    const outboxPayload = JSON.stringify({
+      type: 'ORDER_STATUS_CHANGED',
+      restaurantId: updatedRow.restaurant_id,
+      orderId,
+      status: newStatus,
+      version: 1,
+      eventId: '',
+      time: new Date().toISOString(),
+    })
+    await client.query(
+      `INSERT INTO realtime_outbox (restaurant_id, order_id, event_type, payload)
+       VALUES ($1::uuid, $2, $3, $4::jsonb)`,
+      [updatedRow.restaurant_id, orderId, 'ORDER_STATUS_CHANGED', outboxPayload]
+    )
+
     await client.query('COMMIT')
-    return updateResult.rows[0]
+    return updatedRow
   } catch (e) {
     await client.query('ROLLBACK').catch(() => {})
     throw e
