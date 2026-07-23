@@ -13,7 +13,8 @@ import {
   getNeonRestaurantBySlug,
 } from './src/db/neon-restaurants.js'
 import { upsertNeonBooking, updateNeonBookingStatus, getNeonBookings } from './src/db/neon-bookings.js'
-import { upsertNeonOrder, updateNeonOrderStatus as updateNeonOrderStatusFn, getNeonOrders, deleteOldNeonOrders } from './src/db/neon-orders.js'
+import { updateNeonOrderStatus as updateNeonOrderStatusFn, getNeonOrders, deleteOldNeonOrders } from './src/db/neon-orders.js'
+import { createOrderAtomic } from './src/services/orderCreationService.js'
 import { publishOrderRealtimeEvent } from './src/lib/realtime-publisher.js'
 import { upsertNeonRestaurantMember, deleteNeonRestaurantMember, getNeonRestaurantMembers, filterNeonRestaurantMembersForRole } from './src/db/neon-restaurant-members.js'
 import { checkRestaurantAccess } from './api/_lib/authz.js'
@@ -406,11 +407,27 @@ function menuApiPlugin() {
         try {
           const body = await readBody(req)
           if (pathname === '' || pathname === '/') {
-            await upsertNeonOrder(body.restaurant_id, body)
-            publishOrderRealtimeEvent({ type: 'ORDER_CREATED', restaurantId: body.restaurant_id, orderId: body.id, status: body.status || 'pending' })
-            return json(res, 201, body)
+            if (!body?.restaurant_id || !Array.isArray(body?.items) || body.items.length === 0) {
+              return json(res, 400, { error: 'restaurant_id and a non-empty items array are required' })
+            }
+            const order = await createOrderAtomic({
+              restaurantId: body.restaurant_id,
+              tableNumber: body.table_number ?? body.table ?? null,
+              customerName: body.customer_name ?? body.customerName ?? null,
+              customerPhone: body.customer_phone ?? body.phone ?? null,
+              customerLocation: body.customer_location ?? body.location ?? null,
+              items: body.items,
+              notes: body.notes ?? null,
+            })
+            publishOrderRealtimeEvent({ type: 'ORDER_CREATED', restaurantId: order.restaurant_id, orderId: order.id, status: order.status })
+            return json(res, 201, order)
           }
-        } catch (e) { return json(res, 500, { error: e.message }) }
+        } catch (e) {
+          if (e.code === 'VALIDATION') return json(res, 400, { error: e.message, code: e.code })
+          if (e.code === 'INVALID_ITEM' || e.code === 'INVALID_OPTION') return json(res, 422, { error: e.message, code: e.code })
+          if (e.code === 'DUPLICATE') return json(res, 409, { error: e.message, code: e.code })
+          return json(res, 500, { error: e.message })
+        }
         return next()
       })
 

@@ -26,12 +26,12 @@ import {
   getNeonBookingRestaurantId,
 } from './src/db/neon-bookings.js'
 import {
-  upsertNeonOrder,
   updateNeonOrderStatus as updateNeonOrderStatusFn,
   getNeonOrders,
   deleteOldNeonOrders,
   getNeonOrderRestaurantId,
 } from './src/db/neon-orders.js'
+import { createOrderAtomic } from './src/services/orderCreationService.js'
 import { publishOrderRealtimeEvent } from './src/lib/realtime-publisher.js'
 import {
   upsertNeonRestaurantMember,
@@ -529,24 +529,40 @@ app.post('/api/orders', async (req, res) => {
     const { isDuplicate: orderDup } = await preventDuplicate(dedupKey, 90)
     if (orderDup) return res.status(409).json({ error: 'Duplicate order detected. Your previous order is being processed.' })
 
-    // ── Neon primary save (blocking — source of truth) ────────────────────────
-    await upsertNeonOrder(body.restaurant_id, body)
-    console.log('[orders POST] Neon primary ✅ id:', body.id)
+    if (!body?.restaurant_id || !Array.isArray(body?.items) || body.items.length === 0) {
+      return res.status(400).json({ error: 'restaurant_id and a non-empty items array are required' })
+    }
 
-    // ── Realtime publish to Cloudflare Worker (after Neon succeeds) ───────────
-    publishOrderRealtimeEvent({
-      type: 'ORDER_CREATED',
-      restaurantId: body.restaurant_id,
-      orderId: body.id,
-      status: body.status || 'pending',
-    })
+    try {
+      // ── Server-authoritative order creation (blocking — source of truth) ─────
+      const order = await createOrderAtomic({
+        restaurantId: body.restaurant_id,
+        tableNumber: body.table_number ?? body.table ?? null,
+        customerName: body.customer_name ?? body.customerName ?? null,
+        customerPhone: body.customer_phone ?? body.phone ?? null,
+        customerLocation: body.customer_location ?? body.location ?? null,
+        items: body.items,
+        notes: body.notes ?? null,
+      })
+      console.log('[orders POST] Neon primary ✅ id:', order.id)
 
-    return res.status(201).json(body)
-  } catch (err) {
-    console.error('[orders POST] Error:', err.message)
-    return res.status(500).json({ error: err.message })
-  }
-})
+      // ── Realtime publish to Cloudflare Worker (after Neon succeeds) ───────────
+      publishOrderRealtimeEvent({
+        type: 'ORDER_CREATED',
+        restaurantId: order.restaurant_id,
+        orderId: order.id,
+        status: order.status,
+      })
+
+      return res.status(201).json(order)
+    } catch (err) {
+      console.error('[orders POST] Error:', err.message)
+      if (err.code === 'VALIDATION') return res.status(400).json({ error: err.message, code: err.code })
+      if (err.code === 'INVALID_ITEM' || err.code === 'INVALID_OPTION') return res.status(422).json({ error: err.message, code: err.code })
+      if (err.code === 'DUPLICATE') return res.status(409).json({ error: err.message, code: err.code })
+      return res.status(500).json({ error: err.message })
+    }
+  })
 
 // GET /api/orders/:restaurantId
 // Neon-first. Requires authenticated restaurant membership (any role).
