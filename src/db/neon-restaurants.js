@@ -3,6 +3,7 @@
 // Uses @neondatabase/serverless HTTP driver directly — no Supabase involved.
 
 import { neon } from './pg-sql.js'
+import { normalizeAndValidateSlug } from '../lib/slug-utils.js'
 
 // Fields that must be serialised as JSON strings for JSONB columns
 const JSONB_FIELDS = new Set([
@@ -45,12 +46,15 @@ export const OWNER_ADMIN_PROFILE_PATCH = new Set([
   'place', 'note', 'gst',
 ])
 
-// Superadmin-only: lifecycle and billing/entitlement fields.
+// Superadmin-only: lifecycle, billing/entitlement, and slug-change fields.
+// slug is intentionally absent from OWNER_ADMIN_PROFILE_PATCH — only a
+// superadmin may change a restaurant's slug via patchNeonRestaurantPlatform.
 export const SUPERADMIN_PLATFORM_PATCH = new Set([
   'plan', 'plan_limits',
   'status',
   'is_deleted', 'deleted_at',
   'start_date', 'end_date',
+  'slug',
 ])
 
 // Full write allowlist — union of both tiers.
@@ -102,17 +106,27 @@ export async function getNeonRestaurantByUid(uid) {
 // ── Create ────────────────────────────────────────────────────────────────────
 
 export async function createNeonRestaurant(payload) {
-  const { uid, slug, name } = payload
-  if (!uid)  throw new Error('uid is required')
-  if (!slug) throw new Error('slug is required')
+  // Normalize and validate slug before any DB I/O.
+  const slugResult = normalizeAndValidateSlug(payload.slug)
+  if (!slugResult.ok) {
+    const err = new Error(slugResult.message)
+    err.code = slugResult.code
+    throw err
+  }
+  const slug = slugResult.slug
+  const { name } = payload
   if (!name) throw new Error('name is required')
+
+  // uid is always generated server-side — never trusted from caller.
+  const { generateUid } = await import('../lib/slug-utils.js')
+  const uid = generateUid()
 
   const sql = getSql()
 
-  // Uniqueness guards — run both checks in parallel
+  // Uniqueness guards — case-insensitive slug check + UID check, in parallel.
   const [[slugTaken], [uidTaken]] = await Promise.all([
-    sql`SELECT id FROM restaurants WHERE slug = ${slug} LIMIT 1`,
-    sql`SELECT id FROM restaurants WHERE uid  = ${uid}  LIMIT 1`,
+    sql`SELECT id FROM restaurants WHERE LOWER(slug) = LOWER(${slug}) LIMIT 1`,
+    sql`SELECT id FROM restaurants WHERE uid = ${uid} LIMIT 1`,
   ])
   if (slugTaken) throw new Error(`Slug "${slug}" is already taken in Neon`)
   if (uidTaken)  throw new Error(`UID "${uid}" is already taken in Neon`)
@@ -229,12 +243,37 @@ export async function patchNeonRestaurantProfile(id, patch) {
 
 // Superadmin platform/lifecycle/billing update — strips profile fields.
 // Throws if the filtered patch is empty.
+// When the patch includes "slug", normalizes and validates it before writing.
 export async function patchNeonRestaurantPlatform(id, patch) {
   const safePatch = Object.fromEntries(
     Object.entries(patch).filter(([k]) => SUPERADMIN_PLATFORM_PATCH.has(k))
   )
   if (Object.keys(safePatch).length === 0)
     throw new Error('No valid platform fields provided. For profile fields use the profile update endpoint.')
+
+  // Validate + normalize slug when included in a platform patch.
+  if ('slug' in safePatch) {
+    const slugResult = normalizeAndValidateSlug(safePatch.slug)
+    if (!slugResult.ok) {
+      const err = new Error(slugResult.message)
+      err.code = slugResult.code
+      throw err
+    }
+    safePatch.slug = slugResult.slug
+    // Case-insensitive duplicate check (exclude the restaurant being updated).
+    const sql = getSql()
+    const taken = await sql`
+      SELECT id FROM restaurants
+      WHERE LOWER(slug) = LOWER(${safePatch.slug}) AND id != ${id}
+      LIMIT 1
+    `
+    if (taken.length > 0) {
+      const err = new Error(`Slug "${safePatch.slug}" is already taken`)
+      err.code = 'DUPLICATE'
+      throw err
+    }
+  }
+
   return patchNeonRestaurant(id, safePatch)
 }
 

@@ -16,6 +16,7 @@ import {
   getNeonRestaurants,
 } from './src/db/neon-restaurants.js'
 import { createRestaurantAtomic } from './src/services/restaurantCreationService.js'
+import { normalizeAndValidateSlug } from './src/lib/slug-utils.js'
 import * as menuService from './src/services/menuService.js'
 import * as contentService from './src/services/restaurantContentService.js'
 import {
@@ -959,16 +960,21 @@ app.post('/api/neon/restaurant/create', requireSuperadmin, async (req, res) => {
     if (!payload.slug || !payload.name) {
       return res.status(400).json({ error: 'slug and name required' })
     }
-    // Generate uid server-side when absent.
+    // Normalize and validate slug early for a clear error before any DB I/O.
+    // The service also normalizes internally; this provides a better response.
+    const slugCheck = normalizeAndValidateSlug(payload.slug)
+    if (!slugCheck.ok) {
+      const status = slugCheck.code === 'RESERVED_SLUG' ? 422 : 400
+      return res.status(status).json({ error: slugCheck.message, code: slugCheck.code })
+    }
+    // UID is always generated server-side inside createRestaurantAtomic.
     // id, plan, status, plan_limits are always forced to defaults inside
     // createRestaurantAtomic — caller values for these fields are ignored.
-    const uid = payload.uid || String(Math.floor(1000000000 + Math.random() * 9000000000))
     const ownerUserId = req.authUserId ?? req.authUser?.id ?? null
     const ownerEmail  = req.authEmail  ?? req.authUser?.email ?? null
     const row = await createRestaurantAtomic({
-      slug: payload.slug,
+      slug: slugCheck.slug,
       name: payload.name,
-      uid,
       ownerUserId,
       ownerEmail,
       ipAddress: req.headers['x-forwarded-for'] ?? req.socket?.remoteAddress ?? null,
@@ -995,6 +1001,8 @@ app.post('/api/neon/restaurant/create', requireSuperadmin, async (req, res) => {
     return res.status(201).json(row)
   } catch (err) {
     if (err.code === 'DUPLICATE') return res.status(409).json({ error: err.message })
+    if (err.code === 'INVALID_SLUG') return res.status(400).json({ error: err.message, code: err.code })
+    if (err.code === 'RESERVED_SLUG') return res.status(422).json({ error: err.message, code: err.code })
     return res.status(500).json({ error: err.message })
   }
 })
