@@ -223,6 +223,7 @@ function SlugAdminRoute({ section }) {
 function SuperAdminApp() {
   const { loading, user } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
 
   // After login, restore the original intended destination (e.g. /dashboard)
   useEffect(() => {
@@ -236,7 +237,11 @@ function SuperAdminApp() {
     }
   }, [loading, user, navigate])
 
-  if (loading) return <GlobalLoader />
+  // The login page must not be hidden behind the session bootstrap request.
+  // A cold/stalled auth database should never make /auth look like a blank
+  // page; AuthProvider continues checking in the background and redirects
+  // authenticated users once the session is available.
+  if (loading && location.pathname !== '/auth') return <GlobalLoader />
 
   return (
     <Suspense fallback={<GlobalLoader />}>

@@ -15,6 +15,15 @@ const MOCK_USER = {
 }
 
 const AuthContext = createContext(null)
+const AUTH_REQUEST_TIMEOUT_MS = 8000
+
+function withAuthTimeout(promise, message = 'Authentication is taking too long. Please try again.') {
+  let timer
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error(message)), AUTH_REQUEST_TIMEOUT_MS)
+  })
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer))
+}
 
 export function AuthProvider({ children }) {
   const [user, setUser]                 = useState(null)
@@ -52,7 +61,7 @@ export function AuthProvider({ children }) {
 
     async function initSession() {
       try {
-        const result = await authClient.getSession()
+        const result = await withAuthTimeout(authClient.getSession())
         if (!mounted) return
 
         const sessionUser = result?.data?.user ?? null
@@ -71,7 +80,10 @@ export function AuthProvider({ children }) {
         // On superadmin subdomain: verify against SUPERADMIN_ALLOWED_EMAILS
         if (ACTIVE_SUBDOMAIN === 'superadmin') {
           try {
-            const r = await fetch('/api/auth-check?type=superadmin', { credentials: 'include' })
+            const r = await withAuthTimeout(
+              fetch('/api/auth-check?type=superadmin', { credentials: 'include' }),
+              'The authorization check timed out. Please try again.',
+            )
             const data = await r.json()
             if (!data.allowed) {
               console.warn('[auth] Superadmin access denied for:', email)
@@ -140,10 +152,13 @@ export function AuthProvider({ children }) {
     try {
       // better-auth client returns { data, error } — it does NOT throw on failure.
       // Always destructure the result; never assume success from absence of an exception.
-      const result = await authClient.signIn.social({
-        provider: 'google',
-        callbackURL: `${window.location.origin}/`,
-      })
+      const result = await withAuthTimeout(
+        authClient.signIn.social({
+          provider: 'google',
+          callbackURL: `${window.location.origin}/`,
+        }),
+        'Google sign-in is taking too long. Please try again.',
+      )
       if (result?.error) {
         const msg = result.error.message || result.error.statusText || 'Sign-in failed. Please try again.'
         return { data: null, error: { message: msg } }

@@ -12,6 +12,9 @@ const { Pool } = pg
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   max: 2,
+  connectionTimeoutMillis: 5000,
+  idleTimeoutMillis: 10000,
+  query_timeout: 8000,
 })
 
 // Extra origins added via BETTER_AUTH_TRUSTED_ORIGINS env var (comma-separated).
