@@ -181,6 +181,105 @@ function previewAuthPlugin() {
           res.end(JSON.stringify({ error: 'Internal server error' }))
         }
       })
+
+      // POST /api/realtime/ticket — issue signed WebSocket ticket
+      server.middlewares.use('/api/realtime/ticket', async (req, res) => {
+        if (req.method !== 'POST') {
+          res.statusCode = 405
+          res.setHeader('Content-Type', 'application/json')
+          res.end(JSON.stringify({ error: 'Method not allowed' }))
+          return
+        }
+
+        try {
+          let body = ''
+          req.on('data', chunk => { body += chunk })
+          req.on('end', async () => {
+            try {
+              const { restaurantId, role, orderId } = JSON.parse(body)
+
+              if (!restaurantId || !role) {
+                res.statusCode = 400
+                res.setHeader('Content-Type', 'application/json')
+                res.end(JSON.stringify({ error: 'restaurantId and role required' }))
+                return
+              }
+
+              if (role !== 'staff' && role !== 'customer') {
+                res.statusCode = 400
+                res.setHeader('Content-Type', 'application/json')
+                res.end(JSON.stringify({ error: 'role must be "staff" or "customer"' }))
+                return
+              }
+
+              const { getSessionEmail, checkRestaurantAccess } = await import('./api/_lib/authz.js')
+
+              // Verify session
+              const session = await getSessionEmail(req)
+              if (!session) {
+                res.statusCode = 401
+                res.setHeader('Content-Type', 'application/json')
+                res.end(JSON.stringify({ error: 'Not authenticated' }))
+                return
+              }
+
+              // For staff access, verify restaurant membership
+              if (role === 'staff') {
+                const authResult = await checkRestaurantAccess(req, restaurantId)
+                if (!authResult.allowed) {
+                  res.statusCode = 403
+                  res.setHeader('Content-Type', 'application/json')
+                  res.end(JSON.stringify({ error: 'Not a member of this restaurant' }))
+                  return
+                }
+              }
+
+              const ticketSecret = process.env.REALTIME_TICKET_SECRET || ''
+              if (!ticketSecret) {
+                console.error('[realtime/ticket] REALTIME_TICKET_SECRET not configured')
+                res.statusCode = 500
+                res.setHeader('Content-Type', 'application/json')
+                res.end(JSON.stringify({ error: 'Realtime ticket secret not configured' }))
+                return
+              }
+
+              // Build ticket payload — all scope comes from the server
+              const ticketId = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+              const expiry = Date.now() + 30_000 // 30 seconds
+
+              const payload = JSON.stringify({
+                sub: session.userId,
+                rid: restaurantId,
+                role,
+                exp: expiry,
+                tid: ticketId,
+                aud: role,
+                ...(role === 'customer' && orderId ? { oid: orderId } : {}),
+              })
+
+              const sig = createHmac('sha256', ticketSecret).update(payload).digest('hex')
+              const ticket = Buffer.from(payload).toString('base64url') + '.' + sig
+
+              res.setHeader('Content-Type', 'application/json')
+              res.end(JSON.stringify({
+                ticket,
+                expiresAt: expiry,
+                restaurantId,
+                role,
+              }))
+            } catch (parseErr) {
+              res.statusCode = 400
+              res.setHeader('Content-Type', 'application/json')
+              res.end(JSON.stringify({ error: 'Bad request' }))
+            }
+          })
+        } catch (err) {
+          console.error('[realtime/ticket] Error:', err.message)
+          res.statusCode = 500
+          res.setHeader('Content-Type', 'application/json')
+          res.end(JSON.stringify({ error: err.message }))
+        }
+      })
     },
   }
 }
@@ -1092,6 +1191,9 @@ export default defineConfig(({ mode }) => ({
     host: '0.0.0.0',
     port: 5000,
     allowedHosts: true,
+    fs: {
+      deny: ['exzibo-realtime/'], // Worker code uses cloudflare:workers — not for frontend
+    },
     // historyApiFallback is intentionally NOT set here.
     // Vite's built-in historyApiFallback middleware runs BEFORE post-hook plugins,
     // which would bypass the tableValidationPlugin and serve index.html for invalid
