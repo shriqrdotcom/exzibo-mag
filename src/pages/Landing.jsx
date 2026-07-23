@@ -170,9 +170,9 @@ export default function Landing() {
             onClick={() => navigate('/dashboard')}
             icon={<ArrowRight size={15} />}
             primary
-            accent="#2da3fa"
-            accentSoft="rgba(45,163,250,0.5)"
-            accentGlow="rgba(45,163,250,0.4)"
+            accent="#000000"
+            accentSoft="rgba(0,0,0,0.5)"
+            accentGlow="rgba(0,0,0,0.4)"
           >
             OPEN DASHBOARD
           </CTAButton>

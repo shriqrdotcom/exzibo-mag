@@ -13,8 +13,9 @@ import {
   getNeonRestaurantBySlug,
 } from './src/db/neon-restaurants.js'
 import { upsertNeonBooking, updateNeonBookingStatus, getNeonBookings } from './src/db/neon-bookings.js'
-import { updateNeonOrderStatus as updateNeonOrderStatusFn, getNeonOrders, deleteOldNeonOrders } from './src/db/neon-orders.js'
+import { getNeonOrders, deleteOldNeonOrders } from './src/db/neon-orders.js'
 import { createOrderAtomic } from './src/services/orderCreationService.js'
+import { applyOrderStatusTransition } from './src/services/orderStatusService.js'
 import { publishOrderRealtimeEvent } from './src/lib/realtime-publisher.js'
 import { upsertNeonRestaurantMember, deleteNeonRestaurantMember, getNeonRestaurantMembers, filterNeonRestaurantMembersForRole } from './src/db/neon-restaurant-members.js'
 import { checkRestaurantAccess } from './api/_lib/authz.js'
@@ -344,17 +345,27 @@ function menuApiPlugin() {
         }
       })
 
-      // POST /api/orders/update-status — Neon primary update, Supabase shadow-write
+      // POST /api/orders/update-status — validated transition + terminal timestamp
       server.middlewares.use('/api/orders/update-status', async (req, res) => {
         if (req.method === 'OPTIONS') return json(res, 200, {})
         if (req.method !== 'POST') return json(res, 405, { error: 'Method not allowed' })
         try {
-          const { orderId, status, restaurantId } = await readBody(req)
+          const { orderId, status } = await readBody(req)
           if (!orderId || !status) return json(res, 400, { error: 'orderId and status required' })
 
-          // ── Neon primary update (blocking — source of truth) ────────────────
-          const neonRow = await updateNeonOrderStatusFn(orderId, status)
-          const resolvedRestaurantId = restaurantId || neonRow?.restaurant_id || null
+          // ── Apply validated transition — restaurantId resolved from DB only ──
+          let updatedRow
+          try {
+            updatedRow = await applyOrderStatusTransition(orderId, status)
+          } catch (transitionErr) {
+            if (transitionErr.code === 'NOT_FOUND') return json(res, 404, { error: transitionErr.message, code: transitionErr.code })
+            if (transitionErr.code === 'TERMINAL' || transitionErr.code === 'INVALID_TRANSITION') {
+              return json(res, 409, { error: transitionErr.message, code: transitionErr.code })
+            }
+            if (transitionErr.code === 'INVALID_STATUS') return json(res, 422, { error: transitionErr.message, code: transitionErr.code })
+            throw transitionErr
+          }
+          const resolvedRestaurantId = updatedRow.restaurant_id
           console.log('[orders/update-status] Neon primary ✅ id:', orderId, 'status:', status)
 
           // ── Realtime publish to Cloudflare Worker (after Neon succeeds) ──────

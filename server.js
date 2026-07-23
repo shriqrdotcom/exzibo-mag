@@ -26,12 +26,12 @@ import {
   getNeonBookingRestaurantId,
 } from './src/db/neon-bookings.js'
 import {
-  updateNeonOrderStatus as updateNeonOrderStatusFn,
   getNeonOrders,
   deleteOldNeonOrders,
   getNeonOrderRestaurantId,
 } from './src/db/neon-orders.js'
 import { createOrderAtomic } from './src/services/orderCreationService.js'
+import { applyOrderStatusTransition } from './src/services/orderStatusService.js'
 import { publishOrderRealtimeEvent } from './src/lib/realtime-publisher.js'
 import {
   upsertNeonRestaurantMember,
@@ -461,7 +461,7 @@ app.post('/api/menu/items/upsert', async (req, res) => {
 })
 
 // POST /api/orders/update-status
-// Body: { orderId, status, restaurantId }
+// Body: { orderId, status }
 // Resolves restaurant from DB (never trusts body). Requires any restaurant membership.
 app.post('/api/orders/update-status', async (req, res) => {
   const { orderId, status } = req.body
@@ -475,7 +475,7 @@ app.post('/api/orders/update-status', async (req, res) => {
 
   try {
     // ── Membership check: resolve restaurant_id from DB before updating ──────
-    // Never trust req.body.restaurantId — look it up from the authoritative DB row.
+    // restaurantId is resolved from the DB — never trusted from the request body.
     if (!_isAuthDisabled()) {
       const restaurantId = await getNeonOrderRestaurantId(orderId)
       if (!restaurantId) return res.status(404).json({ error: 'Order not found' })
@@ -489,9 +489,19 @@ app.post('/api/orders/update-status', async (req, res) => {
       }
     }
 
-    // ── Neon primary update (blocking — source of truth) ─────────────────────
-    const neonRow = await updateNeonOrderStatusFn(orderId, status)
-    const resolvedRestaurantId = neonRow?.restaurant_id ?? null
+    // ── Apply validated transition — enforces rules and stamps terminal timestamp ─
+    let updatedRow
+    try {
+      updatedRow = await applyOrderStatusTransition(orderId, status)
+    } catch (transitionErr) {
+      if (transitionErr.code === 'NOT_FOUND') return res.status(404).json({ error: transitionErr.message, code: transitionErr.code })
+      if (transitionErr.code === 'TERMINAL' || transitionErr.code === 'INVALID_TRANSITION') {
+        return res.status(409).json({ error: transitionErr.message, code: transitionErr.code })
+      }
+      if (transitionErr.code === 'INVALID_STATUS') return res.status(422).json({ error: transitionErr.message, code: transitionErr.code })
+      throw transitionErr
+    }
+    const resolvedRestaurantId = updatedRow.restaurant_id
     console.log('[orders/update-status] Neon primary ✅ id:', orderId, 'status:', status)
 
     // ── Realtime publish to Cloudflare Worker (after Neon succeeds) ──────────

@@ -188,6 +188,14 @@ export const orders = pgTable(
     total:            numeric('total', { precision: 10, scale: 2 }).notNull().default('0'),
     notes:            text('notes'),
 
+    // Per-milestone timestamps — set by the server when an order enters each state.
+    // Used by the cleanup policy so that terminal-state age (not creation age) drives
+    // deletion.  NULL on rows created before migration 0007.
+    confirmedAt:  timestamp('confirmed_at',  { withTimezone: true }),
+    completedAt:  timestamp('completed_at',  { withTimezone: true }),
+    rejectedAt:   timestamp('rejected_at',   { withTimezone: true }),
+    cancelledAt:  timestamp('cancelled_at',  { withTimezone: true }),
+
     ...timestamps,
   },
   (t) => [
