@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Store, ExternalLink, Settings, Globe, Utensils } from 'lucide-react'
+import { Plus, Store, ExternalLink, Settings, Globe, Utensils, ArrowLeft } from 'lucide-react'
 import PlanBadge from '../components/PlanBadge'
 import { getRestaurants } from '../lib/db'
 import { openRoleDashboard } from '../lib/navigation'
@@ -83,8 +83,25 @@ export default function Restaurants() {
         position: 'sticky', top: 0, zIndex: 50,
         backdropFilter: 'blur(12px)',
       }}>
-        <div style={{ fontSize: '18px', fontWeight: 900, letterSpacing: '0.05em' }}>
-          EXZI<span style={{ color: '#E8321A' }}>BO</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <button
+            onClick={() => navigate(-1)}
+            aria-label="Go back"
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              width: '36px', height: '36px',
+              background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.10)',
+              borderRadius: '50%', color: '#fff', cursor: 'pointer',
+              transition: 'all 0.2s',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.12)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)' }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.10)' }}
+          >
+            <ArrowLeft size={18} />
+          </button>
+          <div style={{ fontSize: '18px', fontWeight: 900, letterSpacing: '0.05em' }}>
+            EXZI<span style={{ color: '#E8321A' }}>BO</span>
+          </div>
         </div>
 
         <button
