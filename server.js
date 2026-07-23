@@ -20,11 +20,11 @@ import { normalizeAndValidateSlug } from './src/lib/slug-utils.js'
 import * as menuService from './src/services/menuService.js'
 import * as contentService from './src/services/restaurantContentService.js'
 import {
-  upsertNeonBooking,
   updateNeonBookingStatus,
   getNeonBookings,
   getNeonBookingRestaurantId,
 } from './src/db/neon-bookings.js'
+import { createBookingAtomic } from './src/services/bookingCreationService.js'
 import {
   getNeonOrders,
   deleteOldNeonOrders,
@@ -572,7 +572,11 @@ app.post('/api/orders', async (req, res) => {
       if (err.code === 'DUPLICATE') return res.status(409).json({ error: err.message, code: err.code })
       return res.status(500).json({ error: err.message })
     }
-  })
+  } catch (err) {
+    console.error('[orders POST] Error:', err.message)
+    return res.status(500).json({ error: err.message })
+  }
+})
 
 // GET /api/orders/:restaurantId
 // Neon-first. Requires authenticated restaurant membership (any role).
@@ -626,16 +630,30 @@ app.post('/api/bookings', async (req, res) => {
 
     const { allowed: bookingAllowed } = await rateLimit(`rl:booking-create:ip:${getClientIp(req)}`, 5, 60)
     if (!bookingAllowed) return send429(res, 'Too many booking requests. Please wait a moment.')
-    const bookingDedupKey = `dedup:booking:${getClientIp(req)}:${hashBody(body)}`
-    const { isDuplicate: bookingDup } = await preventDuplicate(bookingDedupKey, 300)
-    if (bookingDup) return res.status(409).json({ error: 'Duplicate booking detected. Your previous request is being processed.' })
 
-    const row = { ...body, id: body.id || crypto.randomUUID() }
-    const saved = await upsertNeonBooking(row.restaurant_id, row)
-    console.log('[bookings POST] Neon ✅ id:', row.id)
-    return res.status(201).json(saved ?? row)
+    const saved = await createBookingAtomic({
+      restaurantId: body.restaurant_id,
+      date: body.date,
+      time: body.time,
+      durationMinutes: body.duration_minutes ?? body.durationMinutes ?? body.duration,
+      resourceId: body.resource_id ?? body.resourceId ?? body.table_id ?? body.tableId,
+      tableNumber: body.table_number ?? body.tableNumber,
+      guests: body.guests,
+      customerName: body.customer_name,
+      customerPhone: body.customer_phone,
+      customerEmail: body.customer_email,
+      occasion: body.occasion,
+      seating: body.seating,
+      notes: body.notes,
+    })
+    console.log('[bookings POST] Neon ✅ id:', saved.id)
+    return res.status(201).json(saved)
   } catch (err) {
     console.error('[bookings POST] Error:', err.message)
+    if (err.code === 'VALIDATION' || err.code === 'RESTAURANT_UNAVAILABLE' || err.code === 'OUTSIDE_OPENING_HOURS') {
+      return res.status(400).json({ error: err.message, code: err.code })
+    }
+    if (err.code === 'CONFLICT' || err.code === 'DUPLICATE') return res.status(409).json({ error: err.message, code: err.code })
     return res.status(500).json({ error: err.message })
   }
 })

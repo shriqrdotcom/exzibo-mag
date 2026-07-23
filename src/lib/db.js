@@ -557,7 +557,6 @@ export async function getBookings(restaurantId) {
 
 export async function createBooking(restaurantId, booking) {
   const payload = {
-    id:              booking.id || crypto.randomUUID(),
     restaurant_id:   restaurantId,
     customer_name:   booking.name   || booking.customer_name  || '',
     customer_phone:  booking.phone  || booking.customer_phone || null,
@@ -568,7 +567,9 @@ export async function createBooking(restaurantId, booking) {
     occasion:        booking.occasion || null,
     seating:         booking.seating  || null,
     notes:           booking.notes    || null,
-    status:          booking.status   || 'pending',
+    duration_minutes: booking.durationMinutes ?? booking.duration_minutes ?? booking.duration ?? null,
+    resource_id:     booking.resourceId ?? booking.resource_id ?? booking.tableId ?? booking.table_id ?? null,
+    table_number:    booking.tableNumber ?? booking.table_number ?? null,
   }
   const r = await fetch('/api/bookings', {
     method: 'POST',

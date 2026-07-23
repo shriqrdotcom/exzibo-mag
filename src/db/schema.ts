@@ -245,6 +245,9 @@ export const bookings = pgTable(
     seating:       text('seating'),
     notes:         text('notes'),
     status:        text('status').notNull().default('pending'),
+    resourceId:    uuid('resource_id').references(() => tableNumbers.id, { onDelete: 'set null' }),
+    startAt:       timestamp('start_at', { withTimezone: true }),
+    endAt:         timestamp('end_at', { withTimezone: true }),
 
     ...timestamps,
   },

@@ -1,12 +1,12 @@
 import { setPublicCors } from './_lib/cors.js'
 import { checkRestaurantAccess, ALL_ROLES, MANAGEMENT_ROLES } from './_lib/authz.js'
-import { rateLimit, acquireLock, releaseLock, getClientIp, send429 } from '../src/lib/upstash.server.js'
+import { rateLimit, getClientIp, send429 } from '../src/lib/upstash.server.js'
 import {
-  upsertNeonBooking,
   updateNeonBookingStatus,
   getNeonBookings,
   getNeonBookingRestaurantId,
 } from '../src/db/neon-bookings.js'
+import { createBookingAtomic } from '../src/services/bookingCreationService.js'
 
 // ── /api/bookings — Bookings Handler (Neon-only) ──────────────────────────────
 //
@@ -69,15 +69,29 @@ export default async function handler(req, res) {
       const { allowed } = await rateLimit(`rl:booking:ip:${ip}`, 10, 60)
       if (!allowed) return send429(res, 'Too many booking requests. Please wait.')
 
-      const lockKey = `lock:booking:${body.restaurant_id}:${body.id || ip}`
-      const { acquired } = await acquireLock(lockKey, 5)
-      if (!acquired) return res.status(409).json({ error: 'Booking already in progress.' })
-
       try {
-        const saved = await upsertNeonBooking(body.restaurant_id, body)
-        return res.status(201).json(saved ?? body)
-      } finally {
-        await releaseLock(lockKey)
+        const saved = await createBookingAtomic({
+          restaurantId: body.restaurant_id,
+          date: body.date,
+          time: body.time,
+          durationMinutes: body.duration_minutes ?? body.durationMinutes ?? body.duration,
+          resourceId: body.resource_id ?? body.resourceId ?? body.table_id ?? body.tableId,
+          tableNumber: body.table_number ?? body.tableNumber,
+          guests: body.guests,
+          customerName: body.customer_name,
+          customerPhone: body.customer_phone,
+          customerEmail: body.customer_email,
+          occasion: body.occasion,
+          seating: body.seating,
+          notes: body.notes,
+        })
+        return res.status(201).json(saved)
+      } catch (err) {
+        if (err.code === 'VALIDATION' || err.code === 'RESTAURANT_UNAVAILABLE' || err.code === 'OUTSIDE_OPENING_HOURS') {
+          return res.status(400).json({ error: err.message, code: err.code })
+        }
+        if (err.code === 'CONFLICT' || err.code === 'DUPLICATE') return res.status(409).json({ error: err.message, code: err.code })
+        return res.status(500).json({ error: err.message })
       }
     }
 

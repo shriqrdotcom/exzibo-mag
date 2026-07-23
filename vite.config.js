@@ -12,7 +12,8 @@ import {
   getNeonRestaurantById,
   getNeonRestaurantBySlug,
 } from './src/db/neon-restaurants.js'
-import { upsertNeonBooking, updateNeonBookingStatus, getNeonBookings } from './src/db/neon-bookings.js'
+import { updateNeonBookingStatus, getNeonBookings } from './src/db/neon-bookings.js'
+import { createBookingAtomic } from './src/services/bookingCreationService.js'
 import { getNeonOrders, deleteOldNeonOrders } from './src/db/neon-orders.js'
 import { createOrderAtomic } from './src/services/orderCreationService.js'
 import { applyOrderStatusTransition } from './src/services/orderStatusService.js'
@@ -459,8 +460,22 @@ function menuApiPlugin() {
           const body = await readBody(req)
 
           if (req.method === 'POST' && (pathname === '' || pathname === '/')) {
-            const saved = await upsertNeonBooking(body.restaurant_id, body)
-            return json(res, 201, saved ?? body)
+            const saved = await createBookingAtomic({
+              restaurantId: body.restaurant_id,
+              date: body.date,
+              time: body.time,
+              durationMinutes: body.duration_minutes ?? body.durationMinutes ?? body.duration,
+              resourceId: body.resource_id ?? body.resourceId ?? body.table_id ?? body.tableId,
+              tableNumber: body.table_number ?? body.tableNumber,
+              guests: body.guests,
+              customerName: body.customer_name,
+              customerPhone: body.customer_phone,
+              customerEmail: body.customer_email,
+              occasion: body.occasion,
+              seating: body.seating,
+              notes: body.notes,
+            })
+            return json(res, 201, saved)
           }
 
           const statusMatch = pathname.match(/^\/([^/]+)\/status$/)
@@ -472,7 +487,11 @@ function menuApiPlugin() {
             writeAuditLog({ restaurantId: updated?.restaurant_id ?? null, action: 'update_status', entityType: 'booking', entityId: id, newData: { status } })
             return json(res, 200, updated ?? { id, status })
           }
-        } catch (e) { return json(res, 500, { error: e.message }) }
+        } catch (e) {
+          if (e.code === 'VALIDATION' || e.code === 'RESTAURANT_UNAVAILABLE' || e.code === 'OUTSIDE_OPENING_HOURS') return json(res, 400, { error: e.message, code: e.code })
+          if (e.code === 'CONFLICT' || e.code === 'DUPLICATE') return json(res, 409, { error: e.message, code: e.code })
+          return json(res, 500, { error: e.message })
+        }
         return next()
       })
 
