@@ -235,9 +235,8 @@ export async function authorizeAnalyticsAccess(req, restaurantId) {
   const { isSuperadminEmail } = await import('../../api/_lib/authz.js')
   if (isSuperadminEmail(session.email)) return { allowed: true }
 
-  const { default: pg } = await import('pg')
-  const { Pool } = pg
-  const pool = new Pool({ connectionString: process.env.DATABASE_URL, max: 1 })
+  const { getPool } = await import('../db/pg-sql.js')
+  const pool = getPool(process.env.DATABASE_URL)
   try {
     const result = await pool.query(
       `SELECT role FROM restaurant_members
@@ -257,6 +256,6 @@ export async function authorizeAnalyticsAccess(req, restaurantId) {
     }
     return { allowed: true, role }
   } finally {
-    await pool.end()
+    /* shared pool — do not close */
   }
 }

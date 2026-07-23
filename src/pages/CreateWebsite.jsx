@@ -168,8 +168,8 @@ export default function CreateWebsite() {
       const uid = await generateRestaurantUID()
 
       // ── Step 1: Insert restaurant with text/metadata only ──────
-      // Images are NOT included here — base64 blobs exceed Supabase
-      // REST body limits (5 MB). They are uploaded to Storage below.
+      // Images are NOT included here — base64 blobs exceed API
+      // body limits (5 MB). They are uploaded to Storage below.
       const corePayload = {
         uid,
         slug,
@@ -194,17 +194,9 @@ export default function CreateWebsite() {
 
       const created = await createRestaurant(corePayload)
 
-      // Sync to localStorage so MasterControl and other local-first code works immediately
-      try {
-        const prev = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
-        const merged = [created, ...prev.filter(r => r.id !== created.id)]
-        localStorage.setItem('exzibo_restaurants', JSON.stringify(merged))
-        console.log('[CreateWebsite] Synced UID', created.uid, 'to localStorage')
-      } catch { /* noop */ }
-
-      // ── Step 2: Upload images to Supabase Storage (optional) ───
-      // If the 'restaurant-images' bucket doesn't exist yet, this
-      // block is skipped and the restaurant still saves successfully.
+      // ── Step 2: Upload images to Storage (optional) ─────────────
+      // If the image bucket doesn't exist yet, this block is skipped
+      // and the restaurant still saves successfully.
       try {
         // Upload all carousel images in parallel, then the logo alongside them
         const [imageUrls, logoUrl] = await Promise.all([
@@ -463,7 +455,7 @@ export default function CreateWebsite() {
                   {submitError}
                 </div>
                 <div style={{ fontSize: '11px', color: '#666', marginTop: '6px' }}>
-                  Make sure you have run the database migration in Supabase (see <code style={{ color: '#E8321A' }}>supabase/migration_restaurants.sql</code>).
+                  Make sure the database migration has been run (see <code style={{ color: '#E8321A' }}>supabase/migration_restaurants.sql</code>).
                 </div>
               </div>
             </div>

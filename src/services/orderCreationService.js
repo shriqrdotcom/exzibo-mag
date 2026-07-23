@@ -14,24 +14,12 @@
 // This service does NOT implement status transitions or realtime publishing.
 // Database-backed idempotency is implemented inside the shared transaction.
 
-import pg from 'pg'
 import {
   checkIdempotency,
   recordIdempotencyResponse,
   OPERATION_ORDER_CREATE,
 } from './idempotencyService.js'
-
-const { Pool } = pg
-
-let _pool = null
-function getPool() {
-  if (!_pool) {
-    const url = process.env.DATABASE_URL
-    if (!url) throw new Error('[orderCreationService] DATABASE_URL is not set')
-    _pool = new Pool({ connectionString: url, max: 5 })
-  }
-  return _pool
-}
+import { getPool } from '../db/pg-sql.js'
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
