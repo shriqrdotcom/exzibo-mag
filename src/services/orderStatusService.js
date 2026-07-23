@@ -131,16 +131,19 @@ export async function applyOrderStatusTransition(orderId, newStatus) {
     }
 
     // Execute UPDATE — stamp the milestone timestamp if this status has one.
+    // For 'cancelled', also stamp cancelled_at (in addition to rejected_at which
+    // shared-column cleanup still references for backward compat).
     const tsCol = TIMESTAMP_COL[newStatus]
+    const extraSet = newStatus === 'cancelled' ? ', cancelled_at = now()' : ''
     const setClause = tsCol
-      ? `status = $1, ${tsCol} = now(), updated_at = now()`
+      ? `status = $1, ${tsCol} = now()${extraSet}, updated_at = now()`
       : `status = $1, updated_at = now()`
 
     const updateResult = await client.query(
       `UPDATE orders
        SET ${setClause}
        WHERE id = $2
-       RETURNING id, restaurant_id, status, confirmed_at, completed_at, rejected_at, updated_at`,
+       RETURNING id, restaurant_id, status, confirmed_at, completed_at, rejected_at, cancelled_at, updated_at`,
       [newStatus, orderId]
     )
 

@@ -13,9 +13,10 @@
 -- Partial indexes are used so cleanup queries only scan terminal rows.
 
 ALTER TABLE orders
-  ADD COLUMN IF NOT EXISTS confirmed_at TIMESTAMPTZ,
-  ADD COLUMN IF NOT EXISTS completed_at TIMESTAMPTZ,
-  ADD COLUMN IF NOT EXISTS rejected_at  TIMESTAMPTZ;
+  ADD COLUMN IF NOT EXISTS confirmed_at  TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS completed_at  TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS rejected_at   TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS cancelled_at  TIMESTAMPTZ;
 
 CREATE INDEX IF NOT EXISTS orders_completed_at_idx
   ON orders (completed_at)
@@ -24,3 +25,7 @@ CREATE INDEX IF NOT EXISTS orders_completed_at_idx
 CREATE INDEX IF NOT EXISTS orders_rejected_at_idx
   ON orders (rejected_at)
   WHERE rejected_at IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS orders_cancelled_at_idx
+  ON orders (cancelled_at)
+  WHERE cancelled_at IS NOT NULL;

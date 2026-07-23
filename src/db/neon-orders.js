@@ -127,8 +127,11 @@ export async function deleteOldNeonOrders(confirmedCutoff, rejectedCutoff) {
   )
   const r2 = await pool.query(
     `DELETE FROM orders
-     WHERE status IN ('rejected', 'cancelled', 'failed')
-       AND COALESCE(rejected_at, created_at) < $1::timestamptz`,
+     WHERE (
+       (status IN ('rejected', 'failed') AND COALESCE(rejected_at,  created_at) < $1::timestamptz)
+       OR
+       (status = 'cancelled'             AND COALESCE(cancelled_at, created_at) < $1::timestamptz)
+     )`,
     [rejectedCutoff]
   )
   return {
