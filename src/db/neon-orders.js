@@ -105,22 +105,34 @@ export async function getNeonOrderRestaurantId(orderId) {
 }
 
 // ── deleteOldNeonOrders ───────────────────────────────────────────────────
-// Shadow-delete to mirror the auto-cleanup route.
-// Deletes completed/confirmed orders older than confirmedCutoff ISO string,
-// and rejected/cancelled/failed orders older than rejectedCutoff ISO string.
+// Deletes completed/confirmed orders older than confirmedCutoff and
+// rejected/cancelled/failed orders older than rejectedCutoff.
+//
+// Terminal timestamps (completed_at / confirmed_at / rejected_at) are used as
+// the reference time so that an order that sat pending for hours before being
+// resolved is not deleted prematurely.  COALESCE falls back to created_at for
+// rows written before the 0007 migration (where those columns are NULL).
 export async function deleteOldNeonOrders(confirmedCutoff, rejectedCutoff) {
-  const r1 = await sql`
-    DELETE FROM orders
-    WHERE status IN ('completed', 'confirmed')
-      AND created_at < ${confirmedCutoff}::timestamptz
-  `
-  const r2 = await sql`
-    DELETE FROM orders
-    WHERE status IN ('rejected', 'cancelled', 'failed')
-      AND created_at < ${rejectedCutoff}::timestamptz
-  `
+  const { getPool } = await import('./pg-sql.js')
+  const pool = getPool(process.env.DATABASE_URL)
+
+  const r1 = await pool.query(
+    `DELETE FROM orders
+     WHERE (
+       (status = 'completed' AND COALESCE(completed_at, created_at) < $1::timestamptz)
+       OR
+       (status = 'confirmed' AND COALESCE(confirmed_at, created_at) < $1::timestamptz)
+     )`,
+    [confirmedCutoff]
+  )
+  const r2 = await pool.query(
+    `DELETE FROM orders
+     WHERE status IN ('rejected', 'cancelled', 'failed')
+       AND COALESCE(rejected_at, created_at) < $1::timestamptz`,
+    [rejectedCutoff]
+  )
   return {
-    deletedConfirmed: r1.count ?? 0,
-    deletedRejected:  r2.count ?? 0,
+    deletedConfirmed: r1.rowCount ?? 0,
+    deletedRejected:  r2.rowCount ?? 0,
   }
 }

@@ -3,12 +3,12 @@ import { checkRestaurantAccess, requireSuperadmin, ALL_ROLES, MANAGEMENT_ROLES }
 import { rateLimit, acquireLock, releaseLock, getClientIp, send429 } from '../src/lib/upstash.server.js'
 import { publishOrderRealtimeEvent } from '../src/lib/realtime-publisher.js'
 import {
-  updateNeonOrderStatus,
   deleteOldNeonOrders,
   getNeonOrders,
   getNeonOrderRestaurantId,
 } from '../src/db/neon-orders.js'
 import { createOrderAtomic } from '../src/services/orderCreationService.js'
+import { applyOrderStatusTransition } from '../src/services/orderStatusService.js'
 
 // ── /api/orders — Order Operations Handler (Neon-only) ───────────────────────
 //
@@ -102,9 +102,20 @@ export default async function handler(req, res) {
       const { acquired } = await acquireLock(lockKey, 5)
       if (!acquired) return res.status(409).json({ error: 'Status update already in progress.' })
       try {
-        await updateNeonOrderStatus(orderId, status)
+        const updatedRow = await applyOrderStatusTransition(orderId, status)
         await publishOrderRealtimeEvent({ type: 'ORDER_STATUS_CHANGED', restaurantId: resolvedRestaurantId, orderId, status })
-        return res.json({ success: true, orderId, status })
+        return res.json({ success: true, orderId, status, restaurant_id: updatedRow.restaurant_id })
+      } catch (transitionErr) {
+        if (transitionErr.code === 'TERMINAL' || transitionErr.code === 'INVALID_TRANSITION') {
+          return res.status(409).json({ error: transitionErr.message, code: transitionErr.code })
+        }
+        if (transitionErr.code === 'INVALID_STATUS') {
+          return res.status(422).json({ error: transitionErr.message, code: transitionErr.code })
+        }
+        if (transitionErr.code === 'NOT_FOUND') {
+          return res.status(404).json({ error: transitionErr.message, code: transitionErr.code })
+        }
+        throw transitionErr
       } finally { await releaseLock(lockKey) }
     }
 

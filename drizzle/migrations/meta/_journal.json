@@ -36,6 +36,13 @@
       "when": 1784785360000,
       "tag": "0006_slug_case_insensitive_unique",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1784871760000,
+      "tag": "0007_order_state_retention",
+      "breakpoints": true
     }
   ]
 }
