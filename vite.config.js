@@ -17,7 +17,7 @@ import { createBookingAtomic } from './src/services/bookingCreationService.js'
 import { getNeonOrders, deleteOldNeonOrders } from './src/db/neon-orders.js'
 import { createOrderAtomic } from './src/services/orderCreationService.js'
 import { applyOrderStatusTransition } from './src/services/orderStatusService.js'
-import { startOutboxProcessor } from './src/services/realtimeOutboxProcessor.js'
+import { processSingleOutboxEvent } from './src/services/realtimeOutboxProcessor.js'
 import { upsertNeonRestaurantMember, deleteNeonRestaurantMember, getNeonRestaurantMembers, filterNeonRestaurantMembersForRole } from './src/db/neon-restaurant-members.js'
 import { checkRestaurantAccess } from './api/_lib/authz.js'
 import { executeTeamList, executeTeamUpsert, executeTeamDelete } from './api/_lib/team-service.js'
@@ -401,7 +401,9 @@ function menuApiPlugin() {
           // ── Apply validated transition — restaurantId resolved from DB only ──
           let updatedRow
           try {
-            updatedRow = await applyOrderStatusTransition(orderId, status)
+            updatedRow = await applyOrderStatusTransition(orderId, status, (eventId) => {
+              processSingleOutboxEvent(viteOutboxPool, eventId) // fire-and-forget
+            })
           } catch (transitionErr) {
             if (transitionErr.code === 'NOT_FOUND') return json(res, 404, { error: transitionErr.message, code: transitionErr.code })
             if (transitionErr.code === 'TERMINAL' || transitionErr.code === 'INVALID_TRANSITION') {
@@ -469,9 +471,8 @@ function menuApiPlugin() {
               items: body.items,
               notes: body.notes ?? null,
               idempotencyKey,
+              postCommit: (eventId) => processSingleOutboxEvent(viteOutboxPool, eventId),
             })
-            // Realtime event is published asynchronously via the transactional outbox
-            // (inserted inside createOrderAtomic) — not here.
             return json(res, 201, order)
           }
         } catch (e) {
@@ -1114,23 +1115,21 @@ function spaFallbackPlugin() {
   }
 }
 
-function realtimeOutboxPlugin() {
-  return {
-    name: 'realtime-outbox-plugin',
-    configureServer(server) {
-      server.httpServer?.once('listening', () => {
-        import('pg').then(({ default: pg }) => {
-          const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL, max: 2 })
-          startOutboxProcessor(pool)
-          console.log('[outbox] processor started (Vite runtime)')
-        })
-      })
-    },
+// ── Outbox processing pool (no permanent polling — postCommit fires per event) ─
+import pg from 'pg'
+const { Pool: PgPool } = pg
+let _viteOutboxPool = null
+function getViteOutboxPool() {
+  if (!_viteOutboxPool) {
+    _viteOutboxPool = new PgPool({ connectionString: process.env.DATABASE_URL, max: 2 })
   }
+  return _viteOutboxPool
 }
+// Module-scoped ref so the order/status handlers can use it without passing around
+const viteOutboxPool = getViteOutboxPool()
 
 export default defineConfig(({ mode }) => ({
-  plugins: [react(), previewAuthPlugin(), menuApiPlugin(), aboutApiPlugin(), tableValidationPlugin(), neonRestaurantPlugin(), neonHealthPlugin(), spaFallbackPlugin(), realtimeOutboxPlugin()],
+  plugins: [react(), previewAuthPlugin(), menuApiPlugin(), aboutApiPlugin(), tableValidationPlugin(), neonRestaurantPlugin(), neonHealthPlugin(), spaFallbackPlugin()],
   appType: 'spa',
   define: {},
   resolve: {

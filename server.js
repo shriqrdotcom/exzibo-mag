@@ -32,7 +32,7 @@ import {
 } from './src/db/neon-orders.js'
 import { createOrderAtomic } from './src/services/orderCreationService.js'
 import { applyOrderStatusTransition } from './src/services/orderStatusService.js'
-import { startOutboxProcessor } from './src/services/realtimeOutboxProcessor.js'
+import { processSingleOutboxEvent } from './src/services/realtimeOutboxProcessor.js'
 import {
   upsertNeonRestaurantMember,
   deleteNeonRestaurantMember,
@@ -511,7 +511,9 @@ app.post('/api/orders/update-status', async (req, res) => {
     // ── Apply validated transition — enforces rules and stamps terminal timestamp ─
     let updatedRow
     try {
-      updatedRow = await applyOrderStatusTransition(orderId, status)
+      updatedRow = await applyOrderStatusTransition(orderId, status, (eventId) => {
+        processSingleOutboxEvent(serverOutboxPool, eventId) // fire-and-forget
+      })
     } catch (transitionErr) {
       if (transitionErr.code === 'NOT_FOUND') return res.status(404).json({ error: transitionErr.message, code: transitionErr.code })
       if (transitionErr.code === 'TERMINAL' || transitionErr.code === 'INVALID_TRANSITION') {
@@ -564,11 +566,10 @@ app.post('/api/orders', async (req, res) => {
         items: body.items,
         notes: body.notes ?? null,
         idempotencyKey,
+        postCommit: (eventId) => processSingleOutboxEvent(serverOutboxPool, eventId),
       })
       console.log('[orders POST] Neon primary ✅ id:', order.id)
 
-      // Realtime event is published asynchronously via the transactional outbox
-      // (inserted inside createOrderAtomic) — not here.
       return res.status(201).json(order)
     } catch (err) {
       console.error('[orders POST] Error:', err.message)
@@ -1118,8 +1119,7 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on port ${PORT}`)
 })
 
-// ── Start the transactional outbox processor ─────────────────────────────────
+// ── Outbox processing pool (no permanent polling — postCommit fires per event) ─
 import pg from 'pg'
-const outboxPool = new pg.Pool({ connectionString: process.env.DATABASE_URL, max: 2 })
-const stopOutbox = startOutboxProcessor(outboxPool)
-console.log('[outbox] processor started (Express runtime)')
+const serverOutboxPool = new pg.Pool({ connectionString: process.env.DATABASE_URL, max: 2 })
+console.log('[outbox] fire-and-forget pool ready (Express runtime)')

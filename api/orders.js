@@ -8,6 +8,17 @@ import {
 } from '../src/db/neon-orders.js'
 import { createOrderAtomic } from '../src/services/orderCreationService.js'
 import { applyOrderStatusTransition } from '../src/services/orderStatusService.js'
+import { processSingleOutboxEvent } from '../src/services/realtimeOutboxProcessor.js'
+import pg from 'pg'
+
+const { Pool } = pg
+let _outboxPool = null
+function getOutboxPool() {
+  if (!_outboxPool) {
+    _outboxPool = new Pool({ connectionString: process.env.DATABASE_URL, max: 2 })
+  }
+  return _outboxPool
+}
 
 // ── /api/orders — Order Operations Handler (Neon-only) ───────────────────────
 //
@@ -60,6 +71,7 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'restaurant_id and a non-empty items array are required' })
     }
     try {
+      const outboxPool = getOutboxPool()
       const order = await createOrderAtomic({
         restaurantId: body.restaurant_id,
         tableNumber: body.table_number ?? body.table ?? null,
@@ -69,9 +81,15 @@ export default async function handler(req, res) {
         items: body.items,
         notes: body.notes ?? null,
         idempotencyKey,
+        postCommit: (eventId) => {
+          const attempt = () => processSingleOutboxEvent(outboxPool, eventId)
+          if (typeof req.waitUntil === 'function') {
+            req.waitUntil(attempt())
+          } else {
+            attempt() // fire-and-forget, no await
+          }
+        },
       })
-      // Realtime event is published asynchronously via the transactional outbox
-      // (inserted inside createOrderAtomic) — not here.
       return res.status(201).json(order)
     } catch (err) {
       console.error('[orders POST] Error:', err.message)
@@ -109,9 +127,15 @@ export default async function handler(req, res) {
       const { acquired, token } = await acquireLock(lockKey, 5)
       if (!acquired) return res.status(409).json({ error: 'Status update already in progress.' })
       try {
-        const updatedRow = await applyOrderStatusTransition(orderId, status)
-        // Realtime event is published asynchronously via the transactional outbox
-        // (inserted inside applyOrderStatusTransition) — not here.
+        const outboxPool = getOutboxPool()
+        const updatedRow = await applyOrderStatusTransition(orderId, status, (eventId) => {
+          const attempt = () => processSingleOutboxEvent(outboxPool, eventId)
+          if (typeof req.waitUntil === 'function') {
+            req.waitUntil(attempt())
+          } else {
+            attempt()
+          }
+        })
         return res.json({ success: true, orderId, status, restaurant_id: updatedRow.restaurant_id })
       } catch (transitionErr) {
         if (transitionErr.code === 'TERMINAL' || transitionErr.code === 'INVALID_TRANSITION') {

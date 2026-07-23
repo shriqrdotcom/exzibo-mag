@@ -105,7 +105,15 @@ export function validateTransition(currentStatus, newStatus) {
  *   'VALIDATION'  — missing orderId / newStatus argument
  *   'NOT_FOUND'   — order does not exist
  */
-export async function applyOrderStatusTransition(orderId, newStatus) {
+/**
+ * @param {string} orderId
+ * @param {string} newStatus
+ * @param {function} [postCommit] - Optional callback called with the outbox
+ *   event id after the DB commit. The caller can fire a bounded processing
+ *   attempt here (e.g. via processSingleOutboxEvent) without delaying the
+ *   API response. In Vercel, wrap in request.waitUntil().
+ */
+export async function applyOrderStatusTransition(orderId, newStatus, postCommit) {
   if (!orderId)   { const e = new Error('orderId is required');   e.code = 'VALIDATION'; throw e }
   if (!newStatus) { const e = new Error('newStatus is required'); e.code = 'VALIDATION'; throw e }
 
@@ -161,13 +169,22 @@ export async function applyOrderStatusTransition(orderId, newStatus) {
       eventId: '',
       time: new Date().toISOString(),
     })
-    await client.query(
+    const outboxResult = await client.query(
       `INSERT INTO realtime_outbox (restaurant_id, order_id, event_type, payload)
-       VALUES ($1::uuid, $2, $3, $4::jsonb)`,
+       VALUES ($1::uuid, $2, $3, $4::jsonb)
+       RETURNING id`,
       [updatedRow.restaurant_id, orderId, 'ORDER_STATUS_CHANGED', outboxPayload]
     )
 
     await client.query('COMMIT')
+
+    // Fire-and-forget: invoke one bounded processing attempt after the commit.
+    // The caller provides postCommit to wrap this in waitUntil (Vercel) or
+    // fire it without await (Express/Vite). Never delay the response.
+    if (typeof postCommit === 'function') {
+      try { postCommit(outboxResult.rows[0].id) } catch {}
+    }
+
     return updatedRow
   } catch (e) {
     await client.query('ROLLBACK').catch(() => {})

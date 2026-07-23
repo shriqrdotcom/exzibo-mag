@@ -11,7 +11,13 @@
 //   - Any validation failure or insert error rolls back everything.
 //   - Returns the canonical saved order only after commit.
 //
-// This service does NOT implement status transitions or realtime publishing.
+// postCommit callback (optional):
+//   If provided, called with the outbox event id after the DB commit succeeds
+//   but before the service returns. The caller can use this to fire a bounded
+//   processing attempt (e.g., via processSingleOutboxEvent) without delaying
+//   the API response. In Vercel, wrap the call in request.waitUntil().
+//
+// This service does NOT implement status transitions.
 // Database-backed idempotency is implemented inside the shared transaction.
 
 import pg from 'pg'
@@ -117,6 +123,7 @@ function validateSelectedOptions(menuItem, selectedOptions) {
 //   'DUPLICATE'   — generated order id collided (extremely unlikely)
 //   any PG error   — transaction failure, rolled back
 export async function createOrderAtomic(input) {
+  const { postCommit } = input || {}
   const restaurantId = input?.restaurantId
   if (!restaurantId) {
     const err = new Error('restaurantId is required')
@@ -327,13 +334,21 @@ export async function createOrderAtomic(input) {
       eventId: '',  // filled atomically by the processor using outbox.id
       time: new Date().toISOString(),
     })
-    await client.query(
+    const outboxResult = await client.query(
       `INSERT INTO realtime_outbox (restaurant_id, order_id, event_type, payload)
-       VALUES ($1::uuid, $2, $3, $4::jsonb)`,
+       VALUES ($1::uuid, $2, $3, $4::jsonb)
+       RETURNING id`,
       [restaurantId, orderId, 'ORDER_CREATED', outboxPayload]
     )
 
     await client.query('COMMIT')
+
+    // Fire-and-forget: invoke one bounded processing attempt after the commit.
+    // The caller provides postCommit to wrap this in waitUntil (Vercel) or
+    // fire it without await (Express/Vite). Never delay the response.
+    if (typeof postCommit === 'function') {
+      try { postCommit(outboxResult.rows[0].id) } catch {}
+    }
 
     return canonicalResponse
   } catch (e) {

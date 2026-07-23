@@ -4,6 +4,8 @@ export interface Env {
 	MY_DURABLE_OBJECT: DurableObjectNamespace<MyDurableObject>;
 	PUBLISH_SECRET: string;
 	REALTIME_TICKET_SECRET: string;
+	BACKEND_URL: string;           // Vercel backend — used by scheduled() handler
+	OUTBOX_PROCESSOR_SECRET: string; // shared secret for outbox recovery action
 }
 
 type Role = "staff" | "customer";
@@ -389,5 +391,51 @@ export default {
 		}
 
 		return new Response("Not found", { status: 404 });
+	},
+
+	// ── Scheduled handler: cron-triggered outbox recovery ─────────────────────
+	//
+	// Calls the protected Vercel system endpoint to drain any unpublished outbox
+	// events that were not delivered by immediate post-commit processing.
+	// Configured via wrangler.jsonc triggers.crons.
+	async scheduled(_event: ScheduledController, env: Env, _ctx: ExecutionContext): Promise<void> {
+		const backendUrl = env.BACKEND_URL;
+		const outboxSecret = env.OUTBOX_PROCESSOR_SECRET;
+
+		if (!backendUrl) {
+			console.error("[realtime/scheduled] BACKEND_URL not configured — skipping outbox recovery");
+			return;
+		}
+		if (!outboxSecret) {
+			console.error("[realtime/scheduled] OUTBOX_PROCESSOR_SECRET not configured — skipping outbox recovery");
+			return;
+		}
+
+		const url = `${backendUrl}/api/system?action=processRealtimeOutbox`;
+
+		try {
+			const response = await fetch(url, {
+				method: "POST",
+				headers: {
+					Authorization: `Bearer ${outboxSecret}`,
+					"Content-Type": "application/json",
+				},
+			});
+
+			if (!response.ok) {
+				const body = await response.text().catch(() => "");
+				console.error(
+					`[realtime/scheduled] processRealtimeOutbox returned ${response.status}: ${body.slice(0, 200)}`
+				);
+				return;
+			}
+
+			const result = (await response.json()) as { ok: boolean; published?: number };
+			if (result.ok && (result.published ?? 0) > 0) {
+				console.log(`[realtime/scheduled] Published ${result.published} pending outbox events`);
+			}
+		} catch (err) {
+			console.error(`[realtime/scheduled] Network error: ${(err as Error).message}`);
+		}
 	},
 } satisfies ExportedHandler<Env>;

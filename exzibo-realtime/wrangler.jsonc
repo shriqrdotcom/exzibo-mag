@@ -27,6 +27,11 @@
 		"enabled": true
 	},
 	"upload_source_maps": true,
+	"triggers": {
+		"crons": [
+			"*/1 * * * *"
+		]
+	},
 	"compatibility_flags": [
 		"nodejs_compat"
 	]

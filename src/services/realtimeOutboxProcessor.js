@@ -3,40 +3,44 @@
  *
  * Transactional outbox processor for order realtime events.
  *
- * Polls the realtime_outbox table for unpublished events whose
- * next_attempt_time has passed, publishes them to the Cloudflare Worker
- * through the authenticated /publish/order-event endpoint, and marks them
- * as published (or schedules a retry with exponential backoff).
+ * This module exports two paths:
  *
- * This processor runs as a background interval in server.js and vite.config.js
- * (never in Vercel serverless, where it would be stateless). Vercel relies on
- * the Express/Vite runtime to drain the outbox, or a future external cron job.
+ * 1. processRealtimeOutboxBatch(pool) — claim and process a bounded batch of
+ *    unpublished events. Used for immediate post-commit delivery and for the
+ *    scheduled /api/system?action=processRealtimeOutbox recovery path.
  *
- * Retry policy:
- *   - 10 max attempts per event
- *   - Exponential backoff: 2^attempt seconds (1s, 2s, 4s, 8s, …, ~17min)
- *   - After max attempts: event is marked failed (publishedAt stays NULL,
- *     lastError records the final error)
+ * 2. processSingleOutboxEvent(pool, eventId) — deliver one specific event by
+ *    ID. Used by the fire-and-forget attempt after order creation / status
+ *    change.
  *
- * The outbox event id is used as the realtime event id, enabling downstream
- * idempotency in the Worker/Durable Object.
+ * Concurrency model (batch path):
+ *   - Atomic claim via UPDATE ... WHERE id IN (SELECT ... FOR UPDATE SKIP LOCKED)
+ *     so concurrent processor invocations cannot claim the same events.
+ *   - On claim: next_attempt_time is advanced by LEASE_SEC to act as a lease.
+ *     If the processor crashes, the lease expires naturally and another
+ *     invocation will retry the event.
+ *   - On success: published_at is set, last_error cleared.
+ *   - On transient failure: attempt_count incremented, next_attempt_time set
+ *     with exponential backoff (2^attempt s, capped at 60 s).
+ *   - On max attempts (10): failed_at is set, published_at stays NULL.
+ *     The event is excluded from future normal retry queries.
+ *
+ * The outbox event id is used as the realtime event id (payload.eventId),
+ * enabling downstream idempotency in the Worker/Durable Object.
  */
 
 const MAX_ATTEMPTS = 10
-const POLL_INTERVAL_MS = 2_000     // 2 seconds between polls
 const BATCH_SIZE = 50
+const LEASE_SEC = 30   // lease duration — event is retryable after this if unprocessed
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function computeNextAttempt(attemptCount) {
-  // Exponential backoff: 2^attempt seconds, capped at 60 seconds
   const delaySec = Math.min(Math.pow(2, attemptCount), 60)
   return new Date(Date.now() + delaySec * 1000).toISOString()
 }
 
 // ── Publish a single outbox event to the Worker ──────────────────────────────
-//
-// Returns { ok: true } on success, or { ok: false, error: string } on failure.
 async function publishToWorker(row) {
   const realtimeUrl = process.env.REALTIME_URL
   const publishSecret = process.env.REALTIME_PUBLISH_SECRET
@@ -66,118 +70,167 @@ async function publishToWorker(row) {
   }
 }
 
-// ── Process a single batch ──────────────────────────────────────────────────
+// ── Mark one event after processing ──────────────────────────────────────────
 //
-// Selects unpublished rows with FOR UPDATE SKIP LOCKED, publishes each, and
-// updates the row atomically. Returns the count of successfully processed events.
-async function processBatch(pool) {
-  const client = await pool.connect()
-  try {
-    // Select unpublished events whose next_attempt_time has passed.
-    // Lock rows with SKIP LOCKED so multiple processor instances do not clash.
-    const selectResult = await client.query(
-      `SELECT id, restaurant_id, order_id, event_type, payload, attempt_count, last_error
-       FROM realtime_outbox
-       WHERE published_at IS NULL
-         AND next_attempt_time <= now()
-         AND attempt_count < ${MAX_ATTEMPTS}
-       ORDER BY next_attempt_time ASC
-       LIMIT ${BATCH_SIZE}
-       FOR UPDATE SKIP LOCKED`
+// Called inside the batch or single-event flow. Uses a fresh client (not inside
+// the claiming transaction) so we never hold a DB transaction open while
+// waiting for the Worker HTTP call.
+async function markEvent(client, row, publishResult) {
+  if (publishResult.ok) {
+    await client.query(
+      `UPDATE realtime_outbox
+       SET published_at = now(),
+           attempt_count = attempt_count + 1,
+           last_error = NULL
+       WHERE id = $1`,
+      [row.id]
     )
+  } else {
+    const newAttemptCount = (row.attempt_count || 0) + 1
+    const isFinal = newAttemptCount >= MAX_ATTEMPTS
 
-    const rows = selectResult.rows
-    if (rows.length === 0) return 0
-
-    let processed = 0
-
-    for (const row of rows) {
-      const result = await publishToWorker(row)
-
-      if (result.ok) {
-        // ── Mark as published ────────────────────────────────────────────
-        // Use the outbox event id as the realtime event id, enabling duplicate
-        // detection downstream (the Worker/Durable Object can skip events they
-        // have already seen by eventId).
-        await client.query(
-          `UPDATE realtime_outbox
-           SET published_at = now(),
-               attempt_count = attempt_count + 1,
-               last_error = NULL
-           WHERE id = $1`,
-          [row.id]
-        )
-        processed++
-      } else {
-        // ── Failed — schedule a retry or mark as permanently failed ──────
-        const newAttemptCount = (row.attempt_count || 0) + 1
-        const nextAttempt = computeNextAttempt(newAttemptCount)
-        const isFinal = newAttemptCount >= MAX_ATTEMPTS
-
-        if (isFinal) {
-          console.warn(
-            `[outbox] Event ${row.id} (${row.event_type} order ${row.order_id}) failed after ${MAX_ATTEMPTS} attempts — giving up`
-          )
-        }
-
-        await client.query(
-          `UPDATE realtime_outbox
-           SET attempt_count = $1,
-               next_attempt_time = $2::timestamptz,
-               last_error = $3
-           WHERE id = $4`,
-          [
-            newAttemptCount,
-            isFinal ? '2099-12-31T23:59:59Z' : nextAttempt, // never retry if final
-            result.error,
-            row.id,
-          ]
-        )
-      }
+    if (isFinal) {
+      console.warn(
+        `[outbox] Event ${row.id} (${row.event_type} order ${row.order_id}) failed after ${MAX_ATTEMPTS} attempts — giving up`
+      )
     }
 
-    await client.query('COMMIT')
-    return processed
+    await client.query(
+      `UPDATE realtime_outbox
+       SET attempt_count = $1,
+           next_attempt_time = $2::timestamptz,
+           failed_at = $3,
+           last_error = $4
+       WHERE id = $5`,
+      [
+        newAttemptCount,
+        isFinal ? new Date().toISOString() : computeNextAttempt(newAttemptCount), // null = no retry
+        isFinal ? new Date().toISOString() : null,
+        publishResult.error,
+        row.id,
+      ]
+    )
+  }
+}
+
+// ── Process a single outbox event by ID ──────────────────────────────────────
+//
+// Used for fire-and-forget delivery after order creation / status change.
+// Publishes to the Worker and marks the event. Returns the publish result.
+export async function processSingleOutboxEvent(pool, eventId) {
+  const client = await pool.connect()
+  try {
+    const { rows } = await client.query(
+      `SELECT id, restaurant_id, order_id, event_type, payload, attempt_count, last_error
+       FROM realtime_outbox
+       WHERE id = $1 AND published_at IS NULL AND failed_at IS NULL
+       LIMIT 1`,
+      [eventId]
+    )
+    if (rows.length === 0) return { ok: false, error: 'Event not found or already processed' }
+
+    const row = rows[0]
+    // Fill eventId from the outbox row id for downstream deduplication
+    row.payload = { ...row.payload, eventId: row.id }
+
+    const result = await publishToWorker(row)
+    await markEvent(client, row, result)
+    return result
   } catch (err) {
-    await client.query('ROLLBACK').catch(() => {})
-    console.error('[outbox] batch processing error:', err.message)
-    return 0
+    // Single event — no transaction to roll back
+    console.error('[outbox] single event error:', err.message)
+    return { ok: false, error: err.message }
   } finally {
     client.release()
   }
 }
 
-// ── Start the outbox processor loop ─────────────────────────────────────────
+// ── Process a bounded batch ──────────────────────────────────────────────────
 //
-// Spawns an async interval that polls the outbox table. Returns a stop function.
+// 1. Atomically claim up to BATCH_SIZE events via UPDATE with FOR UPDATE SKIP
+//    LOCKED inside a subquery. The claim advances next_attempt_time by LEASE_SEC
+//    so another processor cannot claim the same events during the lease window.
+// 2. Release the claim transaction BEFORE making any HTTP calls (never hold a
+//    DB transaction while waiting for the Worker).
+// 3. Publish each claimed event to the Worker.
+// 4. Update each event row with the result (published_at or retry/failure).
 //
-// The pool argument must be a pg.Pool connected to the primary database.
-// In server.js, this is the Express-side pool; in vite.config.js, the Vite-side
-// worker's pool.
-export function startOutboxProcessor(pool) {
-  let timer = null
-  let stopped = false
+// Returns the number of events successfully published.
+export async function processRealtimeOutboxBatch(pool) {
+  // ── Step 1: Atomic claim ─────────────────────────────────────────────────
+  // Claim events that are:
+  //   - unpublished (published_at IS NULL)
+  //   - not permanently failed (failed_at IS NULL)
+  //   - eligible for retry (next_attempt_time <= now())
+  //   - under the max attempt limit (attempt_count < MAX_ATTEMPTS)
+  //
+  // The RETURNING clause returns the claimed rows. FOR UPDATE SKIP LOCKED
+  // prevents concurrent processors from claiming the same rows.
+  const claimClient = await pool.connect()
+  let claimedRows
+  try {
+    await claimClient.query('BEGIN')
 
-  async function tick() {
-    if (stopped) return
-    try {
-      await processBatch(pool)
-    } catch (err) {
-      console.error('[outbox] tick error:', err.message)
-    }
-    if (!stopped) {
-      timer = setTimeout(tick, POLL_INTERVAL_MS)
-    }
+    const claimResult = await claimClient.query(
+      `UPDATE realtime_outbox
+       SET next_attempt_time = now() + interval '${LEASE_SEC} seconds'
+       WHERE id IN (
+         SELECT id
+         FROM realtime_outbox
+         WHERE published_at IS NULL
+           AND failed_at IS NULL
+           AND next_attempt_time <= now()
+           AND attempt_count < ${MAX_ATTEMPTS}
+         ORDER BY next_attempt_time ASC
+         LIMIT ${BATCH_SIZE}
+         FOR UPDATE SKIP LOCKED
+       )
+       RETURNING id, restaurant_id, order_id, event_type, payload, attempt_count, last_error`
+    )
+
+    await claimClient.query('COMMIT')
+    claimedRows = claimResult.rows
+  } catch (err) {
+    await claimClient.query('ROLLBACK').catch(() => {})
+    console.error('[outbox] claim transaction error:', err.message)
+    return 0
+  } finally {
+    claimClient.release()
   }
 
-  timer = setTimeout(tick, POLL_INTERVAL_MS)
+  if (claimedRows.length === 0) return 0
 
-  return function stop() {
-    stopped = true
-    if (timer) {
-      clearTimeout(timer)
-      timer = null
+  // ── Step 2: Publish (outside any DB transaction) ─────────────────────────
+  const publishResults = await Promise.allSettled(
+    claimedRows.map(async (row) => {
+      // Fill eventId from the outbox row id for downstream deduplication
+      const payload = { ...row.payload, eventId: row.id }
+      return { row, result: await publishToWorker({ ...row, payload }) }
+    })
+  )
+
+  // ── Step 3: Update event rows (new DB session, no transaction) ────────────
+  const updateClient = await pool.connect()
+  try {
+    let publishedCount = 0
+
+    for (const settled of publishResults) {
+      if (settled.status === 'fulfilled') {
+        const { row, result } = settled.value
+        await markEvent(updateClient, row, result)
+        if (result.ok) publishedCount++
+      } else {
+        // Promise itself rejected — rare, means publishToWorker threw
+        console.error('[outbox] publish rejection:', settled.reason?.message || settled.reason)
+        // The lease will expire and another invocation will retry
+      }
     }
-    console.log('[outbox] processor stopped')
+
+    return publishedCount
+  } catch (err) {
+    console.error('[outbox] batch update error:', err.message)
+    return claimedRows.filter(r => false).length // return 0
+  } finally {
+    updateClient.release()
   }
 }

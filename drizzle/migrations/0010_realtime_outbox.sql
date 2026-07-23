@@ -1,7 +1,8 @@
 -- Transactional outbox for order realtime events.
 -- Events are INSERTed in the same PostgreSQL transaction as the order/status
 -- change that created them, then published asynchronously by the outbox
--- processor. Prepared after migration 0009. DO NOT APPLY AUTOMATICALLY.
+-- processor or the scheduled cron recovery path.
+-- Prepared after migration 0009. DO NOT APPLY AUTOMATICALLY.
 -- Apply through the approved database migration process after review.
 
 CREATE TABLE IF NOT EXISTS realtime_outbox (
@@ -13,15 +14,19 @@ CREATE TABLE IF NOT EXISTS realtime_outbox (
   attempt_count     integer NOT NULL DEFAULT 0,
   next_attempt_time timestamptz NOT NULL DEFAULT now(),
   published_at      timestamptz,
+  failed_at         timestamptz,            -- set when max attempts exhausted
   last_error        text,
   created_at        timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE INDEX IF NOT EXISTS realtime_outbox_unpublished_idx
-  ON realtime_outbox (next_attempt_time, published_at);
+-- Efficiently find unpublished, non-failed events whose lease/backoff has expired.
+CREATE INDEX IF NOT EXISTS realtime_outbox_pending_idx
+  ON realtime_outbox (published_at, failed_at, next_attempt_time, attempt_count);
 
+-- Look up all outbox events for a restaurant.
 CREATE INDEX IF NOT EXISTS realtime_outbox_restaurant_id_idx
   ON realtime_outbox (restaurant_id);
 
+-- Filter by event type (for diagnostics / admin panels).
 CREATE INDEX IF NOT EXISTS realtime_outbox_event_type_idx
   ON realtime_outbox (event_type);

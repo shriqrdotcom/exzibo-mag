@@ -357,11 +357,13 @@ export const realtimeOutbox = pgTable(
     attemptCount:     integer('attempt_count').notNull().default(0),
     nextAttemptTime:  timestamp('next_attempt_time', { withTimezone: true }).notNull().default(sql`now()`),
     publishedAt:      timestamp('published_at', { withTimezone: true }),
+    failedAt:         timestamp('failed_at', { withTimezone: true }),           // set when max attempts exhausted
     lastError:        text('last_error'),
     createdAt:        timestamp('created_at', { withTimezone: true }).notNull().default(sql`now()`),
   },
   (t) => [
-    index('realtime_outbox_unpublished_idx').on(t.nextAttemptTime, t.publishedAt),
+    index('realtime_outbox_unpublished_idx').on(t.nextAttemptTime, t.publishedAt, t.failedAt),
+    index('realtime_outbox_pending_idx').on(t.publishedAt, t.failedAt, t.nextAttemptTime, t.attemptCount),
     index('realtime_outbox_restaurant_id_idx').on(t.restaurantId),
     index('realtime_outbox_event_type_idx').on(t.eventType),
   ]
