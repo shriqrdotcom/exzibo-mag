@@ -140,7 +140,13 @@ async function processBatch(pool) {
     return processed
   } catch (err) {
     await client.query('ROLLBACK').catch(() => {})
-    console.error('[outbox] batch processing error:', err.message)
+    const errEntry = {
+      operation: 'outbox_batch_processing',
+      errorCategory: 'server',
+      message: err.message,
+      pendingCount: null,
+    }
+    console.error('[outbox] batch processing error:', JSON.stringify(errEntry))
     return 0
   } finally {
     client.release()
@@ -161,9 +167,22 @@ export function startOutboxProcessor(pool) {
   async function tick() {
     if (stopped) return
     try {
-      await processBatch(pool)
+      const processed = await processBatch(pool)
+      if (processed > 0) {
+        const entry = {
+          operation: 'outbox_tick',
+          processed,
+          timestamp: new Date().toISOString(),
+        }
+        console.log('[outbox] tick:', JSON.stringify(entry))
+      }
     } catch (err) {
-      console.error('[outbox] tick error:', err.message)
+      const errEntry = {
+        operation: 'outbox_tick',
+        errorCategory: 'server',
+        message: err.message,
+      }
+      console.error('[outbox] tick error:', JSON.stringify(errEntry))
     }
     if (!stopped) {
       timer = setTimeout(tick, POLL_INTERVAL_MS)

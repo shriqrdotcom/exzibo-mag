@@ -72,6 +72,7 @@ import {
 } from './api/_lib/authz.js'
 import { generateRequestId, parsePagination, safeError, badInput, internalError } from './api/_lib/validate.js'
 import { issueRealtimeTicket } from './src/services/realtimeTicketService.js'
+import { structuredLogger } from './src/monitoring/structuredLogger.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const app = express()
@@ -180,6 +181,11 @@ async function _isTableValid(slug, tableNumber) {
 }
 
 app.use(express.json({ limit: '15mb' }))
+
+// ── Structured logging ─────────────────────────────────────────────────────────
+// Logs every request with ID, route, status, duration, error category.
+// Sensitive headers (cookies, authorization, etc.) are NEVER logged.
+app.use(structuredLogger)
 
 // ── Auth disable check helper ─────────────────────────────────────────────────
 // Single source of truth — used by inline auth blocks in complex route handlers.
@@ -1078,6 +1084,7 @@ async function delegateToHandler(filePath, req, res) {
 app.all('/api/restaurants', (req, res) => delegateToHandler('./api/restaurants.js', req, res))
 app.all('/api/settings',    (req, res) => delegateToHandler('./api/settings.js',    req, res))
 app.all('/api/notifications', (req, res) => delegateToHandler('./api/notifications.js', req, res))
+app.all('/api/system',       (req, res) => delegateToHandler('./api/system.js',       req, res))
 app.all('/api/analytics/:restaurantId', (req, res) => {
   req.query.action = 'analytics'
   req.query.id = req.params.restaurantId

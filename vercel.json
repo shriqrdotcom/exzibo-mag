@@ -39,6 +39,7 @@
     { "source": "/api/team-members/shadow-delete",          "destination": "/api/team?action=shadowDelete"                                },
     { "source": "/api/team-members/:restaurantId",          "destination": "/api/team?restaurantId=:restaurantId"                         },
     { "source": "/api/realtime/ticket",                    "destination": "/api/auth-check?action=issueTicket"                            },
+    { "source": "/api/system",                              "destination": "/api/system"                                                    },
     { "source": "/api/(.*)",                                "destination": "/api/$1"                                                       },
     { "source": "/(.*)",                                    "destination": "/index.html"                                                   }
   ]
