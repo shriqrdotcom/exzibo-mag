@@ -465,6 +465,7 @@ function DefaultApp() {
   if (loading) return <GlobalLoader />
 
   return (
+    <SidebarProvider>
     <Suspense fallback={<GlobalLoader />}>
       <Routes>
       {/* Public */}
@@ -517,6 +518,7 @@ function DefaultApp() {
       <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Suspense>
+    </SidebarProvider>
   )
 }
 

@@ -31,6 +31,10 @@ The `className` attributes are load-bearing — they activate the mobile respons
 | `src/index.css` (lines 250+) | All responsive CSS: sidebar drawer, stats grids, tables, modals, touch targets |
 | `src/App.jsx` | `SuperAdminApp` and `DashboardApp` wrapped with `<SidebarProvider>` |
 
+## Critical: all three app entry points need SidebarProvider
+
+`DefaultApp`, `SuperAdminApp`, and `DashboardApp` in `src/App.jsx` all render pages that use `<Sidebar>` and `<AdminHeader>`, so ALL THREE must be wrapped with `<SidebarProvider>`. On Replit preview/localhost, `getSubdomain()` returns `null` → `DefaultApp` is used. If it's missing the provider, `useSidebar()` returns the no-op fallback and the hamburger toggle silently does nothing.
+
 ## Pages with responsive classes
 
 `admin-layout` + `admin-content-area`: Analytics, Dashboard, DeletedRestaurants, DynamicRoute, MasterControl, MenuPage, Settings, TablePage, TeamMembersAdmin, LiveOrder, NotificationsPage, InformationPage, AddRolePage.
