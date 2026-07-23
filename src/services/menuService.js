@@ -230,13 +230,13 @@ export async function deleteItem(req, ip, { id }) {
   if (!allowed) return { status: 429, body: { error: 'Too many menu item deletes.', retryAfter: 60 } }
 
   const lockKey = `lock:menu-item:${id}`
-  const { acquired } = await acquireLock(lockKey, 5)
+  const { acquired, token } = await acquireLock(lockKey, 5)
   if (!acquired) return { status: 409, body: { error: 'Delete already in progress.' } }
   try {
     await deleteNeonMenuItem(id)
     return ok({ success: true })
   } finally {
-    await releaseLock(lockKey)
+    await releaseLock(lockKey, token)
   }
 }
 
@@ -284,12 +284,12 @@ export async function deleteCategory(req, ip, { id }) {
   if (!allowed) return { status: 429, body: { error: 'Too many category deletes.', retryAfter: 60 } }
 
   const lockKey = `lock:menu-category:${id}`
-  const { acquired } = await acquireLock(lockKey, 5)
+  const { acquired, token } = await acquireLock(lockKey, 5)
   if (!acquired) return { status: 409, body: { error: 'Delete already in progress.' } }
   try {
     await deleteNeonMenuCategory(id)
     return ok({ success: true })
   } finally {
-    await releaseLock(lockKey)
+    await releaseLock(lockKey, token)
   }
 }

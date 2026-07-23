@@ -503,10 +503,12 @@ export async function getOrders(restaurantId) {
   return []
 }
 
-export async function createOrder(restaurantId, order) {
+export async function createOrder(restaurantId, order, idempotencyKey) {
   // Order creation is server-authoritative. The client may only supply:
   //   restaurant_id, table/service ref, customer details, item list (menuItemId + quantity + selectedOptions),
   //   and order notes. The server controls id, status, prices, totals, and timestamps.
+  const headers = { 'Content-Type': 'application/json' }
+  if (idempotencyKey) headers['Idempotency-Key'] = idempotencyKey
   const payload = {
     restaurant_id:     restaurantId,
     table_number:      order.table      || order.table_number     || null,
@@ -518,7 +520,7 @@ export async function createOrder(restaurantId, order) {
   }
   const res = await fetch('/api/orders', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     body: JSON.stringify(payload),
   })
   if (!res.ok) {
@@ -555,7 +557,9 @@ export async function getBookings(restaurantId) {
   return (await r.json() ?? []).map(normalizeBooking)
 }
 
-export async function createBooking(restaurantId, booking) {
+export async function createBooking(restaurantId, booking, idempotencyKey) {
+  const headers = { 'Content-Type': 'application/json' }
+  if (idempotencyKey) headers['Idempotency-Key'] = idempotencyKey
   const payload = {
     restaurant_id:   restaurantId,
     customer_name:   booking.name   || booking.customer_name  || '',
@@ -573,7 +577,7 @@ export async function createBooking(restaurantId, booking) {
   }
   const r = await fetch('/api/bookings', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     body: JSON.stringify(payload),
   })
   if (!r.ok) { const err = await r.json().catch(() => ({})); throw new Error(err?.error || `createBooking HTTP ${r.status}`) }

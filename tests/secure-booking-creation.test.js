@@ -157,4 +157,13 @@ describe('migration safety', () => {
     assert.match(journal, /"tag": "0007_order_state_retention"[\s\S]*"tag": "0008_secure_booking_creation"/)
     assert.match(migration, /DO NOT APPLY AUTOMATICALLY/)
   })
+
+  it('prepares the idempotency table after 0008 without applying it', async () => {
+    const migration = await read('drizzle/migrations/0009_idempotency_records.sql')
+    const journal = await read('drizzle/migrations/meta/_journal.json')
+    assert.match(migration, /CREATE TABLE IF NOT EXISTS idempotency_records/)
+    assert.match(migration, /CREATE UNIQUE INDEX IF NOT EXISTS idempotency_records_scope_unique/)
+    assert.match(journal, /"tag": "0008_secure_booking_creation"[\s\S]*"tag": "0009_idempotency_records"/)
+    assert.match(migration, /DO NOT APPLY AUTOMATICALLY/)
+  })
 })

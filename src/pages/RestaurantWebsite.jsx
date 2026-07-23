@@ -6,6 +6,7 @@ import { getRestaurantBySlug, getMenuCategories, getMenuItems, getPublishedMenuI
 import { getPublicImageUrl, getPublicImageUrls } from '../lib/imageUrl'
 import { useMenuSubdomainRedirect } from '../lib/routeConfig'
 import { toSlug } from '../lib/slug'
+import { generateIdempotencyKey } from '../lib/idempotencyKey'
 import {
   Star, MapPin, Bell, ShoppingCart, Home,
   UtensilsCrossed, ClipboardList, CalendarDays,
@@ -508,7 +509,11 @@ export default function RestaurantWebsite() {
   const [orderError, setOrderError] = useState('')
   const [viewingHistoryOrder, setViewingHistoryOrder] = useState(null)
   const [showOrderConfirm, setShowOrderConfirm] = useState(false)
+  const orderKeyRef = useRef(null)
+  const bookingKeyRef = useRef(null)
   useEffect(() => { setShowOrderConfirm(false); setShowHelpSheet(false) }, [activeNav])
+  useEffect(() => { orderKeyRef.current = null }, [cartItems])
+  useEffect(() => { bookingKeyRef.current = null }, [bookingForm])
   useEffect(() => { if (activeNav !== 'menu') setMenuSearchOpen(false) }, [activeNav])
   useEffect(() => {
     if (menuSearchOpen) {
@@ -740,9 +745,10 @@ export default function RestaurantWebsite() {
     setBookingSubmitError('')
     setBookingSubmitting(true)
     try {
+      if (!bookingKeyRef.current) bookingKeyRef.current = generateIdempotencyKey()
       const response = await fetch('/api/bookings', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Idempotency-Key': bookingKeyRef.current },
         body: JSON.stringify({
           restaurant_id:   restaurantId,
           customer_name:   bookingForm.name.trim(),
@@ -758,6 +764,7 @@ export default function RestaurantWebsite() {
       })
       const saved = await response.json().catch(() => ({}))
       if (!response.ok) throw new Error(saved?.error || `Booking request failed (${response.status})`)
+      bookingKeyRef.current = null
       notifyAnalyticsUpdate()
       setBookingSubmitted(true)
     } catch (error) {
@@ -947,12 +954,14 @@ export default function RestaurantWebsite() {
       }
 
       try {
-        const saved = await createOrder(restaurantId, payload)
+        if (!orderKeyRef.current) orderKeyRef.current = generateIdempotencyKey()
+        const saved = await createOrder(restaurantId, payload, orderKeyRef.current)
         if (!saved || saved.error) {
           console.warn('[Order] API insert failed:', saved?.error || 'No response')
           setOrderError('Could not place your order. Please check your connection and try again.')
           return
         }
+        orderKeyRef.current = null
         finalizeSuccessfulOrder(saved, tableNum, restaurantId)
       } catch (err) {
         console.warn('[Order] API insert failed:', err.message)

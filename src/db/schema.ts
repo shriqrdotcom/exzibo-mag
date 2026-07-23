@@ -311,6 +311,31 @@ export const tableNumbers = pgTable(
   ]
 )
 
+// ── idempotency_records ─────────────────────────────────────────────────────
+// Database-backed idempotency for create operations. A unique index on
+// (restaurant_id, operation, key_hash) makes the database the authoritative
+// duplicate guarantee, regardless of Redis availability. The request_hash lets
+// the same key safely replay the same request, while a different request with
+// the same key returns HTTP 409. The response is stored so the replay returns
+// the exact canonical result produced by the first successful request.
+export const idempotencyRecords = pgTable(
+  'idempotency_records',
+  {
+    id:           uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+    restaurantId: uuid('restaurant_id').notNull().references(() => restaurants.id, { onDelete: 'cascade' }),
+    operation:    text('operation').notNull(),     // e.g. 'order:create', 'booking:create'
+    keyHash:      text('key_hash').notNull(),      // SHA-256 of the caller's idempotency key
+    requestHash:  text('request_hash').notNull(),  // SHA-256 of the canonical request payload
+    response:     jsonb('response').notNull(),     // canonical response returned to the caller
+    createdAt:    timestamp('created_at', { withTimezone: true }).notNull().default(sql`now()`),
+  },
+  (t) => [
+    uniqueIndex('idempotency_records_scope_unique').on(t.restaurantId, t.operation, t.keyHash),
+    index('idempotency_records_restaurant_id_idx').on(t.restaurantId),
+    index('idempotency_records_operation_idx').on(t.operation),
+  ]
+)
+
 // ── audit_logs ───────────────────────────────────────────────────────────────
 export const auditLogs = pgTable(
   'audit_logs',

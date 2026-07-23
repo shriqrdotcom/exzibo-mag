@@ -53,11 +53,9 @@ import { r2Upload } from './src/lib/r2.js'
 import { decodeAndValidate } from './api/_lib/image-validate.js'
 import {
   rateLimit,
-  preventDuplicate,
   acquireLock,
   releaseLock,
   getClientIp,
-  hashBody,
   send429,
 } from './src/lib/upstash.server.js'
 import {
@@ -470,7 +468,7 @@ app.post('/api/orders/update-status', async (req, res) => {
   // ── Rate limit: 60/min per IP + 5 s exclusive lock per orderId ───────────
   const { allowed: orderStatusAllowed } = await rateLimit(`rl:order-status:ip:${getClientIp(req)}`, 60, 60)
   if (!orderStatusAllowed) return send429(res, 'Too many order status updates. Please slow down.')
-  const { acquired: orderStatusLocked } = await acquireLock(`lock:order-status:${orderId}`, 5)
+  const { acquired: orderStatusLocked, token: orderStatusToken } = await acquireLock(`lock:order-status:${orderId}`, 5)
   if (!orderStatusLocked) return res.status(409).json({ error: 'Order status update already in progress.' })
 
   try {
@@ -520,7 +518,7 @@ app.post('/api/orders/update-status', async (req, res) => {
     console.error('[orders/update-status] Error:', err.message)
     return res.status(500).json({ error: err.message })
   } finally {
-    await releaseLock(`lock:order-status:${orderId}`)
+    await releaseLock(`lock:order-status:${orderId}`, orderStatusToken)
   }
 })
 
@@ -531,13 +529,14 @@ app.post('/api/orders/update-status', async (req, res) => {
 app.post('/api/orders', async (req, res) => {
   try {
     const body = req.body
+    const idempotencyKey = req.headers['idempotency-key']
+    if (!idempotencyKey || typeof idempotencyKey !== 'string' || idempotencyKey.length < 16) {
+      return res.status(400).json({ error: 'Idempotency-Key header is required (min 16 characters).' })
+    }
 
-    // ── Rate limit: 10 orders/min per IP + 90 s duplicate prevention ─────────
+    // ── Rate limit: 10 orders/min per IP. Database idempotency is the source of truth. ──
     const { allowed: orderAllowed } = await rateLimit(`rl:order-create:ip:${getClientIp(req)}`, 10, 60)
     if (!orderAllowed) return send429(res, 'Too many orders submitted. Please wait a moment.')
-    const dedupKey = `dedup:order:${getClientIp(req)}:${hashBody(body)}`
-    const { isDuplicate: orderDup } = await preventDuplicate(dedupKey, 90)
-    if (orderDup) return res.status(409).json({ error: 'Duplicate order detected. Your previous order is being processed.' })
 
     if (!body?.restaurant_id || !Array.isArray(body?.items) || body.items.length === 0) {
       return res.status(400).json({ error: 'restaurant_id and a non-empty items array are required' })
@@ -553,6 +552,7 @@ app.post('/api/orders', async (req, res) => {
         customerLocation: body.customer_location ?? body.location ?? null,
         items: body.items,
         notes: body.notes ?? null,
+        idempotencyKey,
       })
       console.log('[orders POST] Neon primary ✅ id:', order.id)
 
@@ -567,6 +567,8 @@ app.post('/api/orders', async (req, res) => {
       return res.status(201).json(order)
     } catch (err) {
       console.error('[orders POST] Error:', err.message)
+      if (err.code === 'IDEMPOTENCY_KEY_REQUIRED') return res.status(400).json({ error: err.message, code: err.code })
+      if (err.code === 'IDEMPOTENCY_CONFLICT') return res.status(409).json({ error: err.message, code: err.code })
       if (err.code === 'VALIDATION') return res.status(400).json({ error: err.message, code: err.code })
       if (err.code === 'INVALID_ITEM' || err.code === 'INVALID_OPTION') return res.status(422).json({ error: err.message, code: err.code })
       if (err.code === 'DUPLICATE') return res.status(409).json({ error: err.message, code: err.code })
@@ -627,6 +629,10 @@ app.get('/api/menu/items/:restaurantId', requireRestaurantRole(req => req.params
 app.post('/api/bookings', async (req, res) => {
   try {
     const body = req.body
+    const idempotencyKey = req.headers['idempotency-key']
+    if (!idempotencyKey || typeof idempotencyKey !== 'string' || idempotencyKey.length < 16) {
+      return res.status(400).json({ error: 'Idempotency-Key header is required (min 16 characters).' })
+    }
 
     const { allowed: bookingAllowed } = await rateLimit(`rl:booking-create:ip:${getClientIp(req)}`, 5, 60)
     if (!bookingAllowed) return send429(res, 'Too many booking requests. Please wait a moment.')
@@ -645,11 +651,14 @@ app.post('/api/bookings', async (req, res) => {
       occasion: body.occasion,
       seating: body.seating,
       notes: body.notes,
+      idempotencyKey,
     })
     console.log('[bookings POST] Neon ✅ id:', saved.id)
     return res.status(201).json(saved)
   } catch (err) {
     console.error('[bookings POST] Error:', err.message)
+    if (err.code === 'IDEMPOTENCY_KEY_REQUIRED') return res.status(400).json({ error: err.message, code: err.code })
+    if (err.code === 'IDEMPOTENCY_CONFLICT') return res.status(409).json({ error: err.message, code: err.code })
     if (err.code === 'VALIDATION' || err.code === 'RESTAURANT_UNAVAILABLE' || err.code === 'OUTSIDE_OPENING_HOURS') {
       return res.status(400).json({ error: err.message, code: err.code })
     }
@@ -677,7 +686,7 @@ app.patch('/api/bookings/:id/status', async (req, res) => {
 
   const { allowed: bkStatusAllowed } = await rateLimit(`rl:booking-status:ip:${getClientIp(req)}`, 30, 60)
   if (!bkStatusAllowed) return send429(res, 'Too many booking status updates. Please slow down.')
-  const { acquired: bkStatusLocked } = await acquireLock(`lock:booking-status:${id}`, 5)
+  const { acquired: bkStatusLocked, token: bkStatusToken } = await acquireLock(`lock:booking-status:${id}`, 5)
   if (!bkStatusLocked) return res.status(409).json({ error: 'Booking status update already in progress.' })
 
   try {
@@ -703,7 +712,7 @@ app.patch('/api/bookings/:id/status', async (req, res) => {
     console.error('[bookings PATCH status] Error:', err.message)
     return res.status(500).json({ error: err.message })
   } finally {
-    await releaseLock(`lock:booking-status:${id}`)
+    await releaseLock(`lock:booking-status:${id}`, bkStatusToken)
   }
 })
 

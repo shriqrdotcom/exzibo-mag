@@ -11,10 +11,15 @@
 //   - Any validation failure or insert error rolls back everything.
 //   - Returns the canonical saved order only after commit.
 //
-// This service does NOT implement status transitions, realtime publishing, or
-// Redis idempotency — those are handled by the calling route.
+// This service does NOT implement status transitions or realtime publishing.
+// Database-backed idempotency is implemented inside the shared transaction.
 
 import pg from 'pg'
+import {
+  checkIdempotency,
+  recordIdempotencyResponse,
+  OPERATION_ORDER_CREATE,
+} from './idempotencyService.js'
 
 const { Pool } = pg
 
@@ -132,11 +137,40 @@ export async function createOrderAtomic(input) {
   const customerLocation = input.customerLocation ?? null
   const orderNotes = input.notes ?? null
 
+  const { idempotencyKey } = input
+  const requestPayload = {
+    restaurantId,
+    tableNumber,
+    customerName,
+    customerPhone,
+    customerLocation,
+    items: items.map(i => ({
+      menuItemId: i.menuItemId,
+      quantity: i.quantity,
+      selectedOptions: i.selectedOptions,
+      notes: i.notes,
+    })),
+    notes: orderNotes,
+  }
+
   const client = await getPool().connect()
   try {
     await client.query('BEGIN')
 
-    // 1. Resolve and lock menu items for this restaurant.
+    // 1. Idempotency check: same key + same request returns the stored response;
+    //    same key + different request throws IDEMPOTENCY_CONFLICT (409).
+    const idempotency = await checkIdempotency(client, {
+      restaurantId,
+      operation: OPERATION_ORDER_CREATE,
+      idempotencyKey,
+      requestPayload,
+    })
+    if (idempotency?.response) {
+      await client.query('COMMIT')
+      return idempotency.response
+    }
+
+    // 2. Resolve and lock menu items for this restaurant.
     const menuItemIds = items.map(i => i.menuItemId).filter(Boolean)
     if (menuItemIds.length !== items.length) {
       const err = new Error('Every order item must have a menuItemId')
@@ -252,7 +286,7 @@ export async function createOrderAtomic(input) {
 
     const orderRow = orderResult.rows[0]
 
-    // 4. Insert order_items.
+    // 5. Insert order_items.
     for (const li of lineItems) {
       await client.query(
         `INSERT INTO order_items (
@@ -272,12 +306,17 @@ export async function createOrderAtomic(input) {
       )
     }
 
-    await client.query('COMMIT')
-
-    return {
+    const canonicalResponse = {
       ...orderRow,
       lineItems,
     }
+
+    // 6. Record the idempotency response in the same transaction as the order.
+    await recordIdempotencyResponse(client, restaurantId, OPERATION_ORDER_CREATE, idempotency.keyHash, idempotency.requestHash, canonicalResponse)
+
+    await client.query('COMMIT')
+
+    return canonicalResponse
   } catch (e) {
     await client.query('ROLLBACK').catch(() => {})
     throw e

@@ -8,6 +8,11 @@
 
 import crypto from 'node:crypto'
 import pg from 'pg'
+import {
+  checkIdempotency,
+  recordIdempotencyResponse,
+  OPERATION_BOOKING_CREATE,
+} from './idempotencyService.js'
 
 const { Pool } = pg
 const ACTIVE_STATUSES = ['pending', 'confirmed', 'arrived', 'seated']
@@ -179,9 +184,38 @@ export async function createBookingAtomic(input = {}) {
   const requestedResourceId = input.resourceId ?? input.resource_id ?? input.tableId ?? input.table_id ?? null
   const requestedTableNumber = input.tableNumber ?? input.table_number ?? null
 
+  const { idempotencyKey } = input
+  const requestPayload = {
+    restaurantId,
+    guests,
+    startAt: startAt.toISOString(),
+    endAt: endAt.toISOString(),
+    customerName,
+    customerPhone,
+    customerEmail,
+    occasion,
+    seating,
+    notes,
+    resourceId: requestedResourceId,
+    tableNumber: requestedTableNumber,
+  }
+
   const client = await getPool().connect()
   try {
     await client.query('BEGIN')
+
+    // 1. Idempotency check: same key + same request returns the stored response;
+    //    same key + different request throws IDEMPOTENCY_CONFLICT (409).
+    const idempotency = await checkIdempotency(client, {
+      restaurantId,
+      operation: OPERATION_BOOKING_CREATE,
+      idempotencyKey,
+      requestPayload,
+    })
+    if (idempotency?.response) {
+      await client.query('COMMIT')
+      return idempotency.response
+    }
 
     // Serialize all booking decisions for this restaurant. The lock is
     // transaction-scoped and is held until COMMIT/ROLLBACK.
@@ -294,6 +328,11 @@ export async function createBookingAtomic(input = {}) {
         endAt.toISOString(),
       ],
     )
+
+    const canonicalResponse = insertResult.rows[0]
+
+    // Record the idempotency response in the same transaction as the booking.
+    await recordIdempotencyResponse(client, restaurantId, OPERATION_BOOKING_CREATE, idempotency.keyHash, idempotency.requestHash, canonicalResponse)
 
     await client.query('COMMIT')
     return insertResult.rows[0]

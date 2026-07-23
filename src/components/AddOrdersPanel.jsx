@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo, useRef } from 'react'
 import { getMenuCategories, getMenuItems, createOrder } from '../lib/db'
 import { getPublicImageUrl } from '../lib/imageUrl'
+import { generateIdempotencyKey } from '../lib/idempotencyKey'
 import { Plus, Minus, ShoppingBag } from 'lucide-react'
 
 export default function AddOrdersPanel({
@@ -19,6 +20,7 @@ export default function AddOrdersPanel({
   const [tableNumber, setTableNumber] = useState('')
   const [customerName, setCustomerName] = useState('')
   const [placing, setPlacing] = useState(false)
+  const orderKeyRef = useRef(null)
 
   useEffect(() => {
     async function load() {
@@ -109,7 +111,9 @@ export default function AddOrdersPanel({
         items: orderItems,
         notes: 'Manual order created by staff',
       }
-      await createOrder(restaurantId, order)
+      if (!orderKeyRef.current) orderKeyRef.current = generateIdempotencyKey()
+      await createOrder(restaurantId, order, orderKeyRef.current)
+      orderKeyRef.current = null
       showToast('Order placed successfully')
       onBack()
     } catch (e) {

@@ -1,6 +1,6 @@
 import { Redis } from '@upstash/redis'
 import { Ratelimit } from '@upstash/ratelimit'
-import { createHash } from 'crypto'
+import { createHash, randomBytes } from 'crypto'
 
 // ── Upstash Redis — server-only protection layer ──────────────────────────────
 //
@@ -80,27 +80,41 @@ export async function preventDuplicate(key, ttlSeconds) {
 }
 
 // ── Short-lived exclusive lock ────────────────────────────────────────────────
-// Acquires a Redis lock (SETNX + TTL). Use for critical write operations
-// where double-submission must be prevented (e.g. status updates).
-// Always call releaseLock() in a finally block.
+// Acquires a Redis lock with a random ownership token using SET NX EX. The
+// token is returned to the caller and must be passed back to releaseLock().
+// releaseLock() only deletes the key when the stored token matches, preventing
+// one request from releasing another request's lock.
+//
+// Important: Redis locks are NOT the authoritative duplicate guarantee for
+// order/booking creation. They are only a lightweight concurrency aid. The
+// database idempotency table is the source of truth.
 
 export async function acquireLock(key, ttlSeconds = 10) {
   const redis = getRedis()
-  if (!redis) return { acquired: true }
+  if (!redis) return { acquired: true, token: null }
   try {
-    const result = await redis.set(key, '1', { nx: true, ex: ttlSeconds })
-    return { acquired: result === 'OK' }
+    const token = createHash('sha256').update(randomBytes(16)).digest('hex')
+    const result = await redis.set(key, token, { nx: true, ex: ttlSeconds })
+    if (result === 'OK') return { acquired: true, token }
+    return { acquired: false, token: null }
   } catch (err) {
     console.warn('[upstash][acquireLock] error (failing open):', err.message)
-    return { acquired: true }
+    return { acquired: true, token: null }
   }
 }
 
-export async function releaseLock(key) {
+export async function releaseLock(key, token) {
   const redis = getRedis()
   if (!redis) return
+  if (!token) return
   try {
-    await redis.del(key)
+    // Only delete the key if our token is still stored there. If the lock
+    // expired or was taken over by another owner, this is a no-op and we do
+    // not blindly remove another request's lock.
+    const stored = await redis.get(key)
+    if (stored === token) {
+      await redis.del(key)
+    }
   } catch (err) {
     console.warn('[upstash][releaseLock] error:', err.message)
   }
