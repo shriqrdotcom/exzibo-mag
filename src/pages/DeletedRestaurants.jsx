@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import Sidebar from '../components/Sidebar'
 import AdminHeader from '../components/AdminHeader'
 import { Trash2, AlertTriangle, X, RotateCcw } from 'lucide-react'
-import { getDeletedRestaurants, permanentDeleteRestaurant, updateRestaurant, markRestoredId } from '../lib/db'
+import { getDeletedRestaurants, permanentDeleteRestaurant, updateRestaurant } from '../lib/db'
 
 function formatDDMMYYYY(iso) {
   if (!iso) return '—'
@@ -62,14 +62,10 @@ export default function DeletedRestaurants() {
   }
 
   async function restoreToDemo(r) {
-    // Mark as restored in localStorage first — this overrides the hardcoded
-    // PERMANENTLY_DELETED_IDS seed and removes the ID from the soft-deleted set
-    markRestoredId(r.id)
     try {
       await updateRestaurant(r.id, { status: 'demo', is_deleted: false, deleted_at: null })
-    } catch {
-      // DB update failed — the localStorage override still lets the restaurant
-      // appear in the demo section via filterActive()
+    } catch (err) {
+      console.error('[restoreToDemo] API failed:', err.message)
     }
     fetchDeleted()
     setToast('Restaurant restored to Demo section')

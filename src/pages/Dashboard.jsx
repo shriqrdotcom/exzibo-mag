@@ -4,7 +4,7 @@ import Sidebar from '../components/Sidebar'
 import AdminHeader from '../components/AdminHeader'
 import { TrendingUp, Filter, Download, ChevronLeft, ChevronRight, Plus, Trash2, Clock, X, Pencil, Play, ExternalLink, LayoutDashboard, ShieldCheck, ImageDown, Upload, ZoomIn, ZoomOut, RotateCcw, Save, CheckCircle, AlertTriangle, AlertCircle } from 'lucide-react'
 import { useRole } from '../context/RoleContext'
-import { getRestaurants, updateRestaurant, softDeleteRestaurant, getRestaurantsCreatedThisMonth, upsertGlobalSetting } from '../lib/db'
+import { getRestaurants, updateRestaurant, softDeleteRestaurant, upsertGlobalSetting } from '../lib/db'
 import { openRoleDashboard } from '../lib/navigation'
 import { stripRoleSuffix } from '../lib/uid'
 
@@ -376,8 +376,10 @@ export default function Dashboard() {
 
   const fetchOrderCount = useCallback(async () => {
     try {
-      const count = await getRestaurantsCreatedThisMonth()
-      setMonthRestaurantCount(count)
+      const res = await fetch('/api/restaurants?action=myIds')
+      if (!res.ok) throw new Error(`API ${res.status}`)
+      const ids = await res.json()
+      setMonthRestaurantCount(Array.isArray(ids) ? ids.length : 0)
     } catch {
       setMonthRestaurantCount(0)
     }

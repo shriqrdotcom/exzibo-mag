@@ -3,63 +3,6 @@ import { compressFile, compressDataUrl } from './imageCompressor'
 import { getCompressionLimits } from './imageCompressionSettings'
 import { getAuthUser } from './current-user'
 
-// ── Soft-delete localStorage fallback helpers ─────────────────────────────────
-const LS_SOFT_DELETED = 'exzibo_soft_deleted_ids'
-const LS_RESTORED     = 'exzibo_restored_ids'
-
-function getSoftDeletedIds() {
-  try { return new Set(JSON.parse(localStorage.getItem(LS_SOFT_DELETED) || '[]')) } catch { return new Set() }
-}
-function getRestoredIds() {
-  try { return new Set(JSON.parse(localStorage.getItem(LS_RESTORED) || '[]')) } catch { return new Set() }
-}
-function addSoftDeletedId(id) {
-  const ids = getSoftDeletedIds()
-  ids.add(id)
-  localStorage.setItem(LS_SOFT_DELETED, JSON.stringify([...ids]))
-  const restored = getRestoredIds()
-  if (restored.has(id)) { restored.delete(id); localStorage.setItem(LS_RESTORED, JSON.stringify([...restored])) }
-}
-function removeSoftDeletedId(id) {
-  const ids = getSoftDeletedIds()
-  ids.delete(id)
-  localStorage.setItem(LS_SOFT_DELETED, JSON.stringify([...ids]))
-}
-export function markRestoredId(id) {
-  const restored = getRestoredIds()
-  restored.add(id)
-  localStorage.setItem(LS_RESTORED, JSON.stringify([...restored]))
-  removeSoftDeletedId(id)
-}
-
-// ── Hard-deleted restaurant IDs (one-time client-side filter) ─────────────────
-const PERMANENTLY_DELETED_IDS = []
-;(function seedPermanentDeletes() {
-  const restored = getRestoredIds()
-  const ids      = getSoftDeletedIds()
-  let changed    = false
-  PERMANENTLY_DELETED_IDS.forEach(id => {
-    if (!restored.has(id) && !ids.has(id)) { ids.add(id); changed = true }
-  })
-  if (changed) localStorage.setItem(LS_SOFT_DELETED, JSON.stringify([...ids]))
-})()
-
-const FORCED_DEMO_IDS = new Set([
-  '2fb3a200-f494-4fb3-99cb-ea6f3e917804',
-])
-function applyForcedDemoStatus(rows) {
-  return rows.map(r => FORCED_DEMO_IDS.has(r.id) ? { ...r, status: 'demo', is_deleted: false } : r)
-}
-function filterActive(rows) {
-  const localDeleted = getSoftDeletedIds()
-  const restored     = getRestoredIds()
-  return rows.filter(r =>
-    FORCED_DEMO_IDS.has(r.id) ||
-    restored.has(r.id) ||
-    (!r.is_deleted && !localDeleted.has(r.id))
-  )
-}
-
 // ── Shared fetch helper ───────────────────────────────────────────────────────
 async function apiFetch(url, opts = {}) {
   const res = await fetch(url, opts)
@@ -82,7 +25,7 @@ export async function getRestaurants() {
     try {
       const rows = await apiFetch('/api/neon/restaurants')
       if (Array.isArray(rows) && rows.length > 0) {
-        return applyForcedDemoStatus(filterActive(rows))
+        return rows
       }
     } catch (err) {
       console.warn('[getRestaurants] Neon unavailable:', err.message)
@@ -97,8 +40,7 @@ export async function getRestaurants() {
   const ids = await apiFetch('/api/restaurants?action=myIds')
   if (!Array.isArray(ids) || ids.length === 0) return []
 
-  const rows = await apiFetch(`/api/restaurants?action=list&ids=${ids.join(',')}`)
-  return applyForcedDemoStatus(filterActive(rows))
+  return await apiFetch(`/api/restaurants?action=list&ids=${ids.join(',')}`)
 }
 
 export async function getDeletedRestaurants() {
@@ -113,15 +55,14 @@ export async function getDeletedRestaurants() {
 
 export async function softDeleteRestaurant(id) {
   const deletedAt = new Date().toISOString()
-  addSoftDeletedId(id)
-  try {
-    await fetch(`/api/neon/restaurant/${encodeURIComponent(id)}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ is_deleted: true, deleted_at: deletedAt }),
-    })
-  } catch (err) {
-    console.warn('[softDeleteRestaurant] Neon PATCH failed:', err.message)
+  const res = await fetch(`/api/neon/restaurant/${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ is_deleted: true, deleted_at: deletedAt }),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err?.error || `softDeleteRestaurant API ${res.status}`)
   }
 }
 
@@ -194,18 +135,15 @@ export async function deleteRestaurant(id) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ id }),
   })
-  removeSoftDeletedId(id)
 }
 
 export async function permanentDeleteRestaurant(restaurant) {
   const id = restaurant.id
-  // Delete all restaurant data from Neon
   await apiFetch('/api/restaurants?action=permanentDelete', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ id }),
   })
-  removeSoftDeletedId(id)
 }
 
 export async function checkLinkNameTakenInDB(name) {
@@ -475,20 +413,6 @@ export function normalizeBooking(row) {
 }
 
 // ── Orders ────────────────────────────────────────────────────────────────────
-
-export async function getOrderCountThisMonth() {
-  try {
-    const data = await apiFetch('/api/analytics?action=orderCountThisMonth')
-    return data?.count ?? 0
-  } catch { return 0 }
-}
-
-export async function getRestaurantsCreatedThisMonth() {
-  try {
-    const data = await apiFetch('/api/analytics?action=restaurantsCreatedThisMonth')
-    return data?.count ?? 0
-  } catch { return 0 }
-}
 
 // Unwrap paginated { items, nextCursor } response into a plain array.
 // When `returnRaw` is true, returns { items, nextCursor } instead.

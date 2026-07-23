@@ -11,26 +11,9 @@ import { getRestaurants, getTeamMembers, createTeamMember, deleteTeamMember, upd
 import { openRoleDashboard } from '../lib/navigation'
 import { stripRoleSuffix } from '../lib/uid'
 
-const TEAM_KEY = id => `exzibo_team_admin_${id}`
-
-function loadTeamFallback(restaurantId) {
-  try {
-    const raw = localStorage.getItem(TEAM_KEY(restaurantId))
-    return raw ? JSON.parse(raw) : []
-  } catch { return [] }
-}
-
 async function loadTeam(restaurantId) {
-  try {
-    const rows = await getTeamMembers(restaurantId)
-    return rows
-  } catch {
-    return loadTeamFallback(restaurantId)
-  }
-}
-
-function saveTeam(restaurantId, members) {
-  localStorage.setItem(TEAM_KEY(restaurantId), JSON.stringify(members))
+  const rows = await getTeamMembers(restaurantId)
+  return rows
 }
 
 function uid() {
@@ -187,7 +170,7 @@ export default function TeamMembersAdmin() {
       try {
         rests = await getRestaurants()
       } catch {
-        rests = JSON.parse(localStorage.getItem('exzibo_restaurants') || '[]')
+        rests = []
       }
       setRestaurants(rests)
       const t = {}
@@ -213,7 +196,6 @@ export default function TeamMembersAdmin() {
     const updated = [...current, { id: uid(), email: email.trim(), role, status: 'invited' }]
     const newTeams = { ...teams, [restaurantId]: updated }
     setTeams(newTeams)
-    saveTeam(restaurantId, updated)
     showToast(`${email} added as ${role}.`)
     return true
   }
@@ -222,7 +204,6 @@ export default function TeamMembersAdmin() {
     const updated = (teams[restaurantId] || []).filter(m => m.id !== memberId)
     const newTeams = { ...teams, [restaurantId]: updated }
     setTeams(newTeams)
-    saveTeam(restaurantId, updated)
     showToast(`${email} removed.`)
   }
 
@@ -230,7 +211,6 @@ export default function TeamMembersAdmin() {
     const updated = (teams[restaurantId] || []).map(m => m.id === memberId ? { ...m, role: newRole } : m)
     const newTeams = { ...teams, [restaurantId]: updated }
     setTeams(newTeams)
-    saveTeam(restaurantId, updated)
     showToast('Role updated.')
   }
 

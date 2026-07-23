@@ -1,7 +1,7 @@
 /**
  * Returns true only when VITE_PREVIEW_MODE=true is explicitly set.
- * Running on Replit (replit.dev / replit.app) uses real Supabase Google OAuth —
- * NOT the preview login form — so Replit hostnames are NOT treated as preview.
+ * Replit hostnames (replit.dev / replit.app) are NOT treated as preview —
+ * they use real Better Auth Google OAuth.
  */
 export function isPreviewEnvironment() {
   return import.meta.env.VITE_PREVIEW_MODE === 'true'
