@@ -694,6 +694,8 @@ export default function RestaurantWebsite() {
   const [bookingForm, setBookingForm] = useState({ name: '', phone: '', email: '', date: '', time: '19:00', guests: 2, occasion: 'Casual Dining', seating: 'Indoor', notes: '' })
   const [bookingSubmitted, setBookingSubmitted] = useState(false)
   const [bookingErrors, setBookingErrors] = useState({})
+  const [bookingSubmitError, setBookingSubmitError] = useState('')
+  const [bookingSubmitting, setBookingSubmitting] = useState(false)
   const [showQuickBookModal, setShowQuickBookModal] = useState(false)
   const [quickBookName, setQuickBookName] = useState('')
   const [quickBookPhone, setQuickBookPhone] = useState('')
@@ -719,9 +721,10 @@ export default function RestaurantWebsite() {
   function handleBookingChange(field, value) {
     setBookingForm(prev => ({ ...prev, [field]: value }))
     setBookingErrors(prev => ({ ...prev, [field]: '' }))
+    setBookingSubmitError('')
   }
 
-  function handleBookingSubmit() {
+  async function handleBookingSubmit() {
     const errs = {}
     if (!bookingForm.name.trim()) errs.name = 'Required'
     if (!bookingForm.phone.trim()) errs.phone = 'Required'
@@ -729,57 +732,39 @@ export default function RestaurantWebsite() {
     if (!bookingForm.date) errs.date = 'Required'
     if (Object.keys(errs).length) { setBookingErrors(errs); return }
 
-    const restaurantId = restaurant?.id || slug || 'demo'
-    const storageKey = `exzibo_bookings_${restaurantId}`
-    const existing = JSON.parse(localStorage.getItem(storageKey) || '[]')
-    const newBooking = {
-      id: 'BK' + Date.now().toString().slice(-6),
-      name: bookingForm.name.trim(),
-      phone: bookingForm.phone.trim(),
-      email: bookingForm.email.trim(),
-      date: bookingForm.date,
-      time: bookingForm.time,
-      guests: bookingForm.guests,
-      occasion: bookingForm.occasion,
-      seating: bookingForm.seating,
-      notes: bookingForm.notes.trim(),
-      status: 'pending',
-      submittedAt: new Date().toISOString(),
+    const restaurantId = restaurant?.id
+    if (!restaurantId || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(restaurantId)) {
+      setBookingSubmitError('This restaurant is not available for online bookings. Please try again later.')
+      return
     }
-    // Write to localStorage for same-device admin dashboard
-    localStorage.setItem(storageKey, JSON.stringify([newBooking, ...existing]))
-    notifyAnalyticsUpdate()
-
-    // Also persist via API (Neon-first shadow-write) so admin dashboards on ALL devices see it instantly
-    const isSupabaseRestaurant = restaurantId && restaurantId !== 'demo' &&
-      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(restaurantId)
-    if (isSupabaseRestaurant) {
-      fetch('/api/bookings', {
+    setBookingSubmitError('')
+    setBookingSubmitting(true)
+    try {
+      const response = await fetch('/api/bookings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          id:              newBooking.id,
           restaurant_id:   restaurantId,
-          customer_name:   newBooking.name,
-          customer_phone:  newBooking.phone,
-          customer_email:  newBooking.email,
-          guests:          newBooking.guests,
-          date:            newBooking.date,
-          time:            newBooking.time,
-          occasion:        newBooking.occasion || null,
-          seating:         newBooking.seating  || null,
-          notes:           newBooking.notes    || null,
-          status:          'pending',
+          customer_name:   bookingForm.name.trim(),
+          customer_phone:  bookingForm.phone.trim(),
+          customer_email:  bookingForm.email.trim(),
+          guests:          bookingForm.guests,
+          date:            bookingForm.date,
+          time:            bookingForm.time,
+          occasion:        bookingForm.occasion || null,
+          seating:         bookingForm.seating  || null,
+          notes:           bookingForm.notes.trim() || null,
         }),
-      }).then(r => r.json()).then(saved => {
-        if (saved?.error) console.warn('[Booking] API insert skipped (localStorage backup active):', saved.error)
-        else console.log('[Booking] Persisted via API:', newBooking.id)
-      }).catch(err => {
-        console.warn('[Booking] API insert failed (localStorage backup active):', err.message)
       })
+      const saved = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(saved?.error || `Booking request failed (${response.status})`)
+      notifyAnalyticsUpdate()
+      setBookingSubmitted(true)
+    } catch (error) {
+      setBookingSubmitError(error.message || 'Unable to submit your booking. Please try again.')
+    } finally {
+      setBookingSubmitting(false)
     }
-
-    setBookingSubmitted(true)
   }
 
   const cartCount = cartItems.reduce((s, i) => s + i.qty, 0)
@@ -4679,9 +4664,14 @@ export default function RestaurantWebsite() {
               </div>
 
               {/* Submit Button */}
-              <button className="reserve-btn" onClick={handleBookingSubmit}
-                style={{ width: '100%', background: 'linear-gradient(135deg, #E8321A 0%, #ff6b35 100%)', color: '#fff', border: 'none', borderRadius: '20px', padding: '18px', fontSize: '16px', fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit', letterSpacing: '0.01em', boxShadow: '0 8px 28px rgba(232,50,26,0.42)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
-                Reserve My Table <ChevronRight size={18} />
+              {bookingSubmitError && (
+                <div role="alert" style={{ marginBottom: '12px', color: '#E8321A', background: 'rgba(232,50,26,0.08)', border: '1px solid rgba(232,50,26,0.24)', borderRadius: '12px', padding: '12px 14px', fontSize: '12px', lineHeight: 1.5 }}>
+                  {bookingSubmitError} Please check your details and try again.
+                </div>
+              )}
+              <button className="reserve-btn" onClick={handleBookingSubmit} disabled={bookingSubmitting}
+                style={{ width: '100%', background: bookingSubmitting ? '#9ca3af' : 'linear-gradient(135deg, #E8321A 0%, #ff6b35 100%)', color: '#fff', border: 'none', borderRadius: '20px', padding: '18px', fontSize: '16px', fontWeight: 800, cursor: bookingSubmitting ? 'wait' : 'pointer', fontFamily: 'inherit', letterSpacing: '0.01em', boxShadow: '0 8px 28px rgba(232,50,26,0.42)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
+                {bookingSubmitting ? 'Checking availability…' : 'Reserve My Table'} {!bookingSubmitting && <ChevronRight size={18} />}
               </button>
             </>
           )}

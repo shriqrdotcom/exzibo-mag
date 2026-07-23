@@ -10,11 +10,9 @@ function toJsonb(val) {
   return JSON.stringify(val)
 }
 
-// ── upsertNeonBooking ─────────────────────────────────────────────────────
-// INSERT … ON CONFLICT (id) DO UPDATE — safe for both create and re-sync.
-// restaurantId is passed separately because the booking object from
-// normalizeBooking() uses 'name'/'phone'/'email' aliases, not the DB column
-// names — so we accept either form here.
+// Legacy low-level insert helper retained for existing non-public tooling.
+// Public booking creation must use createBookingAtomic(), which is the only
+// path that validates, locks, checks conflicts, and controls booking metadata.
 export async function upsertNeonBooking(restaurantId, booking) {
   if (!booking?.id) throw new Error('upsertNeonBooking: booking.id is required')
 
@@ -99,7 +97,8 @@ export async function getNeonBookings(restaurantId) {
   const rows = await sql`
     SELECT
       id, restaurant_id, customer_name, customer_phone, customer_email,
-      guests, date, time, occasion, seating, notes, status, created_at
+      guests, date, time, occasion, seating, notes, status, resource_id,
+      start_at, end_at, created_at
     FROM bookings
     WHERE restaurant_id = ${restaurantId}::uuid
     ORDER BY created_at DESC
