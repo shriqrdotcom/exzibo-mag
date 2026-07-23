@@ -22,11 +22,13 @@ import * as contentService from './src/services/restaurantContentService.js'
 import {
   updateNeonBookingStatus,
   getNeonBookings,
+  getNeonBookingsPaginated,
   getNeonBookingRestaurantId,
 } from './src/db/neon-bookings.js'
 import { createBookingAtomic } from './src/services/bookingCreationService.js'
 import {
   getNeonOrders,
+  getNeonOrdersPaginated,
   deleteOldNeonOrders,
   getNeonOrderRestaurantId,
 } from './src/db/neon-orders.js'
@@ -68,6 +70,7 @@ import {
   SETTINGS_ROLES,
   TEAM_WRITE_ROLES,
 } from './api/_lib/authz.js'
+import { generateRequestId, parsePagination, safeError, badInput, internalError } from './api/_lib/validate.js'
 import { issueRealtimeTicket } from './src/services/realtimeTicketService.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -574,13 +577,15 @@ app.post('/api/orders', async (req, res) => {
 // Neon-first. Requires authenticated restaurant membership (any role).
 app.get('/api/orders/:restaurantId', requireRestaurantRole(req => req.params.restaurantId, ALL_ROLES), async (req, res) => {
   try {
+    const requestId = generateRequestId()
     const { restaurantId } = req.params
-    if (!restaurantId) return res.status(400).json({ error: 'restaurantId required' })
-    const rows = await getNeonOrders(restaurantId)
-    return res.json(rows)
+    if (!restaurantId) return badInput(res, 'restaurantId required', requestId)
+    const pagination = parsePagination(req.query)
+    const result = await getNeonOrdersPaginated(restaurantId, pagination)
+    return res.json(result)
   } catch (err) {
     console.error('[orders GET] Error:', err.message)
-    return res.status(500).json({ error: err.message })
+    return res.status(500).json({ error: 'Internal server error' })
   }
 })
 
@@ -659,13 +664,15 @@ app.post('/api/bookings', async (req, res) => {
 
 app.get('/api/bookings/:restaurantId', requireRestaurantRole(req => req.params.restaurantId, ALL_ROLES), async (req, res) => {
   try {
+    const requestId = generateRequestId()
     const { restaurantId } = req.params
-    if (!restaurantId) return res.status(400).json({ error: 'restaurantId required' })
-    const rows = await getNeonBookings(restaurantId)
-    return res.json(rows)
+    if (!restaurantId) return badInput(res, 'restaurantId required', requestId)
+    const pagination = parsePagination(req.query)
+    const result = await getNeonBookingsPaginated(restaurantId, pagination)
+    return res.json(result)
   } catch (err) {
     console.error('[bookings GET] Error:', err.message)
-    return res.status(500).json({ error: err.message })
+    return res.status(500).json({ error: 'Internal server error' })
   }
 })
 
@@ -727,9 +734,11 @@ app.get('/api/team-members/:restaurantId',
   async (req, res) => {
     try {
       const { restaurantId } = req.params
+      const pagination = parsePagination(req.query)
       const { status, body } = await executeTeamList({
         restaurantId,
         caller: { role: req.authRole, email: req.authEmail, userId: req.authUserId, isSuperadmin: req.authIsSuperadmin },
+        pagination,
       })
       return res.status(status).json(body)
     } catch (err) {

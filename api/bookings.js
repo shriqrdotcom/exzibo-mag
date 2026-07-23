@@ -3,10 +3,33 @@ import { checkRestaurantAccess, ALL_ROLES, MANAGEMENT_ROLES } from './_lib/authz
 import { rateLimit, getClientIp, send429 } from '../src/lib/upstash.server.js'
 import {
   updateNeonBookingStatus,
-  getNeonBookings,
+  getNeonBookingsPaginated,
   getNeonBookingRestaurantId,
 } from '../src/db/neon-bookings.js'
 import { createBookingAtomic } from '../src/services/bookingCreationService.js'
+import {
+  generateRequestId,
+  safeError,
+  badInput,
+  unauthorized,
+  forbidden,
+  notFound,
+  conflict,
+  internalError,
+  rejectUnknownFields,
+  validateUuid,
+  parsePagination,
+} from './_lib/validate.js'
+
+const ALLOWED_CREATE_FIELDS = [
+  'restaurant_id', 'date', 'time', 'duration_minutes', 'durationMinutes', 'duration',
+  'resource_id', 'resourceId', 'table_id', 'tableId',
+  'table_number', 'tableNumber', 'guests',
+  'customer_name', 'customer_phone', 'customer_email',
+  'occasion', 'seating', 'notes',
+]
+
+const ALLOWED_STATUS_FIELDS = ['status']
 
 // ── /api/bookings — Bookings Handler (Neon-only) ──────────────────────────────
 //
@@ -20,40 +43,42 @@ export default async function handler(req, res) {
   setPublicCors(res)
   if (req.method === 'OPTIONS') return res.status(200).end()
 
+  const requestId = generateRequestId()
   const action = req.query.action
 
   try {
     // ── GET: list bookings — requires restaurant membership ────────────────────
     if (req.method === 'GET') {
       const { restaurantId } = req.query
-      if (!restaurantId) return res.status(400).json({ error: 'restaurantId required' })
+      if (!restaurantId) return badInput(res, 'restaurantId required', requestId)
 
       const access = await checkRestaurantAccess(req, restaurantId)
-      if (access.error === 'Not authenticated') return res.status(401).json({ error: 'Not authenticated' })
-      if (!access.allowed) return res.status(403).json({ error: 'Access denied' })
+      if (access.error === 'Not authenticated') return unauthorized(res, null, requestId)
+      if (!access.allowed) return forbidden(res, null, requestId)
       if (!access.isSuperadmin && !ALL_ROLES.includes(access.role)) {
-        return res.status(403).json({ error: 'Access denied' })
+        return forbidden(res, null, requestId)
       }
 
-      const rows = await getNeonBookings(restaurantId)
-      return res.json(rows)
+      const pagination = parsePagination(req.query)
+      const result = await getNeonBookingsPaginated(restaurantId, pagination)
+      return res.json(result)
     }
 
     // ── PATCH / updateStatus — requires MANAGEMENT_ROLES membership ────────────
     if (req.method === 'PATCH' || action === 'updateStatus') {
       const id = req.query.id || req.body?.id
       const status = req.body?.status
-      if (!id || !status) return res.status(400).json({ error: 'id and status required' })
+      if (!id || !status) return badInput(res, 'id and status required', requestId)
+      rejectUnknownFields(req.body || {}, ALLOWED_STATUS_FIELDS)
 
-      // Resolve restaurantId from DB — never trust caller-supplied value.
       const restaurantId = await getNeonBookingRestaurantId(id)
-      if (!restaurantId) return res.status(404).json({ error: 'Booking not found' })
+      if (!restaurantId) return notFound(res, 'Booking not found', requestId)
 
       const access = await checkRestaurantAccess(req, restaurantId)
-      if (access.error === 'Not authenticated') return res.status(401).json({ error: 'Not authenticated' })
-      if (!access.allowed) return res.status(403).json({ error: 'Access denied' })
+      if (access.error === 'Not authenticated') return unauthorized(res, null, requestId)
+      if (!access.allowed) return forbidden(res, null, requestId)
       if (!access.isSuperadmin && !MANAGEMENT_ROLES.includes(access.role)) {
-        return res.status(403).json({ error: 'Updating booking status requires manager role or above' })
+        return forbidden(res, 'Updating booking status requires manager role or above', requestId)
       }
 
       const updated = await updateNeonBookingStatus(id, status)
@@ -65,9 +90,10 @@ export default async function handler(req, res) {
       const body = req.body
       const idempotencyKey = req.headers['idempotency-key']
       if (!idempotencyKey || typeof idempotencyKey !== 'string' || idempotencyKey.length < 16) {
-        return res.status(400).json({ error: 'Idempotency-Key header is required (min 16 characters).' })
+        return badInput(res, 'Idempotency-Key header is required (min 16 characters).', requestId)
       }
-      if (!body?.restaurant_id) return res.status(400).json({ error: 'restaurant_id required' })
+      if (!body?.restaurant_id) return badInput(res, 'restaurant_id required', requestId)
+      rejectUnknownFields(body, ALLOWED_CREATE_FIELDS)
 
       const ip = getClientIp(req)
       const { allowed } = await rateLimit(`rl:booking:ip:${ip}`, 10, 60)
@@ -92,19 +118,20 @@ export default async function handler(req, res) {
         })
         return res.status(201).json(saved)
       } catch (err) {
-        if (err.code === 'IDEMPOTENCY_KEY_REQUIRED') return res.status(400).json({ error: err.message, code: err.code })
-        if (err.code === 'IDEMPOTENCY_CONFLICT') return res.status(409).json({ error: err.message, code: err.code })
+        if (err.code === 'IDEMPOTENCY_KEY_REQUIRED') return badInput(res, err.message, requestId)
+        if (err.code === 'IDEMPOTENCY_CONFLICT') return conflict(res, err.message, requestId)
         if (err.code === 'VALIDATION' || err.code === 'RESTAURANT_UNAVAILABLE' || err.code === 'OUTSIDE_OPENING_HOURS') {
-          return res.status(400).json({ error: err.message, code: err.code })
+          return badInput(res, err.message, requestId)
         }
-        if (err.code === 'CONFLICT' || err.code === 'DUPLICATE') return res.status(409).json({ error: err.message, code: err.code })
-        return res.status(500).json({ error: err.message })
+        if (err.code === 'CONFLICT' || err.code === 'DUPLICATE') return conflict(res, err.message, requestId)
+        console.error('[bookings POST] Error:', err.message)
+        return internalError(res, requestId)
       }
     }
 
-    return res.status(405).json({ error: 'Method not allowed' })
+    return safeError(res, 405, 'Method not allowed', requestId)
   } catch (err) {
     console.error('[bookings] Error:', err.message)
-    return res.status(500).json({ error: err.message })
+    return internalError(res, requestId)
   }
 }

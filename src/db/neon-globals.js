@@ -145,6 +145,50 @@ export async function getNotificationHistoryNeon(hoursBack = 24) {
   return rows
 }
 
+// ── getNotificationHistoryNeonPaginated ──────────────────────────────────
+export async function getNotificationHistoryNeonPaginated({ hoursBack = 24, limit = 50, cursor = null } = {}) {
+  const since = new Date(Date.now() - hoursBack * 3600000).toISOString()
+  const take = Math.min(Math.max(1, limit), 100)
+  const takePlus1 = take + 1
+
+  let decodedCursor = null
+  if (cursor) {
+    try {
+      const buf = Buffer.from(cursor, 'base64url')
+      const str = buf.toString('utf-8')
+      const sep = str.lastIndexOf('::')
+      if (sep !== -1) {
+        decodedCursor = { createdAt: str.slice(0, sep), id: str.slice(sep + 2) }
+      }
+    } catch { /* ignore */ }
+  }
+  const sql = getSql()
+  let rows
+  if (decodedCursor) {
+    rows = await sql`
+      SELECT * FROM notification_history
+      WHERE confirmed_at >= ${since}::timestamptz
+        AND (confirmed_at, id) < (${decodedCursor.createdAt}::timestamptz, ${decodedCursor.id})
+      ORDER BY confirmed_at DESC, id DESC
+      LIMIT ${takePlus1}
+    `
+  } else {
+    rows = await sql`
+      SELECT * FROM notification_history
+      WHERE confirmed_at >= ${since}::timestamptz
+      ORDER BY confirmed_at DESC, id DESC
+      LIMIT ${takePlus1}
+    `
+  }
+
+  const hasMore = rows.length > take
+  if (hasMore) rows.pop()
+  const nextCursor = hasMore
+    ? Buffer.from(`${rows[rows.length - 1].confirmed_at}::${rows[rows.length - 1].id}`, 'utf-8').toString('base64url')
+    : null
+  return { items: rows, nextCursor }
+}
+
 // ── sms_notifications ─────────────────────────────────────────────────────────
 
 export async function getLatestSmsNeon() {
@@ -195,6 +239,47 @@ export async function getHelpNotificationsNeon() {
     SELECT * FROM help_notifications ORDER BY created_at DESC LIMIT 50
   `
   return rows
+}
+
+// ── getHelpNotificationsNeonPaginated ─────────────────────────────────────
+export async function getHelpNotificationsNeonPaginated({ limit = 50, cursor = null } = {}) {
+  const take = Math.min(Math.max(1, limit), 100)
+  const takePlus1 = take + 1
+
+  let decodedCursor = null
+  if (cursor) {
+    try {
+      const buf = Buffer.from(cursor, 'base64url')
+      const str = buf.toString('utf-8')
+      const sep = str.lastIndexOf('::')
+      if (sep !== -1) {
+        decodedCursor = { createdAt: str.slice(0, sep), id: str.slice(sep + 2) }
+      }
+    } catch { /* ignore */ }
+  }
+  const sql = getSql()
+  let rows
+  if (decodedCursor) {
+    rows = await sql`
+      SELECT * FROM help_notifications
+      WHERE (created_at, id) < (${decodedCursor.createdAt}::timestamptz, ${decodedCursor.id})
+      ORDER BY created_at DESC, id DESC
+      LIMIT ${takePlus1}
+    `
+  } else {
+    rows = await sql`
+      SELECT * FROM help_notifications
+      ORDER BY created_at DESC, id DESC
+      LIMIT ${takePlus1}
+    `
+  }
+
+  const hasMore = rows.length > take
+  if (hasMore) rows.pop()
+  const nextCursor = hasMore
+    ? Buffer.from(`${rows[rows.length - 1].created_at}::${rows[rows.length - 1].id}`, 'utf-8').toString('base64url')
+    : null
+  return { items: rows, nextCursor }
 }
 
 export async function updateHelpStatusNeon(id, status) {
