@@ -894,7 +894,7 @@ export default function DynamicRoute() {
   const [activeTab, setActiveTab] = useState('menu')
 
   return (
-    <div style={{ display: 'flex', height: '100vh', background: '#0A0A0A', overflow: 'hidden' }}>
+    <div className="admin-layout" style={{ display: 'flex', height: '100vh', background: '#0A0A0A', overflow: 'hidden' }}>
       <Sidebar />
       <main style={{ flex: 1, overflowY: 'auto', padding: '40px' }}>
         <h1 style={{ color: '#fff', fontSize: '28px', fontWeight: 700, marginBottom: '28px' }}>

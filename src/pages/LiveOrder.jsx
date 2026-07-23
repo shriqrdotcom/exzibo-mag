@@ -91,7 +91,7 @@ export default function LiveOrder() {
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: '#0A0A0A' }}>
       <Sidebar />
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <div className="admin-content-area" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <AdminHeader title="LIVE ORDER" />
         <main style={{ flex: 1, padding: '28px 40px', overflowY: 'auto' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>

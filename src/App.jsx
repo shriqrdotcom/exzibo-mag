@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation, usePa
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { AnalyticsProvider } from './context/AnalyticsContext'
 import { RoleProvider } from './context/RoleContext'
+import { SidebarProvider } from './context/SidebarContext'
 import { ACTIVE_SUBDOMAIN } from './lib/subdomain'
 import { getRestaurantBySlug } from './lib/db'
 
@@ -239,6 +240,7 @@ function SuperAdminApp() {
   if (loading) return <GlobalLoader />
 
   return (
+    <SidebarProvider>
     <Suspense fallback={<GlobalLoader />}>
       <Routes>
         {/* Entry point: unauthenticated visitors go straight to the login screen */}
@@ -305,6 +307,7 @@ function SuperAdminApp() {
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Suspense>
+    </SidebarProvider>
   )
 }
 
@@ -395,6 +398,7 @@ function DashboardApp() {
   // admin, menu_studio) is caught here and redirected to /:slug/orders.
 
   return (
+    <SidebarProvider>
     <Suspense fallback={<GlobalLoader />}>
       <Routes>
         {/* Auth page (still accessible for super-admin / internal use) */}
@@ -427,6 +431,7 @@ function DashboardApp() {
         <Route path="*" element={<NotFound />} />
       </Routes>
     </Suspense>
+    </SidebarProvider>
   )
 }
 

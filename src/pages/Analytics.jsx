@@ -330,9 +330,9 @@ export default function Analytics() {
   const [modalOpen, setModalOpen] = useState(false)
 
   return (
-    <div style={{ display: 'flex', height: '100vh', background: '#0A0A0A', overflow: 'hidden' }}>
+    <div className="admin-layout" style={{ display: 'flex', height: '100vh', background: '#0A0A0A', overflow: 'hidden' }}>
       <Sidebar />
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <div className="admin-content-area" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <AdminHeader subtitle="Analytics" showSearch={false} />
         <main style={{ flex: 1, overflowY: 'auto', background: '#f0f0f5', padding: '28px 24px' }}>
           <div style={{ maxWidth: 520, margin: '0 auto' }}>

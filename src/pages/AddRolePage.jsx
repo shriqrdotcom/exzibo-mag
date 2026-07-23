@@ -469,7 +469,7 @@ export default function AddRolePage() {
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: BG_MAIN }}>
       <Sidebar />
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <div className="admin-content-area" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <AdminHeader title="ADD ROLE" />
         <main style={{ flex: 1, padding: '36px 40px', overflowY: 'auto', maxWidth: '900px' }}>
 

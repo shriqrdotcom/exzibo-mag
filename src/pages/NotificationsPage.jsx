@@ -103,7 +103,7 @@ export default function NotificationsPage() {
     <div style={{ display: 'flex', height: '100vh', background: '#0A0A0A', overflow: 'hidden', fontFamily: FONT }}>
       <Sidebar />
 
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <div className="admin-content-area" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <main style={{ flex: 1, overflowY: 'auto', padding: '32px' }}>
 
           {/* ── Page title + actions ── */}

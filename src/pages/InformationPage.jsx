@@ -46,7 +46,7 @@ export default function InformationPage() {
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: '#0A0A0A' }}>
       <Sidebar />
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <div className="admin-content-area" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <AdminHeader title="INFORMATION" />
         <main style={{ flex: 1, padding: '36px 40px', overflowY: 'auto' }}>
 

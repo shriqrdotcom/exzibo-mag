@@ -174,7 +174,7 @@ function DashboardSkeleton() {
       `}</style>
 
       {/* ── KPI cards row ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '16px', marginBottom: '32px' }}>
+      <div className="admin-stats-grid" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '16px', marginBottom: '32px' }}>
         {/* Card 1 — large */}
         <div style={{ background: '#111', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '20px', padding: '28px' }}>
           <div className="dsk" style={{ width: '140px', height: '11px', marginBottom: '20px' }} />
@@ -429,9 +429,9 @@ export default function Dashboard() {
   })()
 
   return (
-    <div style={{ display: 'flex', height: '100vh', background: '#0A0A0A', overflow: 'hidden' }}>
+    <div className="admin-layout" style={{ display: 'flex', height: '100vh', background: '#0A0A0A', overflow: 'hidden' }}>
       <Sidebar />
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <div className="admin-content-area" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <AdminHeader />
         <main style={{ flex: 1, overflowY: 'auto', padding: '32px' }}>
           {loading && !activeSection ? (
@@ -446,7 +446,7 @@ export default function Dashboard() {
             />
           ) : (
           <>
-          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '16px', marginBottom: '32px' }}>
+          <div className="admin-stats-grid" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '16px', marginBottom: '32px' }}>
             <KPICard
               label="ACTIVE OPERATIONS"
               value={restaurants.filter(r => r.status === 'RUNNING' || r.status === 'PAUSED').length.toLocaleString('en-IN')}
@@ -1786,7 +1786,7 @@ function ImageCompressor() {
 
           {/* Stats row */}
           {compressed && (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '16px' }}>
+            <div className="admin-stats-grid-4" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '16px' }}>
               {[
                 { label: 'Original Size', value: fmtSize(original.size), accent: '#888' },
                 { label: 'Compressed Size', value: fmtSize(compressed.size), accent: isInRange ? '#22c55e' : isTooLarge ? '#E8321A' : '#f59e0b' },

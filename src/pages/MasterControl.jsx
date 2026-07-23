@@ -209,7 +209,7 @@ export default function MasterControl() {
 
   if (allowed === null) {
     return (
-      <div style={{ display: 'flex', height: '100vh', background: '#0A0A0A', overflow: 'hidden' }}>
+      <div className="admin-layout" style={{ display: 'flex', height: '100vh', background: '#0A0A0A', overflow: 'hidden' }}>
         <Sidebar />
         <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#555', fontSize: '14px' }}>
           Verifying access…
@@ -220,7 +220,7 @@ export default function MasterControl() {
 
   if (autoLoading) {
     return (
-      <div style={{ display: 'flex', height: '100vh', background: '#0A0A0A', overflow: 'hidden' }}>
+      <div className="admin-layout" style={{ display: 'flex', height: '100vh', background: '#0A0A0A', overflow: 'hidden' }}>
         <Sidebar />
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '16px' }}>
           <div style={{
@@ -240,7 +240,7 @@ export default function MasterControl() {
 
   if (autoError) {
     return (
-      <div style={{ display: 'flex', height: '100vh', background: '#0A0A0A', overflow: 'hidden' }}>
+      <div className="admin-layout" style={{ display: 'flex', height: '100vh', background: '#0A0A0A', overflow: 'hidden' }}>
         <Sidebar />
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '16px' }}>
           <AlertCircle size={32} color="#EF4444" />
@@ -263,7 +263,7 @@ export default function MasterControl() {
 
   if (!allowed) {
     return (
-      <div style={{ display: 'flex', height: '100vh', background: '#0A0A0A', overflow: 'hidden' }}>
+      <div className="admin-layout" style={{ display: 'flex', height: '100vh', background: '#0A0A0A', overflow: 'hidden' }}>
         <Sidebar />
         <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#888', fontSize: '14px' }}>
           Access denied. Redirecting…
@@ -273,9 +273,9 @@ export default function MasterControl() {
   }
 
   return (
-    <div style={{ display: 'flex', height: '100vh', background: '#0A0A0A', overflow: 'hidden' }}>
+    <div className="admin-layout" style={{ display: 'flex', height: '100vh', background: '#0A0A0A', overflow: 'hidden' }}>
       <Sidebar />
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <div className="admin-content-area" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <AdminHeader title="Menu Studio" showSearch={false} />
 
 

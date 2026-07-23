@@ -490,7 +490,7 @@ export default function TablePage() {
   }
 
   return (
-    <div style={{ display: 'flex', height: '100vh', background: '#0A0A0A', overflow: 'hidden' }}>
+    <div className="admin-layout" style={{ display: 'flex', height: '100vh', background: '#0A0A0A', overflow: 'hidden' }}>
       <style>{`
         @keyframes slideInRight {
           from { transform: translateX(100%); opacity: 0; }
@@ -512,7 +512,7 @@ export default function TablePage() {
 
       <Sidebar />
 
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <div className="admin-content-area" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <AdminHeader subtitle="Table" />
         <main style={{ flex: 1, overflowY: 'auto', padding: '32px' }}>
           <div style={{
