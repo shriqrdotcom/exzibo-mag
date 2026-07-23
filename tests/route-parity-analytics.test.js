@@ -254,23 +254,22 @@ describe('6. Analytics authorization enforcement', () => {
     assert.equal(typeof mod.authorizeAnalyticsAccess, 'function')
   })
 
-  it('api/analytics.js handler imports authorizeAnalyticsAccess', () => {
-    const content = fs.readFileSync('api/analytics.js', 'utf-8')
+  it('api/restaurants.js analytics action imports authorizeAnalyticsAccess', () => {
+    const content = fs.readFileSync('api/restaurants.js', 'utf-8')
     assert.ok(content.includes('authorizeAnalyticsAccess'))
-    assert.ok(content.includes('unauthorized('))
-    assert.ok(content.includes('forbidden('))
+    assert.ok(content.includes('unauthorized(res, null, requestId)'))
+    assert.ok(content.includes('forbidden(res, auth.error, requestId)'))
   })
 
-  it('api/analytics.js returns badInput when restaurantId is missing', () => {
-    const content = fs.readFileSync('api/analytics.js', 'utf-8')
-    assert.ok(content.includes('restaurantId required'))
+  it('api/restaurants.js analytics action returns badInput when id is missing', () => {
+    const content = fs.readFileSync('api/restaurants.js', 'utf-8')
+    assert.ok(content.includes('id required for analytics'))
     assert.ok(content.includes('badInput(res,'))
   })
 
-  it('analytics API is GET-only', () => {
-    const content = fs.readFileSync('api/analytics.js', 'utf-8')
-    assert.ok(content.includes("req.method !== 'GET'"))
-    assert.ok(content.includes('405'))
+  it('analytics API action is handled inside api/restaurants.js', () => {
+    const content = fs.readFileSync('api/restaurants.js', 'utf-8')
+    assert.ok(content.includes("action === 'analytics'"))
   })
 
   it('analytics service queries the requested restaurant only', () => {
@@ -314,19 +313,22 @@ describe('7. Analytics are restaurant-scoped', () => {
     assert.ok(content.includes("Restaurant not found"))
   })
 
-  it('analytics plugin in vite.config.js delegates to api/analytics.js', () => {
+  it('analytics plugin in vite.config.js delegates to api/restaurants.js', () => {
     const content = fs.readFileSync('vite.config.js', 'utf-8')
-    assert.ok(content.includes("api/analytics.js"))
+    assert.ok(content.includes("api/restaurants.js"))
+    assert.ok(content.includes("action: 'analytics'"))
   })
 
-  it('Express delegates analytics to api/analytics.js handler', () => {
+  it('Express delegates analytics to api/restaurants.js with action=analytics', () => {
     const content = fs.readFileSync('server.js', 'utf-8')
-    assert.ok(content.includes("api/analytics.js"))
+    assert.ok(content.includes("api/restaurants.js"))
+    assert.ok(content.includes("action = 'analytics'"))
   })
 
-  it('vercel.json has analytics rewrite', () => {
+  it('vercel.json rewrites /api/analytics/:restaurantId to action=analytics', () => {
     const content = fs.readFileSync('vercel.json', 'utf-8')
-    assert.ok(content.includes("/api/analytics"))
+    assert.ok(content.includes('/api/analytics/:restaurantId'))
+    assert.ok(content.includes('action=analytics&id=:restaurantId'))
   })
 })
 
@@ -366,9 +368,10 @@ describe('8. Analytics failure does not become successful zero data', () => {
     assert.ok(content.includes('Preserve previous UI data') || content.includes('stays at its last'), 'Context must preserve previous data on error')
   })
 
-  it('AnalyticsContext calls /api/analytics endpoint', () => {
+  it('AnalyticsContext calls /api/analytics/:restaurantId endpoint', () => {
     const content = fs.readFileSync('src/context/AnalyticsContext.jsx', 'utf-8')
-    assert.ok(content.includes('/api/analytics?restaurantId='))
+    assert.ok(content.includes('/api/analytics/'))
+    assert.ok(!content.includes('/api/analytics?restaurantId='), 'Must use path param, not query param')
     assert.ok(content.includes('fetch('))
   })
 })

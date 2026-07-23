@@ -19,7 +19,7 @@ export function AnalyticsProvider({ children }) {
     setAnalyticsError(null)
 
     try {
-      const res = await fetch(`/api/analytics?restaurantId=${encodeURIComponent(rid)}`)
+      const res = await fetch(`/api/analytics/${encodeURIComponent(rid)}`)
       if (!res.ok) {
         const body = await res.json().catch(() => ({}))
         throw new Error(body?.error || `API ${res.status}`)

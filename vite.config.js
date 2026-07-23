@@ -1026,10 +1026,13 @@ function analyticsPlugin() {
         }
 
         try {
-          const { default: handler } = await import('./api/analytics.js')
-          // Vercel-style handler expects req.query to be populated
-          const qs = new URLSearchParams((req.url || '').split('?')[1] || '')
-          req.query = Object.fromEntries(qs)
+          // Parse restaurantId from path: /api/analytics/:restaurantId
+          const pathParts = (req.url || '').split('?')[0].split('/')
+          const restaurantId = pathParts.length >= 4 ? pathParts[3] : null
+          if (!restaurantId) return json(400, { error: 'restaurantId required' })
+
+          const { default: handler } = await import('./api/restaurants.js')
+          req.query = { action: 'analytics', id: restaurantId }
           await handler(req, res)
         } catch (err) {
           console.error('[analytics] Error:', err.message)

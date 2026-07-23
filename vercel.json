@@ -31,7 +31,7 @@
     { "source": "/api/neon/restaurant/by-uid/:uid",         "destination": "/api/restaurants?action=byUid&uid=:uid"                       },
     { "source": "/api/neon/restaurant/:id",                 "destination": "/api/restaurants?action=neonRestaurant&id=:id"                },
     { "source": "/api/restaurant/:id",                      "destination": "/api/restaurants?action=byId&id=:id"                          },
-    { "source": "/api/analytics",                            "destination": "/api/analytics"                                                 },
+    { "source": "/api/analytics/:restaurantId",              "destination": "/api/restaurants?action=analytics&id=:restaurantId"            },
     { "source": "/api/neon/restaurant-settings/shadow-upsert", "destination": "/api/settings?action=setRestaurantSettings"                },
     { "source": "/api/bookings/:id/status",                 "destination": "/api/bookings?action=updateStatus&id=:id"                     },
     { "source": "/api/bookings/:restaurantId",              "destination": "/api/bookings?restaurantId=:restaurantId"                     },
