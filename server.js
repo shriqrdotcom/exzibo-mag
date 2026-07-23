@@ -69,6 +69,7 @@ import {
   SETTINGS_ROLES,
   TEAM_WRITE_ROLES,
 } from './api/_lib/authz.js'
+import { issueRealtimeTicket } from './src/services/realtimeTicketService.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const app = express()
@@ -326,6 +327,26 @@ app.get('/api/preview-verify', (req, res) => {
     return res.json({ valid, email: valid ? payload.email : null })
   } catch {
     return res.status(401).json({ valid: false })
+  }
+})
+
+// ── Realtime ticket endpoint ──────────────────────────────────────────────────
+// POST /api/realtime/ticket
+// Body: { restaurantId, role, orderId?, orderToken? }
+// Delegates to the shared realtimeTicketService (Vercel/Express/Vite parity).
+app.post('/api/realtime/ticket', async (req, res) => {
+  try {
+    const session = await getSessionEmail(req)
+    const result = await issueRealtimeTicket(session, req, {
+      restaurantId: req.body?.restaurantId,
+      role: req.body?.role,
+      orderId: req.body?.orderId,
+      orderToken: req.body?.orderToken,
+    })
+    return res.status(result.status).json(result.body)
+  } catch (err) {
+    console.error('[realtime/ticket] Error:', err.message)
+    return res.status(500).json({ error: err.message })
   }
 })
 

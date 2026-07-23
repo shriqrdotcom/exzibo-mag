@@ -2,7 +2,8 @@ import { DurableObject } from "cloudflare:workers";
 
 export interface Env {
 	MY_DURABLE_OBJECT: DurableObjectNamespace<MyDurableObject>;
-	PUBLISH_SECRET?: string;
+	PUBLISH_SECRET: string;
+	REALTIME_TICKET_SECRET: string;
 }
 
 type Role = "staff" | "customer";
@@ -12,6 +13,7 @@ type SocketMeta = {
 	role: Role;
 	orderId?: string;
 	connectedAt: number;
+	userId: string;
 };
 
 type OrderEvent = {
@@ -23,6 +25,125 @@ type OrderEvent = {
 	eventId: string;
 	time: string;
 };
+
+interface TicketPayload {
+	sub: string; // userId
+	rid: string; // restaurantId
+	role: Role;  // staff | customer
+	exp: number; // expiry timestamp (ms)
+	tid: string; // random ticket id
+	aud: "staff" | "customer"; // audience
+	oid?: string; // orderId (customer only)
+}
+
+/**
+ * Verify a signed realtime ticket.
+ * Uses HMAC-SHA256 with timing-safe comparison.
+ */
+async function verifyTicket(
+	ticket: string,
+	secret: string
+): Promise<{ ok: true; payload: TicketPayload } | { ok: false; reason: string }> {
+	if (!ticket) {
+		return { ok: false, reason: "Missing ticket" };
+	}
+
+	const parts = ticket.split(".");
+	if (parts.length !== 2) {
+		return { ok: false, reason: "Malformed ticket" };
+	}
+
+	const [payloadB64, sigB64] = parts;
+
+	let payloadStr: string;
+	try {
+		payloadStr = atob(payloadB64);
+	} catch {
+		return { ok: false, reason: "Invalid ticket encoding" };
+	}
+
+	let payload: TicketPayload;
+	try {
+		payload = JSON.parse(payloadStr) as TicketPayload;
+	} catch {
+		return { ok: false, reason: "Invalid ticket payload" };
+	}
+
+	// Verify expiry
+	if (!payload.exp || payload.exp < Date.now()) {
+		return { ok: false, reason: "Ticket expired" };
+	}
+
+	// Verify required fields
+	if (!payload.sub || !payload.rid || !payload.role || !payload.tid || !payload.aud) {
+		return { ok: false, reason: "Incomplete ticket" };
+	}
+
+	if (payload.role !== "staff" && payload.role !== "customer") {
+		return { ok: false, reason: "Invalid ticket role" };
+	}
+
+	if (payload.aud !== "staff" && payload.aud !== "customer") {
+		return { ok: false, reason: "Invalid ticket audience" };
+	}
+
+	// Verify HMAC signature using Web Crypto API (timing-safe)
+	try {
+		const enc = new TextEncoder();
+		const keyData = enc.encode(secret);
+		const payloadData = enc.encode(payloadStr);
+		const sigData = hexToBytes(sigB64);
+
+		const key = await crypto.subtle.importKey(
+			"raw",
+			keyData,
+			{ name: "HMAC", hash: "SHA-256" },
+			false,
+			["sign"]
+		);
+
+		const expectedSig = await crypto.subtle.sign("HMAC", key, payloadData);
+		const expectedHex = bytesToHex(new Uint8Array(expectedSig));
+
+		if (sigB64.length !== expectedHex.length) {
+			return { ok: false, reason: "Invalid ticket signature" };
+		}
+
+		// Timing-safe comparison
+		const sigBuf = new Uint8Array(hexToBytes(sigB64));
+		const expectedBuf = new Uint8Array(expectedSig);
+		if (!timingSafeEqual(sigBuf, expectedBuf)) {
+			return { ok: false, reason: "Invalid ticket signature" };
+		}
+	} catch {
+		return { ok: false, reason: "Ticket verification failed" };
+	}
+
+	return { ok: true, payload };
+}
+
+function timingSafeEqual(a: Uint8Array, b: Uint8Array): boolean {
+	if (a.byteLength !== b.byteLength) return false;
+	let result = 0;
+	for (let i = 0; i < a.byteLength; i++) {
+		result |= a[i]! ^ b[i]!;
+	}
+	return result === 0;
+}
+
+function hexToBytes(hex: string): Uint8Array {
+	const bytes = new Uint8Array(hex.length / 2);
+	for (let i = 0; i < hex.length; i += 2) {
+		bytes[i / 2] = parseInt(hex.substring(i, i + 2), 16);
+	}
+	return bytes;
+}
+
+function bytesToHex(bytes: Uint8Array): string {
+	return Array.from(bytes)
+		.map((b) => b.toString(16).padStart(2, "0"))
+		.join("");
+}
 
 export class MyDurableObject extends DurableObject<Env> {
 	constructor(ctx: DurableObjectState, env: Env) {
@@ -40,16 +161,22 @@ export class MyDurableObject extends DurableObject<Env> {
 				return new Response("Expected WebSocket", { status: 426 });
 			}
 
-			const restaurantId = url.searchParams.get("restaurantId");
-			const role = url.searchParams.get("role") as Role | null;
-			const orderId = url.searchParams.get("orderId") || undefined;
+			const ticketParam = url.searchParams.get("ticket");
 
-			if (!restaurantId || !role) {
-				return new Response("Missing restaurantId or role", { status: 400 });
+			if (!ticketParam) {
+				return new Response("Missing ticket", { status: 401 });
 			}
 
-			if (role !== "staff" && role !== "customer") {
-				return new Response("Invalid role", { status: 400 });
+			const verification = await verifyTicket(ticketParam, this.env.REALTIME_TICKET_SECRET);
+			if (!verification.ok) {
+				return new Response(verification.reason, { status: 401 });
+			}
+
+			const { payload } = verification;
+
+			// Enforce audience match — staff ticket can only connect as staff
+			if (payload.aud !== payload.role) {
+				return new Response("Audience mismatch", { status: 403 });
 			}
 
 			const pair = new WebSocketPair();
@@ -60,10 +187,11 @@ export class MyDurableObject extends DurableObject<Env> {
 			this.ctx.acceptWebSocket(server);
 
 			const meta: SocketMeta = {
-				restaurantId,
-				role,
-				orderId,
+				restaurantId: payload.rid,
+				role: payload.role,
+				orderId: payload.oid,
 				connectedAt: Date.now(),
+				userId: payload.sub,
 			};
 
 			server.serializeAttachment(meta);
@@ -71,9 +199,10 @@ export class MyDurableObject extends DurableObject<Env> {
 			server.send(
 				JSON.stringify({
 					type: "CONNECTED",
-					restaurantId,
-					role,
-					orderId,
+					restaurantId: payload.rid,
+					role: payload.role,
+					orderId: payload.oid,
+					userId: payload.sub,
 					time: new Date().toISOString(),
 				})
 			);
@@ -170,8 +299,7 @@ export default {
 		}
 
 		// WebSocket route:
-		// /ws/restaurant/res_123?role=customer&orderId=ord_123
-		// /ws/restaurant/res_123?role=staff
+		// /ws/restaurant/res_123?ticket=<signed_ticket>
 		if (url.pathname.startsWith("/ws/restaurant/")) {
 			const restaurantId = url.pathname.split("/").pop();
 
@@ -179,8 +307,22 @@ export default {
 				return new Response("Missing restaurantId", { status: 400 });
 			}
 
-			const role = url.searchParams.get("role") || "customer";
-			const orderId = url.searchParams.get("orderId");
+			const ticket = url.searchParams.get("ticket");
+
+			if (!ticket) {
+				return new Response("Missing ticket", { status: 401 });
+			}
+
+			// Verify the ticket at the Worker level before forwarding to DO
+			const verification = await verifyTicket(ticket, env.REALTIME_TICKET_SECRET);
+			if (!verification.ok) {
+				return new Response(verification.reason, { status: 401 });
+			}
+
+			// Verify the ticket's restaurant scope matches the requested restaurant
+			if (verification.payload.rid !== restaurantId) {
+				return new Response("Restaurant scope mismatch", { status: 403 });
+			}
 
 			const durableObjectId = env.MY_DURABLE_OBJECT.idFromName(
 				`restaurant:${restaurantId}`
@@ -189,27 +331,40 @@ export default {
 			const room = env.MY_DURABLE_OBJECT.get(durableObjectId);
 
 			const connectUrl = new URL("https://durable-object/connect");
-			connectUrl.searchParams.set("restaurantId", restaurantId);
-			connectUrl.searchParams.set("role", role);
-
-			if (orderId) {
-				connectUrl.searchParams.set("orderId", orderId);
-			}
+			connectUrl.searchParams.set("ticket", ticket);
 
 			return room.fetch(new Request(connectUrl.toString(), request));
 		}
 
 		// Publish route:
 		// Backend calls this after Neon commit
+		// Authentication is MANDATORY — fail closed.
 		if (url.pathname === "/publish/order-event" && request.method === "POST") {
-			// Production will use PUBLISH_SECRET.
-			// Local dev can work without it.
-			if (env.PUBLISH_SECRET) {
-				const authHeader = request.headers.get("Authorization");
+			// Fail closed if PUBLISH_SECRET is not configured
+			if (!env.PUBLISH_SECRET) {
+				console.error("[realtime] PUBLISH_SECRET not configured — publish rejected");
+				return new Response("Server configuration error: PUBLISH_SECRET not set", { status: 500 });
+			}
 
-				if (authHeader !== `Bearer ${env.PUBLISH_SECRET}`) {
-					return new Response("Unauthorized", { status: 401 });
-				}
+			const authHeader = request.headers.get("Authorization");
+
+			if (!authHeader) {
+				return new Response("Missing Authorization header", { status: 401 });
+			}
+
+			if (!authHeader.startsWith("Bearer ")) {
+				return new Response("Invalid Authorization header format", { status: 401 });
+			}
+
+			const token = authHeader.slice("Bearer ".length);
+
+			// Timing-safe comparison for publish secret
+			const enc = new TextEncoder();
+			const tokenBuf = enc.encode(token);
+			const secretBuf = enc.encode(env.PUBLISH_SECRET);
+
+			if (!timingSafeEqual(tokenBuf, secretBuf)) {
+				return new Response("Unauthorized", { status: 401 });
 			}
 
 			const event = (await request.json()) as OrderEvent;

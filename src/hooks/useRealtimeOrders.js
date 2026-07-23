@@ -5,6 +5,10 @@ import { useEffect, useRef, useState } from 'react'
  * `onOrderEvent()` whenever an ORDER_CREATED, ORDER_STATUS_CHANGED, or
  * ORDER_CANCELLED event arrives.
  *
+ * Authentication: requests a signed ticket from the backend before opening
+ * the WebSocket. The ticket encodes the user's restaurant membership and role
+ * server-side — the client never supplies role or restaurantId directly.
+ *
  * Safe reconnect: retries after 2 s on unexpected close.
  * Duplicate-connection guard: only one socket per restaurantId at a time.
  * Cleanup: socket is closed on component unmount or when restaurantId changes.
@@ -20,6 +24,7 @@ export function useRealtimeOrders(restaurantId, onOrderEvent) {
   const socketRef = useRef(null)
   const destroyedRef = useRef(false)
   const retryTimerRef = useRef(null)
+  const ticketPromiseRef = useRef(null) // in-flight ticket fetch, dedup'd per connect
   const [status, setStatus] = useState('idle') // idle | connecting | open | closed | reconnecting
   const [lastEvent, setLastEvent] = useState(null) // { type, time }
   const [wsHost, setWsHost] = useState('')
@@ -35,12 +40,28 @@ export function useRealtimeOrders(restaurantId, onOrderEvent) {
     const base = (import.meta.env.VITE_REALTIME_URL || 'https://rt.exzibo.online')
       .replace(/^https?:\/\//, '')
       .replace(/\/$/, '')
-    const wsUrl = `wss://${base}/ws/restaurant/${restaurantId}?role=staff`
     setWsHost(base)
 
     let hasConnectedBefore = false
 
-    function connect() {
+    /**
+     * Request a signed realtime ticket from the backend.
+     * The ticket encodes the user's restaurant membership and role server-side.
+     */
+    async function requestTicket() {
+      const res = await fetch('/api/realtime/ticket', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ restaurantId, role: 'staff' }),
+      })
+      if (!res.ok) {
+        const errBody = await res.json().catch(() => ({}))
+        throw new Error(errBody.error || `Ticket request failed (${res.status})`)
+      }
+      return res.json()
+    }
+
+    async function connect() {
       // Guard: don't open if already open for this restaurantId
       if (socketRef.current && socketRef.current.readyState < 2) {
         // CONNECTING (0) or OPEN (1) — skip
@@ -48,48 +69,61 @@ export function useRealtimeOrders(restaurantId, onOrderEvent) {
       }
 
       setStatus(hasConnectedBefore ? 'reconnecting' : 'connecting')
-      console.log('[cf-rt] connecting:', wsUrl)
-      const ws = new WebSocket(wsUrl)
-      socketRef.current = ws
 
-      ws.onopen = () => {
-        hasConnectedBefore = true
-        setStatus('open')
-        console.log('[cf-rt] connected — restaurant:', restaurantId)
-      }
+      try {
+        // Request a ticket from the backend
+        const ticketData = await requestTicket()
+        const wsUrl = `wss://${base}/ws/restaurant/${restaurantId}?ticket=${encodeURIComponent(ticketData.ticket)}`
+        console.log('[cf-rt] connecting with ticket:', wsUrl)
+        const ws = new WebSocket(wsUrl)
+        socketRef.current = ws
 
-      ws.onmessage = (evt) => {
-        try {
-          const msg = JSON.parse(evt.data)
-          const { type } = msg
-          if (
-            type === 'ORDER_CREATED' ||
-            type === 'ORDER_STATUS_CHANGED' ||
-            type === 'ORDER_CANCELLED'
-          ) {
-            console.log('[cf-rt] event received:', type)
-            setLastEvent({ type, time: Date.now(), orderId: msg.orderId })
-            onOrderEvent(type, msg)
-          }
-        } catch {
-          // ignore non-JSON frames (e.g. ping text)
+        ws.onopen = () => {
+          hasConnectedBefore = true
+          setStatus('open')
+          console.log('[cf-rt] connected — restaurant:', restaurantId)
         }
-      }
 
-      ws.onclose = (evt) => {
-        console.log('[cf-rt] closed — code:', evt.code, 'clean:', evt.wasClean)
+        ws.onmessage = (evt) => {
+          try {
+            const msg = JSON.parse(evt.data)
+            const { type } = msg
+            if (
+              type === 'ORDER_CREATED' ||
+              type === 'ORDER_STATUS_CHANGED' ||
+              type === 'ORDER_CANCELLED'
+            ) {
+              console.log('[cf-rt] event received:', type)
+              setLastEvent({ type, time: Date.now(), orderId: msg.orderId })
+              onOrderEvent(type, msg)
+            }
+          } catch {
+            // ignore non-JSON frames (e.g. ping text)
+          }
+        }
+
+        ws.onclose = (evt) => {
+          console.log('[cf-rt] closed — code:', evt.code, 'clean:', evt.wasClean)
+          socketRef.current = null
+          if (destroyedRef.current) return  // unmounted — do not retry
+          setStatus('closed')
+          // Reconnect after 2 s for any non-clean close (server restart, network
+          // blip, etc.). Code 1000 is a normal intentional close — also retry
+          // because the worker may have restarted.
+          retryTimerRef.current = setTimeout(connect, 2_000)
+        }
+
+        ws.onerror = (err) => {
+          console.warn('[cf-rt] WebSocket error:', err)
+          // onclose fires right after onerror, so retry is handled there
+        }
+      } catch (err) {
+        console.warn('[cf-rt] ticket request failed:', err.message)
         socketRef.current = null
-        if (destroyedRef.current) return  // unmounted — do not retry
+        if (destroyedRef.current) return
         setStatus('closed')
-        // Reconnect after 2 s for any non-clean close (server restart, network
-        // blip, etc.). Code 1000 is a normal intentional close — also retry
-        // because the worker may have restarted.
-        retryTimerRef.current = setTimeout(connect, 2_000)
-      }
-
-      ws.onerror = (err) => {
-        console.warn('[cf-rt] WebSocket error:', err)
-        // onclose fires right after onerror, so retry is handled there
+        // Retry ticket request after 5 s (auth may be transient)
+        retryTimerRef.current = setTimeout(connect, 5_000)
       }
     }
 

@@ -1,0 +1,60 @@
+Continue on the existing branch:
+
+fix/realtime-authentication
+
+Do not inspect unrelated code and do not recreate completed work.
+
+Fix only these issues before merging PR #19:
+
+1. Add the realtime-ticket endpoint to the Vercel api/ runtime.
+   Vercel, Express, and Vite must call one shared ticket-issuance service.
+
+2. Confirm the frontend endpoint works in Vercel production, not only server.js or Vite development.
+
+3. Staff tickets must require:
+   - Better Auth session
+   - active restaurant membership
+   - server-resolved restaurant ID and role
+
+4. Do not issue a customer ticket from an arbitrary orderId.
+
+5. Customer tickets must require proof of access to that specific order.
+   - Reuse an existing secure order-tracking token when one already exists.
+   - When no secure order token exists, disable customer-ticket issuance in this PR and return a safe 403.
+   - Do not add a weak order-ID-only fallback.
+
+6. Do not commit a real REALTIME_TICKET_SECRET or PUBLISH_SECRET.
+   Missing secrets must fail closed with no hardcoded fallback.
+
+7. Confirm the ticket-signing secret used by the backend matches the Worker verification configuration by environment-variable name.
+
+Add tests proving:
+
+- the Vercel ticket handler uses the shared service
+- non-members cannot obtain staff tickets
+- a customer cannot request another order’s ticket
+- orderId alone is insufficient
+- missing ticket or publish secrets fail closed
+- valid staff ticket verification still works
+
+Run only:
+
+- realtime-authentication tests
+- Worker type-check
+- npm run build
+- conflict-marker and secret-value search
+
+Do not implement outbox, retries, or delivery recovery.
+Do not apply migrations or run db:push.
+
+Push the correction to the existing branch and update PR #19.
+
+Report only:
+
+- Vercel endpoint added
+- customer authorization behavior
+- secret configuration names
+- test, Worker type-check, and build results
+- commit hash
+- PR URL
+- confirmation that no secret value or database command was committed

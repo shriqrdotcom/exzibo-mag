@@ -181,6 +181,50 @@ function previewAuthPlugin() {
           res.end(JSON.stringify({ error: 'Internal server error' }))
         }
       })
+
+      // POST /api/realtime/ticket — issue signed WebSocket ticket
+      // Delegates to the shared realtimeTicketService (Vercel/Express/Vite parity).
+      server.middlewares.use('/api/realtime/ticket', async (req, res) => {
+        if (req.method !== 'POST') {
+          res.statusCode = 405
+          res.setHeader('Content-Type', 'application/json')
+          res.end(JSON.stringify({ error: 'Method not allowed' }))
+          return
+        }
+
+        try {
+          let body = ''
+          req.on('data', chunk => { body += chunk })
+          req.on('end', async () => {
+            try {
+              const params = JSON.parse(body)
+              const { getSessionEmail } = await import('./api/_lib/authz.js')
+              const { issueRealtimeTicket } = await import('./src/services/realtimeTicketService.js')
+
+              const session = await getSessionEmail(req)
+              const result = await issueRealtimeTicket(session, req, {
+                restaurantId: params.restaurantId,
+                role: params.role,
+                orderId: params.orderId,
+                orderToken: params.orderToken,
+              })
+
+              res.statusCode = result.status
+              res.setHeader('Content-Type', 'application/json')
+              res.end(JSON.stringify(result.body))
+            } catch (parseErr) {
+              res.statusCode = 400
+              res.setHeader('Content-Type', 'application/json')
+              res.end(JSON.stringify({ error: 'Bad request' }))
+            }
+          })
+        } catch (err) {
+          console.error('[realtime/ticket] Error:', err.message)
+          res.statusCode = 500
+          res.setHeader('Content-Type', 'application/json')
+          res.end(JSON.stringify({ error: err.message }))
+        }
+      })
     },
   }
 }
@@ -1092,6 +1136,9 @@ export default defineConfig(({ mode }) => ({
     host: '0.0.0.0',
     port: 5000,
     allowedHosts: true,
+    fs: {
+      deny: ['exzibo-realtime/'], // Worker code uses cloudflare:workers — not for frontend
+    },
     // historyApiFallback is intentionally NOT set here.
     // Vite's built-in historyApiFallback middleware runs BEFORE post-hook plugins,
     // which would bypass the tableValidationPlugin and serve index.html for invalid
