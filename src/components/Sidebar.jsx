@@ -18,9 +18,20 @@ export default function Sidebar() {
   const location = useLocation()
   const [searchParams] = useSearchParams()
   const [unreadCount, setUnreadCount] = useState(0)
+  const [isMobile, setIsMobile] = useState(false)
   const { sidebarOpen, closeSidebar } = useSidebar()
   const isDemoActive = location.pathname === '/dashboard' && searchParams.get('section') === 'demo'
   const isCompressorActive = location.pathname === '/dashboard' && searchParams.get('section') === 'image-compressor'
+
+  // Track viewport width for mobile drawer behavior
+  useEffect(() => {
+    function check() {
+      setIsMobile(window.innerWidth <= 1023)
+    }
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
 
   const refreshUnread = useCallback(async () => {
     try {
@@ -45,30 +56,50 @@ export default function Sidebar() {
     closeSidebar()
   }
 
+  // Mobile drawer: compute inline transform based on sidebarOpen
+  const asideStyle = {
+    width: '270px',
+    minWidth: '270px',
+    height: isMobile ? '100dvh' : '100vh',
+    background: '#0e0e0e',
+    borderRight: '1px solid rgba(255,255,255,0.05)',
+    display: 'flex',
+    flexDirection: 'column',
+    padding: '28px 16px',
+    position: isMobile ? 'fixed' : 'sticky',
+    top: 0,
+    zIndex: isMobile ? 500 : undefined,
+    left: isMobile ? 0 : undefined,
+    transform: isMobile ? `translateX(${sidebarOpen ? '0' : '-100%'})` : undefined,
+    transition: isMobile ? 'transform 0.28s cubic-bezier(0.22, 1, 0.36, 1)' : undefined,
+    willChange: isMobile ? 'transform' : undefined,
+    overscrollBehavior: isMobile ? 'contain' : undefined,
+    overflowY: isMobile ? 'auto' : undefined,
+    boxShadow: isMobile && sidebarOpen ? '4px 0 40px rgba(0,0,0,0.5)' : undefined,
+  }
+
   return (
     <>
       {/* ── Overlay for mobile ── */}
-      {sidebarOpen && (
+      {isMobile && sidebarOpen && (
         <div
           className="sidebar-overlay"
           onClick={closeSidebar}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 499,
+            background: 'rgba(0,0,0,0.5)',
+            backdropFilter: 'blur(4px)',
+            WebkitBackdropFilter: 'blur(4px)',
+            animation: 'fadeInOverlay 0.2s ease',
+          }}
         />
       )}
 
       <aside
         className={`admin-sidebar${sidebarOpen ? ' sidebar-open' : ''}`}
-        style={{
-          width: '270px',
-          minWidth: '270px',
-          height: '100vh',
-          background: '#0e0e0e',
-          borderRight: '1px solid rgba(255,255,255,0.05)',
-          display: 'flex',
-          flexDirection: 'column',
-          padding: '28px 16px',
-          position: 'sticky',
-          top: 0,
-        }}
+        style={asideStyle}
       >
         {/* Close button for mobile */}
         <button
