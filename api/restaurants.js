@@ -12,6 +12,7 @@ import {
 } from '../src/db/neon-restaurants.js'
 import { createRestaurantAtomic } from '../src/services/restaurantCreationService.js'
 import { neon } from '../src/db/pg-sql.js'
+import { normalizeAndValidateSlug } from '../src/lib/slug-utils.js'
 
 // ── /api/restaurants — Restaurant CRUD (Neon-only Vercel function) ────────────
 //
@@ -101,10 +102,16 @@ export default async function handler(req, res) {
 
     if (action === 'checkSlug') {
       const { name } = req.query
-      if (!name) return res.json({ taken: false })
+      if (!name) return res.json({ taken: false, available: true })
+      // Normalize the candidate slug before checking so the availability
+      // answer matches what would actually be stored on creation.
+      const { normalizeSlug } = await import('../src/lib/slug-utils.js')
+      const normalized = normalizeSlug(name)
+      if (!normalized) return res.json({ taken: false, available: true })
       const sql = getSql()
-      const rows = await sql`SELECT id FROM restaurants WHERE slug = ${name} LIMIT 1`
-      return res.json({ taken: rows.length > 0 })
+      // Case-insensitive uniqueness check — mirrors the planned DB constraint.
+      const rows = await sql`SELECT id FROM restaurants WHERE LOWER(slug) = LOWER(${normalized}) LIMIT 1`
+      return res.json({ taken: rows.length > 0, available: rows.length === 0 })
     }
 
     // ── GET/PATCH: /api/neon/restaurant/:id ────────────────────────────────────
@@ -179,15 +186,21 @@ export default async function handler(req, res) {
       if (!createGuard.ok) return
       const payload = req.body
       if (!payload?.slug || !payload?.name) return res.status(400).json({ error: 'slug and name required' })
-      // Generate uid server-side when absent.
+      // Normalize and validate the slug before passing to the service.
+      // The service also normalizes internally, but we validate early here so
+      // the caller gets an informative 400/422 before any DB I/O.
+      const slugCheck = normalizeAndValidateSlug(payload.slug)
+      if (!slugCheck.ok) {
+        const status = slugCheck.code === 'RESERVED_SLUG' ? 422 : 400
+        return res.status(status).json({ error: slugCheck.message, code: slugCheck.code })
+      }
+      // UID is always generated server-side inside createRestaurantAtomic.
       // id, plan, status, plan_limits are always forced to defaults inside
       // createRestaurantAtomic — caller values for these fields are ignored.
-      const uid = payload.uid || String(Math.floor(1000000000 + Math.random() * 9000000000))
       try {
         const row = await createRestaurantAtomic({
-          slug: payload.slug,
+          slug: slugCheck.slug,
           name: payload.name,
-          uid,
           ownerUserId: createGuard.session.userId,
           ownerEmail:  createGuard.session.email,
           ipAddress:   req.headers['x-forwarded-for'] ?? req.socket?.remoteAddress ?? null,
@@ -214,6 +227,8 @@ export default async function handler(req, res) {
         return res.status(201).json(row)
       } catch (err) {
         if (err.code === 'DUPLICATE') return res.status(409).json({ error: err.message })
+        if (err.code === 'INVALID_SLUG') return res.status(400).json({ error: err.message, code: err.code })
+        if (err.code === 'RESERVED_SLUG') return res.status(422).json({ error: err.message, code: err.code })
         throw err
       }
     }
@@ -266,26 +281,64 @@ export default async function handler(req, res) {
       if (!guard.ok) return
       const { id } = req.body
       if (!id) return res.status(400).json({ error: 'id required' })
-      await patchNeonRestaurant(id, { is_deleted: true, deleted_at: new Date().toISOString() })
+      // Soft-delete: mark the record as deleted and set status to 'deleted'.
+      // This hides the restaurant from all public and member endpoints.
+      // Only superadmin may view or restore soft-deleted restaurants.
+      await patchNeonRestaurant(id, {
+        is_deleted: true,
+        deleted_at: new Date().toISOString(),
+        status: 'deleted',
+      })
       return res.json({ success: true })
     }
 
-    if (action === 'permanentDelete') {
+    if (action === 'restore') {
+      // Restore a soft-deleted restaurant — superadmin only.
       const guard = await assertSuperadmin(req, res)
       if (!guard.ok) return
       const { id } = req.body
       if (!id) return res.status(400).json({ error: 'id required' })
+      // Use raw patchNeonRestaurant to update lifecycle fields directly.
+      // We reset is_deleted and deleted_at; status reverts to 'active'.
       const sql = getSql()
-      // Delete all child data (Neon has FK constraints with CASCADE or we do it manually)
-      await sql`DELETE FROM orders WHERE restaurant_id = ${id}::uuid`
-      await sql`DELETE FROM bookings WHERE restaurant_id = ${id}::uuid`
-      await sql`DELETE FROM menu_items WHERE restaurant_id = ${id}::uuid`
-      await sql`DELETE FROM menu_categories WHERE restaurant_id = ${id}::uuid`
-      await sql`DELETE FROM restaurant_members WHERE restaurant_id = ${id}::uuid`
-      await sql`DELETE FROM restaurant_about WHERE restaurant_id = ${id}::uuid`
-      await sql`DELETE FROM restaurant_settings WHERE restaurant_id = ${id}::uuid`
-      await sql`DELETE FROM restaurants WHERE id = ${id}::uuid`
-      return res.json({ success: true })
+      const rows = await sql`
+        UPDATE restaurants
+        SET is_deleted = false,
+            deleted_at = NULL,
+            status     = 'active',
+            updated_at = now()
+        WHERE id = ${id}
+        RETURNING *
+      `
+      if (!rows.length) return res.status(404).json({ error: 'Restaurant not found' })
+      return res.json({ success: true, restaurant: neonRowWithTables(rows[0]) })
+    }
+
+    if (action === 'permanentDelete') {
+      // ── PERMANENT DELETION IS DISABLED ────────────────────────────────────
+      // Permanent deletion of restaurant records, memberships, or child data
+      // must NOT run inside a normal API request.
+      //
+      // Background:
+      //   Irreversible data destruction (including R2 object deletion) must
+      //   be performed only through an out-of-band, superadmin-controlled
+      //   offline process with explicit backups and audit trail — never via
+      //   a live HTTP endpoint that could be triggered by accident, a replay
+      //   attack, or a misconfigured caller.
+      //
+      // To hard-delete a restaurant:
+      //   1. Ensure the restaurant is first soft-deleted (is_deleted = true).
+      //   2. Run the offline purge script with explicit confirmation flags
+      //      (once that script exists — see follow-up tasks).
+      //   3. Separately purge R2 objects using the Cloudflare dashboard or
+      //      the wrangler CLI — never inside a request handler.
+      //
+      // This action now returns 501 (Not Implemented) so any caller that was
+      // depending on it receives a clear, non-silent signal to update.
+      return res.status(501).json({
+        error: 'permanentDelete is disabled. Permanent restaurant deletion must not run inside an API request. Soft-delete the restaurant first, then use the offline purge script.',
+        code: 'PERMANENT_DELETE_DISABLED',
+      })
     }
 
     return res.status(400).json({ error: `Unknown action: ${action}` })

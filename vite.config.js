@@ -869,15 +869,21 @@ function neonRestaurantPlugin() {
             const body = await readBody()
             const payload = body ?? {}
             if (!payload.slug || !payload.name) return json(400, { error: 'slug and name required' })
-            // Generate uid server-side when absent.
+            // Normalize and validate the slug early for a clear error before any DB I/O.
+            const { normalizeAndValidateSlug: _navs } = await import('./src/lib/slug-utils.js')
+            const slugCheck = _navs(payload.slug)
+            if (!slugCheck.ok) {
+              const status = slugCheck.code === 'RESERVED_SLUG' ? 422 : 400
+              return json(status, { error: slugCheck.message, code: slugCheck.code })
+            }
+            // UID is always generated server-side inside createRestaurantAtomic.
             // id, plan, status, plan_limits are always forced to defaults inside
             // createRestaurantAtomic — caller values for these fields are ignored.
-            const uid = payload.uid || String(Math.floor(1000000000 + Math.random() * 9000000000))
+            const { createRestaurantAtomic: _cra } = await import('./src/services/restaurantCreationService.js')
             try {
-              const row = await createRestaurantAtomic({
-                slug: payload.slug,
+              const row = await _cra({
+                slug: slugCheck.slug,
                 name: payload.name,
-                uid,
                 ownerUserId,
                 ownerEmail,
                 // optional profile fields forwarded from the payload
@@ -903,6 +909,8 @@ function neonRestaurantPlugin() {
               return json(201, row)
             } catch (err) {
               if (err.code === 'DUPLICATE') return json(409, { error: err.message })
+              if (err.code === 'INVALID_SLUG') return json(400, { error: err.message, code: err.code })
+              if (err.code === 'RESERVED_SLUG') return json(422, { error: err.message, code: err.code })
               throw err
             }
           }

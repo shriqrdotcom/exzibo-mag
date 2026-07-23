@@ -95,6 +95,7 @@ export default async function handler(req, res) {
          )
          AND rm.active = true
          AND rm.role = ANY($3::text[])
+         AND r.is_deleted = false
        ORDER BY r.name`,
       [userId, email.toLowerCase().trim(), MOBILE_ROLES]
     )

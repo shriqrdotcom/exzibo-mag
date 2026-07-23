@@ -10,6 +10,8 @@
 //
 // On success the committed restaurant row is returned.
 // On duplicate slug or UID an error with .code = 'DUPLICATE' is thrown.
+// On invalid/reserved slug an error with .code = 'INVALID_SLUG' or
+//   'RESERVED_SLUG' is thrown.
 // Any other failure rolls back everything and re-throws.
 //
 // Rules:
@@ -17,10 +19,14 @@
 //     are silently ignored.
 //   - ownerUserId must come from the verified auth session — never from the
 //     request body.
-//   - uid must be generated server-side before this function is called.
+//   - uid is ALWAYS generated server-side inside this function; any caller-
+//     supplied uid is silently ignored.
+//   - slug is normalized and validated before the transaction begins; callers
+//     must not pre-normalize.
 //   - External calls (image uploads, etc.) must NOT happen inside this function.
 
 import pg from 'pg'
+import { normalizeAndValidateSlug, generateUid } from '../lib/slug-utils.js'
 
 const { Pool } = pg
 
@@ -51,9 +57,9 @@ function getPool() {
 //   { code: 'DUPLICATE',  message }   — slug or UID already taken
 //   any other PG / runtime error      — re-thrown as-is
 export async function createRestaurantAtomic({
-  slug,
+  slug: rawSlug,
   name,
-  uid,
+  uid: _ignoredUid, // always generated server-side; caller value silently ignored
   ownerUserId  = null,
   ownerEmail   = null,
   ownerName    = null,
@@ -78,22 +84,28 @@ export async function createRestaurantAtomic({
   logo                = null,
   table_numbers       = [],
 } = {}) {
-  // ── Validation ──────────────────────────────────────────────────────────────
-  if (!slug) {
-    const err = new Error('slug is required')
-    err.code = 'VALIDATION'
+  // ── Slug normalization + validation ──────────────────────────────────────────
+  // Normalize first so callers never need to pre-process the slug.
+  // Reserved and structurally invalid slugs are rejected here before any DB I/O.
+  const slugResult = normalizeAndValidateSlug(rawSlug)
+  if (!slugResult.ok) {
+    const err = new Error(slugResult.message)
+    err.code = slugResult.code  // 'INVALID_SLUG' | 'RESERVED_SLUG'
     throw err
   }
+  const slug = slugResult.slug
+
+  // ── Other validation ──────────────────────────────────────────────────────
   if (!name) {
     const err = new Error('name is required')
     err.code = 'VALIDATION'
     throw err
   }
-  if (!uid) {
-    const err = new Error('uid is required')
-    err.code = 'VALIDATION'
-    throw err
-  }
+
+  // ── UID is always generated server-side ───────────────────────────────────
+  // Never trust caller-supplied uid — generate here, inside the service,
+  // so no call-site can inject a specific value.
+  const uid = generateUid()
 
   const memberName = ownerName || ownerEmail || 'Owner'
 
