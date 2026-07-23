@@ -41,7 +41,7 @@ export function isManagementRole(role) {
   return role === 'owner' || role === 'admin' || role === 'superadmin'
 }
 
-export async function executeTeamList({ restaurantId, caller }) {
+export async function executeTeamList({ restaurantId, caller, pagination }) {
   if (!restaurantId) {
     return { status: 400, body: { error: 'restaurantId required' } }
   }
@@ -50,6 +50,15 @@ export async function executeTeamList({ restaurantId, caller }) {
   }
   if (!isManagementRole(caller.role) && !['manager', 'staff'].includes(caller.role)) {
     return { status: 403, body: { error: 'Access denied' } }
+  }
+
+  if (pagination) {
+    const { getNeonRestaurantMembersPaginated } = await import('../../src/db/neon-restaurant-members.js')
+    const result = await getNeonRestaurantMembersPaginated(restaurantId, {
+      ...pagination,
+      callerRole: caller.role,
+    })
+    return { status: 200, body: result }
   }
 
   if (isManagementRole(caller.role)) {

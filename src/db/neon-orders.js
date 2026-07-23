@@ -92,6 +92,62 @@ export async function getNeonOrders(restaurantId) {
   return rows
 }
 
+// ── getNeonOrdersPaginated ─────────────────────────────────────────────────
+// Cursor-based pagination over orders for a restaurant.
+// Cursor is a base64-encoded "createdAt::id" tuple for stable ordering.
+// Returns { items, nextCursor }.
+export async function getNeonOrdersPaginated(restaurantId, { limit = 50, cursor = null } = {}) {
+  if (!restaurantId) return { items: [], nextCursor: null }
+
+  const take = Math.min(Math.max(1, limit), 100) // 1–100
+  const takePlus1 = take + 1
+
+  let decodedCursor = null
+  if (cursor) {
+    try {
+      const buf = Buffer.from(cursor, 'base64url')
+      const str = buf.toString('utf-8')
+      const sep = str.lastIndexOf('::')
+      if (sep !== -1) {
+        decodedCursor = { createdAt: str.slice(0, sep), id: str.slice(sep + 2) }
+      }
+    } catch { /* invalid cursor — ignore */ }
+  }
+
+  let rows
+  if (decodedCursor) {
+    rows = await sql`
+      SELECT
+        id, restaurant_id, table_number, customer_name, customer_phone,
+        customer_location, items, status, total, notes, created_at
+      FROM orders
+      WHERE restaurant_id = ${restaurantId}::uuid
+        AND (created_at, id) < (${decodedCursor.createdAt}::timestamptz, ${decodedCursor.id})
+      ORDER BY created_at DESC, id DESC
+      LIMIT ${takePlus1}
+    `
+  } else {
+    rows = await sql`
+      SELECT
+        id, restaurant_id, table_number, customer_name, customer_phone,
+        customer_location, items, status, total, notes, created_at
+      FROM orders
+      WHERE restaurant_id = ${restaurantId}::uuid
+      ORDER BY created_at DESC, id DESC
+      LIMIT ${takePlus1}
+    `
+  }
+
+  const hasMore = rows.length > take
+  if (hasMore) rows.pop()
+
+  const nextCursor = hasMore
+    ? Buffer.from(`${rows[rows.length - 1].created_at}::${rows[rows.length - 1].id}`, 'utf-8').toString('base64url')
+    : null
+
+  return { items: rows, nextCursor }
+}
+
 // ── getNeonOrderRestaurantId ──────────────────────────────────────────────
 // Returns the restaurant_id for a given order id, or null if not found.
 // Used by the order-status update route to validate restaurant membership

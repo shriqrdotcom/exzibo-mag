@@ -490,12 +490,32 @@ export async function getRestaurantsCreatedThisMonth() {
   } catch { return 0 }
 }
 
-export async function getOrders(restaurantId) {
+// Unwrap paginated { items, nextCursor } response into a plain array.
+// When `returnRaw` is true, returns { items, nextCursor } instead.
+function unwrapItems(data, mapper, returnRaw) {
+  if (!data) return returnRaw ? { items: [], nextCursor: null } : []
+  if (Array.isArray(data)) return returnRaw ? { items: mapper ? data.map(mapper) : data, nextCursor: null } : (mapper ? data.map(mapper) : data)
+  if (typeof data === 'object' && Array.isArray(data.items)) {
+    const items = mapper ? data.items.map(mapper) : data.items
+    if (returnRaw) return { items, nextCursor: data.nextCursor ?? null }
+    return items
+  }
+  return returnRaw ? { items: [], nextCursor: null } : []
+}
+
+export async function getOrders(restaurantId, opts = {}) {
   try {
-    const res = await fetch(`/api/orders/${encodeURIComponent(restaurantId)}`)
+    let url = `/api/orders/${encodeURIComponent(restaurantId)}`
+    if (opts.cursor || opts.limit) {
+      const params = new URLSearchParams()
+      if (opts.cursor) params.set('cursor', opts.cursor)
+      if (opts.limit) params.set('limit', String(opts.limit))
+      url += `?${params.toString()}`
+    }
+    const res = await fetch(url)
     if (res.ok) {
       const data = await res.json()
-      return (data ?? []).map(normalizeOrder)
+      return unwrapItems(data, normalizeOrder, opts.returnRaw)
     }
   } catch (err) {
     console.warn('[getOrders] API failed:', err.message)
@@ -551,10 +571,18 @@ export async function updateOrderStatus(orderId, status, restaurantId) {
 
 // ── Bookings ──────────────────────────────────────────────────────────────────
 
-export async function getBookings(restaurantId) {
-  const r = await fetch(`/api/bookings/${encodeURIComponent(restaurantId)}`)
+export async function getBookings(restaurantId, opts = {}) {
+  let url = `/api/bookings/${encodeURIComponent(restaurantId)}`
+  if (opts.cursor || opts.limit) {
+    const params = new URLSearchParams()
+    if (opts.cursor) params.set('cursor', opts.cursor)
+    if (opts.limit) params.set('limit', String(opts.limit))
+    url += `?${params.toString()}`
+  }
+  const r = await fetch(url)
   if (!r.ok) { const err = await r.json().catch(() => ({})); throw new Error(err?.error || `getBookings HTTP ${r.status}`) }
-  return (await r.json() ?? []).map(normalizeBooking)
+  const data = await r.json()
+  return unwrapItems(data, normalizeBooking, opts.returnRaw)
 }
 
 export async function createBooking(restaurantId, booking, idempotencyKey) {
@@ -596,10 +624,20 @@ export async function updateBookingStatus(bookingId, status) {
 
 // ── Team Members ──────────────────────────────────────────────────────────────
 
-export async function getTeamMembers(restaurantId) {
+export async function getTeamMembers(restaurantId, opts = {}) {
   try {
-    const r = await fetch(`/api/team-members/${encodeURIComponent(restaurantId)}`)
-    if (r.ok) return await r.json() ?? []
+    let url = `/api/team-members/${encodeURIComponent(restaurantId)}`
+    if (opts.cursor || opts.limit) {
+      const params = new URLSearchParams()
+      if (opts.cursor) params.set('cursor', opts.cursor)
+      if (opts.limit) params.set('limit', String(opts.limit))
+      url += `?${params.toString()}`
+    }
+    const r = await fetch(url)
+    if (r.ok) {
+      const data = await r.json()
+      return unwrapItems(data, null, opts.returnRaw)
+    }
   } catch (err) {
     console.warn('[getTeamMembers] API failed:', err.message)
   }
@@ -716,9 +754,17 @@ export async function insertNotificationHistory({ id, title, message, target_rol
   } catch (e) { console.warn('[insertNotificationHistory] failed (non-fatal):', e.message) }
 }
 
-export async function fetchNotificationHistory(hoursBack = 24) {
+export async function fetchNotificationHistory(hoursBack = 24, opts = {}) {
   try {
-    return await apiFetch(`/api/notifications?action=getNotificationHistory&hoursBack=${hoursBack}`)
+    let url = `/api/notifications?action=getNotificationHistory&hoursBack=${hoursBack}`
+    if (opts.cursor || opts.limit) {
+      const params = new URLSearchParams()
+      if (opts.cursor) params.set('cursor', opts.cursor)
+      if (opts.limit) params.set('limit', String(opts.limit))
+      url += `&${params.toString()}`
+    }
+    const data = await apiFetch(url)
+    return unwrapItems(data, null, opts.returnRaw)
   } catch { return [] }
 }
 
@@ -746,8 +792,18 @@ export async function createHelpNotification({ restaurant_name, restaurant_uid, 
   })
 }
 
-export async function getHelpNotifications() {
-  try { return await apiFetch('/api/notifications?action=getHelp') } catch { return [] }
+export async function getHelpNotifications(opts = {}) {
+  try {
+    let url = '/api/notifications?action=getHelp'
+    if (opts.cursor || opts.limit) {
+      const params = new URLSearchParams()
+      if (opts.cursor) params.set('cursor', opts.cursor)
+      if (opts.limit) params.set('limit', String(opts.limit))
+      url += `&${params.toString()}`
+    }
+    const data = await apiFetch(url)
+    return unwrapItems(data, null, opts.returnRaw)
+  } catch { return [] }
 }
 
 export async function updateHelpNotificationStatus(id, status) {

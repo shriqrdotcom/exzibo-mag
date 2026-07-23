@@ -12,9 +12,9 @@ import {
   getNeonRestaurantById,
   getNeonRestaurantBySlug,
 } from './src/db/neon-restaurants.js'
-import { updateNeonBookingStatus, getNeonBookings } from './src/db/neon-bookings.js'
+import { updateNeonBookingStatus, getNeonBookings, getNeonBookingsPaginated } from './src/db/neon-bookings.js'
 import { createBookingAtomic } from './src/services/bookingCreationService.js'
-import { getNeonOrders, deleteOldNeonOrders } from './src/db/neon-orders.js'
+import { getNeonOrders, getNeonOrdersPaginated, deleteOldNeonOrders } from './src/db/neon-orders.js'
 import { createOrderAtomic } from './src/services/orderCreationService.js'
 import { applyOrderStatusTransition } from './src/services/orderStatusService.js'
 import { startOutboxProcessor } from './src/services/realtimeOutboxProcessor.js'
@@ -25,6 +25,7 @@ import { upsertNeonRestaurantSettingsKey } from './src/db/neon-restaurant-settin
 import { writeAuditLog } from './src/db/neon-audit-logs.js'
 import * as mediaService from './src/services/mediaService.js'
 import { getClientIp } from './src/lib/upstash.server.js'
+import { generateRequestId, parsePagination } from './api/_lib/validate.js'
 import * as menuService from './src/services/menuService.js'
 import * as contentService from './src/services/restaurantContentService.js'
 
@@ -430,8 +431,11 @@ function menuApiPlugin() {
           const m = pathname.match(/^\/([^/]+)$/)
           if (!m) return next()
           try {
-            return json(res, 200, await getNeonOrders(m[1]))
-          } catch (e) { return json(res, 500, { error: e.message }) }
+            const query = Object.fromEntries(new URL(req.url, 'http://x').searchParams)
+            const pagination = parsePagination(query)
+            const result = await getNeonOrdersPaginated(m[1], pagination)
+            return json(res, 200, result)
+          } catch (e) { return json(res, 500, { error: 'Internal server error' }) }
         }
 
         if (req.method !== 'POST') return next()
@@ -478,8 +482,11 @@ function menuApiPlugin() {
         if (req.method === 'GET') {
           const m = pathname.match(/^\/([^/]+)$/)
           if (!m) return next()
-          try { return json(res, 200, await getNeonBookings(m[1])) }
-          catch (e) { return json(res, 500, { error: e.message }) }
+          try {
+            const query = Object.fromEntries(new URL(req.url, 'http://x').searchParams)
+            const pagination = parsePagination(query)
+            return json(res, 200, await getNeonBookingsPaginated(m[1], pagination))
+          } catch (e) { return json(res, 500, { error: 'Internal server error' }) }
         }
 
         if (req.method !== 'POST' && req.method !== 'PATCH') return next()
@@ -563,7 +570,9 @@ function menuApiPlugin() {
           try {
             const caller = await getCaller()
             if (caller.error) return json(res, caller.error === 'Not authenticated' ? 401 : (caller.error.includes('conflict') ? 409 : 403), { error: caller.error })
-            const { status, body } = await executeTeamList({ restaurantId: m[1], caller })
+            const query = Object.fromEntries(new URL(req.url, 'http://x').searchParams)
+            const pagination = parsePagination(query)
+            const { status, body } = await executeTeamList({ restaurantId: m[1], caller, pagination })
             return json(res, status, body)
           } catch (e) { return json(res, e.status || 500, { error: e.message, code: e.code }) }
         }

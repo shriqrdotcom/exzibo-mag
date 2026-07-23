@@ -450,6 +450,70 @@ export async function getNeonRestaurantMembers(restaurantId) {
   return rows
 }
 
+// ── getNeonRestaurantMembersPaginated ─────────────────────────────────────
+// Cursor-based pagination over team members for a restaurant.
+// Returns { items, nextCursor }.
+export async function getNeonRestaurantMembersPaginated(restaurantId, { limit = 50, cursor = null, callerRole } = {}) {
+  if (!restaurantId) return { items: [], nextCursor: null }
+
+  const take = Math.min(Math.max(1, limit), 100)
+  const takePlus1 = take + 1
+
+  let decodedCursor = null
+  if (cursor) {
+    try {
+      const buf = Buffer.from(cursor, 'base64url')
+      const str = buf.toString('utf-8')
+      const sep = str.lastIndexOf('::')
+      if (sep !== -1) {
+        decodedCursor = { createdAt: str.slice(0, sep), id: str.slice(sep + 2) }
+      }
+    } catch { /* ignore */ }
+  }
+
+  const SELECT_ALL = `id, restaurant_id, user_id, owner_id, name, email, role, category, department, phone, active, created_at, updated_at`
+  const SELECT_MGMT = `id, restaurant_id, name, email, role, category, department, phone, active, created_at, updated_at`
+  const SELECT_PUBLIC = `name, role, category, department`
+
+  const isManagement = callerRole === 'owner' || callerRole === 'admin' || callerRole === 'superadmin'
+  const selectClause = isManagement ? SELECT_MGMT : SELECT_PUBLIC
+
+  let rows
+  if (decodedCursor) {
+    rows = await sql.query(
+      `SELECT ${selectClause}
+       FROM restaurant_members
+       WHERE restaurant_id = $1::uuid
+         AND (created_at, id) < ($2::timestamptz, $3)
+       ORDER BY created_at ASC, id ASC
+       LIMIT $4`,
+      [restaurantId, decodedCursor.createdAt, decodedCursor.id, takePlus1]
+    )
+  } else {
+    rows = await sql.query(
+      `SELECT ${selectClause}
+       FROM restaurant_members
+       WHERE restaurant_id = $1::uuid
+       ORDER BY created_at ASC, id ASC
+       LIMIT $2`,
+      [restaurantId, takePlus1]
+    )
+  }
+
+  if (!isManagement) {
+    rows = rows.filter(r => r.active)
+  }
+
+  const hasMore = rows.length > take
+  if (hasMore) rows.pop()
+
+  const nextCursor = hasMore
+    ? Buffer.from(`${rows[rows.length - 1].created_at}::${rows[rows.length - 1].id}`, 'utf-8').toString('base64url')
+    : null
+
+  return { items: rows, nextCursor }
+}
+
 // ── getNeonRestaurantMembersPublic ────────────────────────────────────────────
 // Staff and manager team-list view: only necessary public work information.
 // Excludes internal IDs, contact details, and inactive members.

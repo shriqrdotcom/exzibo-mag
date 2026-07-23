@@ -3,11 +3,28 @@ import { checkRestaurantAccess, requireSuperadmin, ALL_ROLES, MANAGEMENT_ROLES }
 import { rateLimit, acquireLock, releaseLock, getClientIp, send429 } from '../src/lib/upstash.server.js'
 import {
   deleteOldNeonOrders,
-  getNeonOrders,
+  getNeonOrdersPaginated,
   getNeonOrderRestaurantId,
 } from '../src/db/neon-orders.js'
 import { createOrderAtomic } from '../src/services/orderCreationService.js'
 import { applyOrderStatusTransition } from '../src/services/orderStatusService.js'
+import {
+  generateRequestId,
+  safeError,
+  badInput,
+  unauthorized,
+  forbidden,
+  notFound,
+  conflict,
+  internalError,
+  rejectUnknownFields,
+  validateUuid,
+  validateString,
+  validateEnum,
+  parsePagination,
+} from './_lib/validate.js'
+
+const ALLOWED_CREATE_FIELDS = ['restaurant_id', 'items', 'table_number', 'table', 'customer_name', 'customerName', 'customer_phone', 'phone', 'customer_location', 'location', 'notes']
 
 // ── /api/orders — Order Operations Handler (Neon-only) ───────────────────────
 //
@@ -24,42 +41,46 @@ export default async function handler(req, res) {
   setPublicCors(res)
   if (req.method === 'OPTIONS') return res.status(200).end()
 
-  // ── GET: list orders for a restaurant — requires restaurant membership ────────
+  const requestId = generateRequestId()
+
+  // ── GET: list orders for a restaurant — requires restaurant membership ──────
   if (req.method === 'GET') {
     const { restaurantId } = req.query
-    if (!restaurantId) return res.status(400).json({ error: 'restaurantId is required' })
+    if (!restaurantId) return badInput(res, 'restaurantId is required', requestId)
 
     const access = await checkRestaurantAccess(req, restaurantId)
-    if (access.error === 'Not authenticated') return res.status(401).json({ error: 'Not authenticated' })
-    if (!access.allowed) return res.status(403).json({ error: 'Access denied' })
+    if (access.error === 'Not authenticated') return unauthorized(res, null, requestId)
+    if (!access.allowed) return forbidden(res, null, requestId)
     if (!access.isSuperadmin && !ALL_ROLES.includes(access.role)) {
-      return res.status(403).json({ error: 'Access denied' })
+      return forbidden(res, null, requestId)
     }
 
     try {
-      const rows = await getNeonOrders(restaurantId)
-      return res.status(200).json(rows)
+      const pagination = parsePagination(req.query)
+      const result = await getNeonOrdersPaginated(restaurantId, pagination)
+      return res.status(200).json(result)
     } catch (err) {
       console.error('[orders GET] Error:', err.message)
-      return res.status(500).json({ error: err.message })
+      return internalError(res, requestId)
     }
   }
 
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
+  if (req.method !== 'POST') return safeError(res, 405, 'Method not allowed', requestId)
 
   const action = req.query.action
 
-  // ── POST (no action): create order — public customer flow ─────────────────────
+  // ── POST (no action): create order — public customer flow ────────────────────
   if (!action) {
     const body = req.body
     const idempotencyKey = req.headers['idempotency-key']
     if (!idempotencyKey || typeof idempotencyKey !== 'string' || idempotencyKey.length < 16) {
-      return res.status(400).json({ error: 'Idempotency-Key header is required (min 16 characters).' })
+      return badInput(res, 'Idempotency-Key header is required (min 16 characters).', requestId)
     }
     if (!body?.restaurant_id || !Array.isArray(body?.items) || body.items.length === 0) {
-      return res.status(400).json({ error: 'restaurant_id and a non-empty items array are required' })
+      return badInput(res, 'restaurant_id and a non-empty items array are required', requestId)
     }
     try {
+      rejectUnknownFields(body, ALLOWED_CREATE_FIELDS)
       const order = await createOrderAtomic({
         restaurantId: body.restaurant_id,
         tableNumber: body.table_number ?? body.table ?? null,
@@ -70,36 +91,33 @@ export default async function handler(req, res) {
         notes: body.notes ?? null,
         idempotencyKey,
       })
-      // Realtime event is published asynchronously via the transactional outbox
-      // (inserted inside createOrderAtomic) — not here.
       return res.status(201).json(order)
     } catch (err) {
       console.error('[orders POST] Error:', err.message)
-      if (err.code === 'IDEMPOTENCY_KEY_REQUIRED') return res.status(400).json({ error: err.message, code: err.code })
-      if (err.code === 'IDEMPOTENCY_CONFLICT') return res.status(409).json({ error: err.message, code: err.code })
-      if (err.code === 'VALIDATION') return res.status(400).json({ error: err.message, code: err.code })
-      if (err.code === 'INVALID_ITEM' || err.code === 'INVALID_OPTION') return res.status(422).json({ error: err.message, code: err.code })
-      if (err.code === 'DUPLICATE') return res.status(409).json({ error: err.message, code: err.code })
-      return res.status(500).json({ error: err.message })
+      if (err.code === 'IDEMPOTENCY_KEY_REQUIRED') return badInput(res, err.message, requestId)
+      if (err.code === 'IDEMPOTENCY_CONFLICT') return conflict(res, err.message, requestId)
+      if (err.code === 'VALIDATION') return badInput(res, err.message, requestId)
+      if (err.code === 'INVALID_ITEM' || err.code === 'INVALID_OPTION') return safeError(res, 422, err.message, requestId)
+      if (err.code === 'DUPLICATE') return conflict(res, err.message, requestId)
+      return internalError(res, requestId)
     }
   }
 
   try {
-    // ── POST updateStatus — requires MANAGEMENT_ROLES membership ─────────────────
+    // ── POST updateStatus — requires MANAGEMENT_ROLES membership ────────────────
     if (action === 'updateStatus') {
       const { orderId, status } = req.body
-      if (!orderId || !status) return res.status(400).json({ error: 'orderId and status required' })
+      if (!orderId || !status) return badInput(res, 'orderId and status required', requestId)
+      rejectUnknownFields(req.body, ['orderId', 'status', 'restaurantId'])
 
-      // Resolve restaurantId from DB — never trust caller-supplied restaurantId.
-      // A member of restaurant A could otherwise change an order belonging to restaurant B.
       const resolvedRestaurantId = await getNeonOrderRestaurantId(orderId)
-      if (!resolvedRestaurantId) return res.status(404).json({ error: 'Order not found' })
+      if (!resolvedRestaurantId) return notFound(res, 'Order not found', requestId)
 
       const access = await checkRestaurantAccess(req, resolvedRestaurantId)
-      if (access.error === 'Not authenticated') return res.status(401).json({ error: 'Not authenticated' })
-      if (!access.allowed) return res.status(403).json({ error: 'Access denied' })
+      if (access.error === 'Not authenticated') return unauthorized(res, null, requestId)
+      if (!access.allowed) return forbidden(res, null, requestId)
       if (!access.isSuperadmin && !MANAGEMENT_ROLES.includes(access.role)) {
-        return res.status(403).json({ error: 'Updating order status requires manager role or above' })
+        return forbidden(res, 'Updating order status requires manager role or above', requestId)
       }
 
       const ip = getClientIp(req)
@@ -107,29 +125,26 @@ export default async function handler(req, res) {
       if (!allowed) return send429(res, 'Too many order status updates.')
       const lockKey = `lock:order-status:${orderId}`
       const { acquired, token } = await acquireLock(lockKey, 5)
-      if (!acquired) return res.status(409).json({ error: 'Status update already in progress.' })
+      if (!acquired) return conflict(res, 'Status update already in progress.', requestId)
       try {
         const updatedRow = await applyOrderStatusTransition(orderId, status)
-        // Realtime event is published asynchronously via the transactional outbox
-        // (inserted inside applyOrderStatusTransition) — not here.
-        return res.json({ success: true, orderId, status, restaurant_id: updatedRow.restaurant_id })
+        return res.json({ success: true, orderId, status, restaurant_id: updatedRow.restaurant_id, requestId })
       } catch (transitionErr) {
         if (transitionErr.code === 'TERMINAL' || transitionErr.code === 'INVALID_TRANSITION') {
-          return res.status(409).json({ error: transitionErr.message, code: transitionErr.code })
+          return conflict(res, transitionErr.message, requestId)
         }
         if (transitionErr.code === 'INVALID_STATUS') {
-          return res.status(422).json({ error: transitionErr.message, code: transitionErr.code })
+          return safeError(res, 422, transitionErr.message, requestId)
         }
         if (transitionErr.code === 'NOT_FOUND') {
-          return res.status(404).json({ error: transitionErr.message, code: transitionErr.code })
+          return notFound(res, transitionErr.message, requestId)
         }
         throw transitionErr
       } finally { await releaseLock(lockKey, token) }
     }
 
-    // ── POST autoCleanup — superadmin only ────────────────────────────────────────
+    // ── POST autoCleanup — superadmin only ───────────────────────────────────
     if (action === 'autoCleanup') {
-      // requireSuperadmin is an Express middleware — call it manually for Vercel handlers
       const superadminResult = await new Promise((resolve) => {
         const fakeNext = () => resolve({ ok: true })
         const fakeRes = {
@@ -144,17 +159,18 @@ export default async function handler(req, res) {
       }
 
       const { confirmedDeleteHours = 12, rejectedDeleteMinutes = 10 } = req.body || {}
+      rejectUnknownFields(req.body || {}, ['confirmedDeleteHours', 'rejectedDeleteMinutes'])
       const now = Date.now()
       const deletedCount = await deleteOldNeonOrders(
         new Date(now - confirmedDeleteHours * 3600000).toISOString(),
         new Date(now - rejectedDeleteMinutes * 60000).toISOString()
       )
-      return res.json({ success: true, deletedCount })
+      return res.json({ success: true, deletedCount, requestId })
     }
 
-    return res.status(400).json({ error: `Unknown action: ${action}` })
+    return badInput(res, `Unknown action: ${action}`, requestId)
   } catch (err) {
     console.error(`[orders][${action}] Error:`, err.message)
-    return res.status(500).json({ error: err.message })
+    return internalError(res, requestId)
   }
 }
