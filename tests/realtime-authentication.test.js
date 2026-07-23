@@ -55,12 +55,11 @@ describe('Realtime authentication', () => {
     assert.equal(typeof svc.issueRealtimeTicket, 'function')
   })
 
-  // ── Vercel handler exists and imports shared service ──────────────────────
-  it('0. Vercel handler imports shared ticket service', async () => {
-    const handlerMod = await import('../api/realtime.js')
+  // ── Ticket issuance handler lives in auth-check.js (consolidated Vercel handler) ─
+  it('0. auth-check handler imports shared ticket service', async () => {
+    const handlerMod = await import('../api/auth-check.js')
     assert.equal(typeof handlerMod.default, 'function')
-    // Confirm replit.md isn't a test concern — just verify the module loads
-    // and delegates to the service
+    // Verify the auth-check handler delegates to the shared service
     const svc = await import('../src/services/realtimeTicketService.js')
     assert.equal(typeof svc.issueRealtimeTicket, 'function')
   })

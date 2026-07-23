@@ -15,17 +15,40 @@
  * Untrusted origins receive no ACAO / ACAC headers.
  */
 
-import { checkSuperadmin, checkRestaurantAccess } from './_lib/authz.js'
+import { getSessionEmail, checkSuperadmin, checkRestaurantAccess } from './_lib/authz.js'
 import { setCredentialedCors, applyAuthSecurityHeaders } from './_lib/cors.js'
+import { issueRealtimeTicket } from '../src/services/realtimeTicketService.js'
 
 export default async function handler(req, res) {
   setCredentialedCors(req, res)
   applyAuthSecurityHeaders(res)
 
   if (req.method === 'OPTIONS') return res.status(200).end()
-  if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' })
 
-  const { type, restaurantId } = req.query
+  const { type, action, restaurantId } = req.query
+
+  // ── Issue realtime ticket — requires session + membership ──────────────────
+  // POST /api/realtime/ticket  (rewritten to  POST /api/auth-check?action=issueTicket)
+  // Preserves all security: Better Auth session, active membership, server-resolved
+  // restaurant/role, customer-auth gating, fail-closed ticket secret.
+  if (action === 'issueTicket') {
+    if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
+    try {
+      const session = await getSessionEmail(req)
+      const result = await issueRealtimeTicket(session, req, {
+        restaurantId: req.body?.restaurantId,
+        role: req.body?.role,
+        orderId: req.body?.orderId,
+        orderToken: req.body?.orderToken,
+      })
+      return res.status(result.status).json(result.body)
+    } catch (e) {
+      console.error('[auth-check][issueTicket] Error:', e.message)
+      return res.status(500).json({ error: e.message })
+    }
+  }
+
+  if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' })
 
   // ── Superadmin check ──────────────────────────────────────────────────────
   if (type === 'superadmin') {
