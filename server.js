@@ -49,8 +49,7 @@ import {
 } from './api/_lib/team-service.js'
 import { upsertNeonRestaurantSettingsKey } from './src/db/neon-restaurant-settings.js'
 import { writeAuditLog } from './src/db/neon-audit-logs.js'
-import { r2Upload } from './src/lib/r2.js'
-import { decodeAndValidate } from './api/_lib/image-validate.js'
+import * as mediaService from './src/services/mediaService.js'
 import {
   rateLimit,
   acquireLock,
@@ -355,29 +354,15 @@ app.post('/api/realtime/ticket', async (req, res) => {
 
 // POST /api/menu/upload-image
 // Body: { dataUrl: string, restaurantId: string }
-// Requires owner/admin/manager restaurant membership.
-// Uploads to Cloudflare R2. Returns: { url: string, imageKey: string|null }
-app.post('/api/menu/upload-image', requireRestaurantRole(req => req.body.restaurantId, MANAGEMENT_ROLES), async (req, res) => {
-  try {
-    const { dataUrl, restaurantId } = req.body
-    if (!dataUrl || !restaurantId) return res.status(400).json({ error: 'dataUrl and restaurantId required' })
-
-    // ── Rate limit: 15 uploads/min per IP ──────────────────────────────────────
-    const { allowed: uploadAllowed } = await rateLimit(`rl:upload:ip:${getClientIp(req)}`, 15, 60)
-    if (!uploadAllowed) return send429(res, 'Too many image uploads. Please wait before uploading again.')
-
-    // ── Image validation — magic-byte check, size cap ──────────────────────────
-    const validation = decodeAndValidate(dataUrl)
-    if (!validation.ok) return res.status(400).json({ error: validation.error })
-
-    const objectKey = `restaurants/${restaurantId}/menu-items/${Date.now()}.webp`
-    const { publicUrl, objectKey: returnedKey } = await r2Upload(validation.buf, objectKey, 'image/webp')
-    console.log('[menu/upload-image] R2 upload ✅:', returnedKey)
-    return res.json({ url: publicUrl, imageKey: returnedKey })
-  } catch (err) {
-    console.error('[menu/upload-image] Error:', err.message)
-    return res.status(500).json({ error: err.message })
-  }
+// Delegates to shared mediaService.
+app.post('/api/menu/upload-image', async (req, res) => {
+  const result = await mediaService.uploadImage({
+    req,
+    restaurantId: req.body?.restaurantId,
+    dataUrl: req.body?.dataUrl,
+    mediaType: 'menu',
+  })
+  return res.status(result.status).json(result.body)
 })
 
 // POST /api/menu/items
@@ -836,25 +821,18 @@ app.post('/api/orders/auto-cleanup', requireSuperadmin, async (req, res) => {
   }
 })
 
-app.post('/api/restaurant/upload-logo', requireRestaurantRole(req => req.body.restaurantId, MANAGEMENT_ROLES), async (req, res) => {
-  try {
-    const { restaurantId, dataUrl } = req.body
-    if (!restaurantId || !dataUrl) return res.status(400).json({ error: 'restaurantId and dataUrl required' })
-
-    const validation = decodeAndValidate(dataUrl)
-    if (!validation.ok) return res.status(400).json({ error: validation.error })
-
-    const objectKeyPath = `restaurants/${restaurantId}/logo/${Date.now()}.webp`
-    const { publicUrl, objectKey } = await r2Upload(validation.buf, objectKeyPath, 'image/webp')
-    console.log('[restaurant/upload-logo] R2 ✅:', objectKey)
-
-    await patchNeonRestaurant(restaurantId, { logo: publicUrl, logo_key: objectKey })
-    console.log('[restaurant/upload-logo] Neon ✅')
-    return res.json({ url: publicUrl, imageKey: objectKey })
-  } catch (err) {
-    console.error('[restaurant/upload-logo] Error:', err.message)
-    return res.status(500).json({ error: err.message })
-  }
+app.post('/api/restaurant/upload-logo', async (req, res) => {
+  const result = await mediaService.replaceImage({
+    req,
+    restaurantId: req.body?.restaurantId,
+    dataUrl: req.body?.dataUrl,
+    mediaType: 'logo',
+    async updateDb(imageKey, publicUrl) {
+      const old = await patchNeonRestaurant(req.body.restaurantId, { logo: publicUrl, logo_key: imageKey })
+      return { oldKey: old?.logo_key || null }
+    },
+  })
+  return res.status(result.status).json(result.body)
 })
 
 // Profile-only update — owner/admin/manager may update only OWNER_ADMIN_PROFILE_PATCH fields.
@@ -888,42 +866,25 @@ app.post('/api/restaurant/update-social', async (req, res) => {
 
 // ── About Section API ─────────────────────────────────────────────────────────
 
-app.post('/api/about/upload-image', requireRestaurantRole(req => req.body.restaurantId, MANAGEMENT_ROLES), async (req, res) => {
-  try {
-    const { dataUrl, restaurantId, slot } = req.body
-    if (!dataUrl || !restaurantId || slot == null) {
-      return res.status(400).json({ error: 'dataUrl, restaurantId, and slot required' })
-    }
-
-    const validation = decodeAndValidate(dataUrl)
-    if (!validation.ok) return res.status(400).json({ error: validation.error })
-
-    const objectKey = `restaurants/${restaurantId}/about/image-${slot + 1}-${Date.now()}.webp`
-    const { publicUrl, objectKey: returnedKey } = await r2Upload(validation.buf, objectKey, 'image/webp')
-    console.log('[about/upload-image] R2 ✅:', returnedKey)
-    return res.json({ url: publicUrl, imageKey: returnedKey })
-  } catch (err) {
-    console.error('[about/upload-image] Error:', err.message)
-    return res.status(500).json({ error: err.message })
-  }
+app.post('/api/about/upload-image', async (req, res) => {
+  const result = await mediaService.uploadImage({
+    req,
+    restaurantId: req.body?.restaurantId,
+    dataUrl: req.body?.dataUrl,
+    mediaType: 'about',
+    slot: req.body?.slot != null ? Number(req.body.slot) : undefined,
+  })
+  return res.status(result.status).json(result.body)
 })
 
-app.post('/api/restaurant/upload-carousel', requireRestaurantRole(req => req.body.restaurantId, MANAGEMENT_ROLES), async (req, res) => {
-  try {
-    const { dataUrl, restaurantId } = req.body
-    if (!dataUrl || !restaurantId) return res.status(400).json({ error: 'dataUrl and restaurantId required' })
-
-    const validation = decodeAndValidate(dataUrl)
-    if (!validation.ok) return res.status(400).json({ error: validation.error })
-
-    const objectKey = `restaurants/${restaurantId}/carousel/${Date.now()}.webp`
-    const { publicUrl, objectKey: returnedKey } = await r2Upload(validation.buf, objectKey, 'image/webp')
-    console.log('[restaurant/upload-carousel] R2 ✅:', returnedKey)
-    return res.json({ url: publicUrl, imageKey: returnedKey })
-  } catch (err) {
-    console.error('[restaurant/upload-carousel] Error:', err.message)
-    return res.status(500).json({ error: err.message })
-  }
+app.post('/api/restaurant/upload-carousel', async (req, res) => {
+  const result = await mediaService.uploadImage({
+    req,
+    restaurantId: req.body?.restaurantId,
+    dataUrl: req.body?.dataUrl,
+    mediaType: 'carousel',
+  })
+  return res.status(result.status).json(result.body)
 })
 
 // Public endpoint — returns only safe public fields.

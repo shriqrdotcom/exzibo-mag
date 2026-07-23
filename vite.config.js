@@ -23,8 +23,7 @@ import { checkRestaurantAccess } from './api/_lib/authz.js'
 import { executeTeamList, executeTeamUpsert, executeTeamDelete } from './api/_lib/team-service.js'
 import { upsertNeonRestaurantSettingsKey } from './src/db/neon-restaurant-settings.js'
 import { writeAuditLog } from './src/db/neon-audit-logs.js'
-import { r2Upload } from './src/lib/r2.js'
-import { decodeAndValidate } from './api/_lib/image-validate.js'
+import * as mediaService from './src/services/mediaService.js'
 import { getClientIp } from './src/lib/upstash.server.js'
 import * as menuService from './src/services/menuService.js'
 import * as contentService from './src/services/restaurantContentService.js'
@@ -249,30 +248,17 @@ function menuApiPlugin() {
       }
 
       // POST /api/menu/upload-image
-      // Uploads to Cloudflare R2. Falls back to Supabase Storage if R2 is unavailable.
-      // Returns: { url: string, imageKey: string|null }
+      // Delegates to shared mediaService.
       server.middlewares.use('/api/menu/upload-image', async (req, res, next) => {
         if (req.method !== 'POST') return next()
-        try {
-          const { dataUrl, restaurantId } = await readBody(req)
-          if (!dataUrl || !restaurantId) return json(res, 400, { error: 'dataUrl and restaurantId required' })
-
-          // ── Image validation — magic-byte check, size cap ──────────────────
-          const validation = decodeAndValidate(dataUrl)
-          if (!validation.ok) return json(res, 400, { error: validation.error })
-
-          // ── Primary: Cloudflare R2 ──────────────────────────────────────────
-          try {
-            const objectKey = `restaurants/${restaurantId}/menu-items/${Date.now()}.webp`
-            const { publicUrl, objectKey: returnedKey } = await r2Upload(validation.buf, objectKey, 'image/webp')
-            console.log('[menu/upload-image] R2 upload ✅:', returnedKey)
-            return json(res, 200, { url: publicUrl, imageKey: returnedKey })
-          } catch (r2Err) {
-            console.warn('[menu/upload-image] R2 upload failed, falling back to Supabase Storage:', r2Err.message)
-          }
-
-          return json(res, 500, { error: 'R2 upload failed; no fallback configured' })
-        } catch (e) { return json(res, 500, { error: e.message }) }
+        const body = await readBody(req)
+        const result = await mediaService.uploadImage({
+          req,
+          restaurantId: body?.restaurantId,
+          dataUrl: body?.dataUrl,
+          mediaType: 'menu',
+        })
+        return json(res, result.status, result.body)
       })
 
       // Route all /api/menu/* requests through a single dispatcher to avoid
@@ -646,79 +632,50 @@ function aboutApiPlugin() {
       }
 
       // POST /api/about/upload-image
-      // Uploads to Cloudflare R2 (falls back to Supabase Storage).
-      // Returns: { url: string, imageKey: string|null }
+      // Delegates to shared mediaService.
       server.middlewares.use('/api/about/upload-image', async (req, res, next) => {
         if (req.method !== 'POST') return next()
-        try {
-          const { dataUrl, restaurantId, slot } = await readBody(req)
-          if (!dataUrl || !restaurantId || slot == null) return json(res, 400, { error: 'dataUrl, restaurantId, and slot required' })
-
-          const validation = decodeAndValidate(dataUrl)
-          if (!validation.ok) return json(res, 400, { error: validation.error })
-
-          // ── Primary: Cloudflare R2 ──────────────────────────────────────────
-          try {
-            const objectKey = `restaurants/${restaurantId}/about/image-${slot + 1}-${Date.now()}.webp`
-            const { publicUrl, objectKey: returnedKey } = await r2Upload(validation.buf, objectKey, 'image/webp')
-            console.log('[about/upload-image] R2 upload ✅:', returnedKey)
-            return json(res, 200, { url: publicUrl, imageKey: returnedKey })
-          } catch (r2Err) {
-            console.warn('[about/upload-image] R2 upload failed, falling back to Supabase Storage:', r2Err.message)
-          }
-
-          return json(res, 500, { error: 'R2 upload failed; no fallback configured' })
-        } catch (e) { return json(res, 500, { error: e.message }) }
+        const body = await readBody(req)
+        const result = await mediaService.uploadImage({
+          req,
+          restaurantId: body?.restaurantId,
+          dataUrl: body?.dataUrl,
+          mediaType: 'about',
+          slot: body?.slot != null ? Number(body.slot) : undefined,
+        })
+        return json(res, result.status, result.body)
       })
 
       // POST /api/restaurant/upload-logo
-      // Uploads to Cloudflare R2 (falls back to Supabase Storage), patches restaurants.logo in
-      // Supabase, and shadow-writes logo + logo_key to Neon.
-      // Returns: { url: string, imageKey: string|null }
+      // Delegates to shared mediaService (atomic replacement: upload → DB → delete old).
       server.middlewares.use('/api/restaurant/upload-logo', async (req, res, next) => {
         if (req.method !== 'POST') return next()
-        try {
-          const { restaurantId, dataUrl } = await readBody(req)
-          if (!restaurantId || !dataUrl) return json(res, 400, { error: 'restaurantId and dataUrl required' })
-
-          const validation = decodeAndValidate(dataUrl)
-          if (!validation.ok) return json(res, 400, { error: validation.error })
-
-          const objectKeyPath = `restaurants/${restaurantId}/logo/${Date.now()}.webp`
-          const { publicUrl, objectKey } = await r2Upload(validation.buf, objectKeyPath, 'image/webp')
-          await patchNeonRestaurant(restaurantId, { logo: publicUrl, logo_key: objectKey })
-          console.log('[restaurant/upload-logo] Uploaded:', publicUrl)
-          return json(res, 200, { url: publicUrl, imageKey: objectKey })
-        } catch (e) {
-          console.error('[restaurant/upload-logo] Error:', e.message)
-          return json(res, 500, { error: e.message })
-        }
+        const body = await readBody(req)
+        const result = await mediaService.replaceImage({
+          req,
+          restaurantId: body?.restaurantId,
+          dataUrl: body?.dataUrl,
+          mediaType: 'logo',
+          async updateDb(imageKey, publicUrl) {
+            const old = await patchNeonRestaurant(body.restaurantId, { logo: publicUrl, logo_key: imageKey })
+            return { oldKey: old?.logo_key || null }
+          },
+        })
+        return json(res, result.status, result.body)
       })
 
       // POST /api/restaurant/upload-carousel
-      // Uploads a carousel/hero image to Cloudflare R2 (falls back to Supabase Storage).
-      // Returns: { url: string, imageKey: string|null }
+      // Delegates to shared mediaService.
       server.middlewares.use('/api/restaurant/upload-carousel', async (req, res, next) => {
         if (req.method !== 'POST') return next()
-        try {
-          const { dataUrl, restaurantId } = await readBody(req)
-          if (!dataUrl || !restaurantId) return json(res, 400, { error: 'dataUrl and restaurantId required' })
-
-          const validation = decodeAndValidate(dataUrl)
-          if (!validation.ok) return json(res, 400, { error: validation.error })
-
-          // ── Primary: Cloudflare R2 ──────────────────────────────────────────
-          try {
-            const objectKey = `restaurants/${restaurantId}/carousel/${Date.now()}.webp`
-            const { publicUrl, objectKey: returnedKey } = await r2Upload(validation.buf, objectKey, 'image/webp')
-            console.log('[restaurant/upload-carousel] R2 upload ✅:', returnedKey)
-            return json(res, 200, { url: publicUrl, imageKey: returnedKey })
-          } catch (r2Err) {
-            console.warn('[restaurant/upload-carousel] R2 upload failed, falling back to Supabase Storage:', r2Err.message)
-          }
-
-          return json(res, 500, { error: 'R2 upload failed; no fallback configured' })
-        } catch (e) { return json(res, 500, { error: e.message }) }
+        const body = await readBody(req)
+        const result = await mediaService.uploadImage({
+          req,
+          restaurantId: body?.restaurantId,
+          dataUrl: body?.dataUrl,
+          mediaType: 'carousel',
+        })
+        return json(res, result.status, result.body)
       })
 
       // GET /api/restaurant/:id — public; strip internal/platform fields
