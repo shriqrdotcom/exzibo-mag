@@ -118,6 +118,14 @@ export default async function handler(req, res) {
       return res.json(toPublicRestaurant(row))
     }
 
+    if (action === 'byUid') {
+      const { uid } = req.query
+      if (!uid) return badInput(res, 'uid required', requestId)
+      const row = await getNeonRestaurantByUid(uid)
+      if (!row) return notFound(res, 'Not found', requestId)
+      return res.json(toPublicRestaurant(row))
+    }
+
     if (action === 'checkSlug') {
       const { name } = req.query
       if (!name) return res.json({ taken: false, available: true })

@@ -1012,6 +1012,34 @@ function neonRestaurantPlugin() {
   }
 }
 
+function analyticsPlugin() {
+  return {
+    name: 'analytics',
+    configureServer(server) {
+      server.middlewares.use('/api/analytics', async (req, res, next) => {
+        if (req.method !== 'GET') return next()
+
+        function json(status, body) {
+          res.statusCode = status
+          res.setHeader('Content-Type', 'application/json')
+          res.end(JSON.stringify(body))
+        }
+
+        try {
+          const { default: handler } = await import('./api/analytics.js')
+          // Vercel-style handler expects req.query to be populated
+          const qs = new URLSearchParams((req.url || '').split('?')[1] || '')
+          req.query = Object.fromEntries(qs)
+          await handler(req, res)
+        } catch (err) {
+          console.error('[analytics] Error:', err.message)
+          return json(500, { error: 'Internal server error' })
+        }
+      })
+    },
+  }
+}
+
 function neonHealthPlugin() {
   return {
     name: 'neon-health',
@@ -1096,7 +1124,7 @@ function realtimeOutboxPlugin() {
 }
 
 export default defineConfig(({ mode }) => ({
-  plugins: [react(), previewAuthPlugin(), menuApiPlugin(), aboutApiPlugin(), tableValidationPlugin(), neonRestaurantPlugin(), neonHealthPlugin(), spaFallbackPlugin(), realtimeOutboxPlugin()],
+  plugins: [react(), previewAuthPlugin(), menuApiPlugin(), aboutApiPlugin(), tableValidationPlugin(), neonRestaurantPlugin(), analyticsPlugin(), neonHealthPlugin(), spaFallbackPlugin(), realtimeOutboxPlugin()],
   appType: 'spa',
   define: {},
   resolve: {
