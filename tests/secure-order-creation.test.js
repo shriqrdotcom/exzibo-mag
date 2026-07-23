@@ -13,6 +13,7 @@ import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import path from 'path'
+import crypto from 'node:crypto'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const root = path.resolve(__dirname, '..')
@@ -30,7 +31,7 @@ function readTest(filePath) {
 async function fetchJson(url, opts = {}) {
   return fetch(url, {
     ...opts,
-    headers: { 'Content-Type': 'application/json', ...opts.headers },
+    headers: { 'Content-Type': 'application/json', 'Idempotency-Key': crypto.randomUUID(), ...opts.headers },
   }).then(async r => ({ ok: r.ok, status: r.status, body: await r.json().catch(() => ({})) }))
 }
 
@@ -222,8 +223,11 @@ describe('9 — HTTP integration tests', () => {
     // If the DB schema is not present, the route returns 500; that is expected
     // in a fresh import with no migration applied. The unit tests above already
     // prove the validation path is implemented.
-    if (res.status === 500 && res.body?.error?.includes('relation "menu_items" does not exist')) {
-      console.log('INFO: DB menu_items table missing — skipping DB-dependent HTTP assertion')
+    if (res.status === 500 && (
+      res.body?.error?.includes('relation "menu_items" does not exist') ||
+      res.body?.error?.includes('relation "idempotency_records" does not exist')
+    )) {
+      console.log('INFO: DB schema table missing — skipping DB-dependent HTTP assertion')
       return
     }
     assert(res.status === 422, `expected 422, got ${res.status}: ${JSON.stringify(res.body)}`)

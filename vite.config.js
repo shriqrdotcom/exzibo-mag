@@ -418,6 +418,10 @@ function menuApiPlugin() {
 
         try {
           const body = await readBody(req)
+          const idempotencyKey = req.headers['idempotency-key']
+          if (!idempotencyKey || typeof idempotencyKey !== 'string' || idempotencyKey.length < 16) {
+            return json(res, 400, { error: 'Idempotency-Key header is required (min 16 characters).' })
+          }
           if (pathname === '' || pathname === '/') {
             if (!body?.restaurant_id || !Array.isArray(body?.items) || body.items.length === 0) {
               return json(res, 400, { error: 'restaurant_id and a non-empty items array are required' })
@@ -430,11 +434,14 @@ function menuApiPlugin() {
               customerLocation: body.customer_location ?? body.location ?? null,
               items: body.items,
               notes: body.notes ?? null,
+              idempotencyKey,
             })
             publishOrderRealtimeEvent({ type: 'ORDER_CREATED', restaurantId: order.restaurant_id, orderId: order.id, status: order.status })
             return json(res, 201, order)
           }
         } catch (e) {
+          if (e.code === 'IDEMPOTENCY_KEY_REQUIRED') return json(res, 400, { error: e.message, code: e.code })
+          if (e.code === 'IDEMPOTENCY_CONFLICT') return json(res, 409, { error: e.message, code: e.code })
           if (e.code === 'VALIDATION') return json(res, 400, { error: e.message, code: e.code })
           if (e.code === 'INVALID_ITEM' || e.code === 'INVALID_OPTION') return json(res, 422, { error: e.message, code: e.code })
           if (e.code === 'DUPLICATE') return json(res, 409, { error: e.message, code: e.code })
@@ -458,8 +465,11 @@ function menuApiPlugin() {
 
         try {
           const body = await readBody(req)
-
+          const idempotencyKey = req.headers['idempotency-key']
           if (req.method === 'POST' && (pathname === '' || pathname === '/')) {
+            if (!idempotencyKey || typeof idempotencyKey !== 'string' || idempotencyKey.length < 16) {
+              return json(res, 400, { error: 'Idempotency-Key header is required (min 16 characters).' })
+            }
             const saved = await createBookingAtomic({
               restaurantId: body.restaurant_id,
               date: body.date,
@@ -474,6 +484,7 @@ function menuApiPlugin() {
               occasion: body.occasion,
               seating: body.seating,
               notes: body.notes,
+              idempotencyKey,
             })
             return json(res, 201, saved)
           }
@@ -488,6 +499,8 @@ function menuApiPlugin() {
             return json(res, 200, updated ?? { id, status })
           }
         } catch (e) {
+          if (e.code === 'IDEMPOTENCY_KEY_REQUIRED') return json(res, 400, { error: e.message, code: e.code })
+          if (e.code === 'IDEMPOTENCY_CONFLICT') return json(res, 409, { error: e.message, code: e.code })
           if (e.code === 'VALIDATION' || e.code === 'RESTAURANT_UNAVAILABLE' || e.code === 'OUTSIDE_OPENING_HOURS') return json(res, 400, { error: e.message, code: e.code })
           if (e.code === 'CONFLICT' || e.code === 'DUPLICATE') return json(res, 409, { error: e.message, code: e.code })
           return json(res, 500, { error: e.message })

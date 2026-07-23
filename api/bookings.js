@@ -63,6 +63,10 @@ export default async function handler(req, res) {
     // ── POST: create booking — public customer flow ───────────────────────────
     if (req.method === 'POST' && !action) {
       const body = req.body
+      const idempotencyKey = req.headers['idempotency-key']
+      if (!idempotencyKey || typeof idempotencyKey !== 'string' || idempotencyKey.length < 16) {
+        return res.status(400).json({ error: 'Idempotency-Key header is required (min 16 characters).' })
+      }
       if (!body?.restaurant_id) return res.status(400).json({ error: 'restaurant_id required' })
 
       const ip = getClientIp(req)
@@ -84,9 +88,12 @@ export default async function handler(req, res) {
           occasion: body.occasion,
           seating: body.seating,
           notes: body.notes,
+          idempotencyKey,
         })
         return res.status(201).json(saved)
       } catch (err) {
+        if (err.code === 'IDEMPOTENCY_KEY_REQUIRED') return res.status(400).json({ error: err.message, code: err.code })
+        if (err.code === 'IDEMPOTENCY_CONFLICT') return res.status(409).json({ error: err.message, code: err.code })
         if (err.code === 'VALIDATION' || err.code === 'RESTAURANT_UNAVAILABLE' || err.code === 'OUTSIDE_OPENING_HOURS') {
           return res.status(400).json({ error: err.message, code: err.code })
         }

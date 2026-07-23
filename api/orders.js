@@ -53,6 +53,10 @@ export default async function handler(req, res) {
   // ── POST (no action): create order — public customer flow ─────────────────────
   if (!action) {
     const body = req.body
+    const idempotencyKey = req.headers['idempotency-key']
+    if (!idempotencyKey || typeof idempotencyKey !== 'string' || idempotencyKey.length < 16) {
+      return res.status(400).json({ error: 'Idempotency-Key header is required (min 16 characters).' })
+    }
     if (!body?.restaurant_id || !Array.isArray(body?.items) || body.items.length === 0) {
       return res.status(400).json({ error: 'restaurant_id and a non-empty items array are required' })
     }
@@ -65,11 +69,14 @@ export default async function handler(req, res) {
         customerLocation: body.customer_location ?? body.location ?? null,
         items: body.items,
         notes: body.notes ?? null,
+        idempotencyKey,
       })
       await publishOrderRealtimeEvent({ type: 'ORDER_CREATED', restaurantId: order.restaurant_id, orderId: order.id, status: order.status })
       return res.status(201).json(order)
     } catch (err) {
       console.error('[orders POST] Error:', err.message)
+      if (err.code === 'IDEMPOTENCY_KEY_REQUIRED') return res.status(400).json({ error: err.message, code: err.code })
+      if (err.code === 'IDEMPOTENCY_CONFLICT') return res.status(409).json({ error: err.message, code: err.code })
       if (err.code === 'VALIDATION') return res.status(400).json({ error: err.message, code: err.code })
       if (err.code === 'INVALID_ITEM' || err.code === 'INVALID_OPTION') return res.status(422).json({ error: err.message, code: err.code })
       if (err.code === 'DUPLICATE') return res.status(409).json({ error: err.message, code: err.code })
@@ -99,7 +106,7 @@ export default async function handler(req, res) {
       const { allowed } = await rateLimit(`rl:order-status:ip:${ip}`, 60, 60)
       if (!allowed) return send429(res, 'Too many order status updates.')
       const lockKey = `lock:order-status:${orderId}`
-      const { acquired } = await acquireLock(lockKey, 5)
+      const { acquired, token } = await acquireLock(lockKey, 5)
       if (!acquired) return res.status(409).json({ error: 'Status update already in progress.' })
       try {
         const updatedRow = await applyOrderStatusTransition(orderId, status)
@@ -116,7 +123,7 @@ export default async function handler(req, res) {
           return res.status(404).json({ error: transitionErr.message, code: transitionErr.code })
         }
         throw transitionErr
-      } finally { await releaseLock(lockKey) }
+      } finally { await releaseLock(lockKey, token) }
     }
 
     // ── POST autoCleanup — superadmin only ────────────────────────────────────────
