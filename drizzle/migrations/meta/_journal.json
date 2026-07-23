@@ -57,6 +57,13 @@
       "when": 1784803991000,
       "tag": "0009_idempotency_records",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1784809912556,
+      "tag": "0010_realtime_outbox",
+      "breakpoints": true
     }
   ]
 }

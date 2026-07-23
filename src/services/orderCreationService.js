@@ -314,6 +314,25 @@ export async function createOrderAtomic(input) {
     // 6. Record the idempotency response in the same transaction as the order.
     await recordIdempotencyResponse(client, restaurantId, OPERATION_ORDER_CREATE, idempotency.keyHash, idempotency.requestHash, canonicalResponse)
 
+    // 7. Insert a realtime outbox event in the SAME transaction.
+    // The outbox processor will publish asynchronously. This guarantees the
+    // event is persisted even if the Worker is temporarily unavailable.
+    // The outbox event id is used as the realtime event id for deduplication.
+    const outboxPayload = JSON.stringify({
+      type: 'ORDER_CREATED',
+      restaurantId,
+      orderId,
+      status: 'pending',
+      version: 1,
+      eventId: '',  // filled atomically by the processor using outbox.id
+      time: new Date().toISOString(),
+    })
+    await client.query(
+      `INSERT INTO realtime_outbox (restaurant_id, order_id, event_type, payload)
+       VALUES ($1::uuid, $2, $3, $4::jsonb)`,
+      [restaurantId, orderId, 'ORDER_CREATED', outboxPayload]
+    )
+
     await client.query('COMMIT')
 
     return canonicalResponse

@@ -336,6 +336,37 @@ export const idempotencyRecords = pgTable(
   ]
 )
 
+// ── realtime_outbox ───────────────────────────────────────────────────────────
+// Transactional outbox for order realtime events. Events are INSERTed in the
+// same PostgreSQL transaction as the order/status change that created them.
+// A background processor (realtimeOutboxProcessor) then publishes them to the
+// Cloudflare Worker asynchronously. This guarantees at-least-once delivery
+// without coupling order creation/status-change latency to Worker availability.
+//
+// The processor selects unpublished events with FOR UPDATE SKIP LOCKED,
+// publishes through the authenticated Worker endpoint, marks successful events
+// as published, and retries failures with bounded exponential backoff.
+export const realtimeOutbox = pgTable(
+  'realtime_outbox',
+  {
+    id:               uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+    restaurantId:     uuid('restaurant_id').notNull().references(() => restaurants.id, { onDelete: 'cascade' }),
+    orderId:          text('order_id').notNull(),
+    eventType:        text('event_type').notNull(),     // ORDER_CREATED | ORDER_STATUS_CHANGED
+    payload:          jsonb('payload').notNull(),        // full event body sent to Worker
+    attemptCount:     integer('attempt_count').notNull().default(0),
+    nextAttemptTime:  timestamp('next_attempt_time', { withTimezone: true }).notNull().default(sql`now()`),
+    publishedAt:      timestamp('published_at', { withTimezone: true }),
+    lastError:        text('last_error'),
+    createdAt:        timestamp('created_at', { withTimezone: true }).notNull().default(sql`now()`),
+  },
+  (t) => [
+    index('realtime_outbox_unpublished_idx').on(t.nextAttemptTime, t.publishedAt),
+    index('realtime_outbox_restaurant_id_idx').on(t.restaurantId),
+    index('realtime_outbox_event_type_idx').on(t.eventType),
+  ]
+)
+
 // ── audit_logs ───────────────────────────────────────────────────────────────
 export const auditLogs = pgTable(
   'audit_logs',

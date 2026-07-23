@@ -17,7 +17,7 @@ import { createBookingAtomic } from './src/services/bookingCreationService.js'
 import { getNeonOrders, deleteOldNeonOrders } from './src/db/neon-orders.js'
 import { createOrderAtomic } from './src/services/orderCreationService.js'
 import { applyOrderStatusTransition } from './src/services/orderStatusService.js'
-import { publishOrderRealtimeEvent } from './src/lib/realtime-publisher.js'
+import { startOutboxProcessor } from './src/services/realtimeOutboxProcessor.js'
 import { upsertNeonRestaurantMember, deleteNeonRestaurantMember, getNeonRestaurantMembers, filterNeonRestaurantMembersForRole } from './src/db/neon-restaurant-members.js'
 import { checkRestaurantAccess } from './api/_lib/authz.js'
 import { executeTeamList, executeTeamUpsert, executeTeamDelete } from './api/_lib/team-service.js'
@@ -413,16 +413,6 @@ function menuApiPlugin() {
           const resolvedRestaurantId = updatedRow.restaurant_id
           console.log('[orders/update-status] Neon primary ✅ id:', orderId, 'status:', status)
 
-          // ── Realtime publish to Cloudflare Worker (after Neon succeeds) ──────
-          if (resolvedRestaurantId) {
-            publishOrderRealtimeEvent({
-              type: status === 'cancelled' ? 'ORDER_CANCELLED' : 'ORDER_STATUS_CHANGED',
-              restaurantId: resolvedRestaurantId,
-              orderId,
-              status,
-            })
-          }
-
           writeAuditLog({ action: 'update_status', entityType: 'order', entityId: orderId, newData: { status } })
           return json(res, 200, { id: orderId, status, restaurant_id: resolvedRestaurantId })
         } catch (e) { return json(res, 500, { error: e.message }) }
@@ -480,7 +470,8 @@ function menuApiPlugin() {
               notes: body.notes ?? null,
               idempotencyKey,
             })
-            publishOrderRealtimeEvent({ type: 'ORDER_CREATED', restaurantId: order.restaurant_id, orderId: order.id, status: order.status })
+            // Realtime event is published asynchronously via the transactional outbox
+            // (inserted inside createOrderAtomic) — not here.
             return json(res, 201, order)
           }
         } catch (e) {
@@ -1123,8 +1114,23 @@ function spaFallbackPlugin() {
   }
 }
 
+function realtimeOutboxPlugin() {
+  return {
+    name: 'realtime-outbox-plugin',
+    configureServer(server) {
+      server.httpServer?.once('listening', () => {
+        import('pg').then(({ default: pg }) => {
+          const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL, max: 2 })
+          startOutboxProcessor(pool)
+          console.log('[outbox] processor started (Vite runtime)')
+        })
+      })
+    },
+  }
+}
+
 export default defineConfig(({ mode }) => ({
-  plugins: [react(), previewAuthPlugin(), menuApiPlugin(), aboutApiPlugin(), tableValidationPlugin(), neonRestaurantPlugin(), neonHealthPlugin(), spaFallbackPlugin()],
+  plugins: [react(), previewAuthPlugin(), menuApiPlugin(), aboutApiPlugin(), tableValidationPlugin(), neonRestaurantPlugin(), neonHealthPlugin(), spaFallbackPlugin(), realtimeOutboxPlugin()],
   appType: 'spa',
   define: {},
   resolve: {

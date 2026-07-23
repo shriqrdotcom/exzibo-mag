@@ -1,7 +1,6 @@
 import { setPublicCors } from './_lib/cors.js'
 import { checkRestaurantAccess, requireSuperadmin, ALL_ROLES, MANAGEMENT_ROLES } from './_lib/authz.js'
 import { rateLimit, acquireLock, releaseLock, getClientIp, send429 } from '../src/lib/upstash.server.js'
-import { publishOrderRealtimeEvent } from '../src/lib/realtime-publisher.js'
 import {
   deleteOldNeonOrders,
   getNeonOrders,
@@ -71,7 +70,8 @@ export default async function handler(req, res) {
         notes: body.notes ?? null,
         idempotencyKey,
       })
-      await publishOrderRealtimeEvent({ type: 'ORDER_CREATED', restaurantId: order.restaurant_id, orderId: order.id, status: order.status })
+      // Realtime event is published asynchronously via the transactional outbox
+      // (inserted inside createOrderAtomic) — not here.
       return res.status(201).json(order)
     } catch (err) {
       console.error('[orders POST] Error:', err.message)
@@ -110,7 +110,8 @@ export default async function handler(req, res) {
       if (!acquired) return res.status(409).json({ error: 'Status update already in progress.' })
       try {
         const updatedRow = await applyOrderStatusTransition(orderId, status)
-        await publishOrderRealtimeEvent({ type: 'ORDER_STATUS_CHANGED', restaurantId: resolvedRestaurantId, orderId, status })
+        // Realtime event is published asynchronously via the transactional outbox
+        // (inserted inside applyOrderStatusTransition) — not here.
         return res.json({ success: true, orderId, status, restaurant_id: updatedRow.restaurant_id })
       } catch (transitionErr) {
         if (transitionErr.code === 'TERMINAL' || transitionErr.code === 'INVALID_TRANSITION') {
