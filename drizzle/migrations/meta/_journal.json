@@ -29,6 +29,13 @@
       "when": 1784714949086,
       "tag": "0005_canonical_identity_types",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1784785360000,
+      "tag": "0006_slug_case_insensitive_unique",
+      "breakpoints": true
     }
   ]
 }
