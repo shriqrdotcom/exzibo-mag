@@ -26,42 +26,56 @@
     {
       "idx": 3,
       "version": "7",
+      "when": 1783000000000,
+      "tag": "0003_add_orders_items_column",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1783100000000,
+      "tag": "0004_add_global_tables",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
       "when": 1784714949086,
       "tag": "0005_canonical_identity_types",
       "breakpoints": true
     },
     {
-      "idx": 4,
+      "idx": 6,
       "version": "7",
       "when": 1784785360000,
       "tag": "0006_slug_case_insensitive_unique",
       "breakpoints": true
     },
     {
-      "idx": 5,
+      "idx": 7,
       "version": "7",
       "when": 1784871760000,
       "tag": "0007_order_state_retention",
       "breakpoints": true
     },
     {
-      "idx": 6,
+      "idx": 8,
       "version": "7",
       "when": 1784871761000,
       "tag": "0008_secure_booking_creation",
       "breakpoints": true
     },
     {
-      "idx": 7,
+      "idx": 9,
       "version": "7",
-      "when": 1784803991000,
+      "when": 1784890000000,
       "tag": "0009_idempotency_records",
       "breakpoints": true
     },
     {
-      "idx": 8,
+      "idx": 10,
       "version": "7",
-      "when": 1784809912556,
+      "when": 1784900000000,
       "tag": "0010_realtime_outbox",
       "breakpoints": true
     }

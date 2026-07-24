@@ -272,18 +272,20 @@ describe('7 — Migration file and journal', () => {
     )
   })
 
-  it('journal contains 0007_order_state_retention after existing entries', async () => {
+  it('journal contains 0007_order_state_retention after its predecessor 0006', async () => {
     const journalText = await src('drizzle/migrations/meta/_journal.json')
     const journal = JSON.parse(journalText)
     const entry = journal.entries.find(e => e.tag === '0007_order_state_retention')
     assert(entry !== undefined, 'journal must have entry for 0007_order_state_retention')
 
-    // Must come after the existing highest idx (currently 4)
-    const maxExistingIdx = journal.entries
-      .filter(e => e.tag !== '0007_order_state_retention')
-      .reduce((max, e) => Math.max(max, e.idx), -1)
-    assert(entry.idx > maxExistingIdx,
-      `journal idx ${entry.idx} must be greater than existing max idx ${maxExistingIdx}`)
+    // Must come after its immediate predecessor 0006_slug_case_insensitive_unique.
+    // (The original assertion checked idx > max-of-all-others, which broke when
+    // migrations 0008–0010 were added. The correct invariant is that 0007 appears
+    // after 0006 in the sequential idx order.)
+    const e0006 = journal.entries.find(e => e.tag === '0006_slug_case_insensitive_unique')
+    assert(e0006 !== undefined, 'journal must have entry for 0006_slug_case_insensitive_unique')
+    assert(entry.idx > e0006.idx,
+      `journal idx for 0007 (${entry.idx}) must be greater than 0006 idx (${e0006.idx})`)
   })
 
   it('journal entries are ordered by idx with no duplicates', async () => {
