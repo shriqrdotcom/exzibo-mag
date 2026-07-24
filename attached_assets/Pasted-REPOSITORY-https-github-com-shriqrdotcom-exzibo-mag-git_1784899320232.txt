@@ -1,0 +1,647 @@
+REPOSITORY
+https://github.com/shriqrdotcom/exzibo-mag.git
+
+TASK TITLE
+Prompt 3 of 38 — Remove Deployable Authentication Bypasses and Enforce Stable Better Auth Secrets
+
+ROLE
+
+Act as a senior backend security engineer, Better Auth specialist and Node.js runtime-security engineer.
+
+Work only on:
+
+1. Removing deployable server authentication bypasses.
+2. Removing fabricated privileged identities.
+3. Enforcing explicit and stable Better Auth secrets.
+4. Replacing bypass-based tests with safe test-only authentication injection.
+
+Do not modify the custom preview-login or preview-token implementation in this prompt, except where a minimal change is required to prevent it from acting as a general authentication bypass.
+
+Preview-token signing and verification will be handled separately in Prompt 4.
+
+==================================================
+PRECONDITIONS
+==================================================
+
+Before editing:
+
+1. Switch to the latest main branch.
+2. Pull the latest remote changes.
+3. Confirm Prompt 2 / PR #28 is merged.
+4. Confirm the working tree is clean.
+5. Record the exact starting commit SHA.
+6. Create this branch:
+
+   repair/03-auth-bypass-secret-policy
+
+Do not continue from:
+
+- audit/01-reproducible-baseline;
+- repair/02-migration-ledger-integrity;
+- an outdated local branch;
+- a branch containing uncommitted changes.
+
+==================================================
+CONFIRMED PROBLEMS
+==================================================
+
+Repository evidence indicates:
+
+1. server.js can skip authentication when:
+
+   DISABLE_AUTH=true
+
+   or:
+
+   VITE_DISABLE_AUTH=true
+
+2. Some development branches fabricate or assume privileged identities, including owner or superadmin authority.
+
+3. Deployable Express or Replit execution can therefore become unauthenticated through environment-variable misconfiguration.
+
+4. Better Auth secret validation is mainly tied to Vercel-specific runtime detection.
+
+5. Other production-capable runtimes may use a randomly generated per-process Better Auth secret.
+
+6. A random runtime secret:
+
+   - hides missing configuration;
+   - invalidates sessions after restart;
+   - produces inconsistent behaviour between instances;
+   - is not acceptable for production.
+
+==================================================
+OBJECTIVE
+==================================================
+
+After this prompt:
+
+1. No deployable runtime can disable server authentication through environment variables.
+
+2. DISABLE_AUTH and VITE_DISABLE_AUTH must never affect server-side authentication.
+
+3. No deployable branch may fabricate:
+
+   - owner;
+   - admin;
+   - manager;
+   - staff;
+   - superadmin;
+   - restaurant membership.
+
+4. Private routes must always derive identity from a genuine verified server session.
+
+5. Tests must use explicit test-only dependency injection instead of production authentication bypasses.
+
+6. BETTER_AUTH_SECRET must be explicitly configured and stable.
+
+7. Missing BETTER_AUTH_SECRET must fail closed in every production-capable runtime.
+
+8. No random or environment-derived Better Auth secret fallback may remain.
+
+9. Valid Better Auth sessions, cookies, Google OAuth configuration and existing authorization behaviour must remain functional.
+
+==================================================
+STRICT SAFETY RULES
+==================================================
+
+1. Do not work directly on main.
+
+2. Do not request or expose production secrets.
+
+3. Do not print secret values.
+
+4. Do not rotate or replace production secrets.
+
+5. Do not change Google OAuth client IDs, client secrets or redirect URLs.
+
+6. Do not change cookie names, cookie domains, session duration or trusted origins unless a minimal change is strictly required for this task.
+
+7. Do not add another authentication framework.
+
+8. Do not redesign restaurant roles or permissions.
+
+9. Do not trust client-provided:
+
+   - userId;
+   - email;
+   - role;
+   - restaurantId;
+   - superadmin status.
+
+10. Do not create hardcoded development users in deployable code.
+
+11. Do not create fake privileged identities in production code.
+
+12. Do not modify database schema or migration files.
+
+13. Do not run production migrations.
+
+14. Do not repair:
+
+   - preview-token cryptography;
+   - plaintext staff-password storage;
+   - public restaurant-row exposure;
+   - team pagination;
+   - booking authorization;
+   - unrelated application defects.
+
+15. Do not disable or delete failing tests.
+
+16. Test-only secrets must exist only in test configuration or the test process.
+
+17. Stop and report when repository evidence materially differs from this task.
+
+==================================================
+STEP 1 — AUTHENTICATION BYPASS INVENTORY
+==================================================
+
+Search the complete repository for:
+
+- DISABLE_AUTH
+- VITE_DISABLE_AUTH
+- _isAuthDisabled
+- isAuthDisabled
+- auth bypass
+- teamAuthBypass
+- mock owner
+- mock admin
+- mock superadmin
+- fake session
+- development user
+- requireSession
+- getSessionEmail
+- checkRestaurantAccess
+- requireRestaurantRole
+- requireSuperadmin
+- BETTER_AUTH_SECRET
+- crypto.randomUUID
+- crypto.randomBytes
+- randomUUID
+- randomBytes
+- VERCEL_ENV
+- NODE_ENV
+- APP_RUNTIME
+
+Inspect at minimum:
+
+- server.js
+- vite.config.js
+- src/lib/auth.server.js
+- api/_lib/authz.js
+- .replit
+- .env.example
+- package.json
+- authentication tests
+- authorization tests
+- tenant-isolation tests
+- deployment documentation
+- authentication-related Agent-memory files
+
+Create an internal map:
+
+runtime
+→ middleware or route
+→ current authentication method
+→ bypass condition
+→ privilege granted
+→ corrected behaviour
+
+Do not include secret values.
+
+Do not edit until this inventory is complete.
+
+==================================================
+STEP 2 — REMOVE DEPLOYABLE SERVER AUTH BYPASSES
+==================================================
+
+Repair Express, Vite middleware and any other deployable backend so that:
+
+1. DISABLE_AUTH is never used to skip authentication.
+
+2. VITE_DISABLE_AUTH is never used to skip authentication.
+
+3. Remove every deployable branch that:
+
+   - calls next() without verifying a session;
+   - skips membership validation;
+   - skips restaurant-role validation;
+   - skips superadmin validation;
+   - returns a fabricated authenticated user;
+   - fabricates a restaurant membership;
+   - grants owner or superadmin privileges.
+
+4. Private routes must use existing canonical server-side helpers where appropriate:
+
+   - requireSession;
+   - getSessionEmail;
+   - checkRestaurantAccess;
+   - requireRestaurantRole;
+   - requireSuperadmin.
+
+5. Do not copy or recreate authorization rules inside individual routes when an existing shared helper can be used.
+
+6. CORS OPTIONS requests may remain unauthenticated, but the actual protected request must enforce authentication.
+
+7. A frontend VITE variable may control harmless UI presentation only. It must never affect API authentication.
+
+8. Remove authentication-disable flags from deployable Replit or server configuration.
+
+9. When obsolete bypass variables remain referenced only by dead documentation or tests, remove those references safely.
+
+==================================================
+STEP 3 — PRESERVE PUBLIC AND PRIVATE ROUTE BOUNDARIES
+==================================================
+
+Confirm that intentionally public routes remain public, including where applicable:
+
+- public restaurant projection;
+- public menu reads;
+- public order creation;
+- public booking creation;
+- liveness;
+- readiness where intentionally public;
+- authentication callbacks.
+
+Confirm that private routes remain private, including:
+
+- team management;
+- settings mutations;
+- menu mutations;
+- restaurant-management actions;
+- order-management actions;
+- booking-management actions;
+- analytics;
+- media management;
+- superadmin actions.
+
+Do not change route permissions beyond removing the confirmed bypasses.
+
+==================================================
+STEP 4 — REPLACE BYPASS-BASED TESTING
+==================================================
+
+Where tests previously used DISABLE_AUTH or VITE_DISABLE_AUTH:
+
+1. Replace the bypass with explicit test-only dependency injection.
+
+2. Prefer one of these existing-compatible patterns:
+
+   - an application factory receiving authentication dependencies;
+   - an injectable authentication middleware;
+   - a test-only request/session adapter;
+   - a test-only module mock.
+
+3. The default application path must always use real authentication.
+
+4. Test authentication must exist only in:
+
+   - tests;
+   - test setup;
+   - test fixtures;
+   - explicitly injected test adapters.
+
+5. Test code must support controlled scenarios:
+
+   - unauthenticated request;
+   - valid restaurant member;
+   - wrong tenant;
+   - insufficient role;
+   - valid superadmin;
+   - invalid session;
+   - expired session.
+
+6. Use unmistakable test identities such as:
+
+   user@example.invalid
+
+7. Missing test injection must fail closed.
+
+8. Never preserve a deployable environment-variable bypass for test convenience.
+
+9. Do not add a broad application factory refactor when a smaller safe injection point already exists.
+
+==================================================
+STEP 5 — ENFORCE A STABLE BETTER AUTH SECRET
+==================================================
+
+Inspect every Better Auth initialization path.
+
+Implement one canonical policy:
+
+1. BETTER_AUTH_SECRET must be explicitly supplied.
+
+2. Missing BETTER_AUTH_SECRET must fail initialization in every production-capable runtime, including:
+
+   - NODE_ENV=production;
+   - Vercel production;
+   - Vercel preview when real sessions are enabled;
+   - Express production deployment;
+   - Replit deployment;
+   - any runtime explicitly marked production.
+
+3. Do not enforce the requirement only when VERCEL_ENV exists.
+
+4. Remove all randomly generated Better Auth secret fallbacks.
+
+5. Do not fall back to:
+
+   - crypto.randomUUID();
+   - randomUUID();
+   - crypto.randomBytes();
+   - randomBytes();
+   - REPL_ID;
+   - hostname;
+   - deployment ID;
+   - a literal string.
+
+6. Local development must also use an explicitly configured stable development secret.
+
+7. Automated tests may inject a test-only secret through test configuration.
+
+8. The test-only secret must not be embedded in production application logic.
+
+9. Safe configuration errors may state:
+
+   BETTER_AUTH_SECRET is required
+
+10. Never include the secret value in:
+
+   - logs;
+   - exceptions;
+   - HTTP responses;
+   - test reports;
+   - documentation.
+
+11. Preserve existing:
+
+   - Better Auth database configuration;
+   - Google provider configuration;
+   - Expo plugin;
+   - session mappings;
+   - cookie behaviour;
+   - cross-subdomain settings;
+   - trusted origins.
+
+==================================================
+STEP 6 — CONFIGURATION CLEANUP
+==================================================
+
+Update only configuration directly related to this task.
+
+1. Remove DISABLE_AUTH and VITE_DISABLE_AUTH from deployable server configuration.
+
+2. Remove documentation recommending server authentication bypasses.
+
+3. Remove narrowly relevant Agent-memory instructions that explicitly recommend authentication bypasses.
+
+4. Do not rewrite unrelated Agent-memory files.
+
+5. Document BETTER_AUTH_SECRET as required.
+
+6. Use placeholders only.
+
+7. Do not add real or realistic secret values.
+
+8. Do not change actual Replit, Vercel or Cloudflare secret values.
+
+9. Do not perform the broader `.env.example` cleanup planned for a later prompt.
+
+10. Leave preview-authentication variables for Prompt 4 unless they directly create the deployable server bypass being removed here.
+
+==================================================
+STEP 7 — REQUIRED BEHAVIOURAL TESTS
+==================================================
+
+Add or update executable tests proving:
+
+AUTHENTICATION BYPASS REMOVAL
+
+1. Express private route without a valid session returns 401.
+
+2. Express private route still returns 401 when:
+
+   DISABLE_AUTH=true
+
+3. Express private route still returns 401 when:
+
+   VITE_DISABLE_AUTH=true
+
+4. Vite private route without a session returns 401.
+
+5. Vite private route still returns 401 when either bypass variable is set.
+
+6. No bypass path fabricates owner authority.
+
+7. No bypass path fabricates superadmin authority.
+
+AUTHORIZATION PRESERVATION
+
+8. A valid restaurant member continues to access an allowed route.
+
+9. A wrong-tenant user receives 403.
+
+10. Staff cannot perform a management-only mutation.
+
+11. Manager cannot perform an owner/admin-only mutation where the current policy forbids it.
+
+12. A non-superadmin cannot access a superadmin route.
+
+13. Public customer routes remain accessible without a staff session.
+
+BETTER AUTH SECRET
+
+14. Production initialization without BETTER_AUTH_SECRET fails.
+
+15. Express production initialization without the secret fails.
+
+16. Vercel-style production initialization without the secret fails.
+
+17. A configured stable test secret initializes successfully.
+
+18. No random secret generator is used as a fallback.
+
+19. Repeated initialization with the same explicit secret uses the same configuration.
+
+TEST-ONLY AUTHENTICATION
+
+20. Test injection can represent an unauthenticated request.
+
+21. Test injection can represent an authorized member.
+
+22. Test injection can represent a wrong-tenant user.
+
+23. Missing test injection does not authenticate the caller.
+
+Do not connect these tests to production resources.
+
+==================================================
+STEP 8 — VALIDATION
+==================================================
+
+Run:
+
+1. Root frozen installation.
+2. Focused authentication tests.
+3. Express authentication tests.
+4. Vite authentication tests.
+5. Affected authorization tests.
+6. Affected tenant-isolation tests.
+7. JavaScript syntax checks.
+8. Type checking where configured.
+9. Linting where configured.
+10. Prompt 2 migration-integrity tests.
+11. Root production build.
+12. git diff against the starting commit.
+13. git status.
+
+Run a final repository search confirming deployable application code no longer contains:
+
+- DISABLE_AUTH used to skip authentication;
+- VITE_DISABLE_AUTH used to skip authentication;
+- teamAuthBypass;
+- fabricated owner identities;
+- fabricated superadmin identities;
+- random Better Auth secret fallback.
+
+The strings may remain inside negative regression tests only.
+
+Do not claim success when any applicable test fails.
+
+==================================================
+ACCEPTANCE CRITERIA
+==================================================
+
+This prompt is COMPLETE only when:
+
+1. No deployable runtime can bypass authentication with an environment variable.
+
+2. No deployable bypass branch fabricates a privileged identity.
+
+3. Private routes still require a valid server session.
+
+4. Existing role and tenant checks remain enforced.
+
+5. Intentionally public routes remain public.
+
+6. Tests no longer depend on production authentication bypass flags.
+
+7. BETTER_AUTH_SECRET is explicitly required in every production-capable runtime.
+
+8. No random Better Auth secret fallback remains.
+
+9. Valid Better Auth configuration still initializes correctly.
+
+10. Relevant behavioural tests pass.
+
+11. Prompt 2 migration-integrity tests remain green.
+
+12. Root production build passes.
+
+13. No migration is created.
+
+14. No production database is accessed.
+
+15. No production secret is requested or changed.
+
+16. No unrelated application feature is modified.
+
+Use PARTIAL or BLOCKED when an applicable criterion is not proven.
+
+==================================================
+FINAL RESPONSE
+==================================================
+
+Return this exact structure:
+
+PROMPT 3 COMPLETION SUMMARY
+
+Status:
+- COMPLETE / PARTIAL / BLOCKED
+
+Branch:
+- branch name
+
+Starting commit:
+- exact SHA
+
+Ending commit:
+- exact SHA or “Not committed”
+
+Authentication bypasses found:
+- concise list
+
+Authentication bypasses removed:
+- concise list
+
+Fabricated privileged identities removed:
+- concise list
+
+Better Auth secret changes:
+- concise list
+
+Test-only authentication approach:
+- concise explanation
+
+Files changed:
+- exact concise list
+
+Unsafe-pattern final search:
+- DISABLE_AUTH server bypass: FOUND / NOT FOUND
+- VITE_DISABLE_AUTH server bypass: FOUND / NOT FOUND
+- teamAuthBypass: FOUND / NOT FOUND
+- random Better Auth secret fallback: FOUND / NOT FOUND
+- fabricated owner identity: FOUND / NOT FOUND
+- fabricated superadmin identity: FOUND / NOT FOUND
+
+Focused tests:
+- commands
+- PASS / FAIL
+- passed
+- failed
+- skipped
+- concise explanation
+
+Migration-regression tests:
+- command
+- PASS / FAIL
+
+Root production build:
+- command
+- PASS / FAIL
+
+Environment-variable names affected:
+- names only
+- never include values
+
+Behaviour intentionally changed:
+- concise list
+
+Behaviour verified unchanged:
+- concise list
+
+Production resources accessed:
+- No
+
+Production database accessed:
+- No
+
+Production migrations executed:
+- No
+
+Production secrets changed:
+- No
+
+Remaining blockers or risks:
+- concise list
+- write “None found within this prompt’s scope” when applicable
+
+Recommended pull-request title:
+- one concise title
+
+Recommended next action:
+- State whether Prompt 4 may begin.
+
+Final conclusion:
+- State whether Prompt 3 is fully complete and ready for pull-request review.
+- Do not claim that the complete repository is production-ready.
