@@ -925,6 +925,7 @@ app.post('/api/team-members/shadow-upsert',
     req.authEmail = authResult.email
     req.authUserId = authResult.userId
     req.authIsSuperadmin = authResult.isSuperadmin
+    req.authRestaurantId = authRestaurantId  // server-resolved scope for the mutation handler
     next()
   },
   async (req, res) => {
@@ -932,7 +933,7 @@ app.post('/api/team-members/shadow-upsert',
       const { restaurantId, member } = req.body
       if (!restaurantId || !member?.id) return res.status(400).json({ error: 'restaurantId and member.id required' })
       const { status, body } = await executeTeamUpsert({
-        restaurantId,
+        restaurantId: req.authRestaurantId,  // use server-resolved scope, not body.restaurantId
         member,
         caller: { role: req.authRole, email: req.authEmail, userId: req.authUserId, isSuperadmin: req.authIsSuperadmin },
       })
@@ -947,8 +948,9 @@ app.post('/api/team-members/shadow-upsert',
 app.post('/api/team-members/shadow-delete',
   async (req, res, next) => {
     const { id } = req.body
+    // Missing member: idempotent success — already gone.
     const target = await getNeonRestaurantMemberById(id)
-    if (!target) return res.json({ ok: true })
+    if (!target) return res.status(200).json({ success: true })
     const authResult = await checkRestaurantAccess(req, target.restaurant_id)
     if (authResult.error === 'Not authenticated') return res.status(401).json({ error: 'Not authenticated' })
     if (authResult.error) return res.status(409).json({ error: authResult.error })

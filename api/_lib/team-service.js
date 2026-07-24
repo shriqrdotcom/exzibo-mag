@@ -29,6 +29,14 @@ import {
   hasConflictingNeonRestaurantMembership,
 } from '../../src/db/neon-restaurant-members.js'
 
+// Allowed fields for team member mutations (create/update).
+// Reject unknown and sensitive fields to prevent callers from setting
+// password, isSuperadmin, owner_id, or internal permissions.
+const ALLOWED_MEMBER_FIELDS = Object.freeze([
+  'id', 'name', 'email', 'role', 'category', 'department',
+  'phone', 'active', 'created_at', 'restaurant_id', 'owner_id',
+])
+
 export const TEAM_WRITE_ROLES = Object.freeze(['owner', 'admin'])
 export const VALID_RESTAURANT_ROLES = DB_VALID_ROLES
 
@@ -85,7 +93,13 @@ export async function executeTeamUpsert({ restaurantId, member, caller }) {
     return { status: 400, body: { error: `Invalid role: ${member.role}` } }
   }
 
-  // Resolve the member to detect cross-tenant attempts.
+  // Reject unknown and sensitive fields in the member payload
+  const unknownFields = Object.keys(member).filter(k => !ALLOWED_MEMBER_FIELDS.includes(k))
+  if (unknownFields.length > 0) {
+    return { status: 400, body: { error: `Unknown fields: ${unknownFields.join(', ')}` } }
+  }
+
+  // Cross-tenant guard: restaurantId must be the server-resolved value.
   const existing = await getNeonRestaurantMemberById(member.id)
   if (existing && existing.restaurant_id !== restaurantId) {
     return { status: 403, body: { error: 'Member does not belong to this restaurant' } }

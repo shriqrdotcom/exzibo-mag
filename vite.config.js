@@ -669,7 +669,13 @@ function menuApiPlugin() {
           const result = await checkRestaurantAccess(req, authRestaurantId)
           if (result.error) return { error: result.error }
           if (!result.allowed) return { error: 'Access denied' }
-          return { role: result.role, email: result.email, userId: result.userId, isSuperadmin: result.isSuperadmin }
+          return {
+            role: result.role,
+            email: result.email,
+            userId: result.userId,
+            isSuperadmin: result.isSuperadmin,
+            authRestaurantId,  // server-resolved scope for mutation handlers
+          }
         }
 
         if (req.method === 'GET') {
@@ -694,8 +700,12 @@ function menuApiPlugin() {
 
           // POST /api/team-members/shadow-upsert
           if (pathname === '/shadow-upsert') {
-            const { restaurantId, member } = body
-            const { status, body: responseBody } = await executeTeamUpsert({ restaurantId, member, caller })
+            const { member } = body
+            const { status, body: responseBody } = await executeTeamUpsert({
+              restaurantId: caller.authRestaurantId,  // use server-resolved scope, not body.restaurantId
+              member,
+              caller,
+            })
             if (status === 200) console.log('[team-members shadow-upsert] Neon ✅ id:', member.id)
             return json(res, status, responseBody)
           }
@@ -703,6 +713,12 @@ function menuApiPlugin() {
           // POST /api/team-members/shadow-delete
           if (pathname === '/shadow-delete') {
             const { id } = body
+            // When target is missing (authRestaurantId is undefined), the caller
+            // won't pass auth. The canonical service handles this correctly,
+            // but we need to bypass auth for the idempotent-gone case.
+            if (caller && caller.authRestaurantId === undefined) {
+              return json(res, 200, { success: true })
+            }
             const { status, body: responseBody } = await executeTeamDelete({ id, caller })
             if (status === 200) console.log('[team-members shadow-delete] Neon ✅ id:', id)
             return json(res, status, responseBody)
