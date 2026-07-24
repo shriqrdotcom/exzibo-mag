@@ -1,4 +1,3 @@
-import { DISABLE_AUTH } from './env'
 import { compressFile, compressDataUrl } from './imageCompressor'
 import { getCompressionLimits } from './imageCompressionSettings'
 import { getAuthUser } from './current-user'
@@ -21,19 +20,7 @@ export function generateRestaurantUID() {
 // ── Restaurants ───────────────────────────────────────────────────────────────
 
 export async function getRestaurants() {
-  if (DISABLE_AUTH) {
-    try {
-      const rows = await apiFetch('/api/neon/restaurants')
-      if (Array.isArray(rows) && rows.length > 0) {
-        return rows
-      }
-    } catch (err) {
-      console.warn('[getRestaurants] Neon unavailable:', err.message)
-    }
-    return []
-  }
-
-  // Authenticated path
+  // Always requires authentication
   const { data: { user }, error: authError } = getAuthUser()
   if (authError || !user) throw new Error('Not authenticated')
 
