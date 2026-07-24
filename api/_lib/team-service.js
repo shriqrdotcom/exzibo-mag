@@ -21,6 +21,7 @@ import {
   createNeonRestaurantMemberSafe,
   updateNeonRestaurantMemberSafe,
   deleteNeonRestaurantMemberSafe,
+  getNeonRestaurantMembersPaginated,
   getNeonRestaurantMembersManagement,
   getNeonRestaurantMembersPublic,
   filterNeonRestaurantMembersForRole,
@@ -39,6 +40,14 @@ const ALLOWED_MEMBER_FIELDS = Object.freeze([
 
 export const TEAM_WRITE_ROLES = Object.freeze(['owner', 'admin'])
 export const VALID_RESTAURANT_ROLES = DB_VALID_ROLES
+
+// Allowed fields for team member mutation payloads.
+// Must not include password, passwordHash, temporaryPassword, or any
+// credential/superadmin field.
+export const ALLOWED_MEMBER_FIELDS = Object.freeze([
+  'id', 'name', 'email', 'role', 'category', 'department',
+  'phone', 'active', 'created_at', 'restaurant_id', 'owner_id',
+])
 
 export function canManageTeam(caller) {
   if (!caller) return false
@@ -61,7 +70,6 @@ export async function executeTeamList({ restaurantId, caller, pagination }) {
   }
 
   if (pagination) {
-    const { getNeonRestaurantMembersPaginated } = await import('../../src/db/neon-restaurant-members.js')
     const result = await getNeonRestaurantMembersPaginated(restaurantId, {
       ...pagination,
       callerRole: caller.role,
