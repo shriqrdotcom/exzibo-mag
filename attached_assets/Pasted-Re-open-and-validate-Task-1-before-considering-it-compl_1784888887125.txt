@@ -1,0 +1,168 @@
+Re-open and validate Task #1 before considering it complete.
+
+This is a validation-only follow-up.
+
+Do not modify application source code.
+Do not repair any finding.
+Do not regenerate lockfiles.
+Do not add dependencies.
+Do not use production secrets or production infrastructure.
+Do not mark the task complete until the required evidence is reported.
+
+Review the work already performed and provide the exact completion summary required by Prompt 1.
+
+Verify and report all of the following:
+
+1. Current branch name.
+2. Exact starting commit SHA.
+3. Exact ending commit SHA.
+4. Full git status.
+5. Every file changed during the audit.
+6. Confirm whether any application source file was modified.
+7. Root frozen installation:
+   - exact command;
+   - PASS, FAIL or BLOCKED;
+   - concise reason.
+8. Root production build:
+   - exact command;
+   - PASS, FAIL or BLOCKED;
+   - concise reason.
+9. Realtime Worker frozen installation:
+   - exact command;
+   - PASS, FAIL or BLOCKED.
+10. Worker typecheck and build:
+    - exact commands;
+    - PASS, FAIL or BLOCKED.
+11. Test results:
+    - total launched;
+    - passed;
+    - failed;
+    - skipped;
+    - environment failures;
+    - confirmed source defects;
+    - unknown failures.
+12. Migration assessment:
+    - whether the Drizzle journal is consistent;
+    - whether migration 0003 is in the journal;
+    - whether migration 0004 is in the journal;
+    - disposable zero-to-head migration result;
+    - first important migration failure.
+13. Environment-variable inventory:
+    - number of variable names found;
+    - missing documentation;
+    - obsolete or conflicting variables;
+    - never include secret values.
+14. Secret scan:
+    - PASS, FINDINGS or BLOCKED;
+    - number of confirmed secrets;
+    - number requiring human review.
+15. Dependency audit:
+    - PASS, FINDINGS or BLOCKED;
+    - concise result.
+16. Confirmed release blockers.
+17. Environment-only blockers.
+18. Unverified external controls.
+19. Confirm that no production resource was modified.
+20. Confirm that no production migration was executed.
+21. Confirm that no production secret was changed.
+
+Use this exact final format:
+
+PROMPT 1 COMPLETION SUMMARY
+
+Status:
+- COMPLETE / PARTIAL / BLOCKED
+
+Branch:
+- branch name
+
+Starting commit:
+- exact SHA
+
+Ending commit:
+- exact SHA or “No commit created”
+
+Repository modifications:
+- None
+- or list audit-only documentation files
+
+Root frozen install:
+- command
+- PASS / FAIL / BLOCKED
+- concise reason
+
+Root production build:
+- command
+- PASS / FAIL / BLOCKED
+- concise reason
+
+Worker frozen install:
+- command
+- PASS / FAIL / BLOCKED
+- concise reason
+
+Worker typecheck/build:
+- commands
+- PASS / FAIL / BLOCKED
+- concise reason
+
+Tests:
+- total launched
+- passed
+- failed
+- skipped
+- environment failures
+- confirmed source defects
+- unknown failures
+
+Migration assessment:
+- journal consistent: YES / NO / UNVERIFIED
+- 0003 present in journal: YES / NO
+- 0004 present in journal: YES / NO
+- disposable zero-to-head migration: PASS / FAIL / BLOCKED
+- first important migration issue
+
+Environment contract:
+- total variable names found
+- missing documentation
+- obsolete/conflicting variables
+- do not include values
+
+Secret scan:
+- PASS / FINDINGS / BLOCKED
+- confirmed secrets found: number
+- items requiring human review: number
+
+Dependency audit:
+- PASS / FINDINGS / BLOCKED
+- concise result
+
+Confirmed release blockers:
+- numbered concise list
+
+Environment-only blockers:
+- numbered concise list
+
+Unverified external controls:
+- concise list
+
+Files changed:
+- concise list
+- write “None” when applicable
+
+Production resources modified:
+- No
+
+Production migrations executed:
+- No
+
+Production secrets changed:
+- No
+
+Recommended next action:
+- State whether Prompt 2 can safely begin.
+- State the exact blockers that must be resolved first.
+
+Final conclusion:
+- State clearly whether the baseline is reproducible.
+- Do not claim that the repository is production-ready.
