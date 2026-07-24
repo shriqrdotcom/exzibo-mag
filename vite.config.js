@@ -9,6 +9,8 @@ import {
   patchNeonRestaurantProfile,
   patchNeonRestaurantPlatform,
   toPublicRestaurant,
+  toMemberRestaurant,
+  toSuperadminRestaurant,
   getNeonRestaurantById,
   getNeonRestaurantBySlug,
 } from './src/db/neon-restaurants.js'
@@ -995,6 +997,8 @@ function neonRestaurantPlugin() {
           patchNeonRestaurantProfile,
           patchNeonRestaurantPlatform,
           toPublicRestaurant,
+          toMemberRestaurant,
+          toSuperadminRestaurant,
         } = await import('./src/db/neon-restaurants.js')
 
         const { createRestaurantAtomic } = await import('./src/services/restaurantCreationService.js')
@@ -1026,7 +1030,7 @@ function neonRestaurantPlugin() {
             return row ? json(200, toPublicRestaurant(row)) : json(404, { error: 'Not found' })
           }
 
-          // POST /api/neon/restaurant/create — superadmin only
+          // POST /api/neon/restaurant/create — superadmin only (returns SuperadminRestaurantDTO)
           if (method === 'POST' && url === '/create') {
             let ownerUserId = null
             let ownerEmail  = null
@@ -1077,7 +1081,7 @@ function neonRestaurantPlugin() {
                 logo:                payload.logo,
                 table_numbers:       payload.table_numbers,
               })
-              return json(201, row)
+              return json(201, toSuperadminRestaurant(row))
             } catch (err) {
               if (err.code === 'DUPLICATE') return json(409, { error: err.message })
               if (err.code === 'INVALID_SLUG') return json(400, { error: err.message, code: err.code })
@@ -1086,7 +1090,7 @@ function neonRestaurantPlugin() {
             }
           }
 
-          // PATCH /api/neon/restaurant/:id — profile fields only (owner/admin/manager)
+          // PATCH /api/neon/restaurant/:id — profile fields only (owner/admin/manager); returns MemberRestaurantDTO
           if (method === 'PATCH' && url.length > 1) {
             const id = decodeURIComponent(url.replace(/^\//, ''))
             if (!id) return json(400, { error: 'id required' })
@@ -1101,7 +1105,7 @@ function neonRestaurantPlugin() {
             }
             // Profile fields only — platform fields are rejected regardless of role.
             const row = await patchNeonRestaurantProfile(id, body)
-            return row ? json(200, row) : json(404, { error: 'Not found or no valid profile fields' })
+            return row ? json(200, toMemberRestaurant(row)) : json(404, { error: 'Not found or no valid profile fields' })
           }
 
           // GET /api/neon/restaurant/:id — public (used by restaurant website)
