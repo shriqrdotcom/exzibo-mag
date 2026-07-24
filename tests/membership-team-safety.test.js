@@ -212,25 +212,24 @@ describe('C — Last-owner protection logic (pure, no DB)', () => {
 // These tests verify that the atomic operations are implemented via DB
 // transactions (not count-then-update) and are used in api/team.js.
 
-describe('D — Atomic owner operations use DB transactions', async () => {
+describe('D — Owner-sensitive mutations use parent restaurant row lock', async () => {
   const membersSrc = await readSrc('src/db/neon-restaurant-members.js')
-  const teamSrc = await readSrc('api/team.js')
 
-  it('4 — atomicOwnerDemote uses BEGIN / COMMIT', () => {
+  it('4 — withRestaurantMemberTransaction uses BEGIN / COMMIT', () => {
     assert.ok(
       membersSrc.includes("'BEGIN'") && membersSrc.includes("'COMMIT'"),
       'neon-restaurant-members.js must use BEGIN/COMMIT transactions for atomic operations'
     )
   })
 
-  it('4b — atomicOwnerDemote uses FOR UPDATE row lock', () => {
+  it('4b — canonical helper uses FOR UPDATE row lock', () => {
     assert.ok(
       membersSrc.includes('FOR UPDATE'),
-      'atomic operations must use FOR UPDATE to prevent concurrent races'
+      'canonical operation must use FOR UPDATE to prevent concurrent races'
     )
   })
 
-  it('4c — atomicOwnerDemote rechecks owner count inside the transaction', () => {
+  it('4c — mutateRestaurantMemberWithOwnerInvariant rechecks owner count inside the transaction', () => {
     assert.ok(
       membersSrc.includes("role = 'owner' AND active = true") &&
       membersSrc.includes('FOR UPDATE'),
@@ -238,24 +237,25 @@ describe('D — Atomic owner operations use DB transactions', async () => {
     )
   })
 
-  it('4d — atomicOwnerDemote is called from api/team.js for owner demotion', () => {
+  it('4d — updateNeonRestaurantMemberSafe calls mutateRestaurantMemberWithOwnerInvariant', () => {
     assert.ok(
-      teamSrc.includes('atomicOwnerDemote('),
-      'api/team.js must call atomicOwnerDemote for owner demotion'
+      membersSrc.includes('mutateRestaurantMemberWithOwnerInvariant'),
+      'update paths must use the canonical mutateRestaurantMemberWithOwnerInvariant helper'
     )
   })
 
-  it('4e — atomicOwnerDelete is called from api/team.js for owner deletion', () => {
+  it('4e — deleteNeonRestaurantMemberSafe calls mutateRestaurantMemberWithOwnerInvariant', () => {
     assert.ok(
-      teamSrc.includes('atomicOwnerDelete('),
-      'api/team.js must call atomicOwnerDelete for owner deletion'
+      membersSrc.includes('deleteNeonRestaurantMemberSafe') &&
+      membersSrc.includes('mutateRestaurantMemberWithOwnerInvariant'),
+      'delete paths must use the canonical mutateRestaurantMemberWithOwnerInvariant helper'
     )
   })
 
   it('4f — ROLLBACK is present for error cases', () => {
     assert.ok(
       membersSrc.includes("'ROLLBACK'"),
-      'atomic operations must ROLLBACK on error or when the guard fires'
+      'owner-sensitive operations must ROLLBACK on error or when the guard fires'
     )
   })
 

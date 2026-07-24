@@ -24,11 +24,12 @@ export async function withRestaurantMemberTransaction(restaurantId, callback) {
   const client = await getPool(process.env.DATABASE_URL).connect()
   try {
     await client.query('BEGIN')
-    // Use a 64-bit advisory lock derived from the restaurant UUID so concurrent
-    // owner mutations for the same restaurant are serialized. PostgreSQL accepts
-    // a signed bigint for pg_advisory_xact_lock(bigint).
+    // Lock the parent restaurant row to serialize all owner-sensitive mutations
+    // for this restaurant. Every owner-sensitive operation must acquire this lock
+    // before any membership row lock to maintain consistent lock order and prevent
+    // deadlocks. Lock order: restaurant row → target member → active owner rows.
     await client.query(
-      `SELECT pg_advisory_xact_lock(('x' || substr(md5($1::text), 1, 16))::bit(64)::bigint)`,
+      `SELECT id FROM restaurants WHERE id = $1::uuid FOR UPDATE`,
       [restaurantId]
     )
     const result = await callback(client)
@@ -40,6 +41,78 @@ export async function withRestaurantMemberTransaction(restaurantId, callback) {
   } finally {
     client.release()
   }
+}
+
+// ── mutateRestaurantMemberWithOwnerInvariant ─────────────────────────────────
+// Canonical transaction helper for owner-sensitive membership mutations.
+// Acquires locks in consistent order and enforces the invariant that at least
+// one active owner must remain after any mutation that removes active-owner status.
+//
+// Lock order (same for every owner-sensitive operation):
+//   1. Parent restaurant row (acquired by withRestaurantMemberTransaction)
+//   2. Target membership row (FOR UPDATE inside this function)
+//   3. Active owner rows (FOR UPDATE inside this function, when mutation removes owner)
+//
+// Two callbacks:
+//   - shouldCheckOwner(client, target) → returns { check: boolean }.
+//     Called first to determine whether the owner invariant needs to be evaluated.
+//     The helper performs the owner-count check BEFORE calling executeMutation.
+//   - executeMutation(client, target) → executes the actual data change.
+//
+// The last-owner rejection returns a LAST_OWNER_REQUIRED error with HTTP 409.
+export async function mutateRestaurantMemberWithOwnerInvariant(
+  restaurantId,
+  memberId,
+  { callerRole, callerIsSuperadmin },
+  shouldCheckOwner,  // async (client, target) => { check: boolean }
+  executeMutation    // async (client, target) => void
+) {
+  return await withRestaurantMemberTransaction(restaurantId, async (client) => {
+    // Step 2: Lock target membership row.
+    const { rows: [target] } = await client.query(
+      `SELECT id, restaurant_id, role, active FROM restaurant_members WHERE id = $1::uuid FOR UPDATE`,
+      [memberId]
+    )
+    if (!target) {
+      return { deleted: false, missing: true }
+    }
+    if (target.restaurant_id !== restaurantId) {
+      throw Object.assign(new Error('Member does not belong to this restaurant'), { code: 'WRONG_RESTAURANT', status: 403 })
+    }
+
+    // Hierarchy rule: admin cannot modify or delete an owner.
+    if (!callerIsSuperadmin && callerRole === 'admin' && target.role === 'owner') {
+      throw Object.assign(new Error('Admin cannot modify an owner'), { code: 'FORBIDDEN', status: 403 })
+    }
+
+    // Step 3: Determine whether the owner invariant needs to be checked.
+    const { check: shouldCheck } = await shouldCheckOwner(client, target)
+
+    // Step 4: When the mutation removes active-owner status, lock active owner rows
+    // and check the invariant BEFORE executing the mutation.
+    if (shouldCheck) {
+      const { rows: ownerRows } = await client.query(
+        `SELECT id FROM restaurant_members
+         WHERE restaurant_id = $1::uuid AND role = 'owner' AND active = true
+         FOR UPDATE`,
+        [restaurantId]
+      )
+      // If the target is an active owner being removed, subtract it from the count.
+      const isTargetActiveOwner = target.role === 'owner' && target.active
+      const remaining = isTargetActiveOwner ? ownerRows.length - 1 : ownerRows.length
+      if (remaining < 1) {
+        throw Object.assign(
+          new Error('At least one active owner must remain'),
+          { code: 'LAST_OWNER_REQUIRED', status: 409 }
+        )
+      }
+    }
+
+    // Step 5: Execute the mutation.
+    await executeMutation(client, target)
+
+    return { success: true }
+  })
 }
 
 // ── lookupUserIdByEmail ────────────────────────────────────────────────────────
@@ -180,7 +253,10 @@ export async function createNeonRestaurantMemberSafe(restaurantId, member) {
 // ── updateNeonRestaurantMemberSafe ────────────────────────────────────────────
 // Atomic, conflict-aware update. Applies last-owner protection, hierarchy rules
 // (admin cannot modify owner), and identity-alignment duplicate detection inside
-// a transaction with a restaurant-scoped advisory lock.
+// a transaction with a parent restaurant row lock.
+//
+// Last-owner protection covers both role demotion (owner → non-owner) and
+// deactivation (active → false while keeping owner role).
 export async function updateNeonRestaurantMemberSafe(restaurantId, member, { callerRole, callerIsSuperadmin }) {
   if (!member?.id) throw new Error('updateNeonRestaurantMemberSafe: member.id is required')
   if (!member.role || !VALID_RESTAURANT_ROLES.has(member.role)) {
@@ -190,75 +266,59 @@ export async function updateNeonRestaurantMemberSafe(restaurantId, member, { cal
   // Server-side identity resolution: caller-supplied user_id is ignored.
   const resolvedUserId = await lookupUserIdByEmail(member.email)
 
-  return await withRestaurantMemberTransaction(restaurantId, async (client) => {
-    const currentRows = await client.query(
-      `SELECT id, restaurant_id, user_id, owner_id, name, email, role, category, department, phone, active, created_at, updated_at
-       FROM restaurant_members
-       WHERE id = $1::uuid
-       FOR UPDATE`,
-      [member.id]
-    )
-    const current = currentRows.rows[0]
-    if (!current) {
-      throw Object.assign(new Error('Team member not found'), { code: 'NOT_FOUND', status: 404 })
-    }
-    if (current.restaurant_id !== restaurantId) {
-      throw Object.assign(new Error('Member does not belong to this restaurant'), { code: 'WRONG_RESTAURANT', status: 403 })
-    }
-
-    // Hierarchy rule: admin cannot modify an owner.
-    if (!callerIsSuperadmin && callerRole === 'admin' && current.role === 'owner') {
-      throw Object.assign(new Error('Admin cannot modify an owner'), { code: 'FORBIDDEN', status: 403 })
-    }
-
-    // Identity-alignment duplicate detection: if the updated email resolves to
-    // a different identity than the current row, ensure no other active membership
-    // already uses that identity. Email alone must never override a different user_id.
-    const currentResolvedUserId = await lookupUserIdByEmail(current.email)
-    const identityUserId = resolvedUserId ?? currentResolvedUserId ?? null
-    const identityEmail = resolvedUserId ? null : normalizeEmail(member.email)
-    const identityMatches = await findActiveMemberByIdentity(restaurantId, identityUserId, identityEmail)
-    const others = identityMatches.filter(m => m.id !== member.id)
-    if (others.length > 0) {
-      throw Object.assign(new Error('Another active membership already exists for this identity'), { code: 'DUPLICATE_MEMBERSHIP', status: 409 })
-    }
-
-    // Last-owner protection: recheck active owner count inside the locked transaction.
-    if (current.role === 'owner' && member.role !== 'owner') {
-      const ownerCount = await client.query(
-        `SELECT COUNT(*)::int AS cnt
-         FROM restaurant_members
-         WHERE restaurant_id = $1::uuid AND role = 'owner' AND active = true`,
-        [restaurantId]
-      ).then(r => r.rows[0].cnt)
-      if (ownerCount <= 1) {
-        throw Object.assign(new Error('Cannot demote the last owner of a restaurant'), { code: 'LAST_OWNER', status: 403 })
+  const result = await mutateRestaurantMemberWithOwnerInvariant(
+    restaurantId, member.id, { callerRole, callerIsSuperadmin },
+    // shouldCheckOwner — determine if this mutation removes active-owner status
+    async (_client, target) => {
+      const check = target.role === 'owner' && target.active && (
+        member.role !== 'owner' || member.active === false
+      )
+      return { check }
+    },
+    // executeMutation — identity check then update
+    async (client, target) => {
+      // Identity-alignment duplicate detection: if the updated email resolves to
+      // a different identity than the current row, ensure no other active membership
+      // already uses that identity. Email alone must never override a different user_id.
+      const currentResolvedUserId = await lookupUserIdByEmail(target.email)
+      const identityUserId = resolvedUserId ?? currentResolvedUserId ?? null
+      const identityEmail = resolvedUserId ? null : normalizeEmail(member.email)
+      const identityMatches = await findActiveMemberByIdentity(restaurantId, identityUserId, identityEmail)
+      const others = identityMatches.filter(m => m.id !== member.id)
+      if (others.length > 0) {
+        throw Object.assign(new Error('Another active membership already exists for this identity'), { code: 'DUPLICATE_MEMBERSHIP', status: 409 })
       }
+
+      await client.query(
+        `UPDATE restaurant_members
+         SET user_id = $1,
+             owner_id = $2,
+             name = $3,
+             email = $4,
+             role = $5,
+             category = $6,
+             department = $7,
+             phone = $8,
+             active = $9,
+             updated_at = now()
+         WHERE id = $10::uuid`,
+        [resolvedUserId, null, member.name, normalizeEmail(member.email), member.role, member.category ?? null, member.department ?? null, member.phone ?? null, member.active ?? true, member.id]
+      )
     }
-
-    await client.query(
-      `UPDATE restaurant_members
-       SET user_id = $1,
-           owner_id = $2,
-           name = $3,
-           email = $4,
-           role = $5,
-           category = $6,
-           department = $7,
-           phone = $8,
-           active = $9,
-           updated_at = now()
-       WHERE id = $10::uuid`,
-      [resolvedUserId, null, member.name, normalizeEmail(member.email), member.role, member.category ?? null, member.department ?? null, member.phone ?? null, member.active ?? true, member.id]
-    )
-
-    return { updated: true }
-  })
+  )
+  // Preserve old contract: throw NOT_FOUND when member is missing.
+  if (result && result.missing) {
+    throw Object.assign(new Error('Team member not found'), { code: 'NOT_FOUND', status: 404 })
+  }
+  return result
 }
 
 // ── deleteNeonRestaurantMemberSafe ────────────────────────────────────────────
 // Atomic, hierarchy-aware delete. Prevents an admin from deleting an owner and
 // prevents the restaurant from being left with zero active owners.
+//
+// Uses mutateRestaurantMemberWithOwnerInvariant for consistent lock order
+// (restaurant row → target member → active owner rows) and last-owner invariant.
 export async function deleteNeonRestaurantMemberSafe(id, { callerRole, callerIsSuperadmin }) {
   const targetRows = await sql`
     SELECT id, restaurant_id, role, email, user_id
@@ -269,119 +329,90 @@ export async function deleteNeonRestaurantMemberSafe(id, { callerRole, callerIsS
   const target = targetRows[0]
   if (!target) return { deleted: false, missing: true }
 
-  // Hierarchy rule: admin cannot delete an owner.
+  // Hierarchy rule: admin cannot delete an owner (checked before transaction).
   if (!callerIsSuperadmin && callerRole === 'admin' && target.role === 'owner') {
     throw Object.assign(new Error('Admin cannot delete an owner'), { code: 'FORBIDDEN', status: 403 })
   }
 
-  return await withRestaurantMemberTransaction(target.restaurant_id, async (client) => {
-    // Re-fetch with FOR UPDATE inside the lock.
-    const currentRows = await client.query(
-      `SELECT id, restaurant_id, role, active FROM restaurant_members WHERE id = $1::uuid FOR UPDATE`,
-      [id]
-    )
-    const current = currentRows.rows[0]
-    if (!current) return { deleted: false, missing: true }
-
-    if (current.role === 'owner') {
-      const ownerCount = await client.query(
-        `SELECT COUNT(*)::int AS cnt
-         FROM restaurant_members
-         WHERE restaurant_id = $1::uuid AND role = 'owner' AND active = true`,
-        [current.restaurant_id]
-      ).then(r => r.rows[0].cnt)
-      if (ownerCount <= 1) {
-        throw Object.assign(new Error('Cannot delete the last owner of a restaurant'), { code: 'LAST_OWNER', status: 403 })
-      }
+  return await mutateRestaurantMemberWithOwnerInvariant(
+    target.restaurant_id, id, { callerRole, callerIsSuperadmin },
+    // shouldCheckOwner — check if target is an active owner
+    async (_client, current) => ({ check: current.role === 'owner' && current.active }),
+    // executeMutation — perform the delete
+    async (client) => {
+      await client.query(`DELETE FROM restaurant_members WHERE id = $1::uuid`, [id])
     }
-
-    await client.query(`DELETE FROM restaurant_members WHERE id = $1::uuid`, [id])
-    return { deleted: true }
-  })
+  )
 }
 
 // ── atomicOwnerDemote ─────────────────────────────────────────────────────────
-// Atomically demote an owner to a new role. Uses a transaction protected by a
-// restaurant-scoped advisory lock plus a row-level FOR UPDATE lock so two
-// concurrent requests cannot both see count > 1 and proceed to leave zero active
-// owners.
+// Delegates to updateNeonRestaurantMemberSafe via mutateRestaurantMemberWithOwnerInvariant.
+// Maintained for backward compatibility with source-level tests.
+// Returns { ok, error } domain result to preserve existing caller contract.
 export async function atomicOwnerDemote(memberId, newRole, restaurantId) {
   if (!memberId || !newRole || !restaurantId) throw new Error('atomicOwnerDemote: all params required')
-  return await withRestaurantMemberTransaction(restaurantId, async (client) => {
-    // Lock the target row — prevents concurrent demotions from racing.
-    const { rows: [target] } = await client.query(
-      `SELECT id, role, active FROM restaurant_members WHERE id = $1::uuid FOR UPDATE`,
-      [memberId]
-    )
-    if (!target || !target.active) {
-      return { ok: false, error: 'Member not found or already inactive' }
-    }
-
-    if (target.role !== 'owner') {
-      // Not an owner — straightforward update, no last-owner check needed.
-      await client.query(
-        `UPDATE restaurant_members SET role = $1, updated_at = now() WHERE id = $2::uuid`,
-        [newRole, memberId]
-      )
-      return { ok: true }
-    }
-
-    // Recheck owner count inside the transaction with a lock.
-    const { rows: [{ cnt }] } = await client.query(
-      `SELECT COUNT(*) AS cnt
-       FROM restaurant_members
-       WHERE restaurant_id = $1::uuid AND role = 'owner' AND active = true
-       FOR UPDATE`,
-      [restaurantId]
-    )
-    if (parseInt(cnt, 10) <= 1) {
-      return { ok: false, error: 'Cannot demote the last owner of a restaurant' }
-    }
-
-    await client.query(
-      `UPDATE restaurant_members SET role = $1, updated_at = now() WHERE id = $2::uuid`,
-      [newRole, memberId]
+  try {
+    await mutateRestaurantMemberWithOwnerInvariant(
+      restaurantId, memberId, { callerRole: 'owner', callerIsSuperadmin: false },
+      // shouldCheckOwner — only active owners trigger the invariant
+      async (_client, target) => {
+        if (!target.active) {
+          throw Object.assign(new Error('Member not found or already inactive'), { code: 'NOT_ACTIVE', status: 400 })
+        }
+        return { check: target.role === 'owner' }
+      },
+      // executeMutation — perform the demotion
+      async (client) => {
+        await client.query(
+          `UPDATE restaurant_members SET role = $1, updated_at = now() WHERE id = $2::uuid`,
+          [newRole, memberId]
+        )
+      }
     )
     return { ok: true }
-  })
+  } catch (err) {
+    if (err.code === 'LAST_OWNER_REQUIRED') {
+      return { ok: false, error: 'Cannot demote the last owner of a restaurant' }
+    }
+    if (err.code === 'NOT_ACTIVE') {
+      return { ok: false, error: err.message }
+    }
+    throw err
+  }
 }
 
 // ── atomicOwnerDelete ─────────────────────────────────────────────────────────
-// Atomically delete a member, applying the last-owner guard inside the
-// transaction so two concurrent delete requests cannot both succeed when only
-// one owner remains.
+// Delegates to deleteNeonRestaurantMemberSafe via mutateRestaurantMemberWithOwnerInvariant.
+// Maintained for backward compatibility with source-level tests.
+// Returns { ok, error } domain result to preserve existing caller contract.
 export async function atomicOwnerDelete(memberId, restaurantId) {
   if (!memberId || !restaurantId) throw new Error('atomicOwnerDelete: all params required')
-  return await withRestaurantMemberTransaction(restaurantId, async (client) => {
-    const { rows: [target] } = await client.query(
-      `SELECT id, role, active FROM restaurant_members WHERE id = $1::uuid FOR UPDATE`,
-      [memberId]
+  try {
+    await mutateRestaurantMemberWithOwnerInvariant(
+      restaurantId, memberId, { callerRole: 'owner', callerIsSuperadmin: false },
+      // shouldCheckOwner — only active owners trigger the invariant
+      async (_client, target) => {
+        if (!target) return { check: false }
+        return { check: target.role === 'owner' && target.active }
+      },
+      // executeMutation — perform the delete
+      async (client) => {
+        // Idempotent: if already gone, no-op
+        const { rows } = await client.query(
+          `SELECT id FROM restaurant_members WHERE id = $1::uuid LIMIT 1`,
+          [memberId]
+        )
+        if (rows.length === 0) return
+        await client.query(`DELETE FROM restaurant_members WHERE id = $1::uuid`, [memberId])
+      }
     )
-    if (!target) {
-      // Idempotent: already gone.
-      return { ok: true }
-    }
-
-    if (target.role !== 'owner' || !target.active) {
-      // Not an active owner — straightforward delete.
-      await client.query(`DELETE FROM restaurant_members WHERE id = $1::uuid`, [memberId])
-      return { ok: true }
-    }
-
-    const { rows: [{ cnt }] } = await client.query(
-      `SELECT COUNT(*) AS cnt
-       FROM restaurant_members
-       WHERE restaurant_id = $1::uuid AND role = 'owner' AND active = true
-       FOR UPDATE`,
-      [restaurantId]
-    )
-    if (parseInt(cnt, 10) <= 1) {
+    return { ok: true }
+  } catch (err) {
+    if (err.code === 'LAST_OWNER_REQUIRED') {
       return { ok: false, error: 'Cannot delete the last owner of a restaurant' }
     }
-
-    await client.query(`DELETE FROM restaurant_members WHERE id = $1::uuid`, [memberId])
-    return { ok: true }
-  })
+    throw err
+  }
 }
 
 // ── deleteNeonRestaurantMember ────────────────────────────────────────────────
