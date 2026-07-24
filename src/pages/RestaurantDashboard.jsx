@@ -14,7 +14,6 @@ import { useRole } from '../context/RoleContext'
 import { useRestaurantRole } from '../hooks/useRestaurantRole'
 import { useAuth } from '../context/AuthContext'
 import { getRestaurantBySlug } from '../lib/db'
-import { DISABLE_AUTH } from '../lib/env'
 import AdminDashboard from './AdminDashboard'
 import ProfilePage from './ProfilePage'
 
@@ -285,9 +284,9 @@ export default function RestaurantDashboard() {
   const { activateRole } = useRole()
   const { user, loading: authLoading, signOut } = useAuth()
 
-  // ── Production session auth state (not used in DISABLE_AUTH/dev mode) ──
+  // ── Session auth state ──
   const [sessionRole, setSessionRole]     = useState(null)
-  const [sessionChecked, setSessionChecked] = useState(DISABLE_AUTH)
+  const [sessionChecked, setSessionChecked] = useState(false)
   const [sessionDenied, setSessionDenied]   = useState(false)
 
   // ── 0. Read ?role= and ?from=master URL params synchronously at init ────
@@ -329,9 +328,9 @@ export default function RestaurantDashboard() {
       .finally(() => setRestaurantLoading(false))
   }, [restaurantSlug])
 
-  // ── 1b. In production: check session + team membership once restaurant loads
+  // ── 1b. Check session + team membership once restaurant loads
   useEffect(() => {
-    if (DISABLE_AUTH || !restaurant) return
+    if (!restaurant) return
     if (sessionChecked) return
 
     // No Better Auth session → redirect to login
@@ -362,9 +361,9 @@ export default function RestaurantDashboard() {
   }, [restaurant, authLoading, user, sessionChecked])
 
   // ── 2. Get / set role via localStorage ─────────────────────────
-  const { role: localRole, setRole } = useRestaurantRole(restaurant?.id)
-  // In production use DB-sourced role; in dev use localStorage
-  const role = DISABLE_AUTH ? localRole : sessionRole
+  const { setRole } = useRestaurantRole(restaurant?.id)
+  // Role is always sourced from server session check
+  const role = sessionRole
 
   // ── 3. Persist URL role param once restaurant.id is known ──────
   // Saves the per-restaurant key in addition to the global fallback
@@ -384,15 +383,7 @@ export default function RestaurantDashboard() {
     if (role) activateRole(role)
   }, [role, activateRole])
 
-  // ── 5. Show picker when no role is stored (dev/DISABLE_AUTH only) ─
-  useEffect(() => {
-    if (!DISABLE_AUTH) return  // in production, no picker — use session role
-    if (!restaurantLoading && restaurant && !role) {
-      setShowPicker(true)
-    }
-  }, [restaurantLoading, restaurant, role])
-
-  // ── 6. Enforce access matrix ───────────────────────────────────
+  // ── 5. Enforce access matrix ───────────────────────────────────
   useEffect(() => {
     if (!role || !pageSlug) return
     const allowed = PAGE_ACCESS[pageSlug]
@@ -426,10 +417,9 @@ export default function RestaurantDashboard() {
   if (notFound) return <NotFoundPage slug={restaurantSlug} />
   if (pageSlug === 'roles' && restaurant && role) return <FullPageLoader />
 
-  // ── Production auth guards (skipped in DISABLE_AUTH/dev mode) ──────────
-  if (!DISABLE_AUTH) {
-    if (authLoading || !sessionChecked) return <FullPageLoader />
-    if (sessionDenied) {
+  // ── Auth guards ────────────────────────────────────────────────
+  if (authLoading || !sessionChecked) return <FullPageLoader />
+  if (sessionDenied) {
       return (
         <div style={{
           minHeight: '100vh', background: '#0A0A0A',
@@ -452,10 +442,12 @@ export default function RestaurantDashboard() {
         </div>
       )
     }
-  }
 
-  // Show role picker when no role is set and no URL param provided it
-  if (showPicker || (!role && !urlRoleParam && restaurant && DISABLE_AUTH)) {
+  // Show role picker when no role is set
+  // Note: showPicker is never set true in production
+  // (DISABLE_AUTH has been fully removed from deployable code);
+  // this branch is kept only for backward compatibility with test mocks.
+  if (showPicker) {
     return (
       <>
         <div style={{ minHeight: '100vh', background: '#f8f9fa' }} />

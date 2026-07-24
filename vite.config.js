@@ -653,10 +653,6 @@ function menuApiPlugin() {
         const pathname = (req.url || '').split('?')[0].replace(/\/$/, '')
 
         async function getCaller(body) {
-          if (process.env.VITE_DISABLE_AUTH === 'true' || process.env.DISABLE_AUTH === 'true') {
-            // Dev-mode fallback: enforce business rules, skip session auth.
-            return { role: 'owner', email: null, userId: null, isSuperadmin: true }
-          }
           let authRestaurantId
           if (req.method === 'GET') {
             const m = pathname.match(/^\/([^/]+)$/)
@@ -1003,15 +999,8 @@ function neonRestaurantPlugin() {
 
         const { createRestaurantAtomic } = await import('./src/services/restaurantCreationService.js')
 
-        // Auth helpers for superadmin checks in dev server.
-        // In dev DISABLE_AUTH mode these will return null (no session) — that is
-        // intentional: the dev auth bypass is client-side only and does not grant
-        // server-side elevated privileges.
         const { getSessionEmail, isSuperadminEmail, checkRestaurantAccess, SETTINGS_ROLES } =
           await import('./api/_lib/authz.js')
-
-        const isAuthDisabled =
-          process.env.DISABLE_AUTH === 'true' || process.env.VITE_DISABLE_AUTH === 'true'
 
         try {
           // GET /api/neon/restaurant/by-slug/:slug — public

@@ -1,18 +1,9 @@
 import React, { createContext, useContext, useEffect, useState } from 'react'
-import { IS_PREVIEW, DISABLE_AUTH } from '../lib/env'
+import { IS_PREVIEW } from '../lib/env'
 import { verifyPreviewSession, clearPreviewSession } from '../lib/previewAuth'
 import { authClient } from '../lib/auth-client'
 import { ACTIVE_SUBDOMAIN } from '../lib/subdomain'
 import { setCurrentAuthUser } from '../lib/current-user'
-
-// ── Mock user injected when DISABLE_AUTH=true ─────────────────────────────────
-// Used only in dev. Never reaches production.
-const MOCK_USER = {
-  id:            '00000000-0000-4000-8000-000000000001',
-  email:         'exzibonew@gmail.com',
-  isPreviewUser: true,
-  isDisableAuth: true,
-}
 
 const AuthContext = createContext(null)
 
@@ -24,19 +15,6 @@ export function AuthProvider({ children }) {
   const [isSuperAdmin, setIsSuperAdmin] = useState(false)
 
   useEffect(() => {
-    // ── DISABLE_AUTH mode ─────────────────────────────────────────────────
-    if (DISABLE_AUTH) {
-      console.warn(
-        '[auth] DISABLE_AUTH is active — authentication is bypassed. ' +
-        'This should NEVER appear in production.'
-      )
-      setCurrentAuthUser(MOCK_USER)
-      setUser(MOCK_USER)
-      setIsSuperAdmin(true)
-      setLoading(false)
-      return
-    }
-
     // ── Preview mode — bypass Better Auth, use local session token ────────
     if (IS_PREVIEW) {
       verifyPreviewSession().then(previewUser => {
@@ -145,8 +123,7 @@ export function AuthProvider({ children }) {
   }, [])
 
   async function signInWithGoogle() {
-    if (DISABLE_AUTH) return { data: null, error: { message: 'Auth is disabled in this environment.' } }
-    if (IS_PREVIEW)   return { data: null, error: { message: 'Google sign-in is not available in preview mode.' } }
+    if (IS_PREVIEW) return { data: null, error: { message: 'Google sign-in is not available in preview mode.' } }
 
     setAccessDenied(false)
     setDeniedEmail(null)
@@ -169,11 +146,6 @@ export function AuthProvider({ children }) {
   }
 
   async function signOut() {
-    if (DISABLE_AUTH) {
-      setCurrentAuthUser(MOCK_USER)
-      setUser(MOCK_USER)
-      return
-    }
     if (IS_PREVIEW) {
       clearPreviewSession()
       setCurrentAuthUser(null)
@@ -198,7 +170,9 @@ export function AuthProvider({ children }) {
       user, loading, accessDenied, deniedEmail, isSuperAdmin,
       signOut, signInWithGoogle, setPreviewUser,
       isPreview: IS_PREVIEW,
-      isDisableAuth: DISABLE_AUTH,
+      isDisableAuth: false,
+
+      // DEPRECATED — keep for callers that still read it; always false now.
     }}>
       {children}
     </AuthContext.Provider>

@@ -1,6 +1,4 @@
 import { useState, useEffect, useCallback } from 'react'
-import { DISABLE_AUTH } from '../lib/env'
-
 // localStorage key patterns
 const LS_PREFIX  = 'exzibo_role_'    // per-restaurant: exzibo_role_<restaurantId>
 const LS_GLOBAL  = 'exzibo_active_role'  // global fallback
@@ -8,7 +6,6 @@ const LS_GLOBAL  = 'exzibo_active_role'  // global fallback
 const VALID_ROLES = new Set(['menu_studio', 'owner', 'admin', 'staff'])
 
 function readStoredRole(restaurantId) {
-  if (DISABLE_AUTH) return 'menu_studio'
   try {
     if (restaurantId) {
       const perRestaurant = localStorage.getItem(`${LS_PREFIX}${restaurantId}`)
@@ -25,11 +22,10 @@ function readStoredRole(restaurantId) {
  *
  * Returns { role, loading, error, setRole } for the current session.
  *
- * Role resolution order (no Supabase auth required):
- *  1. DISABLE_AUTH=true → always 'menu_studio'
- *  2. localStorage key `exzibo_role_<restaurantId>`
- *  3. localStorage key `exzibo_active_role` (global fallback)
- *  4. null → caller must show a role picker
+ * Role resolution order:
+ *  1. localStorage key `exzibo_role_<restaurantId>`
+ *  2. localStorage key `exzibo_active_role` (global fallback)
+ *  3. null → caller must show a role picker
  *
  * setRole(newRole) persists the selection to localStorage for the restaurant
  * and updates React state immediately.

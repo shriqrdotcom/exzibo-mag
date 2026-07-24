@@ -189,16 +189,9 @@ app.use(express.json({ limit: '15mb' }))
 // Sensitive headers (cookies, authorization, etc.) are NEVER logged.
 app.use(structuredLogger)
 
-// ── Auth disable check helper ─────────────────────────────────────────────────
-// Single source of truth — used by inline auth blocks in complex route handlers.
-function _isAuthDisabled() {
-  return process.env.DISABLE_AUTH === 'true' || process.env.VITE_DISABLE_AUTH === 'true'
-}
-
 // ── Private admin API session guard ──────────────────────────────────────────
 // Any route in _PRIVATE_EXACT or matching _PRIVATE_PATTERNS requires a valid
-// Better Auth session. Public customer routes are intentionally excluded.
-// No-op when DISABLE_AUTH / VITE_DISABLE_AUTH = 'true' (dev mode).
+// Better Auth session. All other routes are intentionally excluded.
 const _PRIVATE_EXACT = new Set([
   '/api/orders/update-status',
   '/api/orders/auto-cleanup',
@@ -259,10 +252,6 @@ function _isPrivateAdminPath(path, method) {
 app.use(async (req, res, next) => {
   if (req.method === 'OPTIONS') return next()
   if (!_isPrivateAdminPath(req.path, req.method)) return next()
-
-  if (process.env.DISABLE_AUTH === 'true' || process.env.VITE_DISABLE_AUTH === 'true') {
-    return next()
-  }
 
   try {
     const session = await getSessionEmail(req)
@@ -902,20 +891,9 @@ app.patch('/api/bookings/:id/status', async (req, res) => {
 // ── Team Member routes ────────────────────────────────────────────────────────
 // All team operations are delegated to the canonical team-service so Vercel,
 // Express, and Vite dev middleware share the same business rules.
-
-function teamAuthBypass(req, res, next) {
-  if (process.env.DISABLE_AUTH === 'true' || process.env.VITE_DISABLE_AUTH === 'true') {
-    req.authRole = 'owner'
-    req.authEmail = null
-    req.authUserId = null
-    req.authIsSuperadmin = true
-    return next()
-  }
-  next()
-}
+// DISABLE_AUTH bypass has been removed — auth is always enforced.
 
 app.get('/api/team-members/:restaurantId',
-  teamAuthBypass,
   requireRestaurantRole(req => req.params.restaurantId, MANAGEMENT_ROLES),
   async (req, res) => {
     try {
@@ -935,9 +913,7 @@ app.get('/api/team-members/:restaurantId',
 )
 
 app.post('/api/team-members/shadow-upsert',
-  teamAuthBypass,
   async (req, res, next) => {
-    if (process.env.DISABLE_AUTH === 'true' || process.env.VITE_DISABLE_AUTH === 'true') return next()
     const { restaurantId, member } = req.body
     const existingMember = await getNeonRestaurantMemberById(member?.id)
     const authRestaurantId = existingMember ? existingMember.restaurant_id : restaurantId
@@ -969,9 +945,7 @@ app.post('/api/team-members/shadow-upsert',
 )
 
 app.post('/api/team-members/shadow-delete',
-  teamAuthBypass,
   async (req, res, next) => {
-    if (process.env.DISABLE_AUTH === 'true' || process.env.VITE_DISABLE_AUTH === 'true') return next()
     const { id } = req.body
     const target = await getNeonRestaurantMemberById(id)
     if (!target) return res.json({ ok: true })
