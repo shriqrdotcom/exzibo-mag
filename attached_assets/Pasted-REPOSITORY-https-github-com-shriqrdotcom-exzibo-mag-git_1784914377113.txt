@@ -1,0 +1,788 @@
+REPOSITORY
+https://github.com/shriqrdotcom/exzibo-mag.git
+
+TASK TITLe— Canonicalize Team Management and Enforce Server-Resolved Restaurant Scope
+
+CURRENT VERIFIED STATE
+
+The following preconditions are already complete:
+
+- PR #31 has been merged into main.
+- The current main commit includes the authentication-bypass removal.
+- The working tree was clean before this branch was created.
+- The current branch already exists:
+
+  repair/07-canonical-team-service-boundary
+
+Do not create another branch.
+Do not switch back to an old repair branch.
+Do not reset main again unless repository corruption is confirmed.
+
+==================================================
+ROLE
+==================================================
+
+Act as a senior multi-tenant SaaS backend engineer, authorization specialist, PostgreSQL application developer and API-contract reviewer.
+
+Work only on the restaurant team-management service and its route adapters.
+
+Your responsibility is to:
+
+1. Create one canonical team-management service.
+2. Ensure every runtime uses it consistently.
+3. Enforce server-resolved restaurant scope.
+4. Prevent cross-tenant mutations.
+5. Fix missing-member crashes.
+6. Restore the missing membership identity-lookup contract.
+7. Make the existing team safety tests executable and reliable.
+
+==================================================
+DO NOT MODIFY
+==================================================
+
+Do not repair or redesign:
+
+- team-list pagination;
+- last-owner transaction locking;
+- membership uniqueness migrations;
+- authentication architecture;
+- Better Auth;
+- preview authentication;
+- restaurant public DTOs;
+- orders;
+- bookings;
+- realtime;
+- settings;
+- media;
+- analytics;
+- billing;
+- general frontend architecture.
+
+Do not add unrelated fixes merely because you discover them.
+
+==================================================
+CONFIRMED PROBLEMS
+==================================================
+
+Repository evidence indicates:
+
+1. api/_lib/team-service.js exists as the intended shared team service.
+
+2. api/team.js still duplicates some authorization and mutation behaviour instead of consistently using the canonical service.
+
+3. A route may authorize one restaurant but pass a client-provided restaurantId to the database mutation.
+
+4. This creates a possible authorization-scope mismatch:
+
+   authorized restaurant
+   ≠
+   mutated restaurant
+
+5. Express, Vite and Vercel team routes may apply different authorization logic.
+
+6. Deleting or updating a missing member may access:
+
+   targetMember.role
+   targetMember.user_id
+   targetMember.email
+
+   before confirming that targetMember exists.
+
+7. Tests import:
+
+   findActiveNeonRestaurantMembersByIdentity
+
+   but src/db/neon-restaurant-members.js does not provide a compatible canonical export.
+
+8. This missing export prevents team-membership safety tests from fully executing.
+
+9. Duplicate active memberships must fail closed rather than returning an arbitrary membership.
+
+==================================================
+PRIMARY OBJECTIVE
+==================================================
+
+After this task:
+
+1. One canonical service owns all team-management mutations.
+
+2. Vercel, Express and Vite route adapters use that service.
+
+3. Client-provided restaurant IDs cannot redirect a mutation to another tenant.
+
+4. Only the server-resolved restaurant ID reaches database mutation functions.
+
+5. Missing target members are handled before property access.
+
+6. The active-membership identity lookup exists and has one consistent implementation.
+
+7. Unknown and sensitive fields remain rejected.
+
+8. Current role permissions remain unchanged.
+
+9. Existing last-owner protection remains invoked where required.
+
+10. Team safety tests load and execute without import cancellation.
+
+==================================================
+STRICT SAFETY RULES
+==================================================
+
+1. Do not work directly on main.
+
+2. Continue only on:
+
+   repair/07-canonical-team-service-boundary
+
+3. Record the current starting commit SHA before editing.
+
+4. Do not access the production database.
+
+5. Do not run production migrations.
+
+6. Do not create or modify migration files.
+
+7. Do not request, print, rotate or commit production secrets.
+
+8. Do not restore:
+
+   - DISABLE_AUTH;
+   - VITE_DISABLE_AUTH;
+   - MOCK_USER;
+   - teamAuthBypass;
+   - _isAuthDisabled;
+   - fabricated owner or superadmin authority.
+
+9. Never trust client-provided:
+
+   - authenticated user ID;
+   - authenticated email;
+   - caller role;
+   - restaurant membership;
+   - restaurant authority;
+   - superadmin status.
+
+10. Do not add password fields to team APIs.
+
+11. Do not create browser-local team records.
+
+12. Do not make team routes public.
+
+13. Do not redesign the role hierarchy.
+
+14. Do not expand manager or staff permissions.
+
+15. Do not weaken last-owner protection.
+
+16. Do not attempt to solve last-owner concurrency fully in this prompt.
+
+17. Do not add membership uniqueness constraints in this prompt.
+
+18. Do not hide, skip or delete legitimate failing tests.
+
+19. Do not commit:
+
+   - .agents/memory files;
+   - attached_assets;
+   - screenshots;
+   - pasted prompts;
+   - generated audit artefacts;
+   - unrelated documentation.
+
+20. Stop and report when a required change materially exceeds this task.
+
+==================================================
+STEP 1 — VERIFY THE BRANCH AND BASELINE
+==================================================
+
+Before editing:
+
+1. Run git branch --show-current.
+
+2. Confirm the branch is:
+
+   repair/07-canonical-team-service-boundary
+
+3. Record:
+
+   - starting commit SHA;
+   - origin/main SHA;
+   - git status;
+   - changed and untracked files.
+
+4. Confirm the working tree contains no previous prompt changes.
+
+5. Confirm the authentication-bypass patterns remain absent from deployable code:
+
+   - DISABLE_AUTH;
+   - VITE_DISABLE_AUTH;
+   - MOCK_USER;
+   - teamAuthBypass;
+   - _isAuthDisabled.
+
+Do not continue if the branch is dirty with unrelated files.
+
+==================================================
+STEP 2 — INVENTORY THE COMPLETE TEAM FLOW
+==================================================
+
+Search the repository for:
+
+- api/_lib/team-service.js
+- api/team.js
+- team-service
+- addMember
+- createMember
+- inviteMember
+- updateMember
+- deleteMember
+- removeMember
+- upsertMember
+- listMembers
+- targetMember
+- restaurantId
+- restaurant_id
+- authRestaurantId
+- resolvedRestaurantId
+- findActiveNeonRestaurantMembersByIdentity
+- findActiveMembership
+- normalized email
+- unclaimed membership
+- checkRestaurantAccess
+- requireRestaurantRole
+- requireSuperadmin
+- MANAGEMENT_ROLES
+- ALL_ROLES
+- last owner
+- owner count
+- rejectUnknownFields
+- ALLOWED_MEMBER_FIELDS
+
+Inspect at minimum:
+
+- api/team.js
+- api/_lib/team-service.js
+- src/db/neon-restaurant-members.js
+- api/_lib/authz.js
+- server.js
+- vite.config.js
+- TeamMembers.jsx
+- TeamMembersAdmin.jsx
+- team-related API clients
+- team-membership-safety tests
+- tenant-isolation tests
+- authorization tests
+- mobile membership/bootstrap queries
+
+Create an internal flow map:
+
+runtime
+→ route/action
+→ authenticated actor source
+→ requested restaurant source
+→ server-resolved restaurant
+→ required role
+→ canonical service operation
+→ database operation
+→ response contract
+
+Do not edit until this map is complete.
+
+==================================================
+STEP 3 — DEFINE THE CANONICAL TEAM SERVICE
+==================================================
+
+Use the existing intended shared team service:
+
+api/_lib/team-service.js
+
+or move it only when repository structure clearly requires a more canonical shared location.
+
+Do not create a second competing service.
+
+The service should expose operations equivalent to:
+
+- listRestaurantMembers
+- createOrInviteRestaurantMember
+- updateRestaurantMember
+- deleteRestaurantMember
+- resolveTeamMutationScope
+
+Use existing repository naming where practical.
+
+The canonical service must own:
+
+1. Actor identity derived from the verified server session.
+
+2. Restaurant-scope resolution.
+
+3. Authorization and role checks.
+
+4. Request validation after HTTP parsing.
+
+5. Target-member lookup.
+
+6. Cross-tenant mismatch rejection.
+
+7. Last-owner guard invocation.
+
+8. Database mutation calls.
+
+9. Stable domain error mapping.
+
+10. Safe response projection.
+
+HTTP route files should remain thin adapters responsible only for:
+
+- HTTP method validation;
+- CORS or headers;
+- body/query parsing;
+- calling the canonical service;
+- mapping domain results to HTTP responses.
+
+==================================================
+STEP 4 — ENFORCE SERVER-RESOLVED RESTAURANT SCOPE
+==================================================
+
+For every create, update and delete team operation:
+
+1. Derive the caller identity from the verified server session.
+
+2. Resolve the caller’s restaurant authority through canonical server-side authorization.
+
+3. Never treat body.restaurantId as final authority.
+
+4. When restaurantId is supplied in:
+
+   - path;
+   - query;
+   - body;
+
+   validate it and compare all values.
+
+5. Reject mismatched path/query/body restaurant IDs.
+
+6. Pass only the trusted server-resolved restaurant ID into database mutation functions.
+
+7. Never silently replace one mismatched value and continue.
+
+8. A member of Restaurant A must not mutate Restaurant B.
+
+9. A verified superadmin may target another restaurant only through the existing documented superadmin path.
+
+10. Client-supplied isSuperadmin, role or permissions must grant no authority.
+
+Use a stable tenant-mismatch response without disclosing whether the target user belongs to another restaurant.
+
+==================================================
+STEP 5 — ROUTE ALL RUNTIMES THROUGH THE CANONICAL SERVICE
+==================================================
+
+Update all applicable team adapters:
+
+- Vercel;
+- Express;
+- Vite development middleware.
+
+Equivalent team operations must use the same canonical service.
+
+Remove duplicate active route-level implementations when safe.
+
+The runtimes must not differ in:
+
+- authentication;
+- allowed roles;
+- restaurant-scope resolution;
+- request-field validation;
+- missing-member handling;
+- last-owner guard use;
+- error mapping;
+- status codes.
+
+Do not leave one legacy mutation path active beside the canonical service.
+
+==================================================
+STEP 6 — REPAIR THE IDENTITY-LOOKUP CONTRACT
+==================================================
+
+Investigate every caller of:
+
+findActiveNeonRestaurantMembersByIdentity
+
+Determine the intended input and output semantics before changing the implementation.
+
+Create or expose one canonical implementation that:
+
+1. Accepts validated identity inputs.
+
+2. Supports authenticated user ID when applicable.
+
+3. Supports normalized email for unclaimed memberships when applicable.
+
+4. Returns active memberships only.
+
+5. Excludes deleted, disabled or inactive memberships.
+
+6. Uses the repository’s existing normalized identity rules.
+
+7. Uses parameterized database queries.
+
+8. Does not return an arbitrary record when multiple active memberships match.
+
+9. Returns or throws an explicit duplicate-state result when duplicate active memberships exist.
+
+10. Avoids returning unnecessary private fields.
+
+Preferred resolution:
+
+- export an existing correct canonical implementation under the expected name; or
+- update all callers and tests to one correctly named canonical function.
+
+Do not create two functions with different semantics merely to satisfy an import.
+
+==================================================
+STEP 7 — FIX NULL TARGET-MEMBER HANDLING
+==================================================
+
+For update and delete operations:
+
+1. Look up the target member.
+
+2. Check whether targetMember is null or undefined.
+
+3. Only after the null check may code access:
+
+   - targetMember.role;
+   - targetMember.user_id;
+   - targetMember.email;
+   - targetMember.restaurant_id;
+   - targetMember.status.
+
+4. UPDATE of a missing member should return 404.
+
+5. DELETE should use one documented behaviour consistently:
+
+   - 404 for missing member; or
+   - 204 for idempotent deletion.
+
+6. Use the same behaviour in Vercel, Express and Vite.
+
+7. Do not invoke last-owner logic for a missing member.
+
+8. Do not leak whether the member exists in another restaurant.
+
+9. Do not allow a TypeError or raw internal error.
+
+==================================================
+STEP 8 — PRESERVE REQUEST-FIELD SECURITY
+==================================================
+
+Ensure team APIs reject unknown or sensitive fields.
+
+Reject fields such as:
+
+- password;
+- passwordHash;
+- temporaryPassword;
+- confirmPassword;
+- credential;
+- isSuperadmin;
+- isSuperAdmin;
+- ownerId;
+- authenticatedUserId;
+- internal permissions;
+- arbitrary restaurant authority;
+- invitation-token hash;
+- reset token.
+
+Preserve or strengthen the existing explicit allowlist.
+
+Role values must be validated server-side.
+
+Do not allow a caller to assign a role beyond the existing role-management policy.
+
+Do not expand current permissions.
+
+==================================================
+STEP 9 — PRESERVE LAST-OWNER GUARD BEHAVIOUR
+==================================================
+
+Do not solve full last-owner concurrency in this prompt.
+
+Ensure the canonical service still invokes the existing guard when:
+
+- deleting an owner;
+- demoting an owner;
+- deactivating an owner.
+
+Ensure:
+
+1. Missing targets do not invoke the guard.
+
+2. Non-owner changes do not invoke it unnecessarily.
+
+3. Guard failures are not converted to success.
+
+4. Route adapters do not bypass the guard.
+
+5. Service-level tests prove the guard is invoked for owner-sensitive mutations.
+
+State clearly in the final report that database-level race protection remains for a later prompt.
+
+==================================================
+STEP 10 — REQUIRED TESTS
+==================================================
+
+Add or repair executable behavioural tests.
+
+MODULE AND IMPORT TESTS
+
+1. The team service imports successfully.
+
+2. The canonical identity-lookup function exists.
+
+3. team-membership-safety.test.js no longer fails during import.
+
+4. Tests are not cancelled due to the missing export.
+
+CANONICAL SERVICE TESTS
+
+5. Vercel team mutations call the canonical service.
+
+6. Express team mutations call the canonical service.
+
+7. Vite team mutations call the canonical service.
+
+8. Duplicate route-level authorization logic is removed or inactive.
+
+TENANT-ISOLATION TESTS
+
+9. Restaurant A cannot update Restaurant B’s member.
+
+10. Restaurant A cannot delete Restaurant B’s member.
+
+11. Body restaurantId mismatch is rejected.
+
+12. Query/body restaurant mismatch is rejected.
+
+13. Path/body restaurant mismatch is rejected.
+
+14. Only the server-resolved restaurant ID reaches the mutation helper.
+
+15. Client-supplied isSuperadmin grants no authority.
+
+16. Verified superadmin behaviour remains limited to the documented server path.
+
+AUTHORIZATION TESTS
+
+17. Unauthenticated team request returns 401.
+
+18. Wrong-tenant authenticated request returns 403 or the established non-disclosure result.
+
+19. Staff cannot perform management-only mutations.
+
+20. Manager permissions remain unchanged.
+
+21. Owner/admin permissions remain unchanged.
+
+22. Equivalent operations return the same authorization outcome across Vercel, Express and Vite.
+
+MISSING-MEMBER TESTS
+
+23. Updating a missing member returns 404.
+
+24. Deleting a missing member returns the selected documented status.
+
+25. Missing-member operations do not throw TypeError.
+
+26. Missing-member operations do not invoke the owner guard.
+
+27. Missing-member operations do not disclose another tenant.
+
+IDENTITY-LOOKUP TESTS
+
+28. Active membership by user ID is found.
+
+29. Active unclaimed membership by normalized email is found.
+
+30. Deleted membership is excluded.
+
+31. Inactive membership is excluded.
+
+32. Duplicate active membership fails closed.
+
+33. Invalid identity input is rejected.
+
+FIELD-VALIDATION TESTS
+
+34. Password fields are rejected.
+
+35. Client-supplied superadmin fields are rejected.
+
+36. Unknown fields are rejected.
+
+37. Existing valid create/invite behaviour still works.
+
+LAST-OWNER CONTRACT TESTS
+
+38. Owner deletion invokes the guard.
+
+39. Owner demotion invokes the guard.
+
+40. Non-owner update avoids unnecessary owner-guard invocation.
+
+REGRESSION TESTS
+
+41. Migration-integrity tests remain green.
+
+42. Authentication-bypass correction tests remain green.
+
+43. Preview-auth security tests remain green.
+
+44. Restaurant DTO security tests remain green.
+
+45. Superadmin credential-containment tests remain green.
+
+Do not use production infrastructure.
+
+==================================================
+STEP 11 — FINAL STATIC SAFETY REVIEW
+==================================================
+
+Search final deployable code for:
+
+- direct team DB mutation outside the canonical service;
+- body.restaurantId passed directly into a team mutation;
+- query.restaurantId passed directly into a mutation without server resolution;
+- targetMember.role before targetMember null check;
+- targetMember.user_id before null check;
+- targetMember.email before null check;
+- duplicate team authorization implementations;
+- missing findActiveNeonRestaurantMembersByIdentity export;
+- client-controlled isSuperadmin;
+- accepted password fields;
+- team route authentication bypasses.
+
+Review every remaining match manually.
+
+Strings may remain inside negative tests.
+
+==================================================
+STEP 12 — VALIDATION COMMANDS
+==================================================
+
+Use the package manager declared by the repository.
+
+Run:
+
+1. Frozen dependency installation.
+
+2. Focused canonical team-service tests.
+
+3. team-membership-safety tests.
+
+4. Cross-runtime authorization parity tests.
+
+5. Tenant-isolation tests.
+
+6. Previous security regression suites.
+
+7. Migration-integrity tests.
+
+8. JavaScript syntax checks.
+
+9. Type checking where configured.
+
+10. Linting where configured.
+
+11. Root production build.
+
+12. git diff against the starting commit.
+
+13. git status.
+
+Classify database/environment-dependent failures accurately.
+
+Do not claim COMPLETE when focused tests fail.
+
+==================================================
+PERMITTED FILE SCOPE
+==================================================
+
+Likely files:
+
+- api/team.js
+- api/_lib/team-service.js
+- src/db/neon-restaurant-members.js
+- server.js
+- vite.config.js
+- narrowly related authorization helper
+- team service tests
+- team-membership safety tests
+- tenant/parity tests
+
+Frontend files should change only when a required response-contract correction makes it unavoidable.
+
+Do not add:
+
+- migration files;
+- attached assets;
+- screenshots;
+- pasted prompt files;
+- .agents/memory files;
+- generated reports;
+- unrelated dependencies.
+
+==================================================
+COMMIT AND PULL REQUEST
+==================================================
+
+When the task is fully validated:
+
+1. Run git status.
+
+2. Confirm only intended files changed.
+
+3. Commit with:
+
+   fix: canonicalize team service and enforce tenant scope
+
+4. Push:
+
+   repair/07-canonical-team-service-boundary
+
+5. Create a pull request targeting:
+
+   main
+
+6. Do not merge the pull request.
+
+7. Do not delete the branch yet.
+
+==================================================
+ACCEPTANCE CRITERIA
+==================================================
+
+Status may be COMPLETE only when:
+
+1. One canonical service handles team mutations.
+
+2. Vercel, Express and Vite use the same service boundary.
+
+3. Client-provided restaurant IDs cannot redirect a mutation.
+
+4. Only server-resolved restaurant scope reaches the database layer.
+
+5. Missing members are handled before property access.
+
+6. The active-membership identity lookup exists and is canonical.
+
+7. Team safety tests load and execute.
+
+8. Unknown and sensitive request fields remain rejected.
+
+9. Existing role permissions remain unchanged.
+
+10. Existing last-owner guard is preserved.
+
+11. Focu

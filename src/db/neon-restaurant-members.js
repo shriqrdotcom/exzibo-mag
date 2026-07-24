@@ -143,6 +143,12 @@ export async function findActiveMemberByIdentity(restaurantId, resolvedUserId, n
   return rows
 }
 
+// ── findActiveNeonRestaurantMembersByIdentity ────────────────────────────────
+// Canonical name alias for findActiveMemberByIdentity. Used by team-membership-safety
+// tests and future callers that need the longer descriptive import name.
+// Accepts validated identity inputs and returns active memberships only.
+export const findActiveNeonRestaurantMembersByIdentity = findActiveMemberByIdentity
+
 // ── hasConflictingNeonRestaurantMembership ────────────────────────────────────
 // Boolean convenience probe for callers that just need to know whether more
 // than one active row matches the supplied identity.

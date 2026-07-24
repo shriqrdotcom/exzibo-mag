@@ -274,7 +274,7 @@ describe('Server contract — api/team.js', () => {
       'Create action must still be supported')
     assert.ok(TEAM_JS.includes('checkRestaurantAccess'),
       'Must use server-side authorization check')
-    assert.ok(TEAM_JS.includes('upsertNeonRestaurantMember'),
+    assert.ok(TEAM_JS.includes('executeTeamUpsert'),
       'Must use the canonical team service for creation')
   })
 })
