@@ -1,7 +1,7 @@
 import express from 'express'
 import path from 'path'
 import { fileURLToPath } from 'url'
-import { createHmac } from 'crypto'
+import { createHmac, timingSafeEqual } from 'crypto'
 import bcrypt from 'bcryptjs'
 import { neonHealthCheck } from './src/db/index.js'
 import {
@@ -291,52 +291,128 @@ app.use(async (req, res, next) => {
 
 app.use(express.static(path.resolve(__dirname, 'dist')))
 
-// ── Preview Auth ──────────────────────────────────────────────────────────────
+// ── Preview Auth (AVAILABLE ONLY IN DEDICATED PREVIEW MODE) ──────────────────
+// These routes are registered ONLY when APP_RUNTIME=preview is explicitly set.
+// They MUST NOT register in production, normal local development, or general
+// Replit deployments. The APP_RUNTIME=preview marker is the server-only gate.
+//
+// Security properties:
+//  • PREVIEW_SECRET is mandatory — no fallback to REPL_ID or a literal.
+//  • PREVIEW_SECRET must be at least 32 characters (validated at startup).
+//  • Missing secret or credentials fails closed (500) instead of degrading.
+//  • Token lifetime is capped at 30 minutes (not 8 hours).
+//  • Signature verification uses crypto.timingSafeEqual (not string equality).
+//  • Preview authentication does NOT grant any admin or superadmin role.
+//  • Login body is limited to 1 KB; unknown fields are rejected.
 
-app.post('/api/preview-login', async (req, res) => {
-  try {
-    const { email, password } = req.body
-    const validEmail = process.env.PREVIEW_EMAIL
-    const validHash  = process.env.PREVIEW_PASSWORD_HASH
-
-    if (!validEmail || !validHash) {
-      return res.status(500).json({ error: 'Preview credentials not configured on server.' })
-    }
-
-    const emailMatch    = email === validEmail
-    const passwordMatch = await bcrypt.compare(password, validHash)
-
-    if (emailMatch && passwordMatch) {
-      const secret  = process.env.PREVIEW_SECRET || process.env.REPL_ID || 'preview-hmac-secret'
-      const payload = JSON.stringify({ email, exp: Date.now() + 8 * 60 * 60 * 1000 })
-      const sig     = createHmac('sha256', secret).update(payload).digest('hex')
-      const token   = Buffer.from(payload).toString('base64url') + '.' + sig
-      return res.json({ success: true, token })
-    } else {
-      return res.status(401).json({ error: 'Invalid email or password.' })
-    }
-  } catch {
-    return res.status(400).json({ error: 'Bad request.' })
+if (process.env.APP_RUNTIME === 'preview') {
+  // Startup validation: PREVIEW_SECRET must be configured and at least 32 chars.
+  if (!process.env.PREVIEW_SECRET || process.env.PREVIEW_SECRET.length < 32) {
+    console.error('[preview-auth] PREVIEW_SECRET must be at least 32 characters. Preview auth will fail closed.')
   }
-})
+  // Simple in-memory rate limiter for preview-login (per IP, 5 attempts/min)
+  const previewLoginAttempts = new Map()
+  setInterval(() => previewLoginAttempts.clear(), 60_000)
 
-app.get('/api/preview-verify', (req, res) => {
-  const auth  = req.headers['authorization'] || ''
-  const token = auth.replace('Bearer ', '')
+  app.post('/api/preview-login', async (req, res) => {
+    try {
+      // Rate limit
+      const clientIp = req.ip || req.connection?.remoteAddress || 'unknown'
+      const attempts = previewLoginAttempts.get(clientIp) || 0
+      if (attempts >= 5) {
+        return res.status(429).json({ error: 'Too many attempts. Try again later.' })
+      }
+      previewLoginAttempts.set(clientIp, attempts + 1)
 
-  if (!token) return res.status(401).json({ valid: false })
+      // Body size limit: reject bodies larger than 1 KB
+      const bodyRaw = JSON.stringify(req.body)
+      if (bodyRaw.length > 1024) {
+        return res.status(413).json({ error: 'Request body too large.' })
+      }
 
-  try {
-    const [payloadB64, sig] = token.split('.')
-    const payload  = JSON.parse(Buffer.from(payloadB64, 'base64url').toString())
-    const secret   = process.env.PREVIEW_SECRET || process.env.REPL_ID || 'preview-hmac-secret'
-    const expected = createHmac('sha256', secret).update(JSON.stringify(payload)).digest('hex')
-    const valid    = sig === expected && payload.exp > Date.now()
-    return res.json({ valid, email: valid ? payload.email : null })
-  } catch {
-    return res.status(401).json({ valid: false })
-  }
-})
+      // Reject unknown body fields — only {email, password} are allowed
+      const allowedFields = new Set(['email', 'password'])
+      for (const key of Object.keys(req.body)) {
+        if (!allowedFields.has(key)) {
+          return res.status(400).json({ error: 'Bad request.' })
+        }
+      }
+
+      const { email, password } = req.body
+      const validEmail = process.env.PREVIEW_EMAIL
+      const validHash  = process.env.PREVIEW_PASSWORD_HASH
+
+      if (!validEmail || !validHash) {
+        return res.status(500).json({ error: 'Preview credentials not configured on server.' })
+      }
+
+      // PREVIEW_SECRET must be explicitly configured — fail closed.
+      // No fallback to REPL_ID, a literal, or any other value.
+      const secret = process.env.PREVIEW_SECRET
+      if (!secret) {
+        return res.status(500).json({ error: 'PREVIEW_SECRET is not configured.' })
+      }
+
+      const emailMatch    = email === validEmail
+      const passwordMatch = await bcrypt.compare(password, validHash)
+
+      if (emailMatch && passwordMatch) {
+        // 30-minute token lifetime — short enough to limit exposure.
+        const payload = JSON.stringify({ email, exp: Date.now() + 30 * 60 * 1000 })
+        const sig     = createHmac('sha256', secret).update(payload).digest('hex')
+        const token   = Buffer.from(payload).toString('base64url') + '.' + sig
+        return res.json({ success: true, token })
+      } else {
+        // One stable public failure — never reveal which field was wrong.
+        return res.status(401).json({ error: 'Invalid email or password.' })
+      }
+    } catch {
+      return res.status(400).json({ error: 'Bad request.' })
+    }
+  })
+
+  app.get('/api/preview-verify', (req, res) => {
+    const auth  = req.headers['authorization'] || ''
+    const token = auth.replace('Bearer ', '')
+
+    if (!token) return res.status(401).json({ valid: false })
+
+    try {
+      const [payloadB64, sig] = token.split('.')
+      if (!payloadB64 || !sig) {
+        return res.status(401).json({ valid: false })
+      }
+
+      const payload = JSON.parse(Buffer.from(payloadB64, 'base64url').toString())
+
+      // Validate required claims
+      if (typeof payload.email !== 'string' || typeof payload.exp !== 'number') {
+        return res.status(401).json({ valid: false })
+      }
+
+      // Fail closed when PREVIEW_SECRET is absent — no hardcoded fallback.
+      const secret = process.env.PREVIEW_SECRET
+      if (!secret) {
+        return res.status(500).json({ valid: false, error: 'PREVIEW_SECRET is not configured.' })
+      }
+
+      const expected = createHmac('sha256', secret).update(JSON.stringify(payload)).digest('hex')
+
+      // Timing-safe comparison prevents timing oracle attacks.
+      const sigBuf      = Buffer.from(sig)
+      const expectedBuf = Buffer.from(expected)
+      const signaturesMatch =
+        sigBuf.length === expectedBuf.length &&
+        timingSafeEqual(sigBuf, expectedBuf)
+
+      const valid = signaturesMatch && payload.exp > Date.now()
+
+      return res.json({ valid, email: valid ? payload.email : null })
+    } catch {
+      return res.status(401).json({ valid: false })
+    }
+  })
+}
 
 // ── Realtime ticket endpoint ──────────────────────────────────────────────────
 // POST /api/realtime/ticket

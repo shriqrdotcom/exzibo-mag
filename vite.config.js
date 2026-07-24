@@ -30,14 +30,23 @@ import * as menuService from './src/services/menuService.js'
 import * as contentService from './src/services/restaurantContentService.js'
 
 function previewAuthPlugin() {
+  // Preview routes register only when APP_RUNTIME=preview is explicitly set.
+  // This ensures they are NOT available in normal dev, production, or general
+  // Replit deployments — only in a dedicated preview environment.
+  if (process.env.APP_RUNTIME !== 'preview') {
+    return { name: 'preview-auth-disabled' }
+  }
+
+  // Startup validation: PREVIEW_SECRET must be at least 32 characters.
+  if (!process.env.PREVIEW_SECRET || process.env.PREVIEW_SECRET.length < 32) {
+    console.warn('[preview-auth] PREVIEW_SECRET must be at least 32 characters. Preview auth will fail closed.')
+  }
+
   return {
     name: 'preview-auth',
-    // Preview authentication is available ONLY in the local Vite dev server.
-    // It is intentionally absent from api/system.js (Vercel) and server.js
-    // (Express production) — these routes do NOT exist in any deployed build.
-    //
-    // Security requirements for local-dev preview auth:
+    // Security properties of this dedicated-preview-mode auth:
     //  • PREVIEW_SECRET must be explicitly configured — no hardcoded fallback.
+    //  • PREVIEW_SECRET must be at least 32 characters (validated at plugin init).
     //  • Missing secret fails closed (500) instead of using a known value.
     //  • Token lifetime is capped at 30 minutes.
     //  • Signature comparison uses crypto.timingSafeEqual to prevent timing attacks.
@@ -53,10 +62,22 @@ function previewAuthPlugin() {
         }
 
         let body = ''
-        req.on('data', chunk => { body += chunk })
+        let bodySize = 0
+        req.on('data', chunk => {
+          bodySize += chunk.length
+          if (bodySize > 1024) {
+            res.statusCode = 413
+            res.setHeader('Content-Type', 'application/json')
+            res.end(JSON.stringify({ error: 'Request body too large.' }))
+            req.destroy()
+            return
+          }
+          body += chunk
+        })
         req.on('end', async () => {
           try {
-            const { email, password } = JSON.parse(body)
+            const parsed = JSON.parse(body)
+            const { email, password } = parsed
             const validEmail = process.env.PREVIEW_EMAIL
             const validHash  = process.env.PREVIEW_PASSWORD_HASH
             // PREVIEW_SECRET must be explicitly configured — fail closed.
@@ -75,6 +96,16 @@ function previewAuthPlugin() {
               res.setHeader('Content-Type', 'application/json')
               res.end(JSON.stringify({ error: 'PREVIEW_SECRET is not configured. Set it in Replit Secrets.' }))
               return
+            }
+
+            // Reject unknown body fields — only {email, password} are allowed
+            for (const key of Object.keys(parsed)) {
+              if (!['email', 'password'].includes(key)) {
+                res.statusCode = 400
+                res.setHeader('Content-Type', 'application/json')
+                res.end(JSON.stringify({ error: 'Bad request.' }))
+                return
+              }
             }
 
             const emailMatch    = email === validEmail

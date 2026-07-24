@@ -36,6 +36,9 @@ Referenced by the app but not yet set in this Replit environment (dev mode works
 - `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` — Google OAuth
 - `SUPERADMIN_ALLOWED_EMAILS` — comma-separated allowlist for the superadmin panel
 - `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` — rate limiting + duplicate prevention
+- `APP_RUNTIME` — set to `preview` to enable `/api/preview-login` and `/api/preview-verify` routes (server-only gate; never set in production)
+- `PREVIEW_SECRET` — HMAC signing key for preview tokens (required when `APP_RUNTIME=preview`; no fallback to `REPL_ID` or literals)
+- `PREVIEW_EMAIL` / `PREVIEW_PASSWORD_HASH` — preview access credentials (required when `APP_RUNTIME=preview`)
 
 See `.env.example` for the full reference (that file also lists Vercel-specific deployment values not relevant to Replit dev).
 
