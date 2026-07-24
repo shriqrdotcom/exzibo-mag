@@ -69,6 +69,8 @@ export function AuthProvider({ children }) {
         console.log('[auth] Signed in as:', email)
 
         // On superadmin subdomain: verify against SUPERADMIN_ALLOWED_EMAILS
+        // ⚠️ FAIL CLOSED — if the check fails or returns an unexpected response,
+        // superadmin access is DENIED. A network/server error must never grant access.
         if (ACTIVE_SUBDOMAIN === 'superadmin') {
           try {
             const r = await fetch('/api/auth-check?type=superadmin', { credentials: 'include' })
@@ -86,7 +88,18 @@ export function AuthProvider({ children }) {
               return
             }
           } catch (e) {
-            console.warn('[auth] Superadmin check failed:', e.message)
+            // Fail closed: network error, timeout, malformed response, HTTP 500 —
+            // none of these may grant superadmin access.
+            console.warn('[auth] Superadmin check failed — access denied:', e.message)
+            if (mounted) {
+              setCurrentAuthUser(null)
+              setUser(null)
+              setIsSuperAdmin(false)
+              setAccessDenied(true)
+              setDeniedEmail(email)
+              setLoading(false)
+            }
+            return
           }
 
           if (mounted) {
