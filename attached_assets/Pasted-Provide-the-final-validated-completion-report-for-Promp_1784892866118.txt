@@ -1,0 +1,135 @@
+Provide the final validated completion report for Prompt 2.
+
+Do not make any more code changes.
+Do not create additional files.
+Do not merge the branch.
+Do not access production infrastructure.
+
+Before answering, run:
+
+1. git status
+2. git diff --stat against the starting commit
+3. git diff against the starting commit
+4. migration integrity tests
+5. zero-to-head disposable PostgreSQL migration
+6. upgrade rehearsal
+7. root production build
+8. relevant migration and order-state tests
+
+Confirm that no production database, production migration or production secret was used.
+
+Return this exact format:
+
+PROMPT 2 COMPLETION SUMMARY
+
+Status:
+- COMPLETE / PARTIAL / BLOCKED
+
+Branch:
+- branch name
+
+Starting commit:
+- exact SHA
+
+Ending commit:
+- exact SHA
+
+Migration strategy selected:
+- Historical journal repair / Forward-only reconciliation
+- concise reason
+
+Original migration defects confirmed:
+- 0003 journal status before repair
+- 0004 journal status before repair
+- 0007 test/index issue
+- other migration defects
+
+Files changed:
+- exact concise list
+
+Migration files changed:
+- exact list
+- explain whether historical SQL contents were modified
+
+Journal changes:
+- entries added
+- final entry count
+- final migration order
+- duplicate or missing entries: YES / NO
+
+Historical migrations rewritten:
+- YES / NO
+- explanation
+
+Approved production migration command:
+- exact command
+
+db:push status:
+- removed / renamed local-only / guarded
+- exact script name
+
+Migration integrity validation:
+- exact command
+- PASS / FAIL
+- result count
+
+Zero-to-head PostgreSQL migration:
+- exact command
+- PASS / FAIL
+- number of migrations applied
+- number of tables created
+- schema objects verified
+
+Upgrade rehearsal:
+- pre-0003 state: PASS / FAIL
+- 0003/0004 changes already present: PASS / FAIL
+- previous journal-head state: PASS / FAIL
+- explain how data safety was verified
+
+Schema smoke tests:
+- exact command
+- PASS / FAIL
+- objects verified
+
+Relevant tests:
+- exact commands
+- passed
+- failed
+- skipped
+- confirm whether failures are migration-related
+
+Root production build:
+- exact command
+- PASS / FAIL
+
+Git status:
+- clean / uncommitted changes
+- list any untracked files
+
+Data-loss risk:
+- None found
+- or concise explanation
+
+Environment variables required:
+- variable names only
+- never include values
+
+Production database accessed:
+- No
+
+Production migrations executed:
+- No
+
+Production secrets changed:
+- No
+
+Remaining migration blockers:
+- concise list
+- write “None” when applicable
+
+Recommended pull-request title:
+- one concise title
+
+Final conclusion:
+- State whether Prompt 2 is fully completed and ready for pull-request review.
+- Do not claim the complete repository is production-ready.
