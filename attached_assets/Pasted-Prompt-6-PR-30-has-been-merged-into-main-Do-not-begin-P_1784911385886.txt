@@ -1,0 +1,139 @@
+Prompt 6 PR #30 has been merged into main.
+
+Do not begin Prompt 7.
+
+A required correction remains from Prompt 3.
+
+The final verification found active DISABLE_AUTH or VITE_DISABLE_AUTH authorization bypasses in:
+
+- server.js
+- vite.config.js
+- src/context/AuthContext.jsx
+- src/lib/env.js
+
+The conclusion that these are safe because production normally does not set the variables is not acceptable. Environment misconfiguration must not be capable of disabling authentication or granting superadmin state.
+
+Please:
+
+1. Switch to main.
+2. Pull the latest origin/main using fast-forward only.
+3. Confirm Prompt 6 is present.
+4. Confirm git status is clean.
+5. Create branch:
+
+   repair/03b-remove-remaining-auth-bypasses
+
+6. Do not modify main directly.
+7. Remove every deployable use of DISABLE_AUTH and VITE_DISABLE_AUTH that:
+   - skips server session authentication;
+   - skips restaurant membership checks;
+   - skips role checks;
+   - skips team authorization;
+   - fabricates a mock authenticated user;
+   - calls setIsSuperAdmin(true);
+   - grants access to protected UI routes.
+
+8. Test convenience must use explicit test-only dependency injection or mocks located only in test code.
+
+9. Production, development, Replit, Express and Vite application code must fail closed without a genuine session.
+
+10. Intentionally public routes must remain public.
+
+11. Remove the client-side mock superadmin path from AuthContext.jsx.
+
+12. Remove server-side auth bypass branches from server.js and vite.config.js.
+
+13. Remove obsolete exports and configuration from src/lib/env.js when no safe UI-only use remains.
+
+14. Do not change Better Auth, OAuth, cookie domains, migrations or unrelated features.
+
+15. Add behavioural tests proving:
+    - DISABLE_AUTH=true cannot authenticate an Express request;
+    - VITE_DISABLE_AUTH=true cannot authenticate an Express request;
+    - the flags cannot authenticate Vite middleware requests;
+    - the flags cannot grant owner or superadmin authority;
+    - valid authenticated sessions continue working;
+    - public routes remain public;
+    - private routes return 401 without a session.
+
+16. Run:
+    - focused authentication tests;
+    - Prompt 2–6 regression tests;
+    - migration-integrity tests;
+    - production build;
+    - final repository search.
+
+17. The final search must report NOT FOUND in deployable code for:
+    - server authentication bypass using DISABLE_AUTH;
+    - server authentication bypass using VITE_DISABLE_AUTH;
+    - fabricated mock authenticated user;
+    - DISABLE_AUTH-based setIsSuperAdmin(true);
+    - fabricated owner or superadmin authority.
+
+18. Commit and push the branch, then create a PR targeting main.
+
+Return:
+
+AUTH BYPASS CORRECTION SUMMARY
+
+Status:
+- COMPLETE / PARTIAL / BLOCKED
+
+Branch:
+- branch name
+
+Starting commit:
+- exact SHA
+
+Ending commit:
+- exact SHA
+
+Bypasses removed:
+- exact file and behaviour
+
+Remaining flag references:
+- file
+- purpose
+- confirm they cannot affect authentication or authorization
+
+Files changed:
+- exact list
+
+Focused tests:
+- commands
+- PASS / FAIL
+- totals
+
+Regression tests:
+- commands
+- PASS / FAIL
+- totals
+
+Production build:
+- command
+- PASS / FAIL
+
+Final unsafe-pattern search:
+- Express auth bypass: FOUND / NOT FOUND
+- Vite auth bypass: FOUND / NOT FOUND
+- mock authenticated user: FOUND / NOT FOUND
+- DISABLE_AUTH superadmin grant: FOUND / NOT FOUND
+- fabricated privileged identity: FOUND / NOT FOUND
+
+Git status:
+- clean / not clean
+
+Pull request:
+- PR number
+- base branch
+- compare branch
+
+Production resources accessed:
+- No
+
+Production secrets changed:
+- No
+
+Final conclusion:
+- State whether all remaining deployable authentication bypasses have been removed.
+- Do not claim the whole repository is production-ready.
