@@ -1,0 +1,803 @@
+REPOSITORY
+https://github.com/shriqrdotcom/exzibo-mag.git
+
+TASK TITLE
+Prompt 6 of 38 — Remove Plaintext Staff Credentials and Make Superadmin Authorization Fail Closed
+
+ROLE
+
+Act as a senior frontend security engineer, Better Auth integration specialist, identity-enrollment architect and application-security reviewer.
+
+Work only on:
+
+1. Removing plaintext staff-password collection and browser persistence.
+2. Removing insecure browser-local staff identity storage.
+3. Making superadmin authorization checks fail closed.
+4. Preserving or safely disabling the unfinished staff-enrollment workflow.
+
+Do not repair unrelated team pagination, membership transactions, restaurant APIs, orders, bookings, migrations, realtime, analytics, billing, media or general frontend architecture.
+
+==================================================
+PRECONDITIONS
+==================================================
+
+Before editing:
+
+1. Switch to the latest main branch.
+2. Pull the latest remote changes.
+3. Confirm Prompt 5 is merged into main.
+4. Confirm the working tree is clean.
+5. Record the exact starting commit SHA.
+6. Create this branch:
+
+   repair/06-superadmin-credential-containment
+
+Do not continue from:
+
+- audit/01-reproducible-baseline;
+- any previous repair branch;
+- an outdated main branch;
+- a branch with uncommitted changes.
+
+==================================================
+CONFIRMED PROBLEMS
+==================================================
+
+Repository evidence indicates:
+
+1. The SuperAdmin staff-management screen asks for a staff password.
+
+2. The password is included in a frontend staff/member object.
+
+3. The complete object is serialized into browser localStorage under a key similar to:
+
+   exzibo_super_staff
+
+4. Plaintext credentials may therefore be accessible through:
+
+   - cross-site scripting;
+   - browser extensions;
+   - developer tools;
+   - shared devices;
+   - browser backups;
+   - accidental logging;
+   - copied localStorage data.
+
+5. Browser-local staff objects may act as an alternative identity or data source rather than using authoritative server APIs.
+
+6. The frontend superadmin authorization check may catch an API failure and then mark the user as a superadmin.
+
+7. A network, server or authorization error must never grant access.
+
+==================================================
+PRIMARY OBJECTIVE
+==================================================
+
+After this prompt:
+
+1. No frontend screen collects or stores a reusable staff password.
+
+2. No password is placed in:
+
+   - React state longer than strictly necessary;
+   - localStorage;
+   - sessionStorage;
+   - IndexedDB;
+   - URL parameters;
+   - logs;
+   - analytics;
+   - staff objects;
+   - API response caches.
+
+3. Browser-local staff records are not treated as authoritative identity or membership records.
+
+4. Staff creation uses an existing safe server-side invitation or membership mechanism when one already exists.
+
+5. When no secure enrollment mechanism exists, the unsafe feature is disabled rather than preserved.
+
+6. Superadmin authorization failures deny access.
+
+7. Only a successful server-verified authorization response can mark a session as superadmin.
+
+8. Existing Better Auth login and legitimate superadmin access continue working.
+
+==================================================
+STRICT SAFETY RULES
+==================================================
+
+1. Do not work directly on main.
+
+2. Do not request, expose, print, rotate or commit production secrets.
+
+3. Do not create a new authentication framework.
+
+4. Do not add plaintext or reversible password storage.
+
+5. Do not hash passwords in the browser.
+
+6. Do not send password hashes from the browser.
+
+7. Do not store passwords in localStorage, sessionStorage or IndexedDB.
+
+8. Do not add a temporary default password.
+
+9. Do not generate a password and display it permanently to the superadmin.
+
+10. Do not create fake authenticated users.
+
+11. Do not trust browser-local role or superadmin values.
+
+12. Do not trust client-provided:
+
+    - user ID;
+    - email ownership;
+    - role;
+    - restaurant ID;
+    - superadmin status;
+    - membership status.
+
+13. Do not change Google OAuth configuration.
+
+14. Do not change normal Better Auth cookie or session configuration.
+
+15. Do not modify database schema or migrations.
+
+16. Do not run production migrations.
+
+17. Do not redesign the complete team-management system.
+
+18. Do not implement SMS OTP or a new paid messaging service.
+
+19. Do not silently ignore authorization failures.
+
+20. Do not weaken tests to make the task pass.
+
+21. Stop and report when a secure enrollment path requires a separate schema or backend project outside this prompt.
+
+==================================================
+STEP 1 — INVENTORY ALL CREDENTIAL AND SUPERADMIN FLOWS
+==================================================
+
+Search the complete repository for:
+
+- exzibo_super_staff
+- localStorage
+- sessionStorage
+- password
+- temporaryPassword
+- staffPassword
+- member.password
+- confirmPassword
+- create staff
+- add staff
+- add team member
+- SuperAdminDashboard
+- AuthContext
+- auth-check
+- isSuperadmin
+- isSuperAdmin
+- setIsSuperadmin
+- setIsAuthenticated
+- superadmin
+- team member creation
+- invitation
+- enrollment
+- reset password
+- Better Auth admin APIs
+- console.log containing email, password or role
+
+Inspect at minimum:
+
+- src/pages/SuperAdminDashboard.jsx
+- src/context/AuthContext.jsx
+- team-management components
+- staff/member forms
+- authentication hooks
+- API client helpers
+- api/team.js
+- canonical team service
+- server.js
+- vite.config.js
+- related tests
+- localStorage compatibility logic
+- documentation describing staff enrollment
+
+Create an internal map:
+
+screen or function
+→ sensitive input
+→ frontend state
+→ request payload
+→ browser storage
+→ server endpoint
+→ authoritative data source
+→ corrected behaviour
+
+Do not include real user data or secret values.
+
+Do not edit until this inventory is complete.
+
+==================================================
+STEP 2 — REMOVE PLAINTEXT PASSWORD COLLECTION
+==================================================
+
+Remove the frontend workflow that asks a superadmin to choose or enter a reusable staff password.
+
+Requirements:
+
+1. Remove password fields from the staff-creation form.
+
+2. Remove password-confirmation fields.
+
+3. Remove password validation logic from the frontend.
+
+4. Remove password properties from:
+
+   - staff objects;
+   - member objects;
+   - form defaults;
+   - local state;
+   - API payloads;
+   - localStorage data;
+   - mock data;
+   - logs;
+   - error reports.
+
+5. Do not replace the field with another secret-like value.
+
+6. Do not retain a hidden password field.
+
+7. Do not create a browser-generated temporary password.
+
+8. Do not transmit plaintext credentials to the team-membership API.
+
+9. Add regression checks proving staff-creation requests contain no password-related field.
+
+==================================================
+STEP 3 — SELECT A SAFE STAFF-ENROLLMENT PATH
+==================================================
+
+Inspect the existing backend and Better Auth integration.
+
+Choose exactly one safe path.
+
+--------------------------------------------------
+PATH A — USE AN EXISTING SECURE INVITATION FLOW
+--------------------------------------------------
+
+Use this path only when the repository already has a secure server-side invitation or enrollment mechanism.
+
+Requirements:
+
+1. Create the restaurant membership using the existing canonical team service.
+
+2. Send only necessary fields, such as:
+
+   - email;
+   - role;
+   - restaurant assignment;
+   - name where required.
+
+3. Generate invitation or enrollment tokens only on the server.
+
+4. Store only a one-way hash of a token when persistence is required.
+
+5. Tokens must have:
+
+   - high entropy;
+   - expiry;
+   - one-time use;
+   - tenant scope;
+   - intended recipient;
+   - revocation capability.
+
+6. Do not return a stored credential to the frontend.
+
+7. Do not expose token hashes.
+
+8. Do not implement email delivery when no configured provider exists.
+
+9. When delivery infrastructure is unavailable, return a safe pending-invitation result without pretending an email was sent.
+
+--------------------------------------------------
+PATH B — USE EXISTING GOOGLE/BETTER AUTH MEMBERSHIP CLAIMING
+--------------------------------------------------
+
+Use this path when the established product design creates an unclaimed membership by email and lets the invited person claim it after signing in with Google.
+
+Requirements:
+
+1. Create only an unclaimed membership record through the canonical server API.
+
+2. Do not create a password.
+
+3. Do not claim that an account has been created before the user authenticates.
+
+4. The membership must be matched through the existing secure normalized-email claim rules.
+
+5. Role and restaurant assignment must remain server-controlled.
+
+6. The UI should clearly state:
+
+   Invitation created — the member must sign in with the invited Google account.
+
+7. Do not store the invitation as the authoritative source in localStorage.
+
+--------------------------------------------------
+PATH C — DISABLE THE UNFINISHED FEATURE
+--------------------------------------------------
+
+Use this path when no secure server-side enrollment mechanism currently exists.
+
+Requirements:
+
+1. Remove or disable the unsafe create-staff action.
+
+2. Display a clear non-sensitive message such as:
+
+   Secure staff enrollment is not available yet.
+
+3. Do not create a browser-local fake staff record.
+
+4. Do not report success.
+
+5. Do not invent a temporary workaround.
+
+6. Record the missing secure enrollment capability as a separate blocker.
+
+Select one path based on repository evidence.
+
+==================================================
+STEP 4 — REMOVE BROWSER-LOCAL STAFF DATABASE BEHAVIOUR
+==================================================
+
+Inspect the localStorage key and every caller.
+
+Requirements:
+
+1. Stop writing staff or membership records to:
+
+   exzibo_super_staff
+
+2. Stop reading that key as an authoritative staff list.
+
+3. Remove passwords and sensitive fields from any retained compatibility data.
+
+4. Prefer removing the key entirely when it has no harmless UI-only purpose.
+
+5. When a compatibility migration is needed:
+
+   - delete the unsafe key on application startup;
+   - do not parse and reuse stored password fields;
+   - do not upload browser-local records automatically;
+   - do not merge them into server data.
+
+6. Staff and membership displays must use server API responses.
+
+7. localStorage may contain only harmless UI preferences, never:
+
+   - credentials;
+   - memberships;
+   - roles;
+   - restaurant assignments;
+   - invitation tokens;
+   - authenticated user records;
+   - customer PII.
+
+8. Add a one-time cleanup that safely removes the obsolete key where appropriate.
+
+9. Do not expose the removed data in logs.
+
+==================================================
+STEP 5 — MAKE SUPERADMIN AUTHORIZATION FAIL CLOSED
+==================================================
+
+Repair the superadmin frontend authorization state.
+
+Requirements:
+
+1. Initial state must not assume superadmin access.
+
+2. While authorization is loading, show a neutral loading state.
+
+3. Mark the user as superadmin only after a successful server response explicitly confirms it.
+
+4. On:
+
+   - network error;
+   - timeout;
+   - malformed response;
+   - HTTP 401;
+   - HTTP 403;
+   - HTTP 500;
+   - aborted request;
+   - session restoration failure;
+
+   the UI must not grant superadmin access.
+
+5. Clear privileged state on authorization failure.
+
+6. Do not substitute a cached browser role.
+
+7. Do not use localStorage as authorization evidence.
+
+8. Present a retryable error or redirect to the appropriate sign-in/access-denied view.
+
+9. A retry must perform a new server authorization check.
+
+10. Do not leak internal exception details to the user.
+
+11. Do not create redirect loops.
+
+12. Server-side API authorization remains the true security boundary.
+
+==================================================
+STEP 6 — PREVENT STALE PRIVILEGED UI STATE
+==================================================
+
+Ensure privileged state is cleared when:
+
+- the user logs out;
+- the session expires;
+- the authorization request returns 401;
+- the authorization request returns 403;
+- the authenticated user changes;
+- the authorization response becomes invalid;
+- a request fails after a previously valid session;
+- the component unmounts during an unresolved request where state updates could race.
+
+Use abort handling or equivalent safe request lifecycle management where appropriate.
+
+Do not retain superadmin state after authorization can no longer be verified.
+
+==================================================
+STEP 7 — SAFE SERVER CONTRACT
+==================================================
+
+Review only the API contracts directly involved in this prompt.
+
+Ensure:
+
+1. Staff membership creation ignores or rejects password-related fields.
+
+2. A client cannot assign platform-superadmin status through the staff form.
+
+3. Restaurant role assignment is validated server-side.
+
+4. Restaurant scope is resolved server-side.
+
+5. API responses do not return:
+
+   - passwords;
+   - password hashes;
+   - reset tokens;
+   - invitation-token hashes;
+   - Better Auth credentials.
+
+6. Unknown sensitive fields are rejected where schema validation already exists.
+
+7. Do not broadly refactor the team API in this prompt.
+
+8. Do not repair team pagination or last-owner concurrency here.
+
+==================================================
+STEP 8 — REQUIRED BEHAVIOURAL TESTS
+==================================================
+
+Add executable tests proving:
+
+PLAINTEXT CREDENTIAL REMOVAL
+
+1. The staff form contains no password input.
+
+2. Staff creation does not require a password.
+
+3. Staff creation payload contains no:
+
+   - password;
+   - passwordHash;
+   - temporaryPassword;
+   - confirmPassword;
+   - credential.
+
+4. No password value is stored in React state after submission.
+
+5. No password is written to localStorage.
+
+6. No password is written to sessionStorage.
+
+7. No password is logged.
+
+8. Representative staff objects contain no credential fields.
+
+BROWSER STORAGE
+
+9. `exzibo_super_staff` is no longer written.
+
+10. Existing unsafe `exzibo_super_staff` data is deleted or ignored safely.
+
+11. Browser-local staff records are not displayed as authoritative data.
+
+12. Server API results are the staff-list source.
+
+13. No role or restaurant membership is trusted from localStorage.
+
+SUPERADMIN FAIL-CLOSED BEHAVIOUR
+
+14. Successful verified authorization marks the user as superadmin.
+
+15. A network failure does not mark the user as superadmin.
+
+16. HTTP 401 clears privileged state.
+
+17. HTTP 403 clears privileged state.
+
+18. HTTP 500 clears privileged state.
+
+19. Malformed authorization response fails closed.
+
+20. Logout clears privileged state.
+
+21. Session expiration clears privileged state.
+
+22. A cached browser role cannot grant superadmin UI access.
+
+23. Retry performs a new authorization request.
+
+ENROLLMENT PATH
+
+For Path A:
+
+24. Server generates the enrollment token.
+
+25. Token is never stored in browser storage.
+
+26. Token is one-time and expires.
+
+For Path B:
+
+24. Membership invitation contains no password.
+
+25. The UI reports that Google sign-in is required.
+
+26. Membership claiming remains server-controlled.
+
+For Path C:
+
+24. Unsafe staff creation is disabled.
+
+25. No fake success is shown.
+
+26. No browser-local staff object is created.
+
+SERVER CONTRACT
+
+27. Password-related request fields are ignored or rejected.
+
+28. Client-supplied superadmin role is rejected.
+
+29. Existing authorized team membership creation still works through the selected safe path.
+
+REGRESSION
+
+30. Prompt 3 authentication-bypass tests remain green.
+
+31. Prompt 4 preview-auth tests remain green.
+
+32. Prompt 5 restaurant-response tests remain green.
+
+33. Prompt 2 migration-integrity tests remain green.
+
+Do not use production infrastructure.
+
+==================================================
+STEP 9 — FINAL REPOSITORY SEARCH
+==================================================
+
+Search deployable source for:
+
+- exzibo_super_staff
+- password fields in SuperAdminDashboard
+- localStorage staff writes
+- localStorage role authorization
+- localStorage superadmin authorization
+- catch blocks that set isSuperadmin to true
+- auth-check failures that grant access
+- console logging authenticated email or credentials
+- plaintext password properties in staff objects
+
+Review every remaining match manually.
+
+Strings may remain in negative regression tests only.
+
+==================================================
+STEP 10 — VALIDATION
+==================================================
+
+Run:
+
+1. Frozen root installation.
+2. Focused superadmin and credential tests.
+3. Relevant team-enrollment tests.
+4. Authentication tests.
+5. Authorization tests.
+6. Prompt 3 regression tests.
+7. Prompt 4 regression tests.
+8. Prompt 5 regression tests.
+9. Prompt 2 migration-integrity tests.
+10. JavaScript syntax checks.
+11. Type checking where configured.
+12. Linting where configured.
+13. Root production build.
+14. git diff against the starting commit.
+15. git status.
+
+Do not claim completion when an applicable check fails.
+
+==================================================
+PERMITTED FILE SCOPE
+==================================================
+
+Likely files include:
+
+- src/pages/SuperAdminDashboard.jsx
+- src/context/AuthContext.jsx
+- narrowly related staff/team form components
+- narrowly related API client code
+- team request validation only where password fields must be rejected
+- focused tests
+- authentication/enrollment documentation
+
+Do not modify unrelated files.
+
+Explain any required file outside this scope in the completion summary.
+
+==================================================
+ACCEPTANCE CRITERIA
+==================================================
+
+This prompt is COMPLETE only when:
+
+1. No staff password is collected by the frontend.
+
+2. No staff password is stored anywhere in browser storage.
+
+3. No password is present in staff objects or API payloads.
+
+4. `exzibo_super_staff` is no longer an authoritative data source.
+
+5. Existing unsafe local data is removed or safely ignored.
+
+6. A secure existing enrollment path is used, or the unfinished feature is safely disabled.
+
+7. Superadmin authorization succeeds only after explicit server confirmation.
+
+8. Every authorization error fails closed.
+
+9. Privileged state is cleared on logout and session failure.
+
+10. Server APIs do not accept client-assigned superadmin authority.
+
+11. Relevant behavioural tests pass.
+
+12. Prompts 2–5 regression tests remain green.
+
+13. Root production build passes.
+
+14. No migration is created.
+
+15. No production database is accessed.
+
+16. No production secret is requested or changed.
+
+17. No unrelated feature is modified.
+
+Use PARTIAL or BLOCKED when any applicable criterion is not proven.
+
+==================================================
+FINAL RESPONSE
+==================================================
+
+Return this exact structure:
+
+PROMPT 6 COMPLETION SUMMARY
+
+Status:
+- COMPLETE / PARTIAL / BLOCKED
+
+Branch:
+- branch name
+
+Starting commit:
+- exact SHA
+
+Ending commit:
+- exact SHA or “Not committed”
+
+Credential exposure originally found:
+- concise list
+
+Enrollment path selected:
+- Existing secure invitation / Google membership claiming / Feature disabled
+- concise reason
+
+Plaintext credential changes:
+- concise list
+
+Browser-storage changes:
+- concise list
+
+Superadmin fail-closed changes:
+- concise list
+
+Files changed:
+- exact concise list
+
+Final unsafe-pattern search:
+- password input in SuperAdminDashboard: FOUND / NOT FOUND
+- password in staff object: FOUND / NOT FOUND
+- password in localStorage: FOUND / NOT FOUND
+- exzibo_super_staff authoritative use: FOUND / NOT FOUND
+- browser-local superadmin authorization: FOUND / NOT FOUND
+- auth error grants superadmin: FOUND / NOT FOUND
+- credential logging: FOUND / NOT FOUND
+
+Focused tests:
+- commands
+- PASS / FAIL
+- passed
+- failed
+- skipped
+- concise explanation
+
+Authentication-regression tests:
+- command
+- PASS / FAIL
+
+Preview-auth regression tests:
+- command
+- PASS / FAIL
+
+Restaurant-response regression tests:
+- command
+- PASS / FAIL
+
+Migration-regression tests:
+- command
+- PASS / FAIL
+
+Root production build:
+- command
+- PASS / FAIL
+
+Behaviour intentionally changed:
+- concise list
+
+Behaviour verified unchanged:
+- concise list
+
+Production resources accessed:
+- No
+
+Production database accessed:
+- No
+
+Production migrations executed:
+- No
+
+Production secrets changed:
+- No
+
+Remaining blockers or risks:
+- concise list
+- write “None found within this prompt’s scope” when applicable
+
+Recommended pull-request title:
+- one concise title
+
+Recommended next action:
+- State whether Prompt 7 may begin.
+
+Final conclusion:
+- State whether Prompt 6 is fully complete and ready for pull-request review.
+- Do not claim that the complete repository is production-ready.
