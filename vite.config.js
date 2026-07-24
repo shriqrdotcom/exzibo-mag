@@ -29,6 +29,48 @@ import { generateRequestId, parsePagination } from './api/_lib/validate.js'
 import * as menuService from './src/services/menuService.js'
 import * as contentService from './src/services/restaurantContentService.js'
 
+// ── Versioned preview token helpers ──────────────────────────────────────────
+// Shared constants for the v1 preview token contract.
+// Matches the identical helpers in server.js.
+const PREVIEW_TOKEN_ISSUER      = 'exzibo-preview'
+const PREVIEW_TOKEN_AUDIENCE    = 'exzibo-preview-access'
+const PREVIEW_TOKEN_VERSION     = 1
+const PREVIEW_TOKEN_LIFETIME_MS = 15 * 60 * 1000  // 15 minutes
+const PREVIEW_CLOCK_SKEW_MS     = 30 * 1000         // 30 seconds
+
+function createPreviewToken(subject, secret) {
+  const now = Date.now()
+  const payload = {
+    version: PREVIEW_TOKEN_VERSION,
+    subject,
+    issuedAt: now,
+    expiresAt: now + PREVIEW_TOKEN_LIFETIME_MS,
+    issuer: PREVIEW_TOKEN_ISSUER,
+    audience: PREVIEW_TOKEN_AUDIENCE,
+    tokenId: crypto.randomUUID(),
+  }
+  const canonical = JSON.stringify(payload)
+  const sig = createHmac('sha256', secret).update(canonical).digest('hex')
+  return Buffer.from(canonical).toString('base64url') + '.' + sig
+}
+
+function clearPreviewCookie_VC(res) {
+  res.setHeader('Set-Cookie', 'preview_token=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0')
+}
+
+function parseCookies(header) {
+  const result = {}
+  if (!header) return result
+  for (const pair of header.split(';')) {
+    const eq = pair.indexOf('=')
+    if (eq === -1) continue
+    const key = pair.slice(0, eq).trim()
+    const val = pair.slice(eq + 1).trim()
+    if (key) result[key] = val
+  }
+  return result
+}
+
 function previewAuthPlugin() {
   // Preview routes register only when APP_RUNTIME=preview is explicitly set.
   // This ensures they are NOT available in normal dev, production, or general
@@ -47,12 +89,14 @@ function previewAuthPlugin() {
     // Security properties of this dedicated-preview-mode auth:
     //  • PREVIEW_SECRET must be explicitly configured — no hardcoded fallback.
     //  • PREVIEW_SECRET must be at least 32 characters (validated at plugin init).
-    //  • Missing secret fails closed (500) instead of using a known value.
-    //  • Token lifetime is capped at 30 minutes.
-    //  • Signature comparison uses crypto.timingSafeEqual to prevent timing attacks.
-    //  • Preview tokens grant no session authority on normal protected APIs;
-    //    they are honoured only by the client-side preview gate UI.
-    //  • Tokens are scoped to a single configured PREVIEW_EMAIL address.
+    //  • Missing secret fails closed (500) instead of degrading.
+    //  • Token lifetime is capped at 15 minutes (versioned contract with strict claims).
+    //  • Signature verification uses crypto.timingSafeEqual (not string equality).
+    //  • Token is stored in HttpOnly cookie — not exposed to frontend JavaScript.
+    //  • Tokens include: version, subject, issuedAt, expiresAt, issuer, audience, tokenId.
+    //  • Preview tokens grant no session authority on normal protected APIs.
+    //  • Login body is limited to 1 KB; unknown fields are rejected.
+    //  • Clock skew tolerance: 30 seconds for issuedAt.
     configureServer(server) {
       server.middlewares.use('/api/preview-login', async (req, res) => {
         if (req.method !== 'POST') {
@@ -112,13 +156,11 @@ function previewAuthPlugin() {
             const passwordMatch = await bcrypt.compare(password, validHash)
 
             if (emailMatch && passwordMatch) {
-              // 30-minute token lifetime — short enough to limit exposure.
-              const payload = JSON.stringify({ email, exp: Date.now() + 30 * 60 * 1000 })
-              const sig     = createHmac('sha256', secret).update(payload).digest('hex')
-              const token   = Buffer.from(payload).toString('base64url') + '.' + sig
-
+              const token = createPreviewToken(email, secret)
+              const cookie = `preview_token=${token}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=${PREVIEW_TOKEN_LIFETIME_MS / 1000}`
+              res.setHeader('Set-Cookie', cookie)
               res.setHeader('Content-Type', 'application/json')
-              res.end(JSON.stringify({ success: true, token }))
+              res.end(JSON.stringify({ success: true }))
             } else {
               res.statusCode = 401
               res.setHeader('Content-Type', 'application/json')
@@ -133,11 +175,11 @@ function previewAuthPlugin() {
       })
 
       server.middlewares.use('/api/preview-verify', (req, res) => {
-        const authHeader = req.headers['authorization'] || ''
-        const token = authHeader.replace('Bearer ', '')
+        // Read token from HttpOnly cookie (not exposed to JS)
+        const cookies = parseCookies(req.headers['cookie'] || '')
+        const token = cookies.preview_token
 
         if (!token) {
-          res.statusCode = 401
           res.setHeader('Content-Type', 'application/json')
           res.end(JSON.stringify({ valid: false }))
           return
@@ -145,8 +187,8 @@ function previewAuthPlugin() {
 
         try {
           const secret = process.env.PREVIEW_SECRET
-          // Fail closed when PREVIEW_SECRET is absent — no hardcoded fallback.
           if (!secret) {
+            clearPreviewCookie_VC(res)
             res.statusCode = 500
             res.setHeader('Content-Type', 'application/json')
             res.end(JSON.stringify({ valid: false, error: 'PREVIEW_SECRET is not configured.' }))
@@ -155,31 +197,68 @@ function previewAuthPlugin() {
 
           const [payloadB64, sig] = token.split('.')
           if (!payloadB64 || !sig) {
-            res.statusCode = 401
+            clearPreviewCookie_VC(res)
             res.setHeader('Content-Type', 'application/json')
             res.end(JSON.stringify({ valid: false }))
             return
           }
 
-          const payload  = JSON.parse(Buffer.from(payloadB64, 'base64url').toString())
-          const expected = createHmac('sha256', secret).update(JSON.stringify(payload)).digest('hex')
+          const raw = Buffer.from(payloadB64, 'base64url').toString()
+          const payload = JSON.parse(raw)
 
-          // Timing-safe comparison prevents timing oracle attacks.
+          // Verify signature first — never trust unverified claims
+          const expected = createHmac('sha256', secret).update(raw).digest('hex')
           const sigBuf      = Buffer.from(sig)
           const expectedBuf = Buffer.from(expected)
           const signaturesMatch =
             sigBuf.length === expectedBuf.length &&
             timingSafeEqual(sigBuf, expectedBuf)
 
-          const valid = signaturesMatch && typeof payload.exp === 'number' && payload.exp > Date.now()
+          if (!signaturesMatch) {
+            clearPreviewCookie_VC(res)
+            res.setHeader('Content-Type', 'application/json')
+            res.end(JSON.stringify({ valid: false }))
+            return
+          }
+
+          // ── Claim validation (after signature verified) ──────────────────
+          const now = Date.now()
+
+          if (payload.version !== PREVIEW_TOKEN_VERSION ||
+              typeof payload.subject !== 'string' || !payload.subject ||
+              payload.issuer !== PREVIEW_TOKEN_ISSUER ||
+              payload.audience !== PREVIEW_TOKEN_AUDIENCE ||
+              typeof payload.expiresAt !== 'number' || payload.expiresAt <= now ||
+              typeof payload.issuedAt !== 'number' ||
+              (payload.expiresAt - payload.issuedAt) > PREVIEW_TOKEN_LIFETIME_MS ||
+              payload.issuedAt > now + PREVIEW_CLOCK_SKEW_MS ||
+              typeof payload.tokenId !== 'string' || !payload.tokenId) {
+            clearPreviewCookie_VC(res)
+            res.setHeader('Content-Type', 'application/json')
+            res.end(JSON.stringify({ valid: false }))
+            return
+          }
 
           res.setHeader('Content-Type', 'application/json')
-          res.end(JSON.stringify({ valid, email: valid ? payload.email : null }))
+          res.end(JSON.stringify({ valid: true, email: payload.subject }))
         } catch {
-          res.statusCode = 401
+          clearPreviewCookie_VC(res)
           res.setHeader('Content-Type', 'application/json')
           res.end(JSON.stringify({ valid: false }))
         }
+      })
+
+      // POST /api/preview-logout — clears the preview cookie
+      server.middlewares.use('/api/preview-logout', (req, res) => {
+        if (req.method !== 'POST') {
+          res.statusCode = 405
+          res.setHeader('Content-Type', 'application/json')
+          res.end(JSON.stringify({ error: 'Method Not Allowed' }))
+          return
+        }
+        clearPreviewCookie_VC(res)
+        res.setHeader('Content-Type', 'application/json')
+        res.end(JSON.stringify({ success: true }))
       })
 
       // GET /api/mobile/v1/bootstrap — delegates to the Vercel handler

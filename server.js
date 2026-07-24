@@ -297,13 +297,57 @@ app.use(express.static(path.resolve(__dirname, 'dist')))
 // Replit deployments. The APP_RUNTIME=preview marker is the server-only gate.
 //
 // Security properties:
-//  • PREVIEW_SECRET is mandatory — no fallback to REPL_ID or a literal.
+//  • PREVIEW_SECRET is mandatory — no fallback to REPL_ID, literal, or runtime value.
 //  • PREVIEW_SECRET must be at least 32 characters (validated at startup).
 //  • Missing secret or credentials fails closed (500) instead of degrading.
-//  • Token lifetime is capped at 30 minutes (not 8 hours).
+//  • Token lifetime is capped at 15 minutes (versioned contract with strict claims).
 //  • Signature verification uses crypto.timingSafeEqual (not string equality).
 //  • Preview authentication does NOT grant any admin or superadmin role.
-//  • Login body is limited to 1 KB; unknown fields are rejected.
+//  • Token is stored in an HttpOnly cookie — not exposed to frontend JavaScript.
+//  • Tokens include: version, subject, issuedAt, expiresAt, issuer, audience, tokenId.
+//  • Login body is limited to 1 KB; unknown fields are rejected; rate limited.
+//  • Clock skew tolerance: 30 seconds for issuedAt.
+//
+// The v1 token payload structure:
+//   { version: 1, subject: string, issuedAt: number, expiresAt: number,
+//     issuer: "exzibo-preview", audience: "exzibo-preview-access",
+//     tokenId: string }
+
+const PREVIEW_TOKEN_ISSUER   = 'exzibo-preview'
+const PREVIEW_TOKEN_AUDIENCE = 'exzibo-preview-access'
+const PREVIEW_TOKEN_VERSION  = 1
+const PREVIEW_TOKEN_LIFETIME_MS = 15 * 60 * 1000  // 15 minutes
+const PREVIEW_CLOCK_SKEW_MS     = 30 * 1000         // 30 seconds
+
+function createPreviewToken(subject, secret) {
+  const now = Date.now()
+  const payload = {
+    version: PREVIEW_TOKEN_VERSION,
+    subject,
+    issuedAt: now,
+    expiresAt: now + PREVIEW_TOKEN_LIFETIME_MS,
+    issuer: PREVIEW_TOKEN_ISSUER,
+    audience: PREVIEW_TOKEN_AUDIENCE,
+    tokenId: crypto.randomUUID(),
+  }
+  const canonical = JSON.stringify(payload)
+  const sig = createHmac('sha256', secret).update(canonical).digest('hex')
+  return Buffer.from(canonical).toString('base64url') + '.' + sig
+}
+
+function cookieOptions(maxAge) {
+  return {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'lax',
+    path: '/',
+    maxAge,
+  }
+}
+
+function clearPreviewCookie(res) {
+  res.clearCookie('preview_token', cookieOptions(0))
+}
 
 if (process.env.APP_RUNTIME === 'preview') {
   // Startup validation: PREVIEW_SECRET must be configured and at least 32 chars.
@@ -357,11 +401,9 @@ if (process.env.APP_RUNTIME === 'preview') {
       const passwordMatch = await bcrypt.compare(password, validHash)
 
       if (emailMatch && passwordMatch) {
-        // 30-minute token lifetime — short enough to limit exposure.
-        const payload = JSON.stringify({ email, exp: Date.now() + 30 * 60 * 1000 })
-        const sig     = createHmac('sha256', secret).update(payload).digest('hex')
-        const token   = Buffer.from(payload).toString('base64url') + '.' + sig
-        return res.json({ success: true, token })
+        const token = createPreviewToken(email, secret)
+        res.cookie('preview_token', token, cookieOptions(PREVIEW_TOKEN_LIFETIME_MS / 1000))
+        return res.json({ success: true })
       } else {
         // One stable public failure — never reveal which field was wrong.
         return res.status(401).json({ error: 'Invalid email or password.' })
@@ -372,31 +414,30 @@ if (process.env.APP_RUNTIME === 'preview') {
   })
 
   app.get('/api/preview-verify', (req, res) => {
-    const auth  = req.headers['authorization'] || ''
-    const token = auth.replace('Bearer ', '')
-
-    if (!token) return res.status(401).json({ valid: false })
+    const token = req.cookies?.preview_token
+    if (!token) {
+      return res.json({ valid: false })
+    }
 
     try {
       const [payloadB64, sig] = token.split('.')
       if (!payloadB64 || !sig) {
-        return res.status(401).json({ valid: false })
+        clearPreviewCookie(res)
+        return res.json({ valid: false })
       }
 
-      const payload = JSON.parse(Buffer.from(payloadB64, 'base64url').toString())
-
-      // Validate required claims
-      if (typeof payload.email !== 'string' || typeof payload.exp !== 'number') {
-        return res.status(401).json({ valid: false })
-      }
+      const raw = Buffer.from(payloadB64, 'base64url').toString()
+      const payload = JSON.parse(raw)
 
       // Fail closed when PREVIEW_SECRET is absent — no hardcoded fallback.
       const secret = process.env.PREVIEW_SECRET
       if (!secret) {
+        clearPreviewCookie(res)
         return res.status(500).json({ valid: false, error: 'PREVIEW_SECRET is not configured.' })
       }
 
-      const expected = createHmac('sha256', secret).update(JSON.stringify(payload)).digest('hex')
+      // Recompute expected signature over the canonical payload
+      const expected = createHmac('sha256', secret).update(raw).digest('hex')
 
       // Timing-safe comparison prevents timing oracle attacks.
       const sigBuf      = Buffer.from(sig)
@@ -405,12 +446,73 @@ if (process.env.APP_RUNTIME === 'preview') {
         sigBuf.length === expectedBuf.length &&
         timingSafeEqual(sigBuf, expectedBuf)
 
-      const valid = signaturesMatch && payload.exp > Date.now()
+      if (!signaturesMatch) {
+        clearPreviewCookie(res)
+        return res.json({ valid: false })
+      }
 
-      return res.json({ valid, email: valid ? payload.email : null })
+      // ── Claim validation (after signature is verified) ──────────────────
+      const now = Date.now()
+
+      // Version
+      if (payload.version !== PREVIEW_TOKEN_VERSION) {
+        clearPreviewCookie(res)
+        return res.json({ valid: false })
+      }
+
+      // Subject
+      if (typeof payload.subject !== 'string' || !payload.subject) {
+        clearPreviewCookie(res)
+        return res.json({ valid: false })
+      }
+
+      // Issuer
+      if (payload.issuer !== PREVIEW_TOKEN_ISSUER) {
+        clearPreviewCookie(res)
+        return res.json({ valid: false })
+      }
+
+      // Audience
+      if (payload.audience !== PREVIEW_TOKEN_AUDIENCE) {
+        clearPreviewCookie(res)
+        return res.json({ valid: false })
+      }
+
+      // Expiration
+      if (typeof payload.expiresAt !== 'number' || payload.expiresAt <= now) {
+        clearPreviewCookie(res)
+        return res.json({ valid: false })
+      }
+
+      // Lifetime check — reject tokens with excessive lifetime
+      if (typeof payload.issuedAt !== 'number' ||
+          (payload.expiresAt - payload.issuedAt) > PREVIEW_TOKEN_LIFETIME_MS) {
+        clearPreviewCookie(res)
+        return res.json({ valid: false })
+      }
+
+      // Clock skew — reject issuedAt too far in the future
+      if (payload.issuedAt > now + PREVIEW_CLOCK_SKEW_MS) {
+        clearPreviewCookie(res)
+        return res.json({ valid: false })
+      }
+
+      // tokenId
+      if (typeof payload.tokenId !== 'string' || !payload.tokenId) {
+        clearPreviewCookie(res)
+        return res.json({ valid: false })
+      }
+
+      return res.json({ valid: true, email: payload.subject })
     } catch {
-      return res.status(401).json({ valid: false })
+      clearPreviewCookie(res)
+      return res.json({ valid: false })
     }
+  })
+
+  app.post('/api/preview-logout', (req, res) => {
+    clearPreviewCookie(res)
+    return res.json({ success: true })
   })
 }
 

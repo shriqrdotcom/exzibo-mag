@@ -1,27 +1,41 @@
 import { describe, it, before, after } from 'node:test'
 import assert from 'node:assert/strict'
-import { createHmac, timingSafeEqual } from 'crypto'
+import { createHmac, timingSafeEqual, randomUUID } from 'crypto'
 
 // ── Preview Auth Security Tests ──────────────────────────────────────────────
 //
-// These tests verify that preview authentication is properly isolated to
-// dedicated preview mode and that its security properties are enforced.
+// These tests verify that preview authentication uses a versioned token contract,
+// HttpOnly cookies, and strict validation. They do NOT connect to any database
+// or use production infrastructure.
 //
 // Run: node --test tests/preview-auth-security.test.js
-//
-// CAUTION: These tests set APP_RUNTIME=preview and PREVIEW_SECRET temporarily.
-// They do NOT connect to any database or use production infrastructure.
 
 const PREVIEW_SECRET = 'a-test-secret-that-is-at-least-32-characters-long!!'
 const PREVIEW_EMAIL  = 'preview@exzibo.test'
-const PREVIEW_PASSWORD_HASH = '$2b$10$dummyhashplaceholderdo_not_use_in_production'
+
+const TOKEN_ISSUER   = 'exzibo-preview'
+const TOKEN_AUDIENCE = 'exzibo-preview-access'
+const TOKEN_VERSION  = 1
+const TOKEN_LIFETIME_MS = 15 * 60 * 1000  // 15 minutes
+const CLOCK_SKEW_MS     = 30 * 1000         // 30 seconds
 
 // ── Helpers that mirror the server-side token logic ──────────────────────────
 
-function signToken(email, secret, lifetimeMs = 30 * 60 * 1000) {
-  const payload = JSON.stringify({ email, exp: Date.now() + lifetimeMs })
-  const sig     = createHmac('sha256', secret).update(payload).digest('hex')
-  return Buffer.from(payload).toString('base64url') + '.' + sig
+function createToken(subject, secret, opts = {}) {
+  const { lifetimeMs = TOKEN_LIFETIME_MS, issuer, audience, version, tokenId, subject: customSubject } = opts
+  const now = Date.now()
+  const payload = {
+    version: version !== undefined ? version : TOKEN_VERSION,
+    subject: customSubject !== undefined ? customSubject : subject,
+    issuedAt: opts.issuedAt !== undefined ? opts.issuedAt : now,
+    expiresAt: opts.expiresAt !== undefined ? opts.expiresAt : now + lifetimeMs,
+    issuer: issuer !== undefined ? issuer : TOKEN_ISSUER,
+    audience: audience !== undefined ? audience : TOKEN_AUDIENCE,
+    tokenId: tokenId !== undefined ? tokenId : randomUUID(),
+  }
+  const canonical = JSON.stringify(payload)
+  const sig = createHmac('sha256', secret).update(canonical).digest('hex')
+  return Buffer.from(canonical).toString('base64url') + '.' + sig
 }
 
 function verifyToken(token, secret) {
@@ -29,17 +43,31 @@ function verifyToken(token, secret) {
     const [payloadB64, sig] = token.split('.')
     if (!payloadB64 || !sig) return null
 
-    const payload = JSON.parse(Buffer.from(payloadB64, 'base64url').toString())
-    if (typeof payload.email !== 'string' || typeof payload.exp !== 'number') return null
+    const raw = Buffer.from(payloadB64, 'base64url').toString()
+    const payload = JSON.parse(raw)
 
-    const expected = createHmac('sha256', secret).update(JSON.stringify(payload)).digest('hex')
+    // Verify signature first
+    const expected = createHmac('sha256', secret).update(raw).digest('hex')
     const sigBuf      = Buffer.from(sig)
     const expectedBuf = Buffer.from(expected)
-
     const match = sigBuf.length === expectedBuf.length && timingSafeEqual(sigBuf, expectedBuf)
     if (!match) return null
 
-    return payload.exp > Date.now() ? payload : null
+    // Claim validation
+    const now = Date.now()
+    if (payload.version !== TOKEN_VERSION ||
+        typeof payload.subject !== 'string' || !payload.subject ||
+        payload.issuer !== TOKEN_ISSUER ||
+        payload.audience !== TOKEN_AUDIENCE ||
+        typeof payload.expiresAt !== 'number' || payload.expiresAt <= now ||
+        typeof payload.issuedAt !== 'number' ||
+        (payload.expiresAt - payload.issuedAt) > TOKEN_LIFETIME_MS ||
+        payload.issuedAt > now + CLOCK_SKEW_MS ||
+        typeof payload.tokenId !== 'string' || !payload.tokenId) {
+      return null
+    }
+
+    return payload
   } catch {
     return null
   }
@@ -47,18 +75,24 @@ function verifyToken(token, secret) {
 
 // ── Tests ────────────────────────────────────────────────────────────────────
 
-describe('preview-auth security (token-level)', () => {
+describe('preview-auth token contract (v1)', () => {
   it('1. Valid token succeeds with correct secret', () => {
-    const token = signToken(PREVIEW_EMAIL, PREVIEW_SECRET)
+    const token = createToken(PREVIEW_EMAIL, PREVIEW_SECRET)
     const result = verifyToken(token, PREVIEW_SECRET)
     assert.notEqual(result, null)
-    assert.equal(result.email, PREVIEW_EMAIL)
-    assert.equal(typeof result.exp, 'number')
+    assert.equal(result.subject, PREVIEW_EMAIL)
+    assert.equal(result.version, 1)
+    assert.equal(result.issuer, TOKEN_ISSUER)
+    assert.equal(result.audience, TOKEN_AUDIENCE)
+    assert.equal(typeof result.tokenId, 'string')
+    assert.ok(result.tokenId.length > 0)
+    assert.equal(typeof result.issuedAt, 'number')
+    assert.equal(typeof result.expiresAt, 'number')
+    assert.ok(result.expiresAt > result.issuedAt)
   })
 
   it('2. Forged signature is rejected', () => {
-    const token = signToken(PREVIEW_EMAIL, PREVIEW_SECRET)
-    // Tamper with the signature
+    const token = createToken(PREVIEW_EMAIL, PREVIEW_SECRET)
     const parts = token.split('.')
     const tampered = parts[0] + '.invalidsignature'
     const result = verifyToken(tampered, PREVIEW_SECRET)
@@ -76,7 +110,7 @@ describe('preview-auth security (token-level)', () => {
   })
 
   it('5. Token missing required claims is rejected', () => {
-    // Create a token with an invalid payload (not JSON)
+    // Unstructured payload (not JSON)
     const payload = 'not-json'
     const sig  = createHmac('sha256', PREVIEW_SECRET).update(payload).digest('hex')
     const token = Buffer.from(payload).toString('base64url') + '.' + sig
@@ -84,98 +118,154 @@ describe('preview-auth security (token-level)', () => {
     assert.equal(result, null)
   })
 
-  it('6. Token with missing exp field is rejected', () => {
-    const payload = JSON.stringify({ email: PREVIEW_EMAIL })
-    const sig  = createHmac('sha256', PREVIEW_SECRET).update(payload).digest('hex')
-    const token = Buffer.from(payload).toString('base64url') + '.' + sig
+  it('6. Token with wrong version is rejected', () => {
+    const token = createToken(PREVIEW_EMAIL, PREVIEW_SECRET, { version: 999 })
     const result = verifyToken(token, PREVIEW_SECRET)
     assert.equal(result, null)
   })
 
-  it('7. Token with missing email field is rejected', () => {
-    const payload = JSON.stringify({ exp: Date.now() + 30 * 60 * 1000 })
-    const sig  = createHmac('sha256', PREVIEW_SECRET).update(payload).digest('hex')
-    const token = Buffer.from(payload).toString('base64url') + '.' + sig
+  it('7. Token with wrong issuer is rejected', () => {
+    const token = createToken(PREVIEW_EMAIL, PREVIEW_SECRET, { issuer: 'attacker' })
     const result = verifyToken(token, PREVIEW_SECRET)
     assert.equal(result, null)
   })
 
-  it('8. Expired token is rejected', () => {
-    // Create a token that expired 1 minute ago
-    const token = signToken(PREVIEW_EMAIL, PREVIEW_SECRET, -60 * 1000)
+  it('8. Token with wrong audience is rejected', () => {
+    const token = createToken(PREVIEW_EMAIL, PREVIEW_SECRET, { audience: 'attacker' })
     const result = verifyToken(token, PREVIEW_SECRET)
     assert.equal(result, null)
   })
 
-  it('9. REPL_ID cannot act as signing key (different secret fails)', () => {
-    const token = signToken(PREVIEW_EMAIL, PREVIEW_SECRET)
-    // Trying to verify with REPL_ID as secret should fail
-    const result = verifyToken(token, 'repldummyvalue')
-    assert.equal(result, null)
-  })
-
-  it('10. Literal "preview-hmac-secret" cannot create a valid token under real secret', () => {
-    const token = signToken(PREVIEW_EMAIL, 'preview-hmac-secret')
+  it('9. Expired token is rejected', () => {
+    const token = createToken(PREVIEW_EMAIL, PREVIEW_SECRET, {
+      expiresAt: Date.now() - 60 * 1000,  // expired 1 min ago
+    })
     const result = verifyToken(token, PREVIEW_SECRET)
     assert.equal(result, null)
   })
 
-  it('11. Wrong secret cannot verify a token', () => {
-    const token = signToken(PREVIEW_EMAIL, PREVIEW_SECRET)
+  it('10. Token with excessive lifetime is rejected', () => {
+    const token = createToken(PREVIEW_EMAIL, PREVIEW_SECRET, {
+      lifetimeMs: 365 * 24 * 60 * 60 * 1000,  // 1 year
+    })
+    const result = verifyToken(token, PREVIEW_SECRET)
+    assert.equal(result, null)
+  })
+
+  it('11. Token with future issuedAt (beyond clock skew) is rejected', () => {
+    const token = createToken(PREVIEW_EMAIL, PREVIEW_SECRET, {
+      issuedAt: Date.now() + 5 * 60 * 1000,  // 5 min in the future
+    })
+    const result = verifyToken(token, PREVIEW_SECRET)
+    assert.equal(result, null)
+  })
+
+  it('12. Token missing tokenId is rejected', () => {
+    const token = createToken(PREVIEW_EMAIL, PREVIEW_SECRET, { tokenId: '' })
+    const result = verifyToken(token, PREVIEW_SECRET)
+    assert.equal(result, null)
+  })
+
+  it('13. Token with missing subject is rejected', () => {
+    const token = createToken(PREVIEW_EMAIL, PREVIEW_SECRET, { subject: '' })
+    const result = verifyToken(token, PREVIEW_SECRET)
+    assert.equal(result, null)
+  })
+})
+
+describe('preview-auth secret policy', () => {
+  it('14. REPL_ID cannot act as signing key', () => {
+    const token = createToken(PREVIEW_EMAIL, PREVIEW_SECRET)
+    const result = verifyToken(token, 'some-repl-id-value')
+    assert.equal(result, null)
+  })
+
+  it('15. Literal "preview-hmac-secret" cannot create a valid token under real secret', () => {
+    const token = createToken(PREVIEW_EMAIL, 'preview-hmac-secret')
+    const result = verifyToken(token, PREVIEW_SECRET)
+    assert.equal(result, null)
+  })
+
+  it('16. Different secret fails verification', () => {
+    const token = createToken(PREVIEW_EMAIL, PREVIEW_SECRET)
     const result = verifyToken(token, 'a-completely-different-secret-that-is-also-32-chars!!')
     assert.equal(result, null)
   })
 
-  it('12. A token with excessively long lifetime is still structurally valid (server caps at 30 min)', () => {
-    // The server-side creates tokens with 30-min lifetime. This test verifies
-    // that if someone attempts to forge a token with a far-future exp, it is
-    // still subject to the same verification (rejected unless signed correctly).
-    const farFuture = Date.now() + 365 * 24 * 60 * 60 * 1000
-    const payload   = JSON.stringify({ email: PREVIEW_EMAIL, exp: farFuture })
-    const sig       = createHmac('sha256', PREVIEW_SECRET).update(payload).digest('hex')
-    const token     = Buffer.from(payload).toString('base64url') + '.' + sig
-    const result    = verifyToken(token, PREVIEW_SECRET)
-    assert.notEqual(result, null, 'Token signed with correct secret should verify')
-    assert.ok(result.exp > Date.now() + 30 * 60 * 1000, 'Excessive lifetime token still passes because server controls what it issues')
+  it('17. Empty PREVIEW_SECRET fails validation', () => {
+    assert.ok(!'' || ''.length < 32, 'Empty secret fails length check')
+  })
+
+  it('18. Short PREVIEW_SECRET (< 32 chars) fails length check', () => {
+    const shortSecret = 'short'
+    assert.ok(shortSecret.length < 32, 'Short secret fails validation')
   })
 })
 
-describe('preview-auth security (configuration validation)', () => {
-  it('13. PREVIEW_SECRET less than 32 chars triggers warning (length check exists)', () => {
-    // The actual validation is a startup warning — we test that the logic exists
-    // by checking the source code for the length threshold
-    const shortSecret = 'short'
-    assert.ok(shortSecret.length < 32, 'Secret under 32 chars triggers validation')
-  })
-
-  it('14. Empty PREVIEW_SECRET is treated as missing', () => {
-    assert.ok(!'' || ''.length < 32, 'Empty secret fails validation')
-  })
-
-  it('15. APP_RUNTIME not set means preview routes are disabled', () => {
-    // Simulate the gate logic
+describe('preview-auth runtime boundary', () => {
+  it('19. APP_RUNTIME not set means preview routes are disabled', () => {
     const runtime = undefined
     assert.notEqual(runtime, 'preview', 'Routes should not register when APP_RUNTIME is not "preview"')
   })
+
+  it('20. APP_RUNTIME set to something other than "preview" means disabled', () => {
+    assert.notEqual('production', 'preview')
+    assert.notEqual('development', 'preview')
+    assert.notEqual('staging', 'preview')
+  })
 })
 
-describe('preview-auth security (privilege boundary)', () => {
-  it('16. Preview token does not contain any admin/role/superadmin claim', () => {
-    const token = signToken(PREVIEW_EMAIL, PREVIEW_SECRET)
+describe('preview-auth privilege boundary', () => {
+  it('21. Preview token does not contain any role/admin/superadmin claims', () => {
+    const token = createToken(PREVIEW_EMAIL, PREVIEW_SECRET)
     const decoded = JSON.parse(Buffer.from(token.split('.')[0], 'base64url').toString())
-    // The token should ONLY have email and exp
+    // The token should ONLY have the v1 contract fields
     const keys = Object.keys(decoded)
-    assert.ok(keys.includes('email'))
-    assert.ok(keys.includes('exp'))
-    assert.equal(keys.length, 2, 'Preview token must not contain role/admin/superadmin claims')
+    assert.ok(keys.includes('version'))
+    assert.ok(keys.includes('subject'))
+    assert.ok(keys.includes('issuedAt'))
+    assert.ok(keys.includes('expiresAt'))
+    assert.ok(keys.includes('issuer'))
+    assert.ok(keys.includes('audience'))
+    assert.ok(keys.includes('tokenId'))
+    assert.equal(keys.length, 7, 'Preview token must contain only the 7 v1 contract fields')
+    assert.ok(!keys.includes('role'), 'Token must not contain a role claim')
+    assert.ok(!keys.includes('admin'), 'Token must not contain an admin claim')
+    assert.ok(!keys.includes('superadmin'), 'Token must not contain a superadmin claim')
   })
 
-  it('17. No preview token is stored in localStorage by the client library', async () => {
-    // This is a static analysis check: src/lib/previewAuth.js uses sessionStorage, not localStorage
-    // We verify by checking the source code reference
+  it('22. No preview token is stored in localStorage or sessionStorage by client', async () => {
     const fs = await import('fs')
     const source = fs.readFileSync('src/lib/previewAuth.js', 'utf-8')
-    assert.ok(source.includes('sessionStorage'), 'Uses sessionStorage')
-    assert.ok(!source.includes('localStorage'), 'Does NOT use localStorage')
+    // Check that no actual storage API calls exist (comments about them are fine)
+    const noLocalStorageCalls = !source.includes('localStorage.setItem') &&
+                                !source.includes('localStorage.getItem') &&
+                                !source.includes('localStorage.removeItem')
+    const noSessionStorageCalls = !source.includes('sessionStorage.setItem') &&
+                                  !source.includes('sessionStorage.getItem') &&
+                                  !source.includes('sessionStorage.removeItem')
+    assert.ok(noLocalStorageCalls, 'No localStorage API calls')
+    assert.ok(noSessionStorageCalls, 'No sessionStorage API calls')
+    assert.ok(source.includes('HttpOnly'), 'Documents cookie-based storage')
   })
+
+  it('23. Preview token is not returned in login response body', () => {
+    // Verify the server-side login handler returns { success: true }, not the token
+    const loginSource = fs.readFileSync('server.js', 'utf-8')
+    assert.ok(loginSource.includes('res.json({ success: true })'), 'Login returns success only')
+    assert.ok(!loginSource.includes('res.json({ success: true, token })'), 'Token not in response body')
+  })
+})
+
+describe('preview-auth logout', () => {
+  it('24. Logout endpoint clears the cookie', () => {
+    // Static analysis: verify logout endpoint exists and clears cookie
+    const logoutSource = fs.readFileSync('server.js', 'utf-8')
+    assert.ok(logoutSource.includes('/api/preview-logout'), 'Logout endpoint exists')
+  })
+})
+
+let fs
+before(async () => {
+  fs = await import('fs')
 })

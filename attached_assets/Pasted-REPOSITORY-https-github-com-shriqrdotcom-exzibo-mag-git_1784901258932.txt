@@ -1,0 +1,767 @@
+REPOSITORY
+https://github.com/shriqrdotcom/exzibo-mag.git
+
+TASK TITLE
+Prompt 4 of 38 — Remove or Securely Isolate the Custom Preview Authentication System
+
+ROLE
+
+Act as a senior application-security engineer, Node.js authentication specialist and cryptographic-token reviewer.
+
+Work only on the custom preview-login and preview-token system.
+
+Do not modify normal Better Auth login, Google OAuth, restaurant authorization, database migrations, orders, bookings, realtime, media, analytics, billing or unrelated UI behaviour.
+
+==================================================
+PRECONDITIONS
+==================================================
+
+Before editing:
+
+1. Switch to the latest main branch.
+2. Pull the latest remote changes.
+3. Confirm Prompt 3 is merged into main.
+4. Confirm the Prompt 3 authentication tests are present.
+5. Confirm the Prompt 2 migration-integrity changes are present.
+6. Confirm the working tree is clean.
+7. Record the exact starting commit SHA.
+8. Create this branch:
+
+   repair/04-preview-auth-isolation
+
+Do not continue from:
+
+- repair/03-auth-bypass-secret-policy;
+- repair/02-migration-ledger-integrity;
+- audit/01-reproducible-baseline;
+- an outdated or dirty branch.
+
+==================================================
+CONFIRMED PROBLEMS
+==================================================
+
+Repository evidence indicates:
+
+1. Preview-token signing can fall back through:
+
+   PREVIEW_SECRET
+   → REPL_ID
+   → literal "preview-hmac-secret"
+
+2. Missing preview configuration can therefore result in a predictable signing key.
+
+3. Preview-token verification may use ordinary string equality rather than a timing-safe comparison.
+
+4. Preview routes may be registered inside the same Express application used by a deployable runtime.
+
+5. Preview tokens may lack a strict:
+
+   - version;
+   - issuer;
+   - audience;
+   - maximum lifetime;
+   - cryptographically secure token ID;
+   - dedicated runtime boundary.
+
+6. Preview authentication may grant more authority than is necessary.
+
+7. It has not yet been conclusively established whether the preview-authentication flow is still used.
+
+==================================================
+PRIMARY OBJECTIVE
+==================================================
+
+First determine whether the custom preview-authentication flow is currently required.
+
+Then select exactly one safe path:
+
+PATH A
+Remove the preview-authentication flow completely when it is unused.
+
+PATH B
+Retain it only inside an explicitly dedicated preview runtime and fully secure its token lifecycle.
+
+After this prompt:
+
+1. No preview key falls back to REPL_ID.
+2. No preview key falls back to a hardcoded literal.
+3. No random runtime secret silently replaces missing configuration.
+4. Preview routes are unavailable in normal production and general deployments.
+5. Missing preview configuration fails closed.
+6. Retained token verification is strict and timing-safe.
+7. Preview authentication cannot automatically grant superadmin authority.
+8. Normal Better Auth login remains unchanged.
+
+==================================================
+STRICT SAFETY RULES
+==================================================
+
+1. Do not work directly on main.
+
+2. Do not request, expose, print, rotate or commit production secrets.
+
+3. Do not modify normal Better Auth session handling.
+
+4. Do not modify Google OAuth configuration.
+
+5. Do not change normal cookie domains or trusted origins.
+
+6. Do not restore DISABLE_AUTH or VITE_DISABLE_AUTH.
+
+7. Do not use REPL_ID as cryptographic secret material.
+
+8. Do not use any fixed literal as a signing secret.
+
+9. Do not generate a temporary random runtime signing secret when configuration is missing.
+
+10. Do not trust client-provided:
+
+    - role;
+    - user ID;
+    - email;
+    - restaurant ID;
+    - superadmin status.
+
+11. Do not assume the preview flow is unused without repository-wide evidence.
+
+12. Do not preserve an insecure preview shortcut merely for development convenience.
+
+13. Do not introduce another authentication framework.
+
+14. Do not modify database schema or migration files.
+
+15. Do not run database migrations.
+
+16. Do not modify unrelated application features.
+
+17. Do not disable or delete legitimate failing tests.
+
+18. Use placeholders only in documentation.
+
+19. Stop and report when repository evidence materially differs from this task.
+
+==================================================
+STEP 1 — COMPLETE PREVIEW-AUTH INVENTORY
+==================================================
+
+Search the entire repository for:
+
+- /api/preview-login
+- /api/preview-verify
+- preview-login
+- preview-verify
+- preview token
+- preview cookie
+- preview authentication
+- PREVIEW_SECRET
+- PREVIEW_EMAIL
+- PREVIEW_PASSWORD_HASH
+- VITE_PREVIEW_MODE
+- APP_RUNTIME
+- REPL_ID
+- preview-hmac-secret
+- timingSafeEqual
+- createHmac
+- localStorage references related to preview auth
+- sessionStorage references related to preview auth
+- frontend callers of preview endpoints
+- tests for preview authentication
+- Replit configuration
+- Vercel configuration
+- deployment documentation
+- Agent-memory files mentioning preview access
+
+Inspect at minimum:
+
+- server.js
+- vite.config.js
+- src/lib/auth.server.js
+- relevant frontend authentication code
+- .replit
+- .env.example
+- package.json
+- preview-related tests
+- authentication documentation
+- committed Agent-memory files
+
+Create an internal usage map:
+
+component or route
+→ caller
+→ runtime
+→ purpose
+→ authentication authority granted
+→ required after repair
+
+Do not include secret values.
+
+Do not modify code until this inventory is complete.
+
+==================================================
+STEP 2 — CLASSIFY THE PREVIEW FLOW
+==================================================
+
+Classify the preview-authentication system as exactly one of:
+
+A. UNUSED
+
+No active frontend, deployment, test or documented operational caller requires it.
+
+B. DEDICATED PREVIEW ONLY
+
+The flow is actively required only in a separately identified preview environment.
+
+C. GENERAL DEPLOYMENT
+
+The flow is used in the same runtime or server used for normal deployment.
+
+D. UNCERTAIN
+
+Repository evidence is insufficient to determine whether removing it is safe.
+
+The final completion report must include evidence for the classification.
+
+When classification is D, do not guess. Use status BLOCKED or retain the flow only behind a fail-closed dedicated preview boundary.
+
+==================================================
+STEP 3 — SELECT EXACTLY ONE IMPLEMENTATION PATH
+==================================================
+
+Select:
+
+PATH A — REMOVE UNUSED PREVIEW AUTHENTICATION
+
+or:
+
+PATH B — RETAIN AND SECURE PREVIEW AUTHENTICATION
+
+Do not partially remove and partially retain two competing preview-auth systems.
+
+==================================================
+PATH A — REMOVE UNUSED PREVIEW AUTHENTICATION
+==================================================
+
+Use PATH A only when repository-wide evidence proves that the flow is unused.
+
+Required work:
+
+1. Remove preview-login route registration.
+
+2. Remove preview-verify route registration.
+
+3. Remove preview-token generation helpers that have no other purpose.
+
+4. Remove preview-token verification helpers that have no other purpose.
+
+5. Remove dead frontend callers.
+
+6. Remove preview cookies or browser-storage behaviour.
+
+7. Remove obsolete preview-authentication environment documentation.
+
+8. Remove obsolete configuration entries for:
+
+   - PREVIEW_SECRET;
+   - PREVIEW_EMAIL;
+   - PREVIEW_PASSWORD_HASH;
+   - VITE_PREVIEW_MODE;
+
+   only when no remaining legitimate use exists.
+
+9. Remove obsolete Agent-memory instructions that tell future agents to use the deleted preview-authentication path.
+
+10. Do not remove unrelated Replit preview or application-preview functionality.
+
+11. Add regression tests proving:
+
+    - preview-login is unavailable;
+    - preview-verify is unavailable;
+    - no preview signing fallback remains;
+    - normal Better Auth login remains functional.
+
+==================================================
+PATH B — RETAIN AND SECURE PREVIEW AUTHENTICATION
+==================================================
+
+Use PATH B when the flow is still required or cannot safely be removed.
+
+--------------------------------------------------
+B1 — DEDICATED RUNTIME BOUNDARY
+--------------------------------------------------
+
+1. Register preview routes only when a server-only runtime setting explicitly enables them.
+
+Use a validated server-only variable such as:
+
+   APP_RUNTIME=preview
+
+2. Do not enable preview authentication using:
+
+   - VITE_PREVIEW_MODE;
+   - another browser-exposed VITE variable;
+   - REPL_ID;
+   - hostname inference;
+   - automatic Replit detection.
+
+3. Preview routes must not register in:
+
+   - production;
+   - normal development;
+   - general Replit deployment;
+   - Vercel production;
+   - tests unless explicitly enabled by the test setup.
+
+4. The default behaviour must be:
+
+   preview routes disabled
+
+5. When APP_RUNTIME=preview is selected, required preview configuration must be validated before the server starts accepting requests.
+
+--------------------------------------------------
+B2 — EXPLICIT SECRET POLICY
+--------------------------------------------------
+
+1. PREVIEW_SECRET must be explicitly supplied whenever preview routes are enabled.
+
+2. Remove all fallback behaviour involving:
+
+   - REPL_ID;
+   - preview-hmac-secret;
+   - another literal;
+   - generated runtime secrets;
+   - hostnames;
+   - deployment IDs.
+
+3. Validate the preview secret at startup.
+
+4. Require a minimum length of at least 32 characters.
+
+5. Reject empty, placeholder or obviously unsafe values.
+
+6. Never log the secret.
+
+7. Never include the secret in:
+
+   - errors;
+   - HTTP responses;
+   - test reports;
+   - documentation;
+   - committed files.
+
+8. Missing or invalid PREVIEW_SECRET must prevent preview-auth route activation.
+
+--------------------------------------------------
+B3 — VERSIONED TOKEN CONTRACT
+--------------------------------------------------
+
+Create one strict token contract containing:
+
+- version;
+- subject;
+- issuedAt;
+- expiresAt;
+- issuer;
+- audience;
+- tokenId.
+
+Recommended logical structure:
+
+{
+  "version": 1,
+  "subject": "...",
+  "issuedAt": 1234567890,
+  "expiresAt": 1234568190,
+  "issuer": "exzibo-preview",
+  "audience": "exzibo-preview-access",
+  "tokenId": "cryptographically-secure-id"
+}
+
+Requirements:
+
+1. Use a documented token version.
+
+2. Reject unknown versions.
+
+3. Generate tokenId using a cryptographically secure source.
+
+4. Use integer Unix timestamps consistently.
+
+5. Use a short maximum lifetime.
+
+Recommended maximum:
+
+   5 to 15 minutes
+
+6. Reject tokens whose lifetime exceeds the configured maximum.
+
+7. Reject expired tokens.
+
+8. Reject issuedAt values beyond a small allowed clock-skew window.
+
+9. Require exact issuer and audience values.
+
+10. Reject missing claims.
+
+11. Reject incorrect claim types.
+
+12. Reject unexpected token structure when strict schema validation is available.
+
+13. Do not trust token claims until the signature has been verified.
+
+--------------------------------------------------
+B4 — SIGNING AND TIMING-SAFE VERIFICATION
+--------------------------------------------------
+
+1. Use HMAC-SHA256 or the repository’s existing secure equivalent.
+
+2. Sign one canonical encoded payload representation.
+
+3. Use base64url consistently.
+
+4. During verification:
+
+   - parse the token structure safely;
+   - validate the encoded sections;
+   - calculate the expected signature;
+   - decode the supplied signature into a Buffer;
+   - decode the expected signature into a Buffer;
+   - confirm both buffers have equal length;
+   - compare using crypto.timingSafeEqual.
+
+5. Never use ordinary string equality for signature comparison.
+
+6. Reject invalid encoding without throwing internal details to the client.
+
+7. Return one stable public error for invalid credentials.
+
+8. Do not reveal whether failure was caused by:
+
+   - email;
+   - password;
+   - token format;
+   - expiry;
+   - signature;
+   - issuer;
+   - audience.
+
+9. Log only a safe failure category and request ID.
+
+--------------------------------------------------
+B5 — PREVIEW LOGIN PROTECTION
+--------------------------------------------------
+
+1. Keep or add rate limiting to preview login.
+
+2. Apply a strict request-body size limit.
+
+3. Use an explicit HTTP method.
+
+4. Reject unsupported methods with 405.
+
+5. Validate the request body using a strict schema.
+
+6. Reject unknown fields.
+
+7. Normalize email input where applicable.
+
+8. Do not store or return plaintext passwords.
+
+9. Do not log supplied credentials.
+
+10. Use a generic authentication-failure response.
+
+11. Do not grant automatic superadmin access after preview login.
+
+12. Prefer a restricted preview identity with only the minimum permissions necessary.
+
+13. Any preview role must be:
+
+    - server-controlled;
+    - explicit;
+    - documented;
+    - limited;
+    - auditable.
+
+14. Preview authentication must not bypass restaurant tenant checks.
+
+--------------------------------------------------
+B6 — COOKIE OR TOKEN STORAGE
+--------------------------------------------------
+
+When the preview token is stored in a cookie:
+
+1. Set HttpOnly.
+
+2. Set Secure outside localhost.
+
+3. Set an explicit Path.
+
+4. Set a bounded Max-Age matching the token lifetime.
+
+5. Use the narrowest appropriate SameSite policy.
+
+6. Do not expose the token to frontend JavaScript.
+
+7. Do not store the preview token in localStorage.
+
+8. Do not store it in sessionStorage unless the architecture strictly requires it and the security implications are documented.
+
+9. Clear invalid or expired preview cookies where appropriate.
+
+10. Do not mix the preview token with the Better Auth session cookie.
+
+==================================================
+STEP 4 — PRESERVE NORMAL AUTHENTICATION
+==================================================
+
+Confirm that this task does not modify:
+
+- Better Auth session creation;
+- Better Auth session restoration;
+- Google OAuth;
+- Expo authentication plugin;
+- cross-subdomain normal session cookies;
+- restaurant membership resolution;
+- normal role authorization;
+- superadmin Better Auth authentication;
+- public customer routes.
+
+Preview auth must remain separate from normal authentication.
+
+==================================================
+STEP 5 — CONFIGURATION AND DOCUMENTATION
+==================================================
+
+Update only preview-authentication configuration.
+
+For PATH A:
+
+1. Remove obsolete preview-auth variables from active templates.
+2. Remove obsolete preview-auth instructions.
+3. Document that the custom preview flow was retired.
+
+For PATH B:
+
+1. Document:
+
+   - APP_RUNTIME;
+   - PREVIEW_SECRET;
+   - PREVIEW_EMAIL or PREVIEW_PASSWORD_HASH only when still needed;
+   - preview token maximum lifetime;
+   - exact preview-only runtime requirement.
+
+2. State clearly:
+
+   Preview authentication must never be enabled in production.
+
+3. Use placeholder values only.
+
+4. Do not modify actual deployment secrets.
+
+5. Do not broadly rewrite unrelated `.env.example` content.
+
+6. Do not change Better Auth variables except where necessary to explain separation from preview auth.
+
+==================================================
+STEP 6 — REQUIRED TESTS
+==================================================
+
+PATH A TESTS
+
+1. preview-login returns 404 or another documented unavailable response.
+
+2. preview-verify returns 404 or another documented unavailable response.
+
+3. No preview-token signing helper remains active.
+
+4. No preview-token verification helper remains active.
+
+5. No frontend caller references the removed endpoints.
+
+6. Normal Better Auth login remains functional.
+
+7. Prompt 3 authentication-bypass tests remain green.
+
+PATH B TESTS
+
+RUNTIME BOUNDARY
+
+1. Preview routes are unavailable when APP_RUNTIME is absent.
+
+2. Preview routes are unavailable in production.
+
+3. Preview routes are unavailable in normal development.
+
+4. Preview routes are available only when explicitly enabled for preview.
+
+SECRET POLICY
+
+5. Missing PREVIEW_SECRET fails closed.
+
+6. A short PREVIEW_SECRET fails validation.
+
+7. REPL_ID cannot act as the signing key.
+
+8. preview-hmac-secret cannot create a valid token.
+
+9. No generated runtime fallback is used.
+
+TOKEN VALIDATION
+
+10. A valid preview token succeeds in dedicated preview mode.
+
+11. A forged signature is rejected.
+
+12. A malformed signature is rejected.
+
+13. Malformed base64 is rejected.
+
+14. Malformed JSON is rejected.
+
+15. Missing required claims are rejected.
+
+16. Incorrect claim types are rejected.
+
+17. Unknown token version is rejected.
+
+18. Expired token is rejected.
+
+19. Excessive token lifetime is rejected.
+
+20. Future issuedAt beyond allowed skew is rejected.
+
+21. Invalid issuer is rejected.
+
+22. Invalid audience is rejected.
+
+23. Signature verification follows the timing-safe path.
+
+PRIVILEGE AND STORAGE
+
+24. Preview authentication does not grant automatic superadmin access.
+
+25. Preview authentication does not bypass tenant authorization.
+
+26. Preview token is not written to localStorage.
+
+27. Preview token is not logged.
+
+28. Preview cookie has the required security attributes where applicable.
+
+REGRESSION
+
+29. Normal Better Auth login remains functional.
+
+30. Prompt 3 authentication-regression tests remain green.
+
+Do not use production infrastructure.
+
+==================================================
+STEP 7 — VALIDATION COMMANDS
+==================================================
+
+Run:
+
+1. Frozen root installation.
+
+2. Focused preview-authentication tests.
+
+3. Prompt 3 authentication-regression tests.
+
+4. Existing Better Auth tests.
+
+5. Existing authorization tests affected by preview authentication.
+
+6. JavaScript syntax checks.
+
+7. Type checking where configured.
+
+8. Linting where configured.
+
+9. Prompt 2 migration-integrity tests.
+
+10. Root production build.
+
+11. git diff against the starting commit.
+
+12. git status.
+
+Run a final repository search confirming deployable code no longer contains:
+
+- preview-hmac-secret;
+- PREVIEW_SECRET fallback to REPL_ID;
+- REPL_ID used as preview signing material;
+- generated preview-secret fallback;
+- preview routes enabled through VITE_PREVIEW_MODE;
+- automatic preview superadmin authority;
+- preview tokens written to localStorage.
+
+Unsafe strings may remain only inside negative regression tests.
+
+Do not claim success when an applicable test fails.
+
+==================================================
+ACCEPTANCE CRITERIA
+==================================================
+
+This prompt is COMPLETE only when:
+
+1. Preview-auth usage is classified with repository evidence.
+
+2. Exactly one implementation path is selected.
+
+3. Unused preview authentication is removed, or active preview authentication is isolated to a dedicated runtime.
+
+4. No signing fallback uses REPL_ID.
+
+5. No signing fallback uses a literal value.
+
+6. No random runtime preview secret fallback remains.
+
+7. Missing preview configuration fails closed.
+
+8. Retained signature verification is timing-safe.
+
+9. Retained tokens have strict version, issuer, audience and lifetime validation.
+
+10. Preview authentication does not grant automatic superadmin authority.
+
+11. Preview authentication does not bypass tenant authorization.
+
+12. Preview tokens are not stored in localStorage.
+
+13. Normal Better Auth behaviour remains unchanged.
+
+14. Prompt 3 authentication tests remain green.
+
+15. Prompt 2 migration tests remain green.
+
+16. Root production build passes.
+
+17. No production secret is requested or changed.
+
+18. No database migration is created or executed.
+
+19. No unrelated application feature is modified.
+
+Use PARTIAL or BLOCKED when any applicable requirement is not proven.
+
+==================================================
+FINAL RESPONSE
+==================================================
+
+Return this exact structure:
+
+PROMPT 4 COMPLETION SUMMARY
+
+Status:
+- COMPLETE / PARTIAL / BLOCKED
+
+Branch:
+- branch name
+
+Starting commit:
+- exact SHA
+
+Ending commit:
+- exact
