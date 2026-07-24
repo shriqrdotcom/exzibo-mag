@@ -194,7 +194,36 @@ export function neonRowWithTables(row) {
   return { ...row, tables: count }
 }
 
-// ── toPublicRestaurant ────────────────────────────────────────────────────────
+// ── DTO builders ──────────────────────────────────────────────────────────────
+//
+// Three explicit projection tiers:
+//   PublicRestaurantDTO      — unauthenticated / public callers
+//   MemberRestaurantDTO      — authenticated restaurant members (owner/admin)
+//   SuperadminRestaurantDTO  — verified superadmin operations
+//
+// Each uses an explicit allowlist — no object spread on the database row.
+// This ensures new columns added to the database are never automatically exposed.
+
+// Fields safe for authenticated restaurant members (owner/admin read view).
+// Includes profile/operational fields on top of public fields, but excludes
+// platform/lifecycle/entitlement fields (plan, status, owner_id, etc.).
+const MEMBER_RESTAURANT_FIELDS = new Set([
+  ...PUBLIC_RESTAURANT_FIELDS,
+  'place', 'note', 'gst', 'logo_key',
+  'created_at', 'updated_at',
+])
+
+// Fields available to verified superadmins (full operational view).
+// Includes platform fields (plan, status, owner_id, lifecycle dates) that
+// must never appear in member or public responses.
+const SUPERADMIN_RESTAURANT_FIELDS = new Set([
+  ...MEMBER_RESTAURANT_FIELDS,
+  'owner_id',
+  'plan', 'plan_limits', 'status',
+  'is_deleted', 'deleted_at',
+  'start_date', 'end_date',
+])
+
 // Returns only the fields safe for public/unauthenticated callers.
 // Strips owner_id, plan, plan_limits, status, lifecycle dates, internal keys.
 export function toPublicRestaurant(row) {
@@ -202,6 +231,27 @@ export function toPublicRestaurant(row) {
   const withTables = neonRowWithTables(row)
   return Object.fromEntries(
     Object.entries(withTables).filter(([k]) => PUBLIC_RESTAURANT_FIELDS.has(k))
+  )
+}
+
+// Returns fields safe for authenticated restaurant members (owner/admin).
+// Includes profile/operational fields but excludes platform/entitlement fields.
+export function toMemberRestaurant(row) {
+  if (!row) return row
+  const withTables = neonRowWithTables(row)
+  return Object.fromEntries(
+    Object.entries(withTables).filter(([k]) => MEMBER_RESTAURANT_FIELDS.has(k))
+  )
+}
+
+// Returns the full operational view for verified superadmins.
+// Includes platform fields (plan, status, owner_id, lifecycle dates) and
+// all member + public fields, but restricts to the explicit allowlist.
+export function toSuperadminRestaurant(row) {
+  if (!row) return row
+  const withTables = neonRowWithTables(row)
+  return Object.fromEntries(
+    Object.entries(withTables).filter(([k]) => SUPERADMIN_RESTAURANT_FIELDS.has(k))
   )
 }
 

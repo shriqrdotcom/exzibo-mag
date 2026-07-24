@@ -1,0 +1,684 @@
+REPOSITORY
+https://github.com/shriqrdotcom/exzibo-mag.git
+
+TASK TITLE
+Prompt 5 of 38 — Eliminate Unauthenticated Restaurant-Record Exposure and Enforce Safe Response DTOs
+
+ROLE
+
+Act as a senior API-security engineer, privacy engineer, multi-tenant SaaS architect and backend contract specialist.
+
+Work only on restaurant API response security and public/private restaurant data projection.
+
+Do not modify authentication architecture, database migrations, team management, orders, bookings, realtime, media, analytics, billing or unrelated frontend behaviour.
+
+==================================================
+PRECONDITIONS
+==================================================
+
+Before editing:
+
+1. Switch to the latest main branch.
+2. Pull the latest remote changes.
+3. Confirm Prompt 4 is merged into main.
+4. Confirm the working tree is clean.
+5. Record the exact starting commit SHA.
+6. Create this branch:
+
+   repair/05-restaurant-response-boundary
+
+Do not continue from:
+
+- repair/04-preview-auth-isolation;
+- repair/03-auth-bypass-secret-policy;
+- repair/02-migration-ledger-integrity;
+- an outdated branch;
+- a branch with uncommitted changes.
+
+==================================================
+CONFIRMED PROBLEM
+==================================================
+
+Repository evidence indicates that most intentionally public restaurant routes use a restricted public projection, but one route does not.
+
+The affected branch is reported as:
+
+GET /api/restaurants?action=neonRestaurant
+
+or the corresponding Vercel rewrite for:
+
+/api/neon/restaurant/:id
+
+This branch can return the raw database restaurant row without requiring restaurant membership or superadmin authorization.
+
+Depending on the current schema, the raw row may expose internal fields such as:
+
+- owner_id;
+- internal status;
+- subscription plan;
+- plan limits;
+- internal lifecycle timestamps;
+- deletion state;
+- operational flags;
+- compatibility fields;
+- internal storage keys;
+- fields added to the table in the future.
+
+Returning the complete database row also creates a future-data-leak risk because newly added columns become public automatically.
+
+==================================================
+PRIMARY OBJECTIVE
+==================================================
+
+After this prompt:
+
+1. No unauthenticated endpoint returns a raw restaurant database row.
+
+2. Every intentionally public restaurant response uses one explicit, minimal and validated public DTO.
+
+3. Internal restaurant responses require a verified session and appropriate tenant or superadmin authorization.
+
+4. Public and internal restaurant response contracts are clearly separated.
+
+5. Sensitive or operational fields cannot appear in public responses, including when new database columns are added later.
+
+6. Cross-tenant access to internal restaurant records is denied.
+
+7. Existing legitimate public restaurant and menu functionality remains operational.
+
+==================================================
+STRICT SAFETY RULES
+==================================================
+
+1. Do not work directly on main.
+
+2. Do not modify database schema or migrations.
+
+3. Do not run production migrations.
+
+4. Do not request, print or change production secrets.
+
+5. Do not weaken authentication or authorization.
+
+6. Do not trust a client-supplied:
+
+   - user ID;
+   - email;
+   - role;
+   - restaurant ID;
+   - owner ID;
+   - superadmin flag.
+
+7. Resolve authenticated identity from the verified server session.
+
+8. Resolve restaurant scope from the database or canonical route parameter.
+
+9. Do not return raw database objects from public routes.
+
+10. Do not solve this by manually deleting a few fields from a raw object.
+
+11. Use an allowlist DTO, not a denylist.
+
+12. Do not expose internal fields merely because they are currently null.
+
+13. Do not change the restaurant database schema.
+
+14. Do not redesign restaurant creation or lifecycle logic.
+
+15. Do not repair the unimported by-UID function unless it directly prevents the required response-security tests from executing.
+
+16. Do not broadly redesign API routing.
+
+17. Do not modify public menu, order or booking data except where a minimal restaurant DTO integration is strictly necessary.
+
+18. Do not silence failing tests.
+
+19. Stop and report when repository evidence differs materially from this task.
+
+==================================================
+STEP 1 — INVENTORY ALL RESTAURANT RESPONSE PATHS
+==================================================
+
+Search the complete repository for:
+
+- neonRestaurant
+- toPublicRestaurant
+- getNeonRestaurantById
+- getNeonRestaurantByUid
+- getRestaurant
+- restaurant DTO
+- public restaurant
+- res.json(restaurant)
+- json({ restaurant
+- raw restaurant row
+- action=list
+- action=byUid
+- action=checkSlug
+- owner_id
+- plan_limits
+- is_deleted
+- deleted_at
+- subscription
+- internal status
+
+Inspect at minimum:
+
+- api/restaurants.js
+- src/db/neon-restaurants.js
+- server.js
+- vite.config.js
+- vercel.json
+- restaurant-related services
+- public menu and restaurant frontend callers
+- mobile bootstrap restaurant projections
+- restaurant-related tests
+- authorization helpers
+- response validation helpers
+
+Create an internal table:
+
+route or action
+→ HTTP method
+→ public or private
+→ authentication required
+→ authorization required
+→ current response source
+→ current DTO
+→ corrected DTO
+
+Do not edit until this inventory is complete.
+
+==================================================
+STEP 2 — DEFINE EXPLICIT RESTAURANT DTO CONTRACTS
+==================================================
+
+Create or reuse explicit server-side DTO builders.
+
+At minimum, define:
+
+1. PublicRestaurantDTO
+
+Used by unauthenticated restaurant and public-menu routes.
+
+2. MemberRestaurantDTO
+
+Used by authenticated restaurant members where additional operational fields are legitimately required.
+
+3. SuperadminRestaurantDTO
+
+Used only for verified platform-superadmin operations when the complete administrative view is required.
+
+Do not return the raw database object even to superadmin routes unless there is a documented reason and a validated schema.
+
+--------------------------------------------------
+PUBLIC DTO REQUIREMENTS
+--------------------------------------------------
+
+The public DTO must use an explicit allowlist.
+
+Include only fields genuinely required by the public menu or public restaurant website, such as where supported by the existing product:
+
+- public ID or public UID;
+- slug;
+- restaurant name;
+- logo or safe public image URL;
+- cover image;
+- public description;
+- address or public location;
+- public contact information intentionally displayed;
+- opening hours;
+- cuisine/category;
+- public social links;
+- public booking or ordering availability;
+- public theme or presentation settings;
+- safe table-display context where intentionally public.
+
+Do not add a field merely because it exists in the database.
+
+--------------------------------------------------
+PUBLIC DTO FORBIDDEN FIELDS
+--------------------------------------------------
+
+The public response must never include fields such as:
+
+- owner_id;
+- owner email;
+- membership data;
+- internal user IDs;
+- internal plan or subscription state;
+- plan_limits;
+- billing identifiers;
+- payment identifiers;
+- internal notes;
+- deletion flags;
+- deleted_at;
+- lifecycle audit fields not required publicly;
+- private configuration;
+- secret or credential fields;
+- internal storage object keys;
+- database connection information;
+- private phone or email fields not explicitly intended for display;
+- internal permissions;
+- staff information;
+- raw JSON configuration containing private values.
+
+The test must detect forbidden fields recursively, not only at the top level.
+
+==================================================
+STEP 3 — REPAIR THE EXPOSED ROUTE
+==================================================
+
+Inspect the exact purpose of:
+
+action=neonRestaurant
+
+and its rewrite.
+
+Choose one correct solution based on actual callers.
+
+OPTION A — PUBLIC ROUTE
+
+Use this only when the route is intentionally required by unauthenticated customer-facing code.
+
+Requirements:
+
+1. Return PublicRestaurantDTO only.
+
+2. Do not expose the raw row.
+
+3. Return 404 for unknown, deleted or unavailable restaurants according to existing public policy.
+
+4. Do not reveal whether an internal deleted or suspended record exists.
+
+5. Apply the same public visibility rules used by other public restaurant routes.
+
+OPTION B — INTERNAL ROUTE
+
+Use this when the route is intended for dashboard, staff or platform administration.
+
+Requirements:
+
+1. Require a verified session.
+
+2. Resolve the authenticated identity server-side.
+
+3. Require restaurant membership and the existing minimum permission level, or verified superadmin access.
+
+4. Resolve the target restaurant from the server route or database.
+
+5. Reject wrong-tenant access with 403.
+
+6. Return MemberRestaurantDTO or SuperadminRestaurantDTO, not a raw row.
+
+OPTION C — UNUSED ROUTE
+
+Use this only when repository-wide evidence proves that no active caller requires the route.
+
+Requirements:
+
+1. Remove the route and rewrite safely.
+
+2. Remove dead callers.
+
+3. Add a regression test proving the retired route is unavailable.
+
+Record which option was selected and why.
+
+==================================================
+STEP 4 — APPLY CONSISTENT PROJECTIONS TO RELATED ROUTES
+==================================================
+
+Review all restaurant read routes discovered in Step 1.
+
+Correct only response-projection defects within this domain.
+
+Ensure:
+
+1. All public list routes use PublicRestaurantDTO.
+
+2. Public slug and UID lookups use PublicRestaurantDTO.
+
+3. Public routes do not become private accidentally.
+
+4. Private routes require proper authentication and authorization.
+
+5. Private responses use their correct explicit DTO.
+
+6. Deleted or unavailable restaurant handling is consistent.
+
+7. No route passes a database row directly into res.json.
+
+Do not perform unrelated restaurant business-logic refactoring.
+
+==================================================
+STEP 5 — FUTURE-PROOF THE PUBLIC CONTRACT
+==================================================
+
+The public response must remain safe when new database columns are added.
+
+Implement these protections:
+
+1. DTOs are built using an explicit property allowlist.
+
+2. The public DTO builder does not use object spread on the database row.
+
+Do not use:
+
+   {
+     ...restaurant
+   }
+
+3. Public response validation rejects unexpected output fields.
+
+4. Tests include a synthetic database row containing extra sensitive fields and prove that those fields are absent from the output.
+
+5. Nested JSON fields are projected explicitly when they may contain both public and private data.
+
+6. URLs are derived from approved public fields rather than exposing storage keys where possible.
+
+==================================================
+STEP 6 — ERROR AND ENUMERATION BEHAVIOUR
+==================================================
+
+Ensure public restaurant routes:
+
+1. Return one stable 404 response for:
+
+   - unknown restaurant;
+   - deleted restaurant;
+   - unavailable private restaurant where disclosure is inappropriate.
+
+2. Do not return database exception messages.
+
+3. Do not reveal raw SQL errors.
+
+4. Do not reveal internal status or lifecycle reason.
+
+5. Use a safe request ID where existing infrastructure supports it.
+
+6. Preserve existing public slug and route behaviour required by the frontend.
+
+Private routes must distinguish:
+
+- 401 for unauthenticated;
+- 403 for authenticated but unauthorized;
+- 404 where resource non-disclosure is the established policy.
+
+Do not redesign the entire error system in this prompt.
+
+==================================================
+STEP 7 — REQUIRED BEHAVIOURAL TESTS
+==================================================
+
+Add or update executable tests proving:
+
+PUBLIC RESPONSE SECURITY
+
+1. An unauthenticated request to the affected public route never receives the raw database row.
+
+2. Public response includes only approved fields.
+
+3. Public response excludes every known sensitive field.
+
+4. Public response excludes newly injected synthetic database columns automatically.
+
+5. Forbidden-field scanning checks nested objects and arrays.
+
+6. Unknown restaurant returns the correct public 404 response.
+
+7. Deleted restaurant does not expose its internal record.
+
+8. Suspended or unavailable restaurant follows the documented public visibility policy.
+
+AUTHENTICATION AND TENANT ISOLATION
+
+9. An internal restaurant route without a valid session returns 401.
+
+10. A valid user without membership receives 403 or the documented non-disclosure response.
+
+11. A member of Restaurant A cannot read Restaurant B’s internal restaurant response.
+
+12. An authorized member can retrieve the allowed internal DTO.
+
+13. A verified superadmin can retrieve the documented platform DTO where supported.
+
+DTO REGRESSION
+
+14. Public list response uses PublicRestaurantDTO.
+
+15. Public slug lookup uses PublicRestaurantDTO.
+
+16. Public UID lookup uses PublicRestaurantDTO where applicable.
+
+17. No public restaurant handler serializes a raw database row.
+
+18. Existing public restaurant website data requirements remain satisfied.
+
+19. Mobile bootstrap or authenticated dashboard projections remain unchanged unless intentionally corrected.
+
+Do not connect tests to production infrastructure.
+
+==================================================
+STEP 8 — STATIC CONTRACT CHECK
+==================================================
+
+Add or update a deterministic contract test that:
+
+1. Creates a representative restaurant database object containing all known internal fields.
+
+2. Adds synthetic future fields such as:
+
+   internal_secret_note
+   payment_customer_id
+   private_config
+   storage_access_key
+
+3. Passes the object through PublicRestaurantDTO.
+
+4. Verifies none of the internal or synthetic fields appear anywhere in the output.
+
+5. Verifies only the approved public keys are present.
+
+Avoid fragile tests that only search source-code strings.
+
+==================================================
+STEP 9 — VALIDATION
+==================================================
+
+Run:
+
+1. Frozen root installation.
+
+2. Focused restaurant-response tests.
+
+3. Public DTO contract tests.
+
+4. Authentication and tenant-isolation tests affected by this change.
+
+5. Prompt 3 authentication-regression tests.
+
+6. Prompt 4 preview-authentication regression tests.
+
+7. Prompt 2 migration-integrity tests.
+
+8. JavaScript syntax checks.
+
+9. Type checking where configured.
+
+10. Linting where configured.
+
+11. Root production build.
+
+12. git diff against the starting commit.
+
+13. git status.
+
+Run a final repository search for public restaurant response paths containing patterns equivalent to:
+
+- res.json(rawRestaurant)
+- res.json(restaurant) where restaurant is a DB row
+- JSON.stringify(raw database restaurant)
+- object spread of a restaurant DB row into a public response
+
+Review every match manually.
+
+Do not claim completion when an applicable test fails.
+
+==================================================
+PERMITTED FILE SCOPE
+==================================================
+
+Likely files include:
+
+- api/restaurants.js
+- shared restaurant DTO helper
+- restaurant response validation schema
+- narrowly related restaurant tests
+- public restaurant/menu callers only if a contract adjustment is required
+- server.js or vite.config.js only when they contain duplicate restaurant read adapters requiring the same DTO
+
+Do not modify unrelated domain files.
+
+Explain any file outside this scope in the final report.
+
+==================================================
+ACCEPTANCE CRITERIA
+==================================================
+
+This prompt is COMPLETE only when:
+
+1. The exposed route no longer returns a raw database row.
+
+2. Every unauthenticated restaurant response uses PublicRestaurantDTO.
+
+3. Public DTOs use explicit allowlists.
+
+4. Sensitive fields are absent from every public response.
+
+5. Synthetic future fields are excluded automatically.
+
+6. Internal restaurant responses require correct authentication and tenant authorization.
+
+7. Wrong-tenant internal access is denied.
+
+8. Deleted or unavailable restaurant records are not improperly disclosed.
+
+9. Existing public restaurant and menu behaviour remains functional.
+
+10. Relevant tests pass.
+
+11. Prompt 2, Prompt 3 and Prompt 4 regression tests remain green.
+
+12. Root production build passes.
+
+13. No database migration is created.
+
+14. No production database is accessed.
+
+15. No production secret is requested or changed.
+
+16. No unrelated feature is modified.
+
+Use PARTIAL or BLOCKED when an applicable requirement is not proven.
+
+==================================================
+FINAL RESPONSE
+==================================================
+
+Return this exact structure:
+
+PROMPT 5 COMPLETION SUMMARY
+
+Status:
+- COMPLETE / PARTIAL / BLOCKED
+
+Branch:
+- branch name
+
+Starting commit:
+- exact SHA
+
+Ending commit:
+- exact SHA or “Not committed”
+
+Exposed route confirmed:
+- route or action
+- original behaviour
+
+Implementation option selected:
+- Public DTO / Protected internal route / Removed unused route
+- concise reason
+
+Public DTO fields:
+- concise approved field list
+
+Forbidden fields verified absent:
+- concise list
+
+Files changed:
+- exact concise list
+
+Raw database response final search:
+- public raw restaurant serialization: FOUND / NOT FOUND
+- public object spread from DB row: FOUND / NOT FOUND
+- public nested sensitive fields: FOUND / NOT FOUND
+
+Focused tests:
+- commands
+- PASS / FAIL
+- passed
+- failed
+- skipped
+- concise explanation
+
+Tenant-isolation tests:
+- command
+- PASS / FAIL
+
+Authentication-regression tests:
+- command
+- PASS / FAIL
+
+Preview-auth regression tests:
+- command
+- PASS / FAIL
+
+Migration-regression tests:
+- command
+- PASS / FAIL
+
+Root production build:
+- command
+- PASS / FAIL
+
+Behaviour intentionally changed:
+- concise list
+
+Behaviour verified unchanged:
+- concise list
+
+Production resources accessed:
+- No
+
+Production database accessed:
+- No
+
+Production migrations executed:
+- No
+
+Production secrets changed:
+- No
+
+Remaining blockers or risks:
+- concise list
+- write “None found within this prompt’s scope” when applicable
+
+Recommended pull-request title:
+- one concise title
+
+Recommended next action:
+- State whether Prompt 6 may begin.
+
+Final conclusion:
+- State whether Prompt 5 is fully complete and ready for pull-request review.
+- Do not claim that the complete repository is production-ready.

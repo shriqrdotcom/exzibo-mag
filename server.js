@@ -13,6 +13,8 @@ import {
   patchNeonRestaurantProfile,
   patchNeonRestaurantPlatform,
   toPublicRestaurant,
+  toMemberRestaurant,
+  toSuperadminRestaurant,
   getNeonRestaurants,
 } from './src/db/neon-restaurants.js'
 import { createRestaurantAtomic } from './src/services/restaurantCreationService.js'
@@ -1210,7 +1212,7 @@ app.post('/api/neon/restaurant/create', requireSuperadmin, async (req, res) => {
       logo:                payload.logo,
       table_numbers:       payload.table_numbers,
     })
-    return res.status(201).json(row)
+    return res.status(201).json(toSuperadminRestaurant(row))
   } catch (err) {
     if (err.code === 'DUPLICATE') return res.status(409).json({ error: err.message })
     if (err.code === 'INVALID_SLUG') return res.status(400).json({ error: err.message, code: err.code })
@@ -1224,7 +1226,7 @@ app.post('/api/neon/restaurant/create', requireSuperadmin, async (req, res) => {
 app.patch('/api/neon/restaurant/:id', requireRestaurantRole(req => req.params.id, MANAGEMENT_ROLES), async (req, res) => {
   try {
     const row = await patchNeonRestaurantProfile(req.params.id, req.body)
-    return row ? res.json(row) : res.status(404).json({ error: 'Not found or no valid profile fields' })
+    return row ? res.json(toMemberRestaurant(row)) : res.status(404).json({ error: 'Not found or no valid profile fields' })
   } catch (err) { return res.status(500).json({ error: err.message }) }
 })
 

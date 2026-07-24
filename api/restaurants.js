@@ -8,6 +8,8 @@ import {
   patchNeonRestaurantProfile,
   patchNeonRestaurantPlatform,
   toPublicRestaurant,
+  toMemberRestaurant,
+  toSuperadminRestaurant,
   neonRowWithTables,
 } from '../src/db/neon-restaurants.js'
 import { createRestaurantAtomic } from '../src/services/restaurantCreationService.js'
@@ -99,7 +101,7 @@ export default async function handler(req, res) {
         WHERE is_deleted = true
         ORDER BY deleted_at DESC NULLS LAST
       `
-      return res.json(rows.map(neonRowWithTables))
+      return res.json(rows.map(toSuperadminRestaurant))
     }
 
     if (action === 'bySlug') {
@@ -171,11 +173,11 @@ export default async function handler(req, res) {
           return forbidden(res, 'Patching restaurant requires owner or admin role', requestId)
         }
         const row = await patchNeonRestaurantProfile(id, patch)
-        return res.json(row ?? { ok: true })
+        return res.json(row ? toMemberRestaurant(row) : { ok: true })
       }
       const row = await getNeonRestaurantById(id)
       if (!row) return notFound(res, 'Not found', requestId)
-      return res.json(row)
+      return res.json(toPublicRestaurant(row))
     }
 
     // ── GET: myIds — restaurant IDs for the authenticated user ─────────────────
@@ -247,7 +249,7 @@ export default async function handler(req, res) {
           logo:                payload.logo,
           table_numbers:       payload.table_numbers,
         })
-        return res.status(201).json(row)
+        return res.status(201).json(toSuperadminRestaurant(row))
       } catch (err) {
         if (err.code === 'DUPLICATE') return conflict(res, err.message, requestId)
         if (err.code === 'INVALID_SLUG') return badInput(res, err.message, requestId)
@@ -266,7 +268,7 @@ export default async function handler(req, res) {
         return forbidden(res, 'Updating restaurant requires owner or admin role', requestId)
       }
       const row = await patchNeonRestaurantProfile(id, patch)
-      return res.json(row ?? { ok: true, requestId })
+      return res.json(row ? toMemberRestaurant(row) : { ok: true, requestId })
     }
 
     if (action === 'updateProfile') {
@@ -279,7 +281,7 @@ export default async function handler(req, res) {
         return forbidden(res, 'Updating restaurant profile requires owner or admin role', requestId)
       }
       const row = await patchNeonRestaurantProfile(restaurantId, patch)
-      return res.json(row ?? { ok: true, requestId })
+      return res.json(row ? toMemberRestaurant(row) : { ok: true, requestId })
     }
 
     if (action === 'platformUpdate') {
@@ -289,7 +291,7 @@ export default async function handler(req, res) {
       if (!restaurantId || !patch) return badInput(res, 'restaurantId and patch required', requestId)
       rejectUnknownFields(req.body, ALLOWED_PLATFORM_FIELDS)
       const row = await patchNeonRestaurantPlatform(restaurantId, patch)
-      return res.json(row ?? { ok: true, requestId })
+      return res.json(row ? toSuperadminRestaurant(row) : { ok: true, requestId })
     }
 
     if (action === 'softDelete') {
@@ -323,7 +325,7 @@ export default async function handler(req, res) {
         RETURNING *
       `
       if (!rows.length) return notFound(res, 'Restaurant not found', requestId)
-      return res.json({ success: true, restaurant: neonRowWithTables(rows[0]) })
+      return res.json({ success: true, restaurant: toSuperadminRestaurant(rows[0]) })
     }
 
     if (action === 'permanentDelete') {
