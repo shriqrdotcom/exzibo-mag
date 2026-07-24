@@ -222,7 +222,7 @@ describe('Last-owner protection', async () => {
 
       await assert.rejects(
         () => deleteNeonRestaurantMemberSafe(ownerId, { callerRole: 'owner', callerIsSuperadmin: false }),
-        /cannot delete the last owner/i
+        /at least one active owner must remain/i
       )
 
       const count = await countNeonActiveOwners(restaurant.id)
@@ -239,7 +239,7 @@ describe('Last-owner protection', async () => {
 
       await assert.rejects(
         () => updateNeonRestaurantMemberSafe(restaurant.id, { id: ownerId, role: 'admin' }, { callerRole: 'owner', callerIsSuperadmin: false }),
-        /cannot demote the last owner/i
+        /at least one active owner must remain/i
       )
 
       const count = await countNeonActiveOwners(restaurant.id)
@@ -265,7 +265,9 @@ describe('Last-owner protection', async () => {
       const finalCount = await countNeonActiveOwners(restaurant.id)
       assert.ok(finalCount >= 1, `Expected at least 1 owner after concurrent deletes, got ${finalCount}`)
       // At least one of the two requests should not have succeeded silently.
-      const failures = [r1, r2].filter(r => r.status === 'rejected' || (r.value && !r.value.deleted)).length
+      // Note: mutateRestaurantMemberWithOwnerInvariant returns { success: true } on success,
+      // so a rejected promise or a non-success result counts as a failure.
+      const failures = [r1, r2].filter(r => r.status === 'rejected' || (r.value && !r.value.success)).length
       assert.ok(failures >= 1, 'At least one concurrent delete must be rejected or report no deletion')
     } finally {
       await deleteTestRestaurant(restaurant.id)

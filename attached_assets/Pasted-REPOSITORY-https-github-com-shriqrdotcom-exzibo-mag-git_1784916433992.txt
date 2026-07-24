@@ -1,0 +1,1064 @@
+REPOSITORY
+https://github.com/shriqrdotcom/exzibo-mag.git
+
+TASK TITLE
+Prompt 9 of 38 — Make Last-Owner Protection Transactional and Concurrency-Safe
+
+ROLE
+
+Act as a senior PostgreSQL transaction engineer, multi-tenant SaaS authorization specialist, concurrency-testing engineer and backend reliability reviewer.
+
+Work only on restaurant-owner membership mutations and last-owner protection.
+
+The goal is to guarantee that concurrent owner deletion, demotion or deactivation cannot leave a restaurant without an active owner.
+
+Do not repair unrelated membership pagination, general authorization, settings, orders, bookings, realtime, media, analytics, billing or frontend architecture.
+
+==================================================
+PRECONDITIONS
+==================================================
+
+Begin only after Prompt 8 has been:
+
+- marked COMPLETE;
+- committed and pushed;
+- reviewed;
+- merged into main.
+
+Before editing:
+
+1. Run:
+
+   git fetch origin
+
+2. Switch to main.
+
+3. Pull using fast-forward only:
+
+   git pull --ff-only origin main
+
+4. Confirm Prompt 8 pagination changes are present.
+
+5. Confirm Prompt 7 canonical team-service changes are present.
+
+6. Confirm these protections remain intact:
+
+   - no DISABLE_AUTH;
+   - no VITE_DISABLE_AUTH;
+   - no MOCK_USER;
+   - no teamAuthBypass;
+   - all team mutations use the canonical team service;
+   - only server-resolved restaurant scope reaches team mutations;
+   - team pagination filters before LIMIT;
+   - migration-integrity tests remain present.
+
+7. Confirm git status is clean.
+
+8. Record:
+
+   - current main commit SHA;
+   - starting commit SHA;
+   - Node.js version;
+   - package-manager version;
+   - PostgreSQL version used for disposable tests.
+
+9. Create this branch:
+
+   repair/09-last-owner-transaction
+
+Do not continue from the Prompt 8 branch.
+
+Do not work directly on main.
+
+==================================================
+CONFIRMED DEFECT
+==================================================
+
+Repository evidence indicates that owner demotion and deletion use logic equivalent to:
+
+SELECT COUNT(*)
+FROM restaurant_members
+WHERE restaurant_id = ...
+  AND role = 'owner'
+  AND active = true
+FOR UPDATE
+
+This does not safely serialize last-owner decisions.
+
+Problems include:
+
+1. Aggregate results are not the underlying owner rows.
+
+2. The query does not provide the intended row-level lock over the owner memberships.
+
+3. Two concurrent transactions may both observe that more than one owner exists.
+
+4. Each transaction may then remove a different owner.
+
+5. Both operations may succeed and leave the restaurant with zero active owners.
+
+6. Similar races may exist across:
+
+   - owner deletion;
+   - owner demotion;
+   - owner deactivation;
+   - membership soft deletion;
+   - runtime-specific mutation paths.
+
+7. A check performed outside the mutation transaction creates a time-of-check/time-of-use race.
+
+==================================================
+PRIMARY OBJECTIVE
+==================================================
+
+After this prompt:
+
+1. Owner deletion, demotion and deactivation are performed inside a real PostgreSQL transaction.
+
+2. All owner-sensitive mutations for the same restaurant are serialized through one consistent lock order.
+
+3. The restaurant and relevant membership rows are locked before the owner-count decision.
+
+4. The last-owner decision and mutation occur in the same transaction.
+
+5. Concurrent requests cannot reduce active owners below one.
+
+6. Failed last-owner attempts roll back completely.
+
+7. Non-owner mutations continue without unnecessary last-owner rejection.
+
+8. Vercel, Express and Vite reach the same canonical transactional implementation.
+
+9. The service returns stable domain errors instead of raw PostgreSQL or JavaScript errors.
+
+10. Real concurrent PostgreSQL tests prove the invariant.
+
+==================================================
+STRICT SAFETY RULES
+==================================================
+
+1. Do not work directly on main.
+
+2. Work only on:
+
+   repair/09-last-owner-transaction
+
+3. Do not access the production database.
+
+4. Do not run any test against production or shared staging.
+
+5. Do not request, expose, print, rotate or commit production secrets.
+
+6. Do not create a migration unless repository evidence proves a schema change is unavoidable.
+
+7. The expected solution should not require a schema migration.
+
+8. Do not use `COUNT(*) ... FOR UPDATE` as the final locking design.
+
+9. Do not perform the owner count outside the mutation transaction.
+
+10. Do not use an in-process JavaScript mutex as the security boundary.
+
+11. Do not use Redis as the primary database-invariant lock.
+
+12. Do not rely on one server instance.
+
+13. Do not rely on Vercel instance affinity.
+
+14. Do not trust client-provided:
+
+    - restaurant ID;
+    - caller identity;
+    - caller role;
+    - target member role;
+    - target active status;
+    - owner count;
+    - superadmin status.
+
+15. Resolve restaurant scope and target membership server-side.
+
+16. Do not restore any authentication bypass.
+
+17. Do not broaden manager or staff permissions.
+
+18. Do not allow manager or staff to demote or delete owners unless the existing authorization policy already explicitly allows it.
+
+19. Do not weaken existing field validation.
+
+20. Do not remove last-owner protection to make tests pass.
+
+21. Do not silently convert a rejected last-owner operation into success.
+
+22. Do not leave transaction clients unreleased.
+
+23. Do not swallow transaction rollback errors.
+
+24. Do not add:
+
+    - Agent-memory files;
+    - attached assets;
+    - screenshots;
+    - pasted prompt files;
+    - generated reports;
+    - unrelated documentation;
+    - unrelated dependencies.
+
+25. Stop and report if the live schema materially differs from repository migrations.
+
+==================================================
+STEP 1 — INVENTORY EVERY OWNER-SENSITIVE MUTATION
+==================================================
+
+Search the complete repository for:
+
+- last owner
+- owner count
+- role = 'owner'
+- role === 'owner'
+- FOR UPDATE
+- COUNT(*)
+- atomic owner
+- demote owner
+- delete owner
+- deactivate owner
+- soft delete member
+- update member role
+- executeTeamUpdate
+- executeTeamDelete
+- executeTeamUpsert
+- deleteNeonRestaurantMember
+- updateNeonRestaurantMember
+- atomicDemote
+- atomicDelete
+- active = false
+- deleted_at
+- pg_advisory
+- BEGIN
+- COMMIT
+- ROLLBACK
+
+Inspect at minimum:
+
+- src/db/neon-restaurant-members.js
+- api/_lib/team-service.js
+- api/team.js
+- server.js
+- vite.config.js
+- authorization helpers
+- team-membership-safety tests
+- team mutation tests
+- owner-related tests
+- any mobile or administrative team APIs
+
+Create an internal map:
+
+runtime
+→ route/action
+→ canonical service operation
+→ database function
+→ target-member lookup
+→ current owner check
+→ current transaction boundary
+→ required corrected transaction
+
+Do not edit until this inventory is complete.
+
+==================================================
+STEP 2 — IDENTIFY THE AUTHORITATIVE TABLES AND STATES
+==================================================
+
+Inspect the actual schema and migrations.
+
+Confirm:
+
+1. Restaurant table name and primary key.
+
+2. Restaurant-membership table name and primary key.
+
+3. Restaurant foreign-key column.
+
+4. Role column.
+
+5. Active-state column.
+
+6. Soft-deletion column or deletion representation.
+
+7. The exact definition of an active owner.
+
+Document the canonical predicate.
+
+For example, only when supported by the actual schema:
+
+role = 'owner'
+AND active = true
+AND deleted_at IS NULL
+
+Do not invent column names.
+
+All owner-count checks, locks and tests must use the same active-owner definition.
+
+==================================================
+STEP 3 — SELECT ONE SERIALIZATION STRATEGY
+==================================================
+
+Choose one PostgreSQL-backed serialization strategy based on repository evidence.
+
+Preferred strategy:
+
+PATH A — LOCK THE PARENT RESTAURANT ROW
+
+Inside the same transaction:
+
+1. Lock the restaurant row:
+
+   SELECT id
+   FROM restaurants
+   WHERE id = $1
+   FOR UPDATE
+
+2. Lock the target membership row.
+
+3. Lock or read all currently active owner membership rows.
+
+4. Determine whether the proposed mutation would leave at least one active owner.
+
+5. Perform the mutation.
+
+6. Commit.
+
+Every owner-sensitive operation for the restaurant must acquire the parent restaurant lock first.
+
+Alternative:
+
+PATH B — TRANSACTION-SCOPED POSTGRESQL ADVISORY LOCK
+
+Use this only when a suitable parent restaurant row cannot be locked consistently.
+
+Requirements:
+
+1. Use `pg_advisory_xact_lock`, not session-level advisory locks.
+
+2. Derive a stable restaurant-scoped key server-side.
+
+3. Acquire the lock inside the database transaction.
+
+4. Use the same key derivation in every owner-sensitive mutation.
+
+5. Document collision and key-generation considerations.
+
+6. Continue to lock the target membership row where appropriate.
+
+Do not mix lock strategies inconsistently.
+
+State in the final report which path was selected and why.
+
+==================================================
+STEP 4 — DEFINE ONE LOCK ORDER
+==================================================
+
+Use the same lock order everywhere to reduce deadlock risk.
+
+Recommended order:
+
+1. Begin transaction.
+
+2. Lock restaurant-level serialization resource.
+
+3. Lock target membership row.
+
+4. Lock or read active owner rows.
+
+5. Validate the proposed resulting owner state.
+
+6. Perform mutation.
+
+7. Commit.
+
+Never use a different order such as:
+
+- target member first in one path;
+- restaurant first in another path.
+
+All of these operations must use the same order:
+
+- owner delete;
+- owner demotion;
+- owner deactivation;
+- owner soft deletion;
+- any combined update that removes active-owner status.
+
+Document the chosen order in code comments near the canonical transaction helper.
+
+==================================================
+STEP 5 — CREATE A CANONICAL TRANSACTION HELPER
+==================================================
+
+Create or update one canonical database-layer transaction helper.
+
+Use repository naming conventions.
+
+It may expose operations equivalent to:
+
+- demoteRestaurantMemberAtomically
+- deactivateRestaurantMemberAtomically
+- deleteRestaurantMemberAtomically
+- mutateRestaurantMemberWithOwnerInvariant
+
+Prefer one shared invariant-enforcing helper rather than three duplicated implementations.
+
+The helper must:
+
+1. Acquire a client from the shared PostgreSQL pool.
+
+2. Begin a transaction explicitly.
+
+3. Acquire the selected restaurant-level lock.
+
+4. Load the target membership using the trusted restaurant ID.
+
+5. Return the documented missing-member result when the target does not exist.
+
+6. Determine whether the proposed mutation removes active-owner status.
+
+7. When the mutation does not remove active-owner status:
+   - perform the normal mutation safely;
+   - do not reject it as a last-owner operation.
+
+8. When the mutation removes active-owner status:
+   - lock/read the current active owners;
+   - calculate the resulting owner set;
+   - reject when zero active owners would remain.
+
+9. Execute the mutation in the same transaction.
+
+10. Commit only after the mutation succeeds.
+
+11. Roll back on every failure.
+
+12. Release the database client in `finally`.
+
+13. Never return before rollback/release handling is complete.
+
+14. Use parameterized SQL only.
+
+15. Return a stable domain result.
+
+==================================================
+STEP 6 — HANDLE THE PROPOSED RESULT, NOT ONLY THE CURRENT COUNT
+==================================================
+
+The decision must evaluate the post-mutation state.
+
+Examples:
+
+1. Current target is an active owner and will be deleted:
+   - remove that target from the resulting active-owner set.
+
+2. Current target is an active owner and role changes to manager:
+   - remove that target from the resulting owner set.
+
+3. Current target is an active owner and active becomes false:
+   - remove that target from the resulting owner set.
+
+4. Current target is already inactive:
+   - do not incorrectly subtract it again.
+
+5. Current target is not an owner:
+   - no last-owner rejection should occur.
+
+6. Update promotes another member to owner in the same atomic operation:
+   - account for the actual mutation semantics only when the repository supports such a combined operation.
+
+Do not rely only on:
+
+ownerCount <= 1
+
+without evaluating whether the target currently qualifies as an active owner.
+
+==================================================
+STEP 7 — STABLE DOMAIN ERROR CONTRACT
+==================================================
+
+Use a stable domain error/result for last-owner rejection.
+
+Use the repository’s existing error conventions where available.
+
+Recommended logical code:
+
+LAST_OWNER_REQUIRED
+
+or the existing equivalent.
+
+Map consistently to HTTP:
+
+409 Conflict
+
+The response must:
+
+1. Be identical across Vercel, Express and Vite.
+
+2. Not expose SQL text.
+
+3. Not expose stack traces.
+
+4. Not expose internal member IDs unnecessarily.
+
+5. Clearly state that at least one active owner must remain.
+
+Missing target behaviour must preserve Prompt 7’s documented contract.
+
+Do not convert a missing target into a last-owner conflict.
+
+==================================================
+STEP 8 — ROUTE ALL OWNER-SENSITIVE OPERATIONS THROUGH IT
+==================================================
+
+Ensure all relevant runtime adapters use the canonical service and transactional database function.
+
+Verify:
+
+- Vercel;
+- Express;
+- Vite middleware.
+
+No runtime may retain a separate:
+
+- count query;
+- last-owner decision;
+- direct owner deletion;
+- direct owner demotion;
+- direct owner deactivation.
+
+Route adapters should not implement transaction logic.
+
+The service should call the canonical database transaction helper.
+
+==================================================
+STEP 9 — DEADLOCK AND RETRY BEHAVIOUR
+==================================================
+
+Use a consistent lock order to avoid application-created deadlocks.
+
+Do not add broad automatic retries for every error.
+
+When handling PostgreSQL serialization or deadlock errors:
+
+1. Identify the exact PostgreSQL codes.
+
+2. Retry only when repository architecture already supports bounded safe retries or when a small bounded retry is clearly justified.
+
+3. Use a strict maximum retry count.
+
+4. Use small jittered backoff.
+
+5. Never retry:
+   - authorization failures;
+   - validation failures;
+   - last-owner conflicts;
+   - missing members;
+   - unknown errors.
+
+6. Preserve idempotency of delete/update requests.
+
+When no retry is necessary with the selected locking design, document that decision.
+
+==================================================
+STEP 10 — REAL CONCURRENCY TEST ENVIRONMENT
+==================================================
+
+Use a disposable PostgreSQL database.
+
+Preferred options:
+
+1. Local ephemeral PostgreSQL.
+
+2. Temporary Replit PostgreSQL instance used only for this branch.
+
+3. Temporary isolated Neon branch explicitly created for tests.
+
+Never use production or shared staging.
+
+Apply migrations from zero before concurrency tests.
+
+Use at least two separate database clients or connections.
+
+Do not simulate concurrency only with sequential mocked calls.
+
+The concurrency tests must use overlapping transactions.
+
+Use synchronization barriers or test hooks where necessary to ensure the transactions overlap at the critical section.
+
+==================================================
+STEP 11 — REQUIRED BEHAVIOURAL TESTS
+==================================================
+
+Add executable tests.
+
+BASIC LAST-OWNER BEHAVIOUR
+
+1. The only active owner cannot be deleted.
+
+2. The only active owner cannot be demoted.
+
+3. The only active owner cannot be deactivated.
+
+4. The only active owner cannot be soft-deleted.
+
+5. The rejection returns the stable domain/HTTP conflict.
+
+6. The membership remains unchanged after rejection.
+
+MULTIPLE OWNERS
+
+7. One owner may be deleted when another active owner remains.
+
+8. One owner may be demoted when another active owner remains.
+
+9. One owner may be deactivated when another active owner remains.
+
+10. The remaining owner stays active.
+
+NON-OWNER OPERATIONS
+
+11. A manager may be updated according to existing policy without invoking last-owner rejection.
+
+12. A staff member may be deleted according to existing policy without invoking owner-count logic.
+
+13. An inactive former owner is not counted as active.
+
+14. A deleted former owner is not counted as active.
+
+MISSING TARGET
+
+15. Missing-member update follows Prompt 7’s documented result.
+
+16. Missing-member delete follows Prompt 7’s documented result.
+
+17. Missing targets do not invoke last-owner rejection.
+
+18. Missing targets do not throw TypeError.
+
+TRANSACTION ROLLBACK
+
+19. A forced mutation failure rolls back the transaction.
+
+20. A failed transaction leaves owner count unchanged.
+
+21. The target membership is unchanged after rollback.
+
+22. The database client is released after failure.
+
+CONCURRENT LAST-OWNER TESTS
+
+23. With two active owners, concurrently deleting both different owners cannot leave zero owners.
+
+Expected result:
+
+- exactly one operation succeeds;
+- the other returns LAST_OWNER_REQUIRED or its documented equivalent;
+- one active owner remains.
+
+24. Concurrent demotion of two different owners cannot leave zero active owners.
+
+25. Concurrent deletion and demotion of different owners cannot leave zero active owners.
+
+26. Concurrent deactivation and deletion cannot leave zero active owners.
+
+27. Repeating the concurrency scenario multiple times never produces zero owners.
+
+28. Concurrent requests use separate database connections.
+
+29. The result is enforced by PostgreSQL locking, not a JavaScript mutex.
+
+LOCK ORDER
+
+30. Every owner-sensitive operation acquires locks in the same order.
+
+31. The test suite does not observe avoidable deadlocks under repeated concurrent execution.
+
+AUTHORIZATION AND TENANT ISOLATION
+
+32. Restaurant A cannot mutate Restaurant B’s owner.
+
+33. Client-provided restaurant ID cannot redirect the transaction.
+
+34. Client-provided owner count is ignored.
+
+35. Client-provided role or superadmin status grants no authority.
+
+36. Existing manager/staff restrictions remain unchanged.
+
+CROSS-RUNTIME PARITY
+
+37. Vercel maps last-owner rejection consistently.
+
+38. Express maps last-owner rejection consistently.
+
+39. Vite maps last-owner rejection consistently.
+
+40. All runtimes reach the same transaction helper.
+
+REGRESSION
+
+41. Prompt 7 canonical team-service tests remain green.
+
+42. Prompt 8 pagination tests remain green.
+
+43. Team-membership safety tests pass when supplied the disposable database.
+
+44. Authentication-bypass tests remain green.
+
+45. Preview-auth tests remain green.
+
+46. Restaurant DTO tests remain green.
+
+47. Superadmin credential tests remain green.
+
+48. Migration-integrity tests remain green.
+
+==================================================
+STEP 12 — REPAIR TEAM-MEMBERSHIP SAFETY TEST INFRASTRUCTURE
+==================================================
+
+Prompt 8 reported that seven team-membership safety tests remained database-dependent.
+
+For this prompt:
+
+1. Run them against the disposable migrated PostgreSQL database.
+
+2. Do not classify them as pre-existing merely because database tables were previously unavailable.
+
+3. Provide the correct isolated test database setup.
+
+4. Ensure test data is created deterministically.
+
+5. Ensure tests clean up after themselves.
+
+6. Do not depend on test execution order.
+
+7. Do not use production credentials.
+
+8. All last-owner-focused safety tests must pass before status COMPLETE.
+
+When an unrelated test still fails, report:
+
+- test name;
+- exact error;
+- why it is outside this prompt;
+- evidence it existed at the starting commit.
+
+==================================================
+STEP 13 — FINAL STATIC SAFETY REVIEW
+==================================================
+
+Search deployable code for:
+
+- COUNT(*) followed by FOR UPDATE for last-owner logic;
+- owner count performed outside a transaction;
+- owner mutation performed after transaction commit;
+- separate last-owner implementations;
+- direct owner deletion outside the canonical helper;
+- direct owner demotion outside the canonical helper;
+- direct owner deactivation outside the canonical helper;
+- inconsistent lock order;
+- JavaScript in-memory mutex used as the invariant;
+- client-provided restaurant ID used as transaction scope;
+- transaction client not released;
+- swallowed rollback;
+- raw PostgreSQL error returned to the client.
+
+Review every match manually.
+
+Unsafe patterns may remain in negative regression-test fixtures only.
+
+==================================================
+STEP 14 — VALIDATION
+==================================================
+
+Use the repository-declared package manager.
+
+Run:
+
+1. Frozen dependency installation.
+
+2. Disposable PostgreSQL zero-to-head migration.
+
+3. Focused last-owner unit tests.
+
+4. Real PostgreSQL concurrency tests.
+
+5. Team-membership safety tests.
+
+6. Prompt 7 canonical service tests.
+
+7. Prompt 8 pagination tests.
+
+8. Tenant-isolation tests.
+
+9. Cross-runtime parity tests.
+
+10. Previous security regression suites.
+
+11. Migration-integrity tests.
+
+12. JavaScript syntax checks.
+
+13. Type checking where configured.
+
+14. Linting where configured.
+
+15. Root production build.
+
+16. git diff against the starting commit.
+
+17. git status.
+
+Do not claim COMPLETE when:
+
+- concurrency tests are not run;
+- only mock-based concurrency tests exist;
+- zero active owners can be produced;
+- focused tests fail;
+- database execution is blocked.
+
+Use PARTIAL or BLOCKED honestly.
+
+==================================================
+PERMITTED FILE SCOPE
+==================================================
+
+Likely files include:
+
+- src/db/neon-restaurant-members.js
+- api/_lib/team-service.js
+- api/team.js
+- server.js
+- vite.config.js
+- shared database transaction helper
+- team-membership safety tests
+- new focused last-owner concurrency tests
+- isolated test-database setup
+
+Do not modify:
+
+- migration files unless strictly required and separately justified;
+- frontend pages;
+- unrelated APIs;
+- package dependencies unless absolutely necessary;
+- Agent-memory files;
+- attached assets;
+- screenshots;
+- pasted prompt files;
+- generated reports.
+
+Explain every changed file in the final response.
+
+==================================================
+COMMIT AND PULL REQUEST
+==================================================
+
+After all acceptance checks pass:
+
+1. Run git status.
+
+2. Confirm only intended Prompt 9 files changed.
+
+3. Commit with:
+
+   fix: serialize last-owner membership mutations
+
+4. Push:
+
+   repair/09-last-owner-transaction
+
+5. Create a pull request targeting:
+
+   main
+
+6. Do not merge the pull request.
+
+7. Do not delete the branch.
+
+==================================================
+ACCEPTANCE CRITERIA
+==================================================
+
+Status may be COMPLETE only when:
+
+1. No aggregate `COUNT(*) ... FOR UPDATE` last-owner lock remains.
+
+2. Every owner-sensitive mutation runs inside a PostgreSQL transaction.
+
+3. One consistent restaurant-scoped lock is used.
+
+4. Every owner-sensitive operation follows the same lock order.
+
+5. The owner check and mutation occur in the same transaction.
+
+6. The post-mutation owner state is evaluated.
+
+7. Concurrent operations cannot leave zero active owners.
+
+8. Real PostgreSQL concurrency tests pass.
+
+9. Transaction rollback is proven.
+
+10. Database clients are released correctly.
+
+11. All runtime adapters use the canonical implementation.
+
+12. Stable last-owner conflict errors are returned consistently.
+
+13. Tenant scope remains server-resolved.
+
+14. Team-membership safety tests run against a disposable database.
+
+15. Prompt 7 and Prompt 8 tests remain green.
+
+16. Previous security and migration tests remain green.
+
+17. Production build passes.
+
+18. No production database is accessed.
+
+19. No production secret is requested or changed.
+
+20. No unrelated files or assets are committed.
+
+Use PARTIAL or BLOCKED when any applicable requirement is not proven.
+
+==================================================
+FINAL RESPONSE
+==================================================
+
+Return this exact structure:
+
+PROMPT 9 COMPLETION SUMMARY
+
+Status:
+- COMPLETE / PARTIAL / BLOCKED
+
+Branch:
+- branch name
+
+Starting commit:
+- exact SHA
+
+Ending commit:
+- exact committed SHA or “Not committed”
+
+Serialization strategy:
+- Parent restaurant row lock / Transaction advisory lock
+- concise reason
+
+Canonical transaction helper:
+- file
+- function name
+- operations covered
+
+Active-owner predicate:
+- exact logical predicate
+
+Lock order:
+- numbered order
+
+Last-owner error:
+- domain code
+- HTTP status
+- public message
+
+Files changed:
+- exact list
+
+Invalid locking removed:
+- COUNT aggregate FOR UPDATE: FOUND / NOT FOUND
+- check outside transaction: FOUND / NOT FOUND
+- duplicate last-owner implementation: FOUND / NOT FOUND
+
+Basic last-owner tests:
+- command
+- passed
+- failed
+- skipped
+
+Concurrency tests:
+- command
+- number of repeated runs
+- passed
+- failed
+- final active-owner count
+- separate DB connections confirmed: YES / NO
+
+Rollback tests:
+- command
+- PASS / FAIL
+
+Team-membership safety tests:
+- command
+- passed
+- failed
+- skipped
+- remaining unrelated failures
+
+Prompt 7 regression tests:
+- command
+- PASS / FAIL
+
+Prompt 8 pagination tests:
+- command
+- PASS / FAIL
+
+Authentication regression tests:
+- command
+- PASS / FAIL
+
+Migration regression tests:
+- command
+- PASS / FAIL
+
+Root production build:
+- command
+- PASS / FAIL
+
+Final safety search:
+- aggregate lock misuse: FOUND / NOT FOUND
+- mutation outside transaction: FOUND / NOT FOUND
+- inconsistent lock order: FOUND / NOT FOUND
+- direct owner mutation bypass: FOUND / NOT FOUND
+- client restaurant scope: FOUND / NOT FOUND
+- unreleased transaction client: FOUND / NOT FOUND
+- raw database error response: FOUND / NOT FOUND
+
+Known out-of-scope risks preserved:
+- membership uniqueness constraint gap
+- other concise items
+
+Production resources accessed:
+- No
+
+Production database accessed:
+- No
+
+Production migrations executed:
+- No
+
+Production secrets changed:
+- No
+
+Git status:
+- clean / not clean
+
+Pull request:
+- PR number
+- base branch
+- compare branch
+
+Recommended pull-request title:
+- fix: serialize last-owner membership mutations
+
+Recommended next action:
+- State whether Prompt 10 may begin.
+
+Final conclusion:
+- State whether Prompt 9 is committed, pushed and ready for pull-request review.
+- Do not claim that the complete repository is production-ready.
