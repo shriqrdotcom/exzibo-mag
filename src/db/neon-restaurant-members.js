@@ -192,16 +192,47 @@ export async function upsertNeonRestaurantMember(restaurantId, member, resolvedU
   `
 }
 
+// ── MEMBERSHIP_IDENTITY_CONFLICT domain error helper ──────────────────────────
+// Stable domain error for duplicate active membership rows.
+// Authorization fails closed — no role or permissions are granted.
+// Public response does not list conflicting row IDs, roles, or emails.
+export function membershipIdentityConflict() {
+  return Object.assign(
+    new Error('Conflicting membership records detected: duplicate active memberships; contact an administrator to resolve duplicates'),
+    { code: 'MEMBERSHIP_IDENTITY_CONFLICT', status: 409 }
+  )
+}
+
+// ── validateIdentityObject ────────────────────────────────────────────────────
+// Validates the canonical identity object:
+//   { userId?: string|null, email?: string|null }
+// Returns a cleaned identity with normalized email.
+// Throws if no identity field is provided.
+function validateIdentityObject(identity) {
+  const userId = identity?.userId ?? null
+  const email = identity?.email ?? null
+  if (!userId && !email) {
+    throw Object.assign(new Error('Identity must include userId or email'), { code: 'INVALID_IDENTITY', status: 400 })
+  }
+  return { userId, email: email ? normalizeEmail(email) : null }
+}
+
 // ── findActiveMemberByIdentity ─────────────────────────────────────────────────
 // Returns every active membership row for a given identity at a restaurant.
 // Applies the canonical identity-alignment rule:
-//   - If resolvedUserId is not null → match by user_id.
-//   - If resolvedUserId is null    → match by email on rows where user_id IS NULL.
+//   - If identity.userId is not null → match by user_id.
+//   - If identity.userId is null    → match by email on rows where user_id IS NULL.
+//
+// identity: { userId?: string|null, email?: string|null }
+//   userId takes precedence when present.
+//   email is normalized (trim → lowercase) automatically.
+//   At least one field must be provided.
 //
 // Normally returns 0 rows (no membership) or 1 row. More than 1 row indicates
-// conflicting duplicate records and must be treated as a data-integrity error.
-export async function findActiveMemberByIdentity(restaurantId, resolvedUserId, normalizedEmail) {
+// conflicting duplicate records and MUST be treated as a data-integrity error.
+export async function findActiveMemberByIdentity(restaurantId, identity) {
   if (!restaurantId) return []
+  const { userId, email } = validateIdentityObject(identity)
   const rows = await sql.query(
     `SELECT id, user_id, email, role, active
      FROM restaurant_members
@@ -211,7 +242,7 @@ export async function findActiveMemberByIdentity(restaurantId, resolvedUserId, n
          ($2::text IS NOT NULL AND user_id = $2)
          OR ($2::text IS NULL AND user_id IS NULL AND lower(trim(email)) = $3)
        )`,
-    [restaurantId, resolvedUserId ?? null, normalizedEmail ?? '']
+    [restaurantId, userId, email ?? '']
   )
   return rows
 }
@@ -219,14 +250,15 @@ export async function findActiveMemberByIdentity(restaurantId, resolvedUserId, n
 // ── findActiveNeonRestaurantMembersByIdentity ────────────────────────────────
 // Canonical name alias for findActiveMemberByIdentity. Used by team-membership-safety
 // tests and future callers that need the longer descriptive import name.
-// Accepts validated identity inputs and returns active memberships only.
+// Accepts the canonical identity object and returns active memberships only.
 export const findActiveNeonRestaurantMembersByIdentity = findActiveMemberByIdentity
 
 // ── hasConflictingNeonRestaurantMembership ────────────────────────────────────
 // Boolean convenience probe for callers that just need to know whether more
 // than one active row matches the supplied identity.
-export async function hasConflictingNeonRestaurantMembership(restaurantId, { email, userId }) {
-  const matches = await findActiveMemberByIdentity(restaurantId, userId, normalizeEmail(email))
+// identity: { userId?, email? } — follows the canonical identity contract.
+export async function hasConflictingNeonRestaurantMembership(restaurantId, identity) {
+  const matches = await findActiveMemberByIdentity(restaurantId, identity)
   return matches.length > 1
 }
 
@@ -234,20 +266,33 @@ export async function hasConflictingNeonRestaurantMembership(restaurantId, { ema
 // Prevent a second active membership for the same person. Server-resolves the
 // user_id from the supplied email, never trusting caller-provided user_id or
 // owner_id. Fail closed if an active membership already exists for this identity.
-export async function createNeonRestaurantMemberSafe(restaurantId, member) {
+//
+// Optionally accepts a resolvedUserId (e.g., from a server-side Better Auth lookup)
+// to bypass the email-based lookup for tests or known-identity contexts.
+// When both resolvedUserId and member.email are provided, lookup is performed
+// by user_id (authoritative) then email-only path (fallback).
+export async function createNeonRestaurantMemberSafe(restaurantId, member, resolvedUserId) {
   if (!member?.id) throw new Error('createNeonRestaurantMemberSafe: member.id is required')
   if (!member.role || !VALID_RESTAURANT_ROLES.has(member.role)) {
     throw Object.assign(new Error(`Invalid role: ${member.role}`), { code: 'INVALID_ROLE', status: 400 })
   }
 
-  // Server-side identity resolution: caller-supplied user_id is ignored.
-  const resolvedUserId = await lookupUserIdByEmail(member.email)
-  const existing = await findActiveMemberByIdentity(restaurantId, resolvedUserId, normalizeEmail(member.email))
+  // Server-side identity resolution: resolvedUserId is trusted (comes from server),
+  // otherwise look up from Better Auth by email. Never trust caller-supplied user_id.
+  if (!resolvedUserId && member.email) {
+    resolvedUserId = await lookupUserIdByEmail(member.email)
+  }
+
+  // Check for existing active membership by canonical identity.
+  // User ID takes precedence when available; email covers unclaimed/pending rows.
+  const identity = { userId: resolvedUserId ?? null, email: member.email ?? null }
+  const existing = await findActiveMemberByIdentity(restaurantId, identity)
   if (existing.length > 0) {
+    if (existing.length > 1) throw membershipIdentityConflict()
     throw Object.assign(new Error('An active membership already exists for this person at this restaurant'), { code: 'DUPLICATE_MEMBERSHIP', status: 409 })
   }
 
-  await upsertNeonRestaurantMember(restaurantId, member, resolvedUserId)
+  await upsertNeonRestaurantMember(restaurantId, member, resolvedUserId ?? null)
 }
 
 // ── updateNeonRestaurantMemberSafe ────────────────────────────────────────────
@@ -282,10 +327,14 @@ export async function updateNeonRestaurantMemberSafe(restaurantId, member, { cal
       // already uses that identity. Email alone must never override a different user_id.
       const currentResolvedUserId = await lookupUserIdByEmail(target.email)
       const identityUserId = resolvedUserId ?? currentResolvedUserId ?? null
-      const identityEmail = resolvedUserId ? null : normalizeEmail(member.email)
-      const identityMatches = await findActiveMemberByIdentity(restaurantId, identityUserId, identityEmail)
+      const identity = {
+        userId: identityUserId,
+        email: identityUserId ? null : normalizeEmail(member.email),
+      }
+      const identityMatches = await findActiveMemberByIdentity(restaurantId, identity)
       const others = identityMatches.filter(m => m.id !== member.id)
       if (others.length > 0) {
+        if (others.length > 1) throw membershipIdentityConflict()
         throw Object.assign(new Error('Another active membership already exists for this identity'), { code: 'DUPLICATE_MEMBERSHIP', status: 409 })
       }
 
