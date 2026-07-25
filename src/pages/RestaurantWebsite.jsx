@@ -511,6 +511,8 @@ export default function RestaurantWebsite() {
   const [showOrderConfirm, setShowOrderConfirm] = useState(false)
   const orderKeyRef = useRef(null)
   const bookingKeyRef = useRef(null)
+  // bookingForm must be declared before the useEffect that references it (TDZ guard)
+  const [bookingForm, setBookingForm] = useState({ name: '', phone: '', email: '', date: '', time: '19:00', guests: 2, occasion: 'Casual Dining', seating: 'Indoor', notes: '' })
   useEffect(() => { setShowOrderConfirm(false); setShowHelpSheet(false) }, [activeNav])
   useEffect(() => { orderKeyRef.current = null }, [cartItems])
   useEffect(() => { bookingKeyRef.current = null }, [bookingForm])
@@ -696,7 +698,6 @@ export default function RestaurantWebsite() {
     return () => window.removeEventListener('scroll', onNavScroll)
   }, [])
 
-  const [bookingForm, setBookingForm] = useState({ name: '', phone: '', email: '', date: '', time: '19:00', guests: 2, occasion: 'Casual Dining', seating: 'Indoor', notes: '' })
   const [bookingSubmitted, setBookingSubmitted] = useState(false)
   const [bookingErrors, setBookingErrors] = useState({})
   const [bookingSubmitError, setBookingSubmitError] = useState('')
