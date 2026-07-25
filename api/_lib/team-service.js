@@ -33,11 +33,6 @@ import {
 // Allowed fields for team member mutations (create/update).
 // Reject unknown and sensitive fields to prevent callers from setting
 // password, isSuperadmin, owner_id, or internal permissions.
-const ALLOWED_MEMBER_FIELDS = Object.freeze([
-  'id', 'name', 'email', 'role', 'category', 'department',
-  'phone', 'active', 'created_at', 'restaurant_id', 'owner_id',
-])
-
 export const TEAM_WRITE_ROLES = Object.freeze(['owner', 'admin'])
 export const VALID_RESTAURANT_ROLES = DB_VALID_ROLES
 

@@ -192,10 +192,6 @@ export async function upsertNeonRestaurantMember(restaurantId, member, resolvedU
   `
 }
 
-// ── findActiveNeonRestaurantMembersByIdentity ────────────────────────────────
-// Canonical name alias, used by team-membership-safety tests.
-export const findActiveNeonRestaurantMembersByIdentity = findActiveMemberByIdentity
-
 // ── findActiveMemberByIdentity ─────────────────────────────────────────────────
 // Returns every active membership row for a given identity at a restaurant.
 // Applies the canonical identity-alignment rule:
