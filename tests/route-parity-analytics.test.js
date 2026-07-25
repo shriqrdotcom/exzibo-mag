@@ -76,20 +76,20 @@ describe('2. By-UID uses the UID lookup', () => {
     assert.ok(!uidFnMatch[0].includes('WHERE id ='), 'By-UID must not query WHERE id =')
   })
 
-  it('server.js has GET /api/neon/restaurant/by-uid/:uid route using getNeonRestaurantByUid', () => {
+  it('server.js has GET /api/neon/restaurant/by-uid/:uid route using lookupRestaurantByUid', () => {
     const content = fs.readFileSync('server.js', 'utf-8')
-    assert.ok(content.includes("getNeonRestaurantByUid(req.params.uid)"), 'Express by-uid uses getNeonRestaurantByUid')
+    assert.ok(content.includes("lookupRestaurantByUid(req.params.uid)"), 'Express by-uid uses lookupRestaurantByUid')
   })
 
-  it('vite.config.js has /by-uid/ route using getNeonRestaurantByUid', () => {
+  it('vite.config.js has /by-uid/ route using lookupRestaurantByUid', () => {
     const content = fs.readFileSync('vite.config.js', 'utf-8')
-    assert.ok(content.includes("getNeonRestaurantByUid(uid)"), 'Vite by-uid uses getNeonRestaurantByUid')
+    assert.ok(content.includes("lookupRestaurantByUid(uid)"), 'Vite by-uid uses lookupRestaurantByUid')
   })
 
-  it('api/restaurants.js has byUid action using getNeonRestaurantByUid', () => {
+  it('api/restaurants.js has byUid action using lookupRestaurantByUid', () => {
     const content = fs.readFileSync('api/restaurants.js', 'utf-8')
     assert.ok(content.includes("action === 'byUid'"), 'Vercel has byUid action')
-    assert.ok(content.includes("getNeonRestaurantByUid(uid)"), 'Vercel byUid uses getNeonRestaurantByUid')
+    assert.ok(content.includes("lookupRestaurantByUid(uid)"), 'Vercel byUid uses lookupRestaurantByUid')
   })
 
   it('vercel.json maps /api/neon/restaurant/by-uid/:uid to action=byUid&uid=:uid (not byId)', () => {
@@ -143,24 +143,24 @@ describe('3. By-slug uses the slug lookup', () => {
 // =============================================================================
 
 describe('4. Cross-runtime lookup contract consistency', () => {
-  it('all three runtimes export the same three lookup functions', () => {
-    // Express imports
+  it('all three runtimes expose the same three lookup paths', () => {
+    // All three runtimes must have the by-uID lookup available
     const svContent = fs.readFileSync('server.js', 'utf-8')
+    const vcContent = fs.readFileSync('vite.config.js', 'utf-8')
+    const arContent = fs.readFileSync('api/restaurants.js', 'utf-8')
+
+    // All three import the shared restaurant-lookup service
+    assert.ok(svContent.includes('restaurant-lookup.js'), 'Express imports restaurant-lookup.js')
+    assert.ok(vcContent.includes('restaurant-lookup.js'), 'Vite imports restaurant-lookup.js')
+    assert.ok(arContent.includes('restaurant-lookup.js'), 'Vercel imports restaurant-lookup.js')
+
+    // All three continue to import direct DB functions (by-id, by-slug)
     assert.ok(svContent.includes('getNeonRestaurantById'))
     assert.ok(svContent.includes('getNeonRestaurantBySlug'))
-    assert.ok(svContent.includes('getNeonRestaurantByUid'))
-
-    // Vite imports
-    const vcContent = fs.readFileSync('vite.config.js', 'utf-8')
     assert.ok(vcContent.includes('getNeonRestaurantById'))
     assert.ok(vcContent.includes('getNeonRestaurantBySlug'))
-    assert.ok(vcContent.includes('getNeonRestaurantByUid'))
-
-    // Vercel imports
-    const arContent = fs.readFileSync('api/restaurants.js', 'utf-8')
     assert.ok(arContent.includes('getNeonRestaurantById'))
     assert.ok(arContent.includes('getNeonRestaurantBySlug'))
-    assert.ok(arContent.includes('getNeonRestaurantByUid'))
   })
 
   it('all three runtimes return toPublicRestaurant for public lookups', () => {

@@ -7,7 +7,7 @@ import { neonHealthCheck } from './src/db/index.js'
 import {
   getNeonRestaurantById,
   getNeonRestaurantBySlug,
-  getNeonRestaurantByUid,
+  getNeonRestaurants,
   createNeonRestaurant,
   patchNeonRestaurant,
   patchNeonRestaurantProfile,
@@ -17,6 +17,7 @@ import {
   toSuperadminRestaurant,
   getNeonRestaurants,
 } from './src/db/neon-restaurants.js'
+import { lookupRestaurantByUid } from './api/_lib/restaurant-lookup.js'
 import { createRestaurantAtomic } from './src/services/restaurantCreationService.js'
 import { normalizeAndValidateSlug } from './src/lib/slug-utils.js'
 import * as menuService from './src/services/menuService.js'
@@ -1137,10 +1138,8 @@ app.get('/api/neon/restaurant/by-slug/:slug', async (req, res) => {
 
 // GET /api/neon/restaurant/by-uid/:uid — public
 app.get('/api/neon/restaurant/by-uid/:uid', async (req, res) => {
-  try {
-    const row = await getNeonRestaurantByUid(req.params.uid)
-    return row ? res.json(toPublicRestaurant(row)) : res.status(404).json({ error: 'Not found' })
-  } catch (err) { return res.status(500).json({ error: err.message }) }
+  const result = await lookupRestaurantByUid(req.params.uid)
+  return res.status(result.status).json(result.body)
 })
 
 // POST /api/neon/restaurant/create — requires superadmin

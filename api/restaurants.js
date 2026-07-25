@@ -12,6 +12,7 @@ import {
   toSuperadminRestaurant,
   neonRowWithTables,
 } from '../src/db/neon-restaurants.js'
+import { lookupRestaurantByUid } from './_lib/restaurant-lookup.js'
 import { createRestaurantAtomic } from '../src/services/restaurantCreationService.js'
 import { getRestaurantAnalytics, authorizeAnalyticsAccess } from '../src/services/analyticsService.js'
 import { neon } from '../src/db/pg-sql.js'
@@ -122,10 +123,9 @@ export default async function handler(req, res) {
 
     if (action === 'byUid') {
       const { uid } = req.query
-      if (!uid) return badInput(res, 'uid required', requestId)
-      const row = await getNeonRestaurantByUid(uid)
-      if (!row) return notFound(res, 'Not found', requestId)
-      return res.json(toPublicRestaurant(row))
+      const result = await lookupRestaurantByUid(uid)
+      if (result.status === 200) return res.status(200).json(result.body)
+      return safeError(res, result.status, result.body.error, requestId)
     }
 
     // ── GET: analytics — restaurant analytics (management roles only) ─────────
