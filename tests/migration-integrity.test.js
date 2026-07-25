@@ -186,6 +186,7 @@ describe('9 — Required migrations are present in the journal', async () => {
     '0008_secure_booking_creation',
     '0009_idempotency_records',
     '0010_realtime_outbox',
+    '0011_realtime_outbox_claim_lease',
   ]
 
   for (const tag of REQUIRED) {

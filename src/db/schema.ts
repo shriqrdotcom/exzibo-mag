@@ -358,6 +358,9 @@ export const realtimeOutbox = pgTable(
     nextAttemptTime:  timestamp('next_attempt_time', { withTimezone: true }).notNull().default(sql`now()`),
     publishedAt:      timestamp('published_at', { withTimezone: true }),
     lastError:        text('last_error'),
+    claimedBy:        text('claimed_by'),                // worker ID that claimed this row
+    claimToken:       uuid('claim_token'),               // unique claim token for CAS operations
+    leaseUntil:       timestamp('lease_until', { withTimezone: true }), // lease expiration
     createdAt:        timestamp('created_at', { withTimezone: true }).notNull().default(sql`now()`),
   },
   (t) => [

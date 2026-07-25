@@ -1,0 +1,162 @@
+Prompt 11 has now been merged into main.
+
+Do not continue from the old Prompt 11 branch.
+Do not branch Prompt 12 from an unmerged commit.
+Do not modify code until the repository history is verified.
+
+==================================================
+STEP 1 — ABORT THE OLD PROMPT 12 START
+==================================================
+
+If a Prompt 12 branch was already created from the unmerged Prompt 11 state:
+
+- do not continue working on it;
+- do not commit it;
+- do not push it;
+- delete it only if it contains no unique work.
+
+Prompt 12 must start from the latest verified origin/main.
+
+==================================================
+STEP 2 — SYNC MAIN
+==================================================
+
+Run:
+
+git fetch origin --prune
+git switch main
+git pull --ff-only origin main
+
+If local main has diverged:
+
+1. Report the local and remote SHAs.
+2. Confirm the working tree contains no valuable uncommitted changes.
+3. Do not run a destructive reset without first reporting the divergence.
+
+Confirm:
+
+git status
+
+The working tree must be fully clean, including no untracked prompt files, screenshots, Agent-memory files or attached assets.
+
+==================================================
+STEP 3 — VERIFY PROMPT 11
+==================================================
+
+Verify this Prompt 11 commit is an ancestor of origin/main:
+
+580fae1a8edc1f1b39a84ce52d66ec23ae71247b
+
+Run an ancestry check equivalent to:
+
+git merge-base --is-ancestor 580fae1a8edc1f1b39a84ce52d66ec23ae71247b origin/main
+
+Confirm that origin/main contains:
+
+- src/services/eventEnvelope.js
+- immutable outbox row ID/eventId handling;
+- no empty eventId in active producers;
+- retry-stable event identity;
+- publisher validation based on outbox row ID.
+
+==================================================
+STEP 4 — VERIFY THE COMPLETE DEPENDENCY CHAIN
+==================================================
+
+Before Prompt 12, verify that the completed work from these pull requests is present in origin/main:
+
+- PR #33 — Prompt 8 team pagination
+- PR #34 — Prompt 9 last-owner transaction
+- PR #35 — Prompt 10 settings global_config
+- Prompt 11 commit 580fae1a8edc1f1b39a84ce52d66ec23ae71247b
+
+Inspect Git history and relevant source files.
+
+For Prompt 8, verify at minimum:
+
+- active filtering occurs before LIMIT;
+- ordering uses created_at ASC, id ASC;
+- the cursor comparator matches ascending order.
+
+For Prompt 9, verify at minimum:
+
+- owner-sensitive mutations use a real PostgreSQL transaction;
+- last-owner protection uses the corrected restaurant-scoped serialization strategy.
+
+For Prompt 10, verify at minimum:
+
+- restaurant settings use restaurant_settings.global_config;
+- no broken restaurant-settings key/value-column query remains.
+
+For Prompt 11, verify at minimum:
+
+- outbox row ID equals eventId;
+- retries preserve the eventId.
+
+If any Prompt 8–11 change is missing from origin/main:
+
+1. Do not create the Prompt 12 branch.
+2. Do not merge old PRs automatically.
+3. Report:
+   - missing prompt;
+   - missing commit or PR;
+   - whether its branch still exists;
+   - whether its changes were superseded by a later commit;
+   - the safest remediation.
+
+==================================================
+STEP 5 — START PROMPT 12 ONLY WHEN VERIFIED
+==================================================
+
+Only when all Prompt 8–11 protections are confirmed in origin/main:
+
+1. Record the exact origin/main SHA.
+2. Confirm git status is clean.
+3. Create:
+
+   repair/12-outbox-claim-lease
+
+4. Begin the complete Prompt 12 instructions already provided.
+
+Do not work directly on main.
+Do not continue from repair/11-realtime-event-id-contract.
+Do not add Agent-memory files, assets, screenshots or pasted prompt files.
+
+Return:
+
+PROMPT 12 PRECONDITION VERIFICATION
+
+Origin main SHA:
+- exact SHA
+
+Prompt 8 present:
+- YES / NO
+- evidence
+
+Prompt 9 present:
+- YES / NO
+- evidence
+
+Prompt 10 present:
+- YES / NO
+- evidence
+
+Prompt 11 present:
+- YES / NO
+- evidence
+
+Prompt 11 commit is ancestor of origin/main:
+- YES / NO
+
+Working tree:
+- clean / not clean
+
+Prompt 12 branch:
+- created / not created
+
+Final decision:
+- Prompt 12 may begin / Prompt 12 is blocked
+
+If blocked:
+- exact missing dependency
+- safest next action
