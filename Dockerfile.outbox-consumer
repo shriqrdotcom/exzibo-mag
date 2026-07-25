@@ -1,0 +1,72 @@
+# Dockerfile.outbox-consumer
+#
+# Provider-neutral deployment artifact for the dedicated realtime outbox consumer.
+# Builds a minimal image that runs only the consumer — no frontend, no API server.
+#
+# Build:
+#   docker build -f Dockerfile.outbox-consumer -t outbox-consumer .
+#
+# Run:
+#   docker run -e DATABASE_URL=... -e REALTIME_URL=... -e REALTIME_PUBLISH_SECRET=... outbox-consumer
+#
+# Health check:
+#   curl http://localhost:9090/healthz   (liveness)
+#   curl http://localhost:9090/readyz    (readiness)
+
+FROM node:22-slim AS base
+WORKDIR /app
+
+# Install pnpm
+RUN corepack enable && corepack prepare pnpm@10.26.1 --activate
+
+# ── Dependencies layer ────────────────────────────────────────────────────
+FROM base AS deps
+COPY package.json pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile --prod
+
+# ── Runtime layer ──────────────────────────────────────────────────────────
+FROM base AS runtime
+
+# Create non-root user
+RUN groupadd -r appuser && useradd -r -g appuser appuser
+
+COPY --from=deps /app/node_modules ./node_modules
+
+# Copy only the consumer runtime files
+COPY src/config/outboxConsumerConfig.js ./src/config/outboxConsumerConfig.js
+COPY src/services/outboxClaimService.js ./src/services/outboxClaimService.js
+COPY src/services/realtimeOutboxProcessor.js ./src/services/realtimeOutboxProcessor.js
+COPY src/services/consumerHeartbeatService.js ./src/services/consumerHeartbeatService.js
+COPY src/services/outboxReadinessService.js ./src/services/outboxReadinessService.js
+COPY src/services/eventEnvelope.js ./src/services/eventEnvelope.js
+COPY scripts/runRealtimeOutboxConsumer.js ./scripts/runRealtimeOutboxConsumer.js
+
+# Verify required files exist
+RUN node -e "
+  const fs = require('fs');
+  const files = [
+    'src/config/outboxConsumerConfig.js',
+    'src/services/outboxClaimService.js',
+    'src/services/realtimeOutboxProcessor.js',
+    'src/services/consumerHeartbeatService.js',
+    'src/services/outboxReadinessService.js',
+    'src/services/eventEnvelope.js',
+    'scripts/runRealtimeOutboxConsumer.js',
+  ];
+  const missing = files.filter(f => !fs.existsSync(f));
+  if (missing.length > 0) {
+    console.error('Missing required files:', missing);
+    process.exit(1);
+  }
+  console.log('All consumer files present');
+"
+
+USER appuser
+
+EXPOSE 9090
+
+# Health check
+HEALTHCHECK --interval=15s --timeout=5s --start-period=10s --retries=2 \
+  CMD node -e "fetch('http://localhost:9090/healthz').then(r => process.exit(r.ok?0:1)).catch(() => process.exit(1))"
+
+ENTRYPOINT ["node", "scripts/runRealtimeOutboxConsumer.js"]
