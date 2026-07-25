@@ -38,12 +38,31 @@ const KNOWN_SETTINGS_KEYS = new Set([
   'menu_presentation',
 ])
 
-// ── Public settings keys (subset exposed via getPublicRestaurantConfig) ───────
+// ── Public settings keys (exposed via getPublicRestaurantConfig) ──────────────
 const PUBLIC_SETTINGS_KEYS = new Set([
   'theme',
   'logo_url',
   'cover_url',
   'restaurant_hours',
+  'public_phone',
+  'public_email',
+  'public_social_links',
+  'ordering_available',
+  'booking_available',
+  'menu_presentation',
+])
+
+// ── Private settings keys (exposed via getPrivateRestaurantConfig) ────────────
+// Explicit allowlist for authorized/authenticated users. Unknown internal or
+// future keys are automatically excluded. No secrets, tokens, credentials,
+// infrastructure values, billing identifiers, private storage keys, or
+// unsupported feature flags are included.
+const PRIVATE_SETTINGS_KEYS = new Set([
+  'menu_filters',
+  'restaurant_hours',
+  'theme',
+  'logo_url',
+  'cover_url',
   'public_phone',
   'public_email',
   'public_social_links',
@@ -239,6 +258,25 @@ export async function getPublicRestaurantConfig(restaurantId) {
   const config = await getRestaurantGlobalConfig(restaurantId)
   const result = {}
   for (const key of PUBLIC_SETTINGS_KEYS) {
+    if (key in config) {
+      result[key] = config[key]
+    }
+  }
+  return result
+}
+
+// ── getPrivateRestaurantConfig ───────────────────────────────────────────────
+// Returns only the approved settings for an authorized/authenticated user.
+// Uses an explicit property allowlist — never spreads global_config directly.
+// Unknown internal or future keys, secrets, tokens, credentials, infrastructure
+// values, billing identifiers, private storage keys, and unsupported feature
+// flags are automatically excluded.
+export async function getPrivateRestaurantConfig(restaurantId) {
+  if (!restaurantId) throw serviceError('restaurantId is required', 'INVALID_INPUT', 400)
+
+  const config = await getRestaurantGlobalConfig(restaurantId)
+  const result = {}
+  for (const key of PRIVATE_SETTINGS_KEYS) {
     if (key in config) {
       result[key] = config[key]
     }
