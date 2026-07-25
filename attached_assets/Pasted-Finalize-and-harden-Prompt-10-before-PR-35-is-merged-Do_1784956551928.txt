@@ -1,0 +1,263 @@
+Finalize and harden Prompt 10 before PR #35 is merged.
+
+Do not begin Prompt 11.
+Do not merge directly into main.
+Do not add unrelated changes.
+
+Current branch:
+
+repair/10-settings-global-config-contract
+
+==================================================
+1. VERIFY PRIVATE SETTINGS PROJECTION
+==================================================
+
+The completion summary currently says:
+
+“Private settings DTO: Full KNOWN_SETTINGS_KEYS + any internal keys”
+
+This is not acceptable.
+
+Change the private settings DTO so that:
+
+1. It uses an explicit allowlist.
+2. Unknown internal or future keys are excluded automatically.
+3. No raw global_config object is returned.
+4. No object spread exposes every stored key.
+5. Secrets, tokens, credentials, infrastructure values, billing identifiers, private storage keys and unsupported feature flags are excluded.
+6. Public and private projections remain separate.
+7. Add a synthetic future-sensitive field test proving it is excluded.
+
+The final summary must list the exact approved private fields.
+
+==================================================
+2. RECHECK THE FIVE REGRESSION FAILURES
+==================================================
+
+The report currently shows:
+
+Prompt 7/9 regression tests: 17/22 passed, 5 failed.
+
+Do not classify these as pre-existing without reproducible evidence.
+
+1. List the exact five failing test names.
+2. Include their exact errors.
+3. Run them using the correct disposable migrated PostgreSQL database.
+4. Confirm all required tables and test data exist.
+5. Run the same tests against the Prompt 10 starting commit:
+
+   389915ffc2f1ef2138bd2b721ec7c551e0cbbde9
+
+6. Do not modify main or lose the current branch changes while comparing.
+7. Classify every failure as:
+   - caused by Prompt 10;
+   - environment/setup failure;
+   - confirmed pre-existing source failure;
+   - already expected to have been fixed by Prompt 7 or Prompt 9.
+
+If a Prompt 7 or Prompt 9 acceptance test still fails with the correct database setup, Prompt 10 must not be reported COMPLETE.
+
+Fix regressions caused by Prompt 10.
+
+For unrelated confirmed pre-existing failures, provide exact evidence from both commits.
+
+==================================================
+3. STRENGTHEN CROSS-RUNTIME PARITY PROOF
+==================================================
+
+The summary reports only static-source parity checks.
+
+Add or run behavioural tests proving that equivalent settings requests through:
+
+- Vercel;
+- Express;
+- Vite;
+
+produce the same:
+
+- authorization result;
+- tenant scope;
+- validation result;
+- read response;
+- write response;
+- public/private projection;
+- error status.
+
+All adapters must call the canonical settings service.
+
+Do not rely only on searching source-code strings.
+
+==================================================
+4. VERIFY SETTINGS AUTHORIZATION
+==================================================
+
+Confirm through behavioural tests:
+
+1. Unauthenticated private read returns 401.
+2. Unauthenticated write returns 401.
+3. Wrong-tenant read is denied.
+4. Wrong-tenant write is denied.
+5. Client restaurantId cannot redirect a read or write.
+6. Client role or isSuperadmin fields grant no authority.
+7. Public settings expose only the approved public DTO.
+8. Private settings require the existing authorized role.
+
+==================================================
+5. VERIFY THE PR FILE SCOPE
+==================================================
+
+PR #35 should contain only intended Prompt 10 files, expected to be:
+
+- api/settings.js
+- src/services/restaurantSettingsService.js
+- tests/settings-global-config.test.js
+
+Explain any additional file.
+
+Exclude:
+
+- .agents/memory/**
+- attached_assets/**
+- screenshots
+- pasted prompt files
+- generated reports
+- migrations unless strictly required
+- dependency changes
+- unrelated documentation
+
+==================================================
+6. FINAL VALIDATION
+==================================================
+
+Run:
+
+1. Frozen dependency installation.
+2. Zero-to-head disposable PostgreSQL migration.
+3. Focused settings tests.
+4. Public/private DTO tests.
+5. Tenant-isolation tests.
+6. Settings concurrency tests.
+7. Behavioural cross-runtime parity tests.
+8. Prompt 7 tests.
+9. Prompt 8 pagination tests.
+10. Prompt 9 last-owner and concurrency tests.
+11. Authentication and preview-auth regression tests.
+12. Restaurant DTO security tests.
+13. Migration-integrity tests.
+14. Complete configured test suite.
+15. Root production build.
+16. Final static safety search.
+17. git diff against the starting commit.
+18. git status.
+
+Do not claim COMPLETE when an applicable regression test fails.
+
+==================================================
+7. COMMIT AND PUSH
+==================================================
+
+Commit only required corrections using:
+
+fix: finalize safe restaurant settings contract
+
+Push the updated branch to PR #35.
+
+Do not merge the PR.
+
+==================================================
+FINAL RESPONSE
+==================================================
+
+Return:
+
+PROMPT 10 FINALIZATION SUMMARY
+
+Status:
+- COMPLETE / PARTIAL / BLOCKED
+
+Branch:
+- branch name
+
+Starting commit:
+- exact SHA
+
+Ending commit:
+- exact committed SHA
+
+Files remaining in PR:
+- exact list
+
+Public DTO allowlist:
+- exact fields
+
+Private DTO allowlist:
+- exact fields
+
+Synthetic sensitive fields excluded:
+- exact test result
+
+Five previous regression failures:
+- exact test name
+- exact error
+- result on starting commit
+- result on current branch
+- classification
+
+Prompt 7 regression tests:
+- command
+- passed
+- failed
+- skipped
+
+Prompt 8 regression tests:
+- command
+- passed
+- failed
+- skipped
+
+Prompt 9 regression/concurrency tests:
+- command
+- passed
+- failed
+- skipped
+
+Behavioural cross-runtime parity:
+- Vercel: PASS / FAIL
+- Express: PASS / FAIL
+- Vite: PASS / FAIL
+
+Focused settings tests:
+- command
+- passed
+- failed
+- skipped
+
+Complete suite:
+- command
+- passed
+- failed
+- skipped
+
+Production build:
+- PASS / FAIL
+
+Final safety search:
+- key/value-column query: FOUND / NOT FOUND
+- raw public global_config: FOUND / NOT FOUND
+- arbitrary private keys exposed: FOUND / NOT FOUND
+- client restaurant authority: FOUND / NOT FOUND
+- unvalidated write: FOUND / NOT FOUND
+- lost-update pattern: FOUND / NOT FOUND
+- runtime DDL: FOUND / NOT FOUND
+
+Git status:
+- clean / not clean
+
+Pull request:
+- PR #35
+- base branch
+- compare branch
+
+Final conclusion:
+- State whether Prompt 10 is clean and ready to merge.
+- Do not claim the complete repository is production-ready.
