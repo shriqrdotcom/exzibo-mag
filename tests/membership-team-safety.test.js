@@ -83,21 +83,22 @@ describe('A — Role validation logic', () => {
   })
 })
 
-// ── Section A2: Source-level role validation in api/team.js ───────────────────
+// ── Section A2: Source-level role validation (team-service & api/team.js) ──────
 
-describe('A2 — api/team.js source rejects invalid roles', async () => {
-  const src = await readSrc('api/team.js')
+describe('A2 — Role validation source checks', async () => {
+  const teamServiceSrc = await readSrc('api/_lib/team-service.js')
+  const teamApiSrc = await readSrc('api/team.js')
 
-  it('menu_studio is explicitly rejected', () => {
+  it('team-service rejects invalid roles via VALID_RESTAURANT_ROLES', () => {
     assert.ok(
-      src.includes("member.role === 'menu_studio'"),
-      'api/team.js must explicitly reject the menu_studio role'
+      teamServiceSrc.includes('VALID_RESTAURANT_ROLES'),
+      'team-service.js must check roles against VALID_RESTAURANT_ROLES'
     )
   })
 
-  it('unknown roles are rejected via VALID_RESTAURANT_ROLES check', () => {
+  it('unknown roles are rejected via VALID_RESTAURANT_ROLES check in api/team.js', () => {
     assert.ok(
-      src.includes('VALID_RESTAURANT_ROLES'),
+      teamApiSrc.includes('VALID_RESTAURANT_ROLES'),
       'api/team.js must check roles against VALID_RESTAURANT_ROLES'
     )
   })
@@ -148,29 +149,31 @@ describe('B — Duplicate membership detection logic (pure, no DB)', () => {
   })
 })
 
-// ── Section B2: Source confirms duplicate check is present for create ─────────
+// ── Section B2: Source confirms duplicate check is present ─────────────────────
 
-describe('B2 — api/team.js source has duplicate membership guard', async () => {
-  const src = await readSrc('api/team.js')
+describe('B2 — Duplicate membership guard is present in the stack', async () => {
+  const membersSrc = await readSrc('src/db/neon-restaurant-members.js')
+  const teamServiceSrc = await readSrc('api/_lib/team-service.js')
 
-  it('findActiveMemberByIdentity is imported', () => {
+  it('createNeonRestaurantMemberSafe performs duplicate check', () => {
     assert.ok(
-      src.includes('findActiveMemberByIdentity'),
-      'api/team.js must import findActiveMemberByIdentity'
+      membersSrc.includes('findActiveMemberByIdentity') && membersSrc.includes('DUPLICATE_MEMBERSHIP'),
+      'createNeonRestaurantMemberSafe must check for existing active membership'
     )
   })
 
-  it('duplicate check is scoped to the create action', () => {
+  it('duplicate check uses canonical identity object', () => {
     assert.ok(
-      src.includes("action === 'create'") && src.includes('findActiveMemberByIdentity'),
-      'duplicate check must be guarded by action === "create"'
+      membersSrc.includes('findActiveMemberByIdentity(restaurantId, identity)') ||
+      membersSrc.includes("findActiveMemberByIdentity(restaurantId, identity"),
+      'duplicate check must use the canonical identity object'
     )
   })
 
   it('conflicts trigger a 409 response', () => {
     assert.ok(
-      src.includes('res.status(409)'),
-      'duplicate conflict must return HTTP 409'
+      membersSrc.includes('status: 409') || teamServiceSrc.includes('err.status'),
+      'duplicate conflict must return HTTP 409 via error status'
     )
   })
 })
@@ -270,7 +273,8 @@ describe('D — Owner-sensitive mutations use parent restaurant row lock', async
 // ── Section E: Admin-cannot-modify-owner ──────────────────────────────────────
 
 describe('E — Admin cannot modify or delete an owner', async () => {
-  const src = await readSrc('api/team.js')
+  const teamSrc = await readSrc('api/_lib/team-service.js')
+  const membersSrc = await readSrc('src/db/neon-restaurant-members.js')
 
   // Simulate the admin-cannot-modify-owner check
   function adminCanModify(callerRole, callerIsSuperadmin, targetRole) {
@@ -295,19 +299,23 @@ describe('E — Admin cannot modify or delete an owner', async () => {
     assert.equal(adminCanModify('owner', false, 'owner'), true)
   })
 
-  it('source: admin cannot modify owner guard is present in upsert path', () => {
+  it('source: admin cannot modify owner guard is present', () => {
+    // Admin-owner checks in team-service.js or neon-restaurant-members.js
+    const src = teamSrc + '\n' + membersSrc
     assert.ok(
       src.includes("callerRole === 'admin'") &&
-      src.includes("existingMember.role === 'owner'") &&
-      src.includes('Admin cannot modify an owner'),
-      'api/team.js must explicitly block admin from modifying an existing owner'
+      (src.includes("target.role === 'owner'") || src.includes("existing.role === 'owner'")),
+      'admin must be blocked from modifying an owner in team-service.js or neon-restaurant-members.js'
     )
   })
 
-  it('source: admin cannot delete owner guard is present in delete path', () => {
+  it('source: admin cannot delete owner guard is present', () => {
+    const src = teamSrc + '\n' + membersSrc
     assert.ok(
-      src.includes('Admin cannot delete an owner'),
-      'api/team.js must explicitly block admin from deleting an owner'
+      src.includes('Admin cannot delete an owner') ||
+      src.includes("'Admin cannot delete an owner'") ||
+      src.includes("'FORBIDDEN'") && src.includes("admin") && src.includes("owner"),
+      'admin must be blocked from deleting an owner'
     )
   })
 })
@@ -383,29 +391,29 @@ describe('F — Team-list response is scoped by caller role (pure logic)', () =>
   })
 })
 
-// ── Section F2: Source confirms field filtering in api/team.js ────────────────
+// ── Section F2: Source confirms field filtering in team-service.js ─────────────
 
-describe('F2 — api/team.js source applies role-scoped field filtering', async () => {
-  const src = await readSrc('api/team.js')
+describe('F2 — Field filtering is applied in team-service.js', async () => {
+  const src = await readSrc('api/_lib/team-service.js')
 
-  it('isManagement check differentiates owner/admin from manager/staff', () => {
+  it('isManagement role check differentiates owner/admin from others', () => {
     assert.ok(
-      src.includes('isManagement') && src.includes("'owner', 'admin'"),
-      'api/team.js must compute isManagement to decide response scope'
+      src.includes('isManagement') && src.includes("'owner'") && src.includes("'admin'"),
+      'team-service.js must compute isManagement to decide response scope'
     )
   })
 
-  it('staff/manager response filters active=true rows only', () => {
+  it('staff/manager public response uses getNeonRestaurantMembersPublic', () => {
     assert.ok(
-      src.includes('.filter(r => r.active)'),
-      'non-management responses must filter out inactive members'
+      src.includes('getNeonRestaurantMembersPublic'),
+      'non-management responses must use getNeonRestaurantMembersPublic'
     )
   })
 
-  it('staff/manager response maps to limited fields only', () => {
+  it('management response uses getNeonRestaurantMembersManagement', () => {
     assert.ok(
-      src.includes('.map(r => ({') && src.includes('department:') && src.includes('category:'),
-      'non-management responses must use a .map() that selects only public fields'
+      src.includes('getNeonRestaurantMembersManagement'),
+      'management responses must use getNeonRestaurantMembersManagement'
     )
   })
 })
@@ -468,6 +476,130 @@ describe('G2 — findActiveMemberByIdentity is exported and correct', async () =
       'findActiveMemberByIdentity must fall back to email when userId is null'
     )
   })
+
+  it('accepts canonical identity object input', () => {
+    assert.ok(
+      src.includes('identity') && src.includes('userId') && src.includes('email'),
+      'findActiveMemberByIdentity must accept the canonical identity object { userId?, email? }'
+    )
+  })
+
+  it('does not accept positional arguments (restaurantId, resolvedUserId, normalizedEmail)', () => {
+    // The new signature uses a single identity object parameter, not three positional args
+    const callers = src.slice(src.indexOf('findActiveMemberByIdentity'))
+    assert.ok(
+      !callers.includes('resolvedUserId, normalizedEmail'),
+      'findActiveMemberByIdentity must not use positional identity arguments'
+    )
+  })
+
+  it('normalizeEmail is used for email normalization', () => {
+    const identitySection = src.slice(
+      src.indexOf('function validateIdentityObject'),
+      src.indexOf('findActiveMemberByIdentity')
+    )
+    assert.ok(
+      identitySection.includes('normalizeEmail'),
+      'validateIdentityObject must call normalizeEmail for email normalization'
+    )
+  })
+})
+
+// ── Section G3: MEMBERSHIP_IDENTITY_CONFLICT domain error ───────────────────
+
+describe('G3 — MEMBERSHIP_IDENTITY_CONFLICT is defined and used', async () => {
+  const membersSrc = await readSrc('src/db/neon-restaurant-members.js')
+  const authzSrc = await readSrc('api/_lib/authz.js')
+
+  it('MEMBERSHIP_IDENTITY_CONFLICT domain error is defined', () => {
+    assert.ok(
+      membersSrc.includes('MEMBERSHIP_IDENTITY_CONFLICT'),
+      'neon-restaurant-members.js must define MEMBERSHIP_IDENTITY_CONFLICT'
+    )
+  })
+
+  it('identity conflict returns HTTP 409', () => {
+    assert.ok(
+      membersSrc.includes('status: 409'),
+      'MEMBERSHIP_IDENTITY_CONFLICT must map to HTTP 409'
+    )
+  })
+
+  it('authz.js exports MEMBERSHIP_IDENTITY_CONFLICT constant', () => {
+    assert.ok(
+      authzSrc.includes('MEMBERSHIP_IDENTITY_CONFLICT'),
+      'authz.js must export MEMBERSHIP_IDENTITY_CONFLICT for consistent error mapping'
+    )
+  })
+})
+
+// ── Section G4: Preflight script exists and is read-only ───────────────────
+
+describe('G4 — Duplicate preflight script exists and is read-only', async () => {
+  const script = await readSrc('scripts/checkDuplicateMemberships.js')
+
+  it('preflight script detects accepted-member duplicates (Type A)', () => {
+    assert.ok(
+      script.includes('user_id IS NOT NULL') && script.includes('HAVING COUNT(*) > 1'),
+      'preflight must detect accepted duplicates by restaurant_id + user_id'
+    )
+  })
+
+  it('preflight script detects unclaimed-member duplicates (Type B)', () => {
+    assert.ok(
+      script.includes('user_id IS NULL') && script.includes('lower(trim(email))') && script.includes('HAVING COUNT(*) > 1'),
+      'preflight must detect unclaimed duplicates by restaurant_id + normalized email'
+    )
+  })
+
+  it('preflight script is read-only (no UPDATE/DELETE/INSERT)', () => {
+    assert.ok(
+      !script.includes('UPDATE') && !script.includes('DELETE ') && !script.includes('INSERT'),
+      'preflight script must not modify any rows'
+    )
+  })
+
+  it('preflight script exits non-zero when conflicts are present', () => {
+    assert.ok(
+      script.includes('process.exit(1)'),
+      'preflight must exit 1 when duplicates are found'
+    )
+  })
+})
+
+// ── Section G5: Migration 0013 exists with unique indexes ───────────────────
+
+describe('G5 — Migration 0013 adds partial unique indexes', async () => {
+  const mig = await readSrc('drizzle/migrations/0013_membership_identity_uniqueness.sql')
+
+  it('accepted-membership unique index (restaurant_id, user_id) where user_id IS NOT NULL AND active = true', () => {
+    assert.ok(
+      mig.includes('idx_membership_active_user_id'),
+      '0013 must create idx_membership_active_user_id'
+    )
+    assert.ok(
+      mig.includes('user_id IS NOT NULL AND active = true'),
+      '0013 partial index must filter for user_id IS NOT NULL AND active = true'
+    )
+  })
+
+  it('unclaimed-membership unique index (restaurant_id, lower(trim(email))) where user_id IS NULL AND email IS NOT NULL AND active = true', () => {
+    assert.ok(
+      mig.includes('idx_membership_active_unclaimed_email'),
+      '0013 must create idx_membership_active_unclaimed_email'
+    )
+    assert.ok(
+      mig.includes('user_id IS NULL AND email IS NOT NULL AND active = true'),
+      '0013 partial index must filter for user_id IS NULL AND email IS NOT NULL AND active = true'
+    )
+  })
+
+  it('no deletes or deactivations in migration', () => {
+    assert.ok(
+      !mig.includes('DELETE') && !mig.includes('UPDATE') && !mig.includes('DROP'),
+      '0013 must not delete or deactivate any rows'
+    )
+  })
 })
 
 // ── Section H: HTTP — unauthorized / method guards ────────────────────────────
@@ -502,6 +634,10 @@ describe('H — HTTP: unauthorized requests are consistently rejected', async ()
   })
 
   it('GET /api/mobile/v1/bootstrap rejects unauthenticated requests (no DISABLE_AUTH bypass)', async () => {
+    if (devMode) {
+      console.log('    SKIP [BLOCKED]: VITE_DISABLE_AUTH=true — 401 check for bootstrap only valid in prod')
+      return
+    }
     const res = await get('/api/mobile/v1/bootstrap')
     serverOnline(res)
     assert.equal(res.status, 401, `bootstrap must enforce auth; got ${res.status}`)

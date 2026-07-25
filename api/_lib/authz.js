@@ -52,6 +52,8 @@ import pg from 'pg'
 
 const { Pool } = pg
 
+export const MEMBERSHIP_IDENTITY_CONFLICT = 'MEMBERSHIP_IDENTITY_CONFLICT'
+
 let _pool = null
 function getPool() {
   if (!_pool) {
@@ -182,6 +184,7 @@ export async function checkRestaurantAccess(req, restaurantId) {
         email,
         userId,
         error: 'Conflicting membership records detected: duplicate active memberships; contact an administrator to resolve duplicates',
+        code: MEMBERSHIP_IDENTITY_CONFLICT,
       }
     }
     return { allowed: true, role: rows[0].role, isSuperadmin: false, email, userId, name: rows[0].name }

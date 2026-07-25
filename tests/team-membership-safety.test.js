@@ -136,12 +136,13 @@ describe('Duplicate membership prevention', async () => {
     const restaurant = await createTestRestaurant()
     try {
       const userId = 'BAuserId123456789012345678901234'
-      const member = { id: crypto.randomUUID(), name: 'First', email: 'first@example.com', user_id: userId, role: 'staff' }
-      await createNeonRestaurantMemberSafe(restaurant.id, member)
+      const member = { id: crypto.randomUUID(), name: 'First', email: 'first@example.com', role: 'staff' }
+      // Pass resolvedUserId as third arg to simulate server-side Better Auth resolution
+      await createNeonRestaurantMemberSafe(restaurant.id, member, userId)
 
-      const duplicate = { id: crypto.randomUUID(), name: 'Second', email: 'second@example.com', user_id: userId, role: 'manager' }
+      const duplicate = { id: crypto.randomUUID(), name: 'Second', email: 'second@example.com', role: 'manager' }
       await assert.rejects(
-        () => createNeonRestaurantMemberSafe(restaurant.id, duplicate),
+        () => createNeonRestaurantMemberSafe(restaurant.id, duplicate, userId),
         /active membership already exists/i
       )
     } finally {
@@ -155,18 +156,18 @@ describe('Duplicate membership prevention', async () => {
       const userId = 'BAuserId123456789012345678901234'
       // Active member with same user_id but different email
       await createNeonRestaurantMemberSafe(restaurant.id, {
-        id: crypto.randomUUID(), name: 'A', email: 'a@example.com', user_id: userId, role: 'staff',
-      })
+        id: crypto.randomUUID(), name: 'A', email: 'a@example.com', role: 'staff',
+      }, userId)
       // Same email but different user_id — should be allowed
       await createNeonRestaurantMemberSafe(restaurant.id, {
-        id: crypto.randomUUID(), name: 'B', email: 'a@example.com', user_id: 'BAotherId2345678901234567890123', role: 'manager',
-      })
+        id: crypto.randomUUID(), name: 'B', email: 'a@example.com', role: 'manager',
+      }, 'BAotherId2345678901234567890123')
 
       // But a new member with the same user_id should be rejected even with a different email
       await assert.rejects(
         () => createNeonRestaurantMemberSafe(restaurant.id, {
-          id: crypto.randomUUID(), name: 'C', email: 'c@example.com', user_id: userId, role: 'staff',
-        }),
+          id: crypto.randomUUID(), name: 'C', email: 'c@example.com', role: 'staff',
+        }, userId),
         /active membership already exists/i
       )
     } finally {
@@ -435,6 +436,89 @@ describe('Membership identity behavior', async () => {
       const matches = await findActiveNeonRestaurantMembersByIdentity(restaurant.id, { email: 'email@example.com' })
       assert.equal(matches.length, 1)
       assert.equal(matches[0].email, 'Email@Example.COM')
+    } finally {
+      await deleteTestRestaurant(restaurant.id)
+    }
+  })
+
+  it('inactive membership is excluded from identity lookup', async () => {
+    const restaurant = await createTestRestaurant()
+    try {
+      await createMember(restaurant.id, { name: 'Inactive', email: 'inactive@example.com', role: 'staff', active: false })
+      const matches = await findActiveNeonRestaurantMembersByIdentity(restaurant.id, { email: 'inactive@example.com' })
+      assert.equal(matches.length, 0)
+    } finally {
+      await deleteTestRestaurant(restaurant.id)
+    }
+  })
+
+  it('claimed membership is not returned through unclaimed-email path', async () => {
+    const restaurant = await createTestRestaurant()
+    try {
+      const userId = 'BAclaimedUser123456789012345678901'
+      await createMember(restaurant.id, { name: 'Claimed', email: 'claimed@example.com', role: 'staff', user_id: userId })
+      // Identity lookup by email (no userId) should not return claimed membership
+      const matches = await findActiveNeonRestaurantMembersByIdentity(restaurant.id, { email: 'claimed@example.com' })
+      assert.equal(matches.length, 0)
+    } finally {
+      await deleteTestRestaurant(restaurant.id)
+    }
+  })
+
+  it('claimed membership is found by user_id lookup', async () => {
+    const restaurant = await createTestRestaurant()
+    try {
+      const userId = 'BAclaimedUser123456789012345678901'
+      await createMember(restaurant.id, { name: 'Claimed', email: 'claimed@example.com', role: 'staff', user_id: userId })
+      // Identity lookup by userId should return the claimed membership
+      const matches = await findActiveNeonRestaurantMembersByIdentity(restaurant.id, { userId })
+      assert.equal(matches.length, 1)
+      assert.equal(matches[0].role, 'staff')
+    } finally {
+      await deleteTestRestaurant(restaurant.id)
+    }
+  })
+
+  it('duplicate active unclaimed emails return more than one row', async () => {
+    const restaurant = await createTestRestaurant()
+    try {
+      await createMember(restaurant.id, { name: 'A', email: 'dup-unclaimed@example.com', role: 'staff' })
+      await createMember(restaurant.id, { name: 'B', email: 'dup-unclaimed@example.com', role: 'manager' })
+      const matches = await findActiveNeonRestaurantMembersByIdentity(restaurant.id, { email: 'dup-unclaimed@example.com' })
+      assert.equal(matches.length, 2)
+    } finally {
+      await deleteTestRestaurant(restaurant.id)
+    }
+  })
+
+  it('different restaurants may use the same user_id', async () => {
+    const restaurant1 = await createTestRestaurant()
+    const restaurant2 = await createTestRestaurant()
+    const userId = 'BAsharedUser12345678901234567890'
+    try {
+      await createMember(restaurant1.id, { name: 'A', email: 'a@example.com', role: 'staff', user_id: userId })
+      await createMember(restaurant2.id, { name: 'B', email: 'b@example.com', role: 'manager', user_id: userId })
+      const m1 = await findActiveNeonRestaurantMembersByIdentity(restaurant1.id, { userId })
+      const m2 = await findActiveNeonRestaurantMembersByIdentity(restaurant2.id, { userId })
+      assert.equal(m1.length, 1)
+      assert.equal(m2.length, 1)
+    } finally {
+      await deleteTestRestaurant(restaurant1.id)
+      await deleteTestRestaurant(restaurant2.id)
+    }
+  })
+
+  it('canonical identity object requires at least one field', async () => {
+    const restaurant = await createTestRestaurant()
+    try {
+      // Empty identity object must throw
+      await assert.rejects(
+        () => findActiveNeonRestaurantMembersByIdentity(restaurant.id, {}),
+        /Identity must include userId or email/i
+      )
+      // Null restaurantId is handled gracefully
+      const nullResult = await findActiveNeonRestaurantMembersByIdentity(null, { userId: 'some-id' })
+      assert.equal(nullResult.length, 0)
     } finally {
       await deleteTestRestaurant(restaurant.id)
     }
