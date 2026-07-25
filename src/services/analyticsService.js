@@ -3,11 +3,23 @@
 // Shared analytics computation for all three runtimes (Vercel, Express, Vite).
 // Queries orders and bookings directly from Neon and returns computed metrics.
 //
+// Revenue rule (canonical):
+//   Revenue must include orders with status: confirmed, completed.
+//   Orders with status: cancelled, rejected, failed must never contribute.
+//   Historical revenue must never decrease after an order reaches completed.
+//
 // Usage:
 //   import { getRestaurantAnalytics } from './src/services/analyticsService.js'
 //   const result = await getRestaurantAnalytics(restaurantId, startDate, endDate)
 
 import { neon } from '../db/pg-sql.js'
+
+// Statuses that count toward revenue and order metrics.
+// confirmed → confirmed orders (accepted, in progress)
+// completed → completed orders (delivered, finished)
+// Both statuses are non-terminal revenue-earning states.
+// cancelled, rejected, failed are excluded from revenue.
+export const REVENUE_STATUSES = ['confirmed', 'completed']
 
 function sql() {
   const url = process.env.DATABASE_URL
@@ -44,12 +56,12 @@ export async function getRestaurantAnalytics(restaurantId, startDate, endDate) {
     throw err
   }
 
-  // ── Orders in date range (confirmed only) ────────────────────────────────
+  // ── Orders in date range (confirmed + completed = revenue-earning) ───────
   const orders = await db`
     SELECT id, status, total, created_at
     FROM orders
     WHERE restaurant_id = ${restaurantId}
-      AND status = 'confirmed'
+      AND status = ANY(${REVENUE_STATUSES}::text[])
       AND created_at >= ${start}::timestamptz
       AND created_at <= ${end}::timestamptz
     ORDER BY created_at ASC
