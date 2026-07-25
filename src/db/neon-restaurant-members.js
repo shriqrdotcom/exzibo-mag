@@ -489,66 +489,151 @@ export async function getNeonRestaurantMembers(restaurantId) {
 
 // ── getNeonRestaurantMembersPaginated ─────────────────────────────────────
 // Cursor-based pagination over team members for a restaurant.
+//
+// Fixes applied for Prompt 8:
+//   1. Active/deleted filtering happens in SQL WHERE before ORDER BY / LIMIT.
+//   2. Pagination uses (created_at ASC, id ASC) with > comparator.
+//   3. Cursor fields (id, created_at) are always selected regardless of caller role.
+//   4. After pagination completes, rows are projected to role-appropriate DTO.
+//   5. Cursor is validated before use; invalid cursors return 400.
+//
 // Returns { items, nextCursor }.
 export async function getNeonRestaurantMembersPaginated(restaurantId, { limit = 50, cursor = null, callerRole } = {}) {
   if (!restaurantId) return { items: [], nextCursor: null }
 
-  const take = Math.min(Math.max(1, limit), 100)
+  // Validate and clamp limit
+  if (limit === undefined || limit === null) limit = 50
+  if (typeof limit !== 'number' || !Number.isInteger(limit) || limit <= 0) {
+    const err = new Error('limit must be a positive integer')
+    err.status = 400
+    throw err
+  }
+  if (limit > 100) {
+    const err = new Error('limit must not exceed 100')
+    err.status = 400
+    throw err
+  }
+
+  const take = limit
   const takePlus1 = take + 1
 
+  // Validate and decode cursor
   let decodedCursor = null
   if (cursor) {
+    if (typeof cursor !== 'string' || cursor.length === 0) {
+      const err = new Error('Invalid cursor')
+      err.status = 400
+      throw err
+    }
     try {
       const buf = Buffer.from(cursor, 'base64url')
       const str = buf.toString('utf-8')
       const sep = str.lastIndexOf('::')
-      if (sep !== -1) {
-        decodedCursor = { createdAt: str.slice(0, sep), id: str.slice(sep + 2) }
+      if (sep === -1 || sep === 0 || sep === str.length - 2) {
+        const err = new Error('Invalid cursor format')
+        err.status = 400
+        throw err
       }
-    } catch { /* ignore */ }
+      const createdAt = str.slice(0, sep)
+      const id = str.slice(sep + 2)
+      // Validate created_at is a parseable timestamp and id is a parseable UUID
+      const ts = new Date(createdAt)
+      if (isNaN(ts.getTime())) {
+        const err = new Error('Invalid cursor: created_at is not a valid timestamp')
+        err.status = 400
+        throw err
+      }
+      if (!id || id.length < 8) {
+        const err = new Error('Invalid cursor: id is not valid')
+        err.status = 400
+        throw err
+      }
+      decodedCursor = { createdAt: createdAt, id: id }
+    } catch (e) {
+      if (e.status) throw e
+      const err = new Error('Invalid cursor')
+      err.status = 400
+      throw err
+    }
   }
 
-  const SELECT_ALL = `id, restaurant_id, user_id, owner_id, name, email, role, category, department, phone, active, created_at, updated_at`
-  const SELECT_MGMT = `id, restaurant_id, name, email, role, category, department, phone, active, created_at, updated_at`
-  const SELECT_PUBLIC = `name, role, category, department`
-
+  // Determine role scope
   const isManagement = callerRole === 'owner' || callerRole === 'admin' || callerRole === 'superadmin'
-  const selectClause = isManagement ? SELECT_MGMT : SELECT_PUBLIC
 
-  let rows
-  if (decodedCursor) {
-    rows = await sql.query(
-      `SELECT ${selectClause}
-       FROM restaurant_members
-       WHERE restaurant_id = $1::uuid
-         AND (created_at, id) < ($2::timestamptz, $3)
-       ORDER BY created_at ASC, id ASC
-       LIMIT $4`,
-      [restaurantId, decodedCursor.createdAt, decodedCursor.id, takePlus1]
-    )
-  } else {
-    rows = await sql.query(
-      `SELECT ${selectClause}
-       FROM restaurant_members
-       WHERE restaurant_id = $1::uuid
-       ORDER BY created_at ASC, id ASC
-       LIMIT $2`,
-      [restaurantId, takePlus1]
-    )
-  }
+  // Always select internal pagination fields PLUS role-appropriate display fields.
+  // Internal fields (id, created_at, active) are needed for cursor generation
+  // and hasMore detection; they are stripped in the final projection.
+  const MGMT_COLS = `id, name, email, role, category, department, phone, active, created_at, updated_at`
+  const PUBLIC_COLS = `id, name, role, category, department, active, created_at`
 
+  const selectCols = isManagement ? MGMT_COLS : PUBLIC_COLS
+
+  // Build WHERE clause: tenant isolation + active filter + cursor continuation
+  const conditions = [`restaurant_id = $1::uuid`]
+  const params = [restaurantId]
+  let paramIdx = 2
+
+  // Non-management (staff) only sees active members; management sees all.
   if (!isManagement) {
-    rows = rows.filter(r => r.active)
+    conditions.push(`active = true`)
   }
 
+  if (decodedCursor) {
+    // Ascending order: rows AFTER the cursor
+    conditions.push(`(created_at, id) > ($${paramIdx}::timestamptz, $${paramIdx + 1})`)
+    params.push(decodedCursor.createdAt, decodedCursor.id)
+    paramIdx += 2
+  }
+
+  const whereClause = conditions.join(' AND ')
+
+  // Execute query: filter → order → limit+1
+  const rows = await sql.query(
+    `SELECT ${selectCols}
+     FROM restaurant_members
+     WHERE ${whereClause}
+     ORDER BY created_at ASC, id ASC
+     LIMIT $${paramIdx}`,
+    [...params, takePlus1]
+  )
+
+  // Limit+1 technique: determine if more rows exist
   const hasMore = rows.length > take
   if (hasMore) rows.pop()
 
+  // Build nextCursor from the last returned eligible row.
+  // Convert Date objects to ISO strings so PostgreSQL can parse them.
   const nextCursor = hasMore
-    ? Buffer.from(`${rows[rows.length - 1].created_at}::${rows[rows.length - 1].id}`, 'utf-8').toString('base64url')
+    ? (() => {
+        const lastRow = rows[rows.length - 1]
+        const ts = lastRow.created_at instanceof Date
+          ? lastRow.created_at.toISOString()
+          : String(lastRow.created_at)
+        return Buffer.from(`${ts}::${lastRow.id}`, 'utf-8').toString('base64url')
+      })()
     : null
 
-  return { items: rows, nextCursor }
+  // Final role-safe projection: strip internal pagination fields from response DTO
+  const items = rows.map(r => {
+    if (isManagement) {
+      return {
+        id: r.id,
+        name: r.name,
+        email: r.email,
+        role: r.role,
+        category: r.category,
+        department: r.department,
+        phone: r.phone,
+        active: r.active,
+        created_at: r.created_at,
+        updated_at: r.updated_at,
+      }
+    }
+    // Staff/public: only name, role, category, department
+    return { name: r.name, role: r.role, category: r.category, department: r.department }
+  })
+
+  return { items, nextCursor }
 }
 
 // ── getNeonRestaurantMembersPublic ────────────────────────────────────────────

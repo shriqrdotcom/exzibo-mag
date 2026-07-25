@@ -3,11 +3,9 @@ import { checkRestaurantAccess, TEAM_WRITE_ROLES } from './_lib/authz.js'
 import {
   VALID_RESTAURANT_ROLES,
   getNeonRestaurantMemberById,
-  getNeonRestaurantMembersPaginated,
 } from '../src/db/neon-restaurant-members.js'
 import {
   ALLOWED_MEMBER_FIELDS,
-  VALID_RESTAURANT_ROLES,
   executeTeamList,
   executeTeamUpsert,
   executeTeamDelete,
@@ -20,11 +18,9 @@ import {
   forbidden,
   conflict,
   internalError,
+  rejectUnknownFields,
   parsePagination,
 } from './_lib/validate.js'
-
-const ALLOWED_UPSERT_FIELDS = ['id', 'name', 'email', 'role', 'category', 'department', 'phone', 'active', 'created_at', 'restaurant_id', 'owner_id']
-const ALLOWED_DELETE_FIELDS = ['id']
 
 // ── Resolve auth restaurant ID for a team operation ─────────────────────────
 // Ensures the server-resolved restaurant ID is used for authorization.
