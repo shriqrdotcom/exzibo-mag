@@ -8,6 +8,15 @@
 //   Orders with status: cancelled, rejected, failed must never contribute.
 //   Historical revenue must never decrease after an order reaches completed.
 //
+// Customer analytics rule (canonical):
+//   Customer count includes orders with status: confirmed, completed.
+//   Customer count excludes orders with status: cancelled, rejected, failed.
+//   Unique customer identity (priority order):
+//     1. customer_phone when present and non-empty (normalized by trim)
+//     2. customer_email when present and non-empty (fallback)
+//     3. If both are empty/null — skip (no phantom "unknown" customer)
+//   Only aggregate counts are returned in the DTO — no raw customer PII.
+//
 // Usage:
 //   import { getRestaurantAnalytics } from './src/services/analyticsService.js'
 //   const result = await getRestaurantAnalytics(restaurantId, startDate, endDate)
@@ -57,8 +66,10 @@ export async function getRestaurantAnalytics(restaurantId, startDate, endDate) {
   }
 
   // ── Orders in date range (confirmed + completed = revenue-earning) ───────
+  // customer_phone and customer_email are needed for unique customer counting.
+  // These fields are NOT returned in the analytics DTO — only aggregate counts.
   const orders = await db`
-    SELECT id, status, total, created_at
+    SELECT id, status, total, created_at, customer_phone, customer_email
     FROM orders
     WHERE restaurant_id = ${restaurantId}
       AND status = ANY(${REVENUE_STATUSES}::text[])
@@ -83,14 +94,24 @@ export async function getRestaurantAnalytics(restaurantId, startDate, endDate) {
   const totalOrders = orders.length
   const totalBookings = bookings.length
 
-  // Unique customer count from orders + bookings
-  const customerPhones = new Set()
-  orders.forEach(o => { if (o.customer_phone) customerPhones.add(o.customer_phone) })
-  bookings.forEach(b => {
-    if (b.customer_phone) customerPhones.add(b.customer_phone)
-    else if (b.customer_email) customerPhones.add(b.customer_email)
+  // ── Unique customer count ────────────────────────────────────────────────
+  //
+  // Canonical identity rule (production quality):
+  //   1. customer_phone when present and non-empty
+  //   2. customer_email when present and non-empty (fallback)
+  //   3. If both are empty/null — do NOT count (avoids phantom "unknown" customer)
+  //
+  // This rule applies identically to orders and bookings.
+  //
+  const customerIdentities = new Set()
+  ;[...orders, ...bookings].forEach(r => {
+    const phone = r.customer_phone && r.customer_phone.trim()
+    const email = r.customer_email && r.customer_email.trim()
+    if (phone) customerIdentities.add(phone)
+    else if (email) customerIdentities.add(email)
+    // Neither phone nor email → skip (no phantom customer)
   })
-  const totalCustomers = customerPhones.size
+  const totalCustomers = customerIdentities.size
 
   // ── Monthly revenue (last 12 months, starting from current month) ────────
   const now = new Date(end)
