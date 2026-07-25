@@ -12,7 +12,9 @@
 // This service does NOT implement authorization or rate limiting — those are
 // the calling route's responsibility.
 
+import crypto from 'node:crypto'
 import { getPool } from '../db/pg-sql.js'
+import { buildCanonicalEnvelope } from './eventEnvelope.js'
 
 // ── Transition table ────────────────────────────────────────────────────────
 
@@ -137,22 +139,25 @@ export async function applyOrderStatusTransition(orderId, newStatus) {
 
     // ── Insert a realtime outbox event in the SAME transaction ──────────────
     // The outbox processor will publish asynchronously. This guarantees the
-    // event is persisted even if the Worker is unavailable. The outbox event
-    // id serves as the realtime event id for downstream idempotency.
+    // event is persisted even if the Worker is unavailable. The outbox row id
+    // is the authoritative event id — eventId === row.id.
     const updatedRow = updateResult.rows[0]
-    const outboxPayload = JSON.stringify({
-      type: 'ORDER_STATUS_CHANGED',
-      restaurantId: updatedRow.restaurant_id,
-      orderId,
-      status: newStatus,
-      version: 1,
-      eventId: '',
-      time: new Date().toISOString(),
-    })
+    const outboxEventId = crypto.randomUUID()
+    const outboxPayload = JSON.stringify(
+      buildCanonicalEnvelope({
+        eventId: outboxEventId,
+        type: 'ORDER_STATUS_CHANGED',
+        version: 1,
+        restaurantId: updatedRow.restaurant_id,
+        orderId,
+        status: newStatus,
+        time: new Date().toISOString(),
+      })
+    )
     await client.query(
-      `INSERT INTO realtime_outbox (restaurant_id, order_id, event_type, payload)
-       VALUES ($1::uuid, $2, $3, $4::jsonb)`,
-      [updatedRow.restaurant_id, orderId, 'ORDER_STATUS_CHANGED', outboxPayload]
+      `INSERT INTO realtime_outbox (id, restaurant_id, order_id, event_type, payload)
+       VALUES ($1::uuid, $2::uuid, $3, $4, $5::jsonb)`,
+      [outboxEventId, updatedRow.restaurant_id, orderId, 'ORDER_STATUS_CHANGED', outboxPayload]
     )
 
     await client.query('COMMIT')

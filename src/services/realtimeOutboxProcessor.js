@@ -22,6 +22,8 @@
  * idempotency in the Worker/Durable Object.
  */
 
+import { validatePublishEnvelope } from './eventEnvelope.js'
+
 const MAX_ATTEMPTS = 10
 const POLL_INTERVAL_MS = 2_000     // 2 seconds between polls
 const BATCH_SIZE = 50
@@ -32,6 +34,28 @@ function computeNextAttempt(attemptCount) {
   // Exponential backoff: 2^attempt seconds, capped at 60 seconds
   const delaySec = Math.min(Math.pow(2, attemptCount), 60)
   return new Date(Date.now() + delaySec * 1000).toISOString()
+}
+
+// ── Build the authoritative publish envelope from a stored row ──────────────
+//
+// The outbox row.id is the single authoritative event identity. Any eventId
+// stored in the payload is overwritten by row.id so retries never change the
+// event identity. The stored payload's type, restaurantId, orderId, status,
+// version, and time are preserved when valid.
+function buildPublishEnvelope(row) {
+  const stored = (typeof row.payload === 'object' && row.payload !== null)
+    ? row.payload
+    : (typeof row.payload === 'string' ? JSON.parse(row.payload) : {})
+
+  return {
+    eventId: row.id,                        // authoritative — overwrites stored
+    type: stored.type || row.event_type,
+    version: stored.version ?? 1,
+    restaurantId: stored.restaurantId || row.restaurant_id,
+    orderId: stored.orderId || row.order_id,
+    status: stored.status || '',
+    time: stored.time || new Date().toISOString(),
+  }
 }
 
 // ── Publish a single outbox event to the Worker ──────────────────────────────
@@ -45,6 +69,17 @@ async function publishToWorker(row) {
     return { ok: false, error: 'REALTIME_URL or REALTIME_PUBLISH_SECRET not configured' }
   }
 
+  // Build the authoritative envelope from the row — never trust stored payload alone
+  let envelope
+  try {
+    envelope = buildPublishEnvelope(row)
+    validatePublishEnvelope(envelope)
+  } catch (err) {
+    const msg = err.code ? `Event validation failed: ${err.message}` : `Invalid event data: ${err.message}`
+    console.error(`[outbox] ${msg} (row ${row.id})`)
+    return { ok: false, error: msg }
+  }
+
   try {
     const r = await fetch(`${realtimeUrl}/publish/order-event`, {
       method: 'POST',
@@ -52,7 +87,7 @@ async function publishToWorker(row) {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${publishSecret}`,
       },
-      body: JSON.stringify(row.payload),
+      body: JSON.stringify(envelope),
     })
 
     if (!r.ok) {

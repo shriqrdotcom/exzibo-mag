@@ -1,0 +1,192 @@
+Finalize Prompt 11 before pull-request review.
+
+Do not begin Prompt 12.
+Do not modify the implementation unless validation reveals a real defect.
+Do not merge directly into main.
+
+Current branch:
+
+repair/11-realtime-event-id-contract
+
+The branch is already committed and pushed. The remaining blocker is that the Wrangler dry-run build was not executed because the current shell uses Node 20.
+
+STEP 1 — USE NODE 22 FOR WORKER VALIDATION
+
+Run the Worker validation in a temporary Node.js 22 environment.
+
+Do not change application source code merely to bypass the Node requirement.
+
+Confirm and report:
+
+- root Node.js version;
+- Worker validation Node.js version;
+- Wrangler version;
+- Worker package-manager version.
+
+STEP 2 — RUN REQUIRED WORKER CHECKS
+
+From the Worker package directory, run:
+
+1. Frozen dependency installation.
+2. TypeScript typecheck.
+3. Worker tests where configured.
+4. Wrangler deployment dry run without deploying anything.
+
+Use the repository’s actual scripts where available.
+
+The dry run must:
+
+- compile the Worker successfully;
+- validate bindings/configuration as far as possible without production secrets;
+- not deploy;
+- not access production Durable Objects;
+- not change Cloudflare resources.
+
+If the dry run requires a non-secret placeholder for a local-only binding, use only a clearly fake test placeholder and do not commit it.
+
+STEP 3 — VERIFY PROMPT 11 FILE SCOPE
+
+Confirm the pull-request diff contains only these intended files unless an additional file is strictly necessary and explained:
+
+- src/services/eventEnvelope.js
+- src/services/orderCreationService.js
+- src/services/orderStatusService.js
+- src/services/realtimeOutboxProcessor.js
+- tests/realtime-event-contract.test.js
+
+Exclude:
+
+- .agents/memory/**
+- attached_assets/**
+- screenshots
+- pasted prompt files
+- generated reports
+- unrelated migrations
+- unrelated dependencies
+- production configuration changes
+
+STEP 4 — VERIFY THE LARGE TEST DIFF
+
+The branch reports more than 1,000 inserted lines.
+
+Review tests/realtime-event-contract.test.js and confirm:
+
+1. It contains executable behavioural tests rather than duplicated prompt text.
+2. It does not contain screenshots, reports or copied instructions.
+3. It tests real exported behaviour where practical.
+4. It does not weaken Worker validation.
+5. It proves retry identity remains stable.
+6. It proves row.id equals the published eventId.
+7. It proves order-created and order-status events reach the isolated Durable Object test double.
+8. It does not contact production infrastructure.
+
+STEP 5 — FINAL VALIDATION
+
+Run:
+
+1. Focused realtime event-contract tests.
+2. Order-creation tests.
+3. Order-status tests.
+4. Existing outbox tests.
+5. Prompt 2 and Prompt 7–10 regression suites.
+6. Migration-integrity tests.
+7. Root production build.
+8. Worker TypeScript check.
+9. Worker tests.
+10. Wrangler dry-run build under Node 22.
+11. Final unsafe-pattern search.
+12. git diff against the starting commit.
+13. git status.
+
+Final unsafe-pattern search must report:
+
+- empty eventId in active producers: NOT FOUND
+- client-controlled eventId: NOT FOUND
+- Math.random event identity: NOT FOUND
+- retry generates a different ID: NOT FOUND
+- publisher ignores outbox row ID: NOT FOUND
+- contradictory event schemas: NOT FOUND
+
+STEP 6 — CREATE THE PULL REQUEST
+
+After every required check passes:
+
+1. Push any necessary validation-only commit.
+2. Create a pull request targeting main from:
+
+   repair/11-realtime-event-id-contract
+
+3. Do not merge it.
+4. Do not delete the branch.
+
+If automatic PR creation is unavailable, provide the exact base branch, compare branch, recommended title and description so I can create it manually.
+
+RETURN THIS SUMMARY
+
+PROMPT 11 FINALIZATION SUMMARY
+
+Status:
+- COMPLETE / PARTIAL / BLOCKED
+
+Branch:
+- branch name
+
+Starting commit:
+- exact SHA
+
+Ending commit:
+- exact SHA
+
+Files in PR:
+- exact list
+
+Root validation:
+- focused tests
+- regression tests
+- production build
+
+Worker validation:
+- Node version
+- TypeScript: PASS / FAIL
+- tests: PASS / FAIL
+- Wrangler dry-run: PASS / FAIL
+- no deployment performed: YES / NO
+
+Event identity:
+- authoritative source
+- row ID equals published eventId: YES / NO
+- retry identity stable: YES / NO
+
+End-to-end tests:
+- order-created delivery: PASS / FAIL
+- order-status delivery: PASS / FAIL
+- same eventId reaches Durable Object: YES / NO
+
+Final safety search:
+- empty producer eventId: FOUND / NOT FOUND
+- client-controlled eventId: FOUND / NOT FOUND
+- Math.random identity: FOUND / NOT FOUND
+- retry creates new ID: FOUND / NOT FOUND
+- publisher ignores row ID: FOUND / NOT FOUND
+- contradictory schemas: FOUND / NOT FOUND
+
+Git status:
+- clean / not clean
+
+Pull request:
+- PR number or “manual creation required”
+- base branch
+- compare branch
+
+Production resources accessed:
+- No
+
+Production Worker deployed:
+- No
+
+Production secrets changed:
+- No
+
+Final conclusion:
+- State whether Prompt 11 is fully validated and ready for pull-request review.
+- Do not claim the complete repository is production-ready.
