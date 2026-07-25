@@ -30,6 +30,7 @@ import { getClientIp } from './src/lib/upstash.server.js'
 import { generateRequestId, parsePagination } from './api/_lib/validate.js'
 import * as menuService from './src/services/menuService.js'
 import * as contentService from './src/services/restaurantContentService.js'
+import { lookupRestaurantByUid } from './api/_lib/restaurant-lookup.js'
 
 // ── Versioned preview token helpers ──────────────────────────────────────────
 // Shared constants for the v1 preview token contract.
@@ -1004,7 +1005,6 @@ function neonRestaurantPlugin() {
         const {
           getNeonRestaurantById,
           getNeonRestaurantBySlug,
-          getNeonRestaurantByUid,
           patchNeonRestaurant,
           patchNeonRestaurantProfile,
           patchNeonRestaurantPlatform,
@@ -1030,9 +1030,8 @@ function neonRestaurantPlugin() {
           // GET /api/neon/restaurant/by-uid/:uid — public
           if (method === 'GET' && url.startsWith('/by-uid/')) {
             const uid = decodeURIComponent(url.replace('/by-uid/', ''))
-            if (!uid) return json(400, { error: 'uid required' })
-            const row = await getNeonRestaurantByUid(uid)
-            return row ? json(200, toPublicRestaurant(row)) : json(404, { error: 'Not found' })
+            const result = await lookupRestaurantByUid(uid)
+            return json(result.status, result.body)
           }
 
           // POST /api/neon/restaurant/create — superadmin only (returns SuperadminRestaurantDTO)
