@@ -17,7 +17,10 @@
     "backfill:apply": "node scripts/restaurant-backfill.js --apply",
     "check:outbox-lag": "node scripts/check-outbox-lag.js",
     "test": "node --test 'tests/**/*.test.js' 'api/__tests__/**/*.test.js' 2>/dev/null || node --test 'tests/**/*.test.js' 'api/__tests__/**/*.test.js'",
-    "test:monitoring": "node --test tests/monitoring.test.js api/__tests__/system.test.js"
+    "test:monitoring": "node --test tests/monitoring.test.js api/__tests__/system.test.js",
+    "outbox:consumer": "node scripts/runRealtimeOutboxConsumer.js",
+    "outbox:consumer:once": "node scripts/runRealtimeOutboxConsumer.js --once",
+    "outbox:consumer:check": "node scripts/runRealtimeOutboxConsumer.js --check"
   },
   "dependencies": {
     "@better-auth/expo": "1.6.23",
