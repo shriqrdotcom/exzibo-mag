@@ -51,7 +51,7 @@ import {
   executeTeamUpsert,
   executeTeamDelete,
 } from './api/_lib/team-service.js'
-import { upsertNeonRestaurantSettingsKey } from './src/db/neon-restaurant-settings.js'
+import { patchRestaurantGlobalConfig } from './src/services/restaurantSettingsService.js'
 import { writeAuditLog } from './src/db/neon-audit-logs.js'
 import * as mediaService from './src/services/mediaService.js'
 import {
@@ -1099,12 +1099,13 @@ app.post('/api/neon/restaurant-settings/shadow-upsert', requireRestaurantRole(re
   try {
     const { restaurantId, key, value } = req.body
     if (!restaurantId || !key) return res.status(400).json({ error: 'restaurantId and key required' })
-    await upsertNeonRestaurantSettingsKey(restaurantId, key, value)
-    console.log(`[restaurant-settings shadow-upsert] Neon ✅ restaurantId=${restaurantId} key=${key}`)
+    await patchRestaurantGlobalConfig(restaurantId, key, value)
+    console.log(`[restaurant-settings shadow-upsert] Canonical ✅ restaurantId=${restaurantId} key=${key}`)
     return res.json({ ok: true })
   } catch (err) {
+    const status = err.status || 500
     console.error('[restaurant-settings shadow-upsert] Error:', err.message)
-    return res.status(500).json({ error: err.message })
+    return res.status(status).json({ error: err.message, code: err.code })
   }
 })
 

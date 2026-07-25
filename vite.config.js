@@ -23,7 +23,7 @@ import { startOutboxProcessor } from './src/services/realtimeOutboxProcessor.js'
 import { upsertNeonRestaurantMember, deleteNeonRestaurantMember, getNeonRestaurantMembers, filterNeonRestaurantMembersForRole } from './src/db/neon-restaurant-members.js'
 import { checkRestaurantAccess } from './api/_lib/authz.js'
 import { executeTeamList, executeTeamUpsert, executeTeamDelete } from './api/_lib/team-service.js'
-import { upsertNeonRestaurantSettingsKey } from './src/db/neon-restaurant-settings.js'
+import { patchRestaurantGlobalConfig } from './src/services/restaurantSettingsService.js'
 import { writeAuditLog } from './src/db/neon-audit-logs.js'
 import * as mediaService from './src/services/mediaService.js'
 import { getClientIp } from './src/lib/upstash.server.js'
@@ -735,10 +735,10 @@ function menuApiPlugin() {
         try {
           const { restaurantId, key, value } = await readBody(req)
           if (!restaurantId || !key) return json(res, 400, { error: 'restaurantId and key required' })
-          await upsertNeonRestaurantSettingsKey(restaurantId, key, value)
-          console.log(`[restaurant-settings shadow-upsert] Neon ✅ restaurantId=${restaurantId} key=${key}`)
+          await patchRestaurantGlobalConfig(restaurantId, key, value)
+          console.log(`[restaurant-settings shadow-upsert] Canonical ✅ restaurantId=${restaurantId} key=${key}`)
           return json(res, 200, { ok: true })
-        } catch (e) { return json(res, 500, { error: e.message }) }
+        } catch (e) { return json(res, e.status || 500, { error: e.message, code: e.code }) }
       })
 
     },

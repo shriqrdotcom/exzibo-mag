@@ -6,8 +6,11 @@ import {
   getUserSettingsNeon,
   upsertUserSettingsNeon,
 } from '../src/db/neon-globals.js'
-import { upsertNeonRestaurantSettingsKey } from '../src/db/neon-restaurant-settings.js'
-import { neon } from '../src/db/pg-sql.js'
+import {
+  getRestaurantSettingsValue,
+  patchRestaurantGlobalConfig,
+  getPublicRestaurantConfig,
+} from '../src/services/restaurantSettingsService.js'
 import {
   generateRequestId,
   safeError,
@@ -103,6 +106,8 @@ export default async function handler(req, res) {
     }
 
     // ── getRestaurantSettings — requires MANAGEMENT_ROLES membership ──────────
+    // Reads a single key from restaurant_settings.global_config JSONB using
+    // the canonical settings service. Does NOT query nonexistent key/value columns.
     if (action === 'getRestaurantSettings') {
       const { restaurantId, key } = req.query
       if (!restaurantId || !key) return badInput(res, 'restaurantId and key required', requestId)
@@ -112,28 +117,29 @@ export default async function handler(req, res) {
       if (!access.isSuperadmin && !MANAGEMENT_ROLES.includes(access.role)) {
         return forbidden(res, null, requestId)
       }
-      const sql = neon(process.env.DATABASE_URL)
-      const rows = await sql`
-        SELECT value FROM restaurant_settings
-        WHERE restaurant_id = ${restaurantId}::uuid AND key = ${key}
-        LIMIT 1
-      `
-      return res.json(rows[0]?.value ?? null)
+      const value = await getRestaurantSettingsValue(restaurantId, key)
+      return res.json(value)
     }
 
     // ── setRestaurantSettings — requires SETTINGS_ROLES (owner/admin) ─────────
+    // Uses the canonical patching service (atomic JSONB merge via || operator).
     if (action === 'setRestaurantSettings') {
       if (req.method !== 'POST') return safeError(res, 405, 'POST required', requestId)
       const { restaurantId, key, value } = req.body
       if (!restaurantId || !key) return badInput(res, 'restaurantId and key required', requestId)
       rejectUnknownFields(req.body, ['restaurantId', 'key', 'value'])
+      // Early body-size guard: reject oversized payloads before validation.
+      const rawLength = Buffer.byteLength(JSON.stringify(req.body), 'utf8')
+      if (rawLength > 100_000) {
+        return safeError(res, 413, 'Request body exceeds maximum allowed size', requestId)
+      }
       const access = await checkRestaurantAccess(req, restaurantId)
       if (access.error === 'Not authenticated') return unauthorized(res, null, requestId)
       if (!access.allowed) return forbidden(res, null, requestId)
       if (!access.isSuperadmin && !SETTINGS_ROLES.includes(access.role)) {
         return forbidden(res, 'Changing restaurant settings requires owner or admin role', requestId)
       }
-      await upsertNeonRestaurantSettingsKey(restaurantId, key, value)
+      await patchRestaurantGlobalConfig(restaurantId, key, value)
       return res.json({ success: true, requestId })
     }
 
