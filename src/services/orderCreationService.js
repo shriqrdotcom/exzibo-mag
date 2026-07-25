@@ -14,12 +14,14 @@
 // This service does NOT implement status transitions or realtime publishing.
 // Database-backed idempotency is implemented inside the shared transaction.
 
+import crypto from 'node:crypto'
 import {
   checkIdempotency,
   recordIdempotencyResponse,
   OPERATION_ORDER_CREATE,
 } from './idempotencyService.js'
 import { getPool } from '../db/pg-sql.js'
+import { buildCanonicalEnvelope, validateEventId } from './eventEnvelope.js'
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -305,20 +307,23 @@ export async function createOrderAtomic(input) {
     // 7. Insert a realtime outbox event in the SAME transaction.
     // The outbox processor will publish asynchronously. This guarantees the
     // event is persisted even if the Worker is temporarily unavailable.
-    // The outbox event id is used as the realtime event id for deduplication.
-    const outboxPayload = JSON.stringify({
-      type: 'ORDER_CREATED',
-      restaurantId,
-      orderId,
-      status: 'pending',
-      version: 1,
-      eventId: '',  // filled atomically by the processor using outbox.id
-      time: new Date().toISOString(),
-    })
+    // The outbox row id is the authoritative event id — eventId === row.id.
+    const outboxEventId = crypto.randomUUID()
+    const outboxPayload = JSON.stringify(
+      buildCanonicalEnvelope({
+        eventId: outboxEventId,
+        type: 'ORDER_CREATED',
+        version: 1,
+        restaurantId,
+        orderId,
+        status: 'pending',
+        time: new Date().toISOString(),
+      })
+    )
     await client.query(
-      `INSERT INTO realtime_outbox (restaurant_id, order_id, event_type, payload)
-       VALUES ($1::uuid, $2, $3, $4::jsonb)`,
-      [restaurantId, orderId, 'ORDER_CREATED', outboxPayload]
+      `INSERT INTO realtime_outbox (id, restaurant_id, order_id, event_type, payload)
+       VALUES ($1::uuid, $2::uuid, $3, $4, $5::jsonb)`,
+      [outboxEventId, restaurantId, orderId, 'ORDER_CREATED', outboxPayload]
     )
 
     await client.query('COMMIT')
