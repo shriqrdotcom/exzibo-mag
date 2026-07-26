@@ -744,6 +744,41 @@ function menuApiPlugin() {
         return next()
       })
 
+      // /api/restaurant-notifications — restaurant-scoped notification service
+      // Rewrites to the shared api/notifications.js handler in dev.
+      server.middlewares.use('/api/restaurant-notifications', async (req, res, next) => {
+        if (req.method === 'OPTIONS') {
+          res.statusCode = 200
+          res.setHeader('Access-Control-Allow-Origin', '*')
+          res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+          res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
+          res.end()
+          return
+        }
+        try {
+          // Parse query string so the Vercel-style handler can read req.query.action.
+          const queryParams = Object.fromEntries(new URLSearchParams((req.url || '').split('?')[1] || ''))
+          req.query = queryParams
+
+          const { default: handler } = await import('./api/notifications.js')
+          if (!res.status) {
+            res.status = (code) => { res.statusCode = code; return res }
+          }
+          if (!res.json) {
+            res.json = (body) => {
+              if (!res.getHeader('Content-Type')) res.setHeader('Content-Type', 'application/json')
+              res.end(JSON.stringify(body))
+            }
+          }
+          await handler(req, res)
+        } catch (err) {
+          console.error('[dev] /api/restaurant-notifications error:', err.message)
+          res.statusCode = 500
+          res.setHeader('Content-Type', 'application/json')
+          res.end(JSON.stringify({ error: 'Internal server error' }))
+        }
+      })
+
       // POST /api/neon/restaurant-settings/shadow-upsert
       // Merges a single restaurant-scoped key into Neon restaurant_settings.global_config.
       // Body: { restaurantId, key: 'menu_filters' | 'restaurant_hours', value: <JSON> }

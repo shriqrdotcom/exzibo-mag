@@ -1,0 +1,627 @@
+REPOSITORY
+https://github.com/shriqrdotcom/exzibo-mag.git
+
+TASK TITLE
+Prompt 27 of 38 — Repair Notification Deduplication, Expiry and Tenant-Safe Delivery Contract
+
+ROLE
+
+Act as a senior backend reliability engineer, notification-system architect, multi-tenant SaaS security reviewer and API contract auditor.
+
+Work only on:
+
+- notification deduplication
+- notification expiry
+- tenant isolation
+- notification status/read-state safety
+- canonical notification service
+- cross-runtime parity
+- focused tests
+
+Do not modify:
+
+- frontend notification UI
+- order business logic
+- booking business logic
+- analytics
+- membership roles
+- authentication
+- realtime outbox
+- Redis core behavior
+- database schema unless strictly required
+- billing
+- media
+
+==================================================
+PRECONDITIONS
+==================================================
+
+Run:
+
+git fetch origin --prune
+git switch main
+git pull --ff-only origin main
+git status
+git rev-parse HEAD
+
+Confirm:
+
+- Prompt 26 canonical domain/slug validation is present.
+- Prompt 25A and 25B API security boundaries are present.
+- Prompt 18–24 protections remain present.
+- Working tree is clean.
+
+Record the starting SHA.
+
+Create branch:
+
+repair/27-notification-delivery-contract
+
+Do not work directly on main.
+
+==================================================
+PROBLEM TO FIX
+==================================================
+
+Notification handling may be inconsistent across runtimes and may lack one strict contract for:
+
+1. duplicate notifications;
+2. expiry after the configured lifetime;
+3. tenant isolation;
+4. read/unread updates;
+5. deletion or dismissal;
+6. safe response DTOs;
+7. stable status and error handling.
+
+The product requirement is:
+
+- no duplicate notifications;
+- notification expiry after 24 hours unless existing code clearly defines another duration;
+- every notification remains restaurant-scoped;
+- notification data must include safe context without exposing internal fields.
+
+==================================================
+OBJECTIVE
+==================================================
+
+After this task:
+
+1. One canonical notification service handles creation, listing, read-state updates and dismissal.
+
+2. Duplicate notifications are blocked deterministically.
+
+3. Notifications expire according to one explicit TTL policy.
+
+4. Expired notifications are never returned as active.
+
+5. Wrong-tenant users cannot read or mutate another restaurant’s notifications.
+
+6. Client-provided restaurant ID, role, user ID or notification ownership is not trusted.
+
+7. Vercel, Express and Vite use the same notification contract.
+
+8. Public/internal response DTOs do not expose raw database rows.
+
+9. Existing Prompt 8–26 regressions remain green.
+
+==================================================
+STRICT RULES
+==================================================
+
+Do not:
+
+- trust client-provided restaurant ID;
+- trust client-provided user ID or role;
+- create duplicate notification logic per runtime;
+- return expired notifications as active;
+- expose raw database fields;
+- expose internal tenant identifiers unnecessarily;
+- expose stack traces or SQL errors;
+- weaken Prompt 25 security middleware;
+- weaken Prompt 18 Redis fail-closed behavior;
+- use in-memory deduplication in production;
+- add screenshots, pasted prompt files, attached_assets, Agent-memory files or generated reports.
+
+==================================================
+STEP 1 — INVENTORY NOTIFICATION FLOW
+==================================================
+
+Search for:
+
+- notification
+- notifications
+- createNotification
+- listNotifications
+- markRead
+- unread
+- read_at
+- expires
+- expiry
+- ttl
+- duplicate
+- dedupe
+- restaurant_id
+- notification type
+- notification status
+- api/notifications.js
+- server.js
+- vite.config.js
+
+Inspect at minimum:
+
+- api/notifications.js
+- server.js
+- vite.config.js
+- notification service/helper files
+- notification database helpers
+- notification tests
+- order/booking flows that create notifications
+- Redis duplicate-protection integration
+- API security middleware from Prompt 25
+
+Create an internal map:
+
+runtime
+→ route/action
+→ authentication
+→ restaurant scope
+→ duplicate strategy
+→ expiry behavior
+→ response DTO
+→ corrected shared service
+
+Do not edit before the inventory is complete.
+
+==================================================
+STEP 2 — DEFINE CANONICAL NOTIFICATION CONTRACT
+==================================================
+
+Use existing repository behavior as the source of truth.
+
+Define:
+
+1. notification types;
+2. required context fields;
+3. read/unread behavior;
+4. dismissal behavior;
+5. TTL policy;
+6. deduplication key;
+7. safe response DTO;
+8. tenant scope.
+
+Expected TTL:
+
+24 hours
+
+Use a different value only if existing product code/tests clearly define one.
+
+The deduplication key should be deterministic and include enough scope to avoid collisions, for example:
+
+restaurant
++ notification type
++ entity/context identifier
++ bounded time or event identifier
+
+Do not rely on message text alone.
+
+==================================================
+STEP 3 — CREATE ONE SHARED NOTIFICATION SERVICE
+==================================================
+
+Create or repair one canonical service for:
+
+- createNotification
+- listActiveNotifications
+- markNotificationRead
+- dismissNotification
+
+The service must own:
+
+- server-resolved restaurant scope;
+- authentication/authorization input;
+- deduplication;
+- expiry filtering;
+- read-state mutation;
+- safe deletion/dismissal;
+- safe DTO projection;
+- stable domain errors.
+
+Route handlers should only parse HTTP input and call the service.
+
+==================================================
+STEP 4 — DEDUPLICATION
+==================================================
+
+Implement deterministic duplicate prevention.
+
+Requirements:
+
+1. Same event/context must not create repeated active notifications.
+
+2. Deduplication must remain tenant-scoped.
+
+3. Redis may be used only through Prompt 18 fail-closed helpers.
+
+4. Database-backed uniqueness or idempotency should be preferred where existing schema supports it.
+
+5. Redis failure must not silently allow duplicates in production.
+
+6. Retries must return the existing notification or a stable duplicate result.
+
+Do not create an in-memory production fallback.
+
+==================================================
+STEP 5 — EXPIRY
+==================================================
+
+Implement one expiry policy.
+
+Requirements:
+
+1. Active list excludes expired notifications.
+
+2. Expiry is based on server time, not client time.
+
+3. Read notifications still expire.
+
+4. Expired notifications cannot be mutated as active.
+
+5. Cleanup may be lazy unless the repository already has a cleanup mechanism.
+
+6. Do not add a background worker unless required.
+
+7. Tests must use deterministic time injection or fake clock.
+
+==================================================
+STEP 6 — TENANT AND AUTHORIZATION SAFETY
+==================================================
+
+For every private notification action:
+
+1. Resolve restaurant scope server-side.
+
+2. Confirm notification belongs to that restaurant.
+
+3. Deny wrong-tenant access.
+
+4. Do not trust client-provided restaurantId.
+
+5. Do not trust client-provided userId, role or superadmin flag.
+
+6. Preserve existing role policy.
+
+7. Return stable:
+   - 401 unauthenticated;
+   - 403 forbidden;
+   - 404 missing/wrong-tenant notification where appropriate;
+   - 409 duplicate when existing contract requires it;
+   - 500 safe internal error.
+
+==================================================
+STEP 7 — RESPONSE DTO
+==================================================
+
+Return an explicit notification DTO.
+
+Include only fields needed by the app, such as:
+
+- id
+- type
+- title/message
+- context
+- createdAt
+- expiresAt
+- read
+- readAt
+
+Do not expose:
+
+- raw restaurant_id
+- raw user_id
+- internal dedupe keys
+- SQL timestamps with inconsistent names
+- internal metadata
+- deleted flags
+- provider errors
+
+Preserve existing public contract where safe.
+
+==================================================
+STEP 8 — CROSS-RUNTIME INTEGRATION
+==================================================
+
+Update:
+
+- Vercel
+- Express
+- Vite
+
+All active notification routes must use the same shared service.
+
+Preserve Prompt 25:
+
+- request IDs;
+- safe error envelope;
+- method guards;
+- body limits;
+- Host/Origin/CSRF security.
+
+==================================================
+STEP 9 — REQUIRED TESTS
+==================================================
+
+Add focused tests proving:
+
+CREATION / DEDUPLICATION
+
+1. valid notification creation succeeds;
+2. duplicate event/context does not create a second active notification;
+3. duplicate prevention is restaurant-scoped;
+4. retry returns stable result;
+5. Redis failure does not silently allow duplicate production creation;
+6. client-provided restaurantId cannot redirect notification scope.
+
+EXPIRY
+
+7. active notification is returned before expiry;
+8. notification is excluded after expiry;
+9. read notification also expires;
+10. client time cannot change expiry;
+11. expired notification cannot be marked active/read;
+12. exact 24-hour boundary follows documented policy.
+
+TENANT SAFETY
+
+13. unauthenticated list returns 401;
+14. wrong-tenant list is denied;
+15. wrong-tenant read update is denied;
+16. wrong-tenant dismissal is denied;
+17. client-provided role cannot grant access;
+18. client-provided user ID cannot grant access.
+
+READ / DISMISSAL
+
+19. unread notification can be marked read;
+20. repeated mark-read is idempotent;
+21. valid dismissal succeeds;
+22. repeated dismissal returns stable safe result;
+23. missing notification returns safe 404.
+
+DTO SAFETY
+
+24. raw DB row is not returned;
+25. internal dedupe key is not returned;
+26. tenant/internal IDs are not exposed unnecessarily;
+27. error response uses Prompt 25 safe envelope and requestId.
+
+CROSS-RUNTIME
+
+28. Vercel notification behavior passes;
+29. Express notification behavior passes;
+30. Vite notification behavior passes;
+31. response/error shape matches across runtimes.
+
+REGRESSION
+
+32. Prompt 25A tests pass;
+33. Prompt 25B tests pass;
+34. Prompt 26 canonical domain tests pass;
+35. Prompt 24 analytics tests pass;
+36. Prompt 18–23 regressions pass;
+37. Prompt 8–17 regressions pass;
+38. migration-integrity tests pass;
+39. root production build passes.
+
+Do not use production infrastructure.
+
+==================================================
+STEP 10 — FINAL SAFETY SEARCH
+==================================================
+
+Confirm NOT FOUND in deployable code:
+
+- duplicate notification logic per runtime
+- client-provided restaurant scope trusted
+- expired notifications returned as active
+- in-memory production deduplication
+- Redis failure silently allows duplicate
+- raw notification DB row returned
+- internal dedupe key returned
+- wrong-tenant notification mutation
+- raw SQL/database error response
+- Prompt 25 security boundary bypass
+
+Review remaining matches manually.
+
+==================================================
+VALIDATION
+==================================================
+
+Run:
+
+1. focused notification tests
+2. duplicate-prevention tests
+3. expiry tests
+4. tenant-isolation tests
+5. route parity tests
+6. Prompt 25A and 25B regressions
+7. Prompt 26 canonical domain tests
+8. Prompt 18–24 regressions
+9. Prompt 8–17 regressions
+10. migration-integrity tests
+11. typecheck/lint where configured
+12. root production build
+13. git diff
+14. git status
+15. final safety search
+
+Do not claim COMPLETE unless Vercel, Express and Vite are tested.
+
+==================================================
+PERMITTED FILE SCOPE
+==================================================
+
+Likely files:
+
+- shared notification service
+- notification DTO/helper
+- api/notifications.js
+- server.js
+- vite.config.js
+- focused notification tests
+- route parity tests
+- Redis call integration only if required
+
+Do not modify:
+
+- database schema or migrations unless strictly required;
+- frontend UI;
+- analytics formulas;
+- membership rules;
+- realtime event logic;
+- billing;
+- media;
+- Agent-memory files;
+- screenshots;
+- pasted prompt files;
+- attached_assets.
+
+==================================================
+COMMIT AND PR
+==================================================
+
+After all checks pass:
+
+1. Confirm only intended Prompt 27 files changed.
+
+2. Commit:
+
+fix: enforce notification delivery contract
+
+3. Push:
+
+repair/27-notification-delivery-contract
+
+4. Create PR targeting main.
+
+5. Do not merge it.
+
+6. Do not delete the branch.
+
+If push or PR creation fails, report manual creation required and preserve the local commit.
+
+==================================================
+FINAL RESPONSE
+==================================================
+
+Return exactly:
+
+PROMPT 27 COMPLETION SUMMARY
+
+Status:
+- COMPLETE / PARTIAL / BLOCKED
+
+Branch:
+- branch name
+
+Starting SHA:
+- exact SHA
+
+Ending SHA:
+- exact SHA or Not committed
+
+Notification contract:
+- types
+- TTL
+- deduplication key
+- read/dismissal behavior
+
+Shared service:
+- file
+- functions
+
+Files changed:
+- exact list
+
+Deduplication tests:
+- passed
+- failed
+- skipped
+
+Expiry tests:
+- passed
+- failed
+- skipped
+
+Tenant-isolation tests:
+- passed
+- failed
+- skipped
+
+DTO safety:
+- PASS / FAIL
+
+Cross-runtime parity:
+- Vercel: PASS / FAIL
+- Express: PASS / FAIL
+- Vite: PASS / FAIL
+
+Prompt 26 regression:
+- PASS / FAIL
+
+Prompt 25A regression:
+- PASS / FAIL
+
+Prompt 25B regression:
+- PASS / FAIL
+
+Previous regressions:
+- PASS / FAIL
+
+Migration tests:
+- PASS / FAIL
+
+Root production build:
+- PASS / FAIL
+
+Final safety search:
+- duplicated notification logic: FOUND / NOT FOUND
+- client restaurant scope trusted: FOUND / NOT FOUND
+- expired notification returned active: FOUND / NOT FOUND
+- in-memory production dedupe: FOUND / NOT FOUND
+- Redis failure allows duplicate: FOUND / NOT FOUND
+- raw notification row returned: FOUND / NOT FOUND
+- internal dedupe key exposed: FOUND / NOT FOUND
+- wrong-tenant mutation: FOUND / NOT FOUND
+- raw DB error response: FOUND / NOT FOUND
+- security boundary bypass: FOUND / NOT FOUND
+
+Production resources accessed:
+- No
+
+Production Redis accessed:
+- No
+
+Production database accessed:
+- No
+
+Production migrations executed:
+- No
+
+Production secrets changed:
+- No
+
+Git status:
+- clean / not clean
+
+Pull request:
+- number or manual creation required
+- base
+- compare
+
+Recommended next action:
+- State whether Prompt 28 may begin after PR review and merge.
+
+Final conclusion:
+- State whether Prompt 27 is committed, pushed and ready for review.
+- Do not claim the entire repository is production-ready.
