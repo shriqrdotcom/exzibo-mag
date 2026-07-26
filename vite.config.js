@@ -14,7 +14,8 @@ import {
   getNeonRestaurantById,
   getNeonRestaurantBySlug,
 } from './src/db/neon-restaurants.js'
-import { updateNeonBookingStatus, getNeonBookings, getNeonBookingsPaginated } from './src/db/neon-bookings.js'
+import { getNeonBookings, getNeonBookingsPaginated } from './src/db/neon-bookings.js'
+import { updateBookingStatusService } from './api/_lib/booking-status-service.js'
 import { createBookingAtomic } from './src/services/bookingCreationService.js'
 import { getNeonOrders, getNeonOrdersPaginated, deleteOldNeonOrders } from './src/db/neon-orders.js'
 import { createOrderAtomic } from './src/services/orderCreationService.js'
@@ -633,11 +634,21 @@ function menuApiPlugin() {
           const statusMatch = pathname.match(/^\/([^/]+)\/status$/)
           if (req.method === 'PATCH' && statusMatch) {
             const id = statusMatch[1]
-            const { status } = body
-            if (!status) return json(res, 400, { error: 'status required' })
-            const updated = await updateNeonBookingStatus(id, status)
-            writeAuditLog({ restaurantId: updated?.restaurant_id ?? null, action: 'update_status', entityType: 'booking', entityId: id, newData: { status } })
-            return json(res, 200, updated ?? { id, status })
+            const result = await updateBookingStatusService({
+              req,
+              bookingId: id,
+              nextStatus: body?.status,
+            })
+            if (result.status === 200 && result.restaurantId) {
+              writeAuditLog({
+                restaurantId: result.restaurantId,
+                action: 'update_status',
+                entityType: 'booking',
+                entityId: id,
+                newData: { status: body?.status },
+              })
+            }
+            return json(res, result.status, result.body)
           }
         } catch (e) {
           if (e.code === 'IDEMPOTENCY_KEY_REQUIRED') return json(res, 400, { error: e.message, code: e.code })

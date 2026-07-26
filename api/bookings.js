@@ -1,12 +1,9 @@
 import { setPublicCors } from './_lib/cors.js'
-import { checkRestaurantAccess, ALL_ROLES, MANAGEMENT_ROLES } from './_lib/authz.js'
+import { checkRestaurantAccess, ALL_ROLES } from './_lib/authz.js'
 import { rateLimit, getClientIp, send429, send503Protection } from '../src/lib/upstash.server.js'
-import {
-  updateNeonBookingStatus,
-  getNeonBookingsPaginated,
-  getNeonBookingRestaurantId,
-} from '../src/db/neon-bookings.js'
+import { getNeonBookingsPaginated } from '../src/db/neon-bookings.js'
 import { createBookingAtomic } from '../src/services/bookingCreationService.js'
+import { updateBookingStatusService } from './_lib/booking-status-service.js'
 import {
   generateRequestId,
   safeError,
@@ -17,7 +14,6 @@ import {
   conflict,
   internalError,
   rejectUnknownFields,
-  validateUuid,
   parsePagination,
 } from './_lib/validate.js'
 
@@ -66,23 +62,24 @@ export default async function handler(req, res) {
 
     // ── PATCH / updateStatus — requires MANAGEMENT_ROLES membership ────────────
     if (req.method === 'PATCH' || action === 'updateStatus') {
-      const id = req.query.id || req.body?.id
-      const status = req.body?.status
-      if (!id || !status) return badInput(res, 'id and status required', requestId)
-      rejectUnknownFields(req.body || {}, ALLOWED_STATUS_FIELDS)
+      const bookingId = req.query.id || req.body?.id
+      const nextStatus = req.body?.status
 
-      const restaurantId = await getNeonBookingRestaurantId(id)
-      if (!restaurantId) return notFound(res, 'Booking not found', requestId)
-
-      const access = await checkRestaurantAccess(req, restaurantId)
-      if (access.error === 'Not authenticated') return unauthorized(res, null, requestId)
-      if (!access.allowed) return forbidden(res, null, requestId)
-      if (!access.isSuperadmin && !MANAGEMENT_ROLES.includes(access.role)) {
-        return forbidden(res, 'Updating booking status requires manager role or above', requestId)
+      const result = await updateBookingStatusService({ req, bookingId, nextStatus })
+      if (result.status === 200 && result.restaurantId) {
+        // Fire-and-forget audit log — do not leak errors to client
+        try {
+          const { writeAuditLog } = await import('../src/db/neon-audit-logs.js')
+          writeAuditLog({
+            restaurantId: result.restaurantId,
+            action: 'update_status',
+            entityType: 'booking',
+            entityId: bookingId,
+            newData: { status: nextStatus },
+          })
+        } catch { /* audit log is non-critical */ }
       }
-
-      const updated = await updateNeonBookingStatus(id, status)
-      return res.json(updated ?? { id, status })
+      return res.status(result.status).json(result.body)
     }
 
     // ── POST: create booking — public customer flow ───────────────────────────
