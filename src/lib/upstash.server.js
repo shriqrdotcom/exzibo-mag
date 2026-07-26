@@ -79,16 +79,10 @@ export function _resetRedisForTest() {
 // server from starting in an unprotected state.
 //
 // In development and test, this is a no-op (returns without throwing).
+import { validateRedisConfig as _validateRedisConfig } from '../config/serverEnv.js'
+
 export function validateRedisConfig() {
-  if (!isProductionEnv()) return
-  const url   = process.env.UPSTASH_REDIS_REST_URL
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN
-  if (!url || !token) {
-    throw new Error(
-      '[upstash] UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN are required in production. ' +
-      'Set both secrets before deploying. Startup aborted.'
-    )
-  }
+  _validateRedisConfig()
 }
 
 // ── Rate limiter ──────────────────────────────────────────────────────────────

@@ -9,23 +9,17 @@ import { createHmac, createHash, randomUUID } from 'node:crypto'
 
 // ── Internal helpers ──────────────────────────────────────────────────────────
 
+import { validateR2Config } from '../config/serverEnv.js'
+
 function getConfig() {
-  const accountId   = process.env.R2_ACCOUNT_ID
-  const accessKeyId = process.env.R2_ACCESS_KEY_ID
-  const secretKey   = process.env.R2_SECRET_ACCESS_KEY
-  const bucket      = process.env.R2_BUCKET_NAME
-  // R2_PUBLIC_BASE_URL takes priority (custom domain, e.g. https://images.exzibo.online)
-  // Falls back to legacy R2_PUBLIC_URL (pub-xxx.r2.dev) if not set.
-  const publicUrl   = (process.env.R2_PUBLIC_BASE_URL || process.env.R2_PUBLIC_URL || '').replace(/\/$/, '')
-
-  if (!accountId || !accessKeyId || !secretKey || !bucket || !publicUrl) {
-    throw new Error(
-      '[r2] Missing required env vars. Check: R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, ' +
-      'R2_SECRET_ACCESS_KEY, R2_BUCKET_NAME, and R2_PUBLIC_BASE_URL (or R2_PUBLIC_URL)'
-    )
+  const cfg = validateR2Config(process.env, { required: true })
+  return {
+    accountId: cfg.r2AccountId,
+    accessKeyId: cfg.r2AccessKeyId,
+    secretKey: cfg.r2SecretKey,
+    bucket: cfg.r2Bucket,
+    publicUrl: cfg.r2PublicUrl,
   }
-
-  return { accountId, accessKeyId, secretKey, bucket, publicUrl }
 }
 
 function sha256Hex(data) {

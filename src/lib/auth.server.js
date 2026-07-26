@@ -2,6 +2,7 @@ import { betterAuth } from 'better-auth'
 import { expo } from '@better-auth/expo'
 import pg from 'pg'
 import crypto from 'node:crypto'
+import { validateDatabaseConfig } from '../config/serverEnv.js'
 
 const { Pool } = pg
 
@@ -9,8 +10,9 @@ const { Pool } = pg
 // Let the Neon connection string handle SSL (it includes sslmode=require).
 // Pool size 2 is appropriate for Vercel serverless — each function instance
 // only handles one request at a time, so 1-2 connections is plenty.
+const { databaseUrl } = validateDatabaseConfig()
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
+  connectionString: databaseUrl,
   max: 2,
 })
 
@@ -35,16 +37,14 @@ const configuredBaseUrl =
   'https://superadmin.exzibo.online'
 
 // ── BETTER_AUTH_SECRET startup guard ────────────────────────────────────────
-// In production (NODE_ENV=production) the secret is mandatory — missing it
-// causes a hard crash at startup so a misconfigured deployment is immediately
-// visible rather than silently degraded.
-// VERCEL_ENV is set automatically by Vercel to 'production', 'preview', or
-// 'development' — it is present only in actual Vercel deployments, NOT during
-// local `npm run dev` or `npm run build`.  This lets us enforce the secret
-// requirement at runtime on the deployed platform while still allowing local
-// builds and development without the secret configured.
-// NOTE: DISABLE_AUTH / VITE_DISABLE_AUTH must NOT be checked here — those
-// variables control client-side UI only and must never influence server auth.
+// In deployed Vercel environments (VERCEL_ENV set) the secret is mandatory —
+// missing it causes a hard crash at startup so a misconfigured deployment is
+// immediately visible rather than silently degraded.
+// Vite's `npm run build` sets NODE_ENV=production but is NOT a runtime, so we
+// only check VERCEL_ENV here, not NODE_ENV. Local builds and dev can run without
+// the secret configured; sessions will fail verification (correct fail-closed).
+// NOTE: Authentication-bypass variables must NOT be checked here — they
+// only control client-side UI and must never influence server auth.
 const _authSecret = process.env.BETTER_AUTH_SECRET
 
 if (!_authSecret && process.env.VERCEL_ENV) {
@@ -55,6 +55,9 @@ if (!_authSecret && process.env.VERCEL_ENV) {
     'Never print or log its value.'
   )
 }
+
+const googleClientId = process.env.GOOGLE_CLIENT_ID || ''
+const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET || ''
 
 export const auth = betterAuth({
   database: pool,
@@ -110,8 +113,8 @@ export const auth = betterAuth({
   },
   socialProviders: {
     google: {
-      clientId: process.env.GOOGLE_CLIENT_ID || '',
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
+      clientId: googleClientId || '',
+      clientSecret: googleClientSecret || '',
       // Force Google to always show the "Choose an account" screen instead of
       // silently continuing with whichever Google account is already signed
       // into the browser. Without this, a returning user with only one active

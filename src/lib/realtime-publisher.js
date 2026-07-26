@@ -10,8 +10,11 @@
  * - Only called from backend routes (server.js / vite.config.js).
  */
 
-const REALTIME_URL = process.env.REALTIME_URL || ''
-const REALTIME_PUBLISH_SECRET = process.env.REALTIME_PUBLISH_SECRET || ''
+import { validateRealtimePublisherConfig } from '../config/serverEnv.js'
+
+// Publisher runtime: fail closed at startup if realtime configuration is missing.
+const { realtimeUrl: REALTIME_URL, realtimePublishSecret: REALTIME_PUBLISH_SECRET } =
+  validateRealtimePublisherConfig(process.env, { required: true })
 
 /**
  * @param {Object} params
@@ -22,10 +25,6 @@ const REALTIME_PUBLISH_SECRET = process.env.REALTIME_PUBLISH_SECRET || ''
  * @param {number} [params.version=1]
  */
 export async function publishOrderRealtimeEvent({ type, restaurantId, orderId, status, version = 1 }) {
-  if (!REALTIME_URL || !REALTIME_PUBLISH_SECRET) {
-    console.warn('[realtime] Skipped publish — REALTIME_URL or REALTIME_PUBLISH_SECRET not set')
-    return
-  }
 
   const eventId = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
   const time = new Date().toISOString()

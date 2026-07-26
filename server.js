@@ -79,10 +79,12 @@ import {
 import { generateRequestId, parsePagination, safeError, badInput, internalError } from './api/_lib/validate.js'
 import { issueRealtimeTicket } from './src/services/realtimeTicketService.js'
 import { structuredLogger } from './src/monitoring/structuredLogger.js'
+import { validateServerEnv } from './src/config/serverEnv.js'
 
+const validatedEnv = validateServerEnv('express')
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const app = express()
-const PORT = process.env.PORT || 5000
+const PORT = validatedEnv.port
 
 // ── Trust proxy configuration ───────────────────────────────────────────────
 // Express req.ip must match the canonical resolver. The mode is derived from

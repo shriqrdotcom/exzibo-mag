@@ -2,6 +2,7 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
 import fs from 'fs'
+import { validateServerEnv } from './src/config/serverEnv.js'
 import { createHmac, timingSafeEqual } from 'crypto'
 import bcrypt from 'bcryptjs'
 import {
@@ -1264,32 +1265,37 @@ function realtimeOutboxPlugin() {
   }
 }
 
-export default defineConfig(({ mode }) => ({
-  plugins: [react(), previewAuthPlugin(), menuApiPlugin(), aboutApiPlugin(), tableValidationPlugin(), neonRestaurantPlugin(), analyticsPlugin(), neonHealthPlugin(), spaFallbackPlugin(), realtimeOutboxPlugin()],
-  appType: 'spa',
-  define: {},
-  resolve: {
-    alias: {
-      '@assets': path.resolve(__dirname, 'attached_assets'),
+export default defineConfig(({ mode, command }) => {
+  if (command === 'serve') {
+    validateServerEnv('vite')
+  }
+  return {
+    plugins: [react(), previewAuthPlugin(), menuApiPlugin(), aboutApiPlugin(), tableValidationPlugin(), neonRestaurantPlugin(), analyticsPlugin(), neonHealthPlugin(), spaFallbackPlugin(), realtimeOutboxPlugin()],
+    appType: 'spa',
+    define: {},
+    resolve: {
+      alias: {
+        '@assets': path.resolve(__dirname, 'attached_assets'),
+      },
     },
-  },
-  server: {
-    host: '0.0.0.0',
-    port: 5000,
-    allowedHosts: true,
-    fs: {
-      deny: ['exzibo-realtime/'], // Worker code uses cloudflare:workers — not for frontend
+    server: {
+      host: '0.0.0.0',
+      port: 5000,
+      allowedHosts: true,
+      fs: {
+        deny: ['exzibo-realtime/'], // Worker code uses cloudflare:workers — not for frontend
+      },
+      // historyApiFallback is intentionally NOT set here.
+      // Vite's built-in historyApiFallback middleware runs BEFORE post-hook plugins,
+      // which would bypass the tableValidationPlugin and serve index.html for invalid
+      // table numbers. The spaFallbackPlugin (a post-hook) handles SPA routing instead,
+      // so it always runs AFTER table validation has had a chance to block bad URLs.
     },
-    // historyApiFallback is intentionally NOT set here.
-    // Vite's built-in historyApiFallback middleware runs BEFORE post-hook plugins,
-    // which would bypass the tableValidationPlugin and serve index.html for invalid
-    // table numbers. The spaFallbackPlugin (a post-hook) handles SPA routing instead,
-    // so it always runs AFTER table validation has had a chance to block bad URLs.
-  },
-  optimizeDeps: {
-    // These are Node.js-only packages imported by server-side files under src/
-    // (pg-sql.js, auth.server.js, etc.). Vite must never try to bundle them for
-    // the browser — doing so creates a duplicate React copy that breaks all hooks.
-    exclude: ['pg', 'bcryptjs', 'better-auth', '@neondatabase/serverless'],
-  },
-}))
+    optimizeDeps: {
+      // These are Node.js-only packages imported by server-side files under src/
+      // (pg-sql.js, auth.server.js, etc.). Vite must never try to bundle them for
+      // the browser — doing so creates a duplicate React copy that breaks all hooks.
+      exclude: ['pg', 'bcryptjs', 'better-auth', '@neondatabase/serverless'],
+    },
+  }
+})
