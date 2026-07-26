@@ -1,5 +1,6 @@
 import { setPublicCors, setAdminCors } from './_lib/cors.js'
 import { getSessionEmail, isSuperadminEmail, checkRestaurantAccess, SETTINGS_ROLES } from './_lib/authz.js'
+import { vercelWrapper } from './_lib/security-middleware.js'
 import {
   getNeonRestaurants,
   getNeonRestaurantBySlug,
@@ -76,7 +77,7 @@ const ALLOWED_CREATE_FIELDS = [
 const ALLOWED_UPDATE_FIELDS = ['id']
 const ALLOWED_PLATFORM_FIELDS = ['restaurantId', 'patch']
 
-export default async function handler(req, res) {
+export default vercelWrapper(async function handler(req, res) {
   setPublicCors(res)
   if (req.method === 'OPTIONS') return res.status(200).end()
 
@@ -343,4 +344,4 @@ export default async function handler(req, res) {
     console.error(`[restaurants][${action}] Error:`, err.message)
     return internalError(res, requestId)
   }
-}
+})

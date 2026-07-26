@@ -13,7 +13,7 @@
 // WHAT IS NEVER DONE
 // ──────────────────
 //   - Client-supplied timezone values are never treated as authoritative
-//   - Server-local timezone (process.env.TZ / host OS) is never used for
+//   - Server-local TZ env var / host OS timezone is never used for
 //     business-day boundaries
 //   - Timezone strings are never evaluated
 //   - Silent fallback without this documented policy is never permitted

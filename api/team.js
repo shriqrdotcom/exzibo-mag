@@ -1,5 +1,6 @@
 import { setAdminCors } from './_lib/cors.js'
 import { checkRestaurantAccess, TEAM_WRITE_ROLES } from './_lib/authz.js'
+import { vercelWrapper } from './_lib/security-middleware.js'
 import {
   VALID_RESTAURANT_ROLES,
   getNeonRestaurantMemberById,
@@ -45,7 +46,7 @@ async function resolveTeamAuthRestaurantId(req, memberId, bodyRestaurantId) {
 // Delegates all authorization, mutation, and error mapping to the canonical
 // team-service.js. Authorization is ALWAYS enforced — no environment-variable bypass.
 
-export default async function handler(req, res) {
+export default vercelWrapper(async function handler(req, res) {
   setAdminCors(req, res)
   if (req.method === 'OPTIONS') return res.status(200).end()
 
@@ -140,4 +141,4 @@ export default async function handler(req, res) {
     if (err.status) return safeError(res, err.status, err.message, requestId)
     return internalError(res, requestId)
   }
-}
+})

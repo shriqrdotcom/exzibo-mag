@@ -1,5 +1,6 @@
 import { setPublicCors, setAdminCors } from './_lib/cors.js'
 import { getSessionEmail, checkSuperadmin, checkRestaurantAccess, SETTINGS_ROLES, MANAGEMENT_ROLES } from './_lib/authz.js'
+import { vercelWrapper } from './_lib/security-middleware.js'
 import {
   getGlobalSetting,
   upsertGlobalSetting,
@@ -37,7 +38,7 @@ const PUBLIC_GLOBAL_KEYS = new Set(['image_compression_limits'])
 //
 // Authorization is ALWAYS enforced — no environment-variable bypass.
 
-export default async function handler(req, res) {
+export default vercelWrapper(async function handler(req, res) {
   setPublicCors(res)
   if (req.method === 'OPTIONS') return res.status(200).end()
 
@@ -148,4 +149,4 @@ export default async function handler(req, res) {
     console.error(`[settings][${action}] Error:`, err.message)
     return internalError(res, requestId)
   }
-}
+})
