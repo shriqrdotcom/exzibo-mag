@@ -8,32 +8,36 @@ npm run db:migrate
 
 This runs `drizzle-kit migrate`, which reads `drizzle/migrations/meta/_journal.json`,
 compares it against the `__drizzle_migrations` table in the target database, and applies
-only the SQL files that have not yet been executed. All applied migrations are reviewed
-before they are committed to the repository.
+only the SQL files that have not yet been executed. Schema changes are made through reviewed SQL migrations;
+every migration is reviewed before it is committed to the repository.
 
-## Prohibited production commands
+## Migration-only policy
+
+- Schema changes are made through reviewed SQL migrations.
+- No `db:push` / `drizzle-kit push` command is exposed by any package script.
+- `drizzle-kit push` is never used against local, shared development, staging, or production databases.
+- Every new migration is reviewed before it is committed to the repository.
+- Production migrations require a backup, preflight check, and rollback plan.
+
+## Prohibited commands
 
 | Command | Why prohibited |
 |---------|---------------|
-| `npm run db:push:local` | Bypasses the journal. Drizzle-kit computes a live diff and applies it immediately — without creating an SQL file, without writing a journal entry, and without any human review. Applying this to production may silently drop columns, change types, or remove constraints. |
-| `drizzle-kit push` (direct) | Same as above. |
+| `npm run db:push` / `drizzle-kit push` | Bypasses the journal. Drizzle-kit computes a live diff and applies it immediately — without creating an SQL file, without writing a journal entry, and without any human review. Applying this to a shared or production database may silently drop columns, change types, or remove constraints. This command is not exposed by any package script. |
 
-> **Note**: The former `db:push` script has been renamed to `db:push:local` to make the
-> local-only scope explicit. It may be used against a **disposable local or branch
-> database only** — never against the shared development database or production.
+The former `db:push` / `db:push:local` scripts have been removed. The only approved way to change schema is through reviewed SQL migrations.
 
-## Safe local-only commands
+## Safe commands
 
 ```bash
 # Apply all pending migrations to a local or branch database:
 npm run db:migrate
 
-# Prototype schema changes against a DISPOSABLE local database only
-# (creates SQL + journal entry when used via drizzle-kit generate):
-npm run db:push:local
-
 # Validate migration ledger integrity without a database connection:
 npm run validate:migrations
+# or
+npm run db:migration:check
+npm run db:migration:verify
 
 # Check restaurant data preflight:
 npm run preflight
@@ -151,6 +155,22 @@ Drizzle does not support automatic rollback. The correct procedures are:
 **Roll-forward:** Write a new migration that undoes the schema change safely (e.g. `ALTER TABLE … DROP COLUMN IF EXISTS`), review it, and apply it through the normal migration workflow.
 
 Never manually edit `_journal.json` to remove an already-applied migration entry.
+
+## Global migration-owned tables
+
+The following tables are created by migration `0004_add_global_tables.sql` and are owned by the migration ledger. They are intentionally **not** represented in `src/db/schema.ts` because they are managed via raw SQL in the migration file and are not part of the Drizzle-tracked core tenant schema.
+
+| Table | Migration | Purpose |
+|-------|-----------|---------|
+| `global_settings` | `0004_add_global_tables.sql` | Application-wide key/value configuration (JSONB) |
+| `user_settings` | `0004_add_global_tables.sql` | Per-user global configuration (JSONB) |
+| `messages` | `0004_add_global_tables.sql` | Broadcast messages to roles |
+| `active_notification` | `0004_add_global_tables.sql` | Currently active notification payload |
+| `notification_history` | `0004_add_global_tables.sql` | Historical notifications |
+| `sms_notifications` | `0004_add_global_tables.sql` | SMS notification log |
+| `help_notifications` | `0004_add_global_tables.sql` | Help-desk request log |
+
+Any change to these tables must be delivered through a new reviewed SQL migration, not via `drizzle-kit push` or direct DDL.
 
 ## Responding to journal/schema drift
 

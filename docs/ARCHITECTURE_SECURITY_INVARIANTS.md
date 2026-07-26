@@ -6,9 +6,9 @@ This is the single reviewed source of truth for the current architecture and for
 
 1. **Neon PostgreSQL is the authoritative database.** All application reads and writes go through server-side handlers to Neon. There is no client-side database access.
 
-2. **Drizzle SQL migrations are the source of schema changes.** New schema changes are generated with `drizzle-kit generate`, committed as numbered SQL files, and applied with `npm run db:migrate`. The migration journal (`drizzle/migrations/meta/_journal.json`) and `__drizzle_migrations` table are the source of truth for what has been applied.
+2. **Drizzle SQL migrations are the source of schema changes.** New schema changes are generated with `drizzle-kit generate`, committed as numbered SQL files, and applied with `npm run db:migrate`. The migration journal (`drizzle/migrations/meta/_journal.json`) and `__drizzle_migrations` table are the source of truth for what has been applied. See `docs/migration-governance.md` for the full workflow.
 
-3. **No production `db:push` workflow.** `npm run db:push:local` (formerly `db:push`) is for disposable local/branch databases only. It is never used against shared dev, staging, or production databases. See `docs/migration-governance.md` for the approved migration workflow.
+3. **No `db:push` / `drizzle-kit push` workflow.** Push-style schema mutation is not exposed by any package script. It is never used against local, shared dev, staging, or production databases. The only approved schema command is `npm run db:migrate`.
 
 4. **Better Auth is the authentication system.** Better Auth v1.6.23 handles sessions, OAuth, and user records. Session validation is server-side. No custom auth-disable flag bypasses server-side session checks in deployable code.
 
