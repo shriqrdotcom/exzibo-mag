@@ -1,0 +1,241 @@
+REPOSITORY
+https://github.com/shriqrdotcom/exzibo-mag.git
+
+TASK TITLE
+Prompt 26 of 38 — Canonical Domain and Restaurant Slug Validation
+
+ROLE
+
+Act as a senior backend security engineer, SaaS platform architect, URL-routing specialist, and multi-tenant validation engineer.
+
+OBJECTIVE
+
+Create one canonical validation layer for all restaurant identifiers and domains.
+
+This prompt must only handle:
+
+1. Restaurant slug validation
+2. Custom domain validation
+3. Reserved slug protection
+4. Canonical URL generation
+5. Domain ownership validation contracts
+6. Route parity across Vercel, Express and Vite
+7. Focused tests
+
+Do NOT modify:
+
+- authentication
+- authorization
+- business logic
+- orders
+- bookings
+- analytics
+- Redis
+- realtime
+- migrations
+- frontend UI
+- billing
+- media
+
+==================================================
+PRECONDITIONS
+==================================================
+
+Run:
+
+git fetch origin --prune
+git switch main
+git pull --ff-only origin main
+git status
+git rev-parse HEAD
+
+Confirm:
+
+- Prompt 25B is merged into main.
+- Prompt 25A security boundary is present.
+- Prompt 18–25 protections remain intact.
+- Working tree is clean.
+
+Record the starting SHA.
+
+Create branch:
+
+repair/26-domain-check-constraints
+
+Do not work on main.
+
+==================================================
+GOALS
+==================================================
+
+Implement one shared validation service for:
+
+• restaurant slugs
+• custom domains
+• reserved names
+• canonical URL generation
+
+Rules:
+
+- Slugs must be lowercase.
+- Only a-z, 0-9 and hyphens.
+- No consecutive hyphens.
+- No leading/trailing hyphen.
+- Length 3–64.
+- Reject reserved system names.
+- Reject invalid Unicode.
+- Reject whitespace.
+- Reject uppercase.
+
+Domains:
+
+- Normalize to lowercase.
+- Strip protocol before validation.
+- Reject invalid TLDs.
+- Reject localhost in production.
+- Reject wildcard domains.
+- Reject duplicate domains.
+- Reject malformed punycode.
+- Preserve existing valid domains.
+
+==================================================
+CANONICAL URL CONTRACT
+==================================================
+
+Generate exactly one canonical URL.
+
+Never produce multiple equivalent URLs.
+
+Normalize:
+
+- trailing slash
+- protocol
+- hostname
+- slug
+
+==================================================
+TESTS
+==================================================
+
+Add focused tests for:
+
+Restaurant slug
+
+- valid slug
+- uppercase rejected
+- spaces rejected
+- unicode rejected
+- reserved names rejected
+- duplicate slug rejected
+- max length
+- min length
+
+Domain
+
+- valid domain
+- duplicate domain
+- wildcard rejected
+- localhost rejected in production
+- protocol normalization
+- uppercase normalization
+- malformed domain rejected
+
+Canonical URL
+
+- generated consistently
+- trailing slash normalization
+- lowercase normalization
+
+Regression
+
+- Prompt 18–25 regressions PASS
+- migration integrity PASS
+- production build PASS
+
+==================================================
+FINAL SAFETY SEARCH
+==================================================
+
+Confirm NOT FOUND:
+
+- uppercase slug acceptance
+- wildcard domains
+- duplicate canonical URLs
+- reserved slug bypass
+- localhost production domain
+- inconsistent URL normalization
+
+==================================================
+VALIDATION
+==================================================
+
+Run:
+
+- focused slug tests
+- focused domain tests
+- canonical URL tests
+- Prompt 18–25 regressions
+- migration tests
+- production build
+- git diff
+- git status
+
+==================================================
+COMMIT
+==================================================
+
+Commit:
+
+fix: enforce canonical domain and slug validation
+
+Push:
+
+repair/26-domain-check-constraints
+
+Create PR targeting main.
+
+Do NOT merge.
+
+==================================================
+FINAL RESPONSE
+==================================================
+
+Return:
+
+PROMPT 26 COMPLETION SUMMARY
+
+Status:
+- COMPLETE / PARTIAL / BLOCKED
+
+Branch:
+- repair/26-domain-check-constraints
+
+Starting SHA
+
+Ending SHA
+
+Files changed
+
+Slug validation
+
+Domain validation
+
+Canonical URL contract
+
+Focused tests
+
+Regression status
+
+Migration tests
+
+Production build
+
+Git status
+
+Pull request number
+
+Recommended next action
+
+State whether Prompt 27 may begin after this PR is reviewed and merged.
+
+Do not claim the repository is fully production-ready.
