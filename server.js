@@ -60,9 +60,11 @@ import {
   acquireLock,
   releaseLock,
   getClientIp,
+  resolveClientIp,
   send429,
   send503Protection,
 } from './src/lib/upstash.server.js'
+import { getTrustedProxyMode } from './src/lib/client-ip.js'
 import {
   getSessionEmail,
   checkRestaurantAccess,
@@ -81,6 +83,19 @@ import { structuredLogger } from './src/monitoring/structuredLogger.js'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const app = express()
 const PORT = process.env.PORT || 5000
+
+// ── Trust proxy configuration ───────────────────────────────────────────────
+// Express req.ip must match the canonical resolver. The mode is derived from
+// trusted server configuration or runtime detection (never a request header).
+const proxyMode = getTrustedProxyMode()
+if (proxyMode === 'vercel' || proxyMode === 'cloudflare') {
+  app.set('trust proxy', 1)
+} else if (proxyMode === 'trusted') {
+  const hops = Number(process.env.TRUSTED_PROXY_HOPS)
+  app.set('trust proxy', Number.isInteger(hops) && hops > 0 ? hops : false)
+} else {
+  app.set('trust proxy', false)
+}
 
 const INVALID_TABLE_HTML = `<!DOCTYPE html>
 <html lang="en">
@@ -354,7 +369,9 @@ if (process.env.APP_RUNTIME === 'preview') {
   app.post('/api/preview-login', async (req, res) => {
     try {
       // Rate limit
-      const clientIp = req.ip || req.connection?.remoteAddress || 'unknown'
+      const ipResult = resolveClientIp(req)
+      if (ipResult.state !== 'resolved') return send503Protection(res)
+      const clientIp = ipResult.ip
       const attempts = previewLoginAttempts.get(clientIp) || 0
       if (attempts >= 5) {
         return res.status(429).json({ error: 'Too many attempts. Try again later.' })
@@ -551,7 +568,9 @@ app.post('/api/menu/upload-image', async (req, res) => {
 // Delegates to menuService (shared with api/menu-content.js and vite.config.js).
 app.post('/api/menu/items', async (req, res) => {
   try {
-    const result = await menuService.createItem(req, getClientIp(req), req.body)
+    const ipResult = resolveClientIp(req)
+    if (ipResult.state !== 'resolved') return send503Protection(res)
+    const result = await menuService.createItem(req, ipResult.ip, req.body)
     return res.status(result.status).json(result.body)
   } catch (err) {
     console.error('[menu/items POST] Error:', err.message)
@@ -564,7 +583,9 @@ app.post('/api/menu/items', async (req, res) => {
 app.patch('/api/menu/items/:id', async (req, res) => {
   try {
     const { id } = req.params
-    const result = await menuService.updateItem(req, getClientIp(req), { id, ...req.body })
+    const ipResult = resolveClientIp(req)
+    if (ipResult.state !== 'resolved') return send503Protection(res)
+    const result = await menuService.updateItem(req, ipResult.ip, { id, ...req.body })
     return res.status(result.status).json(result.body)
   } catch (err) {
     console.error('[menu/items PATCH] Error:', err.message)
@@ -576,7 +597,9 @@ app.patch('/api/menu/items/:id', async (req, res) => {
 app.delete('/api/menu/items/:id', async (req, res) => {
   try {
     const { id } = req.params
-    const result = await menuService.deleteItem(req, getClientIp(req), { id })
+    const ipResult = resolveClientIp(req)
+    if (ipResult.state !== 'resolved') return send503Protection(res)
+    const result = await menuService.deleteItem(req, ipResult.ip, { id })
     return res.status(result.status).json(result.body)
   } catch (err) {
     console.error('[menu/items DELETE] Error:', err.message)
@@ -588,7 +611,9 @@ app.delete('/api/menu/items/:id', async (req, res) => {
 // Body: { id, ...patch }
 app.post('/api/menu/item-patch', async (req, res) => {
   try {
-    const result = await menuService.updateItem(req, getClientIp(req), req.body)
+    const ipResult = resolveClientIp(req)
+    if (ipResult.state !== 'resolved') return send503Protection(res)
+    const result = await menuService.updateItem(req, ipResult.ip, req.body)
     return res.status(result.status).json(result.body)
   } catch (err) {
     console.error('[menu/item-patch] Error:', err.message)
@@ -600,7 +625,9 @@ app.post('/api/menu/item-patch', async (req, res) => {
 // Body: { id }
 app.post('/api/menu/item-delete', async (req, res) => {
   try {
-    const result = await menuService.deleteItem(req, getClientIp(req), req.body)
+    const ipResult = resolveClientIp(req)
+    if (ipResult.state !== 'resolved') return send503Protection(res)
+    const result = await menuService.deleteItem(req, ipResult.ip, req.body)
     return res.status(result.status).json(result.body)
   } catch (err) {
     console.error('[menu/item-delete] Error:', err.message)
@@ -612,7 +639,9 @@ app.post('/api/menu/item-delete', async (req, res) => {
 // Body: { restaurantId, name, emoji, position, id? }
 app.post('/api/menu/categories/upsert', async (req, res) => {
   try {
-    const result = await menuService.upsertCategory(req, getClientIp(req), req.body)
+    const ipResult = resolveClientIp(req)
+    if (ipResult.state !== 'resolved') return send503Protection(res)
+    const result = await menuService.upsertCategory(req, ipResult.ip, req.body)
     return res.status(result.status).json(result.body)
   } catch (err) {
     console.error('[menu/categories/upsert] Error:', err.message)
@@ -624,7 +653,9 @@ app.post('/api/menu/categories/upsert', async (req, res) => {
 // Body: { id }
 app.post('/api/menu/categories/delete', async (req, res) => {
   try {
-    const result = await menuService.deleteCategory(req, getClientIp(req), req.body)
+    const ipResult = resolveClientIp(req)
+    if (ipResult.state !== 'resolved') return send503Protection(res)
+    const result = await menuService.deleteCategory(req, ipResult.ip, req.body)
     return res.status(result.status).json(result.body)
   } catch (err) {
     console.error('[menu/categories/delete] Error:', err.message)
@@ -636,7 +667,9 @@ app.post('/api/menu/categories/delete', async (req, res) => {
 // Body: { restaurantId, items: [...] }
 app.post('/api/menu/items/upsert', async (req, res) => {
   try {
-    const result = await menuService.upsertItems(req, getClientIp(req), req.body)
+    const ipResult = resolveClientIp(req)
+    if (ipResult.state !== 'resolved') return send503Protection(res)
+    const result = await menuService.upsertItems(req, ipResult.ip, req.body)
     return res.status(result.status).json(result.body)
   } catch (err) {
     console.error('[menu/items/upsert] Error:', err.message)
@@ -652,7 +685,9 @@ app.post('/api/orders/update-status', async (req, res) => {
   if (!orderId || !status) return res.status(400).json({ error: 'orderId and status required' })
 
   // ── Rate limit: 60/min per IP + 5 s exclusive lock per orderId ───────────
-  const orderStatusRl = await rateLimit(`rl:order-status:ip:${getClientIp(req)}`, 60, 60)
+  const ipResult = resolveClientIp(req)
+  if (ipResult.state !== 'resolved') return send503Protection(res)
+  const orderStatusRl = await rateLimit(`rl:order-status:ip:${ipResult.ip}`, 60, 60)
   if (!orderStatusRl.available) return send503Protection(res)
   if (!orderStatusRl.allowed) return send429(res, 'Too many order status updates. Please slow down.')
   const orderStatusLock = await acquireLock(`lock:order-status:${orderId}`, 5)
@@ -690,7 +725,7 @@ app.post('/api/orders/update-status', async (req, res) => {
     const resolvedRestaurantId = updatedRow.restaurant_id
     console.log('[orders/update-status] Neon primary ✅ id:', orderId, 'status:', status)
 
-    writeAuditLog({ action: 'update_status', entityType: 'order', entityId: orderId, newData: { status }, ipAddress: req.ip })
+    writeAuditLog({ action: 'update_status', entityType: 'order', entityId: orderId, newData: { status }, ipAddress: getClientIp(req) })
     return res.json({ id: orderId, status, restaurant_id: resolvedRestaurantId })
   } catch (err) {
     console.error('[orders/update-status] Error:', err.message)
@@ -713,7 +748,9 @@ app.post('/api/orders', async (req, res) => {
     }
 
     // ── Rate limit: 10 orders/min per IP. Database idempotency is the source of truth. ──
-    const orderRl = await rateLimit(`rl:order-create:ip:${getClientIp(req)}`, 10, 60)
+    const orderIpResult = resolveClientIp(req)
+    if (orderIpResult.state !== 'resolved') return send503Protection(res)
+    const orderRl = await rateLimit(`rl:order-create:ip:${orderIpResult.ip}`, 10, 60)
     if (!orderRl.available) return send503Protection(res)
     if (!orderRl.allowed) return send429(res, 'Too many orders submitted. Please wait a moment.')
 
@@ -809,7 +846,9 @@ app.post('/api/bookings', async (req, res) => {
       return res.status(400).json({ error: 'Idempotency-Key header is required (min 16 characters).' })
     }
 
-    const bookingRl = await rateLimit(`rl:booking-create:ip:${getClientIp(req)}`, 5, 60)
+    const bookingIpResult = resolveClientIp(req)
+    if (bookingIpResult.state !== 'resolved') return send503Protection(res)
+    const bookingRl = await rateLimit(`rl:booking-create:ip:${bookingIpResult.ip}`, 5, 60)
     if (!bookingRl.available) return send503Protection(res)
     if (!bookingRl.allowed) return send429(res, 'Too many booking requests. Please wait a moment.')
 
@@ -861,7 +900,9 @@ app.patch('/api/bookings/:id/status', async (req, res) => {
   const { id } = req.params
 
   // ── Rate limit + exclusive lock (Redis) ────────────────────────────────────
-  const bkStatusRl = await rateLimit(`rl:booking-status:ip:${getClientIp(req)}`, 30, 60)
+  const bkIpResult = resolveClientIp(req)
+  if (bkIpResult.state !== 'resolved') return send503Protection(res)
+  const bkStatusRl = await rateLimit(`rl:booking-status:ip:${bkIpResult.ip}`, 30, 60)
   if (!bkStatusRl.available) return send503Protection(res)
   if (!bkStatusRl.allowed) return send429(res, 'Too many booking status updates. Please slow down.')
   const bkStatusLock = await acquireLock(`lock:booking-status:${id}`, 5)
@@ -884,7 +925,7 @@ app.patch('/api/bookings/:id/status', async (req, res) => {
         entityType: 'booking',
         entityId: id,
         newData: { status: req.body?.status },
-        ipAddress: req.ip,
+        ipAddress: getClientIp(req),
       })
     }
 
@@ -1025,7 +1066,7 @@ app.post('/api/restaurant/update-profile', requireRestaurantRole(req => req.body
     }
     // patchNeonRestaurantProfile enforces the OWNER_ADMIN_PROFILE_PATCH allowlist.
     const row = await patchNeonRestaurantProfile(restaurantId, patch)
-    writeAuditLog({ restaurantId, action: 'update', entityType: 'restaurant', entityId: restaurantId, newData: patch, ipAddress: req.ip })
+    writeAuditLog({ restaurantId, action: 'update', entityType: 'restaurant', entityId: restaurantId, newData: patch, ipAddress: getClientIp(req) })
     return res.json(row ?? { id: restaurantId })
   } catch (err) {
     console.error('[restaurant/update-profile] Error:', err.message)
@@ -1036,7 +1077,9 @@ app.post('/api/restaurant/update-profile', requireRestaurantRole(req => req.body
 // Delegates to restaurantContentService (shared with api/menu-content.js and vite.config.js).
 app.post('/api/restaurant/update-social', async (req, res) => {
   try {
-    const result = await contentService.updateSocial(req, getClientIp(req), req.body)
+    const ipResult = resolveClientIp(req)
+    if (ipResult.state !== 'resolved') return send503Protection(res)
+    const result = await contentService.updateSocial(req, ipResult.ip, req.body)
     return res.status(result.status).json(result.body)
   } catch (err) {
     console.error('[restaurant/update-social] Error:', err.message)
@@ -1092,7 +1135,9 @@ app.get('/api/about/:restaurantId', async (req, res) => {
 // Delegates to restaurantContentService (shared with api/menu-content.js and vite.config.js).
 app.post('/api/about/save', async (req, res) => {
   try {
-    const result = await contentService.saveAbout(req, getClientIp(req), req.body)
+    const ipResult = resolveClientIp(req)
+    if (ipResult.state !== 'resolved') return send503Protection(res)
+    const result = await contentService.saveAbout(req, ipResult.ip, req.body)
     return res.status(result.status).json(result.body)
   } catch (err) {
     console.error('[about/save] Error:', err.message)
@@ -1175,7 +1220,7 @@ app.post('/api/neon/restaurant/create', requireSuperadmin, async (req, res) => {
       name: payload.name,
       ownerUserId,
       ownerEmail,
-      ipAddress: req.headers['x-forwarded-for'] ?? req.socket?.remoteAddress ?? null,
+      ipAddress: getClientIp(req),
       // optional profile fields forwarded from the payload
       place:               payload.place,
       note:                payload.note,

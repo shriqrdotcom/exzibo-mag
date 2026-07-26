@@ -27,7 +27,7 @@ import { executeTeamList, executeTeamUpsert, executeTeamDelete } from './api/_li
 import { patchRestaurantGlobalConfig } from './src/services/restaurantSettingsService.js'
 import { writeAuditLog } from './src/db/neon-audit-logs.js'
 import * as mediaService from './src/services/mediaService.js'
-import { getClientIp } from './src/lib/upstash.server.js'
+import { getClientIp, resolveClientIp, send503Protection } from './src/lib/upstash.server.js'
 import { generateRequestId, parsePagination } from './api/_lib/validate.js'
 import * as menuService from './src/services/menuService.js'
 import * as contentService from './src/services/restaurantContentService.js'
@@ -383,7 +383,12 @@ function menuApiPlugin() {
       // and server.js call, so dev/Express/Vercel behavior stays identical.
       server.middlewares.use('/api/menu', async (req, res, next) => {
         const pathname = (req.url || '/').split('?')[0].replace(/\/$/, '')
-        const ip = getClientIp(req)
+        const ipResult = resolveClientIp(req)
+        if (ipResult.state !== 'resolved') {
+          res.statusCode = 503
+          return res.end(JSON.stringify({ error: 'Service temporarily unavailable. Please try again later.' }))
+        }
+        const ip = ipResult.ip
 
         if (req.method === 'GET') {
           try {
@@ -483,7 +488,9 @@ function menuApiPlugin() {
         if (req.method !== 'POST') return json(res, 405, { error: 'Method not allowed' })
         try {
           const body = await readBody(req)
-          const result = await contentService.updateSocial(req, getClientIp(req), body)
+          const ipResult = resolveClientIp(req)
+          if (ipResult.state !== 'resolved') return json(res, 503, { error: 'Service temporarily unavailable. Please try again later.' })
+          const result = await contentService.updateSocial(req, ipResult.ip, body)
           return json(res, result.status, result.body)
         } catch (e) {
           console.error('[update-social] Exception:', e.message)
@@ -851,7 +858,9 @@ function aboutApiPlugin() {
         if (req.method !== 'POST') return next()
         try {
           const body = await readBody(req)
-          const result = await contentService.saveAbout(req, getClientIp(req), body)
+          const ipResult = resolveClientIp(req)
+          if (ipResult.state !== 'resolved') return json(res, 503, { error: 'Service temporarily unavailable. Please try again later.' })
+          const result = await contentService.saveAbout(req, ipResult.ip, body)
           return json(res, result.status, result.body)
         } catch (e) { return json(res, 500, { error: e.message }) }
       })

@@ -27,7 +27,7 @@ import {
   ALLOWED_UPLOAD_FORMATS,
 } from '../../api/_lib/image-validate.js'
 import { checkRestaurantAccess, MANAGEMENT_ROLES } from '../../api/_lib/authz.js'
-import { rateLimit, getClientIp, send429 } from '../lib/upstash.server.js'
+import { rateLimit, resolveClientIp, send429 } from '../lib/upstash.server.js'
 import crypto from 'node:crypto'
 
 // ── Constants ──────────────────────────────────────────────────────────────────
@@ -160,7 +160,9 @@ function validateUpload(dataUrl) {
 
 export async function uploadImage({ req, restaurantId, dataUrl, mediaType, slot }) {
   // ── Rate limit ──────────────────────────────────────────────────────────────
-  const ip = getClientIp(req)
+  const ipResult = resolveClientIp(req)
+  if (ipResult.state !== 'resolved') return { status: 503, body: { error: 'Service temporarily unavailable. Please try again later.' } }
+  const ip = ipResult.ip
   const rl = await rateLimit(`rl:upload:ip:${ip}`, UPLOAD_RATE_LIMIT, UPLOAD_RATE_WINDOW)
   if (!rl.allowed) {
     return { status: 429, body: safeError('Too many uploads. Please wait.') }
@@ -232,7 +234,9 @@ export async function uploadImage({ req, restaurantId, dataUrl, mediaType, slot 
 
 export async function replaceImage({ req, restaurantId, dataUrl, mediaType, slot, updateDb }) {
   // ── Rate limit ──────────────────────────────────────────────────────────────
-  const ip = getClientIp(req)
+  const ipResult = resolveClientIp(req)
+  if (ipResult.state !== 'resolved') return { status: 503, body: { error: 'Service temporarily unavailable. Please try again later.' } }
+  const ip = ipResult.ip
   const rl = await rateLimit(`rl:upload:ip:${ip}`, UPLOAD_RATE_LIMIT, UPLOAD_RATE_WINDOW)
   if (!rl.allowed) {
     return { status: 429, body: safeError('Too many uploads. Please wait.') }

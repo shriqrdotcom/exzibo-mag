@@ -41,7 +41,7 @@
 
 import { setCors } from './_lib/cors.js'
 import { getSessionEmail, checkSuperadmin } from './_lib/authz.js'
-import { rateLimit, getClientIp, send429, send503Protection } from '../src/lib/upstash.server.js'
+import { rateLimit, getClientIp, resolveClientIp, send429, send503Protection } from '../src/lib/upstash.server.js'
 import {
   insertMessage,
   getMessagesNeon,
@@ -142,7 +142,9 @@ export default async function handler(req, res) {
     if (action === 'createHelp') {
       if (req.method !== 'POST') return safeError(res, 405, 'Method not allowed', requestId)
 
-      const ip = getClientIp(req)
+      const ipResult = resolveClientIp(req)
+      if (ipResult.state !== 'resolved') return send503Protection(res)
+      const ip = ipResult.ip
       const rl = await rateLimit(`rl:help-submit:ip:${ip}`, 5, 300)
       if (!rl.available) return send503Protection(res)
       if (!rl.allowed) return send429(res, 'Too many help submissions. Please wait a few minutes.')

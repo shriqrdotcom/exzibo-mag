@@ -1,6 +1,6 @@
 import { setCors } from './_lib/cors.js'
 import { checkRestaurantAccess, MANAGEMENT_ROLES } from './_lib/authz.js'
-import { getClientIp } from '../src/lib/upstash.server.js'
+import { getClientIp, resolveClientIp, send503Protection } from '../src/lib/upstash.server.js'
 import * as menuService from '../src/services/menuService.js'
 import * as contentService from '../src/services/restaurantContentService.js'
 
@@ -78,7 +78,9 @@ export default async function handler(req, res) {
     // ── Menu — writes ────────────────────────────────────────────────────────
     if (MENU_POST_ACTIONS.has(action)) {
       if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
-      const ip = getClientIp(req)
+      const ipResult = resolveClientIp(req)
+      if (ipResult.state !== 'resolved') return send503Protection(res)
+      const ip = ipResult.ip
       const result =
         action === 'createItem' ? await menuService.createItem(req, ip, req.body) :
         action === 'upsertItems' ? await menuService.upsertItems(req, ip, req.body) :
@@ -92,7 +94,9 @@ export default async function handler(req, res) {
     // ── Content — writes ─────────────────────────────────────────────────────
     if (CONTENT_POST_ACTIONS.has(action)) {
       if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
-      const ip = getClientIp(req)
+      const ipResult = resolveClientIp(req)
+      if (ipResult.state !== 'resolved') return send503Protection(res)
+      const ip = ipResult.ip
       const result =
         action === 'saveAbout' ? await contentService.saveAbout(req, ip, req.body) :
         await contentService.updateSocial(req, ip, req.body)

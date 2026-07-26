@@ -1,6 +1,6 @@
 import { setPublicCors } from './_lib/cors.js'
 import { checkRestaurantAccess, ALL_ROLES } from './_lib/authz.js'
-import { rateLimit, getClientIp, send429, send503Protection } from '../src/lib/upstash.server.js'
+import { rateLimit, getClientIp, resolveClientIp, send429, send503Protection } from '../src/lib/upstash.server.js'
 import { getNeonBookingsPaginated } from '../src/db/neon-bookings.js'
 import { createBookingAtomic } from '../src/services/bookingCreationService.js'
 import { updateBookingStatusService } from './_lib/booking-status-service.js'
@@ -92,7 +92,9 @@ export default async function handler(req, res) {
       if (!body?.restaurant_id) return badInput(res, 'restaurant_id required', requestId)
       rejectUnknownFields(body, ALLOWED_CREATE_FIELDS)
 
-      const ip = getClientIp(req)
+      const ipResult = resolveClientIp(req)
+      if (ipResult.state !== 'resolved') return send503Protection(res)
+      const ip = ipResult.ip
       const rl = await rateLimit(`rl:booking:ip:${ip}`, 10, 60)
       if (!rl.available) return send503Protection(res)
       if (!rl.allowed) return send429(res, 'Too many booking requests. Please wait.')
