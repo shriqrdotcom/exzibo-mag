@@ -1,0 +1,13 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# exzibo-realtime — Cloudflare Worker local-development secrets
+# Copy this file to .dev.vars and fill in real values. NEVER commit real values to Git.
+# These are secret bindings for `wrangler dev` / `wrangler deploy`.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Required. Used by the backend to authenticate publish requests.
+# Generate with: openssl rand -base64 32
+PUBLISH_SECRET=your_32_char_publish_secret_here
+
+# Required. Used to sign WebSocket tickets.
+# Generate with: openssl rand -base64 32
+REALTIME_TICKET_SECRET=your_32_char_ticket_secret_here

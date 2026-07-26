@@ -1,4 +1,5 @@
 import { DurableObject } from "cloudflare:workers";
+import { validateWorkerEnv } from "./env.js";
 
 export interface Env {
 	MY_DURABLE_OBJECT: DurableObjectNamespace<MyDurableObject>;
@@ -287,6 +288,7 @@ export class MyDurableObject extends DurableObject<Env> {
 
 export default {
 	async fetch(request: Request, env: Env): Promise<Response> {
+		validateWorkerEnv(env);
 		const url = new URL(request.url);
 
 		// Health check

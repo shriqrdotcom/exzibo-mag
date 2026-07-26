@@ -20,6 +20,7 @@
 
 import { createHmac } from 'node:crypto'
 import { checkRestaurantAccess } from '../../api/_lib/authz.js'
+import { validateRealtimeTicketConfig } from '../config/serverEnv.js'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -45,7 +46,8 @@ export async function issueRealtimeTicket(session, req, { restaurantId, role, or
   // ── Fail closed if REALTIME_TICKET_SECRET is missing ─────────────────────
   // Checked FIRST, before any auth or validation, so misconfiguration is
   // always visible regardless of session or membership state.
-  const ticketSecret = process.env.REALTIME_TICKET_SECRET
+  const ticketConfig = validateRealtimeTicketConfig(process.env, { required: false })
+  const ticketSecret = ticketConfig.realtimeTicketSecret
   if (!ticketSecret) {
     console.error('[realtimeTicketService] REALTIME_TICKET_SECRET not configured — fail closed')
     return bad(500, 'Realtime ticket secret not configured')

@@ -2,14 +2,13 @@
 // The TypeScript version (index.ts) is the canonical source for type-safe usage.
 import pg from 'pg'
 import { drizzle } from 'drizzle-orm/node-postgres'
+import { validateDatabaseConfig } from '../config/serverEnv.js'
 
 const { Pool } = pg
 
-if (!process.env.DATABASE_URL) {
-  throw new Error('[db] DATABASE_URL environment variable is not set')
-}
+const { databaseUrl } = validateDatabaseConfig()
 
-const pool = new Pool({ connectionString: process.env.DATABASE_URL })
+const pool = new Pool({ connectionString: databaseUrl })
 export const db = drizzle(pool)
 
 // Lightweight health check — runs SELECT 1 and returns timing info
