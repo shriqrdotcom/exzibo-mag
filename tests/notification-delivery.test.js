@@ -366,15 +366,15 @@ describe('D — HTTP API contract', () => {
 // ─── Section E: Cross-runtime parity (static) ─────────────────────────────────
 
 describe('E — cross-runtime parity', () => {
-  it('E1: api/restaurant-notifications.js exports a default handler', async () => {
-    const { default: handler } = await import('../api/restaurant-notifications.js').catch(() => ({ default: null }))
+  it('E1: api/notifications.js exports a default handler', async () => {
+    const { default: handler } = await import('../api/notifications.js').catch(() => ({ default: null }))
     assert.equal(typeof handler, 'function')
   })
 
-  it('E2: server.js delegates /api/restaurant-notifications to the handler', async () => {
+  it('E2: server.js delegates /api/restaurant-notifications to the shared notifications handler', async () => {
     const fs = await import('node:fs/promises')
     const src = await fs.readFile('server.js', 'utf8')
-    assert.ok(src.includes("delegateToHandler('./api/restaurant-notifications.js'"), 'server.js must delegate /api/restaurant-notifications')
+    assert.ok(src.includes("app.all('/api/restaurant-notifications', (req, res) => delegateToHandler('./api/notifications.js'"), 'server.js must delegate /api/restaurant-notifications to api/notifications.js')
   })
 
   it('E3: vite.config.js registers /api/restaurant-notifications', async () => {

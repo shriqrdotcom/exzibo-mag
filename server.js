@@ -1299,7 +1299,7 @@ async function delegateToHandler(filePath, req, res) {
 app.all('/api/restaurants', (req, res) => delegateToHandler('./api/restaurants.js', req, res))
 app.all('/api/settings',    (req, res) => delegateToHandler('./api/settings.js',    req, res))
 app.all('/api/notifications', (req, res) => delegateToHandler('./api/notifications.js', req, res))
-app.all('/api/restaurant-notifications', (req, res) => delegateToHandler('./api/restaurant-notifications.js', req, res))
+app.all('/api/restaurant-notifications', (req, res) => delegateToHandler('./api/notifications.js', req, res))
 app.all('/api/system',       (req, res) => delegateToHandler('./api/system.js',       req, res))
 app.all('/api/analytics/:restaurantId', (req, res) => {
   req.query.action = 'analytics'

@@ -40,6 +40,7 @@
     { "source": "/api/team-members/:restaurantId",          "destination": "/api/team?restaurantId=:restaurantId"                         },
     { "source": "/api/realtime/ticket",                    "destination": "/api/auth-check?action=issueTicket"                            },
     { "source": "/api/system",                              "destination": "/api/system"                                                    },
+    { "source": "/api/restaurant-notifications",          "destination": "/api/notifications"                                             },
     { "source": "/api/(.*)",                                "destination": "/api/$1"                                                       },
     { "source": "/(.*)",                                    "destination": "/index.html"                                                   }
   ]

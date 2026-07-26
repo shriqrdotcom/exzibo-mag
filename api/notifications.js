@@ -27,8 +27,16 @@
  *   POST ?action=deleteHelp
  *   POST ?action=markAllHelpRead
  *
+ * RESTAURANT MEMBER REQUIRED (restaurant-scoped, tenant isolated):
+ *   POST ?action=create        Create a restaurant-scoped operational notification.
+ *   GET  ?action=list          List active restaurant notifications.
+ *   POST ?action=mark-read     Mark a restaurant notification as read.
+ *   POST ?action=dismiss       Dismiss a restaurant notification.
+ *
  * Restaurant owner / admin / manager / staff roles are NOT platform administrators
- * and are never granted access to superadmin-gated actions.
+ * and are never granted access to superadmin-gated actions. Restaurant-scoped
+ * actions are dispatched through the same canonical notificationService used by
+ * /api/restaurant-notifications, so the tenant boundary from Prompt 27 is preserved.
  *
  * HTTP status contract:
  *   401 — no valid session
@@ -40,9 +48,16 @@
  */
 
 import { setCors } from './_lib/cors.js'
-import { getSessionEmail, checkSuperadmin } from './_lib/authz.js'
+import { getSessionEmail, checkSuperadmin, checkRestaurantAccess } from './_lib/authz.js'
 import { vercelWrapper } from './_lib/security-middleware.js'
 import { rateLimit, getClientIp, resolveClientIp, send429, send503Protection } from '../src/lib/upstash.server.js'
+import {
+  createNotification,
+  listActiveNotifications,
+  markNotificationRead,
+  dismissNotificationIdempotent,
+  NotificationError,
+} from '../src/services/notificationService.js'
 import {
   insertMessage,
   getMessagesNeon,
@@ -69,10 +84,13 @@ import {
   internalError,
   rejectUnknownFields,
   validateString,
+  validateNumber,
   validateEnum,
   validateUuid,
   parsePagination,
+  ValidationError,
 } from './_lib/validate.js'
+import { NOTIFICATION_TYPES } from '../src/services/notificationService.js'
 
 // ── Auth helpers (inline — no Express next()) ─────────────────────────────────
 
@@ -123,6 +141,45 @@ async function assertSession(req, res) {
     return { ok: false }
   }
   return { ok: true, email: session.email, userId: session.userId }
+}
+
+/**
+ * Verify a session that is a member of the given restaurant.
+ * The service never trusts a client-provided restaurantId; this helper resolves
+ * membership server-side via the authz boundary.
+ */
+async function assertRestaurantAccess(req, res, restaurantId) {
+  let session
+  try {
+    session = await getSessionEmail(req)
+  } catch (e) {
+    res.status(500).json({ error: 'Authorization error' })
+    return { ok: false }
+  }
+  if (!session) {
+    res.status(401).json({ error: 'Not authenticated' })
+    return { ok: false }
+  }
+
+  const result = await checkRestaurantAccess(req, restaurantId)
+  if (result.error === 'Not authenticated') {
+    res.status(401).json({ error: 'Not authenticated' })
+    return { ok: false }
+  }
+  if (result.error && (result.error.includes('duplicate') || result.error.includes('conflict'))) {
+    res.status(409).json({ error: result.error })
+    return { ok: false }
+  }
+  if (result.error) {
+    res.status(500).json({ error: 'Authorization error' })
+    return { ok: false }
+  }
+  if (!result.allowed) {
+    res.status(403).json({ error: 'Access denied' })
+    return { ok: false }
+  }
+
+  return { ok: true, userId: session.userId, email: session.email, role: result.role }
 }
 
 // ── Allowed status values for help requests ───────────────────────────────────
@@ -205,6 +262,81 @@ export default vercelWrapper(async function handler(req, res) {
       rejectUnknownFields(req.body || {}, ['id', 'confirmedBy'])
       await confirmActiveNotificationNeon(id, confirmedBy ?? auth.email)
       return res.json({ success: true })
+    }
+
+    // ── RESTAURANT MEMBER REQUIRED: restaurant-scoped operational notifications
+    if (action === 'create') {
+      if (req.method !== 'POST') return safeError(res, 405, 'Method not allowed', requestId)
+      const body = req.body || {}
+      rejectUnknownFields(body, ['restaurantId', 'type', 'title', 'message', 'context', 'dedupeKey', 'ttlHours'])
+
+      const restaurantId = validateUuid(body.restaurantId, 'restaurantId')
+      const type = validateEnum(body.type, 'type', NOTIFICATION_TYPES)
+      const title = validateString(body.title, 'title', { maxLength: 200 })
+      const message = validateString(body.message, 'message', { maxLength: 2000 })
+      const dedupeKey = validateString(body.dedupeKey, 'dedupeKey', { maxLength: 255 })
+      const context = body.context ?? {}
+      const ttlHours = body.ttlHours === undefined ? undefined : validateNumber(body.ttlHours, 'ttlHours', { min: 1, max: 168, integer: true })
+
+      const auth = await assertRestaurantAccess(req, res, restaurantId)
+      if (!auth.ok) return
+
+      const result = await createNotification({
+        restaurantId,
+        type,
+        title,
+        message,
+        context,
+        dedupeKey,
+        ttlHours,
+        userId: auth.userId,
+      })
+      return res.status(result.status).json(result.body)
+    }
+
+    if (action === 'list') {
+      const rawRestaurantId = req.query.restaurantId
+      if (!rawRestaurantId) return badInput(res, 'restaurantId required', requestId)
+      const restaurantId = validateUuid(rawRestaurantId, 'restaurantId')
+
+      const auth = await assertRestaurantAccess(req, res, restaurantId)
+      if (!auth.ok) return
+
+      const pagination = parsePagination(req.query)
+      const result = await listActiveNotifications({
+        restaurantId,
+        limit: pagination.limit,
+        cursor: pagination.cursor || null,
+      })
+      return res.status(result.status).json(result.body)
+    }
+
+    if (action === 'mark-read') {
+      if (req.method !== 'POST') return safeError(res, 405, 'Method not allowed', requestId)
+      const body = req.body || {}
+      rejectUnknownFields(body, ['id', 'restaurantId'])
+      const id = validateUuid(body.id, 'id')
+      const restaurantId = validateUuid(body.restaurantId, 'restaurantId')
+
+      const auth = await assertRestaurantAccess(req, res, restaurantId)
+      if (!auth.ok) return
+
+      const result = await markNotificationRead({ id, restaurantId, userId: auth.userId })
+      return res.status(result.status).json(result.body)
+    }
+
+    if (action === 'dismiss') {
+      if (req.method !== 'POST') return safeError(res, 405, 'Method not allowed', requestId)
+      const body = req.body || {}
+      rejectUnknownFields(body, ['id', 'restaurantId'])
+      const id = validateUuid(body.id, 'id')
+      const restaurantId = validateUuid(body.restaurantId, 'restaurantId')
+
+      const auth = await assertRestaurantAccess(req, res, restaurantId)
+      if (!auth.ok) return
+
+      const result = await dismissNotificationIdempotent({ id, restaurantId, userId: auth.userId })
+      return res.status(result.status).json(result.body)
     }
 
     // ── SUPERADMIN REQUIRED: all platform-administrative actions ──────────────
@@ -317,6 +449,12 @@ export default vercelWrapper(async function handler(req, res) {
 
     return badInput(res, `Unknown action: ${action}`, requestId)
   } catch (err) {
+    if (err instanceof NotificationError) {
+      return safeError(res, err.status, err.message, requestId)
+    }
+    if (err instanceof ValidationError) {
+      return badInput(res, err.message, requestId)
+    }
     console.error(`[notifications][${action}] Error:`, err.message)
     return internalError(res, requestId)
   }

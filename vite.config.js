@@ -745,6 +745,7 @@ function menuApiPlugin() {
       })
 
       // /api/restaurant-notifications — restaurant-scoped notification service
+      // Rewrites to the shared api/notifications.js handler in dev.
       server.middlewares.use('/api/restaurant-notifications', async (req, res, next) => {
         if (req.method === 'OPTIONS') {
           res.statusCode = 200
@@ -759,7 +760,7 @@ function menuApiPlugin() {
           const queryParams = Object.fromEntries(new URLSearchParams((req.url || '').split('?')[1] || ''))
           req.query = queryParams
 
-          const { default: handler } = await import('./api/restaurant-notifications.js')
+          const { default: handler } = await import('./api/notifications.js')
           if (!res.status) {
             res.status = (code) => { res.statusCode = code; return res }
           }
