@@ -29,7 +29,7 @@ export const RESERVED_SLUGS = Object.freeze(new Set([
 
 // ── Length constraints ────────────────────────────────────────────────────────
 export const SLUG_MIN_LENGTH = 3
-export const SLUG_MAX_LENGTH = 60
+export const SLUG_MAX_LENGTH = 64
 
 // ── normalizeSlug ─────────────────────────────────────────────────────────────
 // Converts raw user input into a canonical slug string.
