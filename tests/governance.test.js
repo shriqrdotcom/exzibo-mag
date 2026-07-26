@@ -12,7 +12,7 @@ const GUIDE = join(ROOT, 'docs', 'ARCHITECTURE_SECURITY_INVARIANTS.md');
 const requiredInvariantPhrases = [
   'Neon PostgreSQL is the authoritative database',
   'Drizzle SQL migrations are the source of schema changes',
-  'No production `db:push` workflow',
+  'No `db:push` / `drizzle-kit push` workflow',
   'Better Auth is the authentication system',
   'Server-side authorization is mandatory',
   'Client-provided identifiers are never trusted',

@@ -23,7 +23,10 @@ CREATE TABLE IF NOT EXISTS realtime_consumer_heartbeats (
 CREATE INDEX IF NOT EXISTS idx_realtime_consumer_heartbeats_fresh
   ON realtime_consumer_heartbeats (heartbeat_at DESC);
 
--- Index for stale-heartbeat cleanup (oldest first)
-CREATE INDEX IF NOT EXISTS idx_realtime_consumer_heartbeats_stale
+-- Index for stopped-heartbeat cleanup (oldest first).
+-- Partial-index predicates must be immutable, so the time-dependent portion of the
+-- cleanup filter is applied at query time. Stopped rows are indexed so cleanup can
+-- find them efficiently; old running rows are scanned via the updated_at column.
+CREATE INDEX IF NOT EXISTS idx_realtime_consumer_heartbeats_stopped
   ON realtime_consumer_heartbeats (updated_at ASC)
-  WHERE status = 'stopped' OR updated_at < now() - interval '7 days';
+  WHERE status = 'stopped';

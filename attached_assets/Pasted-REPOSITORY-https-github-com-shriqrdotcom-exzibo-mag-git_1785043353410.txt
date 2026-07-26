@@ -1,0 +1,483 @@
+REPOSITORY
+https://github.com/shriqrdotcom/exzibo-mag.git
+
+TASK TITLE
+Prompt 23 of 38 — Repair Migration Governance and Remove Unsafe db:push Workflow
+
+ROLE
+
+Act as a senior database migration engineer, Drizzle ORM reviewer, PostgreSQL schema-governance specialist, and production-readiness auditor.
+
+Work only on:
+
+- migration governance
+- Drizzle command safety
+- schema ownership documentation
+- migration-only workflow enforcement
+- CI/test checks for unsafe schema commands
+
+Do not modify:
+
+- runtime business logic
+- authentication
+- orders
+- bookings
+- memberships
+- analytics
+- realtime
+- Redis
+- frontend UI
+- billing
+- media
+- database schema content unless required only for governance consistency
+
+==================================================
+PRECONDITIONS
+==================================================
+
+Begin only after Prompt 22 has been merged into main.
+
+Run:
+
+git fetch origin --prune
+git switch main
+git pull --ff-only origin main
+
+Confirm:
+
+- Prompt 22 security invariants guide is present.
+- Prompt 21 environment contract remains present.
+- Prompt 8–20 protections remain present.
+- git status is completely clean.
+
+Record the exact starting commit SHA.
+
+Create branch:
+
+repair/23-migration-governance
+
+Do not work directly on main.
+Do not continue from Prompt 22 branch.
+
+==================================================
+CONFIRMED DEFECT
+==================================================
+
+The repository has contradictory migration governance.
+
+Known problems:
+
+1. package.json exposes a Drizzle db:push / drizzle-kit push workflow.
+
+2. Existing migration comments warn that push-style schema mutation must not be used.
+
+3. Some global tables from earlier migrations are not fully represented by the main Drizzle schema.
+
+4. Future agents or developers may run the wrong schema command.
+
+5. Production schema changes must be migration-only and reproducible.
+
+==================================================
+OBJECTIVE
+==================================================
+
+After this task:
+
+1. The repository has one approved database schema-change path.
+
+2. Unsafe production db:push workflow is removed or blocked.
+
+3. Package scripts clearly separate:
+   - migration generation/checking
+   - migration application
+   - local-only development helpers, if any
+
+4. CI/tests detect reintroduction of unsafe db:push commands.
+
+5. Documentation and scripts agree with the migration-only policy.
+
+6. Existing migration ledger remains valid.
+
+7. Zero-to-head migration tests remain green.
+
+8. No runtime behavior changes.
+
+==================================================
+STRICT RULES
+==================================================
+
+Do not:
+
+- run production migrations
+- access production database
+- delete existing migrations
+- rewrite migration history
+- run db:push against any shared database
+- change table definitions unless required only to reflect already-existing migration-owned schema
+- add unsafe schema-sync commands under a different name
+- leave contradictory docs/comments
+- commit .env files
+- commit screenshots, pasted prompts, attached assets, generated reports, or Agent-memory files
+
+==================================================
+STEP 1 — INVENTORY MIGRATION TOOLING
+==================================================
+
+Search for:
+
+- db:push
+- drizzle-kit push
+- push:
+- migrate
+- migration
+- drizzle/migrations
+- _journal.json
+- schema.ts
+- global tables
+- migration-only
+- db:migrate
+- db:generate
+- db:check
+- drizzle.config
+- DATABASE_URL
+
+Inspect at minimum:
+
+- package.json
+- drizzle.config.*
+- src/db/schema.ts
+- drizzle/migrations/**
+- drizzle/migrations/meta/_journal.json
+- tests/migration-integrity.test.js
+- setup docs
+- security invariants guide
+- README files
+- CI/workflow files if present
+- scripts touching database schema
+
+Create an internal map:
+
+command/file
+→ purpose
+→ safe/unsafe
+→ local/test/prod
+→ current behavior
+→ corrected behavior
+
+Do not edit before inventory is complete.
+
+==================================================
+STEP 2 — DEFINE APPROVED MIGRATION POLICY
+==================================================
+
+Document one policy:
+
+1. Schema changes are made through reviewed SQL migrations.
+
+2. Migration ledger must match disk migrations.
+
+3. Zero-to-head migration must pass.
+
+4. Upgrade rehearsal must pass for additive schema changes.
+
+5. Production migration execution is a controlled release action, not automatic local tooling.
+
+6. db:push / drizzle-kit push is not an approved production or shared-database command.
+
+7. Developers must not use push to “fix” production schema drift.
+
+8. Global tables created by migrations are migration-owned unless represented in schema intentionally.
+
+This policy must align with Prompt 22’s security invariants guide.
+
+==================================================
+STEP 3 — REPAIR PACKAGE SCRIPTS
+==================================================
+
+Remove or rename unsafe scripts.
+
+Requirements:
+
+1. No script named db:push may execute drizzle-kit push.
+
+2. No production-capable script may execute push.
+
+3. If a local-only helper is kept, it must:
+   - be clearly named local-only;
+   - refuse to run unless NODE_ENV is test/development;
+   - refuse common production URLs/domains;
+   - print a warning;
+   - never be referenced by production docs.
+
+Preferred result:
+
+- remove db:push entirely
+- keep safe scripts such as:
+  - db:migrate
+  - db:migration:check
+  - db:migration:verify
+
+Do not break existing migration tests.
+
+==================================================
+STEP 4 — UPDATE GOVERNANCE DOCUMENTATION
+==================================================
+
+Update only narrow docs needed to remove contradictions.
+
+Required guidance:
+
+- use SQL migrations, not push, for schema changes;
+- validate with zero-to-head migration;
+- run upgrade rehearsals for additive changes;
+- do not run schema push against production/shared DB;
+- migrations require code review;
+- production migration requires backup/preflight/rollback plan.
+
+Do not add long unrelated documentation.
+
+==================================================
+STEP 5 — GLOBAL TABLE OWNERSHIP CHECK
+==================================================
+
+Inspect tables created by earlier global migrations.
+
+Determine whether they are:
+
+A. represented in Drizzle schema intentionally;
+B. migration-owned but not represented in schema;
+C. missing from schema by mistake.
+
+Do not automatically add schema definitions.
+
+If adding representation is necessary, do it only if:
+
+- it matches existing SQL exactly;
+- it does not change database shape;
+- tests prove no migration diff is generated by accident.
+
+Otherwise, document migration-owned tables clearly.
+
+==================================================
+STEP 6 — ADD GOVERNANCE TESTS
+==================================================
+
+Add executable tests proving:
+
+1. package.json does not expose db:push.
+
+2. No package script executes drizzle-kit push for production/shared DB.
+
+3. No active docs recommend production db:push.
+
+4. Migration-only policy document exists.
+
+5. Security invariants guide references migration-only governance.
+
+6. Migration journal entries match SQL files.
+
+7. Migration filenames are ordered and unique.
+
+8. No migration file is missing from journal.
+
+9. No journal entry points to a missing migration.
+
+10. Zero-to-head migration remains valid.
+
+11. Additive migration upgrade rehearsal remains valid where applicable.
+
+12. Global migration-owned tables are documented or represented.
+
+13. Unsafe schema command reintroduction fails the test.
+
+14. Prompt 21 environment tests remain green.
+
+15. Prompt 22 governance tests remain green.
+
+16. Prompt 8–20 regressions remain green.
+
+17. Root production build passes.
+
+==================================================
+STEP 7 — FINAL SAFETY SEARCH
+==================================================
+
+Confirm NOT FOUND in active scripts/docs:
+
+- db:push as approved workflow
+- drizzle-kit push as approved production/shared DB workflow
+- schema push recommended for production
+- migration comments contradicting package scripts
+- undocumented migration-owned global tables
+- missing migration journal entries
+- unsafe database command hidden under another name
+
+Allowed:
+
+- negative tests that assert these patterns are forbidden
+- documentation saying these commands must not be used
+
+==================================================
+VALIDATION
+==================================================
+
+Run:
+
+1. Frozen dependency installation.
+2. Focused migration-governance tests.
+3. Migration-integrity tests.
+4. Zero-to-head migration test.
+5. Upgrade rehearsal tests where configured.
+6. Prompt 22 governance tests.
+7. Prompt 21 environment tests.
+8. Prompt 8–20 regression suites.
+9. Root production build.
+10. git diff against starting commit.
+11. git status.
+12. Final safety search.
+
+Do not claim COMPLETE if any active script still exposes unsafe db:push.
+
+==================================================
+PERMITTED FILE SCOPE
+==================================================
+
+Likely files:
+
+- package.json
+- migration governance docs
+- docs/ARCHITECTURE_SECURITY_INVARIANTS.md if narrow update is needed
+- tests/migration-integrity.test.js
+- new migration-governance test file
+- narrowly relevant setup docs
+
+Do not modify:
+
+- runtime business logic
+- database migrations unless absolutely necessary for governance tests
+- database schema content unless only documenting/representing existing migration-owned tables
+- frontend
+- Agent-memory files
+- screenshots
+- pasted prompts
+- attached assets
+
+==================================================
+COMMIT AND PULL REQUEST
+==================================================
+
+After validation:
+
+1. Confirm only intended Prompt 23 files changed.
+
+2. Commit with:
+
+   fix: enforce migration-only schema governance
+
+3. Push:
+
+   repair/23-migration-governance
+
+4. Create a PR targeting main.
+
+5. Do not merge it.
+
+6. Do not delete the branch.
+
+==================================================
+FINAL RESPONSE
+==================================================
+
+Return:
+
+PROMPT 23 COMPLETION SUMMARY
+
+Status:
+- COMPLETE / PARTIAL / BLOCKED
+
+Branch:
+- branch name
+
+Starting SHA:
+- exact SHA
+
+Ending SHA:
+- exact SHA or Not committed
+
+Approved migration policy:
+- concise summary
+
+Scripts changed:
+- exact list
+
+Unsafe scripts removed:
+- exact list
+
+Global table ownership:
+- represented tables
+- migration-owned tables
+- action taken
+
+Docs changed:
+- exact list
+
+Files changed:
+- exact list
+
+Migration-governance tests:
+- passed
+- failed
+- skipped
+
+Migration-integrity tests:
+- PASS / FAIL
+
+Zero-to-head migration:
+- PASS / FAIL
+
+Upgrade rehearsal:
+- PASS / FAIL / NOT APPLICABLE
+
+Prompt 22 regression:
+- PASS / FAIL
+
+Prompt 21 regression:
+- PASS / FAIL
+
+Previous regressions:
+- PASS / FAIL
+
+Root production build:
+- PASS / FAIL
+
+Final safety search:
+- approved db:push workflow: FOUND / NOT FOUND
+- production drizzle-kit push: FOUND / NOT FOUND
+- contradictory migration guidance: FOUND / NOT FOUND
+- missing migration journal entries: FOUND / NOT FOUND
+- undocumented global table ownership: FOUND / NOT FOUND
+- unsafe hidden schema command: FOUND / NOT FOUND
+
+Production database accessed:
+- No
+
+Production migrations executed:
+- No
+
+Production secrets changed:
+- No
+
+Git status:
+- clean / not clean
+
+Pull request:
+- number
+- base
+- compare
+
+Recommended next action:
+- State whether Prompt 24 may begin.
+
+Final conclusion:
+- State whether Prompt 23 is committed, pushed and ready for review.
+- Do not claim the complete repository is production-ready.
