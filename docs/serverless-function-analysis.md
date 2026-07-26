@@ -121,9 +121,9 @@ Each file in `api/` that has a default-exported handler becomes one independent 
 ### `api/auth-check.js`
 - Method: GET · Path: `/api/auth-check?type=superadmin|member&restaurantId=`
 - Purpose: Fast role/permission check used by frontend routing
-- Auth required: Yes (Better Auth session cookie; bypassed when `DISABLE_AUTH`/`VITE_DISABLE_AUTH=true`)
+- Auth required: Yes (Better Auth session cookie; dev-only bypass when `VITE_DISABLE_AUTH=true` in Replit local dev — never set in production)
 - DB: `restaurant_members`
-- Env vars: `SUPERADMIN_ALLOWED_EMAILS`, `DATABASE_URL`, `DISABLE_AUTH`, `VITE_DISABLE_AUTH`
+- Env vars: `SUPERADMIN_ALLOWED_EMAILS`, `DATABASE_URL`; `VITE_DISABLE_AUTH` is local-dev-only and never production
 - Frontend: `src/context/AuthContext.jsx`, `src/pages/RestaurantDashboard.jsx`
 - Status: Active.
 

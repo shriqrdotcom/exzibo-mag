@@ -12,6 +12,7 @@
     "db:migrate": "drizzle-kit migrate",
     "db:push:local": "drizzle-kit push",
     "validate:migrations": "node scripts/validate-migrations.js",
+    "governance:check": "node scripts/governance-check.js",
     "preflight": "node scripts/restaurant-preflight.js",
     "backfill:dry": "node scripts/restaurant-backfill.js",
     "backfill:apply": "node scripts/restaurant-backfill.js --apply",

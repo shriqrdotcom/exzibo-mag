@@ -1,3 +1,4 @@
+- [Architecture security invariants](../docs/ARCHITECTURE_SECURITY_INVARIANTS.md) — canonical source of truth for current stack and forbidden patterns. Read this before any auth, DB, realtime, or infrastructure change.
 - [RBAC routing layer](rbac-routing.md) — RestaurantDashboard.jsx is the role-based routing layer for /:restaurantSlug/:pageSlug; delegates to AdminDashboard after role enforcement.
 - [DashboardApp pageSlug param](dashboard-pageslug.md) — static routes like /:slug/profile don't expose :pageSlug; must use a single dynamic /:slug/:pageSlug route instead.
 - [Replit subdomain routing fix](replit-subdomain.md) — On Replit/localhost, getSubdomain() must return null (not "dashboard") so DefaultApp loads with the full route tree including /dashboard, /auth, etc.

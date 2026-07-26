@@ -7,7 +7,7 @@ A full-stack restaurant management SaaS platform. Features a cinematic dark them
 - **Framework**: React 19 + Vite 8
 - **Routing**: React Router DOM v7
 - **Backend**: Express (`server.js` in production, Vite dev middlewares in dev) + Neon PostgreSQL via Drizzle ORM
-- **Auth**: Better Auth (Google OAuth in production; `VITE_DISABLE_AUTH=true` bypass in dev)
+- **Auth**: Better Auth (Google OAuth in production; `VITE_DISABLE_AUTH=true` is a **dev-only** Replit convenience and never set in production)
 - **Rate limiting / dedup**: Upstash Redis
 - **File storage**: R2 (`src/lib/r2.js`)
 - **Icons**: Lucide React, React Icons
@@ -28,7 +28,7 @@ Note: Supabase (auth/DB/realtime/storage) has been fully removed from this codeb
 
 ## Environment Variables (Secrets)
 Configured in Replit Secrets:
-- `DATABASE_URL` — Neon/Replit PostgreSQL connection string (set; schema pushed via `npm run db:push`)
+- `DATABASE_URL` — Neon/Replit PostgreSQL connection string (set; local dev schema synced via `npm run db:push:local` only)
 
 Referenced by the app but not yet set in this Replit environment (dev mode works without them thanks to `VITE_DISABLE_AUTH=true`; needed for real Google sign-in, production, or rate limiting):
 - `BETTER_AUTH_SECRET` — random 32+ char string
@@ -46,7 +46,7 @@ See `.env.example` for the full reference (that file also lists Vercel-specific 
 - Dev server: `npm run dev` (Vite, port 5000, host 0.0.0.0) — bound to the "Start application" workflow
 - Build: `npm run build`
 - Production: `npm start` (Express server serves built `dist/` + API routes)
-- DB schema sync: `npm run db:push` (Drizzle Kit push against `DATABASE_URL`)
+- DB schema sync: `npm run db:push:local` — **local/branch-only** Drizzle Kit push; production migrations use `npm run db:migrate`
 - Vite config: `allowedHosts: true` for Replit proxy compatibility
 
 ## Auth & Data
@@ -88,12 +88,12 @@ See `.env.example` for the full reference (that file also lists Vercel-specific 
 
 ## Replit Import Setup Notes
 - Installed dependencies with `pnpm install` (this project uses pnpm; `vite` was missing until this ran, which is why the workflow initially failed with `vite: not found`).
-- Ran `npm run db:push` to push the Drizzle schema to the Replit-provisioned Neon/Postgres database (the `restaurants` table etc. didn't exist yet, causing 500s on load).
+- Ran `npm run db:push:local` to push the Drizzle schema to the Replit-provisioned Neon/Postgres database (the `restaurants` table etc. didn't exist yet, causing 500s on load). This is a local-only convenience, not a production migration path.
 - `DATABASE_URL` is set; Better Auth / Google OAuth / Upstash secrets are not set yet — not required for the dev workflow since `VITE_DISABLE_AUTH=true`, but will be needed before enabling real auth or rate limiting.
 
 ## Known Fix: Restaurant creation failure (Better Auth user id vs. `uuid` column)
 Better Auth's default id generator produces a 32-char alphanumeric string, not a UUID (confirmed against production data — existing `user` rows have ids like `Zk0wCSbDzNxztabAgPdsgLPTVyPCqYsk`). `restaurants.owner_id` was a Postgres `uuid` column, so every real (non-DISABLE_AUTH) restaurant creation failed the insert with `invalid input syntax for type uuid`, surfacing as a generic "Restaurant creation failed" error. Fixed by:
-1. `src/db/schema.ts` — changed `restaurants.ownerId` from `uuid('owner_id')` to `text('owner_id')` to match Better Auth's `TEXT` user id column, then ran `npm run db:push` (confirmed-needed migration; both existing restaurant rows had a null `owner_id`, so no data conversion was required).
+1. `src/db/schema.ts` — changed `restaurants.ownerId` from `uuid('owner_id')` to `text('owner_id')` to match Better Auth's `TEXT` user id column, then ran `npm run db:push:local` to confirm the local schema migration (both existing restaurant rows had a null `owner_id`, so no data conversion was required).
 2. `src/lib/auth.server.js` — set `advanced.generateId: () => crypto.randomUUID()` so newly created Better Auth ids are UUID-shaped too (defense in depth, not required for the fix once the column is `text`).
 
 Note: `restaurant_members.user_id`/`owner_id` and `audit_logs.user_id` have the same latent `uuid`-vs-Better-Auth-id mismatch but aren't wired up to real data yet — worth the same `uuid` → `text` fix if/when those flows start writing real user ids.
