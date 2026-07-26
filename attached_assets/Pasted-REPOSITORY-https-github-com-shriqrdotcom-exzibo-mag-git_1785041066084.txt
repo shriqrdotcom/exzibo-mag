@@ -1,0 +1,654 @@
+REPOSITORY
+https://github.com/shriqrdotcom/exzibo-mag.git
+
+TASK TITLE
+Prompt 21 of 38 — Repair Environment Configuration and Production Startup Contract
+
+ROLE
+
+Act as a senior backend configuration engineer, DevOps security reviewer and production-startup reliability specialist.
+
+Work only on:
+
+- environment-variable inventory;
+- environment validation;
+- production startup requirements;
+- environment templates;
+- obsolete variable removal;
+- secret-safe configuration documentation.
+
+Do not modify:
+
+- business logic;
+- authentication architecture;
+- orders;
+- bookings;
+- memberships;
+- analytics;
+- realtime behavior;
+- billing;
+- media;
+- frontend UI;
+- database schema or migrations.
+
+==================================================
+PRECONDITIONS
+==================================================
+
+Begin only after Prompt 20 has been merged into main.
+
+Run:
+
+git fetch origin --prune
+git switch main
+git pull --ff-only origin main
+
+Confirm:
+
+- Prompt 20 trusted client-IP changes are present.
+- Prompt 18 Redis fail-closed validation remains present.
+- Prompt 8–19 protections remain present.
+- git status is completely clean.
+
+Record the exact starting commit SHA.
+
+Create:
+
+repair/21-environment-contract
+
+Do not work directly on main.
+Do not continue from the Prompt 20 branch.
+
+==================================================
+CONFIRMED DEFECT
+==================================================
+
+The repository environment configuration is inconsistent.
+
+Known problems include:
+
+1. .env.example still documents obsolete Supabase variables.
+
+2. The application now uses Neon as the authoritative database.
+
+3. Some variables used by the code are missing from the environment template.
+
+4. Legacy bypass or preview-related variables may still appear in documentation.
+
+5. Required and optional variables are not clearly separated by runtime.
+
+6. Production may start with incomplete or contradictory configuration.
+
+7. Replit, Vercel, Worker and outbox-consumer requirements are not represented consistently.
+
+==================================================
+OBJECTIVE
+==================================================
+
+After this task:
+
+1. Every active environment variable is inventoried.
+
+2. Obsolete variables are removed from active templates.
+
+3. Required variables are validated before production startup.
+
+4. Optional variables have explicit defaults or documented behavior.
+
+5. Vercel, Express, Vite, Worker and consumer environments have clear contracts.
+
+6. Missing critical configuration fails closed.
+
+7. No real secret or realistic secret value is committed.
+
+8. Environment errors never print secret values.
+
+9. Tests detect missing or stale variables.
+
+10. Existing runtime behavior remains unchanged when valid configuration is supplied.
+
+==================================================
+STRICT RULES
+==================================================
+
+Do not:
+
+- request production secret values;
+- print secret values;
+- rotate secrets;
+- access production environments;
+- commit local .env files;
+- commit real URLs, tokens, passwords or keys;
+- preserve obsolete variables for compatibility without evidence;
+- add authentication bypass variables;
+- add production-disable flags;
+- silently generate secrets at runtime;
+- use REPL_ID or hostnames as secrets;
+- modify unrelated code;
+- add Agent-memory files, screenshots, attached assets, pasted prompts or generated reports.
+
+==================================================
+STEP 1 — INVENTORY EVERY ENVIRONMENT VARIABLE
+==================================================
+
+Search the complete repository for:
+
+- process.env
+- import.meta.env
+- env.
+- getEnv
+- requiredEnv
+- optionalEnv
+- DATABASE_URL
+- BETTER_AUTH_SECRET
+- BETTER_AUTH_URL
+- GOOGLE_CLIENT_ID
+- GOOGLE_CLIENT_SECRET
+- UPSTASH
+- REDIS
+- R2_
+- CLOUDFLARE
+- REALTIME_
+- OUTBOX_
+- PREVIEW_
+- VITE_
+- VERCEL_
+- REPL_ID
+- SUPABASE
+- DISABLE_AUTH
+- secrets
+- environment
+
+Inspect at minimum:
+
+- .env.example
+- package.json
+- server.js
+- vite.config.js
+- api/**
+- src/lib/**
+- src/services/**
+- outbox consumer files
+- Worker source and wrangler configuration
+- Better Auth configuration
+- R2/media configuration
+- Redis configuration
+- deployment files
+- tests
+- documentation that instructs environment setup
+
+Create an internal inventory:
+
+variable
+→ runtime
+→ required/optional
+→ secret/non-secret
+→ default
+→ validation
+→ callers
+→ template location
+→ obsolete/active
+
+Do not edit before the inventory is complete.
+
+==================================================
+STEP 2 — CLASSIFY RUNTIMES
+==================================================
+
+Define explicit configuration groups for:
+
+1. Vercel API/frontend runtime.
+2. Express runtime.
+3. Vite local-development runtime.
+4. Cloudflare Worker runtime.
+5. Dedicated outbox-consumer runtime.
+6. Test runtime.
+
+Do not assume every variable belongs in every runtime.
+
+Client-exposed VITE variables must never contain server secrets.
+
+==================================================
+STEP 3 — CREATE ONE SERVER ENV VALIDATOR
+==================================================
+
+Create or repair one canonical server-side configuration validator.
+
+Use repository naming conventions.
+
+It should validate variables such as, where actually required:
+
+- DATABASE_URL
+- BETTER_AUTH_SECRET
+- BETTER_AUTH_URL
+- GOOGLE_CLIENT_ID
+- GOOGLE_CLIENT_SECRET
+- UPSTASH_REDIS_REST_URL
+- UPSTASH_REDIS_REST_TOKEN
+- R2 account/bucket credentials
+- REALTIME_URL
+- REALTIME_PUBLISH_SECRET
+- REALTIME_TICKET_SECRET
+- outbox-consumer operational settings
+
+Requirements:
+
+1. Validate at startup or initialization.
+
+2. Distinguish production, development and test.
+
+3. Validate:
+   - non-empty values;
+   - URL format;
+   - integer ranges;
+   - boolean format;
+   - minimum secret length where already required;
+   - contradictory combinations.
+
+4. Error messages may contain variable names only.
+
+5. Never print values.
+
+6. Do not generate random fallback secrets.
+
+7. Tests may inject explicit test-only configuration.
+
+==================================================
+STEP 4 — REMOVE OBSOLETE VARIABLES
+==================================================
+
+Remove obsolete variables from active templates and setup instructions, including when repository evidence confirms they are unused:
+
+- VITE_SUPABASE_URL
+- VITE_SUPABASE_ANON_KEY
+- SUPABASE_SERVICE_ROLE_KEY
+- obsolete Supabase database variables
+- DISABLE_AUTH
+- VITE_DISABLE_AUTH
+- legacy preview-secret fallbacks
+- outdated storage or realtime variables
+- duplicate R2 public-URL aliases when one canonical name exists
+
+Do not remove a variable until repository-wide search proves it is unused or replaced.
+
+==================================================
+STEP 5 — REBUILD SAFE ENVIRONMENT TEMPLATES
+==================================================
+
+Update `.env.example` or split it into clearly named templates only when useful, such as:
+
+- .env.example
+- .env.production.example
+- exzibo-realtime/.dev.vars.example
+
+Keep the template minimal.
+
+For every active variable, document:
+
+- required or optional;
+- runtime;
+- purpose;
+- safe placeholder;
+- whether it is secret;
+- acceptable format where necessary.
+
+Use placeholders such as:
+
+your-database-url
+your-generated-secret
+your-client-id
+
+Do not include realistic credentials.
+
+==================================================
+STEP 6 — CLIENT/SERVER ENV BOUNDARY
+==================================================
+
+Verify:
+
+1. No server secret is exposed through VITE_ variables.
+
+2. No R2 secret reaches browser bundles.
+
+3. No Better Auth secret reaches browser bundles.
+
+4. No Redis token reaches browser bundles.
+
+5. No realtime publish secret reaches browser bundles.
+
+6. Public client variables contain only intentionally public values.
+
+7. Production build does not embed secret names or values unexpectedly.
+
+==================================================
+STEP 7 — STARTUP FAILURE BEHAVIOR
+==================================================
+
+Production-capable runtimes must fail safely when required configuration is missing.
+
+Test at minimum:
+
+- missing database URL;
+- missing Better Auth secret;
+- missing required Redis configuration;
+- missing realtime publish secret where publisher is enabled;
+- missing consumer configuration when consumer command runs;
+- missing R2 credentials when media mutation runtime starts;
+- malformed URLs;
+- invalid numeric configuration.
+
+Do not make unrelated public-read-only functionality require credentials that it genuinely does not use.
+
+==================================================
+STEP 8 — WORKER ENVIRONMENT CONTRACT
+==================================================
+
+Inspect the Cloudflare Worker configuration.
+
+Ensure:
+
+1. Secret bindings are not committed.
+
+2. Required Worker bindings are validated.
+
+3. Secret variable names match root publisher configuration.
+
+4. Local-development example values are clearly fake.
+
+5. Wrangler dry-run succeeds without deploying.
+
+6. Production secret setup is documented by variable name only.
+
+==================================================
+STEP 9 — REQUIRED TESTS
+==================================================
+
+Add executable tests proving:
+
+INVENTORY
+
+1. Every process.env reference is represented in the environment inventory or intentionally platform-provided.
+
+2. Every import.meta.env reference is classified as public or private.
+
+3. Obsolete Supabase variables are not required.
+
+4. No deployable authentication-bypass variable remains.
+
+VALIDATION
+
+5. Valid production configuration passes.
+
+6. Missing DATABASE_URL fails where database access is required.
+
+7. Missing BETTER_AUTH_SECRET fails for auth runtime.
+
+8. Missing Redis configuration fails for protected production runtime.
+
+9. Missing realtime publish secret fails for publisher runtime.
+
+10. Invalid URL values fail.
+
+11. Invalid integer values fail.
+
+12. Contradictory settings fail.
+
+13. Errors contain variable names but not values.
+
+CLIENT SAFETY
+
+14. Redis token is not exposed to client code.
+
+15. Better Auth secret is not exposed to client code.
+
+16. R2 secret is not exposed to client code.
+
+17. Realtime publish secret is not exposed to client code.
+
+18. VITE variables contain only approved public configuration.
+
+TEMPLATES
+
+19. `.env.example` contains no real secrets.
+
+20. `.env.example` contains no obsolete Supabase requirements.
+
+21. Required active variables are documented.
+
+22. Optional variables are identified.
+
+23. No unsafe auth-disable flag is documented.
+
+RUNTIMES
+
+24. Vercel configuration validation passes.
+
+25. Express configuration validation passes.
+
+26. Vite development configuration passes with explicit dev config.
+
+27. Outbox-consumer configuration validation passes.
+
+28. Worker binding validation passes.
+
+REGRESSION
+
+29. Prompt 18 Redis tests pass.
+
+30. Prompt 20 trusted-IP tests pass.
+
+31. Prompt 19 booking authorization tests pass.
+
+32. Prompt 8–17 regressions pass.
+
+33. Migration-integrity tests pass.
+
+34. Root production build passes.
+
+35. Worker TypeScript and Wrangler dry-run pass.
+
+Do not use production infrastructure.
+
+==================================================
+STEP 10 — FINAL SAFETY SEARCH
+==================================================
+
+Confirm NOT FOUND in active templates or deployable code:
+
+- obsolete required Supabase variables;
+- DISABLE_AUTH;
+- VITE_DISABLE_AUTH;
+- runtime-generated authentication secret;
+- REPL_ID used as secret fallback;
+- literal preview-hmac-secret;
+- server secrets exposed through VITE_;
+- duplicate conflicting environment variable names;
+- real credentials or realistic secret values;
+- startup continuing after missing critical production config;
+- secret values included in errors or logs.
+
+Review every remaining match manually.
+
+==================================================
+VALIDATION
+==================================================
+
+Run:
+
+1. Frozen root dependency installation.
+2. Focused environment-contract tests.
+3. Production-startup validation tests.
+4. Client/server boundary tests.
+5. Prompt 18–20 regression suites.
+6. Prompt 8–17 regression suites.
+7. Migration-integrity tests.
+8. Root production build.
+9. Worker Node 22 TypeScript check.
+10. Wrangler dry-run without deployment.
+11. git diff against starting commit.
+12. git status.
+13. Final safety search.
+
+Do not claim COMPLETE when active environment references are undocumented or unvalidated.
+
+==================================================
+PERMITTED FILE SCOPE
+==================================================
+
+Likely files:
+
+- .env.example
+- environment validator/helper
+- server.js initialization
+- Vercel initialization helper
+- consumer configuration
+- Worker example configuration
+- focused environment tests
+- narrowly relevant setup documentation
+
+Do not modify:
+
+- database schema or migrations;
+- business logic;
+- authentication behavior;
+- analytics;
+- booking/order logic;
+- realtime event logic;
+- frontend UI;
+- Agent-memory files;
+- attached assets;
+- screenshots;
+- pasted prompts.
+
+==================================================
+COMMIT AND PULL REQUEST
+==================================================
+
+After validation:
+
+1. Confirm only intended Prompt 21 files changed.
+
+2. Commit with:
+
+   fix: repair production environment contract
+
+3. Push:
+
+   repair/21-environment-contract
+
+4. Create a pull request targeting main.
+
+5. Do not merge it.
+
+6. Do not delete the branch.
+
+==================================================
+FINAL RESPONSE
+==================================================
+
+Return:
+
+PROMPT 21 COMPLETION SUMMARY
+
+Status:
+- COMPLETE / PARTIAL / BLOCKED
+
+Branch:
+- branch name
+
+Starting SHA:
+- exact SHA
+
+Ending SHA:
+- exact SHA or Not committed
+
+Environment inventory:
+- active variable count
+- required variable count
+- optional variable count
+- obsolete variables removed
+
+Runtime contracts:
+- Vercel
+- Express
+- Vite
+- Worker
+- Outbox consumer
+- Tests
+
+Canonical validator:
+- file
+- function
+- startup integration points
+
+Templates changed:
+- exact list
+
+Files changed:
+- exact list
+
+Configuration tests:
+- passed
+- failed
+- skipped
+
+Client/server secret boundary:
+- PASS / FAIL
+
+Production startup tests:
+- PASS / FAIL
+
+Prompt 20 regression:
+- PASS / FAIL
+
+Prompt 18 regression:
+- PASS / FAIL
+
+Previous regressions:
+- PASS / FAIL
+
+Migration tests:
+- PASS / FAIL
+
+Root production build:
+- PASS / FAIL
+
+Worker validation:
+- TypeScript: PASS / FAIL
+- Wrangler dry-run: PASS / FAIL
+- deployed: NO
+
+Final safety search:
+- obsolete Supabase requirement: FOUND / NOT FOUND
+- auth-disable variable: FOUND / NOT FOUND
+- generated auth-secret fallback: FOUND / NOT FOUND
+- REPL_ID secret fallback: FOUND / NOT FOUND
+- server secret in VITE variable: FOUND / NOT FOUND
+- conflicting variable names: FOUND / NOT FOUND
+- real credential in template: FOUND / NOT FOUND
+- missing critical config allowed: FOUND / NOT FOUND
+- secret values logged: FOUND / NOT FOUND
+
+Production resources accessed:
+- No
+
+Production database accessed:
+- No
+
+Production secrets changed:
+- No
+
+Git status:
+- clean / not clean
+
+Pull request:
+- number
+- base
+- compare
+
+Recommended next action:
+- State whether Prompt 22 may begin.
+
+Final conclusion:
+- State whether Prompt 21 is committed, pushed and ready for review.
+- Do not claim the complete repository is production-ready.

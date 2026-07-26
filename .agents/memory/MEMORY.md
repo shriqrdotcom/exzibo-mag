@@ -16,3 +16,4 @@
 - [Team service canonicalization](team-service-canonicalization.md) — Vercel/Express/Vite delegate to api/_lib/team-service.js; cross-tenant guard passes server-resolved restaurantId (never body); field validation at both layers.
 - [Atomic restaurant creation](atomic-restaurant-creation.md) — createRestaurantAtomic() in src/services/restaurantCreationService.js; single pg.Pool transaction creates restaurant+membership+settings+audit; DUPLICATE err.code on 23505; all three runtimes use it.
 - [Existing restaurant backfill safety](existing-restaurant-backfill.md) — runPreflight + runBackfill in src/services/restaurantBackfillService.js; dry-run default, aborts on ambiguous records, single transaction, no deletes, no migration run.
+- [Environment contract](environment-contract.md) — canonical validator is src/config/serverEnv.js; auth.server.js requires BETTER_AUTH_SECRET only under VERCEL_ENV, never NODE_ENV, to keep Vite builds passing locally.
