@@ -23,12 +23,11 @@ import { normalizeAndValidateSlug } from './src/lib/slug-utils.js'
 import * as menuService from './src/services/menuService.js'
 import * as contentService from './src/services/restaurantContentService.js'
 import {
-  updateNeonBookingStatus,
   getNeonBookings,
   getNeonBookingsPaginated,
-  getNeonBookingRestaurantId,
 } from './src/db/neon-bookings.js'
 import { createBookingAtomic } from './src/services/bookingCreationService.js'
+import { updateBookingStatusService } from './api/_lib/booking-status-service.js'
 import {
   getNeonOrders,
   getNeonOrdersPaginated,
@@ -860,9 +859,8 @@ app.get('/api/bookings/:restaurantId', requireRestaurantRole(req => req.params.r
 
 app.patch('/api/bookings/:id/status', async (req, res) => {
   const { id } = req.params
-  const { status } = req.body || {}
-  if (!status) return res.status(400).json({ error: 'status required' })
 
+  // ── Rate limit + exclusive lock (Redis) ────────────────────────────────────
   const bkStatusRl = await rateLimit(`rl:booking-status:ip:${getClientIp(req)}`, 30, 60)
   if (!bkStatusRl.available) return send503Protection(res)
   if (!bkStatusRl.allowed) return send429(res, 'Too many booking status updates. Please slow down.')
@@ -871,27 +869,29 @@ app.patch('/api/bookings/:id/status', async (req, res) => {
   if (!bkStatusLock.acquired) return res.status(409).json({ error: 'Booking status update already in progress.' })
 
   try {
-    // ── Membership check: resolve restaurant_id from DB before updating ──────
-    if (!_isAuthDisabled()) {
-      const restaurantId = await getNeonBookingRestaurantId(id)
-      if (!restaurantId) return res.status(404).json({ error: 'Booking not found' })
-      const authResult = await checkRestaurantAccess(req, restaurantId)
-      if (authResult.error === 'Not authenticated') return res.status(401).json({ error: 'Not authenticated' })
-      if (authResult.error) return res.status(500).json({ error: authResult.error })
-      if (!authResult.allowed) return res.status(403).json({ error: 'Access denied' })
-      const isElevated = authResult.isSuperadmin || authResult.role === 'menu_studio'
-      if (!isElevated && !ALL_ROLES.includes(authResult.role)) {
-        return res.status(403).json({ error: 'Insufficient role' })
-      }
+    // ── Delegate to canonical service (auth + role + status validation + DTO) ─
+    const result = await updateBookingStatusService({
+      req,
+      bookingId: id,
+      nextStatus: req.body?.status,
+    })
+
+    if (result.status === 200 && result.restaurantId) {
+      console.log('[bookings PATCH status] Neon ✅ id:', id, 'status:', req.body?.status)
+      writeAuditLog({
+        restaurantId: result.restaurantId,
+        action: 'update_status',
+        entityType: 'booking',
+        entityId: id,
+        newData: { status: req.body?.status },
+        ipAddress: req.ip,
+      })
     }
 
-    const updated = await updateNeonBookingStatus(id, status)
-    console.log('[bookings PATCH status] Neon ✅ id:', id, 'status:', status)
-    writeAuditLog({ restaurantId: updated?.restaurant_id ?? null, action: 'update_status', entityType: 'booking', entityId: id, newData: { status }, ipAddress: req.ip })
-    return res.json(updated ?? { id, status })
+    return res.status(result.status).json(result.body)
   } catch (err) {
     console.error('[bookings PATCH status] Error:', err.message)
-    return res.status(500).json({ error: err.message })
+    return res.status(500).json({ error: 'Internal server error' })
   } finally {
     await releaseLock(`lock:booking-status:${id}`, bkStatusLock.token)
   }
