@@ -17,7 +17,9 @@
  */
 
 import crypto from 'crypto'
-import { createSafeError, sendSafeError } from './errors.js'
+import { createSafeError, sendSafeError, isSafeErrorCode, isSafePublicMessage } from './errors.js'
+
+export { sendSafeError }
 
 // ── Request ID ───────────────────────────────────────────────────────────────
 
@@ -196,4 +198,108 @@ export function applySecurityHeaders(res) {
   )
   res.setHeader('X-Frame-Options', 'DENY')
   res.setHeader('Cache-Control', 'no-store, private')
+}
+
+// ── Runtime wrappers ─────────────────────────────────────────────────────────
+
+const DEFAULT_JSON_LIMIT = 1024 * 1024
+const DEFAULT_ALLOWED_METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS']
+
+function ensureResHelpers(res) {
+  if (res && typeof res.status !== 'function') {
+    res.status = (code) => { res.statusCode = code; return res }
+  }
+  if (res && typeof res.json !== 'function') {
+    res.json = (body) => {
+      if (!res.getHeader('Content-Type')) res.setHeader('Content-Type', 'application/json')
+      res.end(JSON.stringify(body))
+    }
+  }
+}
+
+async function runCoreBoundary(req, res, options, handler) {
+  const opts = {
+    allowedMethods: DEFAULT_ALLOWED_METHODS,
+    jsonLimit: DEFAULT_JSON_LIMIT,
+    ...options,
+  }
+
+  ensureResHelpers(res)
+  const requestId = setRequestId(req, res)
+  applySecurityHeaders(res)
+
+  if (methodAllowlist(req, res, opts.allowedMethods)) {
+    return { handled: true, requestId }
+  }
+
+  if (req.body === undefined && (req.headers?.['content-type'] || '').includes('application/json')) {
+    const parser = jsonBodyParser({ limit: opts.jsonLimit })
+    const handled = await parser(req, res)
+    if (handled) return { handled: true, requestId }
+  }
+
+  try {
+    await handler(req, res)
+    return { handled: false, requestId }
+  } catch (err) {
+    console.error('[coreSecurityBoundary] unhandled error:', err)
+    if (!res.headersSent) {
+      sendSafeError(res, { status: 500, code: 'INTERNAL_ERROR', requestId })
+    }
+    return { handled: true, requestId }
+  }
+}
+
+export function vercelWrapper(handler, options = {}) {
+  return async (req, res) => {
+    await runCoreBoundary(req, res, options, handler)
+  }
+}
+
+export function viteWrapper(handler, options = {}) {
+  return async (req, res, next) => {
+    const result = await runCoreBoundary(req, res, options, handler)
+    if (!result.handled && typeof next === 'function' && !res.headersSent) {
+      next()
+    }
+  }
+}
+
+export function expressSecurityMiddleware(options = {}) {
+  const opts = {
+    apiPrefix: '/api',
+    jsonLimit: DEFAULT_JSON_LIMIT,
+    ...options,
+  }
+
+  return (req, res, next) => {
+    const requestId = setRequestId(req, res)
+    applySecurityHeaders(res)
+
+    const isApi = opts.apiPrefix && (req.path || req.url || '').startsWith(opts.apiPrefix)
+    if (isApi && req.method !== 'OPTIONS') {
+      const contentType = (req.headers?.['content-type'] || '').toLowerCase()
+      if (contentType.includes('application/json')) {
+        const contentLength = parseInt(req.headers?.['content-length'] || '0', 10)
+        if (contentLength > opts.jsonLimit) {
+          return sendSafeError(res, { status: 413, code: 'BAD_REQUEST', message: 'Request body too large', requestId })
+        }
+      }
+    }
+
+    next()
+  }
+}
+
+export function expressErrorHandler(options = {}) {
+  return (err, req, res, next) => {
+    if (res.headersSent) return next(err)
+    const requestId = req.requestId || setRequestId(req, res)
+
+    const status = Number.isInteger(err?.status) && err.status >= 400 && err.status < 600 ? err.status : 500
+    const code = isSafeErrorCode(err?.code) ? err.code : 'INTERNAL_ERROR'
+    const message = isSafePublicMessage(err?.message) ? err.message : undefined
+
+    sendSafeError(res, { status, code, message, requestId })
+  }
 }

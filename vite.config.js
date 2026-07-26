@@ -30,6 +30,7 @@ import { writeAuditLog } from './src/db/neon-audit-logs.js'
 import * as mediaService from './src/services/mediaService.js'
 import { getClientIp, resolveClientIp, send503Protection } from './src/lib/upstash.server.js'
 import { generateRequestId, parsePagination } from './api/_lib/validate.js'
+import { viteWrapper, sendSafeError } from './api/_lib/security-middleware.js'
 import * as menuService from './src/services/menuService.js'
 import * as contentService from './src/services/restaurantContentService.js'
 import { lookupRestaurantByUid } from './api/_lib/restaurant-lookup.js'
@@ -465,22 +466,18 @@ function menuApiPlugin() {
 
       // POST /api/restaurant/update-profile
       // Profile-only update — enforces OWNER_ADMIN_PROFILE_PATCH allowlist.
-      server.middlewares.use('/api/restaurant/update-profile', async (req, res) => {
-        if (req.method === 'OPTIONS') return json(res, 200, {})
-        if (req.method !== 'POST') return json(res, 405, { error: 'Method not allowed' })
-        try {
-          const { restaurantId, patch } = await readBody(req)
-          if (!restaurantId || typeof patch !== 'object') return json(res, 400, { error: 'restaurantId and patch object required' })
-          // patchNeonRestaurantProfile enforces the OWNER_ADMIN_PROFILE_PATCH allowlist.
-          // Platform fields (plan, status, lifecycle dates) are silently stripped.
-          const row = await patchNeonRestaurantProfile(restaurantId, patch)
-          writeAuditLog({ restaurantId, action: 'update', entityType: 'restaurant', entityId: restaurantId, newData: patch })
-          return json(res, 200, row ?? {})
-        } catch (e) {
-          console.error('[update-profile] Exception:', e.message)
-          return json(res, 500, { error: e.message })
+      server.middlewares.use('/api/restaurant/update-profile', viteWrapper(async (req, res) => {
+        const { restaurantId, patch } = req.body
+        const requestId = req.requestId
+        if (!restaurantId || typeof patch !== 'object') {
+          return sendSafeError(res, { status: 400, code: 'BAD_REQUEST', message: 'restaurantId and patch object required', requestId })
         }
-      })
+        // patchNeonRestaurantProfile enforces the OWNER_ADMIN_PROFILE_PATCH allowlist.
+        // Platform fields (plan, status, lifecycle dates) are silently stripped.
+        const row = await patchNeonRestaurantProfile(restaurantId, patch)
+        writeAuditLog({ restaurantId, action: 'update', entityType: 'restaurant', entityId: restaurantId, newData: patch })
+        return json(res, 200, row ?? {})
+      }, { allowedMethods: ['POST', 'OPTIONS'] }))
 
       // POST /api/restaurant/update-social — delegates to restaurantContentService
       // (shared with api/menu-content.js and server.js).
