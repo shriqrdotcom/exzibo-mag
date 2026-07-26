@@ -206,37 +206,51 @@ describe('5 — Redis is not the authoritative duplicate guarantee', () => {
 describe('6 — Redis locks carry an ownership token', () => {
   it('acquireLock returns a random token and releaseLock requires it', async () => {
     const src = await read('src/lib/upstash.server.js')
+    // Token is generated inside acquireLock using SHA-256 of random bytes
     assert.match(src, /const token = createHash\('sha256'\)\.update\(randomBytes\(16\)\)\.digest\('hex'\)/)
-    assert.match(src, /return \{ acquired: true, token \}/)
+    // Successful lock returns the token (with available flag too)
+    assert.match(src, /return \{ acquired: true, token/)
     assert.match(src, /export async function releaseLock\(key, token\)/)
     assert.match(src, /if \(!token\) return/)
-    assert.match(src, /const stored = await redis\.get\(key\)/)
-    assert.match(src, /if \(stored === token\)/)
+    // releaseLock uses atomic Lua compare-and-delete (not separate GET then DEL)
+    assert.match(src, /redis\.eval\(RELEASE_LOCK_LUA, \[key\], \[token\]\)/)
+    // Lua script itself performs the comparison server-side
+    assert.match(src, /stored == ARGV\[1\]/)
   })
 
-  it('all callers capture the token and pass it to releaseLock', async () => {
-    const upstash = await read('src/lib/upstash.server.js')
+  it('all callers capture the lock result and pass token to releaseLock', async () => {
     const apiOrders = await read('api/orders.js')
     const server = await read('server.js')
     const menu = await read('src/services/menuService.js')
-    assert.match(apiOrders, /const \{ acquired, token \} = await acquireLock\(lockKey, 5\)/)
-    assert.match(apiOrders, /await releaseLock\(lockKey, token\)/)
-    assert.match(server, /const \{ acquired: orderStatusLocked, token: orderStatusToken \} = await acquireLock/)
-    assert.match(server, /await releaseLock\(`lock:order-status:\$\{orderId\}`, orderStatusToken\)/)
-    assert.match(server, /const \{ acquired: bkStatusLocked, token: bkStatusToken \} = await acquireLock/)
-    assert.match(server, /await releaseLock\(`lock:booking-status:\$\{id\}`, bkStatusToken\)/)
-    assert.match(menu, /const \{ acquired, token \} = await acquireLock\(lockKey, 5\)/)
-    assert.match(menu, /await releaseLock\(lockKey, token\)/)
+    // api/orders.js uses lock.token
+    assert.match(apiOrders, /const lock = await acquireLock\(lockKey, 5\)/)
+    assert.match(apiOrders, /await releaseLock\(lockKey, lock\.token\)/)
+    // server.js uses orderStatusLock.token and bkStatusLock.token
+    assert.match(server, /const orderStatusLock = await acquireLock/)
+    assert.match(server, /await releaseLock\(`lock:order-status:\$\{orderId\}`, orderStatusLock\.token\)/)
+    assert.match(server, /const bkStatusLock = await acquireLock/)
+    assert.match(server, /await releaseLock\(`lock:booking-status:\$\{id\}`, bkStatusLock\.token\)/)
+    // menuService.js uses lock.token
+    assert.match(menu, /const lock = await acquireLock\(lockKey, 5\)/)
+    assert.match(menu, /await releaseLock\(lockKey, lock\.token\)/)
   })
 })
 
 // ── 7. Expired or foreign locks are not blindly deleted ──────────────────────
 
 describe('7 — Redis locks are not blindly deleted', () => {
-  it('releaseLock only deletes when the stored token matches', async () => {
+  it('releaseLock uses atomic Lua compare-and-delete, not a non-atomic GET+DEL', async () => {
     const src = await read('src/lib/upstash.server.js')
+    // releaseLock must accept a token parameter
     assert.doesNotMatch(src, /export async function releaseLock\(key\)/)
-    assert.match(src, /if \(stored === token\) \{\s*await redis\.del\(key\)/s)
+    assert.match(src, /export async function releaseLock\(key, token\)/)
+    // Must use atomic Lua via eval — not the old separate GET then DEL
+    assert.match(src, /redis\.eval\(RELEASE_LOCK_LUA/)
+    assert.match(src, /stored == ARGV\[1\]/, 'Lua script must compare token before deleting')
+    // Must NOT have the old non-atomic pattern
+    assert.doesNotMatch(src,
+      /if \(stored === token\) \{\s*await redis\.del\(key\)/s,
+      'must not use non-atomic JS GET+compare+DEL')
   })
 })
 

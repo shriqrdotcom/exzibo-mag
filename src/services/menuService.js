@@ -131,8 +131,9 @@ export async function createItem(req, ip, { restaurantId, ...item }) {
   const catErr = await validateCategoryOwnership(item.category_id, restaurantId)
   if (catErr) return catErr
 
-  const { allowed } = await rateLimit(`rl:menu-create:ip:${ip}`, 30, 60)
-  if (!allowed) return { status: 429, body: { error: 'Too many menu item creates.', retryAfter: 60 } }
+  const rl = await rateLimit(`rl:menu-create:ip:${ip}`, 30, 60)
+  if (!rl.available) return { status: 503, body: { error: 'Service temporarily unavailable. Please try again later.' } }
+  if (!rl.allowed) return { status: 429, body: { error: 'Too many menu item creates.', retryAfter: 60 } }
 
   if (!item.id) item.id = crypto.randomUUID()
   return ok(await upsertNeonMenuItem(restaurantId, { ...item, restaurant_id: restaurantId }))
@@ -173,8 +174,9 @@ export async function upsertItems(req, ip, { restaurantId, items }) {
     }
   }
 
-  const { allowed } = await rateLimit(`rl:menu-upsert:ip:${ip}`, 10, 60)
-  if (!allowed) return { status: 429, body: { error: 'Too many bulk menu updates.', retryAfter: 60 } }
+  const rl = await rateLimit(`rl:menu-upsert:ip:${ip}`, 10, 60)
+  if (!rl.available) return { status: 503, body: { error: 'Service temporarily unavailable. Please try again later.' } }
+  if (!rl.allowed) return { status: 429, body: { error: 'Too many bulk menu updates.', retryAfter: 60 } }
 
   const rows = await upsertNeonMenuItems(restaurantId, items.map(item => ({
     ...item, restaurant_id: restaurantId, id: item.id || crypto.randomUUID(),
@@ -201,8 +203,9 @@ export async function updateItem(req, ip, { id, ...patch }) {
     if (catErr) return catErr
   }
 
-  const { allowed } = await rateLimit(`rl:menu-update:ip:${ip}`, 60, 60)
-  if (!allowed) return { status: 429, body: { error: 'Too many menu item updates.', retryAfter: 60 } }
+  const rl = await rateLimit(`rl:menu-update:ip:${ip}`, 60, 60)
+  if (!rl.available) return { status: 503, body: { error: 'Service temporarily unavailable. Please try again later.' } }
+  if (!rl.allowed) return { status: 429, body: { error: 'Too many menu item updates.', retryAfter: 60 } }
 
   // ── Partial-update semantics ───────────────────────────────────────────────
   // Merge the patch onto the existing row.  Fields absent from the patch keep
@@ -226,17 +229,19 @@ export async function deleteItem(req, ip, { id }) {
     if (authErr) return authErr
   }
 
-  const { allowed } = await rateLimit(`rl:menu-delete:ip:${ip}`, 20, 60)
-  if (!allowed) return { status: 429, body: { error: 'Too many menu item deletes.', retryAfter: 60 } }
+  const rl = await rateLimit(`rl:menu-delete:ip:${ip}`, 20, 60)
+  if (!rl.available) return { status: 503, body: { error: 'Service temporarily unavailable. Please try again later.' } }
+  if (!rl.allowed) return { status: 429, body: { error: 'Too many menu item deletes.', retryAfter: 60 } }
 
   const lockKey = `lock:menu-item:${id}`
-  const { acquired, token } = await acquireLock(lockKey, 5)
-  if (!acquired) return { status: 409, body: { error: 'Delete already in progress.' } }
+  const lock = await acquireLock(lockKey, 5)
+  if (!lock.available) return { status: 503, body: { error: 'Service temporarily unavailable. Please try again later.' } }
+  if (!lock.acquired) return { status: 409, body: { error: 'Delete already in progress.' } }
   try {
     await deleteNeonMenuItem(id)
     return ok({ success: true })
   } finally {
-    await releaseLock(lockKey, token)
+    await releaseLock(lockKey, lock.token)
   }
 }
 
@@ -264,8 +269,9 @@ export async function upsertCategory(req, ip, { restaurantId, ...category }) {
     if (authErr) return authErr
   }
 
-  const { allowed } = await rateLimit(`rl:category-upsert:ip:${ip}`, 30, 60)
-  if (!allowed) return { status: 429, body: { error: 'Too many category saves.', retryAfter: 60 } }
+  const rl = await rateLimit(`rl:category-upsert:ip:${ip}`, 30, 60)
+  if (!rl.available) return { status: 503, body: { error: 'Service temporarily unavailable. Please try again later.' } }
+  if (!rl.allowed) return { status: 429, body: { error: 'Too many category saves.', retryAfter: 60 } }
 
   return ok(await upsertNeonMenuCategory(restaurantId, category))
 }
@@ -280,16 +286,18 @@ export async function deleteCategory(req, ip, { id }) {
     if (authErr) return authErr
   }
 
-  const { allowed } = await rateLimit(`rl:category-delete:ip:${ip}`, 20, 60)
-  if (!allowed) return { status: 429, body: { error: 'Too many category deletes.', retryAfter: 60 } }
+  const rl = await rateLimit(`rl:category-delete:ip:${ip}`, 20, 60)
+  if (!rl.available) return { status: 503, body: { error: 'Service temporarily unavailable. Please try again later.' } }
+  if (!rl.allowed) return { status: 429, body: { error: 'Too many category deletes.', retryAfter: 60 } }
 
   const lockKey = `lock:menu-category:${id}`
-  const { acquired, token } = await acquireLock(lockKey, 5)
-  if (!acquired) return { status: 409, body: { error: 'Delete already in progress.' } }
+  const lock = await acquireLock(lockKey, 5)
+  if (!lock.available) return { status: 503, body: { error: 'Service temporarily unavailable. Please try again later.' } }
+  if (!lock.acquired) return { status: 409, body: { error: 'Delete already in progress.' } }
   try {
     await deleteNeonMenuCategory(id)
     return ok({ success: true })
   } finally {
-    await releaseLock(lockKey, token)
+    await releaseLock(lockKey, lock.token)
   }
 }

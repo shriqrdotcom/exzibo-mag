@@ -1,6 +1,6 @@
 import { setPublicCors } from './_lib/cors.js'
 import { checkRestaurantAccess, requireSuperadmin, ALL_ROLES, MANAGEMENT_ROLES } from './_lib/authz.js'
-import { rateLimit, acquireLock, releaseLock, getClientIp, send429 } from '../src/lib/upstash.server.js'
+import { rateLimit, acquireLock, releaseLock, getClientIp, send429, send503Protection } from '../src/lib/upstash.server.js'
 import {
   deleteOldNeonOrders,
   getNeonOrdersPaginated,
@@ -121,11 +121,13 @@ export default async function handler(req, res) {
       }
 
       const ip = getClientIp(req)
-      const { allowed } = await rateLimit(`rl:order-status:ip:${ip}`, 60, 60)
-      if (!allowed) return send429(res, 'Too many order status updates.')
+      const rl = await rateLimit(`rl:order-status:ip:${ip}`, 60, 60)
+      if (!rl.available) return send503Protection(res)
+      if (!rl.allowed) return send429(res, 'Too many order status updates.')
       const lockKey = `lock:order-status:${orderId}`
-      const { acquired, token } = await acquireLock(lockKey, 5)
-      if (!acquired) return conflict(res, 'Status update already in progress.', requestId)
+      const lock = await acquireLock(lockKey, 5)
+      if (!lock.available) return send503Protection(res)
+      if (!lock.acquired) return conflict(res, 'Status update already in progress.', requestId)
       try {
         const updatedRow = await applyOrderStatusTransition(orderId, status)
         return res.json({ success: true, orderId, status, restaurant_id: updatedRow.restaurant_id, requestId })
@@ -140,7 +142,7 @@ export default async function handler(req, res) {
           return notFound(res, transitionErr.message, requestId)
         }
         throw transitionErr
-      } finally { await releaseLock(lockKey, token) }
+      } finally { await releaseLock(lockKey, lock.token) }
     }
 
     // ── POST autoCleanup — superadmin only ───────────────────────────────────
