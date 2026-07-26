@@ -7,6 +7,8 @@ On a fresh import/checkout, `npm run dev` fails with `sh: 1: vite: not found` be
 
 **Why:** this project uses pnpm (`packageManager: pnpm@10.26.1` in package.json) but no install step runs automatically on import, and the Drizzle schema (`src/db/schema.ts`) lives only in code until `drizzle-kit push` is run against the provisioned `DATABASE_URL`.
 
-**How to apply:** on any fresh setup of this repo, run `pnpm install` then `npm run db:push` before starting the dev workflow. `replit.md`'s "Replit Import Setup Notes" section documents this too — keep it in sync if the setup steps change.
+**How to apply:** on any fresh setup of this repo, run `pnpm install` then `npm run db:push:local` before starting the dev workflow. `replit.md`'s "Replit Import Setup Notes" section documents this too — keep it in sync if the setup steps change. `db:push:local` is a local-only convenience; production migrations must use `npm run db:migrate` per `docs/migration-governance.md`.
 
-Also note: `replit.md` in this repo can drift out of date relative to the actual stack (e.g. it described Supabase as the primary backend well after Supabase was fully removed from the code — see supabase-removal.md and better-auth-migration.md). Verify claims in replit.md against the actual code (grep for imports) before trusting it, especially for stack/auth/database claims.
+## Deprecated historical drift (what must not return)
+
+`replit.md` in this repo can drift out of date relative to the actual stack (e.g. it described Supabase as the primary backend well after Supabase was fully removed from the code — see supabase-removal.md and better-auth-migration.md). Verify claims in `replit.md` against the actual code (grep for imports) before trusting it, especially for stack/auth/database claims. The canonical current source of truth is `docs/ARCHITECTURE_SECURITY_INVARIANTS.md`.
