@@ -1,0 +1,106 @@
+Finalize Prompt 18 GitHub push and PR creation.
+
+Do not modify source code.
+Do not start Prompt 19.
+Do not create a new branch.
+Do not create a new commit unless the current committed state cannot be pushed.
+
+Current local branch should be:
+
+repair/18-redis-protection-fail-closed
+
+Expected local commit:
+
+f146189eb1f6024ae381a30bffd1b4b68ee73a74
+
+Steps:
+
+1. Confirm current branch:
+
+   git branch --show-current
+
+2. Confirm git status:
+
+   git status
+
+3. Confirm local HEAD:
+
+   git rev-parse HEAD
+
+4. Confirm the committed files are only Prompt 18 Redis protection files.
+
+5. Push the existing branch:
+
+   git push --set-upstream origin repair/18-redis-protection-fail-closed
+
+6. If normal push fails, use the connected GitHub/Replit integration to push the existing branch.
+
+7. Do not add:
+   - pasted prompt files
+   - screenshots
+   - attached_assets
+   - .agents/memory
+   - generated reports
+   - unrelated files
+
+8. After push, verify:
+
+   git ls-remote --heads origin repair/18-redis-protection-fail-closed
+
+9. Create a pull request targeting main.
+
+PR title:
+
+fix: make redis protection fail closed
+
+PR description:
+
+Make Redis-backed abuse controls fail closed in production.
+
+Changes:
+- Removed fail-open Redis behavior for rate limits, duplicate prevention and short locks.
+- Added explicit production Redis configuration validation.
+- Made Redis runtime errors fail safely instead of allowing protected actions.
+- Repaired duplicate-prevention failure handling.
+- Repaired lock acquisition so missing Redis cannot produce fake success.
+- Replaced non-atomic lock release with atomic owner-checked release.
+- Updated affected API call sites to return stable safe errors.
+- Added focused Redis protection tests.
+
+Validation:
+- Redis protection tests: 36 passed.
+- Idempotency/duplicate tests passed.
+- Safety searches passed.
+- Production build passed.
+- Known unrelated integration failures were confirmed pre-existing.
+- No production Redis, database, resources or secrets were accessed.
+
+Return:
+
+PROMPT 18 PUSH SUMMARY
+
+Status:
+- COMPLETE / BLOCKED
+
+Branch:
+- branch name
+
+Local SHA:
+- exact SHA
+
+Remote SHA:
+- exact SHA
+
+Git status:
+- clean / not clean
+
+Files in PR:
+- exact list
+
+PR:
+- number
+- base
+- compare
+
+Final decision:
+- PR ready to merge / blocked
