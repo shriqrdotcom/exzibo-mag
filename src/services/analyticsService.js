@@ -8,11 +8,23 @@
 //   Orders with status: cancelled, rejected, failed must never contribute.
 //   Historical revenue must never decrease after an order reaches completed.
 //
+// Timezone rule (canonical):
+//   All date boundary computations (daily, weekly, monthly buckets; today's
+//   revenue; customer-activity segmentation) use the restaurant's server-owned
+//   IANA timezone read from restaurant_settings.global_config.timezone.
+//   Fallback: UTC (documented in analyticsTimezone.js; never server-local time).
+//   Client-supplied timezone values are never used as authoritative.
+//
 // Usage:
 //   import { getRestaurantAnalytics } from './src/services/analyticsService.js'
 //   const result = await getRestaurantAnalytics(restaurantId, startDate, endDate)
 
 import { neon } from '../db/pg-sql.js'
+import {
+  getRestaurantAnalyticsTimezone,
+  getLocalDateParts,
+  getLocalDayKey,
+} from './analyticsTimezone.js'
 
 // Statuses that count toward revenue and order metrics.
 // confirmed → confirmed orders (accepted, in progress)
@@ -27,22 +39,49 @@ function sql() {
   return neon(url)
 }
 
+// ── isValidDateParam ──────────────────────────────────────────────────────────
+// Returns true when the value is either absent (optional) or a parseable date.
+function isValidDateParam(s) {
+  if (!s) return true
+  const d = new Date(s)
+  return !isNaN(d.getTime())
+}
+
 /**
  * Compute restaurant analytics for the given date range.
+ *
+ * All date boundary computations use the restaurant's server-owned IANA
+ * timezone resolved via getRestaurantAnalyticsTimezone().  The timezone
+ * is never accepted from the API caller.
  *
  * @param {string} restaurantId - UUID of the restaurant
  * @param {string} [startDate]  - ISO date string; defaults to 30 days ago
  * @param {string} [endDate]    - ISO date string; defaults to now
  * @returns {object} { totalRevenue, totalOrders, totalBookings, totalCustomers,
  *                      monthlyRevenue, weeklyRevenue, weeklyCustomerData,
- *                      dateRange: { start, end }, calculatedAt }
- * @throws on DB error or missing restaurant
+ *                      dateRange: { start, end }, timezone, calculatedAt }
+ * @throws {Error} with err.status = 400 on invalid or reversed date range
+ * @throws {Error} with err.status = 404 on missing / deleted restaurant
+ * @throws on DB error
  */
 export async function getRestaurantAnalytics(restaurantId, startDate, endDate) {
   const db = sql()
 
-  const end = endDate || new Date().toISOString()
+  // ── Validate date parameters ─────────────────────────────────────────────
+  if (!isValidDateParam(startDate) || !isValidDateParam(endDate)) {
+    const err = new Error('Invalid date: startDate or endDate cannot be parsed as a valid date')
+    err.status = 400
+    throw err
+  }
+
+  const end   = endDate   || new Date().toISOString()
   const start = startDate || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
+
+  if (new Date(start) > new Date(end)) {
+    const err = new Error('Invalid date range: startDate must not be after endDate')
+    err.status = 400
+    throw err
+  }
 
   // Verify restaurant exists (not deleted)
   const restRows = await db`
@@ -55,6 +94,11 @@ export async function getRestaurantAnalytics(restaurantId, startDate, endDate) {
     err.status = 404
     throw err
   }
+
+  // ── Resolve server-owned restaurant timezone ──────────────────────────────
+  // This is the ONLY source of timezone for analytics.  Client-supplied values
+  // are never used.  Falls back to 'UTC' if not configured (documented policy).
+  const timezone = await getRestaurantAnalyticsTimezone(restaurantId)
 
   // ── Orders in date range (confirmed + completed = revenue-earning) ───────
   const orders = await db`
@@ -92,30 +136,40 @@ export async function getRestaurantAnalytics(restaurantId, startDate, endDate) {
   })
   const totalCustomers = customerPhones.size
 
-  // ── Monthly revenue (last 12 months, starting from current month) ────────
-  const now = new Date(end)
+  // ── Resolve restaurant-local reference point from the end of the range ───
+  // All bucket boundaries are expressed in the restaurant's IANA timezone.
+  const endParts = getLocalDateParts(end, timezone) || (() => {
+    const d = new Date(end)
+    return { year: d.getUTCFullYear(), month: d.getUTCMonth(), day: d.getUTCDate() }
+  })()
+  const endYear     = endParts.year
+  const endMonth    = endParts.month   // 0-based, restaurant-local
+  const currentMonth = endMonth
+  const currentYear  = endYear
+
+  // ── Monthly revenue (last 12 months, using restaurant-local month) ───────
   const monthly = new Array(12).fill(0)
   orders.forEach(o => {
-    const d = new Date(o.created_at)
-    const monthsAgo = (now.getFullYear() - d.getFullYear()) * 12 + (now.getMonth() - d.getMonth())
+    const parts = getLocalDateParts(o.created_at, timezone)
+    if (!parts) return
+    const monthsAgo = (endYear - parts.year) * 12 + (endMonth - parts.month)
     if (monthsAgo >= 0 && monthsAgo < 12) {
       monthly[11 - monthsAgo] += parseFloat(o.total) || 0
     }
   })
 
-  // ── Weekly revenue (last 4 weeks of the current month) ───────────────────
-  const currentMonth = now.getMonth()
-  const currentYear = now.getFullYear()
+  // ── Weekly revenue (last 4 weeks of the current restaurant-local month) ──
   const weekly = [0, 0, 0, 0]
   orders.forEach(o => {
-    const d = new Date(o.created_at)
-    if (d.getMonth() === currentMonth && d.getFullYear() === currentYear) {
-      const weekIdx = Math.min(Math.floor((d.getDate() - 1) / 7), 3)
+    const parts = getLocalDateParts(o.created_at, timezone)
+    if (!parts) return
+    if (parts.month === currentMonth && parts.year === currentYear) {
+      const weekIdx = Math.min(Math.floor((parts.day - 1) / 7), 3)
       weekly[weekIdx] += parseFloat(o.total) || 0
     }
   })
 
-  // ── Weekly customer data (current month) ─────────────────────────────────
+  // ── Weekly customer data (current restaurant-local month) ─────────────────
   const weekBuckets = [
     { label: 'Week 1', minDay: 1, maxDay: 7, ordersCount: 0, bookingsCount: 0 },
     { label: 'Week 2', minDay: 8, maxDay: 14, ordersCount: 0, bookingsCount: 0 },
@@ -124,22 +178,24 @@ export async function getRestaurantAnalytics(restaurantId, startDate, endDate) {
   ]
 
   const thisMonthConfirmed = orders.filter(o => {
-    const d = new Date(o.created_at)
-    return d.getMonth() === currentMonth && d.getFullYear() === currentYear
+    const parts = getLocalDateParts(o.created_at, timezone)
+    return parts && parts.month === currentMonth && parts.year === currentYear
   })
   const thisMonthBookings = bookings.filter(b => {
-    const d = new Date(b.created_at)
-    return d.getMonth() === currentMonth && d.getFullYear() === currentYear
+    const parts = getLocalDateParts(b.created_at, timezone)
+    return parts && parts.month === currentMonth && parts.year === currentYear
   })
 
   thisMonthConfirmed.forEach(o => {
-    const d = new Date(o.created_at)
-    const wi = Math.min(Math.floor((d.getDate() - 1) / 7), 3)
+    const parts = getLocalDateParts(o.created_at, timezone)
+    if (!parts) return
+    const wi = Math.min(Math.floor((parts.day - 1) / 7), 3)
     weekBuckets[wi].ordersCount++
   })
   thisMonthBookings.forEach(b => {
-    const d = new Date(b.created_at)
-    const wi = Math.min(Math.floor((d.getDate() - 1) / 7), 3)
+    const parts = getLocalDateParts(b.created_at, timezone)
+    if (!parts) return
+    const wi = Math.min(Math.floor((parts.day - 1) / 7), 3)
     weekBuckets[wi].bookingsCount++
   })
 
@@ -184,28 +240,30 @@ export async function getRestaurantAnalytics(restaurantId, startDate, endDate) {
     categoryData = null
   }
 
-  // ── Today's revenue (current calendar day) ───────────────────────────────
-  const todayStr = new Date().toISOString().slice(0, 10)
+  // ── Today's revenue (current restaurant-local calendar day) ──────────────
+  // Uses the restaurant's IANA timezone, not the UTC date of the server clock.
+  const todayStr = getLocalDayKey(new Date().toISOString(), timezone)
   const todayRevenue = orders
     .filter(o => {
-      const ts = o.created_at ? new Date(o.created_at).toISOString() : ''
-      return ts.slice(0, 10) === todayStr
+      const ts = o.created_at ? getLocalDayKey(o.created_at, timezone) : ''
+      return ts === todayStr
     })
     .reduce((sum, o) => sum + (parseFloat(o.total) || 0), 0)
 
-  // ── Customer growth (current month vs last month) ────────────────────────
-  const lastMonth = currentMonth === 0 ? 11 : currentMonth - 1
+  // ── Customer growth (current month vs last month, restaurant-local) ───────
+  const lastMonth     = currentMonth === 0 ? 11 : currentMonth - 1
   const lastMonthYear = currentMonth === 0 ? currentYear - 1 : currentYear
+
   const lastMonthOrders = orders.filter(o => {
-    const d = new Date(o.created_at)
-    return d.getMonth() === lastMonth && d.getFullYear() === lastMonthYear
+    const parts = getLocalDateParts(o.created_at, timezone)
+    return parts && parts.month === lastMonth && parts.year === lastMonthYear
   })
   const lastMonthBookings = bookings.filter(b => {
-    const d = new Date(b.created_at)
-    return d.getMonth() === lastMonth && d.getFullYear() === lastMonthYear
+    const parts = getLocalDateParts(b.created_at, timezone)
+    return parts && parts.month === lastMonth && parts.year === lastMonthYear
   })
-  const thisMonthTotal = thisMonthConfirmed.length + thisMonthBookings.length
-  const lastMonthTotal = lastMonthOrders.length + lastMonthBookings.length
+  const thisMonthTotal  = thisMonthConfirmed.length + thisMonthBookings.length
+  const lastMonthTotal  = lastMonthOrders.length + lastMonthBookings.length
   const growthVal = lastMonthTotal > 0
     ? (((thisMonthTotal - lastMonthTotal) / lastMonthTotal) * 100).toFixed(1)
     : thisMonthTotal > 0 ? '100.0' : '0.0'
@@ -223,6 +281,7 @@ export async function getRestaurantAnalytics(restaurantId, startDate, endDate) {
     weeklyRevenue: weekly,
     weeklyCustomerData,
     categoryData,
+    timezone,
     dateRange: { start, end },
     calculatedAt: new Date().toISOString(),
   }

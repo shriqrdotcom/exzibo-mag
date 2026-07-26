@@ -144,6 +144,7 @@ export default async function handler(req, res) {
         return res.status(200).json(result)
       } catch (err) {
         if (err.status === 404) return notFound(res, 'Restaurant not found', requestId)
+        if (err.status === 400) return badInput(res, err.message, requestId)
         console.error(`[restaurants][analytics] Error:`, err.message)
         return internalError(res, requestId)
       }
