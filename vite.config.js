@@ -30,7 +30,7 @@ import { writeAuditLog } from './src/db/neon-audit-logs.js'
 import * as mediaService from './src/services/mediaService.js'
 import { getClientIp, resolveClientIp, send503Protection } from './src/lib/upstash.server.js'
 import { generateRequestId, parsePagination } from './api/_lib/validate.js'
-import { viteWrapper, sendSafeError } from './api/_lib/security-middleware.js'
+import { viteWrapper, sendSafeError, viteGlobalSecurityMiddleware } from './api/_lib/security-middleware.js'
 import * as menuService from './src/services/menuService.js'
 import * as contentService from './src/services/restaurantContentService.js'
 import { lookupRestaurantByUid } from './api/_lib/restaurant-lookup.js'
@@ -1262,12 +1262,25 @@ function realtimeOutboxPlugin() {
   }
 }
 
+function securityPlugin() {
+  return {
+    name: 'security-origin-host-csrf',
+    configureServer(server) {
+      // Apply shared Origin/Host/CSRF policy to every /api request before
+      // route-specific handlers. This makes Vite dev behavior match Express and
+      // Vercel: request ID, security headers, and origin/host/csrf checks are
+      // applied consistently.
+      server.middlewares.use(viteGlobalSecurityMiddleware())
+    },
+  }
+}
+
 export default defineConfig(({ mode, command }) => {
   if (command === 'serve') {
     validateServerEnv('vite')
   }
   return {
-    plugins: [react(), previewAuthPlugin(), menuApiPlugin(), aboutApiPlugin(), tableValidationPlugin(), neonRestaurantPlugin(), analyticsPlugin(), neonHealthPlugin(), spaFallbackPlugin(), realtimeOutboxPlugin()],
+    plugins: [securityPlugin(), react(), previewAuthPlugin(), menuApiPlugin(), aboutApiPlugin(), tableValidationPlugin(), neonRestaurantPlugin(), analyticsPlugin(), neonHealthPlugin(), spaFallbackPlugin(), realtimeOutboxPlugin()],
     appType: 'spa',
     define: {},
     resolve: {

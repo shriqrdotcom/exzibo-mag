@@ -1,5 +1,6 @@
 import { setCors } from './_lib/cors.js'
 import { checkRestaurantAccess, MANAGEMENT_ROLES } from './_lib/authz.js'
+import { vercelWrapper } from './_lib/security-middleware.js'
 import { getClientIp, resolveClientIp, send503Protection } from '../src/lib/upstash.server.js'
 import * as menuService from '../src/services/menuService.js'
 import * as contentService from '../src/services/restaurantContentService.js'
@@ -35,7 +36,7 @@ const MENU_POST_ACTIONS = new Set([
 const CONTENT_GET_ACTIONS = new Set(['getAbout'])
 const CONTENT_POST_ACTIONS = new Set(['saveAbout', 'updateSocial'])
 
-export default async function handler(req, res) {
+export default vercelWrapper(async function handler(req, res) {
   setCors(res)
   if (req.method === 'OPTIONS') return res.status(200).end()
 
@@ -108,4 +109,4 @@ export default async function handler(req, res) {
     console.error(`[menu-content][${action}] Error:`, err.message)
     return res.status(500).json({ error: err.message })
   }
-}
+})

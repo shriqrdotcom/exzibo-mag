@@ -1,5 +1,6 @@
 import { setPublicCors } from './_lib/cors.js'
 import { checkRestaurantAccess, ALL_ROLES } from './_lib/authz.js'
+import { vercelWrapper } from './_lib/security-middleware.js'
 import { rateLimit, getClientIp, resolveClientIp, send429, send503Protection } from '../src/lib/upstash.server.js'
 import { getNeonBookingsPaginated } from '../src/db/neon-bookings.js'
 import { createBookingAtomic } from '../src/services/bookingCreationService.js'
@@ -35,7 +36,7 @@ const ALLOWED_STATUS_FIELDS = ['status']
 //
 // Authorization is ALWAYS enforced — no environment-variable bypass.
 
-export default async function handler(req, res) {
+export default vercelWrapper(async function handler(req, res) {
   setPublicCors(res)
   if (req.method === 'OPTIONS') return res.status(200).end()
 
@@ -134,4 +135,4 @@ export default async function handler(req, res) {
     console.error('[bookings] Error:', err.message)
     return internalError(res, requestId)
   }
-}
+})

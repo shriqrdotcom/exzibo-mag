@@ -41,6 +41,7 @@
 
 import { setCors } from './_lib/cors.js'
 import { getSessionEmail, checkSuperadmin } from './_lib/authz.js'
+import { vercelWrapper } from './_lib/security-middleware.js'
 import { rateLimit, getClientIp, resolveClientIp, send429, send503Protection } from '../src/lib/upstash.server.js'
 import {
   insertMessage,
@@ -129,7 +130,7 @@ const HELP_STATUSES = new Set(['read', 'unread', 'resolved'])
 
 // ── Main handler ──────────────────────────────────────────────────────────────
 
-export default async function handler(req, res) {
+export default vercelWrapper(async function handler(req, res) {
   setCors(res)
   if (req.method === 'OPTIONS') return res.status(200).end()
 
@@ -319,4 +320,4 @@ export default async function handler(req, res) {
     console.error(`[notifications][${action}] Error:`, err.message)
     return internalError(res, requestId)
   }
-}
+})

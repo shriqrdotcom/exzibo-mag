@@ -18,6 +18,7 @@
 
 import crypto from 'crypto'
 import { createSafeError, sendSafeError, isSafeErrorCode, isSafePublicMessage } from './errors.js'
+import { validateHost, validateCsrf } from './origin-host-csrf.js'
 
 export { sendSafeError }
 
@@ -204,6 +205,7 @@ export function applySecurityHeaders(res) {
 
 const DEFAULT_JSON_LIMIT = 1024 * 1024
 const DEFAULT_ALLOWED_METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS']
+const DEFAULT_CSRF_EXEMPT = ['/api/orders', '/api/bookings']
 
 function ensureResHelpers(res) {
   if (res && typeof res.status !== 'function') {
@@ -215,6 +217,37 @@ function ensureResHelpers(res) {
       res.end(JSON.stringify(body))
     }
   }
+}
+
+function runOriginHostCsrfChecks(req, res, requestId, options) {
+  const opts = {
+    apiPrefix: '/api',
+    skipOriginHostCsrf: false,
+    skipHostValidation: false,
+    skipCsrfValidation: false,
+    csrfExempt: DEFAULT_CSRF_EXEMPT,
+    env: process.env,
+    ...options,
+  }
+
+  if (opts.skipOriginHostCsrf) return { handled: false }
+
+  const path = (req.path || req.url || '').split('?')[0].replace(/\/$/, '')
+  if (opts.apiPrefix && !path.startsWith(opts.apiPrefix)) return { handled: false }
+  if (req.method === 'OPTIONS') return { handled: false }
+
+  if (!opts.skipHostValidation && !validateHost(req, res, requestId, opts.env)) {
+    return { handled: true }
+  }
+
+  if (!opts.skipCsrfValidation) {
+    const exempt = opts.csrfExempt.some(p => path === p || path.startsWith(p + '/'))
+    if (!exempt && !validateCsrf(req, res, requestId, opts.env)) {
+      return { handled: true }
+    }
+  }
+
+  return { handled: false }
 }
 
 async function runCoreBoundary(req, res, options, handler) {
@@ -229,6 +262,11 @@ async function runCoreBoundary(req, res, options, handler) {
   applySecurityHeaders(res)
 
   if (methodAllowlist(req, res, opts.allowedMethods)) {
+    return { handled: true, requestId }
+  }
+
+  const originHostResult = runOriginHostCsrfChecks(req, res, requestId, opts)
+  if (originHostResult.handled) {
     return { handled: true, requestId }
   }
 
@@ -287,6 +325,19 @@ export function expressSecurityMiddleware(options = {}) {
       }
     }
 
+    const originHostResult = runOriginHostCsrfChecks(req, res, requestId, opts)
+    if (originHostResult.handled) return
+
+    next()
+  }
+}
+
+export function viteGlobalSecurityMiddleware(options = {}) {
+  return (req, res, next) => {
+    const requestId = req.requestId || setRequestId(req, res)
+    applySecurityHeaders(res)
+    const result = runOriginHostCsrfChecks(req, res, requestId, { apiPrefix: '/api', ...options })
+    if (result.handled) return
     next()
   }
 }

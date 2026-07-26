@@ -1,5 +1,6 @@
 import { uploadImage, replaceImage, deleteImage } from '../src/services/mediaService.js'
 import { setAdminCors, applySecurityHeaders } from './_lib/cors.js'
+import { vercelWrapper } from './_lib/security-middleware.js'
 
 // ── /api/media — Image Upload Handler (Cloudflare R2 only) ───────────────────
 //
@@ -19,7 +20,7 @@ import { setAdminCors, applySecurityHeaders } from './_lib/cors.js'
 
 export const config = { api: { bodyParser: { sizeLimit: '10mb' } } }
 
-export default async function handler(req, res) {
+export default vercelWrapper(async function handler(req, res) {
   setAdminCors(req, res)
   applySecurityHeaders(res)
   if (req.method === 'OPTIONS') return res.status(200).end()
@@ -57,7 +58,7 @@ export default async function handler(req, res) {
   })
 
   return res.status(result.status).json(result.body)
-}
+})
 
 function actionToMediaType(action) {
   const map = {

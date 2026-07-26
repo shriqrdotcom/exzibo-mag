@@ -18,8 +18,9 @@
 import { getSessionEmail, checkSuperadmin, checkRestaurantAccess } from './_lib/authz.js'
 import { setCredentialedCors, applyAuthSecurityHeaders } from './_lib/cors.js'
 import { issueRealtimeTicket } from '../src/services/realtimeTicketService.js'
+import { vercelWrapper } from './_lib/security-middleware.js'
 
-export default async function handler(req, res) {
+export default vercelWrapper(async function handler(req, res) {
   setCredentialedCors(req, res)
   applyAuthSecurityHeaders(res)
 
@@ -87,4 +88,4 @@ export default async function handler(req, res) {
   }
 
   return res.status(400).json({ error: 'Missing or invalid type parameter. Use type=superadmin or type=member&restaurantId=<uuid>' })
-}
+})
