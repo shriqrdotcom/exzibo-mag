@@ -28,6 +28,7 @@ import {
   internalError,
   rejectUnknownFields,
 } from './_lib/validate.js'
+import { getClientIp } from '../src/lib/upstash.server.js'
 
 // ── /api/restaurants — Restaurant CRUD (Neon-only Vercel function) ────────────
 //
@@ -229,7 +230,7 @@ export default async function handler(req, res) {
           name: payload.name,
           ownerUserId: createGuard.session.userId,
           ownerEmail:  createGuard.session.email,
-          ipAddress:   req.headers['x-forwarded-for'] ?? req.socket?.remoteAddress ?? null,
+          ipAddress:   getClientIp(req),
           place:               payload.place,
           note:                payload.note,
           accent_color:        payload.accent_color,

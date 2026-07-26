@@ -1,6 +1,7 @@
 import { Redis } from '@upstash/redis'
 import { Ratelimit } from '@upstash/ratelimit'
 import { createHash, randomBytes } from 'crypto'
+import { resolveClientIp, getClientIp as _getClientIp } from './client-ip.js'
 
 // ── Upstash Redis — server-only protection layer ──────────────────────────────
 //
@@ -242,13 +243,11 @@ export async function releaseLock(key, token) {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
+// Re-export the canonical resolver so all call sites share one implementation.
+export { resolveClientIp } from './client-ip.js'
+
 export function getClientIp(req) {
-  return (
-    (req.headers['x-forwarded-for'] || '').split(',')[0].trim() ||
-    req.headers['x-real-ip'] ||
-    req.socket?.remoteAddress ||
-    'unknown'
-  )
+  return _getClientIp(req)
 }
 
 // Returns a short (8-char) stable hash of any JSON-serialisable value.

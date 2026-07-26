@@ -1,6 +1,6 @@
 import { setPublicCors } from './_lib/cors.js'
 import { checkRestaurantAccess, requireSuperadmin, ALL_ROLES, MANAGEMENT_ROLES } from './_lib/authz.js'
-import { rateLimit, acquireLock, releaseLock, getClientIp, send429, send503Protection } from '../src/lib/upstash.server.js'
+import { rateLimit, acquireLock, releaseLock, getClientIp, resolveClientIp, send429, send503Protection } from '../src/lib/upstash.server.js'
 import {
   deleteOldNeonOrders,
   getNeonOrdersPaginated,
@@ -120,7 +120,9 @@ export default async function handler(req, res) {
         return forbidden(res, 'Updating order status requires manager role or above', requestId)
       }
 
-      const ip = getClientIp(req)
+      const ipResult = resolveClientIp(req)
+      if (ipResult.state !== 'resolved') return send503Protection(res)
+      const ip = ipResult.ip
       const rl = await rateLimit(`rl:order-status:ip:${ip}`, 60, 60)
       if (!rl.available) return send503Protection(res)
       if (!rl.allowed) return send429(res, 'Too many order status updates.')

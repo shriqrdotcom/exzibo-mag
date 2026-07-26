@@ -1,0 +1,658 @@
+REPOSITORY
+https://github.com/shriqrdotcom/exzibo-mag.git
+
+TASK TITLE
+Prompt 20 of 38 — Harden Client IP Resolution and Trusted Proxy Boundaries
+
+ROLE
+
+Act as a senior application-security engineer, reverse-proxy specialist and abuse-control reliability engineer.
+
+Work only on:
+
+- client IP resolution;
+- trusted proxy configuration;
+- forwarded-header validation;
+- rate-limit identity;
+- duplicate-control identity where IP is used;
+- safe audit/log identity.
+
+Do not modify:
+
+- authentication;
+- booking or order business logic;
+- analytics;
+- membership;
+- realtime;
+- billing;
+- media;
+- frontend UI;
+- database schema or migrations.
+
+==================================================
+PRECONDITIONS
+==================================================
+
+Begin only after Prompt 19 has been merged into main.
+
+Run:
+
+git fetch origin --prune
+git switch main
+git pull --ff-only origin main
+
+Confirm:
+
+- Prompt 19 booking authorization parity is present.
+- Prompt 18 Redis fail-closed controls remain present.
+- Prompt 8–17 protections remain present.
+- git status is completely clean.
+
+Record the exact starting commit SHA.
+
+Create:
+
+repair/20-trusted-client-ip
+
+Do not work directly on main.
+Do not continue from the Prompt 19 branch.
+
+==================================================
+CONFIRMED DEFECT
+==================================================
+
+Current client-IP resolution may trust the first value supplied through:
+
+x-forwarded-for
+
+without proving that the request passed through an approved reverse proxy.
+
+Consequences:
+
+1. A direct caller may supply a fake forwarded IP.
+
+2. Rate limits may be applied to an attacker-selected identity.
+
+3. Abuse controls may be bypassed by rotating spoofed headers.
+
+4. Audit records may attribute requests to the wrong source.
+
+5. Vercel, Express, Vite, Cloudflare and local development may interpret IP headers differently.
+
+==================================================
+OBJECTIVE
+==================================================
+
+After this task:
+
+1. One canonical client-IP resolver is used everywhere.
+
+2. Untrusted forwarding headers are never accepted as authoritative.
+
+3. Each supported runtime has an explicit trusted-proxy policy.
+
+4. Direct connections use the actual socket/connection address.
+
+5. Forwarded chains are parsed and validated safely.
+
+6. IPv4 and IPv6 addresses are normalized consistently.
+
+7. Rate limiting and abuse controls use the canonical resolved identity.
+
+8. Spoofed forwarded headers cannot change the effective client identity.
+
+9. Logs and responses never expose internal proxy chains or configuration.
+
+10. Prompt 18 Redis protection remains fully fail closed.
+
+==================================================
+STRICT RULES
+==================================================
+
+Do not:
+
+- trust arbitrary x-forwarded-for values;
+- automatically trust the left-most forwarded address;
+- trust a header merely because it exists;
+- use browser/client-provided runtime flags;
+- accept client-provided IP values in request bodies or query parameters;
+- silently fall back to a spoofable header;
+- disable rate limiting when IP resolution fails;
+- treat every unresolved caller as one permanent global IP;
+- expose proxy IPs, private infrastructure addresses or full header chains in API responses;
+- log authorization headers, cookies, secrets or Redis credentials;
+- add a third-party IP parsing dependency unless the repository has no safe native option;
+- modify unrelated business logic;
+- add Agent-memory files, screenshots, attached assets, pasted prompts or generated reports.
+
+==================================================
+STEP 1 — INVENTORY ALL IP RESOLUTION
+==================================================
+
+Search for:
+
+- getClientIp
+- clientIp
+- client_ip
+- remoteAddress
+- socket.remoteAddress
+- connection.remoteAddress
+- x-forwarded-for
+- x-real-ip
+- cf-connecting-ip
+- forwarded
+- trusted proxy
+- trust proxy
+- rateLimit
+- preventDuplicate
+- audit IP
+- request IP
+- req.ip
+- req.ips
+
+Inspect at minimum:
+
+- src/lib/upstash.server.js
+- server.js
+- vite.config.js
+- api/restaurants.js
+- api/orders.js
+- api/bookings.js
+- api/notifications.js
+- upload routes
+- authentication rate-limit routes
+- public order and booking routes
+- abuse-control tests
+- deployment configuration
+
+Create an internal map:
+
+runtime
+→ immediate network peer
+→ available forwarding headers
+→ currently trusted source
+→ rate-limit key generation
+→ corrected policy
+
+Do not edit until the inventory is complete.
+
+==================================================
+STEP 2 — DEFINE THE TRUST MODEL
+==================================================
+
+Define one explicit server-side trust model.
+
+Supported modes should be derived from actual repository runtimes, such as:
+
+- direct/local;
+- trusted hosted proxy;
+- Cloudflare-fronted deployment;
+- test.
+
+Requirements:
+
+1. The mode must come from trusted server configuration or reliable runtime detection.
+
+2. A public request header must never select the trust mode.
+
+3. Direct/local mode must ignore forwarded headers by default.
+
+4. Hosted-proxy mode may use only the platform-approved client-IP source established for that runtime.
+
+5. Multi-hop forwarded chains must be processed using a documented trusted-hop rule.
+
+6. Unknown or contradictory proxy configuration must fail safely in production.
+
+7. Development behavior must be explicit.
+
+8. Tests may inject a controlled resolver context.
+
+Do not enable a broad “trust every proxy” setting.
+
+==================================================
+STEP 3 — CREATE ONE CANONICAL RESOLVER
+==================================================
+
+Create or repair one shared function equivalent to:
+
+resolveClientIp(request, runtimeContext)
+
+The result should clearly distinguish:
+
+- resolved;
+- unavailable;
+- invalid;
+- untrusted-forwarding-data.
+
+The resolver must:
+
+1. Read the socket/connection peer address.
+
+2. Read forwarding headers only when the immediate proxy/runtime is trusted.
+
+3. Parse comma-separated chains safely.
+
+4. Trim whitespace.
+
+5. Reject malformed values.
+
+6. Remove IPv6 brackets and permitted transport ports safely.
+
+7. Normalize IPv4-mapped IPv6 addresses.
+
+8. Normalize valid IPv6 representation consistently.
+
+9. Reject control characters and oversized header values.
+
+10. Never return a raw unvalidated header string.
+
+11. Return a bounded canonical value suitable for rate-limit keys.
+
+Use native Node.js IP validation where practical.
+
+==================================================
+STEP 4 — DEFINE SAFE FAILURE BEHAVIOUR
+==================================================
+
+When client identity cannot be resolved:
+
+PRODUCTION PROTECTED ROUTES
+
+- Do not silently allow the request without abuse protection.
+- Use a safe protection-unavailable result.
+- Return the existing safe 503 contract where IP identity is mandatory.
+
+LOW-RISK OR INTERNAL OPERATIONS
+
+- Follow an explicit documented policy.
+- Do not invent a random identity per request.
+
+DEVELOPMENT/TEST
+
+- Allow explicit injected identities only in test or controlled development setup.
+- Do not use production deployable bypass flags.
+
+Preserve Prompt 18 fail-closed behaviour.
+
+==================================================
+STEP 5 — UPDATE ALL CALL SITES
+==================================================
+
+Route every IP-dependent control through the canonical resolver.
+
+At minimum inspect and update:
+
+- rate limiting;
+- public order creation;
+- public booking creation;
+- restaurant creation or public restaurant actions;
+- notification endpoints;
+- uploads;
+- authentication throttling;
+- duplicate-prevention keys;
+- audit/security logging.
+
+Requirements:
+
+1. No route reads forwarding headers independently.
+
+2. No route builds its own IP parsing logic.
+
+3. Rate-limit keys use the canonical identity.
+
+4. Duplicate controls remain scoped correctly.
+
+5. Existing restaurant or user scope remains included where required.
+
+6. Failure maps to the safe Redis/protection error contract.
+
+==================================================
+STEP 6 — EXPRESS TRUST-PROXY CONFIGURATION
+==================================================
+
+Inspect Express configuration.
+
+If Express uses:
+
+app.set('trust proxy', true)
+
+or an equivalent broad trust setting, replace it with a narrowly scoped configuration based on the actual deployment topology.
+
+Requirements:
+
+1. Do not trust arbitrary internet peers as proxies.
+
+2. Do not enable blanket hop trust without evidence.
+
+3. Express req.ip and the canonical resolver must agree.
+
+4. Local direct requests must not gain authority from forwarded headers.
+
+5. Production startup must reject invalid trusted-proxy configuration.
+
+==================================================
+STEP 7 — SAFE AUDIT IDENTITY
+==================================================
+
+Where IP addresses are logged or stored for security auditing:
+
+1. Use only the canonical resolved address.
+
+2. Avoid logging the full forwarded chain.
+
+3. Mask or pseudonymize IPs where raw storage is not required.
+
+4. Never include IP details in public error responses.
+
+5. Do not combine IP data with secrets or session tokens in logs.
+
+Do not create a new database audit system in this prompt.
+
+==================================================
+STEP 8 — REQUIRED TESTS
+==================================================
+
+Add executable tests.
+
+DIRECT CONNECTIONS
+
+1. Direct request uses socket remote address.
+
+2. Direct request ignores spoofed x-forwarded-for.
+
+3. Direct request ignores spoofed x-real-ip.
+
+4. Direct request ignores spoofed proxy-specific headers.
+
+TRUSTED PROXY
+
+5. Trusted single-proxy request resolves the intended client address.
+
+6. Trusted multi-hop request follows the configured trusted-hop policy.
+
+7. Extra attacker-controlled left-most values do not become authoritative.
+
+8. Missing trusted header fails according to policy.
+
+9. Malformed trusted header fails safely.
+
+NORMALIZATION
+
+10. IPv4 address is normalized.
+
+11. IPv4 with transport port is handled safely where valid.
+
+12. IPv4-mapped IPv6 normalizes consistently.
+
+13. Valid IPv6 is accepted.
+
+14. Bracketed IPv6 is handled safely.
+
+15. Invalid IPv6 is rejected.
+
+16. Empty header is rejected.
+
+17. Whitespace-only header is rejected.
+
+18. Oversized forwarding header is rejected.
+
+19. Control characters are rejected.
+
+ABUSE-CONTROL INTEGRATION
+
+20. Spoofed forwarded IP cannot bypass rate limiting.
+
+21. Repeated requests with different fake forwarded headers resolve to the same real direct identity.
+
+22. Trusted clients receive distinct rate-limit identities.
+
+23. Unresolved required identity returns safe protection-unavailable behavior.
+
+24. Redis failure remains fail closed.
+
+25. Duplicate prevention still uses correct restaurant/request scope.
+
+CROSS-RUNTIME PARITY
+
+26. Vercel resolver behavior passes.
+
+27. Express resolver behavior passes.
+
+28. Vite/local behavior passes.
+
+29. Cloudflare-fronted mode passes when repository topology supports it.
+
+30. Equivalent requests resolve consistently across supported runtimes.
+
+SECURITY
+
+31. Client request body IP is ignored.
+
+32. Client query-string IP is ignored.
+
+33. Client-provided role/runtime mode cannot enable proxy trust.
+
+34. Error responses contain no proxy chain.
+
+35. Logs contain no secrets.
+
+REGRESSION
+
+36. Prompt 18 Redis tests pass.
+
+37. Prompt 19 booking authorization tests pass.
+
+38. Prompt 8–17 regression suites pass.
+
+39. Migration-integrity tests pass.
+
+40. Root production build passes.
+
+Do not use production infrastructure.
+
+==================================================
+STEP 9 — FINAL SAFETY SEARCH
+==================================================
+
+Confirm NOT FOUND in deployable code:
+
+- first x-forwarded-for value trusted unconditionally;
+- raw forwarding-header value used as rate-limit key;
+- app.set('trust proxy', true) without strict justification;
+- independent route-level IP parsing;
+- request-body or query IP trusted;
+- spoofable IP fallback;
+- unresolved IP silently allowed on protected production route;
+- full forwarding chain logged;
+- proxy configuration selected by client input.
+
+Review every remaining match manually.
+
+==================================================
+VALIDATION
+==================================================
+
+Run:
+
+1. Frozen dependency installation.
+
+2. Focused trusted-proxy and IP-resolution tests.
+
+3. Redis abuse-control integration tests.
+
+4. Rate-limit and duplicate-prevention tests.
+
+5. Cross-runtime parity tests.
+
+6. Prompt 18 and Prompt 19 regression suites.
+
+7. Prompt 8–17 regression suites.
+
+8. Migration-integrity tests.
+
+9. Syntax/type/lint checks where configured.
+
+10. Root production build.
+
+11. git diff against starting commit.
+
+12. git status.
+
+13. Final safety search.
+
+Do not claim COMPLETE unless spoofed forwarded-header tests pass in every supported runtime.
+
+==================================================
+PERMITTED FILE SCOPE
+==================================================
+
+Likely files:
+
+- canonical client-IP resolver;
+- src/lib/upstash.server.js;
+- server.js;
+- relevant API route adapters;
+- trusted-proxy configuration helper;
+- focused IP-resolution tests;
+- affected Redis integration tests.
+
+Do not modify:
+
+- database schema or migrations;
+- booking/order business rules;
+- authentication design;
+- analytics;
+- realtime;
+- frontend UI;
+- billing;
+- Agent-memory files;
+- attached assets;
+- screenshots;
+- pasted prompts.
+
+==================================================
+COMMIT AND PULL REQUEST
+==================================================
+
+After all checks pass:
+
+1. Confirm only intended files changed.
+
+2. Commit with:
+
+   fix: harden trusted client ip resolution
+
+3. Push:
+
+   repair/20-trusted-client-ip
+
+4. Create a pull request targeting main.
+
+5. Do not merge it.
+
+6. Do not delete the branch.
+
+==================================================
+FINAL RESPONSE
+==================================================
+
+Return:
+
+PROMPT 20 COMPLETION SUMMARY
+
+Status:
+- COMPLETE / PARTIAL / BLOCKED
+
+Branch:
+- branch name
+
+Starting SHA:
+- exact SHA
+
+Ending SHA:
+- exact SHA or Not committed
+
+Trusted-proxy policy:
+- supported runtimes
+- direct-mode behavior
+- hosted-proxy behavior
+
+Canonical resolver:
+- file
+- function
+- normalization policy
+
+Protected call sites:
+- exact list
+
+Files changed:
+- exact list
+
+Focused IP tests:
+- passed
+- failed
+- skipped
+
+Spoofing tests:
+- PASS / FAIL
+
+Redis integration:
+- PASS / FAIL
+
+Cross-runtime parity:
+- Vercel: PASS / FAIL
+- Express: PASS / FAIL
+- Vite: PASS / FAIL
+- Cloudflare mode: PASS / FAIL / NOT APPLICABLE
+
+Prompt 18 regression:
+- PASS / FAIL
+
+Prompt 19 regression:
+- PASS / FAIL
+
+Previous regressions:
+- PASS / FAIL
+
+Migration tests:
+- PASS / FAIL
+
+Production build:
+- PASS / FAIL
+
+Final safety search:
+- unconditional x-forwarded-for trust: FOUND / NOT FOUND
+- raw header rate-limit key: FOUND / NOT FOUND
+- blanket trust proxy: FOUND / NOT FOUND
+- duplicated IP parsing: FOUND / NOT FOUND
+- client-provided IP trusted: FOUND / NOT FOUND
+- spoofable fallback: FOUND / NOT FOUND
+- unresolved identity allowed: FOUND / NOT FOUND
+- proxy chain logged: FOUND / NOT FOUND
+
+Production resources accessed:
+- No
+
+Production Redis accessed:
+- No
+
+Production database accessed:
+- No
+
+Production secrets changed:
+- No
+
+Git status:
+- clean / not clean
+
+Pull request:
+- number
+- base
+- compare
+
+Recommended next action:
+- State whether Prompt 21 may begin.
+
+Final conclusion:
+- State whether Prompt 20 is committed, pushed and ready for review.
+- Do not claim the entire repository is production-ready.
