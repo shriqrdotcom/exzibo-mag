@@ -1,0 +1,567 @@
+REPOSITORY
+https://github.com/shriqrdotcom/exzibo-mag.git
+
+TASK TITLE
+Prompt 24 of 38 — Repair Restaurant Timezone Boundaries in Analytics
+
+ROLE
+
+Act as a senior backend analytics engineer, PostgreSQL date/time specialist, and financial-reporting correctness auditor.
+
+Work only on:
+
+- restaurant timezone discovery;
+- analytics date boundaries;
+- daily/weekly/monthly revenue buckets;
+- customer-activity buckets;
+- analytics route parity;
+- timezone tests.
+
+Do not modify:
+
+- order creation;
+- order state machine;
+- bookings;
+- membership;
+- authentication;
+- realtime;
+- Redis;
+- billing;
+- frontend UI;
+- media;
+- database migrations unless absolutely required.
+
+==================================================
+PRECONDITIONS
+==================================================
+
+Begin only after Prompt 23 has been merged into main.
+
+Run:
+
+git fetch origin --prune
+git switch main
+git pull --ff-only origin main
+
+Confirm:
+
+- Prompt 23 migration-governance changes are present.
+- Prompt 16 completed-order revenue fix remains present.
+- Prompt 17 customer analytics fix remains present.
+- Prompt 8–22 protections remain present.
+- git status is completely clean.
+
+Record the exact starting commit SHA.
+
+Create branch:
+
+repair/24-analytics-timezone-boundaries
+
+Do not work directly on main.
+Do not continue from Prompt 23 branch.
+
+==================================================
+CONFIRMED DEFECT
+==================================================
+
+Analytics currently use JavaScript Date or server timezone boundaries.
+
+This can cause:
+
+1. Revenue to be assigned to the wrong business day.
+2. Customer activity to be assigned to the wrong day.
+3. Month/week/day buckets to shift around midnight.
+4. DST transitions to produce incorrect bucket boundaries.
+5. Different deployment servers to produce different analytics.
+
+==================================================
+OBJECTIVE
+==================================================
+
+After this task:
+
+1. Analytics use the restaurant’s canonical IANA timezone.
+
+2. Date range filtering is timezone-aware.
+
+3. Daily, weekly and monthly buckets are based on restaurant local time.
+
+4. Completed and confirmed orders remain included in revenue.
+
+5. Customer analytics from Prompt 17 remain correct.
+
+6. Cancelled, rejected and failed orders remain excluded.
+
+7. Vercel, Express and Vite return identical analytics for the same restaurant/timezone.
+
+8. Invalid or missing timezone configuration fails safely or uses an explicit documented fallback.
+
+9. Tests prove midnight and DST boundaries.
+
+==================================================
+STRICT RULES
+==================================================
+
+Do not:
+
+- use server local timezone as the business timezone;
+- use browser/client timezone for server analytics;
+- trust client-provided timezone unless validated against server-owned restaurant data;
+- change order status semantics;
+- change revenue status semantics from Prompt 16;
+- change customer identity rules from Prompt 17;
+- return raw orders or customer PII;
+- create a new analytics implementation per runtime;
+- silently fallback to UTC without documenting and testing the policy;
+- add Agent-memory files, screenshots, pasted prompts, attached assets or reports.
+
+==================================================
+STEP 1 — INVENTORY ANALYTICS DATE LOGIC
+==================================================
+
+Search for:
+
+- analytics
+- revenue
+- date range
+- startDate
+- endDate
+- month
+- week
+- day
+- Date(
+- new Date
+- toISOString
+- getMonth
+- getFullYear
+- created_at
+- completed_at
+- confirmed
+- completed
+- customer
+- timezone
+- time_zone
+- restaurant_hours
+- restaurant_settings
+- global_config
+
+Inspect at minimum:
+
+- src/services/analyticsService.js
+- api/restaurants.js
+- server.js
+- vite.config.js
+- restaurant schema
+- restaurant settings service
+- Prompt 16 analytics tests
+- Prompt 17 customer analytics tests
+- dashboard analytics callers
+- route parity tests
+
+Create an internal map:
+
+metric
+→ current date source
+→ current timezone assumption
+→ corrected restaurant-local boundary
+→ SQL/query location
+→ affected tests
+
+Do not edit before inventory is complete.
+
+==================================================
+STEP 2 — FIND CANONICAL RESTAURANT TIMEZONE SOURCE
+==================================================
+
+Determine where restaurant timezone should come from.
+
+Inspect:
+
+- restaurant table columns;
+- restaurant_settings.global_config;
+- setup/default restaurant creation;
+- public/private restaurant DTOs;
+- existing settings keys;
+- tests and docs.
+
+Preferred policy:
+
+1. Use a server-owned restaurant timezone value.
+
+2. It must be an IANA timezone string, such as Asia/Kolkata.
+
+3. Validate with native Intl.supportedValuesOf('timeZone') or equivalent safe validation.
+
+4. If the current schema has no timezone field, use the existing settings global_config only if already appropriate.
+
+5. If no server-owned value exists, implement one explicit fallback policy, preferably UTC, and document it as temporary.
+
+Do not create a migration unless repository evidence proves a persistent timezone field is required right now.
+
+==================================================
+STEP 3 — CREATE ONE TIMEZONE UTILITY
+==================================================
+
+Create or repair one shared utility for analytics timezone handling.
+
+It must support:
+
+- validateTimezone(value)
+- getRestaurantAnalyticsTimezone(restaurantId)
+- buildRestaurantDateRange({ timezone, from, to })
+- local day bucket conversion
+- local month bucket conversion
+
+Requirements:
+
+1. Accept only valid IANA timezone names.
+
+2. Reject malformed timezone strings.
+
+3. Reject oversized values.
+
+4. Do not evaluate timezone strings.
+
+5. Do not use client timezone as authoritative.
+
+6. Return deterministic UTC instants for SQL filters.
+
+7. Keep display bucket labels as restaurant-local dates.
+
+==================================================
+STEP 4 — REPAIR ANALYTICS QUERIES
+==================================================
+
+Update shared analytics service only.
+
+All analytics routes must continue using the same service.
+
+Required behavior:
+
+1. Filter orders using UTC instants derived from restaurant-local boundaries.
+
+2. Group daily buckets by restaurant local date.
+
+3. Group monthly buckets by restaurant local month.
+
+4. Preserve Prompt 16 revenue statuses:
+
+   confirmed
+   completed
+
+5. Preserve Prompt 17 customer counting.
+
+6. Exclude cancelled/rejected/failed.
+
+7. Avoid client-side aggregation when SQL can do it safely.
+
+8. Return stable results independent of server timezone.
+
+Use PostgreSQL timezone conversion where appropriate.
+
+==================================================
+STEP 5 — ROUTE CONTRACT
+==================================================
+
+Vercel, Express and Vite analytics routes must return identical results.
+
+Route handlers may accept date range query parameters, but:
+
+1. They must validate them.
+
+2. They must not accept arbitrary timezone override unless an existing private/admin contract requires it.
+
+3. They must call the shared analytics service.
+
+4. They must return safe 400 for invalid date input.
+
+5. Internal errors must return safe 500.
+
+==================================================
+STEP 6 — REQUIRED TESTS
+==================================================
+
+Add focused tests.
+
+TIMEZONE VALIDATION
+
+1. Valid IANA timezone is accepted.
+
+2. Invalid timezone is rejected.
+
+3. Empty timezone is rejected.
+
+4. Oversized timezone is rejected.
+
+5. Client timezone parameter cannot override server-owned restaurant timezone.
+
+REVENUE BOUNDARIES
+
+6. Order just before restaurant-local midnight belongs to previous local day.
+
+7. Order just after restaurant-local midnight belongs to next local day.
+
+8. Same UTC timestamp buckets differently for two restaurants in different timezones.
+
+9. Completed order remains in revenue.
+
+10. Confirmed order remains in revenue.
+
+11. Cancelled/rejected/failed orders remain excluded.
+
+MONTH/WEEK/DAY
+
+12. Daily totals use restaurant-local day.
+
+13. Monthly totals use restaurant-local month.
+
+14. Week boundaries are deterministic and documented.
+
+15. DST spring-forward boundary does not double count.
+
+16. DST fall-back boundary does not double count.
+
+CUSTOMER ANALYTICS
+
+17. Customer count follows restaurant-local date boundary.
+
+18. Unique customer count remains deterministic.
+
+19. Empty customer fields do not create fake customers.
+
+ROUTE PARITY
+
+20. Vercel analytics uses same timezone service.
+
+21. Express analytics uses same timezone service.
+
+22. Vite analytics uses same timezone service.
+
+23. Same fixture returns same totals across all runtimes.
+
+ERRORS
+
+24. Invalid date range returns 400.
+
+25. Start after end returns 400.
+
+26. Internal DB error returns safe 500.
+
+REGRESSION
+
+27. Prompt 16 completed-order revenue tests pass.
+
+28. Prompt 17 customer analytics tests pass.
+
+29. Prompt 18–23 regressions pass.
+
+30. Prompt 8–15 regressions pass.
+
+31. Migration-integrity tests pass.
+
+32. Production build passes.
+
+Do not use production infrastructure.
+
+==================================================
+STEP 7 — FINAL SAFETY SEARCH
+==================================================
+
+Confirm NOT FOUND in analytics deployable code:
+
+- server timezone used for business buckets;
+- browser/client timezone trusted as authoritative;
+- new Date used for business day boundaries without explicit timezone;
+- completed orders excluded from revenue;
+- customer analytics using client-side math;
+- duplicate analytics SQL per runtime;
+- silent UTC fallback without documented policy;
+- raw customer PII exposed in public analytics.
+
+Review every remaining match manually.
+
+==================================================
+VALIDATION
+==================================================
+
+Run:
+
+1. Frozen dependency installation.
+
+2. Focused timezone analytics tests.
+
+3. Prompt 16 analytics regression tests.
+
+4. Prompt 17 customer analytics regression tests.
+
+5. Route parity tests.
+
+6. Prompt 18–23 regression tests.
+
+7. Prompt 8–15 regression tests.
+
+8. Migration-integrity tests.
+
+9. Syntax/type/lint checks where configured.
+
+10. Root production build.
+
+11. git diff against starting commit.
+
+12. git status.
+
+13. Final safety search.
+
+Do not claim COMPLETE unless timezone boundary tests pass for at least:
+- Asia/Kolkata;
+- UTC;
+- one DST-observing timezone.
+
+==================================================
+PERMITTED FILE SCOPE
+==================================================
+
+Likely files:
+
+- src/services/analyticsService.js
+- analytics timezone utility
+- restaurant settings lookup helper only if needed
+- route parity tests
+- analytics timezone tests
+- narrowly relevant docs/comments
+
+Do not modify:
+
+- migrations unless strictly required;
+- order creation;
+- booking logic;
+- membership;
+- auth;
+- realtime;
+- Redis;
+- frontend UI;
+- billing;
+- Agent-memory files;
+- screenshots;
+- pasted prompts;
+- attached assets.
+
+==================================================
+COMMIT AND PULL REQUEST
+==================================================
+
+After validation:
+
+1. Confirm only intended Prompt 24 files changed.
+
+2. Commit with:
+
+   fix: apply restaurant timezone analytics boundaries
+
+3. Push:
+
+   repair/24-analytics-timezone-boundaries
+
+4. Create a PR targeting main.
+
+5. Do not merge it.
+
+6. Do not delete the branch.
+
+==================================================
+FINAL RESPONSE
+==================================================
+
+Return:
+
+PROMPT 24 COMPLETION SUMMARY
+
+Status:
+- COMPLETE / PARTIAL / BLOCKED
+
+Branch:
+- branch name
+
+Starting SHA:
+- exact SHA
+
+Ending SHA:
+- exact SHA or Not committed
+
+Timezone source:
+- source table/config
+- fallback policy
+- validation rule
+
+Analytics boundary policy:
+- daily
+- weekly
+- monthly
+
+Files changed:
+- exact list
+
+Revenue timezone tests:
+- passed
+- failed
+- skipped
+
+Customer timezone tests:
+- passed
+- failed
+- skipped
+
+DST tests:
+- PASS / FAIL
+
+Route parity:
+- Vercel: PASS / FAIL
+- Express: PASS / FAIL
+- Vite: PASS / FAIL
+
+Prompt 16 regression:
+- PASS / FAIL
+
+Prompt 17 regression:
+- PASS / FAIL
+
+Previous regressions:
+- PASS / FAIL
+
+Migration tests:
+- PASS / FAIL
+
+Root production build:
+- PASS / FAIL
+
+Final safety search:
+- server timezone bucket: FOUND / NOT FOUND
+- client timezone trusted: FOUND / NOT FOUND
+- completed orders excluded: FOUND / NOT FOUND
+- duplicate analytics SQL: FOUND / NOT FOUND
+- undocumented UTC fallback: FOUND / NOT FOUND
+- raw customer PII exposed: FOUND / NOT FOUND
+
+Production database accessed:
+- No
+
+Production migrations executed:
+- No
+
+Production secrets changed:
+- No
+
+Git status:
+- clean / not clean
+
+Pull request:
+- number
+- base
+- compare
+
+Recommended next action:
+- State whether Prompt 25 may begin.
+
+Final conclusion:
+- State whether Prompt 24 is committed, pushed and ready for review.
+- Do not claim the complete repository is production-ready.
