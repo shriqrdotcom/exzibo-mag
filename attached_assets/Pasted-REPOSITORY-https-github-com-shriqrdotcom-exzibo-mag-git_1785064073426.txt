@@ -1,0 +1,325 @@
+REPOSITORY
+https://github.com/shriqrdotcom/exzibo-mag.git
+
+TASK TITLE
+Prompt 25A-2 — Integrate Core API Security Boundary Across Vercel, Express and Vite
+
+GOAL
+
+Integrate the Prompt 25A-1 helpers into active API runtimes.
+
+This prompt must handle:
+
+1. Use shared request ID helper
+2. Use shared safe error envelope
+3. Use shared method allowlists
+4. Use shared body limits
+5. Use shared basic security headers
+6. Test Vercel, Express and Vite parity
+7. Commit, push and create PR
+
+Do NOT implement:
+
+- Origin validation
+- Host validation
+- CSRF protection
+- full CORS redesign
+- CSP redesign
+
+Those are Prompt 25B.
+
+==================================================
+PRECONDITIONS
+==================================================
+
+Continue from branch:
+
+repair/25a-core-api-security-boundary
+
+Run:
+
+git status
+git log -1 --oneline
+
+Confirm Prompt 25A-1 helpers are committed.
+
+Do not switch branches unless required.
+
+==================================================
+STRICT SCOPE
+==================================================
+
+Allowed files:
+
+- api/_lib/errors.js
+- api/_lib/security-middleware.js
+- selected API handlers only for wrapper integration
+- server.js
+- vite.config.js
+- focused route/security tests
+- package.json only if required for tests
+
+Do NOT modify:
+
+- business logic
+- order logic
+- booking logic
+- membership rules
+- analytics formulas
+- realtime/outbox
+- Redis core behavior
+- database schema
+- migrations
+- frontend UI
+- billing
+- media processing
+- Agent-memory files
+- screenshots
+- pasted prompt files
+- attached_assets
+- generated reports
+
+==================================================
+TASKS
+==================================================
+
+1. Inventory active API route families:
+
+- Vercel API handlers
+- Express routes in server.js
+- Vite middleware routes in vite.config.js
+
+2. Integrate the shared helpers into the main active route families.
+
+Required behavior:
+
+- every error response includes requestId
+- X-Request-ID response header is present
+- unknown errors use safe INTERNAL_ERROR envelope
+- unsupported methods return 405
+- JSON body has explicit limit
+- malformed JSON returns safe 400
+- basic security headers are applied
+
+3. Preserve current behavior:
+
+- public routes stay public
+- private routes stay private
+- successful response DTOs unchanged
+- Prompt 18 Redis fail-closed unchanged
+- Prompt 19 booking auth unchanged
+- Prompt 20 trusted IP unchanged
+- Prompt 24 analytics unchanged
+
+4. Do not migrate every route if risky. Prioritize active routes and list anything not integrated.
+
+==================================================
+TESTS REQUIRED
+==================================================
+
+Add or update tests proving:
+
+1. Vercel wrapper works.
+2. Express wrapper works.
+3. Vite wrapper works.
+4. Error shape matches across runtimes.
+5. X-Request-ID exists across runtimes.
+6. 405 response works across runtimes.
+7. Safe INTERNAL_ERROR response works across runtimes.
+8. Body limit works where integrated.
+9. Parser error returns safe 400.
+10. Basic security headers exist.
+11. Public route remains public.
+12. Private route remains private.
+
+Regression tests:
+
+13. Prompt 18 Redis tests pass.
+14. Prompt 19 booking tests pass.
+15. Prompt 20 trusted-IP tests pass.
+16. Prompt 21 environment tests pass.
+17. Prompt 22 governance tests pass.
+18. Prompt 23 migration-governance tests pass.
+19. Prompt 24 analytics timezone tests pass.
+20. Prompt 8–17 regressions pass where available.
+21. Migration-integrity tests pass.
+22. Root production build passes.
+
+==================================================
+FINAL SAFETY SEARCH
+==================================================
+
+Confirm in deployable code:
+
+- raw err.message returned to client: NOT FOUND
+- stack trace returned to client: NOT FOUND
+- SQL error returned to client: NOT FOUND
+- unsupported method fallthrough: NOT FOUND
+- missing request ID in error path: NOT FOUND
+- unbounded JSON body parsing: NOT FOUND
+- duplicated core security boundary: NOT FOUND
+- missing security headers from integrated API responses: NOT FOUND
+
+Review remaining matches manually.
+
+==================================================
+VALIDATION
+==================================================
+
+Run:
+
+1. focused route/security tests
+2. request-ID tests
+3. error-envelope tests
+4. method/body tests
+5. security-header tests
+6. cross-runtime core parity tests
+7. Prompt 18–24 regression tests
+8. Prompt 8–17 regression tests where available
+9. migration-integrity tests
+10. npm run build
+11. git diff
+12. git status
+13. final safety search
+
+Do not claim COMPLETE unless Vercel, Express and Vite are tested.
+
+==================================================
+COMMIT AND PR
+==================================================
+
+After all checks pass:
+
+1. Confirm only intended Prompt 25A files changed.
+
+2. Commit with:
+
+fix: integrate core api security boundary
+
+3. Push branch:
+
+repair/25a-core-api-security-boundary
+
+4. Create PR targeting main.
+
+5. Do not merge PR.
+
+6. Do not delete branch.
+
+If push/PR creation fails, report manual creation required and keep local commit safe.
+
+==================================================
+FINAL RESPONSE
+==================================================
+
+Return:
+
+PROMPT 25A COMPLETION SUMMARY
+
+Status:
+- COMPLETE / PARTIAL / BLOCKED
+
+Branch:
+- branch name
+
+Starting SHA:
+- exact SHA from Prompt 25A-1 start
+
+Ending SHA:
+- exact SHA or Not committed
+
+Core security middleware:
+- file
+- functions
+- runtimes integrated
+
+Error envelope:
+- file
+- shape
+- stable codes
+
+Request ID policy:
+- generation
+- accepted input
+- rejected input
+
+Method/body policy:
+- method allowlist strategy
+- body limit strategy
+
+Security headers:
+- exact headers applied
+
+Files changed:
+- exact list
+
+Focused core security tests:
+- passed
+- failed
+- skipped
+
+Request-ID tests:
+- PASS / FAIL
+
+Error-envelope tests:
+- PASS / FAIL
+
+Method/body tests:
+- PASS / FAIL
+
+Security-header tests:
+- PASS / FAIL
+
+Cross-runtime core parity:
+- Vercel: PASS / FAIL
+- Express: PASS / FAIL
+- Vite: PASS / FAIL
+
+Prompt 24 regression:
+- PASS / FAIL
+
+Prompt 18–23 regressions:
+- PASS / FAIL
+
+Previous regressions:
+- PASS / FAIL
+
+Migration tests:
+- PASS / FAIL
+
+Root production build:
+- PASS / FAIL
+
+Final safety search:
+- raw exception response: FOUND / NOT FOUND
+- stack trace response: FOUND / NOT FOUND
+- SQL error response: FOUND / NOT FOUND
+- unsupported method fallthrough: FOUND / NOT FOUND
+- missing request ID in error path: FOUND / NOT FOUND
+- unbounded body parsing: FOUND / NOT FOUND
+- duplicated core boundary: FOUND / NOT FOUND
+- missing security headers: FOUND / NOT FOUND
+
+Production resources accessed:
+- No
+
+Production database accessed:
+- No
+
+Production secrets changed:
+- No
+
+Git status:
+- clean / not clean
+
+Pull request:
+- number or manual creation required
+- base
+- compare
+
+Recommended next action:
+- State whether Prompt 25B may begin only after PR review and merge.
+
+Final conclusion:
+- State whether Prompt 25A is committed, pushed and ready for review.
+- Do not claim the complete repository is production-ready.

@@ -77,6 +77,7 @@ import {
   TEAM_WRITE_ROLES,
 } from './api/_lib/authz.js'
 import { generateRequestId, parsePagination, safeError, badInput, internalError } from './api/_lib/validate.js'
+import { expressSecurityMiddleware, expressErrorHandler } from './api/_lib/security-middleware.js'
 import { issueRealtimeTicket } from './src/services/realtimeTicketService.js'
 import { structuredLogger } from './src/monitoring/structuredLogger.js'
 import { validateServerEnv } from './src/config/serverEnv.js'
@@ -200,6 +201,9 @@ async function _isTableValid(slug, tableNumber) {
     return cache(false)
   }
 }
+
+// ── Core security boundary (request ID, security headers, method/body limits)
+app.use(expressSecurityMiddleware({ apiPrefix: '/api', jsonLimit: 1024 * 1024 }))
 
 app.use(express.json({ limit: '15mb' }))
 
@@ -1306,6 +1310,9 @@ app.all('/api/analytics/:restaurantId', (req, res) => {
 app.get('*', (req, res) => {
   res.sendFile(path.resolve(__dirname, 'dist', 'index.html'))
 })
+
+// ── Safe error handler — must be last after all routes ─────────────────────────
+app.use(expressErrorHandler())
 
 // ── Production startup validation ─────────────────────────────────────────────
 // validateRedisConfig() throws if VERCEL_ENV=production and Upstash credentials

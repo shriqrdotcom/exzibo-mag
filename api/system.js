@@ -1,6 +1,8 @@
-import { setAdminCors, setPublicCors, applySecurityHeaders } from './_lib/cors.js'
+import { setAdminCors, setPublicCors } from './_lib/cors.js'
 import { checkSuperadmin } from './_lib/authz.js'
 import { runReadinessChecks } from '../src/monitoring/readiness.js'
+import { sendSafeError } from './_lib/errors.js'
+import { vercelWrapper } from './_lib/security-middleware.js'
 
 // ── /api/system — System Handler ────────────────────────────────────────────
 //
@@ -17,15 +19,18 @@ const REMOVED_ACTIONS = new Set([
   'listRestaurantDb',
 ])
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   setAdminCors(req, res)
-  applySecurityHeaders(res)
   if (req.method === 'OPTIONS') return res.status(200).end()
 
-  const action = req.query.action
-  if (!action) return res.status(400).json({ error: 'action query param required' })
+  const action = req.query?.action
+  const requestId = req.requestId
+
+  if (!action) {
+    return sendSafeError(res, { status: 400, code: 'BAD_REQUEST', message: 'action query param required', requestId })
+  }
   if (REMOVED_ACTIONS.has(action)) {
-    return res.status(410).json({ error: 'Runtime database provisioning has been removed' })
+    return sendSafeError(res, { status: 410, code: 'BAD_REQUEST', message: 'Runtime database provisioning has been removed', requestId })
   }
 
   if (action === 'liveness') {
@@ -40,7 +45,7 @@ export default async function handler(req, res) {
   if (action === 'readiness') {
     const auth = await checkSuperadmin(req)
     if (!auth.allowed) {
-      return res.status(403).json({ error: 'Forbidden', status: 'unprotected' })
+      return sendSafeError(res, { status: 403, code: 'FORBIDDEN', message: 'Forbidden', requestId })
     }
 
     const checks = await runReadinessChecks()
@@ -52,5 +57,7 @@ export default async function handler(req, res) {
     })
   }
 
-  return res.status(400).json({ error: `Unknown action: ${action}` })
+  return sendSafeError(res, { status: 400, code: 'BAD_REQUEST', message: `Unknown action: ${action}`, requestId })
 }
+
+export default vercelWrapper(handler, { allowedMethods: ['GET', 'POST', 'OPTIONS'] })

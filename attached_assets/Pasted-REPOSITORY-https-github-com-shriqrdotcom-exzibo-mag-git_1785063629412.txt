@@ -1,0 +1,250 @@
+REPOSITORY
+https://github.com/shriqrdotcom/exzibo-mag.git
+
+TASK TITLE
+Prompt 25A-1 — Create Core API Security Helpers and Unit Tests
+
+GOAL
+
+Create reusable core API security helpers only.
+
+This prompt must implement:
+
+1. Safe error envelope helper
+2. Request ID helper
+3. Method allowlist helper
+4. Body-size / JSON parser safety helper
+5. Basic API security headers helper
+6. Unit tests for these helpers
+
+Do NOT integrate every route yet.
+Do NOT work on Origin, Host, CSRF, CORS, or CSP.
+Do NOT modify business logic.
+
+==================================================
+PRECONDITIONS
+==================================================
+
+Run:
+
+git fetch origin --prune
+git switch main
+git pull --ff-only origin main
+git status
+git rev-parse HEAD
+
+Confirm Prompt 24 is merged and working tree is clean.
+
+Create branch:
+
+repair/25a-core-api-security-boundary
+
+Record starting SHA.
+
+==================================================
+STRICT SCOPE
+==================================================
+
+Allowed files only:
+
+- api/_lib/errors.js
+- api/_lib/security-middleware.js
+- focused helper test file
+- package.json only if a test script is required
+
+Do NOT modify:
+
+- server.js
+- vite.config.js
+- API route handlers
+- database schema
+- migrations
+- frontend
+- business logic
+- Redis logic
+- screenshots
+- attached_assets
+- pasted prompt files
+- Agent-memory files
+
+==================================================
+TASKS
+==================================================
+
+1. Inventory existing helper patterns in api/_lib.
+
+2. Create safe error helper.
+
+Error shape:
+
+{
+  ok: false,
+  code: "STABLE_CODE",
+  message: "Safe public message",
+  requestId: "..."
+}
+
+Allowed codes:
+
+BAD_REQUEST
+UNAUTHORIZED
+FORBIDDEN
+NOT_FOUND
+METHOD_NOT_ALLOWED
+CONFLICT
+RATE_LIMITED
+PROTECTION_UNAVAILABLE
+INTERNAL_ERROR
+
+Unknown errors must return:
+
+status 500
+code INTERNAL_ERROR
+message Internal server error
+
+Never expose:
+
+- err.message unless explicitly safe
+- SQL text
+- stack trace
+- file paths
+- cookies
+- tokens
+- secrets
+- provider errors
+
+3. Create request ID helper.
+
+Rules:
+
+- generate crypto.randomUUID() when missing
+- accept x-request-id only if safe
+- reject/replace oversized values
+- reject/replace spaces, newlines, and control characters
+- add X-Request-ID response header
+- include requestId in error envelope
+- never use requestId for auth
+
+4. Create method allowlist helper.
+
+Rules:
+
+- unsupported method returns 405
+- use safe error envelope
+- set Allow header where practical
+- OPTIONS must not run business logic
+
+5. Create body/parser helper.
+
+Rules:
+
+- enforce explicit JSON body size limit
+- oversized body returns safe error
+- malformed JSON returns safe 400
+- do not affect upload/media-specific limits
+
+6. Create basic security headers helper.
+
+Apply where called:
+
+- X-Content-Type-Options: nosniff
+- Referrer-Policy
+- Permissions-Policy
+- frame protection header where safe
+- Cache-Control for private API responses
+
+Do not add CSP here.
+
+==================================================
+TESTS REQUIRED
+==================================================
+
+Add focused tests proving:
+
+1. Missing request ID generates one.
+2. Valid x-request-id is preserved.
+3. Oversized request ID is replaced/rejected safely.
+4. Control-character request ID is replaced/rejected safely.
+5. Error envelope includes requestId.
+6. Unknown exception returns INTERNAL_ERROR.
+7. SQL-like error text is not returned.
+8. Stack trace is not returned.
+9. Secret-like value is not returned.
+10. Known safe domain error keeps stable status/code.
+11. Unsupported method returns 405.
+12. Allow header is present where practical.
+13. OPTIONS does not execute business logic.
+14. Oversized JSON body is rejected safely.
+15. Normal JSON body passes.
+16. Malformed JSON returns safe 400.
+17. Security headers are applied.
+18. Headers do not expose secrets.
+
+==================================================
+VALIDATION
+==================================================
+
+Run only focused helper tests first.
+
+Then run:
+
+node --test tests/migration-integrity.test.js
+npm run build
+
+Run git diff and git status.
+
+==================================================
+COMMIT
+==================================================
+
+Commit only intended helper/test files.
+
+Commit message:
+
+fix: add core api security helpers
+
+Do not push if not needed yet.
+Do not create PR yet.
+
+==================================================
+FINAL RESPONSE
+==================================================
+
+Return:
+
+PROMPT 25A-1 SUMMARY
+
+Status:
+- COMPLETE / PARTIAL / BLOCKED
+
+Branch:
+- branch name
+
+Starting SHA:
+- exact SHA
+
+Ending SHA:
+- exact SHA or Not committed
+
+Files changed:
+- exact list
+
+Helpers created:
+- exact list
+
+Focused helper tests:
+- passed
+- failed
+- skipped
+
+Migration test:
+- PASS / FAIL
+
+Production build:
+- PASS / FAIL
+
+Git status:
+- clean / not clean
+
+Ready for Prompt 25A-2:
+- YES / NO
