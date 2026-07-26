@@ -1,0 +1,502 @@
+REPOSITORY
+https://github.com/shriqrdotcom/exzibo-mag.git
+
+TASK TITLE
+Prompt 25B of 38 — Add Origin, Host, CORS and CSRF API Security Boundary
+
+GOAL
+
+Complete the second half of Prompt 25.
+
+Prompt 25A already added:
+- request IDs
+- safe error envelope
+- method guards
+- body limits
+- basic security headers
+- core API wrapper helpers
+
+This Prompt 25B must add:
+
+1. Origin validation
+2. Host validation
+3. CORS safety
+4. CSRF protection for authenticated unsafe browser requests
+5. Full runtime parity across Vercel, Express and Vite
+6. Tests for all of the above
+
+Do NOT modify:
+- order business logic
+- booking business logic
+- membership rules
+- analytics formulas
+- realtime/outbox
+- Redis core logic
+- database schema
+- migrations
+- frontend UI
+- billing
+- media processing
+
+==================================================
+PRECONDITIONS
+==================================================
+
+Run:
+
+git fetch origin --prune
+git switch main
+git pull --ff-only origin main
+git status
+git rev-parse HEAD
+
+Confirm:
+
+- Prompt 25A is merged into main.
+- Prompt 25A core API security helpers are present.
+- Prompt 24 analytics timezone fix is present.
+- Prompt 23 migration governance is present.
+- Prompt 18–22 protections are present.
+- Working tree is clean.
+
+Record starting SHA.
+
+Create branch:
+
+repair/25b-origin-host-csrf
+
+Do not work on main.
+
+==================================================
+STRICT SCOPE
+==================================================
+
+Allowed files:
+
+- Prompt 25A security helper files
+- Origin/Host/CSRF helper file if needed
+- server.js
+- vite.config.js
+- selected API route wrappers
+- environment validator only if needed for allowed origins/hosts
+- focused tests
+
+Do NOT add:
+- screenshots
+- pasted prompt files
+- attached_assets
+- Agent-memory files
+- generated reports
+- unrelated docs
+
+==================================================
+PROBLEM TO FIX
+==================================================
+
+The API still needs a central browser security boundary.
+
+Current risks:
+
+- production Host validation may be missing or inconsistent;
+- Origin validation may be inconsistent;
+- unsafe authenticated browser requests may lack CSRF protection;
+- CORS may allow unsafe patterns;
+- Vercel, Express and Vite may behave differently.
+
+==================================================
+REQUIRED RESULT
+==================================================
+
+After this task:
+
+1. Production Host validation is server-configured and fail-closed.
+2. Production Origin validation is server-configured and fail-closed for unsafe browser requests.
+3. CSRF protection is enforced for authenticated unsafe browser requests.
+4. Public routes remain public.
+5. Private routes remain private.
+6. Server-to-server signed endpoints are not blocked by CSRF.
+7. OPTIONS preflight does not run business logic.
+8. CORS credentials are allowed only for trusted origins.
+9. No wildcard credentialed CORS in production.
+10. Prompt 25A request ID and safe error envelope remain active.
+11. Vercel, Express and Vite return consistent security responses.
+12. Prompt 8–25A regressions remain green.
+
+==================================================
+STEP 1 — INVENTORY
+==================================================
+
+Search for:
+
+- Origin
+- Host
+- CORS
+- allowedOrigins
+- trustedOrigins
+- allowedHosts
+- csrf
+- CSRF
+- sameSite
+- cookie
+- OPTIONS
+- Access-Control-Allow-Origin
+- Access-Control-Allow-Credentials
+- BETTER_AUTH_URL
+- VERCEL_URL
+- localhost
+
+Inspect:
+
+- Prompt 25A security middleware/helper files
+- environment validator from Prompt 21
+- server.js
+- vite.config.js
+- api/*.js
+- api/_lib/*
+- Better Auth config
+- auth routes
+- order routes
+- booking routes
+- restaurant routes
+- notification routes
+- realtime publish/ticket routes
+- upload/media routes
+- public menu/customer routes
+- existing CORS/security tests
+
+Create internal map:
+
+runtime
+→ allowed host source
+→ allowed origin source
+→ CORS behavior
+→ authenticated unsafe browser routes
+→ server-to-server routes
+→ public routes
+→ corrected policy
+
+Do not edit before inventory is complete.
+
+==================================================
+STEP 2 — ORIGIN AND HOST VALIDATION
+==================================================
+
+Use server-side configuration only.
+
+Rules:
+
+1. Production rejects unknown Host values.
+2. Production rejects unsafe Origin values for authenticated unsafe browser requests.
+3. Localhost/dev origins are allowed only in development.
+4. Preview origins are allowed only if explicitly configured.
+5. Wildcard production origins are not allowed.
+6. Wildcard production hosts are not allowed.
+7. Error response must not reveal the full allowlist.
+8. Prompt 25A error envelope must be used.
+9. X-Request-ID must appear on these errors.
+
+Do not let a client header select security mode.
+
+==================================================
+STEP 3 — CSRF PROTECTION
+==================================================
+
+Apply CSRF protection for cookie-authenticated browser requests using unsafe methods:
+
+- POST
+- PUT
+- PATCH
+- DELETE
+
+Acceptable safe policy:
+
+- require valid same-origin/same-site Origin or Referer; or
+- use existing CSRF token mechanism if already present.
+
+Do NOT require CSRF for:
+
+- public unauthenticated order creation unless current policy already requires it;
+- public unauthenticated booking creation unless current policy already requires it;
+- server-to-server webhook/publish endpoints with signed secrets;
+- OPTIONS preflight.
+
+Failure response:
+
+- status 403
+- safe Prompt 25A error envelope
+- includes requestId
+- no secret or allowlist leakage
+
+==================================================
+STEP 4 — CORS SAFETY
+==================================================
+
+Preserve valid CORS behavior.
+
+Rules:
+
+1. Valid configured origin receives expected CORS headers.
+2. Invalid origin does not receive credentialed CORS access.
+3. Credentials are allowed only for trusted origins.
+4. No production wildcard credentials policy.
+5. OPTIONS preflight returns without business mutation.
+6. Method allowlists from Prompt 25A remain active.
+
+==================================================
+STEP 5 — RUNTIME INTEGRATION
+==================================================
+
+Integrate the policy into:
+
+1. Vercel API handlers
+2. Express routes
+3. Vite middleware routes
+
+Rules:
+
+- reuse shared helpers;
+- keep adapters thin;
+- preserve public/private route classification;
+- preserve existing successful DTOs;
+- preserve Prompt 25A request ID/error envelope;
+- preserve Prompt 20 trusted IP;
+- preserve Prompt 18 Redis fail-closed behavior.
+
+==================================================
+TESTS REQUIRED
+==================================================
+
+Add focused tests proving:
+
+ORIGIN/HOST
+
+1. Valid production Host passes.
+2. Invalid production Host fails.
+3. Valid Origin passes for authenticated unsafe browser request.
+4. Invalid Origin fails for authenticated unsafe browser request.
+5. Missing Origin on authenticated unsafe browser request follows documented safe policy.
+6. Localhost Origin allowed only in development.
+7. Wildcard production Origin is rejected.
+8. Wildcard production Host is rejected.
+9. Error response does not reveal full allowlist.
+
+CSRF
+
+10. Authenticated unsafe request with valid Origin passes.
+11. Authenticated unsafe request with invalid Origin fails.
+12. Authenticated unsafe request with invalid Referer fails if Referer is used.
+13. Safe GET request is not blocked.
+14. Public unauthenticated order/booking route is not wrongly blocked.
+15. Server-to-server signed endpoint is not blocked.
+16. OPTIONS preflight is not blocked by CSRF.
+
+CORS
+
+17. Valid configured Origin gets expected CORS headers.
+18. Invalid Origin does not get credentialed CORS access.
+19. OPTIONS preflight does not run business logic.
+20. Credentials are never allowed with wildcard production Origin.
+
+PROMPT 25A REGRESSION
+
+21. Request ID still appears on Origin/Host/CSRF errors.
+22. Safe error envelope is still used.
+23. Unsupported method still returns 405.
+24. Body limit still works.
+25. Basic security headers still exist.
+
+CROSS-RUNTIME PARITY
+
+26. Vercel Origin/Host/CSRF policy passes.
+27. Express Origin/Host/CSRF policy passes.
+28. Vite Origin/Host/CSRF policy passes.
+29. Error shape matches across runtimes.
+
+REGRESSION
+
+30. Prompt 25A core security tests pass.
+31. Prompt 24 analytics timezone tests pass.
+32. Prompt 18–23 regression tests pass.
+33. Prompt 8–17 regression tests pass.
+34. Migration-integrity tests pass.
+35. Root production build passes.
+
+Do not use production infrastructure.
+
+==================================================
+FINAL SAFETY SEARCH
+==================================================
+
+Confirm NOT FOUND in deployable code:
+
+- wildcard production Origin allowlist
+- wildcard production Host allowlist
+- credentialed CORS with wildcard Origin
+- CSRF disabled for authenticated unsafe browser routes
+- client-controlled security mode
+- full allowlist exposed in client error
+- OPTIONS executing business logic
+- duplicated Origin/Host logic per runtime
+- Prompt 25A error envelope bypassed
+- missing request ID on Origin/CSRF error path
+
+Review remaining matches manually.
+
+==================================================
+VALIDATION
+==================================================
+
+Run:
+
+1. focused Origin/Host tests
+2. focused CSRF tests
+3. focused CORS tests
+4. Prompt 25A core security tests
+5. cross-runtime parity tests
+6. Prompt 18–24 regression tests
+7. Prompt 8–17 regression tests
+8. migration-integrity tests
+9. typecheck/lint where configured
+10. root production build
+11. git diff
+12. git status
+13. final safety search
+
+Do not claim COMPLETE unless Vercel, Express and Vite are all tested.
+
+==================================================
+COMMIT AND PR
+==================================================
+
+After all checks pass:
+
+1. Confirm only intended Prompt 25B files changed.
+
+2. Commit with:
+
+fix: enforce origin host and csrf api boundary
+
+3. Push branch:
+
+repair/25b-origin-host-csrf
+
+4. Create PR targeting main.
+
+5. Do not merge PR.
+
+6. Do not delete branch.
+
+If push or PR creation fails, report manual creation required and keep local commit safe.
+
+==================================================
+FINAL RESPONSE FORMAT
+==================================================
+
+Return exactly:
+
+PROMPT 25B COMPLETION SUMMARY
+
+Status:
+- COMPLETE / PARTIAL / BLOCKED
+
+Branch:
+- branch name
+
+Starting SHA:
+- exact SHA
+
+Ending SHA:
+- exact SHA or Not committed
+
+Origin/Host policy:
+- allowed origins source
+- allowed hosts source
+- production behavior
+- development behavior
+
+CSRF policy:
+- enforcement scope
+- exempt routes
+- failure response
+
+CORS policy:
+- valid origin behavior
+- invalid origin behavior
+- credentials behavior
+
+Files changed:
+- exact list
+
+Origin/Host tests:
+- passed
+- failed
+- skipped
+
+CSRF tests:
+- passed
+- failed
+- skipped
+
+CORS tests:
+- passed
+- failed
+- skipped
+
+Prompt 25A regression:
+- PASS / FAIL
+
+Cross-runtime parity:
+- Vercel: PASS / FAIL
+- Express: PASS / FAIL
+- Vite: PASS / FAIL
+
+Prompt 24 regression:
+- PASS / FAIL
+
+Prompt 18–23 regressions:
+- PASS / FAIL
+
+Previous regressions:
+- PASS / FAIL
+
+Migration tests:
+- PASS / FAIL
+
+Root production build:
+- PASS / FAIL
+
+Final safety search:
+- wildcard production origin: FOUND / NOT FOUND
+- wildcard production host: FOUND / NOT FOUND
+- wildcard credentialed CORS: FOUND / NOT FOUND
+- CSRF disabled unsafe browser route: FOUND / NOT FOUND
+- client-controlled security mode: FOUND / NOT FOUND
+- full allowlist exposed: FOUND / NOT FOUND
+- OPTIONS business execution: FOUND / NOT FOUND
+- duplicated Origin/Host logic: FOUND / NOT FOUND
+- error envelope bypass: FOUND / NOT FOUND
+- missing request ID error path: FOUND / NOT FOUND
+
+Production resources accessed:
+- No
+
+Production database accessed:
+- No
+
+Production secrets changed:
+- No
+
+Git status:
+- clean / not clean
+
+Pull request:
+- number or manual creation required
+- base
+- compare
+
+Recommended next action:
+- State whether Prompt 26 may begin only after PR review and merge.
+
+Final conclusion:
+- State whether Prompt 25B is committed, pushed and ready for review.
+- Do not claim the complete repository is production-ready.
