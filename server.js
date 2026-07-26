@@ -56,11 +56,13 @@ import { patchRestaurantGlobalConfig } from './src/services/restaurantSettingsSe
 import { writeAuditLog } from './src/db/neon-audit-logs.js'
 import * as mediaService from './src/services/mediaService.js'
 import {
+  validateRedisConfig,
   rateLimit,
   acquireLock,
   releaseLock,
   getClientIp,
   send429,
+  send503Protection,
 } from './src/lib/upstash.server.js'
 import {
   getSessionEmail,
@@ -651,10 +653,12 @@ app.post('/api/orders/update-status', async (req, res) => {
   if (!orderId || !status) return res.status(400).json({ error: 'orderId and status required' })
 
   // ── Rate limit: 60/min per IP + 5 s exclusive lock per orderId ───────────
-  const { allowed: orderStatusAllowed } = await rateLimit(`rl:order-status:ip:${getClientIp(req)}`, 60, 60)
-  if (!orderStatusAllowed) return send429(res, 'Too many order status updates. Please slow down.')
-  const { acquired: orderStatusLocked, token: orderStatusToken } = await acquireLock(`lock:order-status:${orderId}`, 5)
-  if (!orderStatusLocked) return res.status(409).json({ error: 'Order status update already in progress.' })
+  const orderStatusRl = await rateLimit(`rl:order-status:ip:${getClientIp(req)}`, 60, 60)
+  if (!orderStatusRl.available) return send503Protection(res)
+  if (!orderStatusRl.allowed) return send429(res, 'Too many order status updates. Please slow down.')
+  const orderStatusLock = await acquireLock(`lock:order-status:${orderId}`, 5)
+  if (!orderStatusLock.available) return send503Protection(res)
+  if (!orderStatusLock.acquired) return res.status(409).json({ error: 'Order status update already in progress.' })
 
   try {
     // ── Membership check: resolve restaurant_id from DB before updating ──────
@@ -693,7 +697,7 @@ app.post('/api/orders/update-status', async (req, res) => {
     console.error('[orders/update-status] Error:', err.message)
     return res.status(500).json({ error: err.message })
   } finally {
-    await releaseLock(`lock:order-status:${orderId}`, orderStatusToken)
+    await releaseLock(`lock:order-status:${orderId}`, orderStatusLock.token)
   }
 })
 
@@ -710,8 +714,9 @@ app.post('/api/orders', async (req, res) => {
     }
 
     // ── Rate limit: 10 orders/min per IP. Database idempotency is the source of truth. ──
-    const { allowed: orderAllowed } = await rateLimit(`rl:order-create:ip:${getClientIp(req)}`, 10, 60)
-    if (!orderAllowed) return send429(res, 'Too many orders submitted. Please wait a moment.')
+    const orderRl = await rateLimit(`rl:order-create:ip:${getClientIp(req)}`, 10, 60)
+    if (!orderRl.available) return send503Protection(res)
+    if (!orderRl.allowed) return send429(res, 'Too many orders submitted. Please wait a moment.')
 
     if (!body?.restaurant_id || !Array.isArray(body?.items) || body.items.length === 0) {
       return res.status(400).json({ error: 'restaurant_id and a non-empty items array are required' })
@@ -805,8 +810,9 @@ app.post('/api/bookings', async (req, res) => {
       return res.status(400).json({ error: 'Idempotency-Key header is required (min 16 characters).' })
     }
 
-    const { allowed: bookingAllowed } = await rateLimit(`rl:booking-create:ip:${getClientIp(req)}`, 5, 60)
-    if (!bookingAllowed) return send429(res, 'Too many booking requests. Please wait a moment.')
+    const bookingRl = await rateLimit(`rl:booking-create:ip:${getClientIp(req)}`, 5, 60)
+    if (!bookingRl.available) return send503Protection(res)
+    if (!bookingRl.allowed) return send429(res, 'Too many booking requests. Please wait a moment.')
 
     const saved = await createBookingAtomic({
       restaurantId: body.restaurant_id,
@@ -857,10 +863,12 @@ app.patch('/api/bookings/:id/status', async (req, res) => {
   const { status } = req.body || {}
   if (!status) return res.status(400).json({ error: 'status required' })
 
-  const { allowed: bkStatusAllowed } = await rateLimit(`rl:booking-status:ip:${getClientIp(req)}`, 30, 60)
-  if (!bkStatusAllowed) return send429(res, 'Too many booking status updates. Please slow down.')
-  const { acquired: bkStatusLocked, token: bkStatusToken } = await acquireLock(`lock:booking-status:${id}`, 5)
-  if (!bkStatusLocked) return res.status(409).json({ error: 'Booking status update already in progress.' })
+  const bkStatusRl = await rateLimit(`rl:booking-status:ip:${getClientIp(req)}`, 30, 60)
+  if (!bkStatusRl.available) return send503Protection(res)
+  if (!bkStatusRl.allowed) return send429(res, 'Too many booking status updates. Please slow down.')
+  const bkStatusLock = await acquireLock(`lock:booking-status:${id}`, 5)
+  if (!bkStatusLock.available) return send503Protection(res)
+  if (!bkStatusLock.acquired) return res.status(409).json({ error: 'Booking status update already in progress.' })
 
   try {
     // ── Membership check: resolve restaurant_id from DB before updating ──────
@@ -885,7 +893,7 @@ app.patch('/api/bookings/:id/status', async (req, res) => {
     console.error('[bookings PATCH status] Error:', err.message)
     return res.status(500).json({ error: err.message })
   } finally {
-    await releaseLock(`lock:booking-status:${id}`, bkStatusToken)
+    await releaseLock(`lock:booking-status:${id}`, bkStatusLock.token)
   }
 })
 
@@ -1251,6 +1259,12 @@ app.all('/api/analytics/:restaurantId', (req, res) => {
 app.get('*', (req, res) => {
   res.sendFile(path.resolve(__dirname, 'dist', 'index.html'))
 })
+
+// ── Production startup validation ─────────────────────────────────────────────
+// validateRedisConfig() throws if VERCEL_ENV=production and Upstash credentials
+// are absent, preventing the server from starting in an unprotected state.
+// This is a no-op in development and test.
+validateRedisConfig()
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on port ${PORT}`)

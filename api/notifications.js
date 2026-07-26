@@ -41,7 +41,7 @@
 
 import { setCors } from './_lib/cors.js'
 import { getSessionEmail, checkSuperadmin } from './_lib/authz.js'
-import { rateLimit, getClientIp, send429 } from '../src/lib/upstash.server.js'
+import { rateLimit, getClientIp, send429, send503Protection } from '../src/lib/upstash.server.js'
 import {
   insertMessage,
   getMessagesNeon,
@@ -143,8 +143,9 @@ export default async function handler(req, res) {
       if (req.method !== 'POST') return safeError(res, 405, 'Method not allowed', requestId)
 
       const ip = getClientIp(req)
-      const { allowed } = await rateLimit(`rl:help-submit:ip:${ip}`, 5, 300)
-      if (!allowed) return send429(res, 'Too many help submissions. Please wait a few minutes.')
+      const rl = await rateLimit(`rl:help-submit:ip:${ip}`, 5, 300)
+      if (!rl.available) return send503Protection(res)
+      if (!rl.allowed) return send429(res, 'Too many help submissions. Please wait a few minutes.')
 
       const body = req.body || {}
       rejectUnknownFields(body, ['message', 'restaurant_name', 'restaurant_uid', 'user_role', 'feedback'])
