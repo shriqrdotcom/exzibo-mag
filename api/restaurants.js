@@ -1,5 +1,5 @@
 import { setPublicCors, setAdminCors } from './_lib/cors.js'
-import { getSessionEmail, isSuperadminEmail, checkRestaurantAccess, SETTINGS_ROLES } from './_lib/authz.js'
+import { authorizeSession, authorizeSuperadmin, authorizeRestaurantRole, getSessionEmail, isSuperadminEmail, SETTINGS_ROLES } from './_lib/authz.js'
 import { vercelWrapper } from './_lib/security-middleware.js'
 import {
   getNeonRestaurants,
@@ -55,7 +55,7 @@ function getSql() {
   return neon(process.env.DATABASE_URL)
 }
 
-// ── Superadmin guard ──────────────────────────────────────────────────────────
+// ── Superadmin guard (legacy — newer handlers use authorizeSuperadmin from authz.js) ──
 async function assertSuperadmin(req, res) {
   const session = await getSessionEmail(req)
   if (!session) {
@@ -179,12 +179,8 @@ export default vercelWrapper(async function handler(req, res) {
       if (req.method === 'PATCH') {
         const patch = req.body
         if (!patch || Object.keys(patch).length === 0) return badInput(res, 'patch body required', requestId)
-        const access = await checkRestaurantAccess(req, id)
-        if (access.error === 'Not authenticated') return unauthorized(res, null, requestId)
-        if (!access.allowed) return forbidden(res, null, requestId)
-        if (!access.isSuperadmin && !SETTINGS_ROLES.includes(access.role)) {
-          return forbidden(res, 'Patching restaurant requires owner or admin role', requestId)
-        }
+        const auth = await authorizeRestaurantRole(req, res, id, SETTINGS_ROLES)
+        if (!auth.ok) return
         const row = await patchNeonRestaurantProfile(id, patch)
         return res.json(row ? toMemberRestaurant(row) : { ok: true })
       }
@@ -195,8 +191,9 @@ export default vercelWrapper(async function handler(req, res) {
 
     // ── GET: myIds — restaurant IDs for the authenticated user ─────────────────
     if (action === 'myIds') {
-      const session = await getSessionEmail(req)
-      if (!session) return unauthorized(res, null, requestId)
+      const auth = await authorizeSession(req, res)
+      if (!auth.ok) return
+      const session = { email: auth.email, userId: auth.userId }
 
       if (isSuperadminEmail(session.email)) {
         const sql = getSql()
@@ -274,12 +271,8 @@ export default vercelWrapper(async function handler(req, res) {
     if (action === 'update') {
       const { id, ...patch } = req.body
       if (!id) return badInput(res, 'id required', requestId)
-      const access = await checkRestaurantAccess(req, id)
-      if (access.error === 'Not authenticated') return unauthorized(res, null, requestId)
-      if (!access.allowed) return forbidden(res, null, requestId)
-      if (!access.isSuperadmin && !SETTINGS_ROLES.includes(access.role)) {
-        return forbidden(res, 'Updating restaurant requires owner or admin role', requestId)
-      }
+      const auth = await authorizeRestaurantRole(req, res, id, SETTINGS_ROLES)
+      if (!auth.ok) return
       const row = await patchNeonRestaurantProfile(id, patch)
       return res.json(row ? toMemberRestaurant(row) : { ok: true, requestId })
     }
@@ -287,12 +280,8 @@ export default vercelWrapper(async function handler(req, res) {
     if (action === 'updateProfile') {
       const { restaurantId, patch } = req.body
       if (!restaurantId || !patch) return badInput(res, 'restaurantId and patch required', requestId)
-      const access = await checkRestaurantAccess(req, restaurantId)
-      if (access.error === 'Not authenticated') return unauthorized(res, null, requestId)
-      if (!access.allowed) return forbidden(res, null, requestId)
-      if (!access.isSuperadmin && !SETTINGS_ROLES.includes(access.role)) {
-        return forbidden(res, 'Updating restaurant profile requires owner or admin role', requestId)
-      }
+      const auth = await authorizeRestaurantRole(req, res, restaurantId, SETTINGS_ROLES)
+      if (!auth.ok) return
       const row = await patchNeonRestaurantProfile(restaurantId, patch)
       return res.json(row ? toMemberRestaurant(row) : { ok: true, requestId })
     }

@@ -1,5 +1,5 @@
 import { setAdminCors, setPublicCors } from './_lib/cors.js'
-import { checkSuperadmin } from './_lib/authz.js'
+import { authorizeSuperadmin } from './_lib/authz.js'
 import { runReadinessChecks } from '../src/monitoring/readiness.js'
 import { sendSafeError } from './_lib/errors.js'
 import { vercelWrapper } from './_lib/security-middleware.js'
@@ -50,10 +50,8 @@ async function handler(req, res) {
   }
 
   if (action === 'readiness') {
-    const auth = await checkSuperadmin(req)
-    if (!auth.allowed) {
-      return sendSafeError(res, { status: 403, code: 'FORBIDDEN', message: 'Forbidden', requestId })
-    }
+    const auth = await authorizeSuperadmin(req, res)
+    if (!auth.ok) return
 
     const checks = await runReadinessChecks()
     const allOk = checks.every(c => c.status === 'ok')

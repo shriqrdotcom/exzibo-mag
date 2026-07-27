@@ -1,5 +1,5 @@
 import { setPublicCors } from './_lib/cors.js'
-import { checkRestaurantAccess, requireSuperadmin, ALL_ROLES, MANAGEMENT_ROLES } from './_lib/authz.js'
+import { authorizeRestaurantAccess, authorizeRestaurantRole, authorizeSuperadmin, ALL_ROLES, MANAGEMENT_ROLES } from './_lib/authz.js'
 import { vercelWrapper } from './_lib/security-middleware.js'
 import { rateLimit, acquireLock, releaseLock, getClientIp, resolveClientIp, send429, send503Protection } from '../src/lib/upstash.server.js'
 import {
@@ -68,12 +68,8 @@ export default vercelWrapper(async function handler(req, res) {
       return badInput(res, 'restaurantId is required', requestId)
     }
 
-    const access = await checkRestaurantAccess(req, restaurantId)
-    if (access.error === 'Not authenticated') return unauthorized(res, null, requestId)
-    if (!access.allowed) return forbidden(res, null, requestId)
-    if (!access.isSuperadmin && !ALL_ROLES.includes(access.role)) {
-      return forbidden(res, null, requestId)
-    }
+    const auth = await authorizeRestaurantRole(req, res, restaurantId, ALL_ROLES)
+    if (!auth.ok) return
 
     try {
       const pagination = parsePagination(req.query)
@@ -142,12 +138,8 @@ export default vercelWrapper(async function handler(req, res) {
       const resolvedRestaurantId = await getNeonOrderRestaurantId(orderId)
       if (!resolvedRestaurantId) return notFound(res, 'Order not found', requestId)
 
-      const access = await checkRestaurantAccess(req, resolvedRestaurantId)
-      if (access.error === 'Not authenticated') return unauthorized(res, null, requestId)
-      if (!access.allowed) return forbidden(res, null, requestId)
-      if (!access.isSuperadmin && !MANAGEMENT_ROLES.includes(access.role)) {
-        return forbidden(res, 'Updating order status requires manager role or above', requestId)
-      }
+      const auth = await authorizeRestaurantRole(req, res, resolvedRestaurantId, MANAGEMENT_ROLES)
+      if (!auth.ok) return
 
       const ipResult = resolveClientIp(req)
       if (ipResult.state !== 'resolved') return send503Protection(res)
@@ -178,18 +170,8 @@ export default vercelWrapper(async function handler(req, res) {
 
     // ── POST autoCleanup — superadmin only ───────────────────────────────────
     if (action === 'autoCleanup') {
-      const superadminResult = await new Promise((resolve) => {
-        const fakeNext = () => resolve({ ok: true })
-        const fakeRes = {
-          _status: null, _body: null,
-          status(s) { this._status = s; return this },
-          json(b) { this._body = b; resolve({ ok: false, status: this._status, body: b }); return this },
-        }
-        requireSuperadmin(req, fakeRes, fakeNext)
-      })
-      if (!superadminResult.ok) {
-        return res.status(superadminResult.status).json(superadminResult.body)
-      }
+      const auth = await authorizeSuperadmin(req, res)
+      if (!auth.ok) return
 
       const { confirmedDeleteHours = 12, rejectedDeleteMinutes = 10 } = req.body || {}
       rejectUnknownFields(req.body || {}, ['confirmedDeleteHours', 'rejectedDeleteMinutes'])

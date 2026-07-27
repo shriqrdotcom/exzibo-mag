@@ -1,0 +1,175 @@
+REPOSITORY
+https://github.com/shriqrdotcom/exzibo-mag.git
+
+TASK TITLE
+Prompt 31 of 38 — Canonical Authorization Policy and Permission Enforcement
+
+GOAL
+
+Create one shared authorization layer so every protected API endpoint enforces permissions consistently.
+
+This prompt must only improve authorization consistency.
+
+Work only on:
+
+- shared authorization helpers
+- permission enforcement
+- role policy
+- resource ownership checks
+- authorization wrappers
+- runtime parity
+- focused authorization tests
+
+Do NOT modify:
+
+- authentication
+- login flow
+- Better Auth configuration
+- business logic
+- order processing
+- booking logic
+- analytics calculations
+- realtime
+- Redis
+- database schema
+- migrations
+- frontend UI
+- billing
+- media processing
+
+==================================================
+PRECONDITIONS
+==================================================
+
+Run:
+
+git fetch origin --prune
+git switch main
+git pull --ff-only origin main
+
+Confirm:
+
+- Prompt 30 validation layer is merged.
+- Prompt 29 structured logging is present.
+- Prompt 25 security middleware is present.
+- Prompt 18–30 protections remain present.
+- Working tree is clean.
+
+Record the starting SHA.
+
+Create branch:
+
+repair/31-authorization-policy
+
+Do not work directly on main.
+
+==================================================
+OBJECTIVE
+==================================================
+
+After this task:
+
+1. Every protected endpoint uses one shared authorization helper.
+2. Authorization is enforced consistently across Vercel, Express and Vite.
+3. Restaurant ownership is verified before protected operations.
+4. Role permissions are centralized.
+5. Unauthorized access always returns a safe 403 response.
+6. Tenant isolation remains intact.
+7. Existing business logic is unchanged.
+8. Prompt 8–30 regressions remain green.
+
+==================================================
+IMPLEMENT
+==================================================
+
+Create or improve one shared authorization module.
+
+Enforce:
+
+- Owner permissions
+- Admin permissions
+- Manager permissions
+- Staff permissions
+- Resource ownership
+- Restaurant membership
+- Superadmin separation
+
+Prevent:
+
+- privilege escalation
+- cross-restaurant access
+- missing ownership checks
+- duplicated authorization logic
+
+Reuse the existing safe error envelope.
+
+==================================================
+TESTS
+==================================================
+
+Verify:
+
+- owner access
+- admin access
+- manager access
+- staff access
+- unauthorized request rejected
+- cross-restaurant access blocked
+- resource ownership enforced
+- runtime parity passes
+- Prompt 8–30 regressions pass
+- migration tests pass
+- production build passes
+
+==================================================
+VALIDATION
+==================================================
+
+Run:
+
+- authorization tests
+- runtime parity tests
+- regression suites
+- migration tests
+- production build
+- git diff
+- git status
+
+==================================================
+COMMIT
+
+Commit message:
+
+fix: standardize authorization policy
+
+Branch:
+
+repair/31-authorization-policy
+
+Create a PR targeting main.
+
+Do not merge.
+
+==================================================
+FINAL RESPONSE
+
+Return:
+
+PROMPT 31 COMPLETION SUMMARY
+
+- Status
+- Branch
+- Starting SHA
+- Ending SHA
+- Files changed
+- Authorization helper added
+- Permission policy
+- Runtime parity
+- Tests passed
+- Regression status
+- Production build status
+- Git status
+- Pull request number
+- Recommended next action
+
+Do not claim the repository is fully production-ready.
