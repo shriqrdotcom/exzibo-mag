@@ -1,0 +1,142 @@
+Finalize Prompt 32 and create the pull request.
+
+The Prompt 32 implementation is already complete. Do not restart the task and do not make new architectural changes unless a validation failure proves a real issue.
+
+Current expected branch:
+
+repair/32-runtime-route-parity
+
+Completed work already includes:
+
+- api/_lib/table-validation.js
+- api/_lib/preview-auth.js
+- server.js runtime refactor
+- vite.config.js runtime refactor
+- tests/route-parity.test.js
+- removal of duplicated runtime logic
+- 37 route-parity tests passing
+- production build passing
+
+Now perform only the Git and finalization steps.
+
+1. Verify branch and repository state:
+
+git fetch origin --prune
+git switch repair/32-runtime-route-parity
+git status
+git rev-parse HEAD
+git log --oneline -5
+
+If the local branch does not exist but the remote branch exists, run:
+
+git switch -c repair/32-runtime-route-parity origin/repair/32-runtime-route-parity
+
+Do not create a differently named branch.
+
+2. Review the diff:
+
+git diff --stat main...HEAD
+git diff --name-only main...HEAD
+
+Confirm only intended Prompt 32 files are included.
+
+Do not include:
+
+- screenshots
+- attached_assets
+- pasted prompt files
+- Agent-memory files
+- generated reports
+- unrelated source changes
+
+3. Run final validation:
+
+- node --test tests/route-parity.test.js
+- relevant authentication and preview-auth tests
+- relevant authorization and validation regressions
+- migration-integrity tests
+- npm run build
+- Vercel function-count validation
+
+Do not claim success if the 37 route-parity tests or production build fail.
+
+4. Commit any uncommitted intended changes.
+
+Use commit message:
+
+fix: enforce canonical runtime route parity
+
+If all intended work is already committed, do not create an empty commit.
+
+5. Synchronize before push:
+
+git fetch origin --prune
+
+If the remote branch exists:
+
+git pull --rebase origin repair/32-runtime-route-parity
+
+Resolve conflicts carefully without removing valid Prompt 32 work or valid remote changes.
+
+6. Push the branch:
+
+git push -u origin repair/32-runtime-route-parity
+
+Do not use plain --force.
+
+If the branch was intentionally rebased and a normal push is rejected, inspect the remote SHA first and use --force-with-lease only when no valid remote commit will be lost.
+
+7. Create or update a pull request:
+
+Base:
+main
+
+Compare:
+repair/32-runtime-route-parity
+
+Title:
+fix: enforce canonical runtime route parity
+
+Description:
+
+Eliminate duplicated runtime business logic and enforce route parity across Vercel, Express, and Vite.
+
+Changes:
+- Extracted shared table validation.
+- Extracted shared preview authentication.
+- Refactored Express and Vite adapters to use shared libraries.
+- Removed duplicated auth, validation, and unused runtime imports.
+- Preserved existing URL, method, authorization, validation, and response contracts.
+- Added 37 route-parity tests.
+- Preserved the Vercel function-count limit.
+
+Validation:
+- Route-parity tests passed.
+- Authentication and preview-auth tests passed.
+- Authorization and validation regressions passed.
+- Migration-integrity tests passed.
+- Production build passed.
+- No production database, deployment, migration, or secret was changed.
+
+Do not merge the PR.
+Do not delete the branch.
+
+8. Return only:
+
+PROMPT 32 FINALIZATION SUMMARY
+
+- Branch
+- Starting SHA
+- Ending SHA
+- Files included in PR
+- Route-parity tests
+- Regression tests
+- Migration tests
+- Production build
+- Vercel function count
+- Commit status
+- Push status
+- Pull-request number
+- Base
+- Compare
+- Whether Prompt 33 may begin after this PR is reviewed and merged
