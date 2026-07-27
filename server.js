@@ -78,6 +78,7 @@ import {
 } from './api/_lib/authz.js'
 import { generateRequestId, parsePagination, safeError, badInput, internalError } from './api/_lib/validate.js'
 import { expressSecurityMiddleware, expressErrorHandler } from './api/_lib/security-middleware.js'
+import { logger } from './src/monitoring/logger.js'
 import { issueRealtimeTicket } from './src/services/realtimeTicketService.js'
 import { structuredLogger } from './src/monitoring/structuredLogger.js'
 import { validateServerEnv } from './src/config/serverEnv.js'
@@ -197,7 +198,7 @@ async function _isTableValid(slug, tableNumber) {
     const valid = tableNumbers.map(String).includes(String(tn))
     return cache(valid)
   } catch {
-    console.warn(`[table-validation] Neon error for ${slug}:${tn} — failing closed`)
+    logger.warn('[table-validation] neon error — failing closed', { slug, table: tn })
     return cache(false)
   }
 }
@@ -283,7 +284,7 @@ app.use(async (req, res, next) => {
     req.authUser  = session.user
     next()
   } catch (e) {
-    console.error('[private-api-guard] Session error:', e.message)
+    logger.error('[private-api-guard] session error', { error: e.message })
     return res.status(401).json({ error: 'Session error', detail: e.message })
   }
 })
@@ -366,7 +367,7 @@ function clearPreviewCookie(res) {
 if (process.env.APP_RUNTIME === 'preview') {
   // Startup validation: PREVIEW_SECRET must be configured and at least 32 chars.
   if (!process.env.PREVIEW_SECRET || process.env.PREVIEW_SECRET.length < 32) {
-    console.error('[preview-auth] PREVIEW_SECRET must be at least 32 characters. Preview auth will fail closed.')
+    logger.error('[preview-auth] PREVIEW_SECRET must be at least 32 characters — preview auth will fail closed')
   }
   // Simple in-memory rate limiter for preview-login (per IP, 5 attempts/min)
   const previewLoginAttempts = new Map()
@@ -547,7 +548,7 @@ app.post('/api/realtime/ticket', async (req, res) => {
     })
     return res.status(result.status).json(result.body)
   } catch (err) {
-    console.error('[realtime/ticket] Error:', err.message)
+    logger.error('[realtime/ticket] error', { error: err.message })
     return res.status(500).json({ error: err.message })
   }
 })
@@ -579,7 +580,7 @@ app.post('/api/menu/items', async (req, res) => {
     const result = await menuService.createItem(req, ipResult.ip, req.body)
     return res.status(result.status).json(result.body)
   } catch (err) {
-    console.error('[menu/items POST] Error:', err.message)
+    logger.error('[menu/items POST] error', { error: err.message })
     return res.status(500).json({ error: err.message })
   }
 })
@@ -594,7 +595,7 @@ app.patch('/api/menu/items/:id', async (req, res) => {
     const result = await menuService.updateItem(req, ipResult.ip, { id, ...req.body })
     return res.status(result.status).json(result.body)
   } catch (err) {
-    console.error('[menu/items PATCH] Error:', err.message)
+    logger.error('[menu/items PATCH] error', { error: err.message })
     return res.status(500).json({ error: err.message })
   }
 })
@@ -608,7 +609,7 @@ app.delete('/api/menu/items/:id', async (req, res) => {
     const result = await menuService.deleteItem(req, ipResult.ip, { id })
     return res.status(result.status).json(result.body)
   } catch (err) {
-    console.error('[menu/items DELETE] Error:', err.message)
+    logger.error('[menu/items DELETE] error', { error: err.message })
     return res.status(500).json({ error: err.message })
   }
 })
@@ -622,7 +623,7 @@ app.post('/api/menu/item-patch', async (req, res) => {
     const result = await menuService.updateItem(req, ipResult.ip, req.body)
     return res.status(result.status).json(result.body)
   } catch (err) {
-    console.error('[menu/item-patch] Error:', err.message)
+    logger.error('[menu/item-patch] error', { error: err.message })
     return res.status(500).json({ error: err.message })
   }
 })
@@ -636,7 +637,7 @@ app.post('/api/menu/item-delete', async (req, res) => {
     const result = await menuService.deleteItem(req, ipResult.ip, req.body)
     return res.status(result.status).json(result.body)
   } catch (err) {
-    console.error('[menu/item-delete] Error:', err.message)
+    logger.error('[menu/item-delete] error', { error: err.message })
     return res.status(500).json({ error: err.message })
   }
 })
@@ -650,7 +651,7 @@ app.post('/api/menu/categories/upsert', async (req, res) => {
     const result = await menuService.upsertCategory(req, ipResult.ip, req.body)
     return res.status(result.status).json(result.body)
   } catch (err) {
-    console.error('[menu/categories/upsert] Error:', err.message)
+    logger.error('[menu/categories/upsert] error', { error: err.message })
     return res.status(500).json({ error: err.message })
   }
 })
@@ -664,7 +665,7 @@ app.post('/api/menu/categories/delete', async (req, res) => {
     const result = await menuService.deleteCategory(req, ipResult.ip, req.body)
     return res.status(result.status).json(result.body)
   } catch (err) {
-    console.error('[menu/categories/delete] Error:', err.message)
+    logger.error('[menu/categories/delete] error', { error: err.message })
     return res.status(500).json({ error: err.message })
   }
 })
@@ -678,7 +679,7 @@ app.post('/api/menu/items/upsert', async (req, res) => {
     const result = await menuService.upsertItems(req, ipResult.ip, req.body)
     return res.status(result.status).json(result.body)
   } catch (err) {
-    console.error('[menu/items/upsert] Error:', err.message)
+    logger.error('[menu/items/upsert] error', { error: err.message })
     return res.status(500).json({ error: err.message })
   }
 })
@@ -729,12 +730,12 @@ app.post('/api/orders/update-status', async (req, res) => {
       throw transitionErr
     }
     const resolvedRestaurantId = updatedRow.restaurant_id
-    console.log('[orders/update-status] Neon primary ✅ id:', orderId, 'status:', status)
+    logger.info('[orders/update-status] success', { id: orderId, status })
 
     writeAuditLog({ action: 'update_status', entityType: 'order', entityId: orderId, newData: { status }, ipAddress: getClientIp(req) })
     return res.json({ id: orderId, status, restaurant_id: resolvedRestaurantId })
   } catch (err) {
-    console.error('[orders/update-status] Error:', err.message)
+    logger.error('[orders/update-status] error', { error: err.message })
     return res.status(500).json({ error: err.message })
   } finally {
     await releaseLock(`lock:order-status:${orderId}`, orderStatusLock.token)
@@ -776,13 +777,13 @@ app.post('/api/orders', async (req, res) => {
         notes: body.notes ?? null,
         idempotencyKey,
       })
-      console.log('[orders POST] Neon primary ✅ id:', order.id)
+      logger.info('[orders POST] success', { id: order.id })
 
       // Realtime event is published asynchronously via the transactional outbox
       // (inserted inside createOrderAtomic) — not here.
       return res.status(201).json(order)
     } catch (err) {
-      console.error('[orders POST] Error:', err.message)
+      logger.error('[orders POST] error', { error: err.message })
       if (err.code === 'IDEMPOTENCY_KEY_REQUIRED') return res.status(400).json({ error: err.message, code: err.code })
       if (err.code === 'IDEMPOTENCY_CONFLICT') return res.status(409).json({ error: err.message, code: err.code })
       if (err.code === 'VALIDATION') return res.status(400).json({ error: err.message, code: err.code })
@@ -791,7 +792,7 @@ app.post('/api/orders', async (req, res) => {
       return res.status(500).json({ error: err.message })
     }
   } catch (err) {
-    console.error('[orders POST] Error:', err.message)
+    logger.error('[orders POST] error', { error: err.message })
     return res.status(500).json({ error: err.message })
   }
 })
@@ -807,7 +808,7 @@ app.get('/api/orders/:restaurantId', requireRestaurantRole(req => req.params.res
     const result = await getNeonOrdersPaginated(restaurantId, pagination)
     return res.json(result)
   } catch (err) {
-    console.error('[orders GET] Error:', err.message)
+    logger.error('[orders GET] error', { error: err.message })
     return res.status(500).json({ error: 'Internal server error' })
   }
 })
@@ -817,7 +818,7 @@ app.get('/api/menu/categories/:restaurantId', requireRestaurantRole(req => req.p
     const result = await menuService.getCategories(req.params.restaurantId)
     return res.status(result.status).json(result.body)
   } catch (err) {
-    console.error('[menu/categories/get] Error:', err.message)
+    logger.error('[menu/categories/get] error', { error: err.message })
     return res.status(500).json({ error: err.message })
   }
 })
@@ -827,7 +828,7 @@ app.get('/api/menu/items/:restaurantId/published', async (req, res) => {
     const result = await menuService.getPublishedItems(req.params.restaurantId)
     return res.status(result.status).json(result.body)
   } catch (err) {
-    console.error('[menu/items/published/get] Error:', err.message)
+    logger.error('[menu/items/published/get] error', { error: err.message })
     return res.status(500).json({ error: err.message })
   }
 })
@@ -837,7 +838,7 @@ app.get('/api/menu/items/:restaurantId', requireRestaurantRole(req => req.params
     const result = await menuService.getItems(req.params.restaurantId)
     return res.status(result.status).json(result.body)
   } catch (err) {
-    console.error('[menu/items/get] Error:', err.message)
+    logger.error('[menu/items/get] error', { error: err.message })
     return res.status(500).json({ error: err.message })
   }
 })
@@ -874,10 +875,10 @@ app.post('/api/bookings', async (req, res) => {
       notes: body.notes,
       idempotencyKey,
     })
-    console.log('[bookings POST] Neon ✅ id:', saved.id)
+    logger.info('[bookings POST] success', { id: saved.id })
     return res.status(201).json(saved)
   } catch (err) {
-    console.error('[bookings POST] Error:', err.message)
+    logger.error('[bookings POST] error', { error: err.message })
     if (err.code === 'IDEMPOTENCY_KEY_REQUIRED') return res.status(400).json({ error: err.message, code: err.code })
     if (err.code === 'IDEMPOTENCY_CONFLICT') return res.status(409).json({ error: err.message, code: err.code })
     if (err.code === 'VALIDATION' || err.code === 'RESTAURANT_UNAVAILABLE' || err.code === 'OUTSIDE_OPENING_HOURS') {
@@ -897,7 +898,7 @@ app.get('/api/bookings/:restaurantId', requireRestaurantRole(req => req.params.r
     const result = await getNeonBookingsPaginated(restaurantId, pagination)
     return res.json(result)
   } catch (err) {
-    console.error('[bookings GET] Error:', err.message)
+    logger.error('[bookings GET] error', { error: err.message })
     return res.status(500).json({ error: 'Internal server error' })
   }
 })
@@ -924,7 +925,7 @@ app.patch('/api/bookings/:id/status', async (req, res) => {
     })
 
     if (result.status === 200 && result.restaurantId) {
-      console.log('[bookings PATCH status] Neon ✅ id:', id, 'status:', req.body?.status)
+      logger.info('[bookings PATCH status] success', { id, status: req.body?.status })
       writeAuditLog({
         restaurantId: result.restaurantId,
         action: 'update_status',
@@ -937,7 +938,7 @@ app.patch('/api/bookings/:id/status', async (req, res) => {
 
     return res.status(result.status).json(result.body)
   } catch (err) {
-    console.error('[bookings PATCH status] Error:', err.message)
+    logger.error('[bookings PATCH status] error', { error: err.message })
     return res.status(500).json({ error: 'Internal server error' })
   } finally {
     await releaseLock(`lock:booking-status:${id}`, bkStatusLock.token)
@@ -962,7 +963,7 @@ app.get('/api/team-members/:restaurantId',
       })
       return res.status(status).json(body)
     } catch (err) {
-      console.error('[team-members GET] Error:', err.message)
+      logger.error('[team-members GET] error', { error: err.message })
       return res.status(err.status || 500).json({ error: err.message, code: err.code })
     }
   }
@@ -995,7 +996,7 @@ app.post('/api/team-members/shadow-upsert',
       })
       return res.status(status).json(body)
     } catch (err) {
-      console.error('[team-members shadow-upsert] Error:', err.message)
+      logger.error('[team-members shadow-upsert] error', { error: err.message })
       return res.status(err.status || 500).json({ error: err.message, code: err.code })
     }
   }
@@ -1027,7 +1028,7 @@ app.post('/api/team-members/shadow-delete',
       })
       return res.status(status).json(body)
     } catch (err) {
-      console.error('[team-members shadow-delete] Error:', err.message)
+      logger.error('[team-members shadow-delete] error', { error: err.message })
       return res.status(err.status || 500).json({ error: err.message, code: err.code })
     }
   }
@@ -1040,10 +1041,10 @@ app.post('/api/orders/auto-cleanup', requireSuperadmin, async (req, res) => {
     const confirmedCutoff = new Date(now - confirmedDeleteHours  * 3600000).toISOString()
     const rejectedCutoff  = new Date(now - rejectedDeleteMinutes * 60000).toISOString()
     const deletedCount = await deleteOldNeonOrders(confirmedCutoff, rejectedCutoff)
-    console.log('[auto-cleanup] Neon ✅ deleted:', deletedCount)
+    logger.info('[auto-cleanup] success', { deleted: deletedCount })
     return res.json({ success: true, deletedCount })
   } catch (err) {
-    console.error('[auto-cleanup] Error:', err.message)
+    logger.error('[auto-cleanup] error', { error: err.message })
     return res.status(500).json({ error: err.message })
   }
 })
@@ -1075,7 +1076,7 @@ app.post('/api/restaurant/update-profile', requireRestaurantRole(req => req.body
     writeAuditLog({ restaurantId, action: 'update', entityType: 'restaurant', entityId: restaurantId, newData: patch, ipAddress: getClientIp(req) })
     return res.json(row ?? { id: restaurantId })
   } catch (err) {
-    console.error('[restaurant/update-profile] Error:', err.message)
+    logger.error('[restaurant/update-profile] error', { error: err.message })
     return res.status(500).json({ error: err.message })
   }
 })
@@ -1088,7 +1089,7 @@ app.post('/api/restaurant/update-social', async (req, res) => {
     const result = await contentService.updateSocial(req, ipResult.ip, req.body)
     return res.status(result.status).json(result.body)
   } catch (err) {
-    console.error('[restaurant/update-social] Error:', err.message)
+    logger.error('[restaurant/update-social] error', { error: err.message })
     return res.status(500).json({ error: err.message })
   }
 })
@@ -1133,7 +1134,7 @@ app.get('/api/about/:restaurantId', async (req, res) => {
     const result = await contentService.getAbout(req.params.restaurantId)
     return res.status(result.status).json(result.body)
   } catch (err) {
-    console.error('[about/get] Error:', err.message)
+    logger.error('[about/get] error', { error: err.message })
     return res.status(500).json({ error: err.message })
   }
 })
@@ -1146,7 +1147,7 @@ app.post('/api/about/save', async (req, res) => {
     const result = await contentService.saveAbout(req, ipResult.ip, req.body)
     return res.status(result.status).json(result.body)
   } catch (err) {
-    console.error('[about/save] Error:', err.message)
+    logger.error('[about/save] error', { error: err.message })
     return res.status(500).json({ error: err.message })
   }
 })
@@ -1160,11 +1161,11 @@ app.post('/api/neon/restaurant-settings/shadow-upsert', requireRestaurantRole(re
     const { restaurantId, key, value } = req.body
     if (!restaurantId || !key) return res.status(400).json({ error: 'restaurantId and key required' })
     await patchRestaurantGlobalConfig(restaurantId, key, value)
-    console.log(`[restaurant-settings shadow-upsert] Canonical ✅ restaurantId=${restaurantId} key=${key}`)
+    logger.info('[restaurant-settings shadow-upsert] success', { restaurantId, key })
     return res.json({ ok: true })
   } catch (err) {
     const status = err.status || 500
-    console.error('[restaurant-settings shadow-upsert] Error:', err.message)
+    logger.error('[restaurant-settings shadow-upsert] error', { error: err.message })
     return res.status(status).json({ error: err.message, code: err.code })
   }
 })
@@ -1182,7 +1183,7 @@ app.get('/api/neon/restaurants', async (req, res) => {
     const rows = await getNeonRestaurants(ids)
     return res.json(rows.map(toPublicRestaurant))
   } catch (err) {
-    console.error('[neon/restaurants]', err.message)
+    logger.error('[neon/restaurants] error', { error: err.message })
     return res.status(500).json({ error: err.message })
   }
 })
@@ -1280,7 +1281,7 @@ app.get('/api/health/neon', async (_req, res) => {
     const result = await neonHealthCheck()
     return res.json(result)
   } catch (err) {
-    console.error('[health/neon] Error:', err.message)
+    logger.error('[health/neon] error', { error: err.message })
     return res.status(500).json({ ok: false, database: 'neon', error: err.message })
   }
 })
@@ -1291,7 +1292,7 @@ async function delegateToHandler(filePath, req, res) {
     const { default: handler } = await import(path.resolve(__dirname, filePath))
     await handler(req, res)
   } catch (err) {
-    console.error(`[delegate] ${filePath}:`, err.message)
+    logger.error('[delegate] error', { file: filePath, error: err.message })
     res.status(500).json({ error: err.message })
   }
 }
@@ -1322,11 +1323,11 @@ app.use(expressErrorHandler())
 validateRedisConfig()
 
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Server running on port ${PORT}`)
+  logger.info('server started', { port: PORT, runtime: 'express' })
 })
 
 // ── Start the transactional outbox processor ─────────────────────────────────
 import pg from 'pg'
 const outboxPool = new pg.Pool({ connectionString: process.env.DATABASE_URL, max: 2 })
 const stopOutbox = startOutboxProcessor(outboxPool)
-console.log('[outbox] processor started (Express runtime)')
+logger.info('outbox processor started', { runtime: 'express' })

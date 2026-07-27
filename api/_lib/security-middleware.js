@@ -19,6 +19,7 @@
 import crypto from 'crypto'
 import { createSafeError, sendSafeError, isSafeErrorCode, isSafePublicMessage } from './errors.js'
 import { validateHost, validateCsrf } from './origin-host-csrf.js'
+import { logger, attachRequestLogger } from '../../src/monitoring/logger.js'
 
 export { sendSafeError }
 
@@ -261,6 +262,12 @@ async function runCoreBoundary(req, res, options, handler) {
   const requestId = setRequestId(req, res)
   applySecurityHeaders(res)
 
+  // Attach structured HTTP request logging (Vercel + Vite runtimes).
+  // Express uses structuredLogger middleware instead; both produce the same
+  // JSON shape via the shared logHttpRequest helper in src/monitoring/logger.js.
+  const _logStart = Date.now()
+  attachRequestLogger(req, res, requestId, _logStart)
+
   if (methodAllowlist(req, res, opts.allowedMethods)) {
     return { handled: true, requestId }
   }
@@ -280,7 +287,7 @@ async function runCoreBoundary(req, res, options, handler) {
     await handler(req, res)
     return { handled: false, requestId }
   } catch (err) {
-    console.error('[coreSecurityBoundary] unhandled error:', err)
+    logger.error('[coreSecurityBoundary] unhandled error', { error: err?.message, requestId })
     if (!res.headersSent) {
       sendSafeError(res, { status: 500, code: 'INTERNAL_ERROR', requestId })
     }
