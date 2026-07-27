@@ -31,6 +31,7 @@ import * as mediaService from './src/services/mediaService.js'
 import { getClientIp, resolveClientIp, send503Protection } from './src/lib/upstash.server.js'
 import { generateRequestId, parsePagination } from './api/_lib/validate.js'
 import { viteWrapper, sendSafeError, viteGlobalSecurityMiddleware } from './api/_lib/security-middleware.js'
+import { logger } from './src/monitoring/logger.js'
 import * as menuService from './src/services/menuService.js'
 import * as contentService from './src/services/restaurantContentService.js'
 import { lookupRestaurantByUid } from './api/_lib/restaurant-lookup.js'
@@ -87,7 +88,7 @@ function previewAuthPlugin() {
 
   // Startup validation: PREVIEW_SECRET must be at least 32 characters.
   if (!process.env.PREVIEW_SECRET || process.env.PREVIEW_SECRET.length < 32) {
-    console.warn('[preview-auth] PREVIEW_SECRET must be at least 32 characters. Preview auth will fail closed.')
+    logger.warn('[preview-auth] PREVIEW_SECRET must be at least 32 characters — preview auth will fail closed')
   }
 
   return {
@@ -291,7 +292,7 @@ function previewAuthPlugin() {
           }
           await handler(req, res)
         } catch (err) {
-          console.error('[dev] /api/mobile/v1/bootstrap error:', err.message)
+          logger.error('[dev] /api/mobile/v1/bootstrap error', { error: err.message })
           res.statusCode = 500
           res.setHeader('Content-Type', 'application/json')
           res.end(JSON.stringify({ error: 'Internal server error' }))
@@ -335,7 +336,7 @@ function previewAuthPlugin() {
             }
           })
         } catch (err) {
-          console.error('[realtime/ticket] Error:', err.message)
+          logger.error('[realtime/ticket] error', { error: err.message })
           res.statusCode = 500
           res.setHeader('Content-Type', 'application/json')
           res.end(JSON.stringify({ error: err.message }))
@@ -491,7 +492,7 @@ function menuApiPlugin() {
           const result = await contentService.updateSocial(req, ipResult.ip, body)
           return json(res, result.status, result.body)
         } catch (e) {
-          console.error('[update-social] Exception:', e.message)
+          logger.error('[update-social] error', { error: e.message })
           return json(res, 500, { error: e.message })
         }
       })
@@ -517,7 +518,7 @@ function menuApiPlugin() {
             throw transitionErr
           }
           const resolvedRestaurantId = updatedRow.restaurant_id
-          console.log('[orders/update-status] Neon primary ✅ id:', orderId, 'status:', status)
+          logger.info('[orders/update-status] success', { id: orderId, status })
 
           writeAuditLog({ action: 'update_status', entityType: 'order', entityId: orderId, newData: { status } })
           return json(res, 200, { id: orderId, status, restaurant_id: resolvedRestaurantId })
@@ -534,7 +535,7 @@ function menuApiPlugin() {
           const confirmedCutoff = new Date(now - confirmedDeleteHours  * 60 * 60 * 1000).toISOString()
           const rejectedCutoff  = new Date(now - rejectedDeleteMinutes * 60        * 1000).toISOString()
           const { deletedConfirmed, deletedRejected } = await deleteOldNeonOrders(confirmedCutoff, rejectedCutoff)
-          console.log(`[auto-cleanup] Neon ✅ deleted ${deletedConfirmed} completed + ${deletedRejected} rejected`)
+          logger.info('[auto-cleanup] success', { deletedCompleted: deletedConfirmed, deletedRejected })
           return json(res, 200, { success: true, deletedConfirmed, deletedRejected })
         } catch (e) { return json(res, 500, { error: e.message }) }
       })
@@ -723,7 +724,7 @@ function menuApiPlugin() {
               member,
               caller,
             })
-            if (status === 200) console.log('[team-members shadow-upsert] Neon ✅ id:', member.id)
+            if (status === 200) logger.info('[team-members shadow-upsert] success', { id: member.id })
             return json(res, status, responseBody)
           }
 
@@ -737,7 +738,7 @@ function menuApiPlugin() {
               return json(res, 200, { success: true })
             }
             const { status, body: responseBody } = await executeTeamDelete({ id, caller })
-            if (status === 200) console.log('[team-members shadow-delete] Neon ✅ id:', id)
+            if (status === 200) logger.info('[team-members shadow-delete] success', { id })
             return json(res, status, responseBody)
           }
         } catch (e) { return json(res, e.status || 500, { error: e.message, code: e.code }) }
@@ -772,7 +773,7 @@ function menuApiPlugin() {
           }
           await handler(req, res)
         } catch (err) {
-          console.error('[dev] /api/restaurant-notifications error:', err.message)
+          logger.error('[dev] /api/restaurant-notifications error', { error: err.message })
           res.statusCode = 500
           res.setHeader('Content-Type', 'application/json')
           res.end(JSON.stringify({ error: 'Internal server error' }))
@@ -788,7 +789,7 @@ function menuApiPlugin() {
           const { restaurantId, key, value } = await readBody(req)
           if (!restaurantId || !key) return json(res, 400, { error: 'restaurantId and key required' })
           await patchRestaurantGlobalConfig(restaurantId, key, value)
-          console.log(`[restaurant-settings shadow-upsert] Canonical ✅ restaurantId=${restaurantId} key=${key}`)
+          logger.info('[restaurant-settings shadow-upsert] success', { restaurantId, key })
           return json(res, 200, { ok: true })
         } catch (e) { return json(res, e.status || 500, { error: e.message, code: e.code }) }
       })
@@ -974,7 +975,7 @@ function tableValidationPlugin() {
       return store(tableNumbers.map(String).includes(String(tn)))
 
     } catch {
-      console.warn(`[table-validation] Neon error for ${slug}:${tn} — failing closed`)
+      logger.warn('[table-validation] neon error — failing closed', { slug, table: tn })
       return store(false)
     }
   }
@@ -1032,7 +1033,7 @@ function neonRestaurantPlugin() {
           // Public endpoint — strip internal/platform fields from every row.
           return json(200, rows.map(toPublicRestaurant))
         } catch (err) {
-          console.error('[neon-restaurants]', err.message)
+          logger.error('[neon-restaurants] error', { error: err.message })
           return json(500, { error: err.message })
         }
       })
@@ -1175,7 +1176,7 @@ function neonRestaurantPlugin() {
 
           return next()
         } catch (err) {
-          console.error('[neon-restaurant]', err.message)
+          logger.error('[neon-restaurant] error', { error: err.message })
           return json(err.message.includes('already taken') ? 409 : 500, { error: err.message })
         }
       })
@@ -1206,7 +1207,7 @@ function analyticsPlugin() {
           req.query = { action: 'analytics', id: restaurantId }
           await handler(req, res)
         } catch (err) {
-          console.error('[analytics] Error:', err.message)
+          logger.error('[analytics] error', { error: err.message })
           return json(500, { error: 'Internal server error' })
         }
       })
@@ -1290,7 +1291,7 @@ function realtimeOutboxPlugin() {
         import('pg').then(({ default: pg }) => {
           const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL, max: 2 })
           startOutboxProcessor(pool)
-          console.log('[outbox] processor started (Vite runtime)')
+          logger.info('outbox processor started', { runtime: 'vite' })
         })
       })
     },
