@@ -11,7 +11,10 @@ const { Pool } = pg
 
 const pools = new Map()
 
-export function getPool(url) {
+export function getPool(url = process.env.DATABASE_URL) {
+  if (!url) {
+    throw new Error('[pg-sql] DATABASE_URL is not set — provide a connection string or set DATABASE_URL')
+  }
   if (!pools.has(url)) {
     pools.set(url, new Pool({ connectionString: url }))
   }
