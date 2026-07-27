@@ -1,8 +1,6 @@
 import express from 'express'
 import path from 'path'
 import { fileURLToPath } from 'url'
-import { createHmac, timingSafeEqual } from 'crypto'
-import bcrypt from 'bcryptjs'
 import { neonHealthCheck } from './src/db/index.js'
 import {
   getNeonRestaurantById,
@@ -101,107 +99,7 @@ if (proxyMode === 'vercel' || proxyMode === 'cloudflare') {
   app.set('trust proxy', false)
 }
 
-const INVALID_TABLE_HTML = `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Invalid Table | Exzibo</title>
-  <style>
-    *{margin:0;padding:0;box-sizing:border-box}
-    body{background:#0a0a0a;color:#fff;font-family:'Inter',system-ui,sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center}
-    .wrap{text-align:center;padding:40px 24px;max-width:420px}
-    .badge{display:inline-flex;align-items:center;gap:6px;background:rgba(232,50,26,0.15);border:1px solid rgba(232,50,26,0.35);color:#e8321a;font-size:11px;font-weight:700;letter-spacing:.1em;padding:5px 14px;border-radius:100px;margin-bottom:32px;text-transform:uppercase}
-    .dot{width:7px;height:7px;border-radius:50%;background:#e8321a;animation:pulse 1.4s ease-in-out infinite}
-    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
-    .num{font-size:88px;font-weight:900;color:#1c1c1c;line-height:1;letter-spacing:-.04em}
-    .title{font-size:22px;font-weight:700;color:#fff;margin:12px 0 10px;letter-spacing:.02em}
-    .sub{font-size:14px;color:#555;line-height:1.65}
-    .sub strong{color:#888}
-    .divider{width:40px;height:2px;background:rgba(232,50,26,0.4);margin:28px auto}
-    .hint{font-size:12px;color:#333;letter-spacing:.06em;text-transform:uppercase;font-weight:600}
-  </style>
-</head>
-<body>
-  <div class="wrap">
-    <div class="badge"><span class="dot"></span>Table Validation Failed</div>
-    <div class="num">404</div>
-    <div class="title">Invalid Table Number</div>
-    <div class="sub">This table number does not exist for this restaurant.<br><strong>Please scan the QR code at your table.</strong></div>
-    <div class="divider"></div>
-    <div class="hint">Exzibo &middot; Secure Table Access</div>
-  </div>
-</body>
-</html>`
-
-// ── Table number validation (server-side) ─────────────────────────────────────
-// In-memory TTL cache so Supabase is only queried once per 60s per table slot.
-// Cache stores: { valid: bool, exp: timestamp }
-// INVALID results are also cached so bad requests don't hammer Supabase.
-const _tableCache = new Map()
-const _CACHE_TTL  = 60_000   // 60 s — new tables appear within 1 minute
-
-const _MENU_PAGES = new Set(['home', 'menu', 'orders', 'booking', 'cart'])
-const _SKIP_SEGS  = new Set([
-  'restaurant', 'admin', 'r', 'table', 'api', 'auth',
-  'dashboard', 'super-admin', 'master-control', 'team-members',
-  'settings', 'create-website', 'restaurants',
-])
-
-
-function _extractTableParams(urlPath) {
-  const pathname = (urlPath || '/').split('?')[0]
-  const parts = pathname.split('/').filter(Boolean)
-  if (!parts.length) return null
-  if (_SKIP_SEGS.has(parts[0])) return null
-  // /:slug/:navPage/:tableNumber
-  if (parts.length >= 3 && _MENU_PAGES.has(parts[1])) {
-    return { slug: parts[0], tableNumber: parts[2] }
-  }
-  // /:slug/item/:itemName/:tableNumber
-  if (parts.length >= 4 && parts[1] === 'item') {
-    return { slug: parts[0], tableNumber: parts[3] }
-  }
-  return null
-}
-
-// ── Core validation logic ─────────────────────────────────────────────────────
-// Source of truth: the `table_numbers` JSONB array in the Neon restaurants table.
-// Only tables explicitly created by the admin (stored in that array) are valid.
-//
-// Fail-closed rules:
-//   • Restaurant not found in Neon  → INVALID
-//   • table_numbers is empty/null   → INVALID (no tables created yet)
-//   • tableNumber not in array      → INVALID
-//
-async function _isTableValid(slug, tableNumber) {
-  // 'demo' slug is always allowed — used for admin previews
-  if (slug === 'demo') return true
-
-  const tn = parseInt(tableNumber, 10)
-  if (!Number.isFinite(tn) || tn < 1) return false
-
-  const cacheKey = `${slug}:${tn}`
-  const hit = _tableCache.get(cacheKey)
-  if (hit && hit.exp > Date.now()) return hit.valid
-
-  const cache = (valid) => {
-    _tableCache.set(cacheKey, { valid, exp: Date.now() + _CACHE_TTL })
-    return valid
-  }
-
-  try {
-    const restaurant = await getNeonRestaurantBySlug(slug)
-    if (!restaurant) return cache(false)
-    const tableNumbers = restaurant.table_numbers
-    if (!Array.isArray(tableNumbers) || tableNumbers.length === 0) return cache(false)
-    const valid = tableNumbers.map(String).includes(String(tn))
-    return cache(valid)
-  } catch {
-    logger.warn('[table-validation] neon error — failing closed', { slug, table: tn })
-    return cache(false)
-  }
-}
+import { INVALID_TABLE_HTML, extractTableParams, isTableValid } from './api/_lib/table-validation.js'
 
 // ── Core security boundary (request ID, security headers, method/body limits)
 app.use(expressSecurityMiddleware({ apiPrefix: '/api', jsonLimit: 1024 * 1024 }))
@@ -294,9 +192,9 @@ app.use(async (req, res, next) => {
 // HTML page — never the SPA shell — so the React app never loads for bad URLs.
 app.use(async (req, res, next) => {
   if (req.method !== 'GET') return next()
-  const params = _extractTableParams(req.url)
+  const params = extractTableParams(req.url)
   if (!params) return next()
-  const valid = await _isTableValid(params.slug, params.tableNumber)
+  const valid = await isTableValid(params.slug, params.tableNumber)
   if (!valid) {
     res.status(404).type('html').send(INVALID_TABLE_HTML)
     return
@@ -306,63 +204,13 @@ app.use(async (req, res, next) => {
 
 app.use(express.static(path.resolve(__dirname, 'dist')))
 
-// ── Preview Auth (AVAILABLE ONLY IN DEDICATED PREVIEW MODE) ──────────────────
-// These routes are registered ONLY when APP_RUNTIME=preview is explicitly set.
-// They MUST NOT register in production, normal local development, or general
-// Replit deployments. The APP_RUNTIME=preview marker is the server-only gate.
-//
-// Security properties:
-//  • PREVIEW_SECRET is mandatory — no fallback to REPL_ID, literal, or runtime value.
-//  • PREVIEW_SECRET must be at least 32 characters (validated at startup).
-//  • Missing secret or credentials fails closed (500) instead of degrading.
-//  • Token lifetime is capped at 15 minutes (versioned contract with strict claims).
-//  • Signature verification uses crypto.timingSafeEqual (not string equality).
-//  • Preview authentication does NOT grant any admin or superadmin role.
-//  • Token is stored in an HttpOnly cookie — not exposed to frontend JavaScript.
-//  • Tokens include: version, subject, issuedAt, expiresAt, issuer, audience, tokenId.
-//  • Login body is limited to 1 KB; unknown fields are rejected; rate limited.
-//  • Clock skew tolerance: 30 seconds for issuedAt.
-//
-// The v1 token payload structure:
-//   { version: 1, subject: string, issuedAt: number, expiresAt: number,
-//     issuer: "exzibo-preview", audience: "exzibo-preview-access",
-//     tokenId: string }
-
-const PREVIEW_TOKEN_ISSUER   = 'exzibo-preview'
-const PREVIEW_TOKEN_AUDIENCE = 'exzibo-preview-access'
-const PREVIEW_TOKEN_VERSION  = 1
-const PREVIEW_TOKEN_LIFETIME_MS = 15 * 60 * 1000  // 15 minutes
-const PREVIEW_CLOCK_SKEW_MS     = 30 * 1000         // 30 seconds
-
-function createPreviewToken(subject, secret) {
-  const now = Date.now()
-  const payload = {
-    version: PREVIEW_TOKEN_VERSION,
-    subject,
-    issuedAt: now,
-    expiresAt: now + PREVIEW_TOKEN_LIFETIME_MS,
-    issuer: PREVIEW_TOKEN_ISSUER,
-    audience: PREVIEW_TOKEN_AUDIENCE,
-    tokenId: crypto.randomUUID(),
-  }
-  const canonical = JSON.stringify(payload)
-  const sig = createHmac('sha256', secret).update(canonical).digest('hex')
-  return Buffer.from(canonical).toString('base64url') + '.' + sig
-}
-
-function cookieOptions(maxAge) {
-  return {
-    httpOnly: true,
-    secure: true,
-    sameSite: 'lax',
-    path: '/',
-    maxAge,
-  }
-}
-
-function clearPreviewCookie(res) {
-  res.clearCookie('preview_token', cookieOptions(0))
-}
+import {
+  PREVIEW_TOKEN_LIFETIME_MS,
+  handlePreviewLogin,
+  handlePreviewVerify,
+  previewCookieOptions,
+  clearPreviewCookie,
+} from './api/_lib/preview-auth.js'
 
 if (process.env.APP_RUNTIME === 'preview') {
   // Startup validation: PREVIEW_SECRET must be configured and at least 32 chars.
@@ -399,132 +247,22 @@ if (process.env.APP_RUNTIME === 'preview') {
         }
       }
 
-      const { email, password } = req.body
-      const validEmail = process.env.PREVIEW_EMAIL
-      const validHash  = process.env.PREVIEW_PASSWORD_HASH
-
-      if (!validEmail || !validHash) {
-        return res.status(500).json({ error: 'Preview credentials not configured on server.' })
+      const result = await handlePreviewLogin(req)
+      if (result.token) {
+        res.cookie('preview_token', result.token, previewCookieOptions(result.maxAge))
       }
-
-      // PREVIEW_SECRET must be explicitly configured — fail closed.
-      // No fallback to REPL_ID, a literal, or any other value.
-      const secret = process.env.PREVIEW_SECRET
-      if (!secret) {
-        return res.status(500).json({ error: 'PREVIEW_SECRET is not configured.' })
-      }
-
-      const emailMatch    = email === validEmail
-      const passwordMatch = await bcrypt.compare(password, validHash)
-
-      if (emailMatch && passwordMatch) {
-        const token = createPreviewToken(email, secret)
-        res.cookie('preview_token', token, cookieOptions(PREVIEW_TOKEN_LIFETIME_MS / 1000))
-        return res.json({ success: true })
-      } else {
-        // One stable public failure — never reveal which field was wrong.
-        return res.status(401).json({ error: 'Invalid email or password.' })
-      }
+      return res.status(result.status).json(result.body)
     } catch {
       return res.status(400).json({ error: 'Bad request.' })
     }
   })
 
   app.get('/api/preview-verify', (req, res) => {
-    const token = req.cookies?.preview_token
-    if (!token) {
-      return res.json({ valid: false })
-    }
-
-    try {
-      const [payloadB64, sig] = token.split('.')
-      if (!payloadB64 || !sig) {
-        clearPreviewCookie(res)
-        return res.json({ valid: false })
-      }
-
-      const raw = Buffer.from(payloadB64, 'base64url').toString()
-      const payload = JSON.parse(raw)
-
-      // Fail closed when PREVIEW_SECRET is absent — no hardcoded fallback.
-      const secret = process.env.PREVIEW_SECRET
-      if (!secret) {
-        clearPreviewCookie(res)
-        return res.status(500).json({ valid: false, error: 'PREVIEW_SECRET is not configured.' })
-      }
-
-      // Recompute expected signature over the canonical payload
-      const expected = createHmac('sha256', secret).update(raw).digest('hex')
-
-      // Timing-safe comparison prevents timing oracle attacks.
-      const sigBuf      = Buffer.from(sig)
-      const expectedBuf = Buffer.from(expected)
-      const signaturesMatch =
-        sigBuf.length === expectedBuf.length &&
-        timingSafeEqual(sigBuf, expectedBuf)
-
-      if (!signaturesMatch) {
-        clearPreviewCookie(res)
-        return res.json({ valid: false })
-      }
-
-      // ── Claim validation (after signature is verified) ──────────────────
-      const now = Date.now()
-
-      // Version
-      if (payload.version !== PREVIEW_TOKEN_VERSION) {
-        clearPreviewCookie(res)
-        return res.json({ valid: false })
-      }
-
-      // Subject
-      if (typeof payload.subject !== 'string' || !payload.subject) {
-        clearPreviewCookie(res)
-        return res.json({ valid: false })
-      }
-
-      // Issuer
-      if (payload.issuer !== PREVIEW_TOKEN_ISSUER) {
-        clearPreviewCookie(res)
-        return res.json({ valid: false })
-      }
-
-      // Audience
-      if (payload.audience !== PREVIEW_TOKEN_AUDIENCE) {
-        clearPreviewCookie(res)
-        return res.json({ valid: false })
-      }
-
-      // Expiration
-      if (typeof payload.expiresAt !== 'number' || payload.expiresAt <= now) {
-        clearPreviewCookie(res)
-        return res.json({ valid: false })
-      }
-
-      // Lifetime check — reject tokens with excessive lifetime
-      if (typeof payload.issuedAt !== 'number' ||
-          (payload.expiresAt - payload.issuedAt) > PREVIEW_TOKEN_LIFETIME_MS) {
-        clearPreviewCookie(res)
-        return res.json({ valid: false })
-      }
-
-      // Clock skew — reject issuedAt too far in the future
-      if (payload.issuedAt > now + PREVIEW_CLOCK_SKEW_MS) {
-        clearPreviewCookie(res)
-        return res.json({ valid: false })
-      }
-
-      // tokenId
-      if (typeof payload.tokenId !== 'string' || !payload.tokenId) {
-        clearPreviewCookie(res)
-        return res.json({ valid: false })
-      }
-
-      return res.json({ valid: true, email: payload.subject })
-    } catch {
+    const result = handlePreviewVerify(req)
+    if (result.status >= 400) {
       clearPreviewCookie(res)
-      return res.json({ valid: false })
     }
+    return res.status(result.status).json(result.body)
   })
 
   app.post('/api/preview-logout', (req, res) => {
@@ -704,17 +442,15 @@ app.post('/api/orders/update-status', async (req, res) => {
   try {
     // ── Membership check: resolve restaurant_id from DB before updating ──────
     // restaurantId is resolved from the DB — never trusted from the request body.
-    if (!_isAuthDisabled()) {
-      const restaurantId = await getNeonOrderRestaurantId(orderId)
-      if (!restaurantId) return res.status(404).json({ error: 'Order not found' })
-      const authResult = await checkRestaurantAccess(req, restaurantId)
-      if (authResult.error === 'Not authenticated') return res.status(401).json({ error: 'Not authenticated' })
-      if (authResult.error) return res.status(500).json({ error: authResult.error })
-      if (!authResult.allowed) return res.status(403).json({ error: 'Access denied' })
-      const isElevated = authResult.isSuperadmin || authResult.role === 'menu_studio'
-      if (!isElevated && !ALL_ROLES.includes(authResult.role)) {
-        return res.status(403).json({ error: 'Insufficient role' })
-      }
+    const restaurantId = await getNeonOrderRestaurantId(orderId)
+    if (!restaurantId) return res.status(404).json({ error: 'Order not found' })
+    const authResult = await checkRestaurantAccess(req, restaurantId)
+    if (authResult.error === 'Not authenticated') return res.status(401).json({ error: 'Not authenticated' })
+    if (authResult.error) return res.status(500).json({ error: authResult.error })
+    if (!authResult.allowed) return res.status(403).json({ error: 'Access denied' })
+    const isElevated = authResult.isSuperadmin || authResult.role === 'menu_studio'
+    if (!isElevated && !ALL_ROLES.includes(authResult.role)) {
+      return res.status(403).json({ error: 'Insufficient role' })
     }
 
     // ── Apply validated transition — enforces rules and stamps terminal timestamp ─

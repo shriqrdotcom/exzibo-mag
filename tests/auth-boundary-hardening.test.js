@@ -124,16 +124,16 @@ describe('Preview auth production isolation', () => {
     assert.ok(!content.includes('REPL_ID'), 'REPL_ID fallback for preview secret must be removed')
   })
 
-  it('5c. vite.config.js preview token lifetime must be ≤ 15 minutes', async () => {
-    const content = await readSrc('vite.config.js')
-    assert.ok(!content.includes('8 * 60 * 60 * 1000'), '8-hour lifetime must be removed')
-    assert.ok(!content.includes('30 * 60 * 1000'), '30-minute lifetime must be removed (replaced by 15 min)')
-    assert.ok(content.includes('15 * 60 * 1000'), '15-minute lifetime must be present')
+  it('5c. shared preview-auth preview token lifetime must be ≤ 15 minutes', async () => {
+    const shared = await readSrc('api/_lib/preview-auth.js')
+    assert.ok(!shared.includes('8 * 60 * 60 * 1000'), '8-hour lifetime must be removed')
+    assert.ok(!shared.includes('30 * 60 * 1000'), '30-minute lifetime must be removed (replaced by 15 min)')
+    assert.ok(shared.includes('15 * 60 * 1000'), '15-minute lifetime must be present in shared module')
   })
 
-  it('5d. vite.config.js preview-verify must use timingSafeEqual', async () => {
-    const content = await readSrc('vite.config.js')
-    assert.ok(content.includes('timingSafeEqual'), 'vite.config.js must use timingSafeEqual for token comparison')
+  it('5d. shared preview-auth must use timingSafeEqual', async () => {
+    const shared = await readSrc('api/_lib/preview-auth.js')
+    assert.ok(shared.includes('timingSafeEqual'), 'shared preview-auth must use timingSafeEqual for token comparison')
   })
 })
 

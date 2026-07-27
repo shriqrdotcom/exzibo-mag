@@ -21,3 +21,4 @@
 - [PostgreSQL upsert RETURNING](postgres-upsert-returning.md) — EXCLUDED is not visible in RETURNING; use `xmax = 0` or a follow-up SELECT inside the same transaction.
 - [Vite dev server query parsing](vite-dev-query-parsing.md) — Vite middleware does not populate `req.query`; parse it explicitly before delegating to Vercel-style handlers.
 - [Notification expiry boundary](notification-expiry-boundary.md) — active notifications use `expires_at > now` (strict) so the 24-hour boundary is deterministic.
+- [Runtime route parity refactoring](runtime-route-parity-refactoring.md) — ~595 lines of duplicated business logic eliminated across Vercel/Express/Vite by extracting shared table-validation.js, preview-auth.js modules; DISABLE_AUTH bypass removed, health check canonicalized.

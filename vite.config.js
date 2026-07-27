@@ -3,8 +3,7 @@ import react from '@vitejs/plugin-react'
 import path from 'path'
 import fs from 'fs'
 import { validateServerEnv } from './src/config/serverEnv.js'
-import { createHmac, timingSafeEqual } from 'crypto'
-import bcrypt from 'bcryptjs'
+// crypto is imported by api/_lib/preview-auth.js (shared module)
 import {
   patchNeonRestaurant,
   patchNeonRestaurantProfile,
@@ -36,34 +35,14 @@ import * as menuService from './src/services/menuService.js'
 import * as contentService from './src/services/restaurantContentService.js'
 import { lookupRestaurantByUid } from './api/_lib/restaurant-lookup.js'
 
-// ── Versioned preview token helpers ──────────────────────────────────────────
-// Shared constants for the v1 preview token contract.
-// Matches the identical helpers in server.js.
-const PREVIEW_TOKEN_ISSUER      = 'exzibo-preview'
-const PREVIEW_TOKEN_AUDIENCE    = 'exzibo-preview-access'
-const PREVIEW_TOKEN_VERSION     = 1
-const PREVIEW_TOKEN_LIFETIME_MS = 15 * 60 * 1000  // 15 minutes
-const PREVIEW_CLOCK_SKEW_MS     = 30 * 1000         // 30 seconds
-
-function createPreviewToken(subject, secret) {
-  const now = Date.now()
-  const payload = {
-    version: PREVIEW_TOKEN_VERSION,
-    subject,
-    issuedAt: now,
-    expiresAt: now + PREVIEW_TOKEN_LIFETIME_MS,
-    issuer: PREVIEW_TOKEN_ISSUER,
-    audience: PREVIEW_TOKEN_AUDIENCE,
-    tokenId: crypto.randomUUID(),
-  }
-  const canonical = JSON.stringify(payload)
-  const sig = createHmac('sha256', secret).update(canonical).digest('hex')
-  return Buffer.from(canonical).toString('base64url') + '.' + sig
-}
-
-function clearPreviewCookie_VC(res) {
-  res.setHeader('Set-Cookie', 'preview_token=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0')
-}
+import {
+  PREVIEW_TOKEN_LIFETIME_MS,
+  createPreviewToken,
+  verifyPreviewToken,
+  clearPreviewCookie,
+  handlePreviewLogin,
+  handlePreviewVerify,
+} from './api/_lib/preview-auth.js'
 
 function parseCookies(header) {
   const result = {}
@@ -105,6 +84,10 @@ function previewAuthPlugin() {
     //  • Login body is limited to 1 KB; unknown fields are rejected.
     //  • Clock skew tolerance: 30 seconds for issuedAt.
     configureServer(server) {
+      // Simple in-memory rate limiter for preview-login (per IP, 5 attempts/min)
+      const previewLoginAttempts = new Map()
+      setInterval(() => previewLoginAttempts.clear(), 60_000)
+
       server.middlewares.use('/api/preview-login', async (req, res) => {
         if (req.method !== 'POST') {
           res.statusCode = 405
@@ -112,6 +95,26 @@ function previewAuthPlugin() {
           return
         }
 
+        // Rate limit
+        const { resolveClientIp } = await import('./src/lib/upstash.server.js')
+        const ipResult = resolveClientIp(req)
+        if (ipResult.state !== 'resolved') {
+          res.statusCode = 503
+          res.setHeader('Content-Type', 'application/json')
+          res.end(JSON.stringify({ error: 'Service temporarily unavailable.' }))
+          return
+        }
+        const clientIp = ipResult.ip
+        const attempts = previewLoginAttempts.get(clientIp) || 0
+        if (attempts >= 5) {
+          res.statusCode = 429
+          res.setHeader('Content-Type', 'application/json')
+          res.end(JSON.stringify({ error: 'Too many attempts. Try again later.' }))
+          return
+        }
+        previewLoginAttempts.set(clientIp, attempts + 1)
+
+        // Body size limit: reject bodies larger than 1 KB
         let body = ''
         let bodySize = 0
         req.on('data', chunk => {
@@ -128,27 +131,6 @@ function previewAuthPlugin() {
         req.on('end', async () => {
           try {
             const parsed = JSON.parse(body)
-            const { email, password } = parsed
-            const validEmail = process.env.PREVIEW_EMAIL
-            const validHash  = process.env.PREVIEW_PASSWORD_HASH
-            // PREVIEW_SECRET must be explicitly configured — fail closed.
-            // Using any hardcoded or environment-derived fallback would allow token forgery.
-            const secret     = process.env.PREVIEW_SECRET
-
-            if (!validEmail || !validHash) {
-              res.statusCode = 500
-              res.setHeader('Content-Type', 'application/json')
-              res.end(JSON.stringify({ error: 'Preview credentials not configured on server.' }))
-              return
-            }
-
-            if (!secret) {
-              res.statusCode = 500
-              res.setHeader('Content-Type', 'application/json')
-              res.end(JSON.stringify({ error: 'PREVIEW_SECRET is not configured. Set it in Replit Secrets.' }))
-              return
-            }
-
             // Reject unknown body fields — only {email, password} are allowed
             for (const key of Object.keys(parsed)) {
               if (!['email', 'password'].includes(key)) {
@@ -158,21 +140,15 @@ function previewAuthPlugin() {
                 return
               }
             }
-
-            const emailMatch    = email === validEmail
-            const passwordMatch = await bcrypt.compare(password, validHash)
-
-            if (emailMatch && passwordMatch) {
-              const token = createPreviewToken(email, secret)
-              const cookie = `preview_token=${token}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=${PREVIEW_TOKEN_LIFETIME_MS / 1000}`
+            req.body = parsed
+            const result = await handlePreviewLogin(req)
+            if (result.token) {
+              const cookie = `preview_token=${result.token}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=${result.maxAge}`
               res.setHeader('Set-Cookie', cookie)
-              res.setHeader('Content-Type', 'application/json')
-              res.end(JSON.stringify({ success: true }))
-            } else {
-              res.statusCode = 401
-              res.setHeader('Content-Type', 'application/json')
-              res.end(JSON.stringify({ error: 'Invalid email or password.' }))
             }
+            res.statusCode = result.status
+            res.setHeader('Content-Type', 'application/json')
+            res.end(JSON.stringify(result.body))
           } catch {
             res.statusCode = 400
             res.setHeader('Content-Type', 'application/json')
@@ -182,77 +158,15 @@ function previewAuthPlugin() {
       })
 
       server.middlewares.use('/api/preview-verify', (req, res) => {
-        // Read token from HttpOnly cookie (not exposed to JS)
         const cookies = parseCookies(req.headers['cookie'] || '')
-        const token = cookies.preview_token
-
-        if (!token) {
-          res.setHeader('Content-Type', 'application/json')
-          res.end(JSON.stringify({ valid: false }))
-          return
+        req.cookies = { preview_token: cookies.preview_token }
+        const result = handlePreviewVerify(req)
+        if (result.status >= 400) {
+          clearPreviewCookie(res)
         }
-
-        try {
-          const secret = process.env.PREVIEW_SECRET
-          if (!secret) {
-            clearPreviewCookie_VC(res)
-            res.statusCode = 500
-            res.setHeader('Content-Type', 'application/json')
-            res.end(JSON.stringify({ valid: false, error: 'PREVIEW_SECRET is not configured.' }))
-            return
-          }
-
-          const [payloadB64, sig] = token.split('.')
-          if (!payloadB64 || !sig) {
-            clearPreviewCookie_VC(res)
-            res.setHeader('Content-Type', 'application/json')
-            res.end(JSON.stringify({ valid: false }))
-            return
-          }
-
-          const raw = Buffer.from(payloadB64, 'base64url').toString()
-          const payload = JSON.parse(raw)
-
-          // Verify signature first — never trust unverified claims
-          const expected = createHmac('sha256', secret).update(raw).digest('hex')
-          const sigBuf      = Buffer.from(sig)
-          const expectedBuf = Buffer.from(expected)
-          const signaturesMatch =
-            sigBuf.length === expectedBuf.length &&
-            timingSafeEqual(sigBuf, expectedBuf)
-
-          if (!signaturesMatch) {
-            clearPreviewCookie_VC(res)
-            res.setHeader('Content-Type', 'application/json')
-            res.end(JSON.stringify({ valid: false }))
-            return
-          }
-
-          // ── Claim validation (after signature verified) ──────────────────
-          const now = Date.now()
-
-          if (payload.version !== PREVIEW_TOKEN_VERSION ||
-              typeof payload.subject !== 'string' || !payload.subject ||
-              payload.issuer !== PREVIEW_TOKEN_ISSUER ||
-              payload.audience !== PREVIEW_TOKEN_AUDIENCE ||
-              typeof payload.expiresAt !== 'number' || payload.expiresAt <= now ||
-              typeof payload.issuedAt !== 'number' ||
-              (payload.expiresAt - payload.issuedAt) > PREVIEW_TOKEN_LIFETIME_MS ||
-              payload.issuedAt > now + PREVIEW_CLOCK_SKEW_MS ||
-              typeof payload.tokenId !== 'string' || !payload.tokenId) {
-            clearPreviewCookie_VC(res)
-            res.setHeader('Content-Type', 'application/json')
-            res.end(JSON.stringify({ valid: false }))
-            return
-          }
-
-          res.setHeader('Content-Type', 'application/json')
-          res.end(JSON.stringify({ valid: true, email: payload.subject }))
-        } catch {
-          clearPreviewCookie_VC(res)
-          res.setHeader('Content-Type', 'application/json')
-          res.end(JSON.stringify({ valid: false }))
-        }
+        res.statusCode = result.status
+        res.setHeader('Content-Type', 'application/json')
+        res.end(JSON.stringify(result.body))
       })
 
       // POST /api/preview-logout — clears the preview cookie
@@ -263,7 +177,7 @@ function previewAuthPlugin() {
           res.end(JSON.stringify({ error: 'Method Not Allowed' }))
           return
         }
-        clearPreviewCookie_VC(res)
+        clearPreviewCookie(res)
         res.setHeader('Content-Type', 'application/json')
         res.end(JSON.stringify({ success: true }))
       })
@@ -903,83 +817,9 @@ function aboutApiPlugin() {
   }
 }
 
+import { INVALID_TABLE_HTML, extractTableParams, isTableValid } from './api/_lib/table-validation.js'
+
 function tableValidationPlugin() {
-  // In-memory TTL cache: avoids hitting Supabase on every request (60s TTL)
-  // Both valid AND invalid results are cached so repeated bad requests
-  // don't hammer the database.
-  const cache    = new Map()
-  const CACHE_TTL = 60_000
-
-  const MENU_PAGES = new Set(['home', 'menu', 'orders', 'booking', 'cart'])
-  const SKIP_SEGS  = new Set([
-    'restaurant', 'admin', 'r', 'table', 'api', 'auth',
-    'dashboard', 'super-admin', 'master-control', 'team-members',
-    'settings', 'create-website', 'restaurants',
-  ])
-
-  function extractParams(urlPath) {
-    const pathname = (urlPath || '/').split('?')[0]
-    const parts = pathname.split('/').filter(Boolean)
-    if (!parts.length) return null
-    if (SKIP_SEGS.has(parts[0])) return null
-    if (parts.length >= 3 && MENU_PAGES.has(parts[1])) {
-      return { slug: parts[0], tableNumber: parts[2] }
-    }
-    if (parts.length >= 4 && parts[1] === 'item') {
-      return { slug: parts[0], tableNumber: parts[3] }
-    }
-    return null
-  }
-
-  // ── Core validation logic ───────────────────────────────────────────────────
-  // Source of truth: the `table_numbers` JSONB array in the restaurants table.
-  // Only tables explicitly created by the admin (stored in that array) are valid.
-  //
-  // Fail-closed rules:
-  //   • No Supabase credentials      → INVALID (misconfigured server)
-  //   • Supabase returned HTTP error → INVALID
-  //   • Restaurant not found in DB   → INVALID
-  //   • table_numbers is empty/null  → INVALID (no tables created yet)
-  //   • tableNumber not in array     → INVALID
-  //
-  // Fail-open rule (only genuine network errors):
-  //   • Supabase unreachable/timeout → OPEN  (prevents lockout during outage)
-  //     This window lasts at most 60 s before the next live check.
-  //
-  async function isValid(slug, tableNumber) {
-    if (slug === 'demo') return true
-    const tn = parseInt(tableNumber, 10)
-    if (!Number.isFinite(tn) || tn < 1) return false
-
-    const cacheKey = `${slug}:${tn}`
-    const hit = cache.get(cacheKey)
-    if (hit && hit.exp > Date.now()) return hit.valid
-
-    const store = (valid) => {
-      cache.set(cacheKey, { valid, exp: Date.now() + CACHE_TTL })
-      return valid
-    }
-
-    try {
-      const row = await getNeonRestaurantBySlug(slug)
-
-      // Restaurant not found → deny access (fail closed)
-      if (!row) return store(false)
-
-      const tableNumbers = row.table_numbers
-
-      // No tables created yet → deny access (fail closed)
-      if (!Array.isArray(tableNumbers) || tableNumbers.length === 0) return store(false)
-
-      // Only allow if the exact table number exists in the array
-      return store(tableNumbers.map(String).includes(String(tn)))
-
-    } catch {
-      logger.warn('[table-validation] neon error — failing closed', { slug, table: tn })
-      return store(false)
-    }
-  }
-
   return {
     name: 'table-validation',
     configureServer(server) {
@@ -988,9 +828,9 @@ function tableValidationPlugin() {
       // This guarantees the validation fires before index.html can be served.
       server.middlewares.use(async (req, res, next) => {
         if (req.method !== 'GET') return next()
-        const params = extractParams(req.url || '/')
+        const params = extractTableParams(req.url || '/')
         if (!params) return next()
-        const valid = await isValid(params.slug, params.tableNumber)
+        const valid = await isTableValid(params.slug, params.tableNumber)
         if (!valid) {
           res.statusCode = 404
           res.setHeader('Content-Type', 'text/html; charset=utf-8')
@@ -1227,14 +1067,10 @@ function neonHealthPlugin() {
           return
         }
         try {
-          const { neon } = await import('./src/db/pg-sql.js')
-          const url = process.env.DATABASE_URL
-          if (!url) throw new Error('DATABASE_URL is not set')
-          const sql = neon(url)
-          const start = Date.now()
-          await sql`SELECT 1`
+          const { neonHealthCheck } = await import('./src/db/index.js')
+          const result = await neonHealthCheck()
           res.setHeader('Content-Type', 'application/json')
-          res.end(JSON.stringify({ ok: true, database: 'postgres', drizzle: 'connected', latencyMs: Date.now() - start }))
+          res.end(JSON.stringify(result))
         } catch (err) {
           res.statusCode = 500
           res.setHeader('Content-Type', 'application/json')
