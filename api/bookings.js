@@ -1,5 +1,5 @@
 import { setPublicCors } from './_lib/cors.js'
-import { checkRestaurantAccess, ALL_ROLES } from './_lib/authz.js'
+import { authorizeRestaurantRole, ALL_ROLES } from './_lib/authz.js'
 import { vercelWrapper } from './_lib/security-middleware.js'
 import { rateLimit, getClientIp, resolveClientIp, send429, send503Protection } from '../src/lib/upstash.server.js'
 import { getNeonBookingsPaginated } from '../src/db/neon-bookings.js'
@@ -61,12 +61,8 @@ export default vercelWrapper(async function handler(req, res) {
         return badInput(res, 'restaurantId required', requestId)
       }
 
-      const access = await checkRestaurantAccess(req, restaurantId)
-      if (access.error === 'Not authenticated') return unauthorized(res, null, requestId)
-      if (!access.allowed) return forbidden(res, null, requestId)
-      if (!access.isSuperadmin && !ALL_ROLES.includes(access.role)) {
-        return forbidden(res, null, requestId)
-      }
+      const auth = await authorizeRestaurantRole(req, res, restaurantId, ALL_ROLES)
+      if (!auth.ok) return
 
       const pagination = parsePagination(req.query)
       const result = await getNeonBookingsPaginated(restaurantId, pagination)

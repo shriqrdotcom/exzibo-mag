@@ -1,5 +1,5 @@
 import { setCors } from './_lib/cors.js'
-import { checkRestaurantAccess, MANAGEMENT_ROLES } from './_lib/authz.js'
+import { authorizeRestaurantRole, MANAGEMENT_ROLES } from './_lib/authz.js'
 import { vercelWrapper } from './_lib/security-middleware.js'
 import { getClientIp, resolveClientIp, send503Protection } from '../src/lib/upstash.server.js'
 import * as menuService from '../src/services/menuService.js'
@@ -53,12 +53,8 @@ export default vercelWrapper(async function handler(req, res) {
       // getItems and getCategories may include unpublished data — require membership.
       // Authorization is ALWAYS enforced — no environment-variable bypass.
       if (action !== 'getPublishedItems') {
-        const access = await checkRestaurantAccess(req, restaurantId)
-        if (access.error === 'Not authenticated') return res.status(401).json({ error: 'Not authenticated' })
-        if (!access.allowed) return res.status(403).json({ error: 'Access denied' })
-        if (!access.isSuperadmin && !MANAGEMENT_ROLES.includes(access.role)) {
-          return res.status(403).json({ error: 'Access denied' })
-        }
+        const auth = await authorizeRestaurantRole(req, res, restaurantId, MANAGEMENT_ROLES)
+        if (!auth.ok) return
       }
 
       const result =

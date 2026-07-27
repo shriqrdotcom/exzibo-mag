@@ -15,7 +15,7 @@
  *   2. Use normalized email ONLY when the membership row has user_id IS NULL.
  *   3. Never allow an email match to override a row that belongs to a different user_id.
  *
- * Exports:
+ * Exports — low-level:
  *   getSessionEmail(req)                        → { email, userId, user } | null
  *   isSuperadminEmail(email)                    → boolean
  *   checkSuperadmin(req)                        → { allowed, role, isSuperadmin, email, userId, error? }
@@ -24,6 +24,12 @@
  *   requireRestaurantAccess(fn)                 → Express middleware factory — 403 if not member/superadmin
  *   requireSuperadmin                           → Express middleware — 403 if not superadmin
  *   requireRestaurantRole(fn, allowedRoles)     → Express middleware factory — 403 if not member with matching role
+ *
+ * Exports — canonical authorization wrappers (write response on failure, return { ok: bool }):
+ *   authorizeRestaurantAccess(req, res, restaurantId)
+ *   authorizeRestaurantRole(req, res, restaurantId, allowedRoles)
+ *   authorizeSuperadmin(req, res)
+ *   authorizeSession(req, res)
  *
  * Role constants (exported):
  *   ALL_ROLES          ['owner','admin','manager','staff']
@@ -260,6 +266,148 @@ export async function requireSuperadmin(req, res, next) {
   } catch (e) {
     return res.status(500).json({ error: 'Authorization error', detail: e.message })
   }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// CANONICAL AUTHORIZATION WRAPPERS
+//
+// These are convenience helpers used by Vercel/Express/Vite handler functions.
+// Each verifies auth and Writes the error response (status + JSON body) to `res`
+// on failure, then returns `{ ok: false }`.  On success they return
+// `{ ok: true, … }` with the verified session/membership information.
+//
+// Usage (Vercel-style):
+//   const auth = await authorizeRestaurantAccess(req, res, restaurantId)
+//   if (!auth.ok) return          ← response already written
+//   // auth.access.role, auth.access.email, auth.access.userId available
+//
+// Authorization is ALWAYS enforced — no environment-variable bypass.
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Verify any authenticated session.
+ *
+ * Writes 401 + `Not authenticated` and returns `{ ok: false }` when there is
+ * no valid Better Auth session cookie.
+ *
+ * Returns `{ ok: true, email, userId }` on success.
+ */
+export async function authorizeSession(req, res) {
+  let session
+  try {
+    session = await getSessionEmail(req)
+  } catch (e) {
+    res.status(500).json({ error: 'Authorization error' })
+    return { ok: false }
+  }
+  if (!session) {
+    res.status(401).json({ error: 'Not authenticated' })
+    return { ok: false }
+  }
+  return { ok: true, email: session.email, userId: session.userId }
+}
+
+/**
+ * Verify a superadmin session.
+ *
+ * Writes:
+ *   401 — not authenticated
+ *   403 — session present but not a superadmin
+ *   500 — unexpected auth error
+ * and returns `{ ok: false }` on any failure.
+ *
+ * Returns `{ ok: true, email, userId }` on success.
+ */
+export async function authorizeSuperadmin(req, res) {
+  let result
+  try {
+    result = await checkSuperadmin(req)
+  } catch (e) {
+    res.status(500).json({ error: 'Authorization error' })
+    return { ok: false }
+  }
+  if (result.error === 'Not authenticated') {
+    res.status(401).json({ error: 'Not authenticated' })
+    return { ok: false }
+  }
+  if (result.error) {
+    res.status(500).json({ error: 'Authorization error' })
+    return { ok: false }
+  }
+  if (!result.allowed) {
+    res.status(403).json({ error: 'Superadmin access required' })
+    return { ok: false }
+  }
+  return { ok: true, email: result.email, userId: result.userId }
+}
+
+/**
+ * Verify the session is a member (or superadmin bypass) of the given restaurant.
+ *
+ * Writes:
+ *   401 — not authenticated
+ *   400 — restaurantId not provided
+ *   409 — conflicting duplicate memberships (data-integrity issue)
+ *   403 — not a member, access denied
+ *   500 — unexpected DB/auth error
+ * and returns `{ ok: false }` on any failure.
+ *
+ * Returns `{ ok: true, access }` on success where `access` has
+ * `{ role, email, userId, name?, isSuperadmin }`.
+ */
+export async function authorizeRestaurantAccess(req, res, restaurantId) {
+  let access
+  try {
+    access = await checkRestaurantAccess(req, restaurantId)
+  } catch (e) {
+    res.status(500).json({ error: 'Authorization error' })
+    return { ok: false }
+  }
+  if (access.error === 'Not authenticated') {
+    res.status(401).json({ error: 'Not authenticated' })
+    return { ok: false }
+  }
+  if (access.error === 'restaurantId required') {
+    res.status(400).json({ error: 'restaurantId required' })
+    return { ok: false }
+  }
+  if (access.error && (access.error.includes('duplicate') || access.error.includes('conflict'))) {
+    res.status(409).json({ error: access.error })
+    return { ok: false }
+  }
+  if (access.error) {
+    res.status(500).json({ error: 'Authorization error' })
+    return { ok: false }
+  }
+  if (!access.allowed) {
+    res.status(403).json({ error: 'Access denied' })
+    return { ok: false }
+  }
+  return { ok: true, access }
+}
+
+/**
+ * Verify the session is a restaurant member AND has one of the allowed roles.
+ *
+ * Same error response contract as `authorizeRestaurantAccess` plus:
+ *   403 — member but insufficient role for the action
+ *
+ * Superadmin (email allowlist) and elevated platform roles always pass role checks.
+ *
+ * Returns `{ ok: true, access }` on success.
+ */
+export async function authorizeRestaurantRole(req, res, restaurantId, allowedRoles) {
+  const result = await authorizeRestaurantAccess(req, res, restaurantId)
+  if (!result.ok) return result
+
+  // Superadmin (email allowlist) and elevated roles always pass.
+  const isElevated = result.access.isSuperadmin || _ELEVATED_ROLES.has(result.access.role)
+  if (!isElevated && allowedRoles && !allowedRoles.includes(result.access.role)) {
+    res.status(403).json({ error: 'Insufficient role for this action' })
+    return { ok: false }
+  }
+
+  return { ok: true, access: result.access }
 }
 
 // ── requireRestaurantRole ────────────────────────────────────────────────────

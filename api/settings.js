@@ -1,5 +1,5 @@
 import { setPublicCors, setAdminCors } from './_lib/cors.js'
-import { getSessionEmail, checkSuperadmin, checkRestaurantAccess, SETTINGS_ROLES, MANAGEMENT_ROLES } from './_lib/authz.js'
+import { authorizeSession, authorizeSuperadmin, authorizeRestaurantRole, SETTINGS_ROLES, MANAGEMENT_ROLES } from './_lib/authz.js'
 import { vercelWrapper } from './_lib/security-middleware.js'
 import {
   getGlobalSetting,
@@ -69,9 +69,8 @@ export default vercelWrapper(async function handler(req, res) {
           return res.json(value)
         }
         // Non-public key: require superadmin
-        const result = await checkSuperadmin(req)
-        if (result.error === 'Not authenticated') return unauthorized(res, null, requestId)
-        if (!result.allowed) return forbidden(res, 'Superadmin access required', requestId)
+        const auth = await authorizeSuperadmin(req, res)
+        if (!auth.ok) return
         const value = await getGlobalSetting(key)
         return res.json(value)
       }
@@ -87,9 +86,8 @@ export default vercelWrapper(async function handler(req, res) {
     // ── setGlobal — superadmin only ───────────────────────────────────────────
     if (action === 'setGlobal') {
       if (req.method !== 'POST') return safeError(res, 405, 'POST required', requestId)
-      const result = await checkSuperadmin(req)
-      if (result.error === 'Not authenticated') return unauthorized(res, null, requestId)
-      if (!result.allowed) return forbidden(res, 'Superadmin access required', requestId)
+      const auth = await authorizeSuperadmin(req, res)
+      if (!auth.ok) return
       const { key, value } = req.body
       if (!key) return badInput(res, 'key required', requestId)
       rejectUnknownFields(req.body, ['key', 'value'])
@@ -99,20 +97,20 @@ export default vercelWrapper(async function handler(req, res) {
 
     // ── getUserSettings — needs session ────────────────────────────────────────
     if (action === 'getUserSettings') {
-      const session = await getSessionEmail(req)
-      if (!session) return unauthorized(res, null, requestId)
-      const config = await getUserSettingsNeon(session.userId)
+      const auth = await authorizeSession(req, res)
+      if (!auth.ok) return
+      const config = await getUserSettingsNeon(auth.userId)
       return res.json(config)
     }
 
     // ── saveUserSettings — needs session ───────────────────────────────────────
     if (action === 'saveUserSettings') {
       if (req.method !== 'POST') return safeError(res, 405, 'POST required', requestId)
-      const session = await getSessionEmail(req)
-      if (!session) return unauthorized(res, null, requestId)
+      const auth = await authorizeSession(req, res)
+      if (!auth.ok) return
       const { config } = req.body
       rejectUnknownFields(req.body, ['config'])
-      await upsertUserSettingsNeon(session.userId, config)
+      await upsertUserSettingsNeon(auth.userId, config)
       return res.json({ success: true, requestId })
     }
 
@@ -122,12 +120,8 @@ export default vercelWrapper(async function handler(req, res) {
     if (action === 'getRestaurantSettings') {
       const { restaurantId, key } = req.query
       if (!restaurantId || !key) return badInput(res, 'restaurantId and key required', requestId)
-      const access = await checkRestaurantAccess(req, restaurantId)
-      if (access.error === 'Not authenticated') return unauthorized(res, null, requestId)
-      if (!access.allowed) return forbidden(res, null, requestId)
-      if (!access.isSuperadmin && !MANAGEMENT_ROLES.includes(access.role)) {
-        return forbidden(res, null, requestId)
-      }
+      const auth = await authorizeRestaurantRole(req, res, restaurantId, MANAGEMENT_ROLES)
+      if (!auth.ok) return
       const value = await getRestaurantSettingsValue(restaurantId, key)
       return res.json(value)
     }
@@ -144,12 +138,8 @@ export default vercelWrapper(async function handler(req, res) {
       if (rawLength > 100_000) {
         return safeError(res, 413, 'Request body exceeds maximum allowed size', requestId)
       }
-      const access = await checkRestaurantAccess(req, restaurantId)
-      if (access.error === 'Not authenticated') return unauthorized(res, null, requestId)
-      if (!access.allowed) return forbidden(res, null, requestId)
-      if (!access.isSuperadmin && !SETTINGS_ROLES.includes(access.role)) {
-        return forbidden(res, 'Changing restaurant settings requires owner or admin role', requestId)
-      }
+      const auth = await authorizeRestaurantRole(req, res, restaurantId, SETTINGS_ROLES)
+      if (!auth.ok) return
       await patchRestaurantGlobalConfig(restaurantId, key, value)
       return res.json({ success: true, requestId })
     }

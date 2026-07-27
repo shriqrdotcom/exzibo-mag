@@ -1,5 +1,5 @@
 import { setAdminCors } from './_lib/cors.js'
-import { checkRestaurantAccess, TEAM_WRITE_ROLES } from './_lib/authz.js'
+import { authorizeRestaurantAccess, TEAM_WRITE_ROLES } from './_lib/authz.js'
 import { vercelWrapper } from './_lib/security-middleware.js'
 import {
   VALID_RESTAURANT_ROLES,
@@ -57,10 +57,9 @@ export default vercelWrapper(async function handler(req, res) {
     // ── GET: list members ──────────────────────────────────────────────────────
     if (req.method === 'GET') {
       const { restaurantId } = req.query
-      const access = await checkRestaurantAccess(req, restaurantId)
-      if (access.error === 'Not authenticated') return unauthorized(res, null, requestId)
-      if (access.error) return conflict(res, access.error, requestId)
-      if (!access.allowed) return forbidden(res, null, requestId)
+      const auth = await authorizeRestaurantAccess(req, res, restaurantId)
+      if (!auth.ok) return
+      const access = auth.access
 
       const pagination = parsePagination(req.query)
       const { status, body } = await executeTeamList({
@@ -87,11 +86,9 @@ export default vercelWrapper(async function handler(req, res) {
 
       // Resolve restaurant scope from existing membership, never from body alone.
       const authRestaurantId = await resolveTeamAuthRestaurantId(req, member.id, restaurantId)
-      const access = await checkRestaurantAccess(req, authRestaurantId)
-      if (access.error === 'Not authenticated') return unauthorized(res, null, requestId)
-      if (access.error) return conflict(res, access.error, requestId)
-      if (!access.allowed) return forbidden(res, null, requestId)
-
+      const auth = await authorizeRestaurantAccess(req, res, authRestaurantId)
+      if (!auth.ok) return
+      const access = auth.access
       // Verify body restaurantId matches server-resolved scope (when both present)
       if (restaurantId && authRestaurantId && restaurantId !== authRestaurantId) {
         return forbidden(res, 'Member does not belong to this restaurant', requestId)
@@ -119,10 +116,9 @@ export default vercelWrapper(async function handler(req, res) {
 
       // Resolve restaurant scope from the target member, never from body.
       const authRestaurantId = await resolveTeamAuthRestaurantId(req, id, null)
-      const access = await checkRestaurantAccess(req, authRestaurantId)
-      if (access.error === 'Not authenticated') return unauthorized(res, null, requestId)
-      if (access.error) return conflict(res, access.error, requestId)
-      if (!access.allowed) return forbidden(res, null, requestId)
+      const auth = await authorizeRestaurantAccess(req, res, authRestaurantId)
+      if (!auth.ok) return
+      const access = auth.access
 
       const caller = {
         role: access.role,

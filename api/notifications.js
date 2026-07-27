@@ -48,7 +48,7 @@
  */
 
 import { setCors } from './_lib/cors.js'
-import { getSessionEmail, checkSuperadmin, checkRestaurantAccess } from './_lib/authz.js'
+import { authorizeSession, authorizeSuperadmin, authorizeRestaurantAccess } from './_lib/authz.js'
 import { vercelWrapper } from './_lib/security-middleware.js'
 import { rateLimit, getClientIp, resolveClientIp, send429, send503Protection } from '../src/lib/upstash.server.js'
 import {
@@ -93,96 +93,6 @@ import {
   ValidationError,
 } from './_lib/validate.js'
 import { NOTIFICATION_TYPES } from '../src/services/notificationService.js'
-
-// ── Auth helpers (inline — no Express next()) ─────────────────────────────────
-
-/**
- * Verify a superadmin session.
- * Returns { ok: true, email } on success.
- * Writes the appropriate error response and returns { ok: false } on failure.
- * Authorization is ALWAYS enforced — no environment-variable bypass.
- */
-async function assertSuperadmin(req, res) {
-  let result
-  try {
-    result = await checkSuperadmin(req)
-  } catch (e) {
-    res.status(500).json({ error: 'Authorization error' })
-    return { ok: false }
-  }
-  if (result.error === 'Not authenticated') {
-    res.status(401).json({ error: 'Not authenticated' })
-    return { ok: false }
-  }
-  if (result.error) {
-    res.status(500).json({ error: 'Authorization error' })
-    return { ok: false }
-  }
-  if (!result.allowed) {
-    res.status(403).json({ error: 'Superadmin access required' })
-    return { ok: false }
-  }
-  return { ok: true, email: result.email }
-}
-
-/**
- * Verify any authenticated session.
- * Returns { ok: true, email, userId } on success.
- * Writes the appropriate error response and returns { ok: false } on failure.
- */
-async function assertSession(req, res) {
-  let session
-  try {
-    session = await getSessionEmail(req)
-  } catch (e) {
-    res.status(500).json({ error: 'Authorization error' })
-    return { ok: false }
-  }
-  if (!session) {
-    res.status(401).json({ error: 'Not authenticated' })
-    return { ok: false }
-  }
-  return { ok: true, email: session.email, userId: session.userId }
-}
-
-/**
- * Verify a session that is a member of the given restaurant.
- * The service never trusts a client-provided restaurantId; this helper resolves
- * membership server-side via the authz boundary.
- */
-async function assertRestaurantAccess(req, res, restaurantId) {
-  let session
-  try {
-    session = await getSessionEmail(req)
-  } catch (e) {
-    res.status(500).json({ error: 'Authorization error' })
-    return { ok: false }
-  }
-  if (!session) {
-    res.status(401).json({ error: 'Not authenticated' })
-    return { ok: false }
-  }
-
-  const result = await checkRestaurantAccess(req, restaurantId)
-  if (result.error === 'Not authenticated') {
-    res.status(401).json({ error: 'Not authenticated' })
-    return { ok: false }
-  }
-  if (result.error && (result.error.includes('duplicate') || result.error.includes('conflict'))) {
-    res.status(409).json({ error: result.error })
-    return { ok: false }
-  }
-  if (result.error) {
-    res.status(500).json({ error: 'Authorization error' })
-    return { ok: false }
-  }
-  if (!result.allowed) {
-    res.status(403).json({ error: 'Access denied' })
-    return { ok: false }
-  }
-
-  return { ok: true, userId: session.userId, email: session.email, role: result.role }
-}
 
 // ── Allowed status values for help requests ───────────────────────────────────
 const HELP_STATUSES = new Set(['read', 'unread', 'resolved'])
@@ -257,7 +167,7 @@ export default vercelWrapper(async function handler(req, res) {
 
     // ── SESSION REQUIRED: restaurant-facing notification reads ─────────────────
     if (action === 'getActiveNotification') {
-      const auth = await assertSession(req, res)
+      const auth = await authorizeSession(req, res)
       if (!auth.ok) return
       const row = await getActiveNotification()
       return res.json(row)
@@ -265,7 +175,7 @@ export default vercelWrapper(async function handler(req, res) {
 
     if (action === 'confirmActiveNotification') {
       if (req.method !== 'POST') return safeError(res, 405, 'Method not allowed', requestId)
-      const auth = await assertSession(req, res)
+      const auth = await authorizeSession(req, res)
       if (!auth.ok) return
       const { id, confirmedBy } = req.body || {}
       if (!id) return badInput(res, 'id required', requestId)
@@ -288,7 +198,7 @@ export default vercelWrapper(async function handler(req, res) {
       const context = body.context ?? {}
       const ttlHours = body.ttlHours === undefined ? undefined : validateNumber(body.ttlHours, 'ttlHours', { min: 1, max: 168, integer: true })
 
-      const auth = await assertRestaurantAccess(req, res, restaurantId)
+      const auth = await authorizeRestaurantAccess(req, res, restaurantId)
       if (!auth.ok) return
 
       const result = await createNotification({
@@ -309,7 +219,7 @@ export default vercelWrapper(async function handler(req, res) {
       if (!rawRestaurantId) return badInput(res, 'restaurantId required', requestId)
       const restaurantId = validateUuid(rawRestaurantId, 'restaurantId')
 
-      const auth = await assertRestaurantAccess(req, res, restaurantId)
+      const auth = await authorizeRestaurantAccess(req, res, restaurantId)
       if (!auth.ok) return
 
       const pagination = parsePagination(req.query)
@@ -328,7 +238,7 @@ export default vercelWrapper(async function handler(req, res) {
       const id = validateUuid(body.id, 'id')
       const restaurantId = validateUuid(body.restaurantId, 'restaurantId')
 
-      const auth = await assertRestaurantAccess(req, res, restaurantId)
+      const auth = await authorizeRestaurantAccess(req, res, restaurantId)
       if (!auth.ok) return
 
       const result = await markNotificationRead({ id, restaurantId, userId: auth.userId })
@@ -342,7 +252,7 @@ export default vercelWrapper(async function handler(req, res) {
       const id = validateUuid(body.id, 'id')
       const restaurantId = validateUuid(body.restaurantId, 'restaurantId')
 
-      const auth = await assertRestaurantAccess(req, res, restaurantId)
+      const auth = await authorizeRestaurantAccess(req, res, restaurantId)
       if (!auth.ok) return
 
       const result = await dismissNotificationIdempotent({ id, restaurantId, userId: auth.userId })
@@ -353,7 +263,7 @@ export default vercelWrapper(async function handler(req, res) {
 
     if (action === 'sendMessage') {
       if (req.method !== 'POST') return safeError(res, 405, 'Method not allowed', requestId)
-      const auth = await assertSuperadmin(req, res)
+      const auth = await authorizeSuperadmin(req, res)
       if (!auth.ok) return
       rejectUnknownFields(req.body || {}, ['topic', 'message', 'send_to', 'sent_by'])
       const row = await insertMessage(req.body || {})
@@ -361,7 +271,7 @@ export default vercelWrapper(async function handler(req, res) {
     }
 
     if (action === 'getMessages') {
-      const auth = await assertSuperadmin(req, res)
+      const auth = await authorizeSuperadmin(req, res)
       if (!auth.ok) return
       const { role } = req.query
       if (!role) return badInput(res, 'role required', requestId)
@@ -371,7 +281,7 @@ export default vercelWrapper(async function handler(req, res) {
 
     if (action === 'publishActiveNotification') {
       if (req.method !== 'POST') return safeError(res, 405, 'Method not allowed', requestId)
-      const auth = await assertSuperadmin(req, res)
+      const auth = await authorizeSuperadmin(req, res)
       if (!auth.ok) return
       rejectUnknownFields(req.body || {}, ['id', 'title', 'message', 'target_roles'])
       const row = await publishActiveNotificationNeon(req.body || {})
@@ -380,7 +290,7 @@ export default vercelWrapper(async function handler(req, res) {
 
     if (action === 'insertNotificationHistory') {
       if (req.method !== 'POST') return safeError(res, 405, 'Method not allowed', requestId)
-      const auth = await assertSuperadmin(req, res)
+      const auth = await authorizeSuperadmin(req, res)
       if (!auth.ok) return
       rejectUnknownFields(req.body || {}, ['id', 'title', 'message', 'target_roles'])
       await insertNotificationHistoryNeon(req.body || {})
@@ -388,7 +298,7 @@ export default vercelWrapper(async function handler(req, res) {
     }
 
     if (action === 'getNotificationHistory') {
-      const auth = await assertSuperadmin(req, res)
+      const auth = await authorizeSuperadmin(req, res)
       if (!auth.ok) return
       const hoursBack = parseInt(req.query.hoursBack, 10) || 24
       const pagination = parsePagination(req.query)
@@ -397,7 +307,7 @@ export default vercelWrapper(async function handler(req, res) {
     }
 
     if (action === 'getLatestSms') {
-      const auth = await assertSuperadmin(req, res)
+      const auth = await authorizeSuperadmin(req, res)
       if (!auth.ok) return
       const row = await getLatestSmsNeon()
       return res.json(row)
@@ -405,7 +315,7 @@ export default vercelWrapper(async function handler(req, res) {
 
     if (action === 'upsertSms') {
       if (req.method !== 'POST') return safeError(res, 405, 'Method not allowed', requestId)
-      const auth = await assertSuperadmin(req, res)
+      const auth = await authorizeSuperadmin(req, res)
       if (!auth.ok) return
       rejectUnknownFields(req.body || {}, ['title', 'message'])
       const row = await upsertSmsNeon(req.body || {})
@@ -413,7 +323,7 @@ export default vercelWrapper(async function handler(req, res) {
     }
 
     if (action === 'getHelp') {
-      const auth = await assertSuperadmin(req, res)
+      const auth = await authorizeSuperadmin(req, res)
       if (!auth.ok) return
       const pagination = parsePagination(req.query)
       const result = await getHelpNotificationsNeonPaginated(pagination)
@@ -422,7 +332,7 @@ export default vercelWrapper(async function handler(req, res) {
 
     if (action === 'updateHelpStatus') {
       if (req.method !== 'POST') return safeError(res, 405, 'Method not allowed', requestId)
-      const auth = await assertSuperadmin(req, res)
+      const auth = await authorizeSuperadmin(req, res)
       if (!auth.ok) return
       const { id, status } = req.body || {}
       if (!id) return badInput(res, 'id required', requestId)
@@ -438,7 +348,7 @@ export default vercelWrapper(async function handler(req, res) {
 
     if (action === 'deleteHelp') {
       if (req.method !== 'POST') return safeError(res, 405, 'Method not allowed', requestId)
-      const auth = await assertSuperadmin(req, res)
+      const auth = await authorizeSuperadmin(req, res)
       if (!auth.ok) return
       const { id } = req.body || {}
       if (!id) return badInput(res, 'id required', requestId)
@@ -449,7 +359,7 @@ export default vercelWrapper(async function handler(req, res) {
 
     if (action === 'markAllHelpRead') {
       if (req.method !== 'POST') return safeError(res, 405, 'Method not allowed', requestId)
-      const auth = await assertSuperadmin(req, res)
+      const auth = await authorizeSuperadmin(req, res)
       if (!auth.ok) return
       const { ids } = req.body || {}
       rejectUnknownFields(req.body || {}, ['ids'])
