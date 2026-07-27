@@ -1,0 +1,861 @@
+After Prompt 32 is merged and its branch is deleted, the next task should verify that the application can **start safely, report dependency health accurately, and shut down without losing work**.
+
+# `@studioprompt` — Prompt 33 of 38
+
+```text
+REPOSITORY
+https://github.com/shriqrdotcom/exzibo-mag.git
+
+TASK TITLE
+Prompt 33 of 38 — Add Production Readiness, Dependency Health and Graceful Shutdown Contract
+
+ROLE
+
+Act as a senior site-reliability engineer, Node.js production engineer, PostgreSQL reliability reviewer, Redis reliability engineer, and graceful-shutdown specialist.
+
+Work only on:
+
+- liveness and readiness endpoints;
+- dependency health checks;
+- startup readiness state;
+- graceful shutdown;
+- in-flight request draining;
+- database connection shutdown;
+- Redis dependency reporting;
+- realtime/outbox consumer shutdown;
+- structured operational diagnostics;
+- focused reliability tests.
+
+Do not modify:
+
+- frontend UI;
+- authentication design;
+- authorization policy;
+- business rules;
+- order state rules;
+- booking state rules;
+- analytics formulas;
+- notification behavior;
+- Redis protection semantics;
+- database schema;
+- migrations;
+- billing;
+- media processing.
+
+==================================================
+PRECONDITIONS
+==================================================
+
+Begin only after Prompt 32 is merged into main.
+
+Run:
+
+git fetch origin --prune
+git switch main
+git pull --ff-only origin main
+git status
+git rev-parse HEAD
+
+Confirm:
+
+- Prompt 32 canonical runtime-route parity is present.
+- Prompt 31 authorization policy is present.
+- Prompt 30 API validation is present.
+- Prompt 29 structured logging is present.
+- Prompt 25A and 25B security boundaries are present.
+- Prompt 18–27 protections remain present.
+- The working tree is completely clean.
+
+Record the exact starting SHA.
+
+Create branch:
+
+repair/33-readiness-graceful-shutdown
+
+Do not work directly on main.
+Do not continue from the Prompt 32 branch.
+
+==================================================
+CONFIRMED RISK
+==================================================
+
+The application needs one explicit production operational contract.
+
+Potential risks include:
+
+1. A process reports healthy before required dependencies are ready.
+2. A health endpoint performs expensive or unsafe checks.
+3. Liveness and readiness are treated as the same thing.
+4. Redis or database outages are hidden.
+5. Shutdown immediately terminates in-flight requests.
+6. Database connections remain open during shutdown.
+7. Realtime/outbox processing continues while shutdown is in progress.
+8. Deployment systems route traffic to an unready instance.
+9. Health endpoints expose internal configuration or provider errors.
+10. Express, Vite and deployable runtime behavior drift.
+
+==================================================
+OBJECTIVE
+==================================================
+
+After this task:
+
+1. Liveness and readiness are separate.
+
+2. Liveness reports whether the process is running.
+
+3. Readiness reports whether the application can safely accept traffic.
+
+4. Required dependencies are checked using bounded timeouts.
+
+5. Health responses expose no secrets or raw provider errors.
+
+6. The process becomes unready before shutdown begins.
+
+7. New requests are rejected or drained safely during shutdown.
+
+8. In-flight requests receive a bounded drain period.
+
+9. Database clients, timers, consumers and background processors close safely.
+
+10. SIGTERM and SIGINT use the same idempotent shutdown path.
+
+11. Forced shutdown occurs after a documented maximum timeout.
+
+12. Structured operational logs use the Prompt 29 logger and request IDs where applicable.
+
+13. Existing API contracts and Prompt 8–32 behavior remain unchanged.
+
+==================================================
+STRICT RULES
+==================================================
+
+Do not:
+
+- access production infrastructure;
+- deploy to production;
+- run production migrations;
+- expose database URLs;
+- expose Redis URLs or tokens;
+- expose raw provider errors;
+- include stack traces in health responses;
+- make liveness dependent on external services;
+- make health checks perform writes;
+- make health checks execute migrations;
+- make health checks scan large tables;
+- silently mark the service ready when required dependencies fail;
+- terminate immediately without a drain attempt;
+- add an endless timer that prevents process exit;
+- change product behavior;
+- add screenshots, pasted prompts, attached_assets, Agent-memory files, generated reports, or unrelated documentation.
+
+==================================================
+STEP 1 — INVENTORY CURRENT STARTUP AND SHUTDOWN
+==================================================
+
+Search for:
+
+- health
+- readiness
+- liveness
+- ready
+- startup
+- shutdown
+- SIGTERM
+- SIGINT
+- process.on
+- server.close
+- close
+- pool.end
+- Redis
+- outbox
+- consumer
+- interval
+- setInterval
+- setTimeout
+- background
+- listen
+- neonHealthCheck
+- graceful
+- drain
+- termination
+
+Inspect at minimum:
+
+- server.js
+- vite.config.js
+- Vercel health routes if present
+- health helpers
+- PostgreSQL pool/client setup
+- Redis/Upstash setup
+- realtime outbox processor
+- dedicated outbox consumer
+- background timers
+- notification cleanup or processing
+- structured logger from Prompt 29
+- environment contract from Prompt 21
+- existing health and startup tests
+
+Create an internal map:
+
+resource/process
+→ startup owner
+→ readiness requirement
+→ health-check method
+→ timeout
+→ shutdown owner
+→ close method
+→ current defect
+→ required repair
+
+Do not edit before the inventory is complete.
+
+==================================================
+STEP 2 — DEFINE LIVENESS CONTRACT
+==================================================
+
+Create one lightweight liveness contract.
+
+Recommended endpoint:
+
+GET /api/health/live
+
+or preserve the existing public health URL if one already exists.
+
+Requirements:
+
+1. Liveness confirms the process/event loop is responsive.
+
+2. It must not depend on:
+   - PostgreSQL;
+   - Redis;
+   - R2;
+   - Cloudflare Worker;
+   - external APIs.
+
+3. It must not perform network calls.
+
+4. It must be fast and bounded.
+
+5. Response must be minimal, for example:
+
+{
+  "ok": true,
+  "status": "alive"
+}
+
+6. Apply Prompt 25:
+   - request ID;
+   - method guard;
+   - safe headers;
+   - safe error envelope.
+
+7. Do not expose version, commit, environment or infrastructure information unless already approved and non-sensitive.
+
+==================================================
+STEP 3 — DEFINE READINESS CONTRACT
+==================================================
+
+Create one canonical readiness service and endpoint.
+
+Recommended endpoint:
+
+GET /api/health/ready
+
+Readiness should evaluate only dependencies required to accept normal traffic.
+
+At minimum assess:
+
+- database connectivity;
+- mandatory Redis protection availability in production;
+- startup configuration validity;
+- critical background processor state where relevant.
+
+Classify each dependency as:
+
+- required;
+- optional;
+- not applicable to request readiness.
+
+Requirements:
+
+1. Required dependency failure makes readiness false.
+
+2. Optional dependency failure may produce degraded status only when business traffic can still operate safely.
+
+3. Every dependency check has a short explicit timeout.
+
+4. Checks are read-only.
+
+5. Do not run migrations.
+
+6. Do not expose raw errors.
+
+7. Do not reveal connection strings, hostnames, tokens or provider details.
+
+8. Response should use safe component names and statuses, such as:
+
+{
+  "ok": false,
+  "status": "not_ready",
+  "checks": {
+    "database": "unavailable",
+    "protection": "ready"
+  },
+  "requestId": "..."
+}
+
+9. Use status:
+   - 200 when ready;
+   - 503 when not ready.
+
+10. Readiness must become false before graceful shutdown starts.
+
+==================================================
+STEP 4 — CENTRALIZE PROCESS STATE
+==================================================
+
+Create one shared lifecycle/readiness state helper.
+
+It should track at least:
+
+- starting;
+- ready;
+- shutting_down;
+- stopped.
+
+Requirements:
+
+1. Default state is not ready.
+
+2. Mark ready only after startup validation succeeds.
+
+3. Mark shutting_down before closing listeners or dependencies.
+
+4. State transitions are idempotent.
+
+5. Client input cannot modify lifecycle state.
+
+6. Vite/Express development behavior is explicit.
+
+7. Serverless handlers must not pretend to own process shutdown when the platform owns lifecycle.
+
+==================================================
+STEP 5 — GRACEFUL SHUTDOWN
+==================================================
+
+Implement one idempotent graceful-shutdown coordinator for process-owned runtimes.
+
+Handle:
+
+- SIGTERM;
+- SIGINT.
+
+Required sequence:
+
+1. Log shutdown start safely.
+
+2. Mark readiness false.
+
+3. Stop accepting new traffic.
+
+4. Stop scheduling new background work.
+
+5. Stop or pause outbox/consumer claiming.
+
+6. Allow in-flight work to drain for a bounded period.
+
+7. Close HTTP server/listener.
+
+8. Close PostgreSQL pool/client.
+
+9. Close Redis client only if the process owns a closable client.
+
+10. Clear owned timers and intervals.
+
+11. Close other owned resources.
+
+12. Log completion.
+
+13. Exit successfully after clean shutdown.
+
+14. Force termination after a documented timeout if shutdown hangs.
+
+Do not call `process.exit()` before cleanup completes except in the forced-timeout path.
+
+==================================================
+STEP 6 — IN-FLIGHT REQUEST DRAINING
+==================================================
+
+Track active requests for process-owned HTTP runtimes.
+
+Requirements:
+
+1. Increment when a request starts.
+
+2. Decrement on response completion/close.
+
+3. Do not count health probes incorrectly after shutdown begins.
+
+4. During shutdown:
+   - stop accepting new requests where possible;
+   - existing requests get time to complete;
+   - new requests receive a safe 503 if they reach middleware.
+
+5. Use a bounded drain timeout.
+
+6. Do not keep sockets open forever.
+
+7. Tests must not rely on arbitrary long sleeps.
+
+==================================================
+STEP 7 — BACKGROUND WORKER COORDINATION
+==================================================
+
+Inspect all process-owned background work, including:
+
+- realtime outbox processor;
+- dedicated outbox consumer;
+- retry timers;
+- cleanup timers;
+- notification processing;
+- health polling.
+
+Requirements:
+
+1. No new claims begin after shutdown starts.
+
+2. Existing claimed work follows the current claim/lease safety contract.
+
+3. Shutdown must not acknowledge unpublished work falsely.
+
+4. Lease recovery remains safe after process termination.
+
+5. Timers are cleared.
+
+6. Stop functions are idempotent.
+
+7. Network delivery must not begin after the stop boundary.
+
+Do not change event identity, lease, retry or acknowledgement business rules.
+
+==================================================
+STEP 8 — STARTUP FAILURE POLICY
+==================================================
+
+Define explicit startup behavior.
+
+Production startup must fail when:
+
+- required environment contract is invalid;
+- mandatory Redis protection configuration is missing;
+- required database initialization cannot complete;
+- another mandatory startup invariant fails.
+
+Requirements:
+
+1. Log a safe failure code.
+
+2. Do not log secret values.
+
+3. Do not begin accepting traffic.
+
+4. Do not report readiness true.
+
+5. Close any partially opened resources.
+
+6. Return non-zero process status for process-owned runtimes.
+
+Development/test behavior must remain explicit and must not silently enable insecure bypasses.
+
+==================================================
+STEP 9 — CROSS-RUNTIME POLICY
+==================================================
+
+Express:
+
+- owns listener lifecycle;
+- supports readiness state;
+- supports graceful shutdown.
+
+Vite development middleware:
+
+- uses shared health/readiness logic where practical;
+- cleans up owned timers/resources;
+- must not weaken production policy.
+
+Vercel/serverless:
+
+- exposes liveness/readiness-compatible handlers where appropriate;
+- must not register process-level signal handlers per invocation;
+- must not close shared platform-managed resources per request;
+- must use the same safe response contract.
+
+Do not force process-owned shutdown logic into serverless handlers.
+
+==================================================
+STEP 10 — REQUIRED TESTS
+==================================================
+
+Add focused tests proving:
+
+LIVENESS
+
+1. Liveness returns 200 while the process is responsive.
+2. Liveness does not query PostgreSQL.
+3. Liveness does not query Redis.
+4. Unsupported liveness method returns 405.
+5. Liveness response exposes no secret/internal data.
+
+READINESS
+
+6. Readiness is false during startup.
+7. Readiness becomes true after required startup checks pass.
+8. Database failure returns 503 readiness.
+9. Mandatory Redis/protection failure returns 503 readiness in production.
+10. Optional dependency behavior follows documented policy.
+11. Dependency timeout returns safe 503.
+12. Raw dependency error is not exposed.
+13. Readiness includes requestId.
+14. Readiness becomes false before shutdown cleanup begins.
+
+SHUTDOWN
+
+15. SIGTERM uses graceful shutdown.
+16. SIGINT uses the same shutdown coordinator.
+17. Repeated shutdown calls are idempotent.
+18. New requests are rejected/drained after shutdown begins.
+19. In-flight request is allowed to finish within drain timeout.
+20. HTTP listener closes.
+21. Database pool closes.
+22. Owned timers are cleared.
+23. Background consumer stops accepting new work.
+24. Forced-timeout path triggers when cleanup hangs.
+25. Clean shutdown does not use premature process.exit.
+
+OUTBOX/LEASE SAFETY
+
+26. Shutdown does not falsely acknowledge unpublished event.
+27. Active lease remains recoverable.
+28. Retry/event identity remains unchanged.
+29. No new network publish begins after consumer stop boundary.
+
+CROSS-RUNTIME
+
+30. Express health behavior passes.
+31. Vite health behavior passes.
+32. Vercel health handler passes.
+33. Health error shape matches Prompt 25.
+34. Structured operational logs use Prompt 29 logger.
+
+REGRESSION
+
+35. Prompt 32 route-parity tests pass.
+36. Prompt 31 authorization tests pass.
+37. Prompt 30 validation tests pass.
+38. Prompt 29 logging tests pass.
+39. Prompt 25A and 25B tests pass.
+40. Prompt 26 and 27 tests pass.
+41. Prompt 18–24 regressions pass.
+42. Prompt 8–17 regressions pass.
+43. Migration-integrity tests pass.
+44. Vercel function count remains 12 or fewer.
+45. Root production build passes.
+
+Do not use production infrastructure.
+
+==================================================
+STEP 11 — FINAL SAFETY SEARCH
+==================================================
+
+Confirm NOT FOUND in deployable code:
+
+- liveness depends on database;
+- liveness depends on Redis;
+- readiness reports true while required dependency fails;
+- raw health dependency error returned;
+- secret included in health response;
+- process.exit before cleanup;
+- signal handler registered per serverless invocation;
+- new background claims after shutdown starts;
+- unbounded shutdown wait;
+- uncleared owned interval;
+- database pool left open by process-owned runtime;
+- duplicate independent shutdown implementations;
+- Prompt 25 security boundary bypass;
+- Prompt 29 logger bypass for lifecycle events.
+
+Review every remaining match manually.
+
+==================================================
+VALIDATION
+==================================================
+
+Run:
+
+1. focused lifecycle-state tests;
+2. liveness tests;
+3. readiness tests;
+4. dependency-timeout tests;
+5. graceful-shutdown tests;
+6. in-flight draining tests;
+7. background-consumer stop tests;
+8. cross-runtime health parity tests;
+9. Prompt 32 regression tests;
+10. Prompt 29–31 regression tests;
+11. Prompt 25A and 25B tests;
+12. Prompt 26 and 27 tests;
+13. Prompt 18–24 regressions;
+14. Prompt 8–17 regressions;
+15. migration-integrity tests;
+16. Vercel function-count validation;
+17. typecheck/lint where configured;
+18. root production build;
+19. git diff against starting SHA;
+20. git status;
+21. final safety search.
+
+Do not claim COMPLETE unless readiness failure and graceful-shutdown behavior are tested.
+
+==================================================
+PERMITTED FILE SCOPE
+==================================================
+
+Likely files:
+
+- shared lifecycle/readiness helper;
+- shared health service;
+- server.js;
+- vite.config.js;
+- existing Vercel health handler or consolidated dispatcher;
+- realtime/outbox consumer stop integration;
+- focused readiness/shutdown tests;
+- route-parity tests if health routing changes;
+- narrow environment/lifecycle documentation only if necessary.
+
+Do not modify:
+
+- database schema;
+- migrations;
+- product business logic;
+- authentication design;
+- authorization policy;
+- analytics formulas;
+- Redis protection semantics;
+- event identity/claim rules;
+- frontend UI;
+- billing;
+- media;
+- Agent-memory files;
+- screenshots;
+- pasted prompts;
+- attached_assets;
+- generated reports.
+
+==================================================
+COMMIT AND PULL REQUEST
+==================================================
+
+After validation:
+
+1. Run:
+
+git status
+git diff --stat
+git diff --name-only
+
+2. Confirm only intended Prompt 33 files changed.
+
+3. Stage only reviewed files.
+
+4. Commit with:
+
+fix: add readiness and graceful shutdown contract
+
+5. Before pushing:
+
+git fetch origin --prune
+
+If the remote branch already exists:
+
+git pull --rebase origin repair/33-readiness-graceful-shutdown
+
+6. Push:
+
+git push -u origin repair/33-readiness-graceful-shutdown
+
+Do not use plain `--force`.
+
+7. Create a pull request:
+
+Base:
+main
+
+Compare:
+repair/33-readiness-graceful-shutdown
+
+Title:
+fix: add readiness and graceful shutdown contract
+
+8. Do not merge the PR.
+9. Do not delete the branch.
+
+==================================================
+FINAL RESPONSE
+==================================================
+
+Return exactly:
+
+PROMPT 33 COMPLETION SUMMARY
+
+Status:
+- COMPLETE / PARTIAL / BLOCKED
+
+Branch:
+- repair/33-readiness-graceful-shutdown
+
+Starting SHA:
+- exact SHA
+
+Ending SHA:
+- exact SHA or Not committed
+
+Lifecycle states:
+- exact states and transitions
+
+Liveness:
+- endpoint
+- dependency behavior
+- status contract
+
+Readiness:
+- endpoint
+- required dependencies
+- optional dependencies
+- timeout policy
+- status contract
+
+Graceful shutdown:
+- signals
+- drain timeout
+- force timeout
+- resources closed
+
+Background processing:
+- consumers stopped
+- timers cleared
+- lease safety result
+
+Files changed:
+- exact list
+
+Liveness tests:
+- passed
+- failed
+- skipped
+
+Readiness tests:
+- passed
+- failed
+- skipped
+
+Shutdown tests:
+- passed
+- failed
+- skipped
+
+Cross-runtime parity:
+- Vercel: PASS / FAIL
+- Express: PASS / FAIL
+- Vite: PASS / FAIL
+
+Prompt 32 regression:
+- PASS / FAIL
+
+Prompt 31 regression:
+- PASS / FAIL
+
+Prompt 30 regression:
+- PASS / FAIL
+
+Prompt 29 regression:
+- PASS / FAIL
+
+Prompt 25A regression:
+- PASS / FAIL
+
+Prompt 25B regression:
+- PASS / FAIL
+
+Prompt 26 regression:
+- PASS / FAIL
+
+Prompt 27 regression:
+- PASS / FAIL
+
+Previous regressions:
+- PASS / FAIL
+
+Migration tests:
+- PASS / FAIL
+
+Vercel function count:
+- exact number
+- PASS / FAIL
+
+Root production build:
+- PASS / FAIL
+
+Final safety search:
+- external dependency in liveness: FOUND / NOT FOUND
+- readiness fail-open: FOUND / NOT FOUND
+- raw health error exposed: FOUND / NOT FOUND
+- secret in health response: FOUND / NOT FOUND
+- premature process exit: FOUND / NOT FOUND
+- per-invocation signal handler: FOUND / NOT FOUND
+- new claim after shutdown: FOUND / NOT FOUND
+- unbounded shutdown: FOUND / NOT FOUND
+- uncleared timer: FOUND / NOT FOUND
+- open process-owned DB pool: FOUND / NOT FOUND
+- duplicated shutdown implementation: FOUND / NOT FOUND
+- security boundary bypass: FOUND / NOT FOUND
+- lifecycle logger bypass: FOUND / NOT FOUND
+
+Production resources accessed:
+- No
+
+Production database accessed:
+- No
+
+Production Redis accessed:
+- No
+
+Production migrations executed:
+- No
+
+Production deployments performed:
+- No
+
+Production secrets changed:
+- No
+
+Git status:
+- clean / not clean
+
+Pull request:
+- number or manual creation required
+- base
+- compare
+
+Outstanding skipped work:
+- Prompt 28 CI quality gates remain unresolved unless separately completed and merged.
+
+Recommended next action:
+- State whether Prompt 34 may begin after this PR is reviewed and merged.
+
+Final conclusion:
+- State whether Prompt 33 is committed, pushed, and ready for review.
+- Do not claim the complete repository is production-ready.
+```
+
+Prompt 28 remains skipped. It must be revisited before the final Prompt 38 production-readiness decision.
