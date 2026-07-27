@@ -90,8 +90,9 @@ export async function lockIdempotencyKey(client, keyHash) {
 }
 
 // Convenience: run the common idempotency check for a create operation. Must be
-// called inside an active transaction on `client`. Returns the stored response if
-// the key has already succeeded, or undefined if the caller should proceed.
+// called inside an active transaction on `client`. Returns { response } if the
+// key has already succeeded, or { keyHash, requestHash } if the caller should
+// proceed and record the response.
 export async function checkIdempotency(client, { restaurantId, operation, idempotencyKey, requestPayload }) {
   if (!idempotencyKey) throw idempotencyKeyRequiredError()
 
@@ -105,7 +106,7 @@ export async function checkIdempotency(client, { restaurantId, operation, idempo
     if (existing.request_hash !== requestHash) {
       throw idempotencyConflictError()
     }
-    return existing.response
+    return { response: existing.response }
   }
 
   return { keyHash, requestHash }

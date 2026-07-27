@@ -31,7 +31,9 @@
     "perf:benchmark": "node scripts/performance/runServiceBenchmarks.js",
     "perf:loadtest": "PERFORMANCE_ALLOW_LOCAL=true node scripts/performance/runApiLoadTest.js",
     "perf:test": "node --test tests/performance-contract.test.js",
-    "perf:check": "node scripts/performance/runServiceBenchmarks.js && node --test tests/performance-contract.test.js"
+    "perf:check": "node scripts/performance/runServiceBenchmarks.js && node --test tests/performance-contract.test.js",
+    "release:manifest": "node scripts/release/createReleaseManifest.js",
+    "release:verify": "node scripts/release/verifyReleaseCandidate.js"
   },
   "dependencies": {
     "@better-auth/expo": "1.6.23",

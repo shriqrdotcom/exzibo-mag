@@ -5,6 +5,8 @@
  * Never logs secret values. Never generates fallback secrets.
  */
 
+import type { Env } from "./index.js";
+
 export class ConfigError extends Error {
   constructor(message: string) {
     super(message);
