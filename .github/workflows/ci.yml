@@ -17,11 +17,13 @@ concurrency:
 # ─────────────────────────────────────────────────────────────────────────────
 # Node policy: Node 22.x for every job.
 # Package manager: pnpm@10.26.1 (declared in package.json packageManager field).
+# Worker package manager: npm (exzibo-realtime has its own package-lock.json).
 # ─────────────────────────────────────────────────────────────────────────────
 
 jobs:
   # ── 1. REPOSITORY INTEGRITY ───────────────────────────────────────────────
   # File-only checks: no database, no production credentials.
+  # Forbidden-file check inspects only files added/renamed by the current change.
   repository-integrity:
     name: repository-integrity
     runs-on: ubuntu-latest
@@ -29,6 +31,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Full history is needed to compute the merge base for PRs.
+          fetch-depth: 0
 
       - uses: pnpm/action-setup@v4
         with:
@@ -42,40 +47,78 @@ jobs:
       - name: Frozen dependency install
         run: pnpm install --frozen-lockfile
 
+      - name: Determine changed-file range
+        id: range
+        run: |
+          set -euo pipefail
+
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            # Compare the PR branch against the merge base with main.
+            git fetch origin main --quiet
+            BASE=$(git merge-base origin/main HEAD)
+            echo "mode=pr" >> "$GITHUB_OUTPUT"
+            echo "base=$BASE" >> "$GITHUB_OUTPUT"
+            echo "head=HEAD" >> "$GITHUB_OUTPUT"
+            echo "range=${BASE}...HEAD" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event_name }}" = "push" ]; then
+            BEFORE="${{ github.event.before }}"
+            AFTER="${{ github.sha }}"
+            # Handle force-pushes or first-push all-zero SHA safely.
+            if [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
+              BEFORE=$(git rev-parse HEAD~1 2>/dev/null || echo "")
+            fi
+            if [ -z "$BEFORE" ]; then
+              # Cannot determine previous commit; inspect nothing.
+              echo "mode=push-unknown" >> "$GITHUB_OUTPUT"
+              echo "range=HEAD...HEAD" >> "$GITHUB_OUTPUT"
+            else
+              echo "mode=push" >> "$GITHUB_OUTPUT"
+              echo "base=$BEFORE" >> "$GITHUB_OUTPUT"
+              echo "head=$AFTER" >> "$GITHUB_OUTPUT"
+              echo "range=${BEFORE}..${AFTER}" >> "$GITHUB_OUTPUT"
+            fi
+          else
+            # workflow_dispatch fallback: inspect the latest commit only.
+            echo "mode=dispatch" >> "$GITHUB_OUTPUT"
+            echo "range=HEAD~1..HEAD" >> "$GITHUB_OUTPUT"
+          fi
+
+          echo "Changed-file range: $(cat "$GITHUB_OUTPUT" | grep '^range=' | cut -d= -f2)"
+
       - name: Forbidden-file check
         run: |
           set -euo pipefail
 
-          echo "── Checking for committed .env files ──"
-          TRACKED=$(git ls-files)
+          RANGE="${{ steps.range.outputs.range }}"
+          echo "── Checking changed files in range $RANGE ──"
+
+          # Extract only added/renamed files in the current change range.
+          if [ "$RANGE" = "HEAD...HEAD" ]; then
+            CHANGED=""
+          else
+            CHANGED=$(git diff --diff-filter=AR --name-only "$RANGE" || true)
+          fi
+
+          if [ -z "$CHANGED" ]; then
+            echo "  ✔ No new or renamed files in this change range."
+            exit 0
+          fi
+
+          echo "New/renamed files in this change range:"
+          echo "$CHANGED" | sed 's/^/  - /'
+
+          VIOLATIONS=$(echo "$CHANGED" | grep -E \
+            '^\.env($|\.)|(^|/)\.env($|\.)|\.dump$|\.sql\.gz$|\.pgdump$|(^|/)attached_assets/|(^|/)screenshots/|(^|/)\.agents/|Agent-memory|(^|/)\.env\b|(^|/)pasted[-_]|(^|/)prompt[-_]|generated[-_]report|backup[-_]archive|conflict[-_]marker' \
+            || true)
 
           # .env.example is the only allowed .env-prefixed file.
-          BAD_ENV=$(echo "$TRACKED" | grep -E '^\.env$|^\.env\.' | grep -v '^\.env\.example$' || true)
-          if [ -n "$BAD_ENV" ]; then
-            echo "ERROR: Real .env file(s) committed:" >&2
-            echo "$BAD_ENV" >&2
+          VIOLATIONS=$(echo "$VIOLATIONS" | grep -v '^\.env\.example$' || true)
+
+          if [ -n "$VIOLATIONS" ]; then
+            echo "ERROR: Forbidden files added in this change range:" >&2
+            echo "$VIOLATIONS" | sed 's/^/  - /' >&2
             exit 1
           fi
-          echo "  ✔ No real .env files tracked."
-
-          echo "── Checking for database dump files ──"
-          DUMPS=$(echo "$TRACKED" | grep -E '\.(dump|sql\.gz|pgdump)$' || true)
-          if [ -n "$DUMPS" ]; then
-            echo "ERROR: Database dump file(s) committed:" >&2
-            echo "$DUMPS" >&2
-            exit 1
-          fi
-          echo "  ✔ No database dumps tracked."
-
-          echo "── Checking for attached_assets directory ──"
-          ASSETS=$(echo "$TRACKED" | grep -E '^attached_assets/' || true)
-          if [ -n "$ASSETS" ]; then
-            echo "ERROR: attached_assets directory committed:" >&2
-            echo "$ASSETS" >&2
-            exit 1
-          fi
-          echo "  ✔ No attached_assets committed."
-
           echo "  ✔ Forbidden-file check passed."
 
       - name: Secret-pattern check
@@ -129,9 +172,9 @@ jobs:
       postgres:
         image: postgres:16
         env:
-          POSTGRES_USER: ci_user
-          POSTGRES_PASSWORD: ci_password
-          POSTGRES_DB: ci_testdb
+          POSTGRES_USER: exzibo_ci
+          POSTGRES_PASSWORD: exzibo_ci_password
+          POSTGRES_DB: exzibo_ci
         options: >-
           --health-cmd pg_isready
           --health-interval 5s
@@ -143,7 +186,7 @@ jobs:
     # ── Fake CI-only environment values ──────────────────────────────────────
     # None of these point to production infrastructure.
     env:
-      DATABASE_URL: postgresql://ci_user:ci_password@localhost:5432/ci_testdb
+      DATABASE_URL: postgresql://exzibo_ci:exzibo_ci_password@127.0.0.1:5432/exzibo_ci
       BETTER_AUTH_SECRET: ci-test-better-auth-secret-not-for-production-use
       BETTER_AUTH_BASE_URL: https://superadmin.example.invalid
       BETTER_AUTH_TRUSTED_ORIGINS: https://dashboard.example.invalid
@@ -180,7 +223,7 @@ jobs:
 
       - name: Wait for PostgreSQL readiness
         run: |
-          until pg_isready -h localhost -p 5432 -U ci_user; do
+          until pg_isready -h 127.0.0.1 -p 5432 -U exzibo_ci; do
             echo "Waiting for PostgreSQL…"
             sleep 1
           done
@@ -191,8 +234,8 @@ jobs:
 
       - name: Confirm migration success
         run: |
-          PGPASSWORD=ci_password psql \
-            -h localhost -p 5432 -U ci_user -d ci_testdb \
+          PGPASSWORD=exzibo_ci_password psql \
+            -h 127.0.0.1 -p 5432 -U exzibo_ci -d exzibo_ci \
             -c "SELECT table_name FROM information_schema.tables
                 WHERE table_schema = 'public' ORDER BY table_name;" \
             | grep -q "restaurants" \
@@ -206,10 +249,47 @@ jobs:
         run: pnpm test
 
   # ── 3. PRODUCTION BUILD ───────────────────────────────────────────────────
+  # Vite config imports serverEnv and may connect to the database during build,
+  # so a disposable PostgreSQL service and a non-production DATABASE_URL are provided.
   production-build:
     name: production-build
     runs-on: ubuntu-latest
     timeout-minutes: 15
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: exzibo_ci
+          POSTGRES_PASSWORD: exzibo_ci_password
+          POSTGRES_DB: exzibo_ci
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+        ports:
+          - 5432:5432
+
+    env:
+      DATABASE_URL: postgresql://exzibo_ci:exzibo_ci_password@127.0.0.1:5432/exzibo_ci
+      BETTER_AUTH_SECRET: ci-test-better-auth-secret-not-for-production-use
+      BETTER_AUTH_BASE_URL: https://superadmin.example.invalid
+      BETTER_AUTH_TRUSTED_ORIGINS: https://dashboard.example.invalid
+      GOOGLE_CLIENT_ID: fake-google-client-id.apps.googleusercontent.com
+      GOOGLE_CLIENT_SECRET: fake-google-client-secret-ci-only
+      SUPERADMIN_ALLOWED_EMAILS: ci-superadmin@example.invalid
+      UPSTASH_REDIS_REST_URL: https://redis.example.invalid
+      UPSTASH_REDIS_REST_TOKEN: fake-upstash-redis-token-ci-test-only-value-here
+      R2_ACCOUNT_ID: fake-r2-account-id-ci-only
+      R2_ACCESS_KEY_ID: fake-r2-access-key-id-ci-only
+      R2_SECRET_ACCESS_KEY: fake-r2-secret-access-key-ci-test-only-value
+      R2_BUCKET_NAME: fake-ci-bucket
+      R2_PUBLIC_BASE_URL: https://images.example.invalid
+      REALTIME_URL: https://rt.example.invalid
+      REALTIME_PUBLISH_SECRET: fake-realtime-publish-secret-ci-test-only-value
+      REALTIME_TICKET_SECRET: fake-realtime-ticket-secret-ci-test-only-value
+      NODE_ENV: test
 
     steps:
       - uses: actions/checkout@v4
@@ -226,6 +306,17 @@ jobs:
       - name: Frozen dependency install
         run: pnpm install --frozen-lockfile
 
+      - name: Wait for PostgreSQL readiness
+        run: |
+          until pg_isready -h 127.0.0.1 -p 5432 -U exzibo_ci; do
+            echo "Waiting for PostgreSQL…"
+            sleep 1
+          done
+          echo "PostgreSQL is ready."
+
+      - name: Run Drizzle migrations from zero
+        run: pnpm db:migrate
+
       - name: Root production build
         run: pnpm build
 
@@ -234,6 +325,7 @@ jobs:
 
   # ── 4. WORKER VALIDATION ─────────────────────────────────────────────────
   # Cloudflare Worker TypeScript check + Wrangler dry-run.
+  # The Worker has its own package-lock.json, so it uses npm (not pnpm).
   # No deployment; no Cloudflare credentials required.
   worker-validation:
     name: worker-validation
@@ -250,7 +342,13 @@ jobs:
         with:
           node-version: '22'
 
+      - name: Pin a stable npm version for the Worker lockfile
+        # npm 10.8.2 ships with Node 22 and is compatible with lockfileVersion 3.
+        run: npm install -g npm@10.8.2
+
       - name: Frozen Worker dependency install
+        # exzibo-realtime has its own package-lock.json, so npm is the canonical
+        # package manager here. pnpm is not used for this subdirectory.
         run: npm ci
 
       - name: Worker TypeScript check
