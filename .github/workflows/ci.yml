@@ -362,8 +362,10 @@ jobs:
           node-version: '22'
 
       - name: Pin a stable npm version for the Worker lockfile
-        # npm 10.8.2 ships with Node 22 and is compatible with lockfileVersion 3.
-        run: npm install -g npm@10.8.2
+        # npm 10.9.8 is the bundled version for Node 22 and is compatible with
+        # lockfileVersion 3. Using the same major line as the runtime avoids the
+        # "Exit handler never called!" crash observed when downgrading to 10.8.2.
+        run: npm install -g npm@10.9.8
 
       - name: Frozen Worker dependency install
         # exzibo-realtime has its own package-lock.json, so npm is the canonical
