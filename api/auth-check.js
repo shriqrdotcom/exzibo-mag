@@ -19,6 +19,10 @@ import { getSessionEmail, checkSuperadmin, checkRestaurantAccess } from './_lib/
 import { setCredentialedCors, applyAuthSecurityHeaders } from './_lib/cors.js'
 import { issueRealtimeTicket } from '../src/services/realtimeTicketService.js'
 import { vercelWrapper } from './_lib/security-middleware.js'
+import { defineValidation, validateRequest } from './_lib/validate.js'
+
+// ── Shared validation definitions ────────────────────────────────────────────
+const vQueryRestaurantId = defineValidation('query', { restaurantId: { type: 'uuid', required: true } })
 
 export default vercelWrapper(async function handler(req, res) {
   setCredentialedCors(req, res)

@@ -21,6 +21,8 @@ import {
   internalError,
   rejectUnknownFields,
   validateString,
+  defineValidation,
+  validateRequest,
 } from './_lib/validate.js'
 
 // ── Approved public global setting keys ───────────────────────────────────────
@@ -42,9 +44,17 @@ export default vercelWrapper(async function handler(req, res) {
   setPublicCors(res)
   if (req.method === 'OPTIONS') return res.status(200).end()
 
+  // ── Shared validation definitions ────────────────────────────────────────────
+  const vQueryAction = defineValidation('query', { action: { type: 'string', required: true } })
+
   const requestId = generateRequestId()
-  const action = req.query.action
-  if (!action) return badInput(res, 'action required', requestId)
+  let action
+  try {
+    const v = validateRequest(req, vQueryAction)
+    action = v.query.action
+  } catch (e) {
+    return badInput(res, 'action required', requestId)
+  }
 
   try {
 

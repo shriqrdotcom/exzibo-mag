@@ -3,6 +3,7 @@ import { checkSuperadmin } from './_lib/authz.js'
 import { runReadinessChecks } from '../src/monitoring/readiness.js'
 import { sendSafeError } from './_lib/errors.js'
 import { vercelWrapper } from './_lib/security-middleware.js'
+import { defineValidation, validateRequest } from './_lib/validate.js'
 
 // ── /api/system — System Handler ────────────────────────────────────────────
 //
@@ -19,14 +20,20 @@ const REMOVED_ACTIONS = new Set([
   'listRestaurantDb',
 ])
 
+// ── Shared validation definitions ────────────────────────────────────────────
+const vQueryAction = defineValidation('query', { action: { type: 'string', required: true } })
+
 async function handler(req, res) {
   setAdminCors(req, res)
   if (req.method === 'OPTIONS') return res.status(200).end()
 
-  const action = req.query?.action
   const requestId = req.requestId
 
-  if (!action) {
+  let action
+  try {
+    const v = validateRequest(req, vQueryAction)
+    action = v.query.action
+  } catch (e) {
     return sendSafeError(res, { status: 400, code: 'BAD_REQUEST', message: 'action query param required', requestId })
   }
   if (REMOVED_ACTIONS.has(action)) {

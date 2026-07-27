@@ -28,6 +28,8 @@ import {
   conflict,
   internalError,
   rejectUnknownFields,
+  defineValidation,
+  validateRequest,
 } from './_lib/validate.js'
 import { getClientIp } from '../src/lib/upstash.server.js'
 
@@ -81,9 +83,17 @@ export default vercelWrapper(async function handler(req, res) {
   setPublicCors(res)
   if (req.method === 'OPTIONS') return res.status(200).end()
 
+  // ── Shared validation definitions ────────────────────────────────────────────
+  const vQueryAction = defineValidation('query', { action: { type: 'string', required: true } })
+
   const requestId = generateRequestId()
-  const action = req.query.action
-  if (!action) return badInput(res, 'action required', requestId)
+  let action
+  try {
+    const v = validateRequest(req, vQueryAction)
+    action = v.query.action
+  } catch (e) {
+    return badInput(res, 'action required', requestId)
+  }
 
   try {
     // ── GET actions ────────────────────────────────────────────────────────────
@@ -109,7 +119,7 @@ export default vercelWrapper(async function handler(req, res) {
 
     if (action === 'bySlug') {
       const { slug } = req.query
-      if (!slug) return badInput(res, 'slug required', requestId)
+      if (!slug || typeof slug !== 'string') return badInput(res, 'slug required', requestId)
       const row = await getNeonRestaurantBySlug(slug)
       if (!row) return notFound(res, 'Not found', requestId)
       return res.json(toPublicRestaurant(row))

@@ -15,6 +15,9 @@ import {
   conflict,
   internalError,
   rejectUnknownFields,
+  validateIdempotencyKey,
+  defineValidation,
+  validateRequest,
   parsePagination,
 } from './_lib/validate.js'
 
@@ -43,11 +46,20 @@ export default vercelWrapper(async function handler(req, res) {
   const requestId = generateRequestId()
   const action = req.query.action
 
+  // ── Shared validation definitions ────────────────────────────────────────────
+  const vQueryRestaurantId = defineValidation('query', { restaurantId: { type: 'uuid', required: true } })
+  const vBodyCreateBooking = defineValidation('body', { restaurant_id: { type: 'string', required: true } })
+
   try {
     // ── GET: list bookings — requires restaurant membership ────────────────────
     if (req.method === 'GET') {
-      const { restaurantId } = req.query
-      if (!restaurantId) return badInput(res, 'restaurantId required', requestId)
+      let restaurantId
+      try {
+        const v = validateRequest(req, vQueryRestaurantId)
+        restaurantId = v.query.restaurantId
+      } catch (e) {
+        return badInput(res, 'restaurantId required', requestId)
+      }
 
       const access = await checkRestaurantAccess(req, restaurantId)
       if (access.error === 'Not authenticated') return unauthorized(res, null, requestId)
@@ -86,11 +98,12 @@ export default vercelWrapper(async function handler(req, res) {
     // ── POST: create booking — public customer flow ───────────────────────────
     if (req.method === 'POST' && !action) {
       const body = req.body
-      const idempotencyKey = req.headers['idempotency-key']
-      if (!idempotencyKey || typeof idempotencyKey !== 'string' || idempotencyKey.length < 16) {
+      try { validateIdempotencyKey(req.headers['idempotency-key']) } catch (e) {
         return badInput(res, 'Idempotency-Key header is required (min 16 characters).', requestId)
       }
-      if (!body?.restaurant_id) return badInput(res, 'restaurant_id required', requestId)
+      try { validateRequest(req, vBodyCreateBooking) } catch (e) {
+        return badInput(res, 'restaurant_id required', requestId)
+      }
       rejectUnknownFields(body, ALLOWED_CREATE_FIELDS)
 
       const ipResult = resolveClientIp(req)
