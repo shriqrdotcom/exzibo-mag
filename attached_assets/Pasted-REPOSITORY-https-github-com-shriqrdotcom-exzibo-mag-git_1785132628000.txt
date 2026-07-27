@@ -1,0 +1,176 @@
+REPOSITORY
+https://github.com/shriqrdotcom/exzibo-mag.git
+
+TASK TITLE
+Prompt 30 of 38 — Canonical Input Validation and API Schema Enforcement
+
+GOAL
+
+Create one shared validation layer for every API endpoint.
+
+Work only on:
+
+- shared request validation
+- schema validation
+- input sanitization
+- consistent validation errors
+- runtime parity
+- focused tests
+
+Do NOT modify:
+
+- business logic
+- authentication
+- authorization
+- restaurant logic
+- orders
+- bookings
+- analytics
+- realtime
+- Redis
+- database schema
+- migrations
+- frontend UI
+- billing
+- media processing
+
+==================================================
+PRECONDITIONS
+==================================================
+
+Run:
+
+git fetch origin --prune
+git switch main
+git pull --ff-only origin main
+
+Confirm:
+
+- Prompt 29 structured logging is merged.
+- Prompt 25 security boundary is present.
+- Prompt 18–29 protections remain present.
+- Working tree is clean.
+
+Record the starting SHA.
+
+Create branch:
+
+repair/30-api-validation-layer
+
+Do not work directly on main.
+
+==================================================
+OBJECTIVE
+==================================================
+
+After this task:
+
+1. Every API request is validated through one shared layer.
+2. Invalid input returns consistent 400 responses.
+3. Unknown fields are rejected where appropriate.
+4. Type validation is consistent.
+5. Required fields are enforced.
+6. Validation errors use the existing safe error envelope.
+7. Vercel, Express and Vite behave identically.
+8. Existing business logic remains unchanged.
+9. Prompt 8–29 regressions remain green.
+
+==================================================
+IMPLEMENT
+==================================================
+
+Create or improve a shared validation helper.
+
+Validate:
+
+- request body
+- query parameters
+- path parameters
+- enums
+- UUIDs
+- numeric IDs
+- restaurant UID
+- slug format
+- pagination values
+- limits
+- sort fields
+
+Reject:
+
+- invalid types
+- unknown fields
+- oversized strings
+- malformed UUIDs
+- invalid restaurant identifiers
+- invalid pagination values
+
+Reuse existing error envelope.
+
+==================================================
+TESTS
+==================================================
+
+Verify:
+
+- valid requests pass
+- invalid body fails
+- invalid query fails
+- invalid path parameter fails
+- unknown fields rejected
+- invalid enum rejected
+- malformed UUID rejected
+- pagination validation works
+- runtime parity passes
+- Prompt 8–29 regressions pass
+- migration tests pass
+- production build passes
+
+==================================================
+VALIDATION
+==================================================
+
+Run:
+
+- validation tests
+- runtime parity tests
+- regression suites
+- migration tests
+- production build
+- git diff
+- git status
+
+==================================================
+COMMIT
+
+Commit message:
+
+fix: add canonical api validation layer
+
+Branch:
+
+repair/30-api-validation-layer
+
+Create a PR targeting main.
+
+Do not merge.
+
+==================================================
+FINAL RESPONSE
+
+Return:
+
+PROMPT 30 COMPLETION SUMMARY
+
+- Status
+- Branch
+- Starting SHA
+- Ending SHA
+- Files changed
+- Validation layer added
+- Runtime parity
+- Tests passed
+- Regression status
+- Production build status
+- Git status
+- Pull request number
+- Recommended next action
