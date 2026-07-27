@@ -2,6 +2,8 @@ import express from 'express'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import { neonHealthCheck } from './src/db/index.js'
+import { getState, markReady, startShutdown, markStopped, isReady, isShuttingDown } from './src/monitoring/lifecycle.js'
+import { handleLiveness, handleReadiness, handleNeonHealth } from './api/_lib/health.js'
 import {
   getNeonRestaurantById,
   getNeonRestaurantBySlug,
@@ -1011,15 +1013,39 @@ app.get('/api/neon/restaurant/:id', async (req, res) => {
   } catch (err) { return res.status(500).json({ error: err.message }) }
 })
 
-// ── Neon health check ─────────────────────────────────────────────────────────
+// ── Active request tracking (for graceful shutdown) ───────────────────────────
+let activeRequests = 0
+const activeRequestLock = { current: 0 }
+
+function incrementActive() { activeRequests++ }
+function decrementActive() { if (activeRequests > 0) activeRequests-- }
+function getActiveRequests() { return activeRequests }
+
+// Middleware: track active requests
+app.use((req, res, next) => {
+  incrementActive()
+  res.on('finish', decrementActive)
+  res.on('close', decrementActive)
+  next()
+})
+
+// ── Health endpoints ───────────────────────────────────────────────────────────
+// Liveness — no dependencies
+app.get('/api/health/live', (req, res) => {
+  const result = handleLiveness()
+  return res.status(result.statusCode).json(result.body)
+})
+
+// Readiness — evaluates required dependencies
+app.get('/api/health/ready', async (req, res) => {
+  const result = await handleReadiness({ requestId: req.requestId })
+  return res.status(result.statusCode).json(result.body)
+})
+
+// Neon DB health (lightweight connectivity)
 app.get('/api/health/neon', async (_req, res) => {
-  try {
-    const result = await neonHealthCheck()
-    return res.json(result)
-  } catch (err) {
-    logger.error('[health/neon] error', { error: err.message })
-    return res.status(500).json({ ok: false, database: 'neon', error: err.message })
-  }
+  const result = await handleNeonHealth()
+  return res.status(result.statusCode).json(result.body)
 })
 
 // ── Delegate query-param API handlers to api/*.js (dev mode) ─────────────────
@@ -1058,12 +1084,104 @@ app.use(expressErrorHandler())
 // This is a no-op in development and test.
 validateRedisConfig()
 
-app.listen(PORT, '0.0.0.0', () => {
+import pg from 'pg'
+const outboxPool = new pg.Pool({ connectionString: process.env.DATABASE_URL, max: 2 })
+
+const server = app.listen(PORT, '0.0.0.0', () => {
+  // Mark ready only after the server is listening and startup validation passed
+  markReady()
   logger.info('server started', { port: PORT, runtime: 'express' })
 })
 
 // ── Start the transactional outbox processor ─────────────────────────────────
-import pg from 'pg'
-const outboxPool = new pg.Pool({ connectionString: process.env.DATABASE_URL, max: 2 })
 const stopOutbox = startOutboxProcessor(outboxPool)
 logger.info('outbox processor started', { runtime: 'express' })
+
+// ── Graceful shutdown ─────────────────────────────────────────────────────────
+const SHUTDOWN_DRAIN_TIMEOUT_MS = 20_000   // 20 seconds for in-flight requests
+const SHUTDOWN_FORCE_TIMEOUT_MS = 30_000   // 30 seconds total before force exit
+
+let shutdownInProgress = false
+
+async function gracefulShutdown(signal, reason) {
+  if (shutdownInProgress) return  // idempotent
+  shutdownInProgress = true
+
+  logger.info('shutdown initiated', { signal, reason, activeRequests: getActiveRequests() })
+
+  // 1. Mark unready — loads balancers / orchestrators stop routing traffic
+  startShutdown(reason)
+
+  // 2. Stop accepting new connections
+  server.close(() => {
+    logger.info('HTTP server closed')
+  })
+
+  // 3. Stop outbox processor — no new claims begin
+  try {
+    stopOutbox()
+    logger.info('outbox processor stopped')
+  } catch (err) {
+    logger.error('outbox processor stop error', { error: err.message })
+  }
+
+  // 4. Drain in-flight requests
+  if (getActiveRequests() > 0) {
+    logger.info('draining active requests', { count: getActiveRequests() })
+    await new Promise((resolve) => {
+      const checkInterval = setInterval(() => {
+        if (getActiveRequests() === 0) {
+          clearInterval(checkInterval)
+          resolve()
+        }
+      }, 200)
+      // Safety timeout: force drain after max wait
+      setTimeout(() => {
+        clearInterval(checkInterval)
+        logger.warn('drain timeout — forcing shutdown', { remaining: getActiveRequests() })
+        resolve()
+      }, SHUTDOWN_DRAIN_TIMEOUT_MS)
+    })
+  }
+
+  // 5. Close database pool
+  try {
+    await outboxPool.end()
+    logger.info('PostgreSQL pool closed')
+  } catch (err) {
+    logger.error('PostgreSQL pool close error', { error: err.message })
+  }
+
+  // 6. Mark stopped
+  markStopped()
+  logger.info('shutdown complete')
+
+  // 7. Exit successfully
+  process.exit(0)
+}
+
+// Forceful shutdown if graceful shutdown hangs
+function forceShutdown(signal, reason) {
+  logger.warn('force shutdown', { signal, reason })
+  markStopped()
+  process.exit(1)
+}
+
+// ── Signal handlers ────────────────────────────────────────────────────────────
+process.on('SIGTERM', () => {
+  gracefulShutdown('SIGTERM', 'process_terminated').catch((err) => {
+    logger.error('SIGTERM handler error', { error: err.message })
+    process.exit(1)
+  })
+  // Force timeout: if graceful shutdown doesn't complete, force exit
+  setTimeout(() => forceShutdown('SIGTERM', 'graceful_timeout'), SHUTDOWN_FORCE_TIMEOUT_MS)
+})
+
+process.on('SIGINT', () => {
+  gracefulShutdown('SIGINT', 'user_interrupt').catch((err) => {
+    logger.error('SIGINT handler error', { error: err.message })
+    process.exit(1)
+  })
+  // Force timeout
+  setTimeout(() => forceShutdown('SIGINT', 'graceful_timeout'), SHUTDOWN_FORCE_TIMEOUT_MS)
+})

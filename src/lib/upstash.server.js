@@ -253,6 +253,24 @@ export function hashBody(obj) {
     .slice(0, 8)
 }
 
+// ── Protection availability check (for readiness probes) ──────────────────────
+//
+// Returns true if Redis/protection is available and functional.
+// In production, this affects readiness; in dev/test, it's informational only.
+// Never exposes Redis URLs, tokens, or raw errors to callers.
+export async function checkProtectionAvailability() {
+  const redis = getRedis()
+  if (!redis) return false
+  try {
+    // Ping is a read-only, bounded operation that confirms the Redis endpoint
+    // responds. If this times out or errors, protection is unavailable.
+    const pingResult = await redis.ping()
+    return pingResult !== null
+  } catch {
+    return false
+  }
+}
+
 // ── Convenience response helpers ──────────────────────────────────────────────
 
 // Send a 429 Too Many Requests response.

@@ -27,7 +27,9 @@ import { executeTeamList, executeTeamUpsert, executeTeamDelete } from './api/_li
 import { patchRestaurantGlobalConfig } from './src/services/restaurantSettingsService.js'
 import { writeAuditLog } from './src/db/neon-audit-logs.js'
 import * as mediaService from './src/services/mediaService.js'
-import { getClientIp, resolveClientIp, send503Protection } from './src/lib/upstash.server.js'
+import { getClientIp, resolveClientIp, send503Protection, checkProtectionAvailability } from './src/lib/upstash.server.js'
+import { getState, markReady, startShutdown, markStopped, isReady, isShuttingDown } from './src/monitoring/lifecycle.js'
+import { handleLiveness, handleReadiness, handleNeonHealth } from './api/_lib/health.js'
 import { generateRequestId, parsePagination } from './api/_lib/validate.js'
 import { viteWrapper, sendSafeError, viteGlobalSecurityMiddleware } from './api/_lib/security-middleware.js'
 import { logger } from './src/monitoring/logger.js'
@@ -1055,10 +1057,39 @@ function analyticsPlugin() {
   }
 }
 
-function neonHealthPlugin() {
+function healthPlugin() {
   return {
-    name: 'neon-health',
+    name: 'health-plugin',
     configureServer(server) {
+      // Liveness — no dependencies, process responsive
+      server.middlewares.use('/api/health/live', (req, res) => {
+        if (req.method !== 'GET') {
+          res.statusCode = 405
+          res.setHeader('Content-Type', 'application/json')
+          res.end(JSON.stringify({ error: 'Method Not Allowed' }))
+          return
+        }
+        const result = handleLiveness()
+        res.statusCode = result.statusCode
+        res.setHeader('Content-Type', 'application/json')
+        res.end(JSON.stringify(result.body))
+      })
+
+      // Readiness — evaluates required dependencies
+      server.middlewares.use('/api/health/ready', async (req, res) => {
+        if (req.method !== 'GET') {
+          res.statusCode = 405
+          res.setHeader('Content-Type', 'application/json')
+          res.end(JSON.stringify({ error: 'Method Not Allowed' }))
+          return
+        }
+        const result = await handleReadiness({ requestId: req.requestId })
+        res.statusCode = result.statusCode
+        res.setHeader('Content-Type', 'application/json')
+        res.end(JSON.stringify(result.body))
+      })
+
+      // Neon DB health (lightweight connectivity)
       server.middlewares.use('/api/health/neon', async (req, res) => {
         if (req.method !== 'GET') {
           res.statusCode = 405
@@ -1066,16 +1097,10 @@ function neonHealthPlugin() {
           res.end(JSON.stringify({ error: 'Method Not Allowed' }))
           return
         }
-        try {
-          const { neonHealthCheck } = await import('./src/db/index.js')
-          const result = await neonHealthCheck()
-          res.setHeader('Content-Type', 'application/json')
-          res.end(JSON.stringify(result))
-        } catch (err) {
-          res.statusCode = 500
-          res.setHeader('Content-Type', 'application/json')
-          res.end(JSON.stringify({ ok: false, database: 'postgres', error: err.message }))
-        }
+        const result = await handleNeonHealth()
+        res.statusCode = result.statusCode
+        res.setHeader('Content-Type', 'application/json')
+        res.end(JSON.stringify(result.body))
       })
     },
   }
@@ -1120,16 +1145,80 @@ function spaFallbackPlugin() {
 }
 
 function realtimeOutboxPlugin() {
+  let _stopOutbox = null
+  let _outboxPool = null
+  let _shutdownRegistered = false
+
   return {
     name: 'realtime-outbox-plugin',
     configureServer(server) {
       server.httpServer?.once('listening', () => {
         import('pg').then(({ default: pg }) => {
-          const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL, max: 2 })
-          startOutboxProcessor(pool)
+          _outboxPool = new pg.Pool({ connectionString: process.env.DATABASE_URL, max: 2 })
+          _stopOutbox = startOutboxProcessor(_outboxPool)
+          markReady()
           logger.info('outbox processor started', { runtime: 'vite' })
         })
       })
+
+      // Register shutdown once
+      if (!_shutdownRegistered) {
+        _shutdownRegistered = true
+
+        // Graceful shutdown for SIGTERM/SIGINT
+        const SHUTDOWN_DRAIN_TIMEOUT_MS = 20_000
+        const SHUTDOWN_FORCE_TIMEOUT_MS = 30_000
+        let shutdownInProgress = false
+
+        async function gracefulShutdown(signal, reason) {
+          if (shutdownInProgress) return
+          shutdownInProgress = true
+          logger.info('shutdown initiated', { signal, reason, runtime: 'vite' })
+          startShutdown(reason)
+
+          // Stop outbox processor
+          if (_stopOutbox) {
+            try { _stopOutbox(); logger.info('outbox processor stopped') }
+            catch (err) { logger.error('outbox stop error', { error: err.message }) }
+          }
+
+          // Close HTTP server
+          if (server.httpServer) {
+            await new Promise((resolve) => {
+              server.httpServer.close(() => {
+                logger.info('HTTP server closed')
+                resolve()
+              })
+            })
+          }
+
+          // Close DB pool
+          if (_outboxPool) {
+            try { await _outboxPool.end(); logger.info('PostgreSQL pool closed') }
+            catch (err) { logger.error('pool close error', { error: err.message }) }
+          }
+
+          markStopped()
+          logger.info('shutdown complete')
+          process.exit(0)
+        }
+
+        function forceShutdown(signal) {
+          logger.warn('force shutdown', { signal })
+          markStopped()
+          process.exit(1)
+        }
+
+        process.on('SIGTERM', () => {
+          gracefulShutdown('SIGTERM', 'process_terminated').catch(() => process.exit(1))
+          setTimeout(() => forceShutdown('SIGTERM'), SHUTDOWN_FORCE_TIMEOUT_MS)
+        })
+
+        process.on('SIGINT', () => {
+          gracefulShutdown('SIGINT', 'user_interrupt').catch(() => process.exit(1))
+          setTimeout(() => forceShutdown('SIGINT'), SHUTDOWN_FORCE_TIMEOUT_MS)
+        })
+      }
     },
   }
 }
@@ -1152,7 +1241,7 @@ export default defineConfig(({ mode, command }) => {
     validateServerEnv('vite')
   }
   return {
-    plugins: [securityPlugin(), react(), previewAuthPlugin(), menuApiPlugin(), aboutApiPlugin(), tableValidationPlugin(), neonRestaurantPlugin(), analyticsPlugin(), neonHealthPlugin(), spaFallbackPlugin(), realtimeOutboxPlugin()],
+    plugins: [securityPlugin(), react(), previewAuthPlugin(), menuApiPlugin(), aboutApiPlugin(), tableValidationPlugin(), neonRestaurantPlugin(), analyticsPlugin(), healthPlugin(), spaFallbackPlugin(), realtimeOutboxPlugin()],
     appType: 'spa',
     define: {},
     resolve: {
