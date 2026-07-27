@@ -1,0 +1,1007 @@
+After Prompt 33 is merged and the branch is deleted, the next production-readiness step is **backup, restore, and disaster-recovery verification**.
+
+Prompt 28 CI quality gates is still unresolved and must be revisited before the final Prompt 38 decision.
+
+# `@studioprompt` — Prompt 34 of 38
+
+```text
+REPOSITORY
+https://github.com/shriqrdotcom/exzibo-mag.git
+
+TASK TITLE
+Prompt 34 of 38 — Add Backup, Restore and Disaster-Recovery Verification
+
+ROLE
+
+Act as a senior PostgreSQL reliability engineer, disaster-recovery architect, SaaS operations engineer, Cloudflare R2 recovery reviewer, and production runbook auditor.
+
+Work only on:
+
+- database backup and restore procedures;
+- backup verification;
+- recovery-point and recovery-time contracts;
+- migration-aware restore validation;
+- Cloudflare R2 recovery/inventory procedures;
+- environment and secret restoration checklist;
+- recovery scripts using non-production resources;
+- disaster-recovery tests;
+- operational runbooks.
+
+Do not modify:
+
+- frontend UI;
+- product business logic;
+- authentication behavior;
+- authorization policy;
+- order or booking rules;
+- analytics formulas;
+- notification behavior;
+- Redis protection behavior;
+- realtime event identity;
+- outbox claim/lease semantics;
+- production database schema;
+- existing migrations;
+- billing behavior;
+- media upload processing.
+
+==================================================
+PRECONDITIONS
+==================================================
+
+Begin only after Prompt 33 has been merged into main.
+
+Run:
+
+git fetch origin --prune
+git switch main
+git pull --ff-only origin main
+git status
+git rev-parse HEAD
+
+Confirm:
+
+- Prompt 33 readiness and graceful-shutdown contract is present.
+- Prompt 32 runtime-route parity is present.
+- Prompt 31 authorization policy is present.
+- Prompt 30 validation layer is present.
+- Prompt 29 structured logging is present.
+- Prompt 25A and 25B security boundaries are present.
+- Prompt 18–27 protections remain present.
+- git status is completely clean.
+
+Record the exact starting SHA.
+
+Create branch:
+
+repair/34-backup-restore-dr
+
+Do not work directly on main.
+Do not continue from the Prompt 33 branch.
+
+==================================================
+CONFIRMED RISK
+==================================================
+
+The repository may contain recovery notes, but production readiness requires a tested and reproducible recovery contract.
+
+Risks include:
+
+1. Backups exist but have never been restored.
+
+2. A backup may be incomplete, corrupted, or incompatible with current migrations.
+
+3. Restore procedures may accidentally target production.
+
+4. Tenant data integrity may not be verified after recovery.
+
+5. R2 objects may not be included in recovery planning.
+
+6. Environment variables and secrets may not have a restoration inventory.
+
+7. Recovery scripts may expose credentials.
+
+8. Migration state may differ between backup metadata and application code.
+
+9. Realtime outbox rows may be replayed incorrectly after restore.
+
+10. Recovery-time and recovery-point expectations may be undocumented or unrealistic.
+
+==================================================
+OBJECTIVE
+==================================================
+
+After this task:
+
+1. A clear database backup contract exists.
+
+2. A clear database restore contract exists.
+
+3. Restore validation uses a disposable non-production PostgreSQL database.
+
+4. Backups are verified, not merely created.
+
+5. Migration state is checked before and after restore.
+
+6. Tenant isolation and key relational invariants are verified after restore.
+
+7. Outbox/idempotency state is reviewed safely after restore.
+
+8. R2 media recovery and reconciliation procedures are documented and testable without production access.
+
+9. Environment-variable and secret recovery inventory exists without containing secret values.
+
+10. Recovery scripts fail closed when a production target is detected.
+
+11. RPO and RTO targets are explicitly documented as operational targets, not guarantees.
+
+12. No production database, bucket, Worker, Redis instance, or secret is accessed.
+
+13. Prompt 8–33 regressions remain green.
+
+==================================================
+STRICT RULES
+==================================================
+
+Do not:
+
+- access the production Neon database;
+- create a production backup;
+- restore into production;
+- access or mutate a production R2 bucket;
+- print DATABASE_URL;
+- print R2 credentials;
+- print auth, Redis, Worker, webhook, or provider secrets;
+- commit dump files;
+- commit database data;
+- commit environment files;
+- commit secret inventories containing values;
+- run destructive SQL against an unknown database;
+- use db:push;
+- rewrite migrations;
+- mark recovery verified without performing a disposable restore test;
+- add screenshots, pasted prompts, attached_assets, Agent-memory files, generated dumps, or unrelated reports.
+
+==================================================
+STEP 1 — INVENTORY RECOVERY SURFACE
+==================================================
+
+Search for:
+
+- backup
+- restore
+- disaster recovery
+- recovery
+- RPO
+- RTO
+- pg_dump
+- pg_restore
+- psql
+- DATABASE_URL
+- Neon
+- branch
+- snapshot
+- point in time
+- R2
+- bucket
+- object
+- media
+- migration
+- drizzle
+- outbox
+- idempotency
+- runbook
+- secrets
+- environment
+- rollback
+
+Inspect at minimum:
+
+- existing recovery documentation;
+- scripts/**;
+- package.json scripts;
+- Drizzle migration files and journal;
+- database connection helpers;
+- schema definitions;
+- order/idempotency tables;
+- realtime outbox tables;
+- notification tables;
+- restaurant and membership tables;
+- R2 upload/storage helpers;
+- environment contract from Prompt 21;
+- readiness health logic from Prompt 33;
+- migration-governance rules from Prompt 23.
+
+Create an internal recovery inventory:
+
+resource
+→ authoritative system
+→ backup mechanism
+→ restore mechanism
+→ verification method
+→ destructive risk
+→ secret requirement
+→ recovery owner
+→ missing control
+
+Do not edit before this inventory is complete.
+
+==================================================
+STEP 2 — DEFINE RECOVERY CLASSIFICATION
+==================================================
+
+Classify repository data into:
+
+1. Critical relational data
+   - restaurants;
+   - users/auth-related references;
+   - memberships;
+   - orders;
+   - bookings;
+   - settings;
+   - notifications;
+   - idempotency;
+   - realtime outbox.
+
+2. Recoverable object data
+   - menu images;
+   - restaurant logos;
+   - covers;
+   - uploaded media.
+
+3. Re-creatable data
+   - caches;
+   - short Redis locks;
+   - rate-limit counters;
+   - derived analytics where applicable.
+
+4. External configuration
+   - environment variables;
+   - OAuth configuration;
+   - Redis credentials;
+   - R2 bindings;
+   - Worker bindings;
+   - deployment-domain settings.
+
+Document whether each item requires:
+
+- backup;
+- restore;
+- reconciliation;
+- regeneration;
+- manual reconfiguration.
+
+Do not place secret values in the document.
+
+==================================================
+STEP 3 — DEFINE RPO AND RTO TARGETS
+==================================================
+
+Add explicit operational recovery targets.
+
+Define separate targets for:
+
+- PostgreSQL relational data;
+- R2 media;
+- Redis ephemeral protections;
+- application configuration.
+
+Requirements:
+
+1. State targets as proposed operational objectives, not guaranteed service claims.
+
+2. Explain what data may be lost within the RPO window.
+
+3. Explain what work is required within the RTO window.
+
+4. Distinguish:
+   - platform backup availability;
+   - tested application-level recovery capability.
+
+5. Do not claim point-in-time recovery is active unless verified from current provider configuration.
+
+6. Mark any provider-dashboard verification as a manual action.
+
+==================================================
+STEP 4 — CREATE SAFE DATABASE TARGET GUARD
+==================================================
+
+Create a shared recovery safety helper or script guard.
+
+It must reject execution when:
+
+- database hostname matches known production configuration;
+- environment is marked production;
+- an explicit disposable/test confirmation is absent;
+- the connection string is missing;
+- the database name is ambiguous or protected.
+
+Use an explicit acknowledgement such as:
+
+RECOVERY_ALLOW_NONPROD=true
+
+This must not override a detected production target.
+
+Requirements:
+
+1. Never print the complete connection string.
+
+2. Log only sanitized host/database labels.
+
+3. Fail before any destructive operation.
+
+4. Tests must cover production-target rejection.
+
+Suggested file:
+
+scripts/lib/recoverySafety.js
+
+==================================================
+STEP 5 — CREATE DATABASE BACKUP SCRIPT
+==================================================
+
+Create a safe wrapper for a logical PostgreSQL backup.
+
+Suggested file:
+
+scripts/createDatabaseBackup.js
+
+Requirements:
+
+1. Accept source connection only from environment.
+
+2. Reject production execution during automated tests.
+
+3. Use pg_dump or an equivalent explicit PostgreSQL mechanism.
+
+4. Prefer a format suitable for verification and restore.
+
+5. Record sanitized metadata separately, such as:
+   - creation time;
+   - schema/migration journal state;
+   - application commit SHA when available;
+   - PostgreSQL version;
+   - checksum;
+   - backup format.
+
+6. Never store credentials in metadata.
+
+7. Never commit backup output.
+
+8. Ensure backup paths are ignored by Git.
+
+9. Support a dry-run mode.
+
+10. Exit non-zero on failure.
+
+Do not run against production.
+
+==================================================
+STEP 6 — CREATE DISPOSABLE RESTORE SCRIPT
+==================================================
+
+Create a restore-validation wrapper.
+
+Suggested file:
+
+scripts/verifyDatabaseRestore.js
+
+Required sequence:
+
+1. Validate target with recovery safety guard.
+
+2. Confirm target is disposable and non-production.
+
+3. Confirm target is empty or explicitly approved for replacement.
+
+4. Restore the backup.
+
+5. Verify migration journal.
+
+6. Run schema/integrity checks.
+
+7. Run domain invariants.
+
+8. Run tenant-isolation checks.
+
+9. Run outbox/idempotency recovery checks.
+
+10. Produce a sanitized verification summary.
+
+11. Exit non-zero if any verification fails.
+
+Do not automatically repair recovered data.
+
+==================================================
+STEP 7 — RESTORE INTEGRITY CHECKS
+==================================================
+
+After restore, verify at minimum:
+
+SCHEMA
+
+- expected migration journal entries exist;
+- no migration is missing or duplicated;
+- required tables exist;
+- required indexes and constraints exist.
+
+RELATIONSHIPS
+
+- restaurant memberships reference valid restaurants;
+- order items reference valid orders;
+- booking ownership remains valid;
+- settings remain one-row-per-restaurant where required;
+- notification tenant scope remains valid.
+
+DOMAIN SAFETY
+
+- statuses use allowed values;
+- quantities and amounts obey existing constraints;
+- restaurant UIDs/slugs/domains remain valid;
+- active membership uniqueness remains valid.
+
+TENANT SAFETY
+
+- no restored query/helper returns another restaurant’s private data;
+- tenant keys are present on scoped records.
+
+OUTBOX AND IDEMPOTENCY
+
+- published events are not treated as unpublished;
+- unpublished events preserve event identity;
+- claim/lease fields remain recoverable;
+- idempotency keys remain stable;
+- restore checks do not publish events.
+
+Do not mutate records during verification.
+
+==================================================
+STEP 8 — R2 MEDIA RECOVERY CONTRACT
+==================================================
+
+Inventory current R2 object usage.
+
+Document:
+
+- bucket purpose;
+- object-key format;
+- database fields that reference objects;
+- deletion behavior;
+- public/private access model;
+- backup/versioning assumptions;
+- restoration/reconciliation process.
+
+Create a read-only reconciliation script or test helper that can compare:
+
+database references
+↔ object inventory
+
+Requirements:
+
+1. Use injected fake/test R2 clients in automated tests.
+
+2. Do not contact production R2.
+
+3. Detect:
+   - database reference with missing object;
+   - orphan object without database reference;
+   - malformed object key;
+   - cross-tenant key mismatch.
+
+4. Do not automatically delete objects.
+
+5. Do not expose signed URLs or credentials.
+
+Suggested file:
+
+scripts/checkMediaReconciliation.js
+
+==================================================
+STEP 9 — CONFIGURATION RECOVERY INVENTORY
+==================================================
+
+Create a recovery checklist containing variable names only.
+
+Include categories such as:
+
+- database;
+- Better Auth;
+- Google OAuth;
+- superadmin allowlist;
+- Redis/Upstash;
+- R2;
+- realtime Worker;
+- webhook/publish secrets;
+- deployment hosts/origins;
+- application URLs;
+- monitoring configuration.
+
+Requirements:
+
+1. No values.
+
+2. Mark each variable:
+   - required;
+   - optional;
+   - runtime owner;
+   - recovery source;
+   - validation method.
+
+3. Reuse Prompt 21 environment contract where possible.
+
+4. Do not create a second conflicting environment definition.
+
+==================================================
+STEP 10 — RECOVERY RUNBOOK
+==================================================
+
+Create or repair a concise operational runbook.
+
+Suggested file:
+
+docs/runbooks/disaster-recovery.md
+
+Include:
+
+1. Incident declaration.
+
+2. Scope assessment.
+
+3. Stop-write or maintenance decision.
+
+4. Backup selection.
+
+5. Disposable restore rehearsal.
+
+6. Integrity verification.
+
+7. Configuration restoration.
+
+8. R2 reconciliation.
+
+9. Application startup in not-ready state.
+
+10. Readiness verification.
+
+11. Controlled traffic restoration.
+
+12. Outbox/idempotency review.
+
+13. Post-recovery monitoring.
+
+14. Rollback/abort criteria.
+
+15. Evidence collection.
+
+16. Final incident review.
+
+Do not include secrets or provider screenshots.
+
+==================================================
+STEP 11 — REQUIRED TESTS
+==================================================
+
+Add focused tests proving:
+
+SAFETY GUARD
+
+1. Missing target URL is rejected.
+2. Production environment is rejected.
+3. Known production host is rejected.
+4. Disposable non-production target is accepted.
+5. Full connection string is never logged.
+6. Explicit non-production acknowledgement is required.
+7. A production target cannot be overridden by acknowledgement.
+
+BACKUP
+
+8. Backup command is generated correctly.
+9. Backup failure exits non-zero.
+10. Dry-run performs no backup.
+11. Metadata contains no credentials.
+12. Checksum verification detects corruption.
+13. Backup output path is Git-ignored.
+
+RESTORE
+
+14. Restore into unapproved database is rejected.
+15. Restore into disposable database succeeds in test environment.
+16. Migration journal is verified.
+17. Missing migration causes failure.
+18. Missing required table causes failure.
+19. Broken foreign-key relationship causes failure.
+20. Invalid tenant relationship causes failure.
+21. Published outbox state remains published.
+22. Unpublished event identity remains stable.
+23. Verification performs no network publication.
+24. Verification does not modify application data after restore.
+
+R2 RECONCILIATION
+
+25. Referenced object present passes.
+26. Missing referenced object is reported.
+27. Orphan object is reported.
+28. Malformed object key is reported.
+29. Cross-tenant key mismatch is reported.
+30. No object is deleted.
+31. No production R2 request occurs.
+
+CONFIGURATION/RUNBOOK
+
+32. Recovery inventory contains variable names but no values.
+33. Runbook includes database, R2, configuration and readiness recovery.
+34. Runbook includes abort criteria.
+35. Runbook does not contain secret-like values.
+
+REGRESSION
+
+36. Prompt 33 readiness tests pass.
+37. Prompt 32 route-parity tests pass.
+38. Prompt 31 authorization tests pass.
+39. Prompt 30 validation tests pass.
+40. Prompt 29 logging tests pass.
+41. Prompt 25A and 25B tests pass.
+42. Prompt 26 and 27 tests pass.
+43. Prompt 18–24 regressions pass.
+44. Prompt 8–17 regressions pass.
+45. Migration-integrity tests pass.
+46. Vercel function count remains 12 or fewer.
+47. Root production build passes.
+
+Do not use production infrastructure.
+
+==================================================
+STEP 12 — DISPOSABLE RESTORE REHEARSAL
+==================================================
+
+Perform one complete restore rehearsal only against a disposable local/test PostgreSQL database.
+
+Required evidence:
+
+1. Source fixture/test database prepared.
+
+2. Logical backup created.
+
+3. Backup checksum recorded.
+
+4. Disposable target prepared.
+
+5. Backup restored.
+
+6. Migration state verified.
+
+7. Integrity checks passed.
+
+8. Application-level recovery tests passed.
+
+9. No production endpoint or credential was used.
+
+10. Temporary dump and database were cleaned up after verification.
+
+Do not commit the dump.
+
+If PostgreSQL tooling is unavailable, return PARTIAL rather than claiming the rehearsal passed.
+
+==================================================
+STEP 13 — FINAL SAFETY SEARCH
+==================================================
+
+Confirm NOT FOUND:
+
+- production database restore command;
+- production database hostname in scripts/docs;
+- committed dump file;
+- committed connection string;
+- secret value in recovery inventory;
+- destructive command without target guard;
+- db:push in recovery procedure;
+- migration rewrite;
+- automatic R2 deletion;
+- production R2 access;
+- outbox publication during restore verification;
+- raw provider error returned or logged;
+- pasted prompt or attached asset added by this task.
+
+Review all remaining matches manually.
+
+==================================================
+VALIDATION
+==================================================
+
+Run:
+
+1. recovery-safety tests;
+2. backup-wrapper tests;
+3. restore-verification tests;
+4. disposable restore rehearsal;
+5. schema/integrity tests;
+6. tenant-recovery tests;
+7. outbox/idempotency recovery tests;
+8. R2 reconciliation tests;
+9. runbook/config-inventory tests;
+10. Prompt 33 regression tests;
+11. Prompt 29–32 regression tests;
+12. Prompt 25A and 25B tests;
+13. Prompt 26 and 27 tests;
+14. Prompt 18–24 regressions;
+15. Prompt 8–17 regressions;
+16. migration-integrity tests;
+17. Vercel function-count validation;
+18. typecheck/lint where configured;
+19. root production build;
+20. git diff against starting SHA;
+21. git status;
+22. final safety search.
+
+Do not claim COMPLETE unless the disposable restore rehearsal passes.
+
+==================================================
+PERMITTED FILE SCOPE
+==================================================
+
+Likely files:
+
+- scripts/lib/recoverySafety.js
+- scripts/createDatabaseBackup.js
+- scripts/verifyDatabaseRestore.js
+- scripts/checkMediaReconciliation.js
+- focused recovery tests
+- docs/runbooks/disaster-recovery.md
+- environment recovery inventory
+- .gitignore only for backup artifact protection
+- package.json only for narrow recovery test scripts
+
+Do not modify:
+
+- production database schema;
+- migrations;
+- runtime business logic;
+- authentication;
+- authorization;
+- analytics formulas;
+- Redis semantics;
+- realtime event/lease logic;
+- frontend UI;
+- billing;
+- media upload processing;
+- Agent-memory files;
+- screenshots;
+- pasted prompts;
+- attached_assets;
+- generated dumps or reports.
+
+==================================================
+COMMIT AND PULL REQUEST
+==================================================
+
+After validation:
+
+1. Run:
+
+git status
+git diff --stat
+git diff --name-only
+
+2. Confirm only intended Prompt 34 files changed.
+
+3. Confirm no dump, credentials, `.env`, screenshot, pasted prompt, or attached asset is staged.
+
+4. Stage only reviewed files.
+
+5. Commit with:
+
+fix: add tested disaster recovery contract
+
+6. Before pushing:
+
+git fetch origin --prune
+
+If the remote branch exists:
+
+git pull --rebase origin repair/34-backup-restore-dr
+
+7. Push:
+
+git push -u origin repair/34-backup-restore-dr
+
+Do not use plain `--force`.
+
+8. Create a pull request:
+
+Base:
+main
+
+Compare:
+repair/34-backup-restore-dr
+
+Title:
+fix: add tested disaster recovery contract
+
+9. Do not merge the PR.
+10. Do not delete the branch.
+
+==================================================
+FINAL RESPONSE
+==================================================
+
+Return exactly:
+
+PROMPT 34 COMPLETION SUMMARY
+
+Status:
+- COMPLETE / PARTIAL / BLOCKED
+
+Branch:
+- repair/34-backup-restore-dr
+
+Starting SHA:
+- exact SHA
+
+Ending SHA:
+- exact SHA or Not committed
+
+Recovery classification:
+- critical relational data
+- R2 media
+- ephemeral/re-creatable data
+- external configuration
+
+RPO targets:
+- exact proposed targets
+
+RTO targets:
+- exact proposed targets
+
+Database backup:
+- script
+- format
+- checksum policy
+- production guard
+
+Database restore:
+- script
+- disposable target policy
+- integrity checks
+
+Disposable restore rehearsal:
+- PASS / FAIL / NOT AVAILABLE
+- source type
+- target type
+- backup created
+- restore completed
+- cleanup completed
+
+R2 recovery:
+- inventory/reconciliation file
+- checks performed
+- production accessed: NO
+
+Configuration recovery:
+- inventory file
+- secret values included: NO
+
+Runbook:
+- file
+- covered stages
+
+Files changed:
+- exact list
+
+Recovery-safety tests:
+- passed
+- failed
+- skipped
+
+Backup tests:
+- passed
+- failed
+- skipped
+
+Restore tests:
+- passed
+- failed
+- skipped
+
+R2 reconciliation tests:
+- passed
+- failed
+- skipped
+
+Tenant/data-integrity verification:
+- PASS / FAIL
+
+Outbox/idempotency verification:
+- PASS / FAIL
+
+Prompt 33 regression:
+- PASS / FAIL
+
+Prompt 32 regression:
+- PASS / FAIL
+
+Prompt 31 regression:
+- PASS / FAIL
+
+Prompt 30 regression:
+- PASS / FAIL
+
+Prompt 29 regression:
+- PASS / FAIL
+
+Prompt 25A regression:
+- PASS / FAIL
+
+Prompt 25B regression:
+- PASS / FAIL
+
+Prompt 26 regression:
+- PASS / FAIL
+
+Prompt 27 regression:
+- PASS / FAIL
+
+Previous regressions:
+- PASS / FAIL
+
+Migration tests:
+- PASS / FAIL
+
+Vercel function count:
+- exact number
+- PASS / FAIL
+
+Root production build:
+- PASS / FAIL
+
+Final safety search:
+- production restore command: FOUND / NOT FOUND
+- production hostname committed: FOUND / NOT FOUND
+- database dump committed: FOUND / NOT FOUND
+- connection string committed: FOUND / NOT FOUND
+- secret value in recovery inventory: FOUND / NOT FOUND
+- destructive action without guard: FOUND / NOT FOUND
+- db:push recovery path: FOUND / NOT FOUND
+- migration rewritten: FOUND / NOT FOUND
+- automatic R2 deletion: FOUND / NOT FOUND
+- production R2 access: FOUND / NOT FOUND
+- outbox publish during restore: FOUND / NOT FOUND
+- raw provider error: FOUND / NOT FOUND
+- pasted prompt/attached asset: FOUND / NOT FOUND
+
+Production resources accessed:
+- No
+
+Production database accessed:
+- No
+
+Production R2 accessed:
+- No
+
+Production migrations executed:
+- No
+
+Production deployments performed:
+- No
+
+Production secrets changed:
+- No
+
+Git status:
+- clean / not clean
+
+Pull request:
+- number or manual creation required
+- base
+- compare
+
+Outstanding skipped work:
+- Prompt 28 CI quality gates remain unresolved unless separately completed and merged.
+
+Recommended next action:
+- State whether Prompt 35 may begin after this PR is reviewed and merged.
+
+Final conclusion:
+- State whether Prompt 34 is committed, pushed, and ready for review.
+- Do not claim the complete repository is production-ready.
+```
+
+Only merge Prompt 34 when the completion status is **COMPLETE** and the disposable restore rehearsal has passed.
