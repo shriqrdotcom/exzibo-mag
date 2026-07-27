@@ -1,0 +1,1001 @@
+REPOSITORY
+https://github.com/shriqrdotcom/exzibo-mag.git
+
+TASK TITLE
+Prompt 35 of 38 — Add Performance, Load, Concurrency and Scalability Verification
+
+ROLE
+
+Act as a senior backend performance engineer, PostgreSQL query-performance specialist, SaaS scalability architect, Node.js reliability engineer and production-capacity reviewer.
+
+Work only on:
+
+- backend performance measurement;
+- API latency benchmarks;
+- database-query efficiency;
+- concurrency verification;
+- connection-pool safety;
+- pagination and bounded-query enforcement;
+- event-loop blocking detection;
+- memory-growth detection;
+- load-test tooling;
+- performance budgets;
+- focused performance tests and documentation.
+
+Do not modify:
+
+- product behavior;
+- frontend UI or design;
+- authentication architecture;
+- authorization policy;
+- order or booking state rules;
+- analytics formulas;
+- notification semantics;
+- Redis protection semantics;
+- realtime event identity;
+- outbox claim/lease behavior;
+- database schema or migrations unless a confirmed critical performance defect cannot be fixed safely without them;
+- billing;
+- media-processing behavior.
+
+==================================================
+PRECONDITIONS
+==================================================
+
+Begin only after Prompt 34 is merged into main.
+
+Run:
+
+git fetch origin --prune
+git switch main
+git pull --ff-only origin main
+git status
+git rev-parse HEAD
+
+Confirm:
+
+- Prompt 34 backup, restore and disaster-recovery contract is present.
+- Prompt 33 readiness and graceful shutdown is present.
+- Prompt 32 runtime-route parity is present.
+- Prompt 31 authorization policy is present.
+- Prompt 30 validation layer is present.
+- Prompt 29 structured logging is present.
+- Prompt 25A and 25B security boundaries are present.
+- Prompt 18–27 protections remain present.
+- Working tree is completely clean.
+
+Record the exact starting SHA.
+
+Create branch:
+
+repair/35-performance-capacity
+
+Do not work directly on main.
+Do not continue from the Prompt 34 branch.
+
+==================================================
+CONFIRMED RISK
+==================================================
+
+The repository has received extensive correctness and security hardening, but production readiness also requires measurable performance and capacity limits.
+
+Potential risks include:
+
+1. Unbounded database queries.
+2. Missing pagination on list endpoints.
+3. N+1 database queries.
+4. Slow tenant-scoped lookups.
+5. Event-loop blocking operations.
+6. Excessive memory growth under repeated requests.
+7. Connection-pool exhaustion.
+8. Inefficient analytics queries.
+9. Slow order, booking and notification flows under concurrency.
+10. Realtime/outbox workers competing with API traffic.
+11. Performance regressions being merged without detection.
+12. Benchmarks using unrealistic mocks and producing misleading results.
+
+==================================================
+OBJECTIVE
+==================================================
+
+After this task:
+
+1. Critical API paths have reproducible performance tests.
+
+2. Performance budgets are explicit and documented.
+
+3. List endpoints are bounded and paginated.
+
+4. Database access is tenant-scoped and query-efficient.
+
+5. N+1 patterns are identified and repaired where confirmed.
+
+6. Connection-pool behavior is safe under concurrent requests.
+
+7. Event-loop blocking is measured.
+
+8. Memory usage is measured under repeated load.
+
+9. Order, booking, notification, analytics and settings flows are tested under representative concurrency.
+
+10. Outbox processing does not starve normal request traffic.
+
+11. Load tests use disposable local/test infrastructure only.
+
+12. No production infrastructure is accessed.
+
+13. Prompt 8–34 regressions remain green.
+
+==================================================
+STRICT RULES
+==================================================
+
+Do not:
+
+- load-test production;
+- access production Neon;
+- access production Redis;
+- access production R2;
+- deploy Vercel or Cloudflare;
+- run production migrations;
+- disable security middleware for benchmarks;
+- bypass authentication or tenant checks to improve numbers;
+- remove validation for performance;
+- replace database-backed protections with in-memory logic;
+- change product behavior merely to satisfy a benchmark;
+- use unlimited concurrency;
+- create infinite loops or watch processes;
+- commit benchmark output containing sensitive data;
+- commit large generated reports;
+- add screenshots, pasted prompts, attached_assets or Agent-memory files;
+- claim scalability beyond what was actually tested.
+
+==================================================
+STEP 1 — INVENTORY PERFORMANCE-CRITICAL PATHS
+==================================================
+
+Search for:
+
+- SELECT *
+- LIMIT
+- OFFSET
+- cursor
+- ORDER BY
+- JOIN
+- Promise.all
+- for await
+- for (
+- map(async
+- pool.query
+- transaction
+- connection pool
+- max connections
+- timeout
+- analytics
+- aggregate
+- COUNT
+- SUM
+- notification
+- order creation
+- booking creation
+- menu
+- bootstrap
+- outbox
+- setInterval
+- JSON.stringify
+- bcrypt
+- crypto
+- blocking
+- load test
+- benchmark
+- performance
+
+Inspect at minimum:
+
+- order creation and status services;
+- booking creation and status services;
+- team and membership queries;
+- restaurant listing and lookup;
+- settings service;
+- analytics service;
+- notification service;
+- menu-listing service;
+- mobile bootstrap endpoint if present;
+- realtime outbox processor;
+- dedicated outbox consumer;
+- PostgreSQL connection setup;
+- Redis protection helpers;
+- request logging and request-duration measurements;
+- existing pagination helpers;
+- existing tests and benchmark scripts.
+
+Create an internal matrix:
+
+route/service
+→ expected traffic
+→ database queries
+→ query count
+→ pagination/bounds
+→ transaction use
+→ concurrency risk
+→ memory risk
+→ current benchmark
+→ required test/fix
+
+Do not edit before this inventory is complete.
+
+==================================================
+STEP 2 — DEFINE PERFORMANCE BUDGETS
+==================================================
+
+Create realistic non-production performance budgets.
+
+Define budgets for at least:
+
+- simple public restaurant lookup;
+- menu/category listing;
+- authenticated restaurant bootstrap;
+- order creation;
+- order status update;
+- booking creation;
+- notification listing;
+- analytics summary;
+- team-member listing;
+- health liveness;
+- readiness with healthy dependencies.
+
+Document separately:
+
+- median latency;
+- p95 latency;
+- p99 latency where useful;
+- error rate;
+- maximum query count;
+- maximum response size where relevant;
+- tested concurrency;
+- memory-growth tolerance.
+
+Rules:
+
+1. Budgets are test-environment objectives, not production guarantees.
+
+2. Do not invent unrealistic sub-millisecond targets.
+
+3. Keep separate budgets for:
+   - unit/service benchmarks;
+   - local integration tests;
+   - disposable PostgreSQL load tests.
+
+4. Include hardware/environment limitations in the summary.
+
+==================================================
+STEP 3 — CREATE SAFE LOAD-TEST HARNESS
+==================================================
+
+Create a bounded load-test harness.
+
+Suggested files:
+
+- scripts/performance/runApiLoadTest.js
+- scripts/performance/runServiceBenchmarks.js
+- tests/performance-contract.test.js
+
+Requirements:
+
+1. Test only localhost or explicitly approved `.invalid`/test targets.
+
+2. Reject production domains.
+
+3. Reject unknown external hosts.
+
+4. Require an explicit flag such as:
+
+PERFORMANCE_ALLOW_LOCAL=true
+
+5. Use bounded:
+   - duration;
+   - concurrency;
+   - request count;
+   - payload size.
+
+6. Stop on excessive error rate.
+
+7. Produce sanitized summaries only.
+
+8. Never log cookies, tokens, personal data or secret headers.
+
+9. Exit non-zero when budgets are violated.
+
+10. Do not leave a dev server running after tests.
+
+==================================================
+STEP 4 — QUERY COUNT AND N+1 DETECTION
+==================================================
+
+Add query instrumentation for tests.
+
+Verify critical service operations have bounded query counts.
+
+At minimum assess:
+
+- restaurant bootstrap;
+- team listing;
+- menu listing;
+- order creation;
+- booking creation;
+- notification listing;
+- analytics summary.
+
+Requirements:
+
+1. Detect repeated per-row queries.
+
+2. Do not expose SQL text in client responses.
+
+3. Test instrumentation must not affect production behavior.
+
+4. Repair confirmed N+1 patterns using existing services and safe joins/batches.
+
+5. Preserve tenant filters.
+
+6. Preserve existing DTOs.
+
+7. Do not add broad unscoped joins.
+
+==================================================
+STEP 5 — PAGINATION AND BOUNDED QUERIES
+==================================================
+
+Verify every potentially large list endpoint has:
+
+- default limit;
+- maximum limit;
+- deterministic ordering;
+- valid cursor or offset policy;
+- tenant-scoped filter before limit;
+- bounded projection.
+
+Inspect at minimum:
+
+- team members;
+- orders;
+- bookings;
+- notifications;
+- menu items;
+- restaurants;
+- analytics detail lists if present.
+
+Requirements:
+
+1. No unbounded production list query.
+
+2. Invalid limits return safe validation errors.
+
+3. Maximum limits cannot be bypassed.
+
+4. Pagination remains stable under equal timestamps.
+
+5. Existing Prompt 8 pagination rules remain intact.
+
+==================================================
+STEP 6 — DATABASE INDEX AND QUERY-PLAN REVIEW
+==================================================
+
+Review existing indexes against actual query patterns.
+
+Use disposable PostgreSQL only.
+
+Run EXPLAIN or EXPLAIN ANALYZE only against safe fixture data.
+
+Check:
+
+- tenant key filters;
+- status filters;
+- created_at ordering;
+- active-record filters;
+- order and booking lookup keys;
+- notification expiry/listing;
+- outbox claim eligibility;
+- analytics date/status filters;
+- restaurant UID/slug/domain lookups.
+
+Rules:
+
+1. Do not add an index without evidence.
+
+2. Prefer query correction before unnecessary indexes.
+
+3. Do not create a migration in this prompt unless:
+   - a critical missing index is confirmed;
+   - the migration is additive;
+   - Prompt 23 migration governance is followed;
+   - zero-to-head and upgrade tests pass.
+
+4. If a migration is needed, report it explicitly.
+
+==================================================
+STEP 7 — CONNECTION-POOL AND TIMEOUT SAFETY
+==================================================
+
+Inspect database connection behavior.
+
+Verify:
+
+- bounded maximum connections;
+- idle timeout;
+- connection timeout;
+- query timeout where supported;
+- transactions release clients;
+- errors release connections;
+- graceful shutdown closes process-owned pools;
+- serverless handlers do not close shared resources per request.
+
+Tests must cover:
+
+1. concurrent requests do not exceed configured pool limit;
+
+2. failed transaction releases connection;
+
+3. timeout returns safe error;
+
+4. repeated load does not leak clients;
+
+5. shutdown waits for or safely closes active resources.
+
+Do not increase connection limits blindly.
+
+==================================================
+STEP 8 — EVENT-LOOP AND CPU BLOCKING
+==================================================
+
+Inspect synchronous or CPU-heavy operations in request paths.
+
+Examples:
+
+- large JSON serialization;
+- synchronous filesystem work;
+- password hashing in hot paths;
+- large loops;
+- image processing;
+- cryptographic work;
+- repeated regex over large payloads.
+
+Requirements:
+
+1. Measure event-loop delay under representative load.
+
+2. Move confirmed blocking work away from request-critical paths only where safe.
+
+3. Do not weaken password hashing.
+
+4. Do not move trusted server work into the browser.
+
+5. Do not add worker threads unless clearly justified and tested.
+
+==================================================
+STEP 9 — MEMORY-STABILITY TESTS
+==================================================
+
+Add bounded repeated-request tests.
+
+Verify:
+
+- heap usage stabilizes;
+- request listeners are not leaked;
+- timers are not leaked;
+- database clients are not leaked;
+- large responses are not retained;
+- logging does not retain full request objects;
+- background consumers do not accumulate unresolved promises.
+
+Requirements:
+
+1. Use reasonable tolerance for garbage collection.
+
+2. Force GC only when test runtime explicitly supports it.
+
+3. Do not claim a memory leak from one noisy sample.
+
+4. Report baseline and ending memory measurements.
+
+==================================================
+STEP 10 — CONCURRENCY TESTS
+==================================================
+
+Add focused concurrent tests for:
+
+ORDER
+
+- concurrent duplicate submissions;
+- valid parallel orders;
+- idempotency behavior;
+- database transaction safety.
+
+BOOKING
+
+- concurrent booking creation;
+- duplicate prevention;
+- status update consistency.
+
+TEAM
+
+- concurrent membership mutation;
+- last-owner protection remains safe.
+
+NOTIFICATIONS
+
+- concurrent duplicate notification creation;
+- tenant-safe listing.
+
+OUTBOX
+
+- multiple consumers claim separate rows;
+- lease and acknowledgement remain safe;
+- API traffic remains responsive during bounded consumer work.
+
+SETTINGS
+
+- unrelated concurrent patches remain preserved.
+
+Do not change confirmed contracts from previous prompts.
+
+==================================================
+STEP 11 — RESPONSE SIZE AND DATA PROJECTION
+==================================================
+
+Measure representative response sizes.
+
+Check:
+
+- restaurant bootstrap;
+- menu list;
+- team list;
+- analytics;
+- notifications.
+
+Requirements:
+
+1. No raw database row leakage.
+
+2. No unnecessary internal fields.
+
+3. No accidental unbounded embedded arrays.
+
+4. Pagination metadata remains concise.
+
+5. Response compression behavior may be documented but must not be relied on to hide oversized payloads.
+
+Do not change public response DTOs unless removing confirmed unintended internal fields.
+
+==================================================
+STEP 12 — REQUIRED TESTS
+==================================================
+
+Add focused tests proving:
+
+LOAD HARNESS SAFETY
+
+1. Production host is rejected.
+2. Unknown external host is rejected.
+3. Local target requires explicit approval.
+4. Concurrency is bounded.
+5. Duration/request count is bounded.
+6. Excessive error rate stops the test.
+7. Secret headers are not logged.
+
+QUERY PERFORMANCE
+
+8. Critical services have bounded query counts.
+9. N+1 pattern is detected by test.
+10. Restaurant bootstrap remains bounded.
+11. Team listing remains bounded.
+12. Menu listing remains bounded.
+13. Notification listing remains bounded.
+14. Analytics query count remains bounded.
+
+PAGINATION
+
+15. Large lists require pagination.
+16. Default limit is enforced.
+17. Maximum limit is enforced.
+18. Tenant filtering occurs before limit.
+19. Stable ordering is preserved.
+
+CONNECTIONS
+
+20. Concurrent requests respect pool maximum.
+21. Failed transaction releases client.
+22. Query timeout is bounded.
+23. Repeated load does not leak clients.
+24. Graceful shutdown closes process-owned pool.
+
+EVENT LOOP / MEMORY
+
+25. Event-loop delay stays within documented test budget.
+26. Repeated request test shows no unbounded listener growth.
+27. Timers are cleaned up.
+28. Heap growth remains within documented tolerance.
+29. Logger does not retain request objects.
+
+CONCURRENCY
+
+30. Concurrent order idempotency passes.
+31. Concurrent booking protection passes.
+32. Last-owner concurrency passes.
+33. Notification deduplication passes.
+34. Settings patch concurrency passes.
+35. Outbox multi-consumer claim safety passes.
+
+PERFORMANCE BUDGETS
+
+36. Public restaurant lookup meets local p95 budget.
+37. Menu listing meets local p95 budget.
+38. Authenticated bootstrap meets local p95 budget.
+39. Order creation meets local p95 budget.
+40. Booking creation meets local p95 budget.
+41. Notification listing meets local p95 budget.
+42. Analytics summary meets local p95 budget.
+43. Health liveness meets local budget.
+
+REGRESSION
+
+44. Prompt 34 recovery tests pass.
+45. Prompt 33 lifecycle tests pass.
+46. Prompt 32 route-parity tests pass.
+47. Prompt 31 authorization tests pass.
+48. Prompt 30 validation tests pass.
+49. Prompt 29 logging tests pass.
+50. Prompt 25A and 25B tests pass.
+51. Prompt 26 and 27 tests pass.
+52. Prompt 18–24 regressions pass.
+53. Prompt 8–17 regressions pass.
+54. Migration-integrity tests pass.
+55. Vercel function count remains 12 or fewer.
+56. Root production build passes.
+
+Do not use production infrastructure.
+
+==================================================
+STEP 13 — PERFORMANCE DOCUMENTATION
+==================================================
+
+Create a concise performance document, for example:
+
+docs/performance/performance-contract.md
+
+Include:
+
+- tested environment;
+- tested dataset size;
+- performance budgets;
+- concurrency levels;
+- known limitations;
+- query-count budgets;
+- connection-pool contract;
+- benchmark commands;
+- production load-test prohibition;
+- interpretation guidance;
+- remaining scalability risks.
+
+Do not include sensitive endpoint credentials or generated large reports.
+
+==================================================
+STEP 14 — FINAL SAFETY SEARCH
+==================================================
+
+Confirm NOT FOUND:
+
+- unbounded production list query;
+- tenant filter applied after limit;
+- unlimited load-test concurrency;
+- production host accepted by load harness;
+- plaintext secret in benchmark output;
+- connection client leak;
+- transaction client not released;
+- endless performance loop;
+- dev/watch server left running;
+- security middleware disabled for benchmark;
+- authentication bypass for performance;
+- migration rewritten;
+- raw SQL/provider error exposed;
+- pasted prompt, screenshot or attached asset added by this task.
+
+Review every remaining match manually.
+
+==================================================
+VALIDATION
+==================================================
+
+Run:
+
+1. load-harness safety tests;
+2. query-count tests;
+3. pagination/bounds tests;
+4. connection-pool tests;
+5. event-loop tests;
+6. memory-stability tests;
+7. concurrency tests;
+8. bounded local API load test;
+9. service benchmarks;
+10. Prompt 34 recovery regressions;
+11. Prompt 33 lifecycle regressions;
+12. Prompt 29–32 regressions;
+13. Prompt 25A and 25B tests;
+14. Prompt 26 and 27 tests;
+15. Prompt 18–24 regressions;
+16. Prompt 8–17 regressions;
+17. migration-integrity tests;
+18. Vercel function-count validation;
+19. typecheck/lint where configured;
+20. root production build;
+21. git diff against starting SHA;
+22. git status;
+23. final safety search.
+
+Do not claim COMPLETE unless the bounded local load test and critical concurrency tests pass.
+
+==================================================
+PERMITTED FILE SCOPE
+==================================================
+
+Likely files:
+
+- scripts/performance/**
+- tests/performance-contract.test.js
+- tests/performance/**
+- narrowly relevant service/query repairs
+- database connection configuration only if required
+- performance documentation
+- package.json only for focused benchmark scripts
+- migration files only if a confirmed critical index is required and fully governed
+
+Do not modify:
+
+- frontend UI;
+- product behavior;
+- authentication architecture;
+- authorization policy;
+- analytics formulas;
+- Redis protection semantics;
+- realtime event identity or claim rules;
+- billing;
+- media behavior;
+- Agent-memory files;
+- screenshots;
+- pasted prompts;
+- attached_assets;
+- large generated benchmark reports.
+
+==================================================
+COMMIT AND PULL REQUEST
+==================================================
+
+After validation:
+
+1. Run:
+
+git status
+git diff --stat
+git diff --name-only
+
+2. Confirm only intended Prompt 35 files changed.
+
+3. Confirm no generated benchmark output, screenshot, prompt or attached asset is staged.
+
+4. Stage only reviewed files.
+
+5. Commit with:
+
+fix: add performance and capacity verification
+
+6. Before pushing:
+
+git fetch origin --prune
+
+If the remote branch exists:
+
+git pull --rebase origin repair/35-performance-capacity
+
+7. Push:
+
+git push -u origin repair/35-performance-capacity
+
+Do not use plain `--force`.
+
+8. Create a pull request:
+
+Base:
+main
+
+Compare:
+repair/35-performance-capacity
+
+Title:
+fix: add performance and capacity verification
+
+9. Do not merge the PR.
+10. Do not delete the branch.
+
+==================================================
+FINAL RESPONSE
+==================================================
+
+Return exactly:
+
+PROMPT 35 COMPLETION SUMMARY
+
+Status:
+- COMPLETE / PARTIAL / BLOCKED
+
+Branch:
+- repair/35-performance-capacity
+
+Starting SHA:
+- exact SHA
+
+Ending SHA:
+- exact SHA or Not committed
+
+Performance environment:
+- runtime
+- database
+- dataset size
+- concurrency
+- duration
+
+Performance budgets:
+- exact route/service budgets
+
+Load-test harness:
+- files
+- target guard
+- concurrency limits
+- production target rejected: YES / NO
+
+Query analysis:
+- services measured
+- query counts
+- N+1 defects found
+- defects repaired
+
+Pagination:
+- routes checked
+- unbounded routes found
+- repairs made
+
+Connection pool:
+- maximum
+- timeout policy
+- leak tests
+
+Event loop:
+- measured delay
+- budget result
+
+Memory:
+- baseline
+- ending measurement
+- growth result
+
+Concurrency:
+- order: PASS / FAIL
+- booking: PASS / FAIL
+- membership: PASS / FAIL
+- notifications: PASS / FAIL
+- settings: PASS / FAIL
+- outbox: PASS / FAIL
+
+Latency results:
+- restaurant lookup p50/p95
+- menu listing p50/p95
+- bootstrap p50/p95
+- order creation p50/p95
+- booking creation p50/p95
+- notifications p50/p95
+- analytics p50/p95
+- liveness p50/p95
+
+Files changed:
+- exact list
+
+Focused performance tests:
+- passed
+- failed
+- skipped
+
+Prompt 34 regression:
+- PASS / FAIL
+
+Prompt 33 regression:
+- PASS / FAIL
+
+Prompt 32 regression:
+- PASS / FAIL
+
+Prompt 31 regression:
+- PASS / FAIL
+
+Prompt 30 regression:
+- PASS / FAIL
+
+Prompt 29 regression:
+- PASS / FAIL
+
+Prompt 25A regression:
+- PASS / FAIL
+
+Prompt 25B regression:
+- PASS / FAIL
+
+Prompt 26 regression:
+- PASS / FAIL
+
+Prompt 27 regression:
+- PASS / FAIL
+
+Previous regressions:
+- PASS / FAIL
+
+Migration tests:
+- PASS / FAIL
+
+Vercel function count:
+- exact number
+- PASS / FAIL
+
+Root production build:
+- PASS / FAIL
+
+Final safety search:
+- unbounded list query: FOUND / NOT FOUND
+- tenant filter after limit: FOUND / NOT FOUND
+- unlimited load concurrency: FOUND / NOT FOUND
+- production target accepted: FOUND / NOT FOUND
+- secret in benchmark output: FOUND / NOT FOUND
+- connection leak: FOUND / NOT FOUND
+- unreleased transaction client: FOUND / NOT FOUND
+- endless load process: FOUND / NOT FOUND
+- benchmark security bypass: FOUND / NOT FOUND
+- authentication bypass: FOUND / NOT FOUND
+- migration rewritten: FOUND / NOT FOUND
+- raw DB/provider error: FOUND / NOT FOUND
+- pasted prompt/asset: FOUND / NOT FOUND
+
+Production resources accessed:
+- No
+
+Production database accessed:
+- No
+
+Production Redis accessed:
+- No
+
+Production R2 accessed:
+- No
+
+Production migrations executed:
+- No
+
+Production deployments performed:
+- No
+
+Production secrets changed:
+- No
+
+Git status:
+- clean / not clean
+
+Pull request:
+- number or manual creation required
+- base
+- compare
+
+Outstanding skipped work:
+- Prompt 28 CI quality gates remain unresolved unless separately completed and merged.
+
+Recommended next action:
+- State whether Prompt 36 may begin after this PR is reviewed and merged.
+
+Final conclusion:
+- State whether Prompt 35 is committed, pushed, and ready for review.
+- Do not claim the complete repository is production-ready.
