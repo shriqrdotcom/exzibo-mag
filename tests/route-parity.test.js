@@ -262,12 +262,20 @@ describe('Shared preview auth', () => {
 })
 
 describe('Shared health check', () => {
-  it('vite.config.js uses neonHealthCheck from src/db/index.js', () => {
+  it('vite.config.js handles health through shared api/_lib/health.js', () => {
     const lines = readLines('vite.config.js')
-    const hasSharedHealthCheck = lines.some(l =>
-      l.includes('neonHealthCheck') && l.includes('./src/db/index.js')
+    const hasSharedHealthImport = lines.some(l =>
+      l.includes('./api/_lib/health.js')
     )
-    assert.ok(hasSharedHealthCheck, 'vite.config.js should import neonHealthCheck from shared source')
+    assert.ok(hasSharedHealthImport, 'vite.config.js should import from shared health module')
+  })
+
+  it('api/_lib/health.js uses neonHealthCheck from src/db/index.js', () => {
+    const lines = readLines('api/_lib/health.js')
+    const hasHealthCheck = lines.some(l =>
+      l.includes('neonHealthCheck') && l.includes('../../src/db/index.js')
+    )
+    assert.ok(hasHealthCheck, 'shared health module should import neonHealthCheck')
   })
 })
 

@@ -4,6 +4,7 @@ import { runReadinessChecks } from '../src/monitoring/readiness.js'
 import { sendSafeError } from './_lib/errors.js'
 import { vercelWrapper } from './_lib/security-middleware.js'
 import { defineValidation, validateRequest } from './_lib/validate.js'
+import { handleLiveness } from './_lib/health.js'
 
 // ── /api/system — System Handler ────────────────────────────────────────────
 //
@@ -42,8 +43,10 @@ async function handler(req, res) {
 
   if (action === 'liveness') {
     setPublicCors(res)
-    return res.json({
-      status: 'ok',
+    const result = handleLiveness()
+    // Augment with previous info (version + timestamp) for backward compat
+    return res.status(result.statusCode).json({
+      ...result.body,
       version: process.env.npm_package_version || '0.0.0',
       timestamp: new Date().toISOString(),
     })
