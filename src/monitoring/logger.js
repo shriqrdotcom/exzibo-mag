@@ -147,6 +147,33 @@ export function extractRoute(req) {
 // Writes one JSON log line per HTTP request after the response is sent.
 // Includes: requestId, method, route, statusCode, durationMs, errorCategory,
 //           message, url.
+//
+// Also records operational metrics via src/observability/metrics.js.
+// Metrics are fire-and-forget: they never throw or affect log output.
+
+let _metricsModule = null
+
+async function getMetrics() {
+  if (_metricsModule) return _metricsModule
+  try {
+    _metricsModule = await import('../observability/metrics.js')
+  } catch {
+    _metricsModule = null
+  }
+  return _metricsModule
+}
+
+let _routeFamilyModule = null
+
+async function getRouteFamily() {
+  if (_routeFamilyModule) return _routeFamilyModule
+  try {
+    _routeFamilyModule = await import('../observability/routeFamily.js')
+  } catch {
+    _routeFamilyModule = null
+  }
+  return _routeFamilyModule
+}
 
 export function logHttpRequest(req, requestId, statusCode, startMs) {
   const durationMs    = Date.now() - startMs
@@ -170,15 +197,91 @@ export function logHttpRequest(req, requestId, statusCode, startMs) {
   entry.message = parts.join(' ')
 
   emit('info', entry.message, entry)
+
+  // Record operational metrics (fire-and-forget; never throws)
+  _recordRequestMetrics(req, statusCode, durationMs).catch(() => {})
 }
+
+async function _recordRequestMetrics(req, statusCode, durationMs) {
+  try {
+    const metrics = await getMetrics()
+    if (!metrics) return
+    const rf = await getRouteFamily()
+    if (!rf) return
+
+    const rawPath    = req.path || req.url || ''
+    const routeFamily = rf.normalizeRouteFamily(rawPath)
+    const method      = (req.method || 'GET').toUpperCase()
+    const statusClass = rf.statusToClass(statusCode)
+    const outcome     = rf.statusToOutcome(statusCode)
+
+    // Skip health/liveness probes from request-count SLI
+    const isHealthProbe = routeFamily === 'health'
+
+    if (!isHealthProbe) {
+      metrics.incrementCounter('api_requests_total', 1, { routeFamily, method, statusClass })
+      metrics.observeDuration('api_request_duration_ms', durationMs, { routeFamily, method })
+
+      if (statusCode >= 500) {
+        metrics.incrementCounter('api_errors_total', 1, { routeFamily, method, outcome })
+      }
+    }
+  } catch {
+    // Never propagate metric recording errors
+  }
+}
+
+// ── In-flight request tracking ────────────────────────────────────────────────
+// Module-level counter for currently in-flight requests.
+// Updated synchronously; gauge is set via setGauge after each change.
+
+let _inflightCount = 0
+
+function _incrementInflight() {
+  _inflightCount++
+  getMetrics().then(metrics => {
+    if (metrics) metrics.setGauge('api_inflight_requests', _inflightCount)
+  }).catch(() => {})
+}
+
+function _decrementInflight() {
+  if (_inflightCount > 0) _inflightCount--
+  getMetrics().then(metrics => {
+    if (metrics) metrics.setGauge('api_inflight_requests', _inflightCount)
+  }).catch(() => {})
+}
+
+/** For test use only — reset the in-flight counter. */
+export function _resetInflightForTest() { _inflightCount = 0 }
 
 // ── Request interceptor ──────────────────────────────────────────────────────
 // Wraps res.end so that logHttpRequest is called exactly once per response.
+// Also tracks in-flight gauge with correct semantics:
+//   - Incremented at request start
+//   - Decremented on res.end() (normal completion)
+//   - Decremented on res.once('close') (aborted/premature close)
 // Safe to call on both Express ServerResponse and Vercel response objects.
 
 export function attachRequestLogger(req, res, requestId, startMs) {
   const original = res.end?.bind(res)
   if (typeof original !== 'function') return
+
+  // Increment gauge at request start
+  _incrementInflight()
+
+  let finished = false
+
+  function onFinish() {
+    if (!finished) {
+      finished = true
+      _decrementInflight()
+    }
+  }
+
+  // Listen for aborted/closed connections that never call res.end()
+  if (typeof res.once === 'function') {
+    res.once('close', onFinish)
+  }
 
   let logged = false
   res.end = function (...args) {
@@ -186,6 +289,9 @@ export function attachRequestLogger(req, res, requestId, startMs) {
       logged = true
       logHttpRequest(req, requestId, res.statusCode, startMs)
     }
-    return original(...args)
+    const result = original(...args)
+    // Decrement after the original end() runs (covers the normal completion path)
+    onFinish()
+    return result
   }
 }

@@ -238,17 +238,34 @@ function runOriginHostCsrfChecks(req, res, requestId, options) {
   if (req.method === 'OPTIONS') return { handled: false }
 
   if (!opts.skipHostValidation && !validateHost(req, res, requestId, opts.env)) {
+    // Record host rejection metric (fire-and-forget)
+    _recordSecuritySignal('host').catch(() => {})
     return { handled: true }
   }
 
   if (!opts.skipCsrfValidation) {
     const exempt = opts.csrfExempt.some(p => path === p || path.startsWith(p + '/'))
     if (!exempt && !validateCsrf(req, res, requestId, opts.env)) {
+      // Determine whether this was an origin vs CSRF rejection
+      const hasOrigin = !!(req.headers?.origin || req.headers?.referer)
+      _recordSecuritySignal(hasOrigin ? 'csrf' : 'origin').catch(() => {})
       return { handled: true }
     }
   }
 
   return { handled: false }
+}
+
+// Security signal recording — fire-and-forget, never throws
+async function _recordSecuritySignal(type) {
+  try {
+    const signals = await import('../../src/observability/securitySignals.js')
+    if (type === 'host')   signals.recordHostRejection('untrusted_host')
+    if (type === 'csrf')   signals.recordCsrfRejection('untrusted_origin')
+    if (type === 'origin') signals.recordOriginRejection('missing_origin')
+  } catch {
+    // Never propagate metric recording errors
+  }
 }
 
 async function runCoreBoundary(req, res, options, handler) {
