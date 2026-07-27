@@ -1,0 +1,263 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Node policy: Node 22.x for every job.
+# Package manager: pnpm@10.26.1 (declared in package.json packageManager field).
+# ─────────────────────────────────────────────────────────────────────────────
+
+jobs:
+  # ── 1. REPOSITORY INTEGRITY ───────────────────────────────────────────────
+  # File-only checks: no database, no production credentials.
+  repository-integrity:
+    name: repository-integrity
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.26.1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+
+      - name: Frozen dependency install
+        run: pnpm install --frozen-lockfile
+
+      - name: Forbidden-file check
+        run: |
+          set -euo pipefail
+
+          echo "── Checking for committed .env files ──"
+          TRACKED=$(git ls-files)
+
+          # .env.example is the only allowed .env-prefixed file.
+          BAD_ENV=$(echo "$TRACKED" | grep -E '^\.env$|^\.env\.' | grep -v '^\.env\.example$' || true)
+          if [ -n "$BAD_ENV" ]; then
+            echo "ERROR: Real .env file(s) committed:" >&2
+            echo "$BAD_ENV" >&2
+            exit 1
+          fi
+          echo "  ✔ No real .env files tracked."
+
+          echo "── Checking for database dump files ──"
+          DUMPS=$(echo "$TRACKED" | grep -E '\.(dump|sql\.gz|pgdump)$' || true)
+          if [ -n "$DUMPS" ]; then
+            echo "ERROR: Database dump file(s) committed:" >&2
+            echo "$DUMPS" >&2
+            exit 1
+          fi
+          echo "  ✔ No database dumps tracked."
+
+          echo "── Checking for attached_assets directory ──"
+          ASSETS=$(echo "$TRACKED" | grep -E '^attached_assets/' || true)
+          if [ -n "$ASSETS" ]; then
+            echo "ERROR: attached_assets directory committed:" >&2
+            echo "$ASSETS" >&2
+            exit 1
+          fi
+          echo "  ✔ No attached_assets committed."
+
+          echo "  ✔ Forbidden-file check passed."
+
+      - name: Secret-pattern check
+        run: |
+          set -euo pipefail
+
+          echo "── Scanning tracked source files for high-confidence secret patterns ──"
+          TRACKED_FILES=$(git ls-files -- '*.js' '*.ts' '*.json' '*.yml' '*.yaml' '*.sh' '*.env*')
+          FOUND=0
+
+          while IFS= read -r file; do
+            [ -f "$file" ] || continue
+            # Skip the example env file (intentionally has placeholder values).
+            [ "$file" = ".env.example" ] && continue
+            if grep -qE \
+              "(AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{36}|github_pat_[A-Za-z0-9_]{82}|sk_live_[A-Za-z0-9]{24}|pk_live_[A-Za-z0-9]{24})" \
+              "$file" 2>/dev/null; then
+              echo "ERROR: Potential secret pattern found in: $file" >&2
+              FOUND=1
+            fi
+          done <<< "$TRACKED_FILES"
+
+          if [ "$FOUND" -eq 1 ]; then exit 1; fi
+          echo "  ✔ Secret-pattern check passed."
+
+      - name: Migration integrity (file-only)
+        run: |
+          echo "── validate-migrations.js ──"
+          node scripts/validate-migrations.js
+          echo "── migration-integrity.test.js ──"
+          node --test tests/migration-integrity.test.js
+
+      - name: Zero-to-head file gates (release verifier)
+        run: node --test tests/release/verify.test.js
+
+      - name: Vercel function-count check
+        run: node --test tests/vercel-function-count.test.js
+
+      - name: Architecture governance check
+        run: node --test tests/governance.test.js
+
+  # ── 2. APPLICATION TESTS ──────────────────────────────────────────────────
+  # Disposable PostgreSQL service; all committed migrations applied from zero
+  # before any test runs.  Fake CI-only values for non-database services.
+  application-tests:
+    name: application-tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: ci_user
+          POSTGRES_PASSWORD: ci_password
+          POSTGRES_DB: ci_testdb
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+        ports:
+          - 5432:5432
+
+    # ── Fake CI-only environment values ──────────────────────────────────────
+    # None of these point to production infrastructure.
+    env:
+      DATABASE_URL: postgresql://ci_user:ci_password@localhost:5432/ci_testdb
+      BETTER_AUTH_SECRET: ci-test-better-auth-secret-not-for-production-use
+      BETTER_AUTH_BASE_URL: https://superadmin.example.invalid
+      BETTER_AUTH_TRUSTED_ORIGINS: https://dashboard.example.invalid
+      GOOGLE_CLIENT_ID: fake-google-client-id.apps.googleusercontent.com
+      GOOGLE_CLIENT_SECRET: fake-google-client-secret-ci-only
+      SUPERADMIN_ALLOWED_EMAILS: ci-superadmin@example.invalid
+      UPSTASH_REDIS_REST_URL: https://redis.example.invalid
+      UPSTASH_REDIS_REST_TOKEN: fake-upstash-redis-token-ci-test-only-value-here
+      R2_ACCOUNT_ID: fake-r2-account-id-ci-only
+      R2_ACCESS_KEY_ID: fake-r2-access-key-id-ci-only
+      R2_SECRET_ACCESS_KEY: fake-r2-secret-access-key-ci-test-only-value
+      R2_BUCKET_NAME: fake-ci-bucket
+      R2_PUBLIC_BASE_URL: https://images.example.invalid
+      REALTIME_URL: https://rt.example.invalid
+      REALTIME_PUBLISH_SECRET: fake-realtime-publish-secret-ci-test-only-value
+      REALTIME_TICKET_SECRET: fake-realtime-ticket-secret-ci-test-only-value
+      # Prevent Vite/build from loading auth in test mode.
+      NODE_ENV: test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.26.1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+
+      - name: Frozen dependency install
+        run: pnpm install --frozen-lockfile
+
+      - name: Wait for PostgreSQL readiness
+        run: |
+          until pg_isready -h localhost -p 5432 -U ci_user; do
+            echo "Waiting for PostgreSQL…"
+            sleep 1
+          done
+          echo "PostgreSQL is ready."
+
+      - name: Run Drizzle migrations from zero
+        run: pnpm db:migrate
+
+      - name: Confirm migration success
+        run: |
+          PGPASSWORD=ci_password psql \
+            -h localhost -p 5432 -U ci_user -d ci_testdb \
+            -c "SELECT table_name FROM information_schema.tables
+                WHERE table_schema = 'public' ORDER BY table_name;" \
+            | grep -q "restaurants" \
+            && echo "  ✔ Migration confirmed: restaurants table present." \
+            || { echo "ERROR: Drizzle migrations did not create expected tables." >&2; exit 1; }
+
+      - name: Migration governance tests
+        run: node --test tests/migration-governance.test.js
+
+      - name: Complete test inventory
+        run: pnpm test
+
+  # ── 3. PRODUCTION BUILD ───────────────────────────────────────────────────
+  production-build:
+    name: production-build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.26.1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+
+      - name: Frozen dependency install
+        run: pnpm install --frozen-lockfile
+
+      - name: Root production build
+        run: pnpm build
+
+      - name: Verify Vercel function count (≤ 12)
+        run: node --test tests/vercel-function-count.test.js
+
+  # ── 4. WORKER VALIDATION ─────────────────────────────────────────────────
+  # Cloudflare Worker TypeScript check + Wrangler dry-run.
+  # No deployment; no Cloudflare credentials required.
+  worker-validation:
+    name: worker-validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: exzibo-realtime
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Frozen Worker dependency install
+        run: npm ci
+
+      - name: Worker TypeScript check
+        run: npx tsc --noEmit
+
+      - name: Wrangler dry-run (no deployment)
+        run: npx wrangler deploy --dry-run
+        env:
+          # Fake account ID — dry-run does not upload to Cloudflare.
+          CLOUDFLARE_ACCOUNT_ID: fake-account-id-ci-dry-run-only
