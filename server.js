@@ -1070,7 +1070,7 @@ app.all('/api/analytics/:restaurantId', (req, res) => {
 })
 
 // ── SPA fallback — must be last ───────────────────────────────────────────────
-app.get('*', (req, res) => {
+app.get('/{*splat}', (req, res) => {
   res.sendFile(path.resolve(__dirname, 'dist', 'index.html'))
 })
 
