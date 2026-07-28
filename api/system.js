@@ -1,5 +1,5 @@
 import { setAdminCors, setPublicCors } from './_lib/cors.js'
-import { authorizeSuperadmin } from './_lib/authz.js'
+import { checkSuperadmin } from './_lib/authz.js'
 import { runReadinessChecks } from '../src/monitoring/readiness.js'
 import { createSafeError, sendSafeError } from './_lib/errors.js'
 import { vercelWrapper } from './_lib/security-middleware.js'
@@ -57,14 +57,27 @@ async function handler(req, res) {
     // Augment with previous info (version + timestamp) for backward compat
     return res.status(result.statusCode).json({
       ...result.body,
+      status: result.statusCode === 200 ? 'ok' : result.body.status,
       version: process.env.npm_package_version || '0.0.0',
       timestamp: new Date().toISOString(),
     })
   }
 
   if (action === 'readiness') {
-    const auth = await authorizeSuperadmin(req, res)
-    if (!auth.ok) return
+    let auth
+    try {
+      auth = await checkSuperadmin(req)
+    } catch {
+      return sendSafeError(res, { status: 500, code: 'INTERNAL_ERROR', requestId })
+    }
+    if (auth.error || !auth.allowed) {
+      return sendSafeError(res, {
+        status: 403,
+        code: 'FORBIDDEN',
+        message: 'Superadmin access required',
+        requestId,
+      })
+    }
 
     const checks = await runReadinessChecks()
     const allOk = checks.every(c => c.status === 'ok')
