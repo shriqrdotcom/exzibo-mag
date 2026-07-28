@@ -270,7 +270,11 @@ jobs:
         # assertions have completed.
         run: |
           TEST_FILES=$(find tests api/__tests__ -type f -name '*.test.js' -print)
-          pnpm exec node --test --test-force-exit $TEST_FILES
+          pnpm exec node --test \
+            --test-concurrency=1 \
+            --test-timeout=120000 \
+            --test-force-exit \
+            $TEST_FILES
 
   # ── 3. PRODUCTION BUILD ───────────────────────────────────────────────────
   # Vite config imports serverEnv and may connect to the database during build,
