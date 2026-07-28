@@ -265,7 +265,12 @@ jobs:
         run: node --test tests/migration-governance.test.js
 
       - name: Complete test inventory
-        run: pnpm test
+        # The suite opens shared database pools in several modules. Node's test
+        # runner can otherwise wait indefinitely for those handles after all
+        # assertions have completed.
+        run: |
+          TEST_FILES=$(find tests api/__tests__ -type f -name '*.test.js' -print)
+          pnpm exec node --test --test-force-exit $TEST_FILES
 
   # ── 3. PRODUCTION BUILD ───────────────────────────────────────────────────
   # Vite config imports serverEnv and may connect to the database during build,
