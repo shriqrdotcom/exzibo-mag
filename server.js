@@ -174,6 +174,12 @@ function _isPrivateAdminPath(path, method) {
 
 app.use(async (req, res, next) => {
   if (req.method === 'OPTIONS') return next()
+  // These per-restaurant schema endpoints were removed. Keep their former
+  // authorization boundary so stale clients fail closed instead of receiving
+  // the SPA fallback's 404 response.
+  if (req.path.startsWith('/api/restaurant-db/')) {
+    return requireSuperadmin(req, res, next)
+  }
   if (!_isPrivateAdminPath(req.path, req.method)) return next()
 
   try {

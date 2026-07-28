@@ -1,7 +1,7 @@
 import { setAdminCors, setPublicCors } from './_lib/cors.js'
 import { authorizeSuperadmin } from './_lib/authz.js'
 import { runReadinessChecks } from '../src/monitoring/readiness.js'
-import { sendSafeError } from './_lib/errors.js'
+import { createSafeError, sendSafeError } from './_lib/errors.js'
 import { vercelWrapper } from './_lib/security-middleware.js'
 import { defineValidation, validateRequest } from './_lib/validate.js'
 import { handleLiveness } from './_lib/health.js'
@@ -38,7 +38,17 @@ async function handler(req, res) {
     return sendSafeError(res, { status: 400, code: 'BAD_REQUEST', message: 'action query param required', requestId })
   }
   if (REMOVED_ACTIONS.has(action)) {
-    return sendSafeError(res, { status: 410, code: 'BAD_REQUEST', message: 'Runtime database provisioning has been removed', requestId })
+    const message = 'Runtime database provisioning has been removed'
+    const envelope = {
+      ...createSafeError({ code: 'BAD_REQUEST', message, requestId }),
+      // Preserve the legacy error key for clients that consume retired actions.
+      error: message,
+    }
+    if (!res.headersSent) {
+      res.setHeader('Content-Type', 'application/json')
+      res.status(410).json(envelope)
+    }
+    return envelope
   }
 
   if (action === 'liveness') {
