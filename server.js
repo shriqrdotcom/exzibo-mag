@@ -15,7 +15,6 @@ import {
   toPublicRestaurant,
   toMemberRestaurant,
   toSuperadminRestaurant,
-  getNeonRestaurants,
 } from './src/db/neon-restaurants.js'
 import { lookupRestaurantByUid } from './api/_lib/restaurant-lookup.js'
 import { createRestaurantAtomic } from './src/services/restaurantCreationService.js'
