@@ -264,6 +264,21 @@ jobs:
       - name: Migration governance tests
         run: node --test tests/migration-governance.test.js
 
+      - name: Start application server for HTTP tests
+        run: |
+          nohup pnpm start > "$RUNNER_TEMP/application-server.log" 2>&1 &
+          echo $! > "$RUNNER_TEMP/application-server.pid"
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent http://127.0.0.1:5000/api/health/live >/dev/null; then
+              echo "Application server is ready."
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "Application server did not become ready." >&2
+          cat "$RUNNER_TEMP/application-server.log" >&2
+          exit 1
+
       - name: Complete test inventory
         # Run each file in its own process. The suite opens shared database
         # pools and several files mutate process.env; passing all files to one
