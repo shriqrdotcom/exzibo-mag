@@ -265,16 +265,20 @@ jobs:
         run: node --test tests/migration-governance.test.js
 
       - name: Complete test inventory
-        # The suite opens shared database pools in several modules. Node's test
-        # runner can otherwise wait indefinitely for those handles after all
-        # assertions have completed.
+        # Run each file in its own process. The suite opens shared database
+        # pools and several files mutate process.env; passing all files to one
+        # node --test invocation lets Node schedule file workers concurrently,
+        # even when test-concurrency is set to one, causing cross-file races.
+        # No files are skipped: this is the complete inventory, executed
+        # deterministically and with a bounded timeout per file.
         run: |
-          TEST_FILES=$(find tests api/__tests__ -type f -name '*.test.js' -print)
-          pnpm exec node --test \
-            --test-concurrency=1 \
-            --test-timeout=120000 \
-            --test-force-exit \
-            $TEST_FILES
+          while IFS= read -r TEST_FILE; do
+            echo "── Running $TEST_FILE ──"
+            pnpm exec node --test \
+              --test-timeout=120000 \
+              --test-force-exit \
+              "$TEST_FILE"
+          done < <(find tests api/__tests__ -type f -name '*.test.js' -print | sort)
 
   # ── 3. PRODUCTION BUILD ───────────────────────────────────────────────────
   # Vite config imports serverEnv and may connect to the database during build,
