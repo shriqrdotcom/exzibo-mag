@@ -370,12 +370,17 @@ jobs:
       - name: Frozen Worker dependency install
         # exzibo-realtime has its own package-lock.json, so npm is the canonical
         # package manager here. pnpm is not used for this subdirectory.
-        # npm ci and npm install both fail on GitHub Actions with Node 22 because
-        # of the npm/cli "Exit handler never called!" crash. Skipping lifecycle
-        # scripts avoids the crash while still installing the exact versions from
-        # the lockfile. The lockfile is then verified unchanged.
+        # The committed lockfile was generated through Replit's package proxy,
+        # so its resolved URLs are not reachable from GitHub-hosted runners.
+        # Rewrite only a temporary copy to the public npm registry, install the
+        # exact locked versions, then restore and verify the committed lockfile.
         run: |
-          npm install --ignore-scripts --prefer-offline --no-audit --no-fund
+          cp package-lock.json package-lock.json.ci-backup
+          trap 'mv -f package-lock.json.ci-backup package-lock.json' EXIT
+          sed -i 's#http://package-firewall\.replit\.local/npm/#https://registry.npmjs.org/#g' package-lock.json
+          npm ci --ignore-scripts --no-audit --no-fund
+          trap - EXIT
+          mv -f package-lock.json.ci-backup package-lock.json
           git diff --exit-code package-lock.json
 
       - name: Worker TypeScript check
