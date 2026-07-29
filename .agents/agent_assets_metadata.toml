@@ -24,3 +24,9 @@ id = "FYLmWHQACaW4AVU8i__hf"
 uri = "file://docs/pre-merge-audit-report.pdf"
 type = "pdf"
 title = "Pre-Merge Audit Report — EXZIBO Vercel Serverless Functions (PDF)"
+
+[[outputs]]
+id = "OekUI-vfvKBTySYNr0n2O"
+uri = "file://attached_assets/exzibo-vercel-serverless-architecture-audit.pdf"
+type = "pdf"
+title = "Exzibo Vercel Serverless Architecture Audit (PDF)"
