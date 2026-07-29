@@ -20,6 +20,8 @@
  */
 
 import { getSessionEmail } from '../_lib/authz.js'
+import { vercelWrapper } from '../_lib/security-middleware.js'
+import { sendSafeError } from '../_lib/errors.js'
 import pg from 'pg'
 
 const { Pool } = pg
@@ -47,7 +49,7 @@ function getPool() {
 }
 
 // ── Handler ──────────────────────────────────────────────────────────────────
-export default async function handler(req, res) {
+export default vercelWrapper(async function handler(req, res) {
   // Always prevent caching of auth responses.
   res.setHeader('Cache-Control', 'no-store')
   res.setHeader('Content-Type', 'application/json')
@@ -65,12 +67,16 @@ export default async function handler(req, res) {
   try {
     session = await getSessionEmail(req)
   } catch (err) {
-    console.error('[mobile/bootstrap] session error:', err.message)
-    return res.status(500).json({ error: 'Internal server error' })
+    throw err
   }
 
   if (!session) {
-    return res.status(401).json({ error: 'Not authenticated' })
+    return sendSafeError(res, {
+      status: 401,
+      code: 'UNAUTHORIZED',
+      message: 'Not authenticated',
+      requestId: req.requestId,
+    })
   }
 
   const { userId, email, user } = session
@@ -101,8 +107,7 @@ export default async function handler(req, res) {
     )
     rows = result.rows
   } catch (err) {
-    console.error('[mobile/bootstrap] DB error:', err.message)
-    return res.status(500).json({ error: 'Internal server error' })
+    throw err
   }
 
   // ── Build response ────────────────────────────────────────────────────────
@@ -125,4 +130,4 @@ export default async function handler(req, res) {
     },
     restaurants,
   })
-}
+}, { allowedMethods: ['GET'] })
