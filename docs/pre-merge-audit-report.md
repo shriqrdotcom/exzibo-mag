@@ -194,9 +194,9 @@ The single most serious finding is **not architectural but a security gap**: `ap
 - **Duplicate impl:** none found in `vite.config.js`/`server.js` audits — appears to be Vercel/production-only functionality (dev/prod parity gap, opposite direction of the others)
 
 #### 3.12 `api/system.js`
-- **Public paths / rewrites:** `/api/preview-login`, `/api/preview-verify`, `/api/restaurant-db/create`, `/api/restaurant-db/drop`, `/api/restaurant-db/list`
-- **Methods/actions:** `POST previewLogin`, `GET previewVerify`, `POST createRestaurantDb`, `POST dropRestaurantDb`, `GET listRestaurantDb`
-- **Frontend callers:** preview-mode login gate (Replit preview auth flow, `IS_PREVIEW` mode), restaurant creation/deletion flow (indirectly, via `src/lib/db.js` `createRestaurant`/`permanentDeleteRestaurant` which also call `/api/restaurant-db/create` and `/api/restaurant-db/drop`)
+- **Public paths / rewrites (historical snapshot):** `/api/preview-login`, `/api/preview-verify`; the legacy `/api/restaurant-db/*` rewrites described in this report have since been retired.
+- **Methods/actions (historical snapshot):** `POST previewLogin`, `GET previewVerify`; the runtime database provisioning actions have since been removed.
+- **Frontend callers:** preview-mode login gate (Replit preview auth flow, `IS_PREVIEW` mode). No active frontend caller depends on the retired restaurant database provisioning routes.
 - **DB tables:** `public.restaurant_databases`, and dynamically-created per-restaurant schemas `r_{shortId}` containing `orders`, `bookings`, `menu_categories`, `menu_items`
 - **Shared helpers:** `bcrypt` (password hash compare), `crypto.createHmac` (token signing) — both self-contained, not shared with Better Auth
 - **Env vars:** `PREVIEW_EMAIL`, `PREVIEW_PASSWORD_HASH`, `PREVIEW_SECRET`, `REPL_ID` (HMAC secret fallback), `DATABASE_URL`

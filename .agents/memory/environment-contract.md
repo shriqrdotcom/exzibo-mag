@@ -38,6 +38,18 @@ Only `VITE_*` variables reach the browser. The allowed public variables are `VIT
 
 **Why:** Secrets in client bundles are leaked to anyone who opens the app.
 
+## Canonical URL aliases
+
+`BETTER_AUTH_BASE_URL` and `R2_PUBLIC_BASE_URL` are the canonical server-side
+names. `BETTER_AUTH_URL` and `R2_PUBLIC_URL` are temporary compatibility aliases:
+they warn when used alone and fail validation when set to a conflicting value.
+
+**Why:** A single internal name prevents deployment drift while allowing older
+deployments to migrate without silently choosing the wrong URL.
+
+**How to apply:** Use the canonical names in new configuration and code; remove
+the aliases after all deployments have migrated.
+
 ## realtimeTicketService keeps request-time validation
 
 `validateRealtimeTicketConfig` is called inside `issueRealtimeTicket` rather than at module load.

@@ -42,6 +42,20 @@ function nonEmpty(value) {
   return typeof value === 'string' && value.trim().length > 0
 }
 
+function resolveCanonicalAlias(env, canonicalName, legacyName, fallback) {
+  const canonical = nonEmpty(env[canonicalName]) ? env[canonicalName].trim() : undefined
+  const legacy = nonEmpty(env[legacyName]) ? env[legacyName].trim() : undefined
+  if (canonical && legacy && canonical !== legacy) {
+    throw new ConfigError(`${canonicalName} and ${legacyName} must not contain conflicting values`)
+  }
+  if (!canonical && legacy) {
+    if (typeof console !== 'undefined' && typeof console.warn === 'function') {
+      console.warn(`[config] ${legacyName} is deprecated; use ${canonicalName}`)
+    }
+  }
+  return canonical || legacy || fallback
+}
+
 function requireNonEmpty(value, name, env) {
   if (!nonEmpty(value)) {
     throw new ConfigError(`${name} is required and must be a non-empty string`)
@@ -169,10 +183,12 @@ export function validateAuthConfig(env = process.env) {
   if (nonEmpty(authSecret) && authSecret.length < MIN_BETTER_AUTH_SECRET_LENGTH) {
     throw new ConfigError('BETTER_AUTH_SECRET must be at least 32 characters')
   }
-  const baseUrl =
-    env.BETTER_AUTH_BASE_URL ||
-    env.BETTER_AUTH_URL ||
-    'https://superadmin.exzibo.online'
+  const baseUrl = resolveCanonicalAlias(
+    env,
+    'BETTER_AUTH_BASE_URL',
+    'BETTER_AUTH_URL',
+    'https://superadmin.exzibo.online',
+  )
   requireUrl(baseUrl, 'BETTER_AUTH_BASE_URL', { httpsOnly: true })
   return {
     authSecret: nonEmpty(authSecret) ? authSecret : undefined,
@@ -231,9 +247,9 @@ export function validateR2Config(env = process.env, { required = true } = {}) {
   const accessKeyId = env.R2_ACCESS_KEY_ID
   const secretKey = env.R2_SECRET_ACCESS_KEY
   const bucket = env.R2_BUCKET_NAME
-  const publicBaseUrl = env.R2_PUBLIC_BASE_URL
-  const legacyPublicUrl = env.R2_PUBLIC_URL
-  const publicUrl = (publicBaseUrl || legacyPublicUrl || '').replace(/\/$/, '')
+  const publicBaseUrl = nonEmpty(env.R2_PUBLIC_BASE_URL) ? env.R2_PUBLIC_BASE_URL.trim() : undefined
+  const legacyPublicUrl = nonEmpty(env.R2_PUBLIC_URL) ? env.R2_PUBLIC_URL.trim() : undefined
+  const publicUrl = resolveCanonicalAlias(env, 'R2_PUBLIC_BASE_URL', 'R2_PUBLIC_URL', '').replace(/\/$/, '')
 
   const allPresent = nonEmpty(accountId) && nonEmpty(accessKeyId) && nonEmpty(secretKey) && nonEmpty(bucket) && nonEmpty(publicUrl)
   const anyPresent = nonEmpty(accountId) || nonEmpty(accessKeyId) || nonEmpty(secretKey) || nonEmpty(bucket) || nonEmpty(publicBaseUrl) || nonEmpty(legacyPublicUrl)
@@ -250,7 +266,7 @@ export function validateR2Config(env = process.env, { required = true } = {}) {
     r2AccessKeyId: accessKeyId || undefined,
     r2SecretKey: secretKey || undefined,
     r2Bucket: bucket || undefined,
-    r2PublicBaseUrl: publicBaseUrl || undefined,
+    r2PublicBaseUrl: publicUrl || undefined,
     r2LegacyPublicUrl: legacyPublicUrl || undefined,
     r2PublicUrl: publicUrl || undefined,
   }
