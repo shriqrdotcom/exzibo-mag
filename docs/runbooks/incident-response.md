@@ -535,7 +535,7 @@ Conduct a blameless post-incident review within 5 business days.
 
 #### Containment
 
-- **Misconfiguration:** Fix the BETTER_AUTH_TRUSTED_ORIGINS or BETTER_AUTH_BASE_URL and restart.
+   - **Misconfiguration:** Fix the BETTER_AUTH_TRUSTED_ORIGINS or canonical BETTER_AUTH_BASE_URL and restart. BETTER_AUTH_URL is only a temporary compatibility alias and must not conflict with it.
 - **Attack:** Apply rate limits at the CDN layer. Do not change application auth policy in response to an attack.
 
 #### Recovery

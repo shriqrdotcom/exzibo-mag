@@ -15,12 +15,6 @@ import { handleLiveness } from './_lib/health.js'
 //   liveness   — public; returns status, version, timestamp (no sensitive data)
 //   readiness  — protected (superadmin); returns bounded component statuses
 
-const REMOVED_ACTIONS = new Set([
-  'createRestaurantDb',
-  'dropRestaurantDb',
-  'listRestaurantDb',
-])
-
 // ── Shared validation definitions ────────────────────────────────────────────
 const vQueryAction = defineValidation('query', { action: { type: 'string', required: true } })
 
@@ -37,10 +31,6 @@ async function handler(req, res) {
   } catch (e) {
     return sendSafeError(res, { status: 400, code: 'BAD_REQUEST', message: 'action query param required', requestId })
   }
-  if (REMOVED_ACTIONS.has(action)) {
-    return sendSafeError(res, { status: 410, code: 'BAD_REQUEST', message: 'Runtime database provisioning has been removed', requestId })
-  }
-
   if (action === 'liveness') {
     setPublicCors(res)
     const result = handleLiveness()

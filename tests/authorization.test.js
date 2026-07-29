@@ -292,13 +292,10 @@ describe('B2 — admin read endpoints (auth enforcement in prod, bypassed in dev
 
 // ─── Section B3: Superadmin-only routes — no session → 401/403 ─────────────
 
-describe('B3 — superadmin-only routes (restaurant-db)', async () => {
+describe('B3 — superadmin-only routes', async () => {
   const devMode = process.env.DISABLE_AUTH === 'true' || process.env.VITE_DISABLE_AUTH === 'true'
 
   const SUPERADMIN_ROUTES = [
-    { label: 'GET /api/restaurant-db/list', method: 'GET', path: '/api/restaurant-db/list' },
-    { label: 'POST /api/restaurant-db/create', method: 'POST', path: '/api/restaurant-db/create' },
-    { label: 'POST /api/restaurant-db/drop', method: 'POST', path: '/api/restaurant-db/drop' },
     { label: 'POST /api/orders/auto-cleanup', method: 'POST', path: '/api/orders/auto-cleanup' },
   ]
 
@@ -358,10 +355,6 @@ describe('C — cross-restaurant isolation [BLOCKED: requires real test sessions
 
   it('admin cannot delete the last owner', () => {
     blockedMsg('last-owner protection: POST /api/team-members/shadow-delete returns 403')
-  })
-
-  it('non-superadmin cannot access restaurant-db routes even with valid session', () => {
-    blockedMsg('superadmin gate: regular member → GET /api/restaurant-db/list returns 403')
   })
 
   it('PATCH /api/neon/restaurant/:id requires membership (not just session)', () => {

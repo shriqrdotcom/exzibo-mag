@@ -134,15 +134,16 @@ export async function r2Upload(buffer, objectKey, contentType = 'image/webp') {
 /**
  * Derive the R2 object key from a public R2 URL.
  * Returns null if the URL is not an R2 URL (e.g. it's a Supabase URL).
- * Recognises both the custom domain (R2_PUBLIC_BASE_URL / images.exzibo.online)
- * and the legacy pub-xxx.r2.dev URL (R2_PUBLIC_URL).
+ * Recognises the canonical custom domain (R2_PUBLIC_BASE_URL) and the legacy
+ * pub-xxx.r2.dev URL. R2_PUBLIC_URL remains a temporary server-side alias for
+ * deployments that have not migrated yet.
  *
  * @param {string|null} url
  * @returns {string|null}
  */
 export function r2KeyFromUrl(url) {
   if (!url) return null
-  const customBase = (process.env.R2_PUBLIC_BASE_URL || 'https://images.exzibo.online').replace(/\/$/, '')
+  const customBase = (process.env.R2_PUBLIC_BASE_URL || process.env.R2_PUBLIC_URL || 'https://images.exzibo.online').replace(/\/$/, '')
   const legacyBase = (process.env.R2_PUBLIC_URL || '').replace(/\/$/, '')
   if (customBase && url.startsWith(customBase + '/')) return url.slice(customBase.length + 1)
   if (legacyBase && url.startsWith(legacyBase + '/')) return url.slice(legacyBase.length + 1)
