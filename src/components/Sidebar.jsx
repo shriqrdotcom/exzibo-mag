@@ -39,23 +39,23 @@ export default function Sidebar() {
 
   return (
     <aside style={{
-      width: '270px',
-      minWidth: '270px',
+      width: '256px',
+      minWidth: '256px',
       height: '100vh',
-      background: '#0e0e0e',
-      borderRight: '1px solid rgba(255,255,255,0.05)',
+      background: '#111111',
+      borderRight: '1px solid rgba(255,255,255,0.04)',
       display: 'flex',
       flexDirection: 'column',
-      padding: '28px 16px',
+      padding: '24px 12px',
       position: 'sticky',
       top: 0,
     }}>
       {/* Logo */}
-      <div style={{ marginBottom: '40px', paddingLeft: '8px' }}>
-        <div style={{ fontSize: '20px', fontWeight: 900, letterSpacing: '0.05em', color: '#fff' }}>
+      <div style={{ marginBottom: '36px', paddingLeft: '12px' }}>
+        <div style={{ fontSize: '18px', fontWeight: 900, letterSpacing: '0.06em', color: '#fff' }}>
           EXZI<span style={{ color: '#E8321A' }}>BO</span>
         </div>
-        <div style={{ fontSize: '10px', fontWeight: 500, letterSpacing: '0.2em', color: '#555', marginTop: '4px', textTransform: 'uppercase' }}>
+        <div style={{ fontSize: '9px', fontWeight: 600, letterSpacing: '0.22em', color: '#444', marginTop: '3px', textTransform: 'uppercase' }}>
           Premium Management
         </div>
       </div>
@@ -71,35 +71,34 @@ export default function Sidebar() {
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '12px',
-                  padding: '12px 16px',
-                  borderRadius: '12px',
-                  background: isActive ? '#fff' : 'transparent',
-                  border: isActive ? 'none' : '1px solid rgba(255,255,255,0.06)',
-                  color: isActive ? '#111' : '#888',
-                  fontSize: '14px',
-                  fontWeight: isActive ? 600 : 500,
+                  gap: '10px',
+                  padding: '10px 14px',
+                  borderRadius: '10px',
+                  background: isActive ? 'rgba(255,255,255,0.07)' : 'transparent',
+                  border: 'none',
+                  borderLeft: isActive ? '2px solid #E8321A' : '2px solid transparent',
+                  color: isActive ? '#fff' : '#555',
+                  fontSize: '13px',
+                  fontWeight: isActive ? 600 : 400,
                   cursor: 'pointer',
-                  transition: 'all 0.2s ease',
+                  transition: 'all 0.15s ease',
                   textAlign: 'left',
                   width: '100%',
                 }}
                 onMouseEnter={e => {
                   if (!isActive) {
                     e.currentTarget.style.background = 'rgba(255,255,255,0.04)'
-                    e.currentTarget.style.color = '#fff'
-                    e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'
+                    e.currentTarget.style.color = '#aaa'
                   }
                 }}
                 onMouseLeave={e => {
                   if (!isActive) {
                     e.currentTarget.style.background = 'transparent'
-                    e.currentTarget.style.color = '#888'
-                    e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)'
+                    e.currentTarget.style.color = '#555'
                   }
                 }}
               >
-                <Icon size={18} />
+                <Icon size={16} />
                 {label}
               </button>
             </PermissionGate>
@@ -112,35 +111,34 @@ export default function Sidebar() {
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '12px',
-            padding: '12px 16px',
-            borderRadius: '12px',
-            background: isDemoActive ? '#E8321A' : 'transparent',
-            border: isDemoActive ? 'none' : '1px solid rgba(255,255,255,0.06)',
-            color: isDemoActive ? '#fff' : '#888',
-            fontSize: '14px',
-            fontWeight: isDemoActive ? 600 : 500,
+            gap: '10px',
+            padding: '10px 14px',
+            borderRadius: '10px',
+            background: isDemoActive ? 'rgba(232,50,26,0.12)' : 'transparent',
+            border: 'none',
+            borderLeft: isDemoActive ? '2px solid #E8321A' : '2px solid transparent',
+            color: isDemoActive ? '#E8321A' : '#555',
+            fontSize: '13px',
+            fontWeight: isDemoActive ? 600 : 400,
             cursor: 'pointer',
-            transition: 'all 0.2s ease',
+            transition: 'all 0.15s ease',
             textAlign: 'left',
             width: '100%',
           }}
           onMouseEnter={e => {
             if (!isDemoActive) {
               e.currentTarget.style.background = 'rgba(255,255,255,0.04)'
-              e.currentTarget.style.color = '#fff'
-              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'
+              e.currentTarget.style.color = '#aaa'
             }
           }}
           onMouseLeave={e => {
             if (!isDemoActive) {
               e.currentTarget.style.background = 'transparent'
-              e.currentTarget.style.color = '#888'
-              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)'
+              e.currentTarget.style.color = '#555'
             }
           }}
         >
-          <Play size={18} />
+          <Play size={16} />
           DEMO
         </button>
 
@@ -150,35 +148,34 @@ export default function Sidebar() {
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '12px',
-            padding: '12px 16px',
-            borderRadius: '12px',
-            background: isCompressorActive ? '#E8321A' : 'transparent',
-            border: isCompressorActive ? 'none' : '1px solid rgba(255,255,255,0.06)',
-            color: isCompressorActive ? '#fff' : '#888',
-            fontSize: '14px',
-            fontWeight: isCompressorActive ? 600 : 500,
+            gap: '10px',
+            padding: '10px 14px',
+            borderRadius: '10px',
+            background: isCompressorActive ? 'rgba(232,50,26,0.12)' : 'transparent',
+            border: 'none',
+            borderLeft: isCompressorActive ? '2px solid #E8321A' : '2px solid transparent',
+            color: isCompressorActive ? '#E8321A' : '#555',
+            fontSize: '13px',
+            fontWeight: isCompressorActive ? 600 : 400,
             cursor: 'pointer',
-            transition: 'all 0.2s ease',
+            transition: 'all 0.15s ease',
             textAlign: 'left',
             width: '100%',
           }}
           onMouseEnter={e => {
             if (!isCompressorActive) {
               e.currentTarget.style.background = 'rgba(255,255,255,0.04)'
-              e.currentTarget.style.color = '#fff'
-              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'
+              e.currentTarget.style.color = '#aaa'
             }
           }}
           onMouseLeave={e => {
             if (!isCompressorActive) {
               e.currentTarget.style.background = 'transparent'
-              e.currentTarget.style.color = '#888'
-              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)'
+              e.currentTarget.style.color = '#555'
             }
           }}
         >
-          <ImageDown size={18} />
+          <ImageDown size={16} />
           Image Compressor
         </button>
 
@@ -188,16 +185,17 @@ export default function Sidebar() {
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '12px',
-            padding: '12px 16px',
-            borderRadius: '12px',
-            background: notifActive ? '#E8321A' : 'transparent',
-            border: notifActive ? 'none' : '1px solid rgba(255,255,255,0.06)',
-            color: notifActive ? '#fff' : '#888',
-            fontSize: '14px',
-            fontWeight: notifActive ? 600 : 500,
+            gap: '10px',
+            padding: '10px 14px',
+            borderRadius: '10px',
+            background: notifActive ? 'rgba(232,50,26,0.12)' : 'transparent',
+            border: 'none',
+            borderLeft: notifActive ? '2px solid #E8321A' : '2px solid transparent',
+            color: notifActive ? '#E8321A' : '#555',
+            fontSize: '13px',
+            fontWeight: notifActive ? 600 : 400,
             cursor: 'pointer',
-            transition: 'all 0.2s ease',
+            transition: 'all 0.15s ease',
             textAlign: 'left',
             width: '100%',
             position: 'relative',
@@ -205,15 +203,13 @@ export default function Sidebar() {
           onMouseEnter={e => {
             if (!notifActive) {
               e.currentTarget.style.background = 'rgba(255,255,255,0.04)'
-              e.currentTarget.style.color = '#fff'
-              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'
+              e.currentTarget.style.color = '#aaa'
             }
           }}
           onMouseLeave={e => {
             if (!notifActive) {
               e.currentTarget.style.background = 'transparent'
-              e.currentTarget.style.color = '#888'
-              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)'
+              e.currentTarget.style.color = '#555'
             }
           }}
         >
@@ -265,38 +261,18 @@ export default function Sidebar() {
             <button
               onClick={() => navigate('/deleted-restaurants')}
               style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-                padding: '12px 16px',
-                borderRadius: '12px',
-                background: isActive ? '#E8321A' : 'transparent',
-                border: isActive ? 'none' : '1px solid rgba(255,255,255,0.06)',
-                color: isActive ? '#fff' : '#888',
-                fontSize: '14px',
-                fontWeight: isActive ? 600 : 500,
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                textAlign: 'left',
-                width: '100%',
+                display: 'flex', alignItems: 'center', gap: '10px',
+                padding: '10px 14px', borderRadius: '10px',
+                background: isActive ? 'rgba(232,50,26,0.12)' : 'transparent',
+                border: 'none', borderLeft: isActive ? '2px solid #E8321A' : '2px solid transparent',
+                color: isActive ? '#E8321A' : '#555', fontSize: '13px',
+                fontWeight: isActive ? 600 : 400, cursor: 'pointer',
+                transition: 'all 0.15s ease', textAlign: 'left', width: '100%',
               }}
-              onMouseEnter={e => {
-                if (!isActive) {
-                  e.currentTarget.style.background = 'rgba(255,255,255,0.04)'
-                  e.currentTarget.style.color = '#fff'
-                  e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'
-                }
-              }}
-              onMouseLeave={e => {
-                if (!isActive) {
-                  e.currentTarget.style.background = 'transparent'
-                  e.currentTarget.style.color = '#888'
-                  e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)'
-                }
-              }}
+              onMouseEnter={e => { if (!isActive) { e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; e.currentTarget.style.color = '#aaa' } }}
+              onMouseLeave={e => { if (!isActive) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#555' } }}
             >
-              <Trash2 size={18} />
-              Deleted
+              <Trash2 size={16} />Deleted
             </button>
           )
         })()}
@@ -308,38 +284,18 @@ export default function Sidebar() {
             <button
               onClick={() => navigate('/dynamic-route')}
               style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-                padding: '12px 16px',
-                borderRadius: '12px',
-                background: isActive ? '#E8321A' : 'transparent',
-                border: isActive ? 'none' : '1px solid rgba(255,255,255,0.06)',
-                color: isActive ? '#fff' : '#888',
-                fontSize: '14px',
-                fontWeight: isActive ? 600 : 500,
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                textAlign: 'left',
-                width: '100%',
+                display: 'flex', alignItems: 'center', gap: '10px',
+                padding: '10px 14px', borderRadius: '10px',
+                background: isActive ? 'rgba(232,50,26,0.12)' : 'transparent',
+                border: 'none', borderLeft: isActive ? '2px solid #E8321A' : '2px solid transparent',
+                color: isActive ? '#E8321A' : '#555', fontSize: '13px',
+                fontWeight: isActive ? 600 : 400, cursor: 'pointer',
+                transition: 'all 0.15s ease', textAlign: 'left', width: '100%',
               }}
-              onMouseEnter={e => {
-                if (!isActive) {
-                  e.currentTarget.style.background = 'rgba(255,255,255,0.04)'
-                  e.currentTarget.style.color = '#fff'
-                  e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'
-                }
-              }}
-              onMouseLeave={e => {
-                if (!isActive) {
-                  e.currentTarget.style.background = 'transparent'
-                  e.currentTarget.style.color = '#888'
-                  e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)'
-                }
-              }}
+              onMouseEnter={e => { if (!isActive) { e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; e.currentTarget.style.color = '#aaa' } }}
+              onMouseLeave={e => { if (!isActive) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#555' } }}
             >
-              <Route size={18} />
-              Dynamic Route
+              <Route size={16} />Dynamic Route
             </button>
           )
         })()}
@@ -351,38 +307,18 @@ export default function Sidebar() {
             <button
               onClick={() => navigate('/add-role')}
               style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-                padding: '12px 16px',
-                borderRadius: '12px',
-                background: isActive ? '#E8321A' : 'transparent',
-                border: isActive ? 'none' : '1px solid rgba(255,255,255,0.06)',
-                color: isActive ? '#fff' : '#888',
-                fontSize: '14px',
-                fontWeight: isActive ? 600 : 500,
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                textAlign: 'left',
-                width: '100%',
+                display: 'flex', alignItems: 'center', gap: '10px',
+                padding: '10px 14px', borderRadius: '10px',
+                background: isActive ? 'rgba(232,50,26,0.12)' : 'transparent',
+                border: 'none', borderLeft: isActive ? '2px solid #E8321A' : '2px solid transparent',
+                color: isActive ? '#E8321A' : '#555', fontSize: '13px',
+                fontWeight: isActive ? 600 : 400, cursor: 'pointer',
+                transition: 'all 0.15s ease', textAlign: 'left', width: '100%',
               }}
-              onMouseEnter={e => {
-                if (!isActive) {
-                  e.currentTarget.style.background = 'rgba(255,255,255,0.04)'
-                  e.currentTarget.style.color = '#fff'
-                  e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'
-                }
-              }}
-              onMouseLeave={e => {
-                if (!isActive) {
-                  e.currentTarget.style.background = 'transparent'
-                  e.currentTarget.style.color = '#888'
-                  e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)'
-                }
-              }}
+              onMouseEnter={e => { if (!isActive) { e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; e.currentTarget.style.color = '#aaa' } }}
+              onMouseLeave={e => { if (!isActive) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#555' } }}
             >
-              <ShieldPlus size={18} />
-              Add Role
+              <ShieldPlus size={16} />Add Role
             </button>
           )
         })()}
@@ -394,62 +330,35 @@ export default function Sidebar() {
             <button
               onClick={() => navigate('/order-time')}
               style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-                padding: '12px 16px',
-                borderRadius: '12px',
-                background: isActive ? '#E8321A' : 'transparent',
-                border: isActive ? 'none' : '1px solid rgba(255,255,255,0.06)',
-                color: isActive ? '#fff' : '#888',
-                fontSize: '14px',
-                fontWeight: isActive ? 600 : 500,
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                textAlign: 'left',
-                width: '100%',
+                display: 'flex', alignItems: 'center', gap: '10px',
+                padding: '10px 14px', borderRadius: '10px',
+                background: isActive ? 'rgba(232,50,26,0.12)' : 'transparent',
+                border: 'none', borderLeft: isActive ? '2px solid #E8321A' : '2px solid transparent',
+                color: isActive ? '#E8321A' : '#555', fontSize: '13px',
+                fontWeight: isActive ? 600 : 400, cursor: 'pointer',
+                transition: 'all 0.15s ease', textAlign: 'left', width: '100%',
               }}
-              onMouseEnter={e => {
-                if (!isActive) {
-                  e.currentTarget.style.background = 'rgba(255,255,255,0.04)'
-                  e.currentTarget.style.color = '#fff'
-                  e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'
-                }
-              }}
-              onMouseLeave={e => {
-                if (!isActive) {
-                  e.currentTarget.style.background = 'transparent'
-                  e.currentTarget.style.color = '#888'
-                  e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)'
-                }
-              }}
+              onMouseEnter={e => { if (!isActive) { e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; e.currentTarget.style.color = '#aaa' } }}
+              onMouseLeave={e => { if (!isActive) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#555' } }}
             >
-              <Clock size={18} />
-              Order Time
+              <Clock size={16} />Order Time
             </button>
           )
         })()}
 
         {/* ── INFORMATION section ── */}
-        <div style={{ marginTop: '10px' }}>
+        <div style={{ marginTop: '12px' }}>
           <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '10px',
-            padding: '10px 8px 6px',
+            display: 'flex', alignItems: 'center', gap: '10px',
+            padding: '8px 14px 6px',
           }}>
-            <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.06)' }} />
+            <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.04)' }} />
             <span style={{
-              fontSize: '9px',
-              fontWeight: 700,
-              letterSpacing: '0.18em',
-              color: '#444',
-              textTransform: 'uppercase',
-              whiteSpace: 'nowrap',
-            }}>
-              Information
-            </span>
-            <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.06)' }} />
+              fontSize: '9px', fontWeight: 700,
+              letterSpacing: '0.18em', color: '#333',
+              textTransform: 'uppercase', whiteSpace: 'nowrap',
+            }}>Information</span>
+            <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.04)' }} />
           </div>
 
           {/* Information nav button */}
@@ -459,38 +368,18 @@ export default function Sidebar() {
               <button
                 onClick={() => navigate('/information')}
                 style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '12px',
-                  padding: '12px 16px',
-                  borderRadius: '12px',
-                  background: isActive ? '#E8321A' : 'transparent',
-                  border: isActive ? 'none' : '1px solid rgba(255,255,255,0.06)',
-                  color: isActive ? '#fff' : '#888',
-                  fontSize: '14px',
-                  fontWeight: isActive ? 600 : 500,
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  textAlign: 'left',
-                  width: '100%',
+                  display: 'flex', alignItems: 'center', gap: '10px',
+                  padding: '10px 14px', borderRadius: '10px',
+                  background: isActive ? 'rgba(232,50,26,0.12)' : 'transparent',
+                  border: 'none', borderLeft: isActive ? '2px solid #E8321A' : '2px solid transparent',
+                  color: isActive ? '#E8321A' : '#555', fontSize: '13px',
+                  fontWeight: isActive ? 600 : 400, cursor: 'pointer',
+                  transition: 'all 0.15s ease', textAlign: 'left', width: '100%',
                 }}
-                onMouseEnter={e => {
-                  if (!isActive) {
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.04)'
-                    e.currentTarget.style.color = '#fff'
-                    e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'
-                  }
-                }}
-                onMouseLeave={e => {
-                  if (!isActive) {
-                    e.currentTarget.style.background = 'transparent'
-                    e.currentTarget.style.color = '#888'
-                    e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)'
-                  }
-                }}
+                onMouseEnter={e => { if (!isActive) { e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; e.currentTarget.style.color = '#aaa' } }}
+                onMouseLeave={e => { if (!isActive) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#555' } }}
               >
-                <Info size={18} />
-                Information
+                <Info size={16} />Information
               </button>
             )
           })()}
@@ -505,29 +394,31 @@ export default function Sidebar() {
           alignItems: 'center',
           justifyContent: 'center',
           gap: '8px',
-          padding: '13px',
-          borderRadius: '50px',
-          background: 'transparent',
-          border: '1px solid rgba(255,255,255,0.12)',
-          color: '#fff',
-          fontSize: '13px',
-          fontWeight: 600,
-          letterSpacing: '0.05em',
+          padding: '11px',
+          borderRadius: '10px',
+          background: 'rgba(232,50,26,0.1)',
+          border: '1px solid rgba(232,50,26,0.2)',
+          color: '#E8321A',
+          fontSize: '12px',
+          fontWeight: 700,
+          letterSpacing: '0.08em',
           cursor: 'pointer',
           transition: 'all 0.2s ease',
         }}
         onMouseEnter={e => {
           e.currentTarget.style.background = '#E8321A'
           e.currentTarget.style.borderColor = '#E8321A'
-          e.currentTarget.style.boxShadow = '0 0 20px rgba(232,50,26,0.4)'
+          e.currentTarget.style.color = '#fff'
+          e.currentTarget.style.boxShadow = '0 0 20px rgba(232,50,26,0.3)'
         }}
         onMouseLeave={e => {
-          e.currentTarget.style.background = 'transparent'
-          e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)'
+          e.currentTarget.style.background = 'rgba(232,50,26,0.1)'
+          e.currentTarget.style.borderColor = 'rgba(232,50,26,0.2)'
+          e.currentTarget.style.color = '#E8321A'
           e.currentTarget.style.boxShadow = 'none'
         }}
       >
-        <Zap size={15} />
+        <Zap size={14} />
         GO LIVE
       </button>
     </aside>

@@ -174,30 +174,30 @@ function DashboardSkeleton() {
       `}</style>
 
       {/* ── KPI cards row ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '16px', marginBottom: '32px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '16px', marginBottom: '28px' }}>
         {/* Card 1 — large */}
-        <div style={{ background: '#111', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '20px', padding: '28px' }}>
-          <div className="dsk" style={{ width: '140px', height: '11px', marginBottom: '20px' }} />
-          <div className="dsk" style={{ width: '90px', height: '48px', borderRadius: '10px' }} />
+        <div style={{ background: '#161616', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '16px', padding: '24px 28px' }}>
+          <div className="dsk" style={{ width: '140px', height: '10px', marginBottom: '20px' }} />
+          <div className="dsk" style={{ width: '90px', height: '44px', borderRadius: '10px' }} />
         </div>
         {/* Card 2 */}
-        <div style={{ background: '#111', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '20px', padding: '28px' }}>
+        <div style={{ background: '#161616', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '16px', padding: '24px 28px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-            <div className="dsk" style={{ width: '110px', height: '11px' }} />
-            <div className="dsk" style={{ width: '70px', height: '26px', borderRadius: '6px' }} />
+            <div className="dsk" style={{ width: '110px', height: '10px' }} />
+            <div className="dsk" style={{ width: '70px', height: '24px', borderRadius: '6px' }} />
           </div>
-          <div className="dsk" style={{ width: '100px', height: '48px', borderRadius: '10px' }} />
+          <div className="dsk" style={{ width: '100px', height: '44px', borderRadius: '10px' }} />
         </div>
         {/* Card 3 */}
-        <div style={{ background: '#111', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '20px', padding: '28px' }}>
-          <div className="dsk" style={{ width: '130px', height: '11px', marginBottom: '12px' }} />
-          <div className="dsk" style={{ width: '60px', height: '11px', marginBottom: '16px' }} />
-          <div className="dsk" style={{ width: '80px', height: '48px', borderRadius: '10px' }} />
+        <div style={{ background: '#161616', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '16px', padding: '24px 28px' }}>
+          <div className="dsk" style={{ width: '130px', height: '10px', marginBottom: '12px' }} />
+          <div className="dsk" style={{ width: '60px', height: '10px', marginBottom: '16px' }} />
+          <div className="dsk" style={{ width: '80px', height: '44px', borderRadius: '10px' }} />
         </div>
       </div>
 
       {/* ── Table area ── */}
-      <div style={{ background: '#111', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '20px', overflow: 'hidden' }}>
+      <div style={{ background: '#161616', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '16px', overflow: 'hidden' }}>
         {/* Table header bar */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '24px 28px' }}>
           <div className="dsk" style={{ width: '180px', height: '18px', borderRadius: '6px' }} />
@@ -429,11 +429,11 @@ export default function Dashboard() {
   })()
 
   return (
-    <div style={{ display: 'flex', height: '100vh', background: '#0A0A0A', overflow: 'hidden' }}>
+    <div style={{ display: 'flex', height: '100vh', background: '#0d0d0d', overflow: 'hidden' }}>
       <Sidebar />
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <AdminHeader />
-        <main style={{ flex: 1, overflowY: 'auto', padding: '32px' }}>
+        <main style={{ flex: 1, overflowY: 'auto', padding: '28px 32px' }}>
           {loading && !activeSection ? (
             <DashboardSkeleton />
           ) : activeSection === 'image-compressor' ? (
@@ -446,20 +446,20 @@ export default function Dashboard() {
             />
           ) : (
           <>
-          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '16px', marginBottom: '32px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '14px', marginBottom: '24px' }}>
             <KPICard
               label="ACTIVE OPERATIONS"
               value={restaurants.filter(r => r.status === 'RUNNING' || r.status === 'PAUSED').length.toLocaleString('en-IN')}
             />
             <div style={{
-              background: '#111',
+              background: '#161616',
               border: '1px solid rgba(255,255,255,0.06)',
-              borderRadius: '20px',
-              padding: '28px',
+              borderRadius: '16px',
+              padding: '24px 28px',
               position: 'relative',
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-                <div style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.1em', color: '#555', textTransform: 'uppercase' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+                <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', color: '#444', textTransform: 'uppercase' }}>
                   TOTAL REVENUE
                 </div>
                 <button
@@ -481,21 +481,21 @@ export default function Dashboard() {
                 </button>
               </div>
               <div style={{ display: 'flex', alignItems: 'flex-end', gap: '14px' }}>
-                <span style={{ fontSize: '42px', fontWeight: 800, lineHeight: 1, letterSpacing: '-0.02em' }}>
+                <span style={{ fontSize: '40px', fontWeight: 700, lineHeight: 1, letterSpacing: '-0.02em', color: '#fff' }}>
                   {formatRevenue(currentMonthRevenue)}
                 </span>
               </div>
             </div>
             <div style={{
-              background: '#111',
+              background: '#161616',
               border: '1px solid rgba(255,255,255,0.06)',
-              borderRadius: '20px',
-              padding: '28px',
+              borderRadius: '16px',
+              padding: '24px 28px',
             }}>
-              <div style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.1em', color: '#555', marginBottom: '16px', textTransform: 'uppercase' }}>
+              <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', color: '#444', marginBottom: '20px', textTransform: 'uppercase' }}>
                 NEW RESTAURANTS
               </div>
-              <div style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.1em', color: '#555', marginBottom: '8px', textTransform: 'uppercase' }}>
+              <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', color: '#444', marginBottom: '8px', textTransform: 'uppercase' }}>
                 {currentMonthAbbr}
               </div>
               {monthRestaurantCount === null ? (
@@ -515,18 +515,19 @@ export default function Dashboard() {
           </div>
 
           <div style={{
-            background: '#111',
+            background: '#161616',
             border: '1px solid rgba(255,255,255,0.06)',
-            borderRadius: '20px',
+            borderRadius: '16px',
             overflow: 'hidden',
           }}>
             <div style={{
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              padding: '24px 28px',
+              padding: '20px 28px',
+              borderBottom: '1px solid rgba(255,255,255,0.05)',
             }}>
-              <h2 style={{ fontSize: '18px', fontWeight: 700 }}>List of Active Users</h2>
+              <h2 style={{ fontSize: '15px', fontWeight: 600, color: '#fff', letterSpacing: '-0.01em' }}>List of Active Users</h2>
               <div style={{ display: 'flex', gap: '10px' }}>
                 <IconBtn icon={<Filter size={14} />} label="FILTER" />
                 <IconBtn icon={<Download size={14} />} label="EXPORT" />
@@ -1188,21 +1189,21 @@ export default function Dashboard() {
 function KPICard({ label, value, badge, badgeIcon }) {
   return (
     <div style={{
-      background: '#111',
+      background: '#161616',
       border: '1px solid rgba(255,255,255,0.06)',
-      borderRadius: '20px',
-      padding: '28px',
+      borderRadius: '16px',
+      padding: '24px 28px',
     }}>
-      <div style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.1em', color: '#555', marginBottom: '16px', textTransform: 'uppercase' }}>
+      <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', color: '#444', marginBottom: '20px', textTransform: 'uppercase' }}>
         {label}
       </div>
       <div style={{ display: 'flex', alignItems: 'flex-end', gap: '14px' }}>
-        <span style={{ fontSize: '42px', fontWeight: 800, lineHeight: 1, letterSpacing: '-0.02em' }}>{value}</span>
+        <span style={{ fontSize: '40px', fontWeight: 700, lineHeight: 1, letterSpacing: '-0.02em', color: '#fff' }}>{value}</span>
         {badge && (
           <span style={{
             display: 'flex', alignItems: 'center', gap: '4px',
-            background: 'rgba(232,50,26,0.15)',
-            border: '1px solid rgba(232,50,26,0.2)',
+            background: 'rgba(232,50,26,0.12)',
+            border: '1px solid rgba(232,50,26,0.18)',
             borderRadius: '50px',
             padding: '4px 10px',
             fontSize: '11px', fontWeight: 700, color: '#E8321A',
