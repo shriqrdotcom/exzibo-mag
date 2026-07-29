@@ -7,14 +7,30 @@ import { setCurrentAuthUser } from '../lib/current-user'
 
 const AuthContext = createContext(null)
 
+// Dev-only mock superadmin — only active when VITE_DISABLE_AUTH=true (set in
+// .replit [userenv.development]). Vite strips this from production builds.
+const DISABLE_AUTH = import.meta.env.VITE_DISABLE_AUTH === 'true'
+const DEV_MOCK_USER = DISABLE_AUTH ? {
+  id: '00000000-0000-0000-0000-000000000001',
+  email: 'dev@exzibo.local',
+  name: 'Dev SuperAdmin',
+  emailVerified: true,
+} : null
+
 export function AuthProvider({ children }) {
-  const [user, setUser]                 = useState(null)
-  const [loading, setLoading]           = useState(true)
+  const [user, setUser]                 = useState(DISABLE_AUTH ? DEV_MOCK_USER : null)
+  const [loading, setLoading]           = useState(!DISABLE_AUTH)
   const [accessDenied, setAccessDenied] = useState(false)
   const [deniedEmail, setDeniedEmail]   = useState(null)
-  const [isSuperAdmin, setIsSuperAdmin] = useState(false)
+  const [isSuperAdmin, setIsSuperAdmin] = useState(DISABLE_AUTH)
 
   useEffect(() => {
+    // ── Dev bypass — VITE_DISABLE_AUTH=true (Replit dev only) ────────────
+    if (DISABLE_AUTH) {
+      setCurrentAuthUser(DEV_MOCK_USER)
+      return
+    }
+
     // ── Preview mode — bypass Better Auth, use local session token ────────
     if (IS_PREVIEW) {
       verifyPreviewSession().then(previewUser => {
