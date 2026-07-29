@@ -27,6 +27,7 @@ import {
   deleteNeonRestaurantMemberSafe,
   countNeonActiveOwners,
 } from '../src/db/neon-restaurant-members.js'
+import { closePool } from '../src/db/pg-sql.js'
 
 // ── Two separate pools for concurrent connections ────────────────────────────
 const pool1 = new Pool({ connectionString: DATABASE_URL, max: 2 })
@@ -74,19 +75,26 @@ async function runConcurrentMutations(restaurantId, mutationASpec, mutationBSpec
   const clientA = await pool1.connect()
   const clientB = await pool2.connect()
 
-  // Barrier: both transactions must have locked the restaurant row before proceeding.
+  // Barrier: both transactions must have started before either tries to lock
+  // the restaurant row. The row lock intentionally serializes the mutations;
+  // placing the barrier after that lock would deadlock the first transaction
+  // while the second waits to reach the barrier.
   let barrierResolve
   const barrier = new Promise(resolve => { barrierResolve = resolve })
+  let readyCount = 0
+  function signalReady() {
+    readyCount += 1
+    if (readyCount === 2) barrierResolve()
+    return barrier
+  }
   let results = []
 
   // Mutation A
   const pA = (async () => {
     try {
       await clientA.query('BEGIN')
+      await signalReady()
       await clientA.query(`SELECT id FROM restaurants WHERE id = $1::uuid FOR UPDATE`, [restaurantId])
-      // Signal we're at the barrier, wait for both to arrive
-      barrierResolve()
-      await barrier
 
       // Lock target
       const { rows: [target] } = await clientA.query(
@@ -149,8 +157,8 @@ async function runConcurrentMutations(restaurantId, mutationASpec, mutationBSpec
   const pB = (async () => {
     try {
       await clientB.query('BEGIN')
+      await signalReady()
       await clientB.query(`SELECT id FROM restaurants WHERE id = $1::uuid FOR UPDATE`, [restaurantId])
-      await barrier  // Wait for A to also be at the barrier
 
       const { rows: [target] } = await clientB.query(
         `SELECT id, role, active FROM restaurant_members WHERE id = $1::uuid FOR UPDATE`,
@@ -564,4 +572,5 @@ describe('Tenant isolation', async () => {
 after(async () => {
   await pool1.end()
   await pool2.end()
+  await closePool(DATABASE_URL)
 })

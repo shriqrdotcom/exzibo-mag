@@ -272,7 +272,7 @@ describe('Server contract — api/team.js', () => {
     assert.ok(TEAM_JS.includes('action === \'create\'') ||
               TEAM_JS.includes("action === 'create'"),
       'Create action must still be supported')
-    assert.ok(TEAM_JS.includes('checkRestaurantAccess'),
+    assert.ok(TEAM_JS.includes('authorizeRestaurantAccess'),
       'Must use server-side authorization check')
     assert.ok(TEAM_JS.includes('executeTeamUpsert'),
       'Must use the canonical team service for creation')

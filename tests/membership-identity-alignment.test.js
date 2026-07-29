@@ -228,31 +228,33 @@ describe('A5 — mobile bootstrap source already uses the unified identity rule'
   })
 })
 
-// ── Section A6: team.js — server-side user_id resolution ─────────────────────
+// ── Section A6: canonical team service — server-side user_id resolution ──────
 
-describe('A6 — team.js strips caller-supplied identity and resolves server-side', async () => {
-  const src = await readSrc('api/team.js')
+describe('A6 — canonical team service strips caller-supplied identity', async () => {
+  const handlerSrc = await readSrc('api/team.js')
+  const serviceSrc = await readSrc('api/_lib/team-service.js')
+  const memberDbSrc = await readSrc('src/db/neon-restaurant-members.js')
 
-  it('lookupUserIdByEmail is imported', () => {
+  it('team.js delegates mutations to the canonical team service', () => {
     assert.ok(
-      src.includes('lookupUserIdByEmail'),
-      'api/team.js must import lookupUserIdByEmail'
+      handlerSrc.includes('executeTeamUpsert'),
+      'api/team.js must delegate team mutations to executeTeamUpsert'
     )
   })
 
-  it('resolvedUserId is assigned from lookupUserIdByEmail, not from member body', () => {
+  it('canonical team service uses the safe membership mutation helpers', () => {
     assert.ok(
-      src.includes('await lookupUserIdByEmail('),
-      'team.js must call lookupUserIdByEmail to resolve user_id server-side'
+      serviceSrc.includes('createNeonRestaurantMemberSafe') &&
+      serviceSrc.includes('updateNeonRestaurantMemberSafe'),
+      'team-service.js must use the safe membership mutation helpers'
     )
   })
 
-  it('caller-supplied member.user_id is never used directly', () => {
-    // upsertNeonRestaurantMember(restaurantId, member) is the OLD call (no resolvedUserId).
-    // New call must pass resolvedUserId as 3rd argument.
+  it('safe membership helpers resolve identity before upsert', () => {
     assert.ok(
-      src.includes('upsertNeonRestaurantMember(restaurantId, member, resolvedUserId)'),
-      'upsertNeonRestaurantMember must receive resolvedUserId, not member.user_id'
+      memberDbSrc.includes('await lookupUserIdByEmail(') &&
+      memberDbSrc.includes('upsertNeonRestaurantMember(restaurantId, member, resolvedUserId'),
+      'membership helpers must resolve user_id server-side before upsert'
     )
   })
 })

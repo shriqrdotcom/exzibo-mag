@@ -156,124 +156,84 @@ describe('Smoke runner', () => {
 
 describe('Release gates', async () => {
   const { evaluateReleaseGates } = await import('../config/release/release-gates.js')
+  const allPassingGates = {
+    'git-clean': true,
+    'sha-recorded': true,
+    'frozen-install': true,
+    'release-verifier': true,
+    'acceptance-tests': true,
+    'root-build': true,
+    'migration-tests': true,
+    'function-count': true,
+    'worker-validation': true,
+    'readiness-tests': true,
+    'monitoring-contract': true,
+    'recovery-runbook': true,
+    'rollback-runbook': true,
+    'canary-runbook': true,
+    'security-check': true,
+    'prompt-28': true,
+  }
 
   it('returns GO only when all gates including Prompt 28 pass', () => {
-    const allPassing = {
-      'git-clean': true,
-      'sha-recorded': true,
-      'frozen-install': true,
-      'release-verifier': true,
-      'acceptance-tests': true,
-      'root-build': true,
-      'migration-tests': true,
-      'function-count': true,
-      'worker-validation': true,
-      'readiness-tests': true,
-      'monitoring-contract': true,
-      'recovery-runbook': true,
-      'rollback-runbook': true,
-      'canary-runbook': true,
-      'security-check': true,
-      'prompt-28': true,
-    }
-    const evaluation = evaluateReleaseGates(allPassing)
+    const evaluation = evaluateReleaseGates(allPassingGates)
     assert.equal(evaluation.decision, 'GO')
     assert.equal(evaluation.failedGateIds.length, 0)
   })
 
   it('returns NO-GO when Prompt 28 is unresolved', () => {
-    const allPassing = {
-      'git-clean': true,
-      'sha-recorded': true,
-      'frozen-install': true,
-      'release-verifier': true,
-      'acceptance-tests': true,
-      'root-build': true,
-      'migration-tests': true,
-      'function-count': true,
-      'worker-validation': true,
-      'readiness-tests': true,
-      'monitoring-contract': true,
-      'recovery-runbook': true,
-      'rollback-runbook': true,
-      'canary-runbook': true,
-      'security-check': true,
-      'prompt-28': false,
-    }
-    const evaluation = evaluateReleaseGates(allPassing)
+    const evaluation = evaluateReleaseGates({ ...allPassingGates, 'prompt-28': false })
     assert.equal(evaluation.decision, 'NO-GO')
     assert.ok(evaluation.failedGateIds.includes('prompt-28'))
   })
 
   it('returns NO-GO when Git state is dirty', () => {
-    const evaluation = evaluateReleaseGates({
-      'git-clean': false,
-      'sha-recorded': true,
-      'prompt-28': true,
-    })
+    const evaluation = evaluateReleaseGates({ ...allPassingGates, 'git-clean': false })
     assert.equal(evaluation.decision, 'NO-GO')
     assert.ok(evaluation.failedGateIds.includes('git-clean'))
   })
 
   it('returns NO-GO when build fails', () => {
-    const evaluation = evaluateReleaseGates({
-      'root-build': false,
-      'prompt-28': true,
-    })
+    const evaluation = evaluateReleaseGates({ ...allPassingGates, 'root-build': false })
     assert.equal(evaluation.decision, 'NO-GO')
     assert.ok(evaluation.failedGateIds.includes('root-build'))
   })
 
   it('returns NO-GO when migration fails', () => {
-    const evaluation = evaluateReleaseGates({
-      'migration-tests': false,
-      'prompt-28': true,
-    })
+    const evaluation = evaluateReleaseGates({ ...allPassingGates, 'migration-tests': false })
     assert.equal(evaluation.decision, 'NO-GO')
     assert.ok(evaluation.failedGateIds.includes('migration-tests'))
   })
 
   it('returns NO-GO when function count is above 12', () => {
-    const evaluation = evaluateReleaseGates({
-      'function-count': false,
-      'prompt-28': true,
-    })
+    const evaluation = evaluateReleaseGates({ ...allPassingGates, 'function-count': false })
     assert.equal(evaluation.decision, 'NO-GO')
     assert.ok(evaluation.failedGateIds.includes('function-count'))
   })
 
   it('returns NO-GO when Worker validation fails', () => {
-    const evaluation = evaluateReleaseGates({
-      'worker-validation': false,
-      'prompt-28': true,
-    })
+    const evaluation = evaluateReleaseGates({ ...allPassingGates, 'worker-validation': false })
     assert.equal(evaluation.decision, 'NO-GO')
     assert.ok(evaluation.failedGateIds.includes('worker-validation'))
   })
 
   it('returns NO-GO when acceptance tests fail', () => {
-    const evaluation = evaluateReleaseGates({
-      'acceptance-tests': false,
-      'prompt-28': true,
-    })
+    const evaluation = evaluateReleaseGates({ ...allPassingGates, 'acceptance-tests': false })
     assert.equal(evaluation.decision, 'NO-GO')
     assert.ok(evaluation.failedGateIds.includes('acceptance-tests'))
   })
 
   it('returns NO-GO when rollback runbook is missing', () => {
-    const evaluation = evaluateReleaseGates({
-      'rollback-runbook': false,
-      'prompt-28': true,
-    })
+    const evaluation = evaluateReleaseGates({ ...allPassingGates, 'rollback-runbook': false })
     assert.equal(evaluation.decision, 'NO-GO')
     assert.ok(evaluation.failedGateIds.includes('rollback-runbook'))
   })
 
   it('returns explicit failed gate IDs', () => {
     const evaluation = evaluateReleaseGates({
+      ...allPassingGates,
       'git-clean': false,
       'root-build': false,
-      'prompt-28': true,
     })
     assert.equal(evaluation.decision, 'NO-GO')
     assert.ok(Array.isArray(evaluation.failedGateIds))

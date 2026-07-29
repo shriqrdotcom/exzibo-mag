@@ -21,6 +21,13 @@ export function getPool(url = process.env.DATABASE_URL) {
   return pools.get(url)
 }
 
+export async function closePool(url = process.env.DATABASE_URL) {
+  const pool = pools.get(url)
+  if (!pool) return
+  pools.delete(url)
+  await pool.end()
+}
+
 export function neon(url) {
   const pool = getPool(url)
 

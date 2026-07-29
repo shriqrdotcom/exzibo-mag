@@ -415,8 +415,8 @@ describe('6+7 — Duplicate slug or UID returns HTTP 409', async () => {
       "api/restaurants.js create must catch DUPLICATE and return 409"
     )
     assert.ok(
-      createSection.includes('res.status(409)'),
-      "api/restaurants.js create must send HTTP 409 for duplicates"
+      createSection.includes('conflict(res'),
+      "api/restaurants.js create must use the shared conflict response for duplicates"
     )
   })
 
@@ -585,13 +585,13 @@ describe('9 — Vercel, Express, and Vite all use createRestaurantAtomic', async
     assert.equal(typeof createRestaurantAtomic, 'function', 'createRestaurantAtomic must be a function')
   })
 
-  it('service throws VALIDATION error for missing slug', async () => {
+  it('service throws INVALID_SLUG error for missing slug', async () => {
     // Does not require DATABASE_URL — validation runs before the pool is used.
     const { createRestaurantAtomic } = await import('../src/services/restaurantCreationService.js')
     await assert.rejects(
       () => createRestaurantAtomic({ name: 'No Slug', uid: '1234567890' }),
       err => {
-        assert.equal(err.code, 'VALIDATION', 'missing slug must throw VALIDATION error')
+        assert.equal(err.code, 'INVALID_SLUG', 'missing slug must throw INVALID_SLUG error')
         assert.ok(/slug/i.test(err.message), 'error message must mention slug')
         return true
       }
@@ -610,15 +610,11 @@ describe('9 — Vercel, Express, and Vite all use createRestaurantAtomic', async
     )
   })
 
-  it('service throws VALIDATION error for missing uid', async () => {
-    const { createRestaurantAtomic } = await import('../src/services/restaurantCreationService.js')
-    await assert.rejects(
-      () => createRestaurantAtomic({ slug: 'no-uid', name: 'No UID' }),
-      err => {
-        assert.equal(err.code, 'VALIDATION', 'missing uid must throw VALIDATION error')
-        assert.ok(/uid/i.test(err.message), 'error message must mention uid')
-        return true
-      }
+  it('service generates UID when uid is omitted', async () => {
+    const src = await readSrc('src/services/restaurantCreationService.js')
+    assert.ok(
+      src.includes('const uid = generateUid()'),
+      'createRestaurantAtomic must generate a UID when caller does not provide one'
     )
   })
 })

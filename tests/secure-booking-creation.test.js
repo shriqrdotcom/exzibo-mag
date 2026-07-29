@@ -135,7 +135,7 @@ describe('booking runtime adapters', () => {
     const server = await read('server.js')
     const vite = await read('vite.config.js')
     const client = await read('src/pages/RestaurantWebsite.jsx')
-    assert.match(api, /err\.code === 'CONFLICT'.*status\(409\)/s)
+    assert.match(api, /err\.code === 'CONFLICT'.*conflict\(res/s)
     assert.match(server, /err\.code === 'CONFLICT'.*status\(409\)/s)
     assert.match(vite, /e\.code === 'CONFLICT'.*json\(res, 409/s)
     assert.match(client, /if \(!response\.ok\) throw new Error/)
