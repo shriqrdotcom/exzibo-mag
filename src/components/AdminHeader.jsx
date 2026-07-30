@@ -9,13 +9,13 @@ export default function AdminHeader({ title = 'Admin Console', subtitle }) {
       justifyContent: 'space-between',
       padding: '20px 32px',
       borderBottom: '1px solid rgba(255,255,255,0.05)',
-      background: '#0e0e0e',
+      background: '#000000',
       position: 'sticky',
       top: 0,
       zIndex: 10,
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <span style={{ color: '#E8321A', fontSize: '13px', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+        <span style={{ color: '#fff', fontSize: '13px', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
           {title}
         </span>
         {subtitle && (

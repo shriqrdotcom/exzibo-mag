@@ -2,7 +2,7 @@ import { betterAuth } from 'better-auth'
 import { expo } from '@better-auth/expo'
 import pg from 'pg'
 import crypto from 'node:crypto'
-import { validateDatabaseConfig } from '../config/serverEnv.js'
+import { validateAuthConfig, validateDatabaseConfig } from '../config/serverEnv.js'
 
 const { Pool } = pg
 
@@ -28,13 +28,9 @@ const extraTrustedOrigins = (process.env.BETTER_AUTH_TRUSTED_ORIGINS || '')
 const mobileAppTrustedOrigins = (process.env.MOBILE_APP_TRUSTED_ORIGINS || '')
   .split(',').map(s => s.trim()).filter(Boolean)
 
-// Accept either env var name — some deployments set BETTER_AUTH_URL instead
-// of BETTER_AUTH_BASE_URL. Both mean the same thing: the domain Google's
-// OAuth callback should return to (must match the Google Console redirect URI).
-const configuredBaseUrl =
-  process.env.BETTER_AUTH_BASE_URL ||
-  process.env.BETTER_AUTH_URL ||
-  'https://superadmin.exzibo.online'
+// BETTER_AUTH_BASE_URL is canonical. validateAuthConfig retains a temporary,
+// warned fallback for BETTER_AUTH_URL and rejects conflicting values.
+const { authBaseUrl: configuredBaseUrl } = validateAuthConfig()
 
 // ── BETTER_AUTH_SECRET startup guard ────────────────────────────────────────
 // In deployed Vercel environments (VERCEL_ENV set) the secret is mandatory —

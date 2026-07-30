@@ -239,6 +239,52 @@ describe('VALIDATION', () => {
     assert.ok(caught.message.includes('DATABASE_URL'))
     assert.ok(!caught.message.includes('postgresql://'))
   })
+
+  it('13a. conflicting Better Auth URL aliases fail safely', async () => {
+    const m = await import('../src/config/serverEnv.js')
+    assert.throws(
+      () => m.validateAuthConfig({
+        ...env(),
+        BETTER_AUTH_BASE_URL: 'https://one.example',
+        BETTER_AUTH_URL: 'https://two.example',
+      }),
+      /BETTER_AUTH_BASE_URL and BETTER_AUTH_URL/
+    )
+  })
+
+  it('13b. Better Auth URL legacy alias is accepted as a compatibility fallback', async () => {
+    const m = await import('../src/config/serverEnv.js')
+    assert.equal(
+      m.validateAuthConfig({
+        ...without(env(), 'BETTER_AUTH_BASE_URL'),
+        BETTER_AUTH_URL: 'https://superadmin.exzibo.online',
+      }).authBaseUrl,
+      'https://superadmin.exzibo.online'
+    )
+  })
+
+  it('13c. conflicting R2 public URL aliases fail safely', async () => {
+    const m = await import('../src/config/serverEnv.js')
+    assert.throws(
+      () => m.validateR2Config({
+        ...env(),
+        R2_PUBLIC_BASE_URL: 'https://one.example',
+        R2_PUBLIC_URL: 'https://two.example',
+      }),
+      /R2_PUBLIC_BASE_URL and R2_PUBLIC_URL/
+    )
+  })
+
+  it('13d. R2 public URL legacy alias is accepted as a compatibility fallback', async () => {
+    const m = await import('../src/config/serverEnv.js')
+    assert.equal(
+      m.validateR2Config({
+        ...without(env(), 'R2_PUBLIC_BASE_URL'),
+        R2_PUBLIC_URL: 'https://images.exzibo.online',
+      }).r2PublicUrl,
+      'https://images.exzibo.online'
+    )
+  })
 })
 
 // ─────────────────────────────────────────────────────────────────────────────

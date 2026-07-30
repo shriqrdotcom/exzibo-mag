@@ -162,38 +162,24 @@ describe('Removed migration endpoints no longer return fake success', () => {
     )
   })
 
-  it('9. api/system.js returns 410 Gone for removed provisioning actions', async () => {
+  it('9. api/system.js fails closed for unknown actions', async () => {
     const { default: handler } = await import('../api/system.js')
-    const { req, res } = mockReqRes({ method: 'GET', query: { action: 'listRestaurantDb' } })
+    const { req, res } = mockReqRes({ method: 'GET', query: { action: 'unknownAction' } })
     await handler(req, res)
-    assert.equal(res._status, 410)
-    assert.ok(res._body?.error, 'response body must include an error')
-    assert.ok(
-      !res._body?.success,
-      'removed endpoint must not return a fake success flag'
-    )
-  })
-
-  it('10. api/system.js createRestaurantDb action returns 410 Gone', async () => {
-    const { default: handler } = await import('../api/system.js')
-    const { req, res } = mockReqRes({ method: 'POST', query: { action: 'createRestaurantDb' }, body: {} })
-    await handler(req, res)
-    assert.equal(res._status, 410)
-  })
-
-  it('11. api/system.js dropRestaurantDb action returns 410 Gone', async () => {
-    const { default: handler } = await import('../api/system.js')
-    const { req, res } = mockReqRes({ method: 'POST', query: { action: 'dropRestaurantDb' }, body: {} })
-    await handler(req, res)
-    assert.equal(res._status, 410)
+    assert.equal(res._status, 400)
+    assert.ok(res._body?.code || res._body?.error, 'response body must include a safe error')
   })
 })
 
 // ── Group 4: Per-restaurant schema provisioning routes are gone ─────────────────
 
 describe('Per-restaurant schema provisioning routes are removed', () => {
+  it('10. vercel.json has no legacy restaurant-db rewrites', async () => {
+    const content = await readSrc('vercel.json')
+    assert.ok(!content.includes('/api/restaurant-db/'), 'legacy restaurant-db rewrites must be removed')
+  })
 
-  it('12. server.js has no /api/restaurant-db routes', async () => {
+  it('11. server.js has no /api/restaurant-db routes', async () => {
     const content = await readSrc('server.js')
     assert.ok(
       !content.includes("'/api/restaurant-db/create'"),
@@ -209,7 +195,7 @@ describe('Per-restaurant schema provisioning routes are removed', () => {
     )
   })
 
-  it('13. vite.config.js has no restaurantDbPlugin', async () => {
+  it('12. vite.config.js has no restaurantDbPlugin', async () => {
     const content = await readSrc('vite.config.js')
     assert.ok(
       !content.includes('function restaurantDbPlugin'),
@@ -221,7 +207,7 @@ describe('Per-restaurant schema provisioning routes are removed', () => {
     )
   })
 
-  it('14. src/lib/db.js does not call /api/restaurant-db/create or /drop', async () => {
+  it('13. src/lib/db.js does not call /api/restaurant-db/create or /drop', async () => {
     const content = await readSrc('src/lib/db.js')
     assert.ok(
       !content.includes('/api/restaurant-db/create'),

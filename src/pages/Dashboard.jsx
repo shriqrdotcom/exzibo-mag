@@ -166,7 +166,7 @@ function DashboardSkeleton() {
           100% { background-position:  800px 0; }
         }
         .dsk {
-          background: linear-gradient(90deg, #1c1c1c 25%, #272727 50%, #1c1c1c 75%);
+          background: linear-gradient(90deg, #0f0f0f 25%, #1a1a1a 50%, #0f0f0f 75%);
           background-size: 1600px 100%;
           animation: dskShimmer 1.6s infinite linear;
           border-radius: 8px;
@@ -174,30 +174,30 @@ function DashboardSkeleton() {
       `}</style>
 
       {/* ── KPI cards row ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '16px', marginBottom: '32px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '16px', marginBottom: '28px' }}>
         {/* Card 1 — large */}
-        <div style={{ background: '#111', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '20px', padding: '28px' }}>
-          <div className="dsk" style={{ width: '140px', height: '11px', marginBottom: '20px' }} />
-          <div className="dsk" style={{ width: '90px', height: '48px', borderRadius: '10px' }} />
+        <div style={{ background: '#0a0a0a', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '16px', padding: '24px 28px' }}>
+          <div className="dsk" style={{ width: '140px', height: '10px', marginBottom: '20px' }} />
+          <div className="dsk" style={{ width: '90px', height: '44px', borderRadius: '10px' }} />
         </div>
         {/* Card 2 */}
-        <div style={{ background: '#111', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '20px', padding: '28px' }}>
+        <div style={{ background: '#0a0a0a', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '16px', padding: '24px 28px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-            <div className="dsk" style={{ width: '110px', height: '11px' }} />
-            <div className="dsk" style={{ width: '70px', height: '26px', borderRadius: '6px' }} />
+            <div className="dsk" style={{ width: '110px', height: '10px' }} />
+            <div className="dsk" style={{ width: '70px', height: '24px', borderRadius: '6px' }} />
           </div>
-          <div className="dsk" style={{ width: '100px', height: '48px', borderRadius: '10px' }} />
+          <div className="dsk" style={{ width: '100px', height: '44px', borderRadius: '10px' }} />
         </div>
         {/* Card 3 */}
-        <div style={{ background: '#111', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '20px', padding: '28px' }}>
-          <div className="dsk" style={{ width: '130px', height: '11px', marginBottom: '12px' }} />
-          <div className="dsk" style={{ width: '60px', height: '11px', marginBottom: '16px' }} />
-          <div className="dsk" style={{ width: '80px', height: '48px', borderRadius: '10px' }} />
+        <div style={{ background: '#0a0a0a', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '16px', padding: '24px 28px' }}>
+          <div className="dsk" style={{ width: '130px', height: '10px', marginBottom: '12px' }} />
+          <div className="dsk" style={{ width: '60px', height: '10px', marginBottom: '16px' }} />
+          <div className="dsk" style={{ width: '80px', height: '44px', borderRadius: '10px' }} />
         </div>
       </div>
 
       {/* ── Table area ── */}
-      <div style={{ background: '#111', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '20px', overflow: 'hidden' }}>
+      <div style={{ background: '#0a0a0a', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '16px', overflow: 'hidden' }}>
         {/* Table header bar */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '24px 28px' }}>
           <div className="dsk" style={{ width: '180px', height: '18px', borderRadius: '6px' }} />
@@ -429,11 +429,11 @@ export default function Dashboard() {
   })()
 
   return (
-    <div style={{ display: 'flex', height: '100vh', background: '#0A0A0A', overflow: 'hidden' }}>
+    <div style={{ display: 'flex', height: '100vh', background: '#000000', overflow: 'hidden' }}>
       <Sidebar />
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <AdminHeader />
-        <main style={{ flex: 1, overflowY: 'auto', padding: '32px' }}>
+        <main style={{ flex: 1, overflowY: 'auto', padding: '28px 32px' }}>
           {loading && !activeSection ? (
             <DashboardSkeleton />
           ) : activeSection === 'image-compressor' ? (
@@ -446,20 +446,20 @@ export default function Dashboard() {
             />
           ) : (
           <>
-          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '16px', marginBottom: '32px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '14px', marginBottom: '24px' }}>
             <KPICard
               label="ACTIVE OPERATIONS"
               value={restaurants.filter(r => r.status === 'RUNNING' || r.status === 'PAUSED').length.toLocaleString('en-IN')}
             />
             <div style={{
-              background: '#111',
+              background: '#0a0a0a',
               border: '1px solid rgba(255,255,255,0.06)',
-              borderRadius: '20px',
-              padding: '28px',
+              borderRadius: '16px',
+              padding: '24px 28px',
               position: 'relative',
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-                <div style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.1em', color: '#555', textTransform: 'uppercase' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+                <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', color: '#444', textTransform: 'uppercase' }}>
                   TOTAL REVENUE
                 </div>
                 <button
@@ -481,28 +481,28 @@ export default function Dashboard() {
                 </button>
               </div>
               <div style={{ display: 'flex', alignItems: 'flex-end', gap: '14px' }}>
-                <span style={{ fontSize: '42px', fontWeight: 800, lineHeight: 1, letterSpacing: '-0.02em' }}>
+                <span style={{ fontSize: '40px', fontWeight: 700, lineHeight: 1, letterSpacing: '-0.02em', color: '#fff' }}>
                   {formatRevenue(currentMonthRevenue)}
                 </span>
               </div>
             </div>
             <div style={{
-              background: '#111',
+              background: '#0a0a0a',
               border: '1px solid rgba(255,255,255,0.06)',
-              borderRadius: '20px',
-              padding: '28px',
+              borderRadius: '16px',
+              padding: '24px 28px',
             }}>
-              <div style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.1em', color: '#555', marginBottom: '16px', textTransform: 'uppercase' }}>
+              <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', color: '#444', marginBottom: '20px', textTransform: 'uppercase' }}>
                 NEW RESTAURANTS
               </div>
-              <div style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.1em', color: '#555', marginBottom: '8px', textTransform: 'uppercase' }}>
+              <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', color: '#444', marginBottom: '8px', textTransform: 'uppercase' }}>
                 {currentMonthAbbr}
               </div>
               {monthRestaurantCount === null ? (
                 <div style={{
                   width: '48px', height: '48px', borderRadius: '50%',
-                  border: '3px solid rgba(232,50,26,0.15)',
-                  borderTopColor: '#E8321A',
+                  border: '3px solid rgba(255,255,255,0.08)',
+                  borderTopColor: '#fff',
                   animation: 'spin 0.8s linear infinite',
                   marginTop: '4px',
                 }} />
@@ -515,18 +515,19 @@ export default function Dashboard() {
           </div>
 
           <div style={{
-            background: '#111',
+            background: '#0a0a0a',
             border: '1px solid rgba(255,255,255,0.06)',
-            borderRadius: '20px',
+            borderRadius: '16px',
             overflow: 'hidden',
           }}>
             <div style={{
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              padding: '24px 28px',
+              padding: '20px 28px',
+              borderBottom: '1px solid rgba(255,255,255,0.05)',
             }}>
-              <h2 style={{ fontSize: '18px', fontWeight: 700 }}>List of Active Users</h2>
+              <h2 style={{ fontSize: '15px', fontWeight: 600, color: '#fff', letterSpacing: '-0.01em' }}>List of Active Users</h2>
               <div style={{ display: 'flex', gap: '10px' }}>
                 <IconBtn icon={<Filter size={14} />} label="FILTER" />
                 <IconBtn icon={<Download size={14} />} label="EXPORT" />
@@ -542,8 +543,8 @@ export default function Dashboard() {
               }}>
                 <div style={{
                   width: '60px', height: '60px', borderRadius: '18px',
-                  background: 'rgba(232,50,26,0.08)',
-                  border: '2px dashed rgba(232,50,26,0.2)',
+                  background: 'rgba(255,255,255,0.04)',
+                  border: '2px dashed rgba(255,255,255,0.1)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontSize: '26px', marginBottom: '20px',
                 }}>🍽️</div>
@@ -556,11 +557,10 @@ export default function Dashboard() {
                   style={{
                     display: 'flex', alignItems: 'center', gap: '7px',
                     padding: '11px 22px',
-                    background: '#E8321A',
+                    background: '#fff',
                     border: 'none', borderRadius: '50px',
-                    color: '#fff', fontSize: '12px', fontWeight: 700, letterSpacing: '0.08em',
+                    color: '#111', fontSize: '12px', fontWeight: 700, letterSpacing: '0.08em',
                     cursor: 'pointer',
-                    boxShadow: '0 0 20px rgba(232,50,26,0.4)',
                   }}
                 >
                   <Plus size={13} /> ADD CUSTOMER
@@ -654,8 +654,8 @@ export default function Dashboard() {
                             transition: 'all 0.2s',
                           }}
                           onMouseEnter={e => {
-                            e.currentTarget.style.background = 'rgba(232,50,26,0.12)'
-                            e.currentTarget.style.borderColor = 'rgba(232,50,26,0.4)'
+                            e.currentTarget.style.background = 'rgba(255,255,255,0.08)'
+                            e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'
                           }}
                           onMouseLeave={e => {
                             e.currentTarget.style.background = 'rgba(255,255,255,0.05)'
@@ -688,11 +688,10 @@ export default function Dashboard() {
                 {[1, 2, 3].map(p => (
                   <button key={p} onClick={() => setCurrentPage(p)} style={{
                     width: '36px', height: '36px', borderRadius: '50%',
-                    background: currentPage === p ? '#E8321A' : 'rgba(255,255,255,0.06)',
+                    background: currentPage === p ? '#fff' : 'rgba(255,255,255,0.06)',
                     border: 'none',
-                    color: '#fff', fontSize: '13px', fontWeight: 600,
+                    color: currentPage === p ? '#111' : '#fff', fontSize: '13px', fontWeight: 600,
                     cursor: 'pointer',
-                    boxShadow: currentPage === p ? '0 0 16px rgba(232,50,26,0.4)' : 'none',
                     transition: 'all 0.2s',
                   }}>{p}</button>
                 ))}
@@ -712,16 +711,16 @@ export default function Dashboard() {
         style={{
           position: 'fixed', bottom: '28px', right: '28px',
           width: '52px', height: '52px', borderRadius: '50%',
-          background: '#E8321A',
+          background: '#fff',
           border: 'none',
-          color: '#fff',
+          color: '#111',
           cursor: 'pointer',
-          boxShadow: '0 0 30px rgba(232,50,26,0.5)',
+          boxShadow: '0 4px 24px rgba(0,0,0,0.5)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           transition: 'transform 0.2s, box-shadow 0.2s',
         }}
-        onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.08)'; e.currentTarget.style.boxShadow = '0 0 40px rgba(232,50,26,0.7)' }}
-        onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.boxShadow = '0 0 30px rgba(232,50,26,0.5)' }}
+        onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.08)'; e.currentTarget.style.boxShadow = '0 6px 32px rgba(0,0,0,0.6)' }}
+        onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.boxShadow = '0 4px 24px rgba(0,0,0,0.5)' }}
       >
         <Plus size={22} />
       </button>
@@ -740,11 +739,11 @@ export default function Dashboard() {
             onClick={e => e.stopPropagation()}
             style={{
               width: '100%', maxWidth: '440px',
-              background: '#141414',
-              border: '1px solid rgba(232,50,26,0.3)',
+              background: '#0a0a0a',
+              border: '1px solid rgba(255,255,255,0.08)',
               borderRadius: '18px',
               padding: '28px',
-              boxShadow: '0 20px 60px rgba(0,0,0,0.7), 0 0 40px rgba(232,50,26,0.15)',
+              boxShadow: '0 20px 60px rgba(0,0,0,0.8)',
               position: 'relative',
             }}
           >
@@ -762,7 +761,7 @@ export default function Dashboard() {
             >✕</button>
 
             <div style={{
-              fontSize: '15px', fontWeight: 800, color: '#E8321A',
+              fontSize: '15px', fontWeight: 800, color: '#fff',
               letterSpacing: '0.06em', marginBottom: '18px', paddingRight: '40px',
             }}>
               MOVE TO DELETED RESTAURANTS
@@ -790,10 +789,9 @@ export default function Dashboard() {
                 onClick={() => { setDeleteStage('confirm'); setDeleteError('') }}
                 style={{
                   width: '100%', padding: '13px',
-                  background: '#E8321A', border: 'none', borderRadius: '10px',
-                  color: '#fff', fontSize: '13px', fontWeight: 800,
+                  background: '#fff', border: 'none', borderRadius: '10px',
+                  color: '#111', fontSize: '13px', fontWeight: 800,
                   letterSpacing: '0.08em', cursor: 'pointer',
-                  boxShadow: '0 0 20px rgba(232,50,26,0.4)',
                 }}
               >
                 DELETE
@@ -815,7 +813,7 @@ export default function Dashboard() {
                   style={{
                     width: '100%', padding: '12px 14px',
                     background: 'rgba(255,255,255,0.05)',
-                    border: `1px solid ${deleteError ? 'rgba(232,50,26,0.5)' : 'rgba(255,255,255,0.1)'}`,
+                    border: `1px solid ${deleteError ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.1)'}`,
                     borderRadius: '10px',
                     color: '#fff', fontSize: '14px', fontFamily: 'monospace',
                     outline: 'none', boxSizing: 'border-box',
@@ -823,7 +821,7 @@ export default function Dashboard() {
                   }}
                 />
                 {deleteError && (
-                  <div style={{ fontSize: '12px', color: '#E8321A', fontWeight: 600, marginBottom: '14px' }}>
+                  <div style={{ fontSize: '12px', color: '#aaa', fontWeight: 600, marginBottom: '14px' }}>
                     {deleteError}
                   </div>
                 )}
@@ -831,10 +829,9 @@ export default function Dashboard() {
                   onClick={handleConfirmDelete}
                   style={{
                     width: '100%', padding: '13px',
-                    background: '#E8321A', border: 'none', borderRadius: '10px',
-                    color: '#fff', fontSize: '13px', fontWeight: 800,
+                    background: '#fff', border: 'none', borderRadius: '10px',
+                    color: '#111', fontSize: '13px', fontWeight: 800,
                     letterSpacing: '0.08em', cursor: 'pointer',
-                    boxShadow: '0 0 20px rgba(232,50,26,0.4)',
                   }}
                 >
                   CONFIRM
@@ -859,7 +856,7 @@ export default function Dashboard() {
             onClick={e => e.stopPropagation()}
             style={{
               width: '100%', maxWidth: '380px',
-              background: '#141414',
+              background: '#0a0a0a',
               border: '1px solid rgba(255,255,255,0.08)',
               borderRadius: '18px',
               padding: '24px',
@@ -950,7 +947,7 @@ export default function Dashboard() {
             onClick={e => e.stopPropagation()}
             style={{
               width: '100%', maxWidth: '460px',
-              background: '#141414',
+              background: '#0a0a0a',
               border: '1px solid rgba(255,255,255,0.08)',
               borderRadius: '18px',
               padding: '28px',
@@ -1058,10 +1055,9 @@ export default function Dashboard() {
               onClick={saveEdit}
               style={{
                 width: '100%', padding: '13px',
-                background: '#E8321A', border: 'none', borderRadius: '10px',
-                color: '#fff', fontSize: '13px', fontWeight: 800,
+                background: '#fff', border: 'none', borderRadius: '10px',
+                color: '#111', fontSize: '13px', fontWeight: 800,
                 letterSpacing: '0.08em', cursor: 'pointer',
-                boxShadow: '0 0 20px rgba(232,50,26,0.4)',
               }}
             >
               SAVE CHANGES
@@ -1188,24 +1184,24 @@ export default function Dashboard() {
 function KPICard({ label, value, badge, badgeIcon }) {
   return (
     <div style={{
-      background: '#111',
+      background: '#0a0a0a',
       border: '1px solid rgba(255,255,255,0.06)',
-      borderRadius: '20px',
-      padding: '28px',
+      borderRadius: '16px',
+      padding: '24px 28px',
     }}>
-      <div style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.1em', color: '#555', marginBottom: '16px', textTransform: 'uppercase' }}>
+      <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', color: '#444', marginBottom: '20px', textTransform: 'uppercase' }}>
         {label}
       </div>
       <div style={{ display: 'flex', alignItems: 'flex-end', gap: '14px' }}>
-        <span style={{ fontSize: '42px', fontWeight: 800, lineHeight: 1, letterSpacing: '-0.02em' }}>{value}</span>
+        <span style={{ fontSize: '40px', fontWeight: 700, lineHeight: 1, letterSpacing: '-0.02em', color: '#fff' }}>{value}</span>
         {badge && (
           <span style={{
             display: 'flex', alignItems: 'center', gap: '4px',
-            background: 'rgba(232,50,26,0.15)',
-            border: '1px solid rgba(232,50,26,0.2)',
+            background: 'rgba(255,255,255,0.08)',
+            border: '1px solid rgba(255,255,255,0.12)',
             borderRadius: '50px',
             padding: '4px 10px',
-            fontSize: '11px', fontWeight: 700, color: '#E8321A',
+            fontSize: '11px', fontWeight: 700, color: '#aaa',
             marginBottom: '6px',
           }}>
             {badgeIcon}{badge}
@@ -1264,14 +1260,14 @@ function EditMenuBtn({ onClick, active }) {
       onMouseLeave={() => setHov(false)}
       style={{
         padding: '9px 16px',
-        background: hov ? '#E8321A' : 'transparent',
-        border: `1px ${active ? 'dashed' : 'solid'} ${hov ? '#E8321A' : 'rgba(255,255,255,0.12)'}`,
+        padding: '9px 16px',
+        background: hov ? 'rgba(255,255,255,0.1)' : 'transparent',
+        border: `1px ${active ? 'dashed' : 'solid'} ${hov ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.12)'}`,
         borderRadius: '10px',
         color: hov ? '#fff' : '#aaa',
         fontSize: '11px', fontWeight: 700, letterSpacing: '0.06em',
         cursor: 'pointer',
         transition: 'all 0.2s',
-        boxShadow: hov ? '0 0 16px rgba(232,50,26,0.3)' : 'none',
       }}
     >
       EDIT MENU
@@ -1288,10 +1284,10 @@ function EditRowBtn({ onClick }) {
       title="Edit"
       style={{
         width: '32px', height: '32px',
-        background: hov ? 'rgba(232,50,26,0.15)' : 'rgba(255,255,255,0.04)',
-        border: `1px solid ${hov ? 'rgba(232,50,26,0.5)' : 'rgba(255,255,255,0.1)'}`,
+        background: hov ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.04)',
+        border: `1px solid ${hov ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.1)'}`,
         borderRadius: '9px',
-        color: hov ? '#E8321A' : '#888',
+        color: hov ? '#fff' : '#888',
         cursor: 'pointer',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         transition: 'all 0.2s',
@@ -1311,10 +1307,10 @@ function DeleteBtn({ onClick }) {
       title="Delete"
       style={{
         width: '32px', height: '32px',
-        background: hov ? 'rgba(232,50,26,0.15)' : 'rgba(255,255,255,0.04)',
-        border: `1px solid ${hov ? 'rgba(232,50,26,0.5)' : 'rgba(255,255,255,0.1)'}`,
+        background: hov ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.04)',
+        border: `1px solid ${hov ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.1)'}`,
         borderRadius: '9px',
-        color: hov ? '#E8321A' : '#888',
+        color: hov ? '#fff' : '#888',
         cursor: 'pointer',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         transition: 'all 0.2s',
@@ -1537,11 +1533,11 @@ function ImageCompressor() {
     : isTooSmall
     ? { icon: <AlertTriangle size={14} />, label: `Below ${minKB} KB minimum`, color: '#f59e0b', bg: 'rgba(245,158,11,0.08)', border: 'rgba(245,158,11,0.2)' }
     : isTooLarge
-    ? { icon: <AlertCircle size={14} />, label: `Exceeds ${maxKB} KB maximum`, color: '#E8321A', bg: 'rgba(232,50,26,0.08)', border: 'rgba(232,50,26,0.2)' }
+    ? { icon: <AlertCircle size={14} />, label: `Exceeds ${maxKB} KB maximum`, color: '#fff', bg: 'rgba(255,255,255,0.06)', border: 'rgba(255,255,255,0.15)' }
     : null
 
   const cardStyle = {
-    background: '#111',
+    background: '#0a0a0a',
     border: '1px solid rgba(255,255,255,0.06)',
     borderRadius: '20px',
     padding: '28px',
@@ -1550,7 +1546,7 @@ function ImageCompressor() {
   const inputNumStyle = {
     width: '90px',
     padding: '9px 12px',
-    background: '#0A0A0A',
+    background: '#000000',
     border: '1px solid rgba(255,255,255,0.1)',
     borderRadius: '10px',
     color: '#fff',
@@ -1576,8 +1572,8 @@ function ImageCompressor() {
         <span style={{
           display: 'inline-flex', alignItems: 'center', gap: '6px',
           padding: '4px 12px', borderRadius: '50px',
-          background: 'rgba(232,50,26,0.08)', border: '1px solid rgba(232,50,26,0.3)',
-          fontSize: '10px', fontWeight: 800, color: '#E8321A',
+          background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)',
+          fontSize: '10px', fontWeight: 800, color: '#aaa',
           letterSpacing: '0.15em', fontFamily: 'monospace',
         }}>
           ◈ NIE IQE1
@@ -1589,10 +1585,10 @@ function ImageCompressor() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <div style={{
             width: '40px', height: '40px', borderRadius: '12px',
-            background: 'rgba(232,50,26,0.12)', border: '1px solid rgba(232,50,26,0.2)',
+            background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
-            <ImageDown size={20} color="#E8321A" />
+            <ImageDown size={20} color="#fff" />
           </div>
           <div>
             <h2 style={{ margin: 0, fontSize: '22px', fontWeight: 800, color: '#fff' }}>Image Compressor</h2>
@@ -1605,13 +1601,13 @@ function ImageCompressor() {
               style={{
                 display: 'flex', alignItems: 'center', gap: '6px',
                 padding: '8px 16px', borderRadius: '50px',
-                background: dragging ? 'rgba(232,50,26,0.15)' : 'rgba(232,50,26,0.08)',
-                border: `1px solid ${dragging ? '#E8321A' : 'rgba(232,50,26,0.3)'}`,
-                color: '#E8321A', fontSize: '12px', fontWeight: 700, cursor: 'pointer',
+                background: dragging ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.05)',
+                border: `1px solid ${dragging ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.12)'}`,
+                color: '#ddd', fontSize: '12px', fontWeight: 700, cursor: 'pointer',
                 transition: 'all 0.2s',
               }}
-              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(232,50,26,0.15)'; e.currentTarget.style.borderColor = '#E8321A' }}
-              onMouseLeave={e => { if (!dragging) { e.currentTarget.style.background = 'rgba(232,50,26,0.08)'; e.currentTarget.style.borderColor = 'rgba(232,50,26,0.3)' } }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.3)' }}
+              onMouseLeave={e => { if (!dragging) { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)' } }}
             >
               <Upload size={12} /> {original ? 'Change Image' : 'Upload Image'}
             </button>
@@ -1623,7 +1619,7 @@ function ImageCompressor() {
                 color: '#888', fontSize: '12px', fontWeight: 600, cursor: 'pointer',
                 transition: 'all 0.2s',
               }}
-              onMouseEnter={e => { e.currentTarget.style.borderColor = '#E8321A'; e.currentTarget.style.color = '#E8321A' }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.25)'; e.currentTarget.style.color = '#fff' }}
               onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; e.currentTarget.style.color = '#888' }}
               >
                 <RotateCcw size={12} /> Reset
@@ -1638,8 +1634,8 @@ function ImageCompressor() {
         ...cardStyle,
         marginBottom: '24px',
         padding: '20px 28px',
-        background: '#0e0e0e',
-        border: '1px solid rgba(232,50,26,0.14)',
+        background: '#000000',
+        border: '1px solid rgba(255,255,255,0.06)',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '24px', flexWrap: 'wrap' }}>
           {/* Label */}
@@ -1696,8 +1692,8 @@ function ImageCompressor() {
           {/* Active range badge */}
           <div style={{
             padding: '6px 14px', borderRadius: '50px',
-            background: 'rgba(232,50,26,0.08)', border: '1px solid rgba(232,50,26,0.2)',
-            fontSize: '12px', fontWeight: 700, color: '#E8321A',
+            background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
+            fontSize: '12px', fontWeight: 700, color: '#aaa',
             whiteSpace: 'nowrap', paddingTop: '18px',
           }}>
             Active: {minKB} – {maxKB} KB
@@ -1711,9 +1707,9 @@ function ImageCompressor() {
               marginLeft: 'auto',
               display: 'flex', alignItems: 'center', gap: '7px',
               padding: '10px 22px', borderRadius: '50px',
-              background: saveFlash ? 'rgba(34,197,94,0.15)' : (limitsChanged && limitsValid) ? '#E8321A' : '#1a1a1a',
+              background: saveFlash ? 'rgba(34,197,94,0.15)' : (limitsChanged && limitsValid) ? '#fff' : '#0a0a0a',
               border: saveFlash ? '1px solid rgba(34,197,94,0.35)' : (limitsChanged && limitsValid) ? 'none' : '1px solid rgba(255,255,255,0.06)',
-              color: saveFlash ? '#22c55e' : (limitsChanged && limitsValid) ? '#fff' : '#444',
+              color: saveFlash ? '#22c55e' : (limitsChanged && limitsValid) ? '#111' : '#444',
               fontSize: '13px', fontWeight: 700,
               cursor: (limitsChanged && limitsValid) ? 'pointer' : 'not-allowed',
               transition: 'all 0.3s',
@@ -1726,7 +1722,7 @@ function ImageCompressor() {
 
         {/* Validation error */}
         {!limitsValid && (pendingMin || pendingMax) && (
-          <div style={{ marginTop: '12px', fontSize: '12px', color: '#E8321A', display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <div style={{ marginTop: '12px', fontSize: '12px', color: '#aaa', display: 'flex', alignItems: 'center', gap: '6px' }}>
             <AlertCircle size={13} /> Minimum must be at least 1 KB and less than Maximum
           </div>
         )}
@@ -1744,9 +1740,9 @@ function ImageCompressor() {
               <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.1em', color: '#555', textTransform: 'uppercase' }}>Output Format</span>
               <div style={{
                 padding: '7px 16px', borderRadius: '8px', fontSize: '12px', fontWeight: 700,
-                border: '1px solid rgba(232,50,26,0.35)',
-                background: 'rgba(232,50,26,0.15)',
-                color: '#E8321A', display: 'inline-block',
+                border: '1px solid rgba(255,255,255,0.15)',
+                background: 'rgba(255,255,255,0.06)',
+                color: '#aaa', display: 'inline-block',
               }}>WebP</div>
             </div>
             {/* Quality slider — used as starting quality hint */}
@@ -1754,12 +1750,12 @@ function ImageCompressor() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1, minWidth: '200px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.1em', color: '#555', textTransform: 'uppercase' }}>Quality Hint</span>
-                  <span style={{ fontSize: '16px', fontWeight: 800, color: quality >= 70 ? '#22c55e' : quality >= 40 ? '#f59e0b' : '#E8321A' }}>{quality}%</span>
+                  <span style={{ fontSize: '16px', fontWeight: 800, color: quality >= 70 ? '#22c55e' : quality >= 40 ? '#f59e0b' : '#fff' }}>{quality}%</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <ZoomOut size={14} color="#555" />
                   <input type="range" min={1} max={100} value={quality} onChange={e => setQuality(Number(e.target.value))}
-                    style={{ flex: 1, accentColor: '#E8321A', cursor: 'pointer' }} />
+                    style={{ flex: 1, accentColor: '#fff', cursor: 'pointer' }} />
                   <ZoomIn size={14} color="#555" />
                 </div>
               </div>
@@ -1771,12 +1767,11 @@ function ImageCompressor() {
               style={{
                 marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '7px',
                 padding: '11px 24px', borderRadius: '50px',
-                background: qualityFlash ? 'rgba(34,197,94,0.15)' : qualityChanged ? '#E8321A' : '#1a1a1a',
+                background: qualityFlash ? 'rgba(34,197,94,0.15)' : qualityChanged ? '#fff' : '#0a0a0a',
                 border: qualityFlash ? '1px solid rgba(34,197,94,0.35)' : qualityChanged ? 'none' : '1px solid rgba(255,255,255,0.06)',
-                color: qualityFlash ? '#22c55e' : qualityChanged ? '#fff' : '#444',
+                color: qualityFlash ? '#22c55e' : qualityChanged ? '#111' : '#444',
                 fontSize: '13px', fontWeight: 700, letterSpacing: '0.05em',
                 cursor: qualityChanged ? 'pointer' : 'not-allowed',
-                boxShadow: qualityChanged && !qualityFlash ? '0 0 20px rgba(232,50,26,0.35)' : 'none',
                 transition: 'all 0.3s',
               }}
             >
@@ -1789,9 +1784,9 @@ function ImageCompressor() {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '16px' }}>
               {[
                 { label: 'Original Size', value: fmtSize(original.size), accent: '#888' },
-                { label: 'Compressed Size', value: fmtSize(compressed.size), accent: isInRange ? '#22c55e' : isTooLarge ? '#E8321A' : '#f59e0b' },
-                { label: 'Size Saved', value: `${saving > 0 ? saving : 0}%`, accent: saving > 0 ? '#E8321A' : '#888' },
-                { label: 'Target Range', value: `${minKB}–${maxKB} KB`, accent: '#E8321A' },
+                { label: 'Compressed Size', value: fmtSize(compressed.size), accent: isInRange ? '#22c55e' : isTooLarge ? '#fff' : '#f59e0b' },
+                { label: 'Size Saved', value: `${saving > 0 ? saving : 0}%`, accent: saving > 0 ? '#fff' : '#888' },
+                { label: 'Target Range', value: `${minKB}–${maxKB} KB`, accent: '#aaa' },
               ].map(s => (
                 <div key={s.label} style={{ ...cardStyle, padding: '20px 24px', textAlign: 'center' }}>
                   <div style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.1em', color: '#555', textTransform: 'uppercase', marginBottom: '8px' }}>{s.label}</div>
@@ -1829,9 +1824,9 @@ function ImageCompressor() {
               }} />
             </div>
             {/* Compressed */}
-            <div style={{ ...cardStyle, border: `1px solid ${isInRange ? 'rgba(34,197,94,0.15)' : isTooLarge ? 'rgba(232,50,26,0.15)' : isTooSmall ? 'rgba(245,158,11,0.15)' : 'rgba(255,255,255,0.06)'}` }}>
+            <div style={{ ...cardStyle, border: `1px solid ${isInRange ? 'rgba(34,197,94,0.15)' : isTooLarge ? 'rgba(255,255,255,0.12)' : isTooSmall ? 'rgba(245,158,11,0.15)' : 'rgba(255,255,255,0.06)'}` }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
-                <span style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.1em', color: compressed ? (isInRange ? '#22c55e' : isTooLarge ? '#E8321A' : '#f59e0b') : '#555', textTransform: 'uppercase' }}>
+                <span style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.1em', color: compressed ? (isInRange ? '#22c55e' : isTooLarge ? '#fff' : '#f59e0b') : '#555', textTransform: 'uppercase' }}>
                   {compressed ? `Compressed · ${format.split('/')[1].toUpperCase()} · ${fmtSize(compressed.size)}` : 'Processing…'}
                 </span>
                 {rangeStatus && !processing && (
@@ -1848,7 +1843,7 @@ function ImageCompressor() {
                 <div style={{ width: '100%', height: '220px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '14px' }}>
                   <div style={{
                     width: '36px', height: '36px', borderRadius: '50%',
-                    border: '3px solid rgba(232,50,26,0.15)', borderTopColor: '#E8321A',
+                    border: '3px solid rgba(255,255,255,0.08)', borderTopColor: '#fff',
                     animation: 'spin 0.8s linear infinite',
                   }} />
                   <span style={{ fontSize: '11px', color: '#444', fontWeight: 600 }}>Optimising to {minKB}–{maxKB} KB…</span>
@@ -1863,9 +1858,9 @@ function ImageCompressor() {
                     marginTop: '16px', width: '100%',
                     display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
                     padding: '11px 0', borderRadius: '12px',
-                    background: '#E8321A', border: 'none',
-                    color: '#fff', fontSize: '13px', fontWeight: 700, letterSpacing: '0.05em',
-                    cursor: 'pointer', boxShadow: '0 0 20px rgba(232,50,26,0.3)',
+                    background: '#fff', border: 'none',
+                    color: '#111', fontSize: '13px', fontWeight: 700, letterSpacing: '0.05em',
+                    cursor: 'pointer',
                     transition: 'opacity 0.2s',
                   }}
                   onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
@@ -1907,7 +1902,7 @@ function DemoWebsitesPanel({ restaurants, onEdit, onDelete }) {
       </div>
 
       <div style={{
-        background: '#111',
+        background: '#0a0a0a',
         border: '1px solid rgba(245,158,11,0.12)',
         borderRadius: '20px',
         overflow: 'hidden',
@@ -1989,7 +1984,7 @@ function DemoWebsitesPanel({ restaurants, onEdit, onDelete }) {
                             { label: 'VIEW',   color: '#22c55e', rgb: '34,197,94',  onClick: () => r.slug ? window.open(`https://menu.exzibo.online/${r.slug}/home/1`, '_blank', 'noopener,noreferrer') : null },
                             { label: 'ADMIN',  color: '#3B82F6', rgb: '59,130,246', onClick: () => openRoleDashboard(navigate, r, 'owner') },
                             { label: 'MASTER', color: '#A855F7', rgb: '168,85,247', onClick: () => openRoleDashboard(navigate, r, 'master') },
-                            { label: 'OPEN',   color: '#E8321A', rgb: '232,50,26',  onClick: () => r.slug ? window.open(`https://dashboard.exzibo.online/${r.slug}/dashboard`, '_blank', 'noopener,noreferrer') : null },
+                            { label: 'OPEN',   color: '#aaa',    rgb: '180,180,180', onClick: () => r.slug ? window.open(`https://dashboard.exzibo.online/${r.slug}/dashboard`, '_blank', 'noopener,noreferrer') : null },
                           ].map(({ label, color, rgb, onClick }) => (
                             <button
                               key={label}

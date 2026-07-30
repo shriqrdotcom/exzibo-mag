@@ -60,7 +60,7 @@ See `.env.example` for the full reference (that file also lists Vercel-specific 
 - `vite.config.js` has `server.allowedHosts: true` — required for Replit's proxy iframe
 - `src/lib/env.js` detects Replit/localhost and sets preview-mode flags
 - `npm run dev` uses the locally installed `vite` binary (not `npx vite`) to avoid install prompts
-- API routes in `vite.config.js` (dev) and `server.js` (prod) handle all `/api/*` traffic (menu, orders, bookings, restaurant CRUD, restaurant-db provisioning, etc.)
+- API routes in `vite.config.js` (dev) and `server.js` (prod) handle all active `/api/*` traffic (menu, orders, bookings, restaurant CRUD, etc.). Runtime database provisioning routes are retired.
 
 ## User Preferences
 - `VITE_DISABLE_AUTH=true` is the correct dev workflow on Replit (bypasses Google OAuth which requires a redirect URI)

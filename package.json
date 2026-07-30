@@ -14,6 +14,8 @@
     "db:migration:verify": "node scripts/validate-migrations.js",
     "validate:migrations": "node scripts/validate-migrations.js",
     "governance:check": "node scripts/governance-check.js",
+    "check:serverless": "node scripts/check-serverless.js",
+    "release:serverless": "node scripts/release/verifyServerlessBuild.js",
     "preflight": "node scripts/restaurant-preflight.js",
     "backfill:dry": "node scripts/restaurant-backfill.js",
     "backfill:apply": "node scripts/restaurant-backfill.js --apply",

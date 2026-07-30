@@ -1,8 +1,8 @@
 /**
  * tests/vercel-function-count.test.js
  *
- * Verifies that the repository produces no more than 12 Vercel Serverless
- * Functions, that required routes are preserved, and that consolidation did not
+ * Verifies that the repository produces exactly the reviewed 12 Vercel
+ * Serverless Functions, that required routes are preserved, and that consolidation did not
  * change security boundaries or public/private classifications.
  */
 
@@ -97,9 +97,23 @@ function getRouteForFile(filePath) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe('Vercel function count', () => {
-  it('has 12 or fewer deployable API route entry files', async () => {
+  it('has exactly the reviewed 12 deployable API route entry files', async () => {
     const files = await listApiEntryFiles()
-    assert.ok(files.length <= 12, `Found ${files.length} deployable API entry files: ${files.join(', ')}`)
+    assert.deepEqual(files, [
+      'auth-check.js',
+      'auth.js',
+      'bookings.js',
+      'media.js',
+      'menu-content.js',
+      'mobile/bootstrap.js',
+      'notifications.js',
+      'orders.js',
+      'restaurants.js',
+      'settings.js',
+      'system.js',
+      'team.js',
+    ])
+    assert.equal(files.length, 12, `Found ${files.length} deployable API entry files: ${files.join(', ')}`)
   })
 
   it('does not treat _lib helpers as route entry points', async () => {
