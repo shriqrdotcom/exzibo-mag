@@ -53,7 +53,7 @@ export default function Sidebar() {
       {/* Logo */}
       <div style={{ marginBottom: '36px', paddingLeft: '12px' }}>
         <div style={{ fontSize: '18px', fontWeight: 900, letterSpacing: '0.06em', color: '#fff' }}>
-          EXZI<span style={{ color: '#E8321A' }}>BO</span>
+          EXZIBO
         </div>
         <div style={{ fontSize: '9px', fontWeight: 600, letterSpacing: '0.22em', color: '#444', marginTop: '3px', textTransform: 'uppercase' }}>
           Premium Management
@@ -76,7 +76,7 @@ export default function Sidebar() {
                   borderRadius: '10px',
                   background: isActive ? 'rgba(255,255,255,0.07)' : 'transparent',
                   border: 'none',
-                  borderLeft: isActive ? '2px solid #E8321A' : '2px solid transparent',
+                  borderLeft: isActive ? '2px solid rgba(255,255,255,0.4)' : '2px solid transparent',
                   color: isActive ? '#fff' : '#555',
                   fontSize: '13px',
                   fontWeight: isActive ? 600 : 400,
@@ -114,10 +114,10 @@ export default function Sidebar() {
             gap: '10px',
             padding: '10px 14px',
             borderRadius: '10px',
-            background: isDemoActive ? 'rgba(232,50,26,0.12)' : 'transparent',
+            background: isDemoActive ? 'rgba(255,255,255,0.07)' : 'transparent',
             border: 'none',
-            borderLeft: isDemoActive ? '2px solid #E8321A' : '2px solid transparent',
-            color: isDemoActive ? '#E8321A' : '#555',
+            borderLeft: isDemoActive ? '2px solid rgba(255,255,255,0.4)' : '2px solid transparent',
+            color: isDemoActive ? '#fff' : '#555',
             fontSize: '13px',
             fontWeight: isDemoActive ? 600 : 400,
             cursor: 'pointer',
@@ -151,10 +151,10 @@ export default function Sidebar() {
             gap: '10px',
             padding: '10px 14px',
             borderRadius: '10px',
-            background: isCompressorActive ? 'rgba(232,50,26,0.12)' : 'transparent',
+            background: isCompressorActive ? 'rgba(255,255,255,0.07)' : 'transparent',
             border: 'none',
-            borderLeft: isCompressorActive ? '2px solid #E8321A' : '2px solid transparent',
-            color: isCompressorActive ? '#E8321A' : '#555',
+            borderLeft: isCompressorActive ? '2px solid rgba(255,255,255,0.4)' : '2px solid transparent',
+            color: isCompressorActive ? '#fff' : '#555',
             fontSize: '13px',
             fontWeight: isCompressorActive ? 600 : 400,
             cursor: 'pointer',
@@ -188,10 +188,10 @@ export default function Sidebar() {
             gap: '10px',
             padding: '10px 14px',
             borderRadius: '10px',
-            background: notifActive ? 'rgba(232,50,26,0.12)' : 'transparent',
+            background: notifActive ? 'rgba(255,255,255,0.07)' : 'transparent',
             border: 'none',
-            borderLeft: notifActive ? '2px solid #E8321A' : '2px solid transparent',
-            color: notifActive ? '#E8321A' : '#555',
+            borderLeft: notifActive ? '2px solid rgba(255,255,255,0.4)' : '2px solid transparent',
+            color: notifActive ? '#fff' : '#555',
             fontSize: '13px',
             fontWeight: notifActive ? 600 : 400,
             cursor: 'pointer',
@@ -223,15 +223,14 @@ export default function Sidebar() {
                 minWidth: '16px',
                 height: '16px',
                 borderRadius: '99px',
-                background: notifActive ? 'rgba(255,255,255,0.9)' : '#E8321A',
-                color: notifActive ? '#E8321A' : '#fff',
+                background: '#fff',
+                color: '#111',
                 fontSize: '9px',
                 fontWeight: 800,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 padding: '0 3px',
-                boxShadow: '0 0 6px rgba(232,50,26,0.6)',
                 lineHeight: 1,
               }}>
                 {unreadCount > 99 ? '99+' : unreadCount}
@@ -244,8 +243,8 @@ export default function Sidebar() {
               marginLeft: 'auto',
               padding: '2px 7px',
               borderRadius: '99px',
-              background: 'rgba(232,50,26,0.15)',
-              color: '#E8321A',
+              background: 'rgba(255,255,255,0.08)',
+              color: '#aaa',
               fontSize: '10px',
               fontWeight: 700,
             }}>
@@ -263,9 +262,9 @@ export default function Sidebar() {
               style={{
                 display: 'flex', alignItems: 'center', gap: '10px',
                 padding: '10px 14px', borderRadius: '10px',
-                background: isActive ? 'rgba(232,50,26,0.12)' : 'transparent',
-                border: 'none', borderLeft: isActive ? '2px solid #E8321A' : '2px solid transparent',
-                color: isActive ? '#E8321A' : '#555', fontSize: '13px',
+                background: isActive ? 'rgba(255,255,255,0.07)' : 'transparent',
+                border: 'none', borderLeft: isActive ? '2px solid rgba(255,255,255,0.4)' : '2px solid transparent',
+                color: isActive ? '#fff' : '#555', fontSize: '13px',
                 fontWeight: isActive ? 600 : 400, cursor: 'pointer',
                 transition: 'all 0.15s ease', textAlign: 'left', width: '100%',
               }}
@@ -286,9 +285,9 @@ export default function Sidebar() {
               style={{
                 display: 'flex', alignItems: 'center', gap: '10px',
                 padding: '10px 14px', borderRadius: '10px',
-                background: isActive ? 'rgba(232,50,26,0.12)' : 'transparent',
-                border: 'none', borderLeft: isActive ? '2px solid #E8321A' : '2px solid transparent',
-                color: isActive ? '#E8321A' : '#555', fontSize: '13px',
+                background: isActive ? 'rgba(255,255,255,0.07)' : 'transparent',
+                border: 'none', borderLeft: isActive ? '2px solid rgba(255,255,255,0.4)' : '2px solid transparent',
+                color: isActive ? '#fff' : '#555', fontSize: '13px',
                 fontWeight: isActive ? 600 : 400, cursor: 'pointer',
                 transition: 'all 0.15s ease', textAlign: 'left', width: '100%',
               }}
@@ -309,9 +308,9 @@ export default function Sidebar() {
               style={{
                 display: 'flex', alignItems: 'center', gap: '10px',
                 padding: '10px 14px', borderRadius: '10px',
-                background: isActive ? 'rgba(232,50,26,0.12)' : 'transparent',
-                border: 'none', borderLeft: isActive ? '2px solid #E8321A' : '2px solid transparent',
-                color: isActive ? '#E8321A' : '#555', fontSize: '13px',
+                background: isActive ? 'rgba(255,255,255,0.07)' : 'transparent',
+                border: 'none', borderLeft: isActive ? '2px solid rgba(255,255,255,0.4)' : '2px solid transparent',
+                color: isActive ? '#fff' : '#555', fontSize: '13px',
                 fontWeight: isActive ? 600 : 400, cursor: 'pointer',
                 transition: 'all 0.15s ease', textAlign: 'left', width: '100%',
               }}
@@ -332,9 +331,9 @@ export default function Sidebar() {
               style={{
                 display: 'flex', alignItems: 'center', gap: '10px',
                 padding: '10px 14px', borderRadius: '10px',
-                background: isActive ? 'rgba(232,50,26,0.12)' : 'transparent',
-                border: 'none', borderLeft: isActive ? '2px solid #E8321A' : '2px solid transparent',
-                color: isActive ? '#E8321A' : '#555', fontSize: '13px',
+                background: isActive ? 'rgba(255,255,255,0.07)' : 'transparent',
+                border: 'none', borderLeft: isActive ? '2px solid rgba(255,255,255,0.4)' : '2px solid transparent',
+                color: isActive ? '#fff' : '#555', fontSize: '13px',
                 fontWeight: isActive ? 600 : 400, cursor: 'pointer',
                 transition: 'all 0.15s ease', textAlign: 'left', width: '100%',
               }}
@@ -370,9 +369,9 @@ export default function Sidebar() {
                 style={{
                   display: 'flex', alignItems: 'center', gap: '10px',
                   padding: '10px 14px', borderRadius: '10px',
-                  background: isActive ? 'rgba(232,50,26,0.12)' : 'transparent',
-                  border: 'none', borderLeft: isActive ? '2px solid #E8321A' : '2px solid transparent',
-                  color: isActive ? '#E8321A' : '#555', fontSize: '13px',
+                  background: isActive ? 'rgba(255,255,255,0.07)' : 'transparent',
+                  border: 'none', borderLeft: isActive ? '2px solid rgba(255,255,255,0.4)' : '2px solid transparent',
+                  color: isActive ? '#fff' : '#555', fontSize: '13px',
                   fontWeight: isActive ? 600 : 400, cursor: 'pointer',
                   transition: 'all 0.15s ease', textAlign: 'left', width: '100%',
                 }}
@@ -396,9 +395,9 @@ export default function Sidebar() {
           gap: '8px',
           padding: '11px',
           borderRadius: '10px',
-          background: 'rgba(232,50,26,0.1)',
-          border: '1px solid rgba(232,50,26,0.2)',
-          color: '#E8321A',
+          background: 'rgba(255,255,255,0.05)',
+          border: '1px solid rgba(255,255,255,0.12)',
+          color: '#aaa',
           fontSize: '12px',
           fontWeight: 700,
           letterSpacing: '0.08em',
@@ -406,15 +405,15 @@ export default function Sidebar() {
           transition: 'all 0.2s ease',
         }}
         onMouseEnter={e => {
-          e.currentTarget.style.background = '#E8321A'
-          e.currentTarget.style.borderColor = '#E8321A'
-          e.currentTarget.style.color = '#fff'
-          e.currentTarget.style.boxShadow = '0 0 20px rgba(232,50,26,0.3)'
+          e.currentTarget.style.background = '#fff'
+          e.currentTarget.style.borderColor = '#fff'
+          e.currentTarget.style.color = '#111'
+          e.currentTarget.style.boxShadow = '0 0 20px rgba(255,255,255,0.12)'
         }}
         onMouseLeave={e => {
-          e.currentTarget.style.background = 'rgba(232,50,26,0.1)'
-          e.currentTarget.style.borderColor = 'rgba(232,50,26,0.2)'
-          e.currentTarget.style.color = '#E8321A'
+          e.currentTarget.style.background = 'rgba(255,255,255,0.05)'
+          e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)'
+          e.currentTarget.style.color = '#aaa'
           e.currentTarget.style.boxShadow = 'none'
         }}
       >

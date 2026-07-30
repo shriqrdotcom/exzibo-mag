@@ -15,7 +15,7 @@ export default function AdminHeader({ title = 'Admin Console', subtitle }) {
       zIndex: 10,
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <span style={{ color: '#E8321A', fontSize: '13px', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+        <span style={{ color: '#fff', fontSize: '13px', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
           {title}
         </span>
         {subtitle && (
