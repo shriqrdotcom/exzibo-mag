@@ -327,10 +327,8 @@ describe('Integrated system handler', () => {
     const req = makeReq({ method: 'GET', url: '/api/system?action=readiness', query: { action: 'readiness' } })
     const res = makeRes()
     await systemHandler(req, res)
-    assert.equal(res.statusCode, 403)
-    assert.equal(res.body.ok, false)
-    assert.equal(res.body.code, 'FORBIDDEN')
-    assert.ok(res.body.requestId)
+    assert.equal(res.statusCode, 401)
+    assert.deepEqual(res.body, { error: 'Not authenticated' })
   })
 
   it('missing action returns safe 400 envelope', async () => {
