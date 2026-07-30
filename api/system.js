@@ -1,7 +1,7 @@
 import { setAdminCors, setPublicCors } from './_lib/cors.js'
 import { authorizeSuperadmin } from './_lib/authz.js'
 import { runReadinessChecks } from '../src/monitoring/readiness.js'
-import { sendSafeError } from './_lib/errors.js'
+import { createSafeError, sendSafeError } from './_lib/errors.js'
 import { vercelWrapper } from './_lib/security-middleware.js'
 import { defineValidation, validateRequest } from './_lib/validate.js'
 import { handleLiveness } from './_lib/health.js'
@@ -14,6 +14,12 @@ import { handleLiveness } from './_lib/health.js'
 // Available actions:
 //   liveness   — public; returns status, version, timestamp (no sensitive data)
 //   readiness  — protected (superadmin); returns bounded component statuses
+
+const REMOVED_ACTIONS = new Set([
+  'createRestaurantDb',
+  'dropRestaurantDb',
+  'listRestaurantDb',
+])
 
 // ── Shared validation definitions ────────────────────────────────────────────
 const vQueryAction = defineValidation('query', { action: { type: 'string', required: true } })
@@ -31,12 +37,27 @@ async function handler(req, res) {
   } catch (e) {
     return sendSafeError(res, { status: 400, code: 'BAD_REQUEST', message: 'action query param required', requestId })
   }
+  if (REMOVED_ACTIONS.has(action)) {
+    const message = 'Runtime database provisioning has been removed'
+    const envelope = {
+      ...createSafeError({ code: 'BAD_REQUEST', message, requestId }),
+      // Preserve the legacy error key for clients that consume retired actions.
+      error: message,
+    }
+    if (!res.headersSent) {
+      res.setHeader('Content-Type', 'application/json')
+      res.status(410).json(envelope)
+    }
+    return envelope
+  }
+
   if (action === 'liveness') {
     setPublicCors(res)
     const result = handleLiveness()
     // Augment with previous info (version + timestamp) for backward compat
     return res.status(result.statusCode).json({
       ...result.body,
+      status: result.statusCode === 200 ? 'ok' : result.body.status,
       version: process.env.npm_package_version || '0.0.0',
       timestamp: new Date().toISOString(),
     })

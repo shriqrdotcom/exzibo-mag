@@ -21,7 +21,7 @@
 
 import { getSessionEmail } from '../_lib/authz.js'
 import { vercelWrapper } from '../_lib/security-middleware.js'
-import { sendSafeError } from '../_lib/errors.js'
+import { createSafeError } from '../_lib/errors.js'
 import pg from 'pg'
 
 const { Pool } = pg
@@ -48,6 +48,22 @@ function getPool() {
   return _pool
 }
 
+function sendMobileError(res, { status, code, message, requestId }) {
+  const envelope = createSafeError({ code, message, requestId })
+  const body = { ...envelope, error: envelope.message }
+
+  if (!res.headersSent) {
+    res.setHeader('Content-Type', 'application/json')
+    if (typeof res.status === 'function') {
+      res.status(status).json(body)
+    } else {
+      res.statusCode = status
+      res.end(JSON.stringify(body))
+    }
+  }
+  return body
+}
+
 // ── Handler ──────────────────────────────────────────────────────────────────
 export default vercelWrapper(async function handler(req, res) {
   // Always prevent caching of auth responses.
@@ -71,7 +87,7 @@ export default vercelWrapper(async function handler(req, res) {
   }
 
   if (!session) {
-    return sendSafeError(res, {
+    return sendMobileError(res, {
       status: 401,
       code: 'UNAUTHORIZED',
       message: 'Not authenticated',
@@ -130,4 +146,4 @@ export default vercelWrapper(async function handler(req, res) {
     },
     restaurants,
   })
-}, { allowedMethods: ['GET'] })
+}, { allowedMethods: ['GET'], errorField: 'error' })

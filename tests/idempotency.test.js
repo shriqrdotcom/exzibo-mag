@@ -92,6 +92,12 @@ describe('2 — idempotency conflict detection', () => {
     const { checkIdempotency, recordIdempotencyResponse, OPERATION_ORDER_CREATE } = await import('../src/services/idempotencyService.js')
     await withTestConnection(async (client) => {
       const restaurantId = '00000000-0000-0000-0000-000000000001'
+      await client.query(
+        `INSERT INTO restaurants (id, uid, slug, name)
+         VALUES ($1::uuid, $2, $3, $4)
+         ON CONFLICT (id) DO NOTHING`,
+        [restaurantId, 'idempotency-test-restaurant', 'idempotency-test-restaurant', 'Idempotency Test Restaurant']
+      )
       const key = generateIdempotencyKey()
       const payload = { restaurantId, items: [{ menuItemId: 'a', quantity: 1 }] }
       const idempotency = await checkIdempotency(client, {
@@ -119,6 +125,12 @@ describe('2 — idempotency conflict detection', () => {
     const { checkIdempotency, recordIdempotencyResponse, OPERATION_ORDER_CREATE } = await import('../src/services/idempotencyService.js')
     await withTestConnection(async (client) => {
       const restaurantId = '00000000-0000-0000-0000-000000000001'
+      await client.query(
+        `INSERT INTO restaurants (id, uid, slug, name)
+         VALUES ($1::uuid, $2, $3, $4)
+         ON CONFLICT (id) DO NOTHING`,
+        [restaurantId, 'idempotency-test-restaurant', 'idempotency-test-restaurant', 'Idempotency Test Restaurant']
+      )
       const key = generateIdempotencyKey()
       const payloadA = { restaurantId, items: [{ menuItemId: 'a', quantity: 1 }] }
       const idempotency = await checkIdempotency(client, {

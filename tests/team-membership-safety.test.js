@@ -177,37 +177,44 @@ describe('Duplicate membership prevention', async () => {
 })
 
 describe('Conflicting duplicate memberships fail closed', async () => {
-  it('detects conflicting duplicate rows by email and returns conflict', async () => {
+  it('prevents conflicting active unclaimed rows at the database boundary', async () => {
     const restaurant = await createTestRestaurant()
     try {
       const email = 'conflict@example.com'
       await createMember(restaurant.id, { name: 'A', email, role: 'staff' })
-      await createMember(restaurant.id, { name: 'B', email, role: 'admin' })
+      await assert.rejects(
+        () => createMember(restaurant.id, { name: 'B', email, role: 'admin' }),
+        err => err?.code === '23505' && err?.constraint === 'idx_membership_active_unclaimed_email'
+      )
 
       const conflict = await hasConflictingNeonRestaurantMembership(restaurant.id, { email })
-      assert.equal(conflict, true)
+      assert.equal(conflict, false)
 
       const matches = await findActiveNeonRestaurantMembersByIdentity(restaurant.id, { email })
-      assert.equal(matches.length, 2)
+      assert.equal(matches.length, 1)
+      assert.equal(matches[0].role, 'staff')
     } finally {
       await deleteTestRestaurant(restaurant.id)
     }
   })
 
-  it('checkRestaurantAccess returns a safe conflict error instead of an arbitrary role', async () => {
+  it('checkRestaurantAccess cannot select an arbitrary role from duplicate active rows', async () => {
     const restaurant = await createTestRestaurant()
     try {
       const email = 'conflict@example.com'
       await createMember(restaurant.id, { name: 'A', email, role: 'staff' })
-      await createMember(restaurant.id, { name: 'B', email, role: 'admin' })
+      await assert.rejects(
+        () => createMember(restaurant.id, { name: 'B', email, role: 'admin' }),
+        err => err?.code === '23505' && err?.constraint === 'idx_membership_active_unclaimed_email'
+      )
 
       const result = await checkRestaurantAccess({ headers: {} }, restaurant.id)
-      // Without a real Better Auth session we cannot hit the duplicate branch directly,
-      // so we verify the DB query function that underpins it is conflict-aware.
+      // Without a real Better Auth session, verify the DB query state that
+      // prevents the access check from selecting an arbitrary role.
       const matches = await findActiveNeonRestaurantMembersByIdentity(restaurant.id, { email })
-      assert.equal(matches.length, 2)
-      assert.ok(matches.some(m => m.role === 'staff'))
-      assert.ok(matches.some(m => m.role === 'admin'))
+      assert.equal(matches.length, 1)
+      assert.equal(matches[0].role, 'staff')
+      assert.equal(result.allowed, false)
     } finally {
       await deleteTestRestaurant(restaurant.id)
     }
@@ -479,13 +486,14 @@ describe('Membership identity behavior', async () => {
     }
   })
 
-  it('duplicate active unclaimed emails return more than one row', async () => {
+  it('duplicate active unclaimed emails are rejected by the database constraint', async () => {
     const restaurant = await createTestRestaurant()
     try {
       await createMember(restaurant.id, { name: 'A', email: 'dup-unclaimed@example.com', role: 'staff' })
-      await createMember(restaurant.id, { name: 'B', email: 'dup-unclaimed@example.com', role: 'manager' })
-      const matches = await findActiveNeonRestaurantMembersByIdentity(restaurant.id, { email: 'dup-unclaimed@example.com' })
-      assert.equal(matches.length, 2)
+      await assert.rejects(
+        () => createMember(restaurant.id, { name: 'B', email: 'dup-unclaimed@example.com', role: 'manager' }),
+        err => err?.code === '23505' && err?.constraint === 'idx_membership_active_unclaimed_email'
+      )
     } finally {
       await deleteTestRestaurant(restaurant.id)
     }

@@ -1,0 +1,473 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Node policy: Node 22.x for every job.
+# Package manager: pnpm@10.26.1 (declared in package.json packageManager field).
+# Worker package manager: npm (exzibo-realtime has its own package-lock.json).
+# ─────────────────────────────────────────────────────────────────────────────
+
+jobs:
+  # ── 1. REPOSITORY INTEGRITY ───────────────────────────────────────────────
+  # File-only checks: no database, no production credentials.
+  # Forbidden-file check inspects only files added/renamed by the current change.
+  repository-integrity:
+    name: repository-integrity
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Full history is needed to compute the merge base for PRs.
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.26.1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+
+      - name: Frozen dependency install
+        run: pnpm install --frozen-lockfile
+
+      - name: Determine changed-file range
+        id: range
+        run: |
+          set -euo pipefail
+
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            # Compare the PR branch against the merge base with main.
+            git fetch origin main --quiet
+            BASE=$(git merge-base origin/main HEAD)
+            echo "mode=pr" >> "$GITHUB_OUTPUT"
+            echo "base=$BASE" >> "$GITHUB_OUTPUT"
+            echo "head=HEAD" >> "$GITHUB_OUTPUT"
+            echo "range=${BASE}...HEAD" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event_name }}" = "push" ]; then
+            BEFORE="${{ github.event.before }}"
+            AFTER="${{ github.sha }}"
+            # Handle force-pushes or first-push all-zero SHA safely.
+            if [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
+              BEFORE=$(git rev-parse HEAD~1 2>/dev/null || echo "")
+            fi
+            if [ -z "$BEFORE" ]; then
+              # Cannot determine previous commit; inspect nothing.
+              echo "mode=push-unknown" >> "$GITHUB_OUTPUT"
+              echo "range=HEAD...HEAD" >> "$GITHUB_OUTPUT"
+            else
+              echo "mode=push" >> "$GITHUB_OUTPUT"
+              echo "base=$BEFORE" >> "$GITHUB_OUTPUT"
+              echo "head=$AFTER" >> "$GITHUB_OUTPUT"
+              echo "range=${BEFORE}..${AFTER}" >> "$GITHUB_OUTPUT"
+            fi
+          else
+            # workflow_dispatch fallback: inspect the latest commit only.
+            echo "mode=dispatch" >> "$GITHUB_OUTPUT"
+            echo "range=HEAD~1..HEAD" >> "$GITHUB_OUTPUT"
+          fi
+
+          echo "Changed-file range: $(cat "$GITHUB_OUTPUT" | grep '^range=' | cut -d= -f2)"
+
+      - name: Forbidden-file check
+        run: |
+          set -euo pipefail
+
+          RANGE="${{ steps.range.outputs.range }}"
+          echo "── Checking changed files in range $RANGE ──"
+
+          # Extract only added/renamed files in the current change range.
+          if [ "$RANGE" = "HEAD...HEAD" ]; then
+            CHANGED=""
+          else
+            CHANGED=$(git diff --diff-filter=AR --name-only "$RANGE" || true)
+          fi
+
+          if [ -z "$CHANGED" ]; then
+            echo "  ✔ No new or renamed files in this change range."
+            exit 0
+          fi
+
+          echo "New/renamed files in this change range:"
+          echo "$CHANGED" | sed 's/^/  - /'
+
+          VIOLATIONS=$(echo "$CHANGED" | grep -E \
+            '^\.env($|\.)|(^|/)\.env($|\.)|\.dump$|\.sql\.gz$|\.pgdump$|(^|/)attached_assets/|(^|/)screenshots/|(^|/)\.agents/|Agent-memory|(^|/)\.env\b|(^|/)pasted[-_]|(^|/)prompt[-_]|generated[-_]report|backup[-_]archive|conflict[-_]marker' \
+            || true)
+
+          # .env.example is the only allowed .env-prefixed file.
+          VIOLATIONS=$(echo "$VIOLATIONS" | grep -v '^\.env\.example$' || true)
+
+          if [ -n "$VIOLATIONS" ]; then
+            echo "ERROR: Forbidden files added in this change range:" >&2
+            echo "$VIOLATIONS" | sed 's/^/  - /' >&2
+            exit 1
+          fi
+          echo "  ✔ Forbidden-file check passed."
+
+      - name: Secret-pattern check
+        run: |
+          set -euo pipefail
+
+          RANGE="${{ steps.range.outputs.range }}"
+          echo "── Scanning changed source files in range $RANGE for high-confidence secret patterns ──"
+
+          if [ "$RANGE" = "HEAD...HEAD" ]; then
+            CHANGED=""
+          else
+            CHANGED=$(git diff --diff-filter=AM --name-only "$RANGE" || true)
+          fi
+
+          if [ -z "$CHANGED" ]; then
+            echo "  ✔ No changed source files in this change range to scan."
+            exit 0
+          fi
+
+          FOUND=0
+
+          while IFS= read -r file; do
+            [ -f "$file" ] || continue
+            case "$file" in
+              *.js|*.ts|*.json|*.yml|*.yaml|*.sh|*.env*)
+                ;;
+              *)
+                continue
+                ;;
+            esac
+            # Skip the example env file (intentionally has placeholder values).
+            [ "$file" = ".env.example" ] && continue
+            if grep -qE \
+              "(AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{36}|github_pat_[A-Za-z0-9_]{82}|sk_live_[A-Za-z0-9]{24}|pk_live_[A-Za-z0-9]{24})" \
+              "$file" 2>/dev/null; then
+              echo "ERROR: Potential secret pattern found in: $file" >&2
+              FOUND=1
+            fi
+          done <<< "$CHANGED"
+
+          if [ "$FOUND" -eq 1 ]; then exit 1; fi
+          echo "  ✔ Secret-pattern check passed."
+
+      - name: Migration integrity (file-only)
+        run: |
+          echo "── validate-migrations.js ──"
+          node scripts/validate-migrations.js
+          echo "── migration-integrity.test.js ──"
+          node --test tests/migration-integrity.test.js
+
+      - name: Zero-to-head file gates (release verifier)
+        run: node --test tests/release/verify.test.js
+
+      - name: Vercel function-count check
+        run: node --test tests/vercel-function-count.test.js
+
+      - name: Architecture governance check
+        run: node --test tests/governance.test.js
+
+  # ── 2. APPLICATION TESTS ──────────────────────────────────────────────────
+  # Disposable PostgreSQL service; all committed migrations applied from zero
+  # before any test runs.  Fake CI-only values for non-database services.
+  application-tests:
+    name: application-tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: exzibo_ci
+          POSTGRES_PASSWORD: exzibo_ci_password
+          POSTGRES_DB: exzibo_ci
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+        ports:
+          - 5432:5432
+
+    # ── Fake CI-only environment values ──────────────────────────────────────
+    # None of these point to production infrastructure.
+    env:
+      DATABASE_URL: postgresql://exzibo_ci:exzibo_ci_password@127.0.0.1:5432/exzibo_ci
+      BETTER_AUTH_SECRET: ci-test-better-auth-secret-not-for-production-use
+      BETTER_AUTH_BASE_URL: https://superadmin.example.invalid
+      BETTER_AUTH_TRUSTED_ORIGINS: https://dashboard.example.invalid
+      GOOGLE_CLIENT_ID: fake-google-client-id.apps.googleusercontent.com
+      GOOGLE_CLIENT_SECRET: fake-google-client-secret-ci-only
+      SUPERADMIN_ALLOWED_EMAILS: ci-superadmin@example.invalid
+      UPSTASH_REDIS_REST_URL: https://redis.example.invalid
+      UPSTASH_REDIS_REST_TOKEN: fake-upstash-redis-token-ci-test-only-value-here
+      R2_ACCOUNT_ID: fake-r2-account-id-ci-only
+      R2_ACCESS_KEY_ID: fake-r2-access-key-id-ci-only
+      R2_SECRET_ACCESS_KEY: fake-r2-secret-access-key-ci-test-only-value
+      R2_BUCKET_NAME: fake-ci-bucket
+      R2_PUBLIC_BASE_URL: https://images.example.invalid
+      REALTIME_URL: https://rt.example.invalid
+      REALTIME_PUBLISH_SECRET: fake-realtime-publish-secret-ci-test-only-value
+      REALTIME_TICKET_SECRET: fake-realtime-ticket-secret-ci-test-only-value
+      # Prevent Vite/build from loading auth in test mode.
+      NODE_ENV: test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.26.1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+
+      - name: Frozen dependency install
+        run: pnpm install --frozen-lockfile
+
+      - name: Wait for PostgreSQL readiness
+        run: |
+          until pg_isready -h 127.0.0.1 -p 5432 -U exzibo_ci; do
+            echo "Waiting for PostgreSQL…"
+            sleep 1
+          done
+          echo "PostgreSQL is ready."
+
+      - name: Run Drizzle migrations from zero
+        run: pnpm db:migrate
+
+      - name: Provision Better Auth tables for CI
+        run: |
+          PGPASSWORD=exzibo_ci_password psql \
+            -v ON_ERROR_STOP=1 \
+            -h 127.0.0.1 -p 5432 -U exzibo_ci -d exzibo_ci <<'SQL'
+          CREATE TABLE IF NOT EXISTS "user" (
+            id             TEXT PRIMARY KEY,
+            name           TEXT NOT NULL,
+            email          TEXT NOT NULL UNIQUE,
+            email_verified BOOLEAN NOT NULL DEFAULT false,
+            image          TEXT,
+            created_at     TIMESTAMP NOT NULL DEFAULT now(),
+            updated_at     TIMESTAMP NOT NULL DEFAULT now()
+          );
+          CREATE TABLE IF NOT EXISTS "session" (
+            id         TEXT PRIMARY KEY,
+            expires_at TIMESTAMP NOT NULL,
+            token      TEXT NOT NULL UNIQUE,
+            created_at TIMESTAMP NOT NULL DEFAULT now(),
+            updated_at TIMESTAMP NOT NULL DEFAULT now(),
+            ip_address TEXT,
+            user_agent TEXT,
+            user_id    TEXT NOT NULL REFERENCES "user"(id) ON DELETE CASCADE
+          );
+          CREATE INDEX IF NOT EXISTS session_user_id_idx ON "session"(user_id);
+          CREATE TABLE IF NOT EXISTS "account" (
+            id                       TEXT PRIMARY KEY,
+            account_id               TEXT NOT NULL,
+            provider_id              TEXT NOT NULL,
+            user_id                  TEXT NOT NULL REFERENCES "user"(id) ON DELETE CASCADE,
+            access_token             TEXT,
+            refresh_token             TEXT,
+            id_token                 TEXT,
+            access_token_expires_at  TIMESTAMP,
+            refresh_token_expires_at TIMESTAMP,
+            scope                    TEXT,
+            password                 TEXT,
+            created_at               TIMESTAMP NOT NULL DEFAULT now(),
+            updated_at               TIMESTAMP NOT NULL DEFAULT now()
+          );
+          CREATE INDEX IF NOT EXISTS account_user_id_idx ON "account"(user_id);
+          CREATE INDEX IF NOT EXISTS account_provider_idx ON "account"(provider_id, account_id);
+          CREATE TABLE IF NOT EXISTS "verification" (
+            id         TEXT PRIMARY KEY,
+            identifier TEXT NOT NULL,
+            value      TEXT NOT NULL,
+            expires_at TIMESTAMP NOT NULL,
+            created_at TIMESTAMP DEFAULT now(),
+            updated_at TIMESTAMP DEFAULT now()
+          );
+          SQL
+
+      - name: Confirm migration success
+        run: |
+          PGPASSWORD=exzibo_ci_password psql \
+            -h 127.0.0.1 -p 5432 -U exzibo_ci -d exzibo_ci \
+            -c "SELECT table_name FROM information_schema.tables
+                WHERE table_schema = 'public' ORDER BY table_name;" \
+            | grep -q "restaurants" \
+            && echo "  ✔ Migration confirmed: restaurants table present." \
+            || { echo "ERROR: Drizzle migrations did not create expected tables." >&2; exit 1; }
+
+      - name: Migration governance tests
+        run: node --test tests/migration-governance.test.js
+
+      - name: Start application server for HTTP tests
+        run: |
+          nohup pnpm start > "$RUNNER_TEMP/application-server.log" 2>&1 &
+          echo $! > "$RUNNER_TEMP/application-server.pid"
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent http://127.0.0.1:5000/api/health/live >/dev/null; then
+              echo "Application server is ready."
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "Application server did not become ready." >&2
+          cat "$RUNNER_TEMP/application-server.log" >&2
+          exit 1
+
+      - name: Complete test inventory
+        # Run each file in its own process. The suite opens shared database
+        # pools and several files mutate process.env; passing all files to one
+        # node --test invocation lets Node schedule file workers concurrently,
+        # even when test-concurrency is set to one, causing cross-file races.
+        # No files are skipped: this is the complete inventory, executed
+        # deterministically and with a bounded timeout per file.
+        run: |
+          while IFS= read -r TEST_FILE; do
+            echo "── Running $TEST_FILE ──"
+            pnpm exec node --test \
+              --test-timeout=120000 \
+              --test-force-exit \
+              "$TEST_FILE"
+          done < <(find tests api/__tests__ -type f -name '*.test.js' -print | sort)
+
+  # ── 3. PRODUCTION BUILD ───────────────────────────────────────────────────
+  # Vite config imports serverEnv and may connect to the database during build,
+  # so a disposable PostgreSQL service and a non-production DATABASE_URL are provided.
+  production-build:
+    name: production-build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: exzibo_ci
+          POSTGRES_PASSWORD: exzibo_ci_password
+          POSTGRES_DB: exzibo_ci
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+        ports:
+          - 5432:5432
+
+    env:
+      DATABASE_URL: postgresql://exzibo_ci:exzibo_ci_password@127.0.0.1:5432/exzibo_ci
+      BETTER_AUTH_SECRET: ci-test-better-auth-secret-not-for-production-use
+      BETTER_AUTH_BASE_URL: https://superadmin.example.invalid
+      BETTER_AUTH_TRUSTED_ORIGINS: https://dashboard.example.invalid
+      GOOGLE_CLIENT_ID: fake-google-client-id.apps.googleusercontent.com
+      GOOGLE_CLIENT_SECRET: fake-google-client-secret-ci-only
+      SUPERADMIN_ALLOWED_EMAILS: ci-superadmin@example.invalid
+      UPSTASH_REDIS_REST_URL: https://redis.example.invalid
+      UPSTASH_REDIS_REST_TOKEN: fake-upstash-redis-token-ci-test-only-value-here
+      R2_ACCOUNT_ID: fake-r2-account-id-ci-only
+      R2_ACCESS_KEY_ID: fake-r2-access-key-id-ci-only
+      R2_SECRET_ACCESS_KEY: fake-r2-secret-access-key-ci-test-only-value
+      R2_BUCKET_NAME: fake-ci-bucket
+      R2_PUBLIC_BASE_URL: https://images.example.invalid
+      REALTIME_URL: https://rt.example.invalid
+      REALTIME_PUBLISH_SECRET: fake-realtime-publish-secret-ci-test-only-value
+      REALTIME_TICKET_SECRET: fake-realtime-ticket-secret-ci-test-only-value
+      NODE_ENV: test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.26.1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+
+      - name: Frozen dependency install
+        run: pnpm install --frozen-lockfile
+
+      - name: Wait for PostgreSQL readiness
+        run: |
+          until pg_isready -h 127.0.0.1 -p 5432 -U exzibo_ci; do
+            echo "Waiting for PostgreSQL…"
+            sleep 1
+          done
+          echo "PostgreSQL is ready."
+
+      - name: Run Drizzle migrations from zero
+        run: pnpm db:migrate
+
+      - name: Root production build
+        run: pnpm build
+
+      - name: Verify Vercel function count (≤ 12)
+        run: node --test tests/vercel-function-count.test.js
+
+  # ── 4. WORKER VALIDATION ─────────────────────────────────────────────────
+  # Cloudflare Worker TypeScript check + Wrangler dry-run.
+  # The Worker has its own package-lock.json, so it uses npm (not pnpm).
+  # No deployment; no Cloudflare credentials required.
+  worker-validation:
+    name: worker-validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: exzibo-realtime
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Pin a stable npm version for the Worker lockfile
+        # npm 10.9.8 is the bundled version for Node 22 and is compatible with
+        # lockfileVersion 3. Using the same major line as the runtime avoids the
+        # "Exit handler never called!" crash observed when downgrading to 10.8.2.
+        run: npm install -g npm@10.9.8
+
+      - name: Frozen Worker dependency install
+        # exzibo-realtime has its own package-lock.json, so npm is the canonical
+        # package manager here. pnpm is not used for this subdirectory.
+        # The committed lockfile was generated through Replit's package proxy,
+        # so its resolved URLs are not reachable from GitHub-hosted runners.
+        # Rewrite only a temporary copy to the public npm registry, install the
+        # exact locked versions, then restore and verify the committed lockfile.
+        run: |
+          cp package-lock.json package-lock.json.ci-backup
+          trap 'mv -f package-lock.json.ci-backup package-lock.json' EXIT
+          sed -i 's#http://package-firewall\.replit\.local/npm/#https://registry.npmjs.org/#g' package-lock.json
+          npm ci --ignore-scripts --no-audit --no-fund
+          trap - EXIT
+          mv -f package-lock.json.ci-backup package-lock.json
+          git diff --exit-code package-lock.json
+
+      - name: Worker TypeScript check
+        run: npx tsc --noEmit
+
+      - name: Wrangler dry-run (no deployment)
+        run: npx wrangler deploy --dry-run
+        env:
+          # Fake account ID — dry-run does not upload to Cloudflare.
+          CLOUDFLARE_ACCOUNT_ID: fake-account-id-ci-dry-run-only

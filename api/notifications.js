@@ -124,8 +124,11 @@ export default vercelWrapper(async function handler(req, res) {
       if (ipResult.state !== 'resolved') return send503Protection(res)
       const ip = ipResult.ip
       const rl = await rateLimit(`rl:help-submit:ip:${ip}`, 5, 300)
-      if (!rl.available) return send503Protection(res)
-      if (!rl.allowed) return send429(res, 'Too many help submissions. Please wait a few minutes.')
+      if (!rl.allowed) {
+        return rl.available
+          ? send429(res, 'Too many help submissions. Please wait a few minutes.')
+          : send503Protection(res)
+      }
 
       const body = req.body || {}
       rejectUnknownFields(body, ['message', 'restaurant_name', 'restaurant_uid', 'user_role', 'feedback'])

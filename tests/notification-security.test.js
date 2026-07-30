@@ -186,18 +186,17 @@ describe('B — public help submission (HTTP)', async () => {
     assert.equal(Object.keys(body).join(','), 'success', 'Response must contain only { success }')
   })
 
-  it('B8: caller-supplied status field is ignored (server owns status)', async () => {
+  it('B8: caller-supplied status field is rejected as an unknown field', async () => {
     if (!process.env.DATABASE_URL) { console.log('    SKIP: DATABASE_URL not set'); return }
     const res = await post(HELP_PATH, {
       message: 'Attempt to set status.',
       status:  'resolved',          // privileged field — must be ignored
     })
     if (res._networkError) { console.log('    SKIP: server offline'); return }
-    // Should succeed (status is silently dropped, not a validation error)
-    assert.ok([200, 201].includes(res.status), `Expected 2xx, got ${res.status}`)
+    // Public help submissions accept only the documented whitelist.
+    assert.equal(res.status, 400, `Expected 400, got ${res.status}`)
     const body = await res.json()
-    assert.equal(body.success, true)
-    assert.equal(body.status, undefined, 'status must not be echoed back')
+    assert.ok(body.error, 'Should have an error field')
   })
 
   it('B9: GET to createHelp returns 405', async () => {
@@ -378,7 +377,7 @@ describe('F — policy consistency: Vite / Express / Vercel all route to same ha
     )
   })
 
-  it('F5: all superadmin-only actions call assertSuperadmin before touching the DB', async () => {
+  it('F5: all superadmin-only actions call authorizeSuperadmin before touching the DB', async () => {
     const fs = await import('node:fs/promises')
     const src = await fs.readFile('api/notifications.js', 'utf8')
     const adminActions = [
@@ -389,11 +388,11 @@ describe('F — policy consistency: Vite / Express / Vercel all route to same ha
     for (const action of adminActions) {
       const actionIdx = src.indexOf(`action === '${action}'`)
       assert.ok(actionIdx >= 0, `action '${action}' must exist in handler`)
-      // Find the next assertSuperadmin after the action check
-      const nextAssert = src.indexOf('assertSuperadmin', actionIdx)
+      // Find the next authorizeSuperadmin call after the action check
+      const nextAuthorize = src.indexOf('authorizeSuperadmin', actionIdx)
       assert.ok(
-        nextAssert > actionIdx,
-        `action '${action}' must call assertSuperadmin before DB access`
+        nextAuthorize > actionIdx,
+        `action '${action}' must call authorizeSuperadmin before DB access`
       )
     }
   })

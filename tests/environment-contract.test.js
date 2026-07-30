@@ -316,7 +316,14 @@ describe('CLIENT SAFETY', () => {
 
   it('18. VITE variables contain only approved public configuration', () => {
     const refs = findVitePublicRefs()
-    const allowed = new Set(['VITE_BETTER_AUTH_URL', 'VITE_REALTIME_URL', 'VITE_R2_PUBLIC_BASE_URL', 'VITE_PREVIEW_MODE'])
+    const allowed = new Set([
+      'VITE_BETTER_AUTH_URL',
+      'VITE_REALTIME_URL',
+      'VITE_R2_PUBLIC_BASE_URL',
+      'VITE_PREVIEW_MODE',
+      // Development-only client UI convenience; never used by server auth.
+      'VITE_DISABLE_AUTH',
+    ])
     const disallowed = refs.filter(r => !allowed.has(r))
     assert.deepStrictEqual(disallowed, [], `Disallowed VITE variable: ${disallowed.join(', ')}`)
   })

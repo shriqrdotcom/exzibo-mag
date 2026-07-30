@@ -78,18 +78,18 @@ describe('A — image validation (pure unit)', async () => {
     assert.equal(result.format, 'WebP')
   })
 
-  it('accepts a valid GIF89a buffer', () => {
+  it('rejects a detected GIF89a upload format', () => {
     const buf = Buffer.from([0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 0x01, 0x00])
     const result = validateImageBuffer(buf)
-    assert.equal(result.ok, true, `Expected ok=true, got: ${result.error}`)
-    assert.equal(result.format, 'GIF')
+    assert.equal(result.ok, false, 'GIF uploads are intentionally not allowed')
+    assert.match(result.error, /expected JPEG, PNG, or WebP/i)
   })
 
-  it('accepts a valid GIF87a buffer', () => {
+  it('rejects a detected GIF87a upload format', () => {
     const buf = Buffer.from([0x47, 0x49, 0x46, 0x38, 0x37, 0x61, 0x01, 0x00])
     const result = validateImageBuffer(buf)
-    assert.equal(result.ok, true, `Expected ok=true, got: ${result.error}`)
-    assert.equal(result.format, 'GIF')
+    assert.equal(result.ok, false, 'GIF uploads are intentionally not allowed')
+    assert.match(result.error, /expected JPEG, PNG, or WebP/i)
   })
 
   // ── Malformed / unsupported data ─────────────────────────────────────────────

@@ -431,13 +431,23 @@ describe('9 — Caller-provided platform fields are not trusted during creation'
     )
   })
 
-  it('api/restaurants.js action=create generates uid server-side when absent', async () => {
+  it('restaurant creation delegates UID generation to the shared service', async () => {
     const src = await readSrc('api/restaurants.js')
-    // Use a wider window (1200 chars) to cover the full create handler body.
-    const createSection = src.slice(src.indexOf("action === 'create'"), src.indexOf("action === 'create'") + 1200)
+    const serviceSrc = await readSrc('src/services/restaurantCreationService.js')
+    // The API delegates creation; UID generation belongs to the shared service.
+    const createStart = src.indexOf("action === 'create'")
+    const createSection = src.slice(createStart, createStart + 3000)
     assert.ok(
-      createSection.includes('payload.uid'),
-      'create action must handle uid generation when absent'
+      createSection.includes('createRestaurantAtomic('),
+      'create action must delegate to createRestaurantAtomic'
+    )
+    assert.ok(
+      serviceSrc.includes('const uid = generateUid()'),
+      'createRestaurantAtomic must generate the UID server-side'
+    )
+    assert.ok(
+      !createSection.includes('payload.uid'),
+      'create action must not forward caller-provided UID'
     )
     // Must not accept a caller-provided plan, status, or id — those are stripped
     // inside createNeonRestaurant. Verify the handler never forwards them explicitly.

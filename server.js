@@ -15,7 +15,6 @@ import {
   toPublicRestaurant,
   toMemberRestaurant,
   toSuperadminRestaurant,
-  getNeonRestaurants,
 } from './src/db/neon-restaurants.js'
 import { lookupRestaurantByUid } from './api/_lib/restaurant-lookup.js'
 import { createRestaurantAtomic } from './src/services/restaurantCreationService.js'
@@ -175,6 +174,12 @@ function _isPrivateAdminPath(path, method) {
 
 app.use(async (req, res, next) => {
   if (req.method === 'OPTIONS') return next()
+  // These per-restaurant schema endpoints were removed. Keep their former
+  // authorization boundary so stale clients fail closed instead of receiving
+  // the SPA fallback's 404 response.
+  if (req.path.startsWith('/api/restaurant-db/')) {
+    return requireSuperadmin(req, res, next)
+  }
   if (!_isPrivateAdminPath(req.path, req.method)) return next()
 
   try {
@@ -496,8 +501,11 @@ app.post('/api/orders', async (req, res) => {
     const orderIpResult = resolveClientIp(req)
     if (orderIpResult.state !== 'resolved') return send503Protection(res)
     const orderRl = await rateLimit(`rl:order-create:ip:${orderIpResult.ip}`, 10, 60)
-    if (!orderRl.available) return send503Protection(res)
-    if (!orderRl.allowed) return send429(res, 'Too many orders submitted. Please wait a moment.')
+    if (!orderRl.allowed) {
+      return orderRl.available
+        ? send429(res, 'Too many orders submitted. Please wait a moment.')
+        : send503Protection(res)
+    }
 
     if (!body?.restaurant_id || !Array.isArray(body?.items) || body.items.length === 0) {
       return res.status(400).json({ error: 'restaurant_id and a non-empty items array are required' })
@@ -1064,6 +1072,8 @@ app.all('/api/settings',    (req, res) => delegateToHandler('./api/settings.js',
 app.all('/api/notifications', (req, res) => delegateToHandler('./api/notifications.js', req, res))
 app.all('/api/restaurant-notifications', (req, res) => delegateToHandler('./api/notifications.js', req, res))
 app.all('/api/system',       (req, res) => delegateToHandler('./api/system.js',       req, res))
+app.all('/api/team',         (req, res) => delegateToHandler('./api/team.js',        req, res))
+app.all('/api/mobile/v1/bootstrap', (req, res) => delegateToHandler('./api/mobile/bootstrap.js', req, res))
 app.all('/api/analytics/:restaurantId', (req, res) => {
   req.query.action = 'analytics'
   req.query.id = req.params.restaurantId
@@ -1071,7 +1081,7 @@ app.all('/api/analytics/:restaurantId', (req, res) => {
 })
 
 // ── SPA fallback — must be last ───────────────────────────────────────────────
-app.get('*', (req, res) => {
+app.get('/{*splat}', (req, res) => {
   res.sendFile(path.resolve(__dirname, 'dist', 'index.html'))
 })
 

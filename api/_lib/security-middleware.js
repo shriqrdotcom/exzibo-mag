@@ -55,27 +55,30 @@ export function setRequestId(req, res) {
 
 // ── Method allowlist ─────────────────────────────────────────────────────────
 
-export function sendMethodNotAllowed(res, allowed, requestId) {
+export function sendMethodNotAllowed(res, allowed, requestId, options = {}) {
   const allowedHeader = Array.isArray(allowed) ? allowed.join(', ') : 'GET, HEAD'
   const envelope = createSafeError({
     code: 'METHOD_NOT_ALLOWED',
     message: 'Method not allowed',
     requestId,
   })
+  const body = options.errorField
+    ? { ...envelope, [options.errorField]: envelope.message }
+    : envelope
   if (!res.headersSent) {
     res.setHeader('Allow', allowedHeader)
     if (typeof res.status === 'function') {
-      res.status(405).json(envelope)
+      res.status(405).json(body)
     } else {
       res.statusCode = 405
       res.setHeader('Content-Type', 'application/json')
-      res.end(JSON.stringify(envelope))
+      res.end(JSON.stringify(body))
     }
   }
-  return envelope
+  return body
 }
 
-export function methodAllowlist(req, res, allowed) {
+export function methodAllowlist(req, res, allowed, options = {}) {
   const allowedMethods = Array.isArray(allowed) ? allowed : ['GET', 'HEAD']
   const method = (req.method || 'GET').toUpperCase()
   const requestId = req.requestId || setRequestId(req, res)
@@ -94,7 +97,7 @@ export function methodAllowlist(req, res, allowed) {
 
   if (allowedMethods.includes(method)) return false
 
-  sendMethodNotAllowed(res, allowedMethods, requestId)
+  sendMethodNotAllowed(res, allowedMethods, requestId, options)
   return true
 }
 
@@ -285,7 +288,7 @@ async function runCoreBoundary(req, res, options, handler) {
   const _logStart = Date.now()
   attachRequestLogger(req, res, requestId, _logStart)
 
-  if (methodAllowlist(req, res, opts.allowedMethods)) {
+  if (methodAllowlist(req, res, opts.allowedMethods, opts)) {
     return { handled: true, requestId }
   }
 
