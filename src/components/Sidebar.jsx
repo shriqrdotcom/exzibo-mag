@@ -42,7 +42,7 @@ export default function Sidebar() {
       width: '256px',
       minWidth: '256px',
       height: '100vh',
-      background: '#111111',
+      background: '#000000',
       borderRight: '1px solid rgba(255,255,255,0.04)',
       display: 'flex',
       flexDirection: 'column',

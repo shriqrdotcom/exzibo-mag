@@ -166,7 +166,7 @@ function DashboardSkeleton() {
           100% { background-position:  800px 0; }
         }
         .dsk {
-          background: linear-gradient(90deg, #1c1c1c 25%, #272727 50%, #1c1c1c 75%);
+          background: linear-gradient(90deg, #0f0f0f 25%, #1a1a1a 50%, #0f0f0f 75%);
           background-size: 1600px 100%;
           animation: dskShimmer 1.6s infinite linear;
           border-radius: 8px;
@@ -176,12 +176,12 @@ function DashboardSkeleton() {
       {/* ── KPI cards row ── */}
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '16px', marginBottom: '28px' }}>
         {/* Card 1 — large */}
-        <div style={{ background: '#161616', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '16px', padding: '24px 28px' }}>
+        <div style={{ background: '#0a0a0a', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '16px', padding: '24px 28px' }}>
           <div className="dsk" style={{ width: '140px', height: '10px', marginBottom: '20px' }} />
           <div className="dsk" style={{ width: '90px', height: '44px', borderRadius: '10px' }} />
         </div>
         {/* Card 2 */}
-        <div style={{ background: '#161616', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '16px', padding: '24px 28px' }}>
+        <div style={{ background: '#0a0a0a', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '16px', padding: '24px 28px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
             <div className="dsk" style={{ width: '110px', height: '10px' }} />
             <div className="dsk" style={{ width: '70px', height: '24px', borderRadius: '6px' }} />
@@ -189,7 +189,7 @@ function DashboardSkeleton() {
           <div className="dsk" style={{ width: '100px', height: '44px', borderRadius: '10px' }} />
         </div>
         {/* Card 3 */}
-        <div style={{ background: '#161616', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '16px', padding: '24px 28px' }}>
+        <div style={{ background: '#0a0a0a', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '16px', padding: '24px 28px' }}>
           <div className="dsk" style={{ width: '130px', height: '10px', marginBottom: '12px' }} />
           <div className="dsk" style={{ width: '60px', height: '10px', marginBottom: '16px' }} />
           <div className="dsk" style={{ width: '80px', height: '44px', borderRadius: '10px' }} />
@@ -197,7 +197,7 @@ function DashboardSkeleton() {
       </div>
 
       {/* ── Table area ── */}
-      <div style={{ background: '#161616', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '16px', overflow: 'hidden' }}>
+      <div style={{ background: '#0a0a0a', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '16px', overflow: 'hidden' }}>
         {/* Table header bar */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '24px 28px' }}>
           <div className="dsk" style={{ width: '180px', height: '18px', borderRadius: '6px' }} />
@@ -429,7 +429,7 @@ export default function Dashboard() {
   })()
 
   return (
-    <div style={{ display: 'flex', height: '100vh', background: '#0d0d0d', overflow: 'hidden' }}>
+    <div style={{ display: 'flex', height: '100vh', background: '#000000', overflow: 'hidden' }}>
       <Sidebar />
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <AdminHeader />
@@ -452,7 +452,7 @@ export default function Dashboard() {
               value={restaurants.filter(r => r.status === 'RUNNING' || r.status === 'PAUSED').length.toLocaleString('en-IN')}
             />
             <div style={{
-              background: '#161616',
+              background: '#0a0a0a',
               border: '1px solid rgba(255,255,255,0.06)',
               borderRadius: '16px',
               padding: '24px 28px',
@@ -487,7 +487,7 @@ export default function Dashboard() {
               </div>
             </div>
             <div style={{
-              background: '#161616',
+              background: '#0a0a0a',
               border: '1px solid rgba(255,255,255,0.06)',
               borderRadius: '16px',
               padding: '24px 28px',
@@ -515,7 +515,7 @@ export default function Dashboard() {
           </div>
 
           <div style={{
-            background: '#161616',
+            background: '#0a0a0a',
             border: '1px solid rgba(255,255,255,0.06)',
             borderRadius: '16px',
             overflow: 'hidden',
@@ -739,7 +739,7 @@ export default function Dashboard() {
             onClick={e => e.stopPropagation()}
             style={{
               width: '100%', maxWidth: '440px',
-              background: '#141414',
+              background: '#0a0a0a',
               border: '1px solid rgba(255,255,255,0.08)',
               borderRadius: '18px',
               padding: '28px',
@@ -856,7 +856,7 @@ export default function Dashboard() {
             onClick={e => e.stopPropagation()}
             style={{
               width: '100%', maxWidth: '380px',
-              background: '#141414',
+              background: '#0a0a0a',
               border: '1px solid rgba(255,255,255,0.08)',
               borderRadius: '18px',
               padding: '24px',
@@ -947,7 +947,7 @@ export default function Dashboard() {
             onClick={e => e.stopPropagation()}
             style={{
               width: '100%', maxWidth: '460px',
-              background: '#141414',
+              background: '#0a0a0a',
               border: '1px solid rgba(255,255,255,0.08)',
               borderRadius: '18px',
               padding: '28px',
@@ -1184,7 +1184,7 @@ export default function Dashboard() {
 function KPICard({ label, value, badge, badgeIcon }) {
   return (
     <div style={{
-      background: '#161616',
+      background: '#0a0a0a',
       border: '1px solid rgba(255,255,255,0.06)',
       borderRadius: '16px',
       padding: '24px 28px',
@@ -1537,7 +1537,7 @@ function ImageCompressor() {
     : null
 
   const cardStyle = {
-    background: '#111',
+    background: '#0a0a0a',
     border: '1px solid rgba(255,255,255,0.06)',
     borderRadius: '20px',
     padding: '28px',
@@ -1546,7 +1546,7 @@ function ImageCompressor() {
   const inputNumStyle = {
     width: '90px',
     padding: '9px 12px',
-    background: '#0A0A0A',
+    background: '#000000',
     border: '1px solid rgba(255,255,255,0.1)',
     borderRadius: '10px',
     color: '#fff',
@@ -1634,7 +1634,7 @@ function ImageCompressor() {
         ...cardStyle,
         marginBottom: '24px',
         padding: '20px 28px',
-        background: '#0e0e0e',
+        background: '#000000',
         border: '1px solid rgba(255,255,255,0.06)',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '24px', flexWrap: 'wrap' }}>
@@ -1707,7 +1707,7 @@ function ImageCompressor() {
               marginLeft: 'auto',
               display: 'flex', alignItems: 'center', gap: '7px',
               padding: '10px 22px', borderRadius: '50px',
-              background: saveFlash ? 'rgba(34,197,94,0.15)' : (limitsChanged && limitsValid) ? '#fff' : '#1a1a1a',
+              background: saveFlash ? 'rgba(34,197,94,0.15)' : (limitsChanged && limitsValid) ? '#fff' : '#0a0a0a',
               border: saveFlash ? '1px solid rgba(34,197,94,0.35)' : (limitsChanged && limitsValid) ? 'none' : '1px solid rgba(255,255,255,0.06)',
               color: saveFlash ? '#22c55e' : (limitsChanged && limitsValid) ? '#111' : '#444',
               fontSize: '13px', fontWeight: 700,
@@ -1767,7 +1767,7 @@ function ImageCompressor() {
               style={{
                 marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '7px',
                 padding: '11px 24px', borderRadius: '50px',
-                background: qualityFlash ? 'rgba(34,197,94,0.15)' : qualityChanged ? '#fff' : '#1a1a1a',
+                background: qualityFlash ? 'rgba(34,197,94,0.15)' : qualityChanged ? '#fff' : '#0a0a0a',
                 border: qualityFlash ? '1px solid rgba(34,197,94,0.35)' : qualityChanged ? 'none' : '1px solid rgba(255,255,255,0.06)',
                 color: qualityFlash ? '#22c55e' : qualityChanged ? '#111' : '#444',
                 fontSize: '13px', fontWeight: 700, letterSpacing: '0.05em',
@@ -1902,7 +1902,7 @@ function DemoWebsitesPanel({ restaurants, onEdit, onDelete }) {
       </div>
 
       <div style={{
-        background: '#111',
+        background: '#0a0a0a',
         border: '1px solid rgba(245,158,11,0.12)',
         borderRadius: '20px',
         overflow: 'hidden',
