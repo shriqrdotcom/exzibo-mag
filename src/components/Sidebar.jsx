@@ -63,7 +63,7 @@ export default function Sidebar() {
       {/* Nav items */}
       <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
         {navItems.map(({ icon: Icon, label, path, permission }) => {
-          const isActive = location.pathname === path
+          const isActive = location.pathname === path && !searchParams.get('section')
           return (
             <PermissionGate key={path} permission={permission}>
               <button
