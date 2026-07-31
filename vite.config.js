@@ -1153,6 +1153,18 @@ function realtimeOutboxPlugin() {
     name: 'realtime-outbox-plugin',
     configureServer(server) {
       server.httpServer?.once('listening', () => {
+        // Replit development does not configure the realtime publish secret.
+        // Do not start a DB polling worker in that case: the worker would
+        // issue a claim query every 2 seconds while the app is idle.
+        if (!process.env.REALTIME_URL || !process.env.REALTIME_PUBLISH_SECRET) {
+          markReady()
+          logger.info('outbox processor disabled', {
+            runtime: 'vite',
+            reason: 'realtime publishing is not configured',
+          })
+          return
+        }
+
         import('pg').then(({ default: pg }) => {
           _outboxPool = new pg.Pool({ connectionString: process.env.DATABASE_URL, max: 2 })
           _stopOutbox = startOutboxProcessor(_outboxPool)

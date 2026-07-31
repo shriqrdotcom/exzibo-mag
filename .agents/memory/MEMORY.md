@@ -22,3 +22,4 @@
 - [Vite dev server query parsing](vite-dev-query-parsing.md) — Vite middleware does not populate `req.query`; parse it explicitly before delegating to Vercel-style handlers.
 - [Notification expiry boundary](notification-expiry-boundary.md) — active notifications use `expires_at > now` (strict) so the 24-hour boundary is deterministic.
 - [Runtime route parity refactoring](runtime-route-parity-refactoring.md) — ~595 lines of duplicated business logic eliminated across Vercel/Express/Vite by extracting shared table-validation.js, preview-auth.js modules; DISABLE_AUTH bypass removed, health check canonicalized.
+- [Conditional outbox worker](conditional-outbox-worker.md) — only start realtime outbox polling when endpoint and publish credentials are configured.

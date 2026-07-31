@@ -1095,7 +1095,12 @@ app.use(expressErrorHandler())
 validateRedisConfig()
 
 import pg from 'pg'
-const outboxPool = new pg.Pool({ connectionString: process.env.DATABASE_URL, max: 2 })
+const realtimePublishingConfigured = Boolean(
+  process.env.REALTIME_URL && process.env.REALTIME_PUBLISH_SECRET,
+)
+const outboxPool = realtimePublishingConfigured
+  ? new pg.Pool({ connectionString: process.env.DATABASE_URL, max: 2 })
+  : null
 
 const server = app.listen(PORT, '0.0.0.0', () => {
   // Mark ready only after the server is listening and startup validation passed
@@ -1104,8 +1109,18 @@ const server = app.listen(PORT, '0.0.0.0', () => {
 })
 
 // ── Start the transactional outbox processor ─────────────────────────────────
-const stopOutbox = startOutboxProcessor(outboxPool)
-logger.info('outbox processor started', { runtime: 'express' })
+const stopOutbox = realtimePublishingConfigured
+  ? startOutboxProcessor(outboxPool)
+  : null
+logger.info(
+  realtimePublishingConfigured ? 'outbox processor started' : 'outbox processor disabled',
+  {
+    runtime: 'express',
+    ...(realtimePublishingConfigured
+      ? {}
+      : { reason: 'realtime publishing is not configured' }),
+  },
+)
 
 // ── Graceful shutdown ─────────────────────────────────────────────────────────
 const SHUTDOWN_DRAIN_TIMEOUT_MS = 20_000   // 20 seconds for in-flight requests
@@ -1156,8 +1171,10 @@ async function gracefulShutdown(signal, reason) {
 
   // 5. Close database pool
   try {
-    await outboxPool.end()
-    logger.info('PostgreSQL pool closed')
+    if (outboxPool) {
+      await outboxPool.end()
+      logger.info('PostgreSQL pool closed')
+    }
   } catch (err) {
     logger.error('PostgreSQL pool close error', { error: err.message })
   }
