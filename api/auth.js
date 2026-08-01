@@ -1,5 +1,6 @@
 import { toNodeHandler } from 'better-auth/node'
 import { auth } from '../src/lib/auth.server.js'
+import { applyBrowserSecurityHeaders } from './_lib/browser-security.js'
 
 const betterAuthHandler = toNodeHandler(auth)
 
@@ -17,6 +18,7 @@ export const config = {
  * Better Auth tables must exist already; no request-time DDL is performed.
  */
 export default async function handler(req, res) {
+  applyBrowserSecurityHeaders(res, { req })
   const subpath = Array.isArray(req.query._path)
     ? req.query._path.join('/')
     : (req.query._path || '')

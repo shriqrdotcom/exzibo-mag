@@ -50,8 +50,18 @@ export function getPublicImageUrl(value) {
     return `${R2_BASE}/${v}`
   }
 
-  // 5. Unknown URL or local path — return as-is
-  return v
+  // 5. Local paths and HTTP(S) URLs are displayable image sources. Reject
+  // executable or unsupported schemes before they reach an img/src sink.
+  if (v.startsWith('/') || /^data:image\//i.test(v) || /^blob:/i.test(v)) return v
+  if (/^https?:\/\//i.test(v)) {
+    try {
+      const parsed = new URL(v)
+      return ['http:', 'https:'].includes(parsed.protocol) ? v : ''
+    } catch {
+      return ''
+    }
+  }
+  return ''
 }
 
 /**

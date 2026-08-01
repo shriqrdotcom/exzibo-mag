@@ -4,6 +4,7 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { notifyAnalyticsUpdate } from '../context/AnalyticsContext'
 import { getRestaurantBySlug, getMenuCategories, getMenuItems, getPublishedMenuItems, loadMenuFilters, fetchRestaurantAbout, loadRestaurantHours } from '../lib/db'
 import { getPublicImageUrl, getPublicImageUrls } from '../lib/imageUrl'
+import { safeExternalUrl } from '../lib/safeExternalUrl'
 import { useMenuSubdomainRedirect } from '../lib/routeConfig'
 import { toSlug } from '../lib/slug'
 import { generateIdempotencyKey } from '../lib/idempotencyKey'
@@ -3453,9 +3454,8 @@ export default function RestaurantWebsite() {
           {/* ── FOOTER ── */}
           {(() => {
             const ensureUrl = url => {
-              if (!url || !url.trim() || url.trim() === '#') return null
-              const u = url.trim()
-              return /^https?:\/\//i.test(u) ? u : `https://${u}`
+              if (!url || url.trim() === '#') return null
+              return safeExternalUrl(url)
             }
             const sl = restaurant.socialLinks || {}
             const allSocials = [
@@ -3622,8 +3622,8 @@ export default function RestaurantWebsite() {
                             <Star key={i} size={11} color="#FFB800" fill={i <= ratingStars ? '#FFB800' : 'none'} />
                           ))}
                         </div>
-                        {restaurant.googleReview && restaurant.googleReview.trim() && (
-                          <a href={restaurant.googleReview.trim()} target="_blank" rel="noopener noreferrer" className="exz-rate-btn">
+                        {safeExternalUrl(restaurant.googleReview) && (
+                          <a href={safeExternalUrl(restaurant.googleReview)} target="_blank" rel="noopener noreferrer" className="exz-rate-btn">
                             Rate Us
                           </a>
                         )}
@@ -4857,9 +4857,9 @@ export default function RestaurantWebsite() {
                 const name = restaurant?.name || ''
                 const placeId = restaurant?.google_place_id
                 if (placeId) {
-                  window.open(`https://search.google.com/local/writereview?placeid=${placeId}`, '_blank')
+                  window.open(`https://search.google.com/local/writereview?placeid=${placeId}`, '_blank', 'noopener,noreferrer')
                 } else {
-                  window.open(`https://www.google.com/search?q=${encodeURIComponent(name + ' reviews')}`, '_blank')
+                  window.open(`https://www.google.com/search?q=${encodeURIComponent(name + ' reviews')}`, '_blank', 'noopener,noreferrer')
                 }
               }}
               style={{
@@ -5683,6 +5683,7 @@ function InfoRow({ icon, label, value, theme }) {
 }
 
 function SocialBtn({ href, icon, brandColor, theme }) {
+  const safeHref = safeExternalUrl(href)
   const hexToRgba = (hex, alpha) => {
     const r = parseInt(hex.slice(1, 3), 16)
     const g = parseInt(hex.slice(3, 5), 16)
@@ -5693,7 +5694,7 @@ function SocialBtn({ href, icon, brandColor, theme }) {
   const hoverBorder = brandColor ? hexToRgba(brandColor, 0.35) : 'rgba(232,50,26,0.3)'
   return (
     <a
-      href={href}
+      href={safeHref || '#'}
       target="_blank"
       rel="noopener noreferrer"
       style={{

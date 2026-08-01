@@ -32,6 +32,7 @@ import { getState, markReady, startShutdown, markStopped, isReady, isShuttingDow
 import { handleLiveness, handleReadiness, handleNeonHealth } from './api/_lib/health.js'
 import { generateRequestId, parsePagination } from './api/_lib/validate.js'
 import { viteWrapper, sendSafeError, viteGlobalSecurityMiddleware } from './api/_lib/security-middleware.js'
+import { applyDocumentSecurityHeaders } from './api/_lib/browser-security.js'
 import { logger } from './src/monitoring/logger.js'
 import * as menuService from './src/services/menuService.js'
 import * as contentService from './src/services/restaurantContentService.js'
@@ -1132,6 +1133,7 @@ function spaFallbackPlugin() {
             let html = fs.readFileSync(indexPath, 'utf-8')
             // Always transform as '/' — all SPA routes render the same shell
             html = await server.transformIndexHtml('/', html)
+            applyDocumentSecurityHeaders(res, { req })
             res.setHeader('Content-Type', 'text/html; charset=utf-8')
             res.statusCode = 200
             res.end(html)

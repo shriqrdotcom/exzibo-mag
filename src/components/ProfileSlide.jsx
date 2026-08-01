@@ -14,6 +14,7 @@ import AddMembersModal from './AddMembersModal'
 import RemainingDaysModal from './RemainingDaysModal'
 import { updateRestaurant, updateRestaurantProfile, updateRestaurantSocial, uploadLogoViaApi, getTeamMembers, getRestaurantById, saveRestaurantHours } from '../lib/db'
 import { processImageFile, isAcceptedImageType } from '../lib/processImage'
+import { safeExternalUrl } from '../lib/safeExternalUrl'
 
 
 const TEAM_ACCENT_START = '#6366F1'
@@ -1097,14 +1098,15 @@ export default function ProfileSlide({
                   s.key === 'linkedin' ? '#e8f0fe' :
                   s.key === 'youtube' ? '#fff0f0' :
                   s.key === 'twitter' ? '#f0f0f0' : '#fff'
-                const savedUrl =
+                const savedUrl = safeExternalUrl(
                   s.key === 'facebook' ? facebookUrlInput :
                   s.key === 'instagram' ? instagramUrlInput :
                   s.key === 'linkedin' ? linkedinUrlInput :
                   s.key === 'youtube' ? youtubeUrlInput :
                   s.key === 'twitter' ? twitterUrlInput : ''
+                )
                 const handleClick = activeRole === 'staff'
-                  ? (savedUrl ? () => window.open(savedUrl, '_blank') : undefined)
+                  ? (savedUrl ? () => window.open(savedUrl, '_blank', 'noopener,noreferrer') : undefined)
                   : (
                     s.key === 'facebook' ? () => { setFacebookModalOpen(o => !o); setInstagramModalOpen(false); setLinkedinModalOpen(false); setYoutubeModalOpen(false); setTwitterModalOpen(false) } :
                     s.key === 'instagram' ? () => { setInstagramModalOpen(o => !o); setFacebookModalOpen(false); setLinkedinModalOpen(false); setYoutubeModalOpen(false); setTwitterModalOpen(false) } :
@@ -1596,7 +1598,7 @@ export default function ProfileSlide({
                     const hoursStr = savedHours
                       ? `${formatTime(savedHours.openH, savedHours.openM, savedHours.openAmPm)} – ${formatTime(savedHours.closeH, savedHours.closeM, savedHours.closeAmPm)}`
                       : '11:00 AM – 11:00 PM'
-                    const reviewLink = googleReviewInput || ''
+                    const reviewLink = safeExternalUrl(googleReviewInput)
                     const iconC = 'rgba(255,255,255,0.4)'
                     const textC = 'rgba(255,255,255,0.6)'
                     const dimC  = 'rgba(255,255,255,0.36)'
@@ -1824,7 +1826,7 @@ export default function ProfileSlide({
                       <div style={{ borderTop: '1px solid #E8EDF5', paddingTop: '14px' }}>
                         <div style={{ fontSize: '10px', fontWeight: 700, color: '#94a3b8', letterSpacing: '0.08em', marginBottom: '10px' }}>VIEW</div>
                         <div
-                          onClick={() => { if (telegramSaved) { window.open(telegramSaved, '_blank') } }}
+                          onClick={() => { const url = safeExternalUrl(telegramSaved); if (url) window.open(url, '_blank', 'noopener,noreferrer') }}
                           title={telegramSaved ? 'Open Telegram' : 'Save a link first'}
                           style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', padding: '10px 16px', borderRadius: '12px', background: telegramSaved ? '#EFF9FF' : '#F5F5F7', border: `1.5px solid ${telegramSaved ? '#BAE6FD' : '#E0E0E8'}`, cursor: telegramSaved ? 'pointer' : 'not-allowed', opacity: telegramSaved ? 1 : 0.5, transition: 'all 0.15s' }}
                         >

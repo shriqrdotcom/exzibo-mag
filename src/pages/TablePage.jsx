@@ -610,7 +610,7 @@ export default function TablePage() {
                             <GetBtn
                               copied={copiedId === r.id}
                               onCopy={() => openLinks(r)}
-                              onOpen={() => window.open(getRestaurantUrl(r), '_blank')}
+                              onOpen={() => window.open(getRestaurantUrl(r), '_blank', 'noopener,noreferrer')}
                             />
                           </td>
                         </tr>

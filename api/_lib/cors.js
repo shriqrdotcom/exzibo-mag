@@ -30,13 +30,15 @@
  *   • Static list: superadmin.exzibo.online, dashboard.exzibo.online
  *   • Runtime additions via BETTER_AUTH_TRUSTED_ORIGINS (comma-separated)
  *     and MOBILE_APP_TRUSTED_ORIGINS (comma-separated, for Expo schemes).
- *   • HSTS is not applied here — it is set at the edge (Vercel / Cloudflare)
- *     and only makes sense in an HTTPS-only context.
- *   • CSP is not applied here — requires per-route verification of all
- *     required script/style origins before adding a restrictive policy.
+ *   • HSTS is applied by the shared browser-security helper only for
+ *     production HTTPS requests.
+ *   • CSP is intentionally document-only; API responses keep the baseline
+ *     policy and are not given document directives.
  */
 
 // ── Static trusted origins ────────────────────────────────────────────────────
+import { applyBrowserSecurityHeaders } from './browser-security.js'
+
 const STATIC_TRUSTED_ORIGINS = Object.freeze([
   'https://superadmin.exzibo.online',
   'https://dashboard.exzibo.online',
@@ -98,10 +100,7 @@ export function setCredentialedCors(req, res) {
 
 // ── Baseline security headers ─────────────────────────────────────────────────
 export function applySecurityHeaders(res) {
-  res.setHeader('X-Content-Type-Options', 'nosniff')
-  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin')
-  res.setHeader('Permissions-Policy', 'geolocation=(), camera=(), microphone=()')
-  res.setHeader('X-Frame-Options', 'DENY')
+  applyBrowserSecurityHeaders(res)
 }
 
 // ── Auth security headers (baseline + no-store) ───────────────────────────────

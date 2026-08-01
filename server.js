@@ -77,6 +77,7 @@ import {
 } from './api/_lib/authz.js'
 import { generateRequestId, parsePagination, safeError, badInput, internalError } from './api/_lib/validate.js'
 import { expressSecurityMiddleware, expressErrorHandler } from './api/_lib/security-middleware.js'
+import { applyDocumentSecurityHeaders, isHtmlDocumentRequest } from './api/_lib/browser-security.js'
 import { logger } from './src/monitoring/logger.js'
 import { issueRealtimeTicket } from './src/services/realtimeTicketService.js'
 import { structuredLogger } from './src/monitoring/structuredLogger.js'
@@ -206,6 +207,11 @@ app.use(async (req, res, next) => {
     res.status(404).type('html').send(INVALID_TABLE_HTML)
     return
   }
+  next()
+})
+
+app.use((req, res, next) => {
+  if (isHtmlDocumentRequest(req)) applyDocumentSecurityHeaders(res, { req })
   next()
 })
 
@@ -1082,6 +1088,7 @@ app.all('/api/analytics/:restaurantId', (req, res) => {
 
 // ── SPA fallback — must be last ───────────────────────────────────────────────
 app.get('/{*splat}', (req, res) => {
+  applyDocumentSecurityHeaders(res, { req })
   res.sendFile(path.resolve(__dirname, 'dist', 'index.html'))
 })
 

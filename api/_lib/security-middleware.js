@@ -20,6 +20,7 @@ import crypto from 'crypto'
 import { createSafeError, sendSafeError, isSafeErrorCode, isSafePublicMessage } from './errors.js'
 import { validateHost, validateCsrf } from './origin-host-csrf.js'
 import { logger, attachRequestLogger } from '../../src/monitoring/logger.js'
+import { applyBrowserSecurityHeaders } from './browser-security.js'
 
 export { sendSafeError }
 
@@ -193,16 +194,7 @@ export function jsonBodyParser({ limit } = {}) {
 // ── Basic security headers ───────────────────────────────────────────────────
 
 export function applySecurityHeaders(res) {
-  if (!res || res.headersSent) return
-
-  res.setHeader('X-Content-Type-Options', 'nosniff')
-  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin')
-  res.setHeader(
-    'Permissions-Policy',
-    'accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()'
-  )
-  res.setHeader('X-Frame-Options', 'DENY')
-  res.setHeader('Cache-Control', 'no-store, private')
+  applyBrowserSecurityHeaders(res)
 }
 
 // ── Runtime wrappers ─────────────────────────────────────────────────────────
