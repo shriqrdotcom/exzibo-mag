@@ -1,0 +1,189 @@
+APK PROMPT 7D — FIX THE MOBILE BOOTSTRAP 500 ERROR
+
+TASK
+
+Diagnose and fix the production mobile-bootstrap endpoint that returns HTTP 500 for an unauthenticated request instead of the expected HTTP 401 JSON response.
+
+REPOSITORY
+
+Work only in:
+
+shriqrdotcom/exzibo-mag
+
+Do not modify the App-Manager-07 mobile repository.
+
+Affected endpoint:
+
+```text
+GET https://dashboard.exzibo.online/api/mobile/v1/bootstrap
+```
+
+Current response:
+
+```text
+HTTP 500
+Content-Type: application/json
+{"error":{"code":"500","message":"A server error has occurred"}}
+```
+
+Required unauthenticated response:
+
+```text
+HTTP 401
+Content-Type: application/json
+Cache-Control: no-store
+```
+
+1. SAFETY CHECK
+
+Before changing anything:
+
+* Fetch and prune origin.
+* Confirm this is the `exzibo-mag` repository.
+* Confirm the tracked working tree is clean.
+* Confirm the latest `origin/main` commit.
+* Confirm the production Vercel deployment commit if read-only deployment metadata is available.
+* Make three safe unauthenticated GET requests to the endpoint to confirm the failure is reproducible.
+* Do not print cookies, tokens, environment values, database URLs, user data, or Vercel secrets.
+
+If the endpoint has already recovered and consistently returns the correct 401 response, do not create a branch or dummy commit. Report the recovery and verification results.
+
+2. DIAGNOSE THE ROOT CAUSE
+
+Inspect only the relevant implementation:
+
+* Mobile bootstrap route and Vercel route mapping
+* Better Auth server configuration
+* Server-side session lookup
+* Authentication helpers
+* Database/session adapter used by the route
+* Error-handling and logging code
+* Production environment validation
+* Existing bootstrap and authentication tests
+
+Use read-only Vercel logs if authenticated access is available. Redact request IDs, user data and secret values.
+
+Determine whether the 500 is caused by:
+
+* A route or import failure
+* Better Auth session lookup
+* Database connection failure
+* Missing production environment-variable name
+* Incorrect production deployment
+* Expired or incompatible database schema
+* Exception handling before the unauthenticated response
+* Another confirmed cause
+
+Do not hide infrastructure failures by converting every exception into a 401.
+
+Only a genuinely missing, invalid or expired session should return 401. Database, configuration and authentication-service outages must remain sanitized 500 responses and be logged server-side.
+
+3. IMPLEMENT THE MINIMUM SAFE FIX
+
+If the cause is a code defect:
+
+* Create a branch from the latest `origin/main`:
+
+```text
+fix/mobile-bootstrap-unauthenticated-500
+```
+
+* Make the smallest necessary change.
+* Preserve the authenticated bootstrap response and restaurant-membership checks.
+* Preserve `Cache-Control: no-store`.
+* Return a stable sanitized 401 JSON response for missing or invalid sessions.
+* Do not expose internal errors, database details, stack traces or personal data.
+* Keep real infrastructure failures as sanitized 500 responses with safe server-side logging.
+* Do not weaken authentication or tenant isolation.
+
+If the cause is a missing or incorrect Vercel environment variable, stale deployment or external configuration:
+
+* Do not create an unrelated code commit.
+* Report the exact variable name or deployment mismatch without printing its value.
+* Do not change production environment variables or trigger a deployment unless already explicitly authorized.
+
+4. TESTING
+
+Add or update focused tests using the existing test framework for:
+
+* Request without a session returns 401 JSON
+* Invalid session returns 401
+* Expired session returns 401
+* Valid authenticated session still returns the correct bootstrap response
+* Restaurant membership isolation remains enforced
+* Authentication-service or database exception remains a sanitized 500
+* No internal stack trace is returned
+* `Cache-Control: no-store` is present
+* Unsupported methods remain correctly rejected
+
+Run:
+
+* Relevant bootstrap tests
+* Authentication and authorization tests
+* Tenant-isolation tests
+* TypeScript
+* ESLint
+* Production build
+* Existing secret scanning
+
+Do not use a real customer session or modify production restaurant data.
+
+5. RUNTIME VERIFICATION
+
+If a code fix is required, verify locally or in the available test environment that the signed-out response is 401.
+
+Do not deploy the feature branch directly to production.
+
+Push the clean branch for review and allow the normal GitHub PR and Vercel production process to handle deployment after merge.
+
+6. COMMIT AND PUSH
+
+If code changes are required, commit with:
+
+```text
+fix: restore mobile bootstrap unauthenticated response
+```
+
+Push only to:
+
+```text
+origin/fix/mobile-bootstrap-unauthenticated-500
+```
+
+Do not force-push, merge, or deploy.
+
+Do not include:
+
+* `.env` files
+* Credentials
+* Prompts
+* `attached_assets`
+* Logs
+* Database exports
+* Generated build output
+
+FINAL RESPONSE
+
+Return:
+
+1. Exact root cause
+2. Whether the issue was code, deployment, environment or transient
+3. Affected route and files
+4. Files changed
+5. Final unauthenticated response contract
+6. Confirmation that genuine infrastructure failures remain 500
+7. Test and build results
+8. Secret-scan result
+9. Commit hash and remote branch, if applicable
+10. Pull-request link
+11. Required action before production verification
+12. Confirmation that no mobile files, customer data or production environment values were modified
+
+End with `WORK STATUS: DONE` if either:
+
+* The endpoint recovered and three consecutive production checks return the correct 401 JSON response, or
+* A confirmed code fix passed every check and was pushed cleanly for review.
+
+Otherwise report the exact blocker and safest next action, ending with:
+
+`WORK STATUS: NOT DONE`
