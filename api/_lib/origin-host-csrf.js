@@ -161,10 +161,7 @@ const CSRF_EXEMPT_PATHS = new Set(['/api/orders', '/api/bookings'])
 
 function isCsrfExemptRoute(req) {
   const path = getPath(req)
-  if (CSRF_EXEMPT_PATHS.has(path)) return true
-  // Signed server-to-server endpoints opt out via explicit header.
-  if (req.headers?.['x-server-to-server']) return true
-  return false
+  return CSRF_EXEMPT_PATHS.has(path)
 }
 
 export function validateHost(req, res, requestId, env = process.env) {

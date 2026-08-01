@@ -178,8 +178,12 @@ describe('Zero-to-head migration', { skip: !DATABASE_URL }, () => {
     const { sqlFiles } = await loadArtefacts();
     for (const file of sqlFiles) {
       const sql = await readFile(join(MIGRATIONS_DIR, file), 'utf-8');
+      // The committed migrations target public explicitly for foreign-key
+      // references. Rewrite only this disposable test copy so the complete
+      // chain remains isolated without changing historical migration SQL.
+      const isolatedSql = sql.replaceAll('"public".', `"${schemaName}".`);
       // Execute each migration as a single statement batch.
-      await pool.query(sql);
+      await pool.query(isolatedSql);
     }
 
     // Verify core tenant tables exist after zero-to-head application.

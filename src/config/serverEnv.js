@@ -38,6 +38,15 @@ function isDeployedEnv(env) {
   return !!env.VERCEL_ENV || env.NODE_ENV === 'production'
 }
 
+// Preview authentication is a deliberately weaker, isolated access path for
+// local/dedicated preview environments. It must never be enabled by a
+// production deployment marker, regardless of which server runtime starts.
+export function validatePreviewRuntimeBoundary(env = process.env) {
+  if (isProductionEnv(env) && env.APP_RUNTIME === 'preview') {
+    throw new ConfigError('APP_RUNTIME=preview is not allowed in production')
+  }
+}
+
 function nonEmpty(value) {
   return typeof value === 'string' && value.trim().length > 0
 }
@@ -301,6 +310,7 @@ export function validateRealtimeTicketConfig(env = process.env, { required = tru
 }
 
 export function validatePreviewConfig(env = process.env) {
+  validatePreviewRuntimeBoundary(env)
   const runtime = env.APP_RUNTIME
   if (!nonEmpty(runtime) || runtime !== 'preview') {
     return { previewMode: false }
@@ -385,6 +395,7 @@ export function validateServerEnv(runtime, { env = process.env } = {}) {
     throw new ConfigError('Environment object is required')
   }
 
+  validatePreviewRuntimeBoundary(env)
   const production = isProductionEnv(env)
   const trustedProxyMode = parseTrustedProxyMode(env.TRUSTED_PROXY_MODE)
   const trustedProxyHops = parseTrustedProxyHops(env.TRUSTED_PROXY_HOPS)

@@ -283,7 +283,7 @@ describe('Origin / CSRF policy', () => {
     assert.equal(validateCsrf(req, res, 'req-csrf'), true)
   })
 
-  it('signed server-to-server endpoint is not blocked', () => {
+  it('client-settable server-to-server header cannot bypass CSRF', () => {
     setProductionEnv()
     const req = makeReq({
       method: 'POST',
@@ -295,7 +295,9 @@ describe('Origin / CSRF policy', () => {
       },
     })
     const res = makeRes()
-    assert.equal(validateCsrf(req, res, 'req-csrf'), true)
+    assert.equal(validateCsrf(req, res, 'req-csrf'), false)
+    assert.equal(res.statusCode, 403)
+    assert.equal(res.body.code, 'FORBIDDEN')
   })
 
   it('OPTIONS preflight is not blocked by CSRF', () => {

@@ -49,10 +49,11 @@ async function createTestRestaurant() {
   const restaurantId = uuid()
   const ownerId = uuid()
   const now = new Date().toISOString()
+  const uniqueKey = uuid()
   await pool.query(
     `INSERT INTO restaurants (id, uid, name, slug, owner_id, status, plan, is_deleted, created_at, updated_at)
      VALUES ($1::uuid, $2, 'Test Restaurant', $3, $4, 'active', 'free', false, $5, $5)`,
-    [restaurantId, `uid-${Date.now()}`, `test-${Date.now()}`, ownerId, now]
+    [restaurantId, `uid-${uniqueKey}`, `test-${uniqueKey}`, ownerId, now]
   )
   return { restaurantId, ownerId }
 }

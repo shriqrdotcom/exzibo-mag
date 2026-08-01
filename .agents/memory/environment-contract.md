@@ -55,3 +55,11 @@ the aliases after all deployments have migrated.
 `validateRealtimeTicketConfig` is called inside `issueRealtimeTicket` rather than at module load.
 
 **Why:** Existing tests import `realtimeTicketService` without configuring `REALTIME_TICKET_SECRET`. Moving validation to request time preserves those tests while still failing closed at runtime.
+
+## Preview runtime boundary
+
+`APP_RUNTIME=preview` is valid only for an explicitly non-production runtime. The canonical validator rejects it whenever either `VERCEL_ENV=production` or `NODE_ENV=production` is present.
+
+**Why:** Preview authentication is intentionally weaker and must never be enabled by a production deployment marker; checking both markers keeps Vercel and long-running server runtimes aligned.
+
+**How to apply:** Route all Express/Vite environment startup validation through `validateServerEnv`; do not rely on client-prefixed variables or route-registration checks as the production guard.

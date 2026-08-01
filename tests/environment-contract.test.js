@@ -285,6 +285,51 @@ describe('VALIDATION', () => {
       'https://images.exzibo.online'
     )
   })
+
+  it('13e. production preview authentication mode fails closed', async () => {
+    const m = await import('../src/config/serverEnv.js')
+    const previewProduction = {
+      ...env(),
+      NODE_ENV: 'production',
+      APP_RUNTIME: 'preview',
+      PREVIEW_SECRET: 'p'.repeat(32),
+      PREVIEW_EMAIL: 'preview@example.invalid',
+      PREVIEW_PASSWORD_HASH: 'hash',
+    }
+    assert.throws(
+      () => m.validateServerEnv('express', { env: previewProduction }),
+      /APP_RUNTIME=preview is not allowed in production/
+    )
+    assert.throws(
+      () => m.validateServerEnv('vite', { env: { ...previewProduction, NODE_ENV: 'development', VERCEL_ENV: 'production' } }),
+      /APP_RUNTIME=preview is not allowed in production/
+    )
+    assert.throws(
+      () => m.validateServerEnv('vercel', { env: { ...previewProduction, VERCEL_ENV: 'production', NODE_ENV: undefined } }),
+      /APP_RUNTIME=preview is not allowed in production/
+    )
+  })
+
+  it('13f. development preview authentication remains explicitly supported', async () => {
+    const m = await import('../src/config/serverEnv.js')
+    assert.doesNotThrow(() => m.validateServerEnv('express', {
+      ...env(),
+      NODE_ENV: 'development',
+      APP_RUNTIME: 'preview',
+      PREVIEW_SECRET: 'p'.repeat(32),
+      PREVIEW_EMAIL: 'preview@example.invalid',
+      PREVIEW_PASSWORD_HASH: 'hash',
+    }))
+  })
+
+  it('13g. client-prefixed variables cannot enable or disable the server guard', async () => {
+    const m = await import('../src/config/serverEnv.js')
+    assert.doesNotThrow(() => m.validateServerEnv('express', {
+      ...env(),
+      NODE_ENV: 'production',
+      VITE_APP_RUNTIME: 'preview',
+    }))
+  })
 })
 
 // ─────────────────────────────────────────────────────────────────────────────
