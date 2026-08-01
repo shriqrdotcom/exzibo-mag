@@ -43,6 +43,10 @@
 import { checkRestaurantAccess, MANAGEMENT_ROLES } from '../../api/_lib/authz.js'
 import { rateLimit, acquireLock, releaseLock } from '../lib/upstash.server.js'
 import {
+  enforcePublicRateLimit,
+  PUBLIC_RATE_LIMITS,
+} from './publicApiProtectionService.js'
+import {
   getNeonMenuCategories,
   getNeonMenuCategoryById,
   upsertNeonMenuCategory,
@@ -114,8 +118,20 @@ export async function getItems(restaurantId) {
   return ok(await getNeonMenuItems(restaurantId))
 }
 
-export async function getPublishedItems(restaurantId) {
+export async function getPublishedItems(restaurantId, req = null) {
   if (!restaurantId) return bad(400, 'restaurantId required')
+  if (req) {
+    const protection = await enforcePublicRateLimit(
+      req,
+      PUBLIC_RATE_LIMITS.publishedMenu,
+      { tenantId: restaurantId },
+    )
+    if (!protection.allowed) {
+      return protection.available
+        ? { status: 429, body: { error: 'Too many published-menu requests. Please slow down.', retryAfter: protection.retryAfter }, retryAfter: protection.retryAfter }
+        : { status: 503, body: { error: 'Service temporarily unavailable. Please try again later.' } }
+    }
+  }
   return ok(await getNeonPublishedMenuItems(restaurantId))
 }
 

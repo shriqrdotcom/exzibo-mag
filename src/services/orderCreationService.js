@@ -28,7 +28,7 @@ import { buildCanonicalEnvelope, validateEventId } from './eventEnvelope.js'
 function generateOrderId() {
   // 9-digit decimal string. The old frontend used 9 digits; the schema stores id
   // as text, so we keep the same shape for compatibility.
-  return String(Math.floor(100000000 + Math.random() * 900000000))
+  return String(crypto.randomInt(100000000, 1000000000))
 }
 
 function toNumericCents(n) {

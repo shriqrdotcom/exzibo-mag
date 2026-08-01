@@ -18,9 +18,13 @@
  *   - Missing REALTIME_TICKET_SECRET fails closed with 500.
  */
 
-import { createHmac } from 'node:crypto'
+import { createHmac, randomBytes } from 'node:crypto'
 import { checkRestaurantAccess } from '../../api/_lib/authz.js'
 import { validateRealtimeTicketConfig } from '../config/serverEnv.js'
+import {
+  enforcePublicRateLimit,
+  PUBLIC_RATE_LIMITS,
+} from './publicApiProtectionService.js'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -51,6 +55,25 @@ export async function issueRealtimeTicket(session, req, { restaurantId, role, or
   if (!ticketSecret) {
     console.error('[realtimeTicketService] REALTIME_TICKET_SECRET not configured — fail closed')
     return bad(500, 'Realtime ticket secret not configured')
+  }
+
+  // All deployed runtimes call this shared service. Keeping the limit here
+  // prevents a runtime adapter from accidentally omitting ticket protection.
+  // Unit callers may omit req; real HTTP requests always provide it.
+  if (req) {
+    const protection = await enforcePublicRateLimit(req, PUBLIC_RATE_LIMITS.realtimeTicket)
+    if (!protection.allowed) {
+      return {
+        status: protection.available ? 429 : 503,
+        body: {
+          error: protection.available
+            ? 'Too many realtime ticket requests. Please slow down.'
+            : 'Service temporarily unavailable. Please try again later.',
+          ...(protection.available ? { retryAfter: protection.retryAfter } : {}),
+        },
+        retryAfter: protection.available ? protection.retryAfter : undefined,
+      }
+    }
   }
 
   // ── Validate inputs ───────────────────────────────────────────────────────
@@ -87,7 +110,9 @@ export async function issueRealtimeTicket(session, req, { restaurantId, role, or
 
   // ── Sign the ticket ────────────────────────────────────────────────────
 
-  const ticketId = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+  // Keep the existing timestamp-plus-short-suffix ticket-id shape, but make
+  // the suffix unpredictable so ticket IDs cannot be guessed or enumerated.
+  const ticketId = `${Date.now()}-${randomBytes(6).toString('hex').slice(0, 8)}`
   const expiry = Date.now() + 30_000 // 30 seconds
 
   const payload = JSON.stringify({

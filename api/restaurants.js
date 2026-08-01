@@ -32,6 +32,11 @@ import {
   validateRequest,
 } from './_lib/validate.js'
 import { getClientIp } from '../src/lib/upstash.server.js'
+import {
+  enforcePublicRateLimit,
+  PUBLIC_RATE_LIMITS,
+  setRetryAfter,
+} from '../src/services/publicApiProtectionService.js'
 
 // ── /api/restaurants — Restaurant CRUD (Neon-only Vercel function) ────────────
 //
@@ -53,6 +58,19 @@ import { getClientIp } from '../src/lib/upstash.server.js'
 
 function getSql() {
   return neon(process.env.DATABASE_URL)
+}
+
+async function enforcePublicRestaurantLookup(req, res, tenantId) {
+  const protection = await enforcePublicRateLimit(req, PUBLIC_RATE_LIMITS.restaurantLookup, { tenantId })
+  if (protection.allowed) return null
+
+  setRetryAfter(res, protection)
+  return res.status(protection.available ? 429 : 503).json({
+    error: protection.available
+      ? 'Too many restaurant-lookup requests. Please slow down.'
+      : 'Service temporarily unavailable. Please try again later.',
+    ...(protection.available ? { retryAfter: protection.retryAfter } : {}),
+  })
 }
 
 // ── Superadmin guard (legacy — newer handlers use authorizeSuperadmin from authz.js) ──
@@ -99,6 +117,14 @@ export default vercelWrapper(async function handler(req, res) {
     // ── GET actions ────────────────────────────────────────────────────────────
 
     if (action === 'list') {
+      const protection = await enforcePublicRateLimit(req, PUBLIC_RATE_LIMITS.restaurantList)
+      if (!protection.allowed) {
+        setRetryAfter(res, protection)
+        return res.status(protection.available ? 429 : 503).json({
+          error: protection.available ? 'Too many restaurant-list requests. Please slow down.' : 'Service temporarily unavailable. Please try again later.',
+          ...(protection.available ? { retryAfter: protection.retryAfter } : {}),
+        })
+      }
       const idsParam = req.query.ids
       const ids = idsParam ? idsParam.split(',').filter(Boolean) : null
       const rows = await getNeonRestaurants(ids)
@@ -120,6 +146,14 @@ export default vercelWrapper(async function handler(req, res) {
     if (action === 'bySlug') {
       const { slug } = req.query
       if (!slug || typeof slug !== 'string') return badInput(res, 'slug required', requestId)
+      const protection = await enforcePublicRateLimit(req, PUBLIC_RATE_LIMITS.restaurantLookup, { tenantId: slug })
+      if (!protection.allowed) {
+        setRetryAfter(res, protection)
+        return res.status(protection.available ? 429 : 503).json({
+          error: protection.available ? 'Too many restaurant-lookup requests. Please slow down.' : 'Service temporarily unavailable. Please try again later.',
+          ...(protection.available ? { retryAfter: protection.retryAfter } : {}),
+        })
+      }
       const row = await getNeonRestaurantBySlug(slug)
       if (!row) return notFound(res, 'Not found', requestId)
       return res.json(toPublicRestaurant(row))
@@ -128,6 +162,14 @@ export default vercelWrapper(async function handler(req, res) {
     if (action === 'byId') {
       const { id } = req.query
       if (!id) return badInput(res, 'id required', requestId)
+      const protection = await enforcePublicRateLimit(req, PUBLIC_RATE_LIMITS.restaurantLookup, { tenantId: id })
+      if (!protection.allowed) {
+        setRetryAfter(res, protection)
+        return res.status(protection.available ? 429 : 503).json({
+          error: protection.available ? 'Too many restaurant-lookup requests. Please slow down.' : 'Service temporarily unavailable. Please try again later.',
+          ...(protection.available ? { retryAfter: protection.retryAfter } : {}),
+        })
+      }
       const row = await getNeonRestaurantById(id)
       if (!row) return notFound(res, 'Not found', requestId)
       return res.json(toPublicRestaurant(row))
@@ -135,6 +177,14 @@ export default vercelWrapper(async function handler(req, res) {
 
     if (action === 'byUid') {
       const { uid } = req.query
+      const protection = await enforcePublicRateLimit(req, PUBLIC_RATE_LIMITS.restaurantLookup, { tenantId: uid })
+      if (!protection.allowed) {
+        setRetryAfter(res, protection)
+        return res.status(protection.available ? 429 : 503).json({
+          error: protection.available ? 'Too many restaurant-lookup requests. Please slow down.' : 'Service temporarily unavailable. Please try again later.',
+          ...(protection.available ? { retryAfter: protection.retryAfter } : {}),
+        })
+      }
       const result = await lookupRestaurantByUid(uid)
       if (result.status === 200) return res.status(200).json(result.body)
       return safeError(res, result.status, result.body.error, requestId)
@@ -184,6 +234,8 @@ export default vercelWrapper(async function handler(req, res) {
         const row = await patchNeonRestaurantProfile(id, patch)
         return res.json(row ? toMemberRestaurant(row) : { ok: true })
       }
+      const blocked = await enforcePublicRestaurantLookup(req, res, id)
+      if (blocked) return blocked
       const row = await getNeonRestaurantById(id)
       if (!row) return notFound(res, 'Not found', requestId)
       return res.json(toPublicRestaurant(row))

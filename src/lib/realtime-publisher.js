@@ -10,6 +10,7 @@
  * - Only called from backend routes (server.js / vite.config.js).
  */
 
+import { randomUUID } from 'node:crypto'
 import { validateRealtimePublisherConfig } from '../config/serverEnv.js'
 
 // Publisher runtime: fail closed at startup if realtime configuration is missing.
@@ -26,7 +27,7 @@ const { realtimeUrl: REALTIME_URL, realtimePublishSecret: REALTIME_PUBLISH_SECRE
  */
 export async function publishOrderRealtimeEvent({ type, restaurantId, orderId, status, version = 1 }) {
 
-  const eventId = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+  const eventId = randomUUID()
   const time = new Date().toISOString()
 
   const body = {

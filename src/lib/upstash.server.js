@@ -274,8 +274,11 @@ export async function checkProtectionAvailability() {
 // ── Convenience response helpers ──────────────────────────────────────────────
 
 // Send a 429 Too Many Requests response.
-export function send429(res, message = 'Too many requests. Please slow down.') {
-  return res.status(429).json({ error: message, retryAfter: 60 })
+export function send429(res, message = 'Too many requests. Please slow down.', retryAfter = 60) {
+  if (res && !res.headersSent && typeof res.setHeader === 'function') {
+    res.setHeader('Retry-After', String(Math.max(1, Number(retryAfter) || 60)))
+  }
+  return res.status(429).json({ error: message, retryAfter: Math.max(1, Number(retryAfter) || 60) })
 }
 
 // Send a 503 Service Unavailable response when Redis protection is not available.

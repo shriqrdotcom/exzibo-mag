@@ -503,3 +503,41 @@ describe('31. Production build passes (source check: no syntax-breaking patterns
     }
   })
 })
+
+describe('32. Booking status locks are acquired only after authorization', async () => {
+  it('canonical preflight resolves the booking tenant and checks membership', async () => {
+    const src = await read('api/_lib/booking-status-service.js')
+    assert.match(src, /export async function authorizeBookingStatusRequest/)
+    assert.match(src, /getNeonBookingRestaurantId\(bookingId\)/)
+    assert.match(src, /checkRestaurantAccess\(req, restaurantId\)/)
+    assert.match(src, /MANAGEMENT_ROLES\.includes\(access\.role\)/)
+  })
+
+  it('Vercel authorizes before acquiring the booking lock', async () => {
+    const src = await read('api/bookings.js')
+    const block = src.match(/if \(req\.method === 'PATCH' \|\| action === 'updateStatus'\)[\s\S]*?if \(req\.method === 'POST'/)?.[0]
+    assert.ok(block, 'Vercel booking status block not found')
+    assert.ok(block.indexOf('authorizeBookingStatusRequest') < block.indexOf('acquireLock'))
+  })
+
+  it('Express authorizes before acquiring the booking lock', async () => {
+    const src = await read('server.js')
+    const block = src.match(/app\.patch\('\/api\/bookings\/:id\/status'[\s\S]*?\n\}\)/)?.[0]
+    assert.ok(block, 'Express booking status block not found')
+    assert.ok(block.indexOf('authorizeBookingStatusRequest') < block.indexOf('acquireLock'))
+  })
+
+  it('Vite authorizes before acquiring the booking lock', async () => {
+    const src = await read('vite.config.js')
+    const block = src.match(/const statusMatch = pathname\.match[\s\S]*?return json\(res, result\.status, result\.body\)/)?.[0]
+    assert.ok(block, 'Vite booking status block not found')
+    assert.ok(block.indexOf('authorizeBookingStatusRequest') < block.indexOf('acquireLock'))
+  })
+
+  it('booking 429 responses derive Retry-After from limiter reset', async () => {
+    for (const file of ['api/bookings.js', 'server.js', 'vite.config.js']) {
+      const src = await read(file)
+      assert.match(src, /retryAfterSeconds\([^)]*\.reset/, `${file} must derive Retry-After from reset`)
+    }
+  })
+})

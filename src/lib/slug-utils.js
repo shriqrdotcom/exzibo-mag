@@ -8,6 +8,8 @@
 // NEVER accept a slug directly from caller input without running it through
 // normalizeAndValidateSlug() first.
 
+import { randomInt } from 'node:crypto'
+
 // ── Reserved slugs ────────────────────────────────────────────────────────────
 // These strings overlap with application routes, platform namespaces, or
 // operational paths.  Accepting them as restaurant slugs would cause routing
@@ -120,5 +122,5 @@ export function normalizeAndValidateSlug(raw) {
 // Format: 10-digit decimal string (unique enough for a public identifier,
 // DB unique constraint is the authoritative guard).
 export function generateUid() {
-  return String(Math.floor(1000000000 + Math.random() * 9000000000))
+  return String(randomInt(1000000000, 10000000000))
 }

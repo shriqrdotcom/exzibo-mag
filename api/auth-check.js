@@ -20,6 +20,9 @@ import { setCredentialedCors, applyAuthSecurityHeaders } from './_lib/cors.js'
 import { issueRealtimeTicket } from '../src/services/realtimeTicketService.js'
 import { vercelWrapper } from './_lib/security-middleware.js'
 import { defineValidation, validateRequest } from './_lib/validate.js'
+import {
+  setRetryAfter,
+} from '../src/services/publicApiProtectionService.js'
 
 // ── Shared validation definitions ────────────────────────────────────────────
 const vQueryRestaurantId = defineValidation('query', { restaurantId: { type: 'uuid', required: true } })
@@ -46,6 +49,7 @@ export default vercelWrapper(async function handler(req, res) {
         orderId: req.body?.orderId,
         orderToken: req.body?.orderToken,
       })
+      if (result.retryAfter) setRetryAfter(res, result)
       return res.status(result.status).json(result.body)
     } catch (e) {
       console.error('[auth-check][issueTicket] Error:', e.message)

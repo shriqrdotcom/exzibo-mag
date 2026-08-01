@@ -2,6 +2,7 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
 import fs from 'fs'
+import { pathToFileURL } from 'node:url'
 import { validateServerEnv } from './src/config/serverEnv.js'
 // crypto is imported by api/_lib/preview-auth.js (shared module)
 import {
@@ -15,7 +16,7 @@ import {
   getNeonRestaurantBySlug,
 } from './src/db/neon-restaurants.js'
 import { getNeonBookings, getNeonBookingsPaginated } from './src/db/neon-bookings.js'
-import { updateBookingStatusService } from './api/_lib/booking-status-service.js'
+import { authorizeBookingStatusRequest, updateBookingStatusService } from './api/_lib/booking-status-service.js'
 import { createBookingAtomic } from './src/services/bookingCreationService.js'
 import { getNeonOrders, getNeonOrdersPaginated, deleteOldNeonOrders } from './src/db/neon-orders.js'
 import { createOrderAtomic } from './src/services/orderCreationService.js'
@@ -27,7 +28,15 @@ import { executeTeamList, executeTeamUpsert, executeTeamDelete } from './api/_li
 import { patchRestaurantGlobalConfig } from './src/services/restaurantSettingsService.js'
 import { writeAuditLog } from './src/db/neon-audit-logs.js'
 import * as mediaService from './src/services/mediaService.js'
-import { getClientIp, resolveClientIp, send503Protection, checkProtectionAvailability } from './src/lib/upstash.server.js'
+import {
+  getClientIp,
+  resolveClientIp,
+  rateLimit,
+  acquireLock,
+  releaseLock,
+  send503Protection,
+  checkProtectionAvailability,
+} from './src/lib/upstash.server.js'
 import { getState, markReady, startShutdown, markStopped, isReady, isShuttingDown } from './src/monitoring/lifecycle.js'
 import { handleLiveness, handleReadiness, handleNeonHealth } from './api/_lib/health.js'
 import { generateRequestId, parsePagination } from './api/_lib/validate.js'
@@ -37,6 +46,13 @@ import { logger } from './src/monitoring/logger.js'
 import * as menuService from './src/services/menuService.js'
 import * as contentService from './src/services/restaurantContentService.js'
 import { lookupRestaurantByUid } from './api/_lib/restaurant-lookup.js'
+import {
+  enforcePublicRateLimit,
+  PUBLIC_RATE_LIMITS,
+  retryAfterSeconds,
+  setRetryAfter,
+  writeRateLimitFailure,
+} from './src/services/publicApiProtectionService.js'
 
 import {
   PREVIEW_TOKEN_LIFETIME_MS,
@@ -185,14 +201,23 @@ function previewAuthPlugin() {
         res.end(JSON.stringify({ success: true }))
       })
 
-      // GET /api/mobile/v1/bootstrap — delegates to the Vercel handler
-      // The exact URL /api/mobile/v1/bootstrap must be registered before Vite's
-      // SPA fallback so it never returns HTML in development.
+    },
+  }
+}
+
+// Runtime API routes that must be registered in normal Vite development as
+// well as the dedicated preview runtime. These cannot live in
+// previewAuthPlugin(), because that plugin is intentionally disabled unless
+// APP_RUNTIME=preview.
+function mobileAndRealtimeApiPlugin() {
+  return {
+    name: 'mobile-and-realtime-api',
+    configureServer(server) {
+      // GET /api/mobile/v1/bootstrap — delegates to the Vercel handler.
+      // Register before the SPA fallback so auth failures never become HTML.
       server.middlewares.use('/api/mobile/v1/bootstrap', async (req, res) => {
         try {
           const { default: handler } = await import('./api/mobile/bootstrap.js')
-          // Wrap the Node.js IncomingMessage/ServerResponse pair in a minimal
-          // Vercel-compatible shim (status + json helpers).
           if (!res.status) {
             res.status = (code) => { res.statusCode = code; return res }
           }
@@ -204,9 +229,6 @@ function previewAuthPlugin() {
               res.end(JSON.stringify(body))
             }
           }
-          if (!res.getHeader('Cache-Control')) {
-            // handler sets it, but ensure it's present even on middleware short-circuits
-          }
           await handler(req, res)
         } catch (err) {
           logger.error('[dev] /api/mobile/v1/bootstrap error', { error: err.message })
@@ -216,8 +238,7 @@ function previewAuthPlugin() {
         }
       })
 
-      // POST /api/realtime/ticket — issue signed WebSocket ticket
-      // Delegates to the shared realtimeTicketService (Vercel/Express/Vite parity).
+      // POST /api/realtime/ticket — issue signed WebSocket ticket.
       server.middlewares.use('/api/realtime/ticket', async (req, res) => {
         if (req.method !== 'POST') {
           res.statusCode = 405
@@ -243,10 +264,11 @@ function previewAuthPlugin() {
                 orderToken: params.orderToken,
               })
 
+              if (result.retryAfter) setRetryAfter(res, result)
               res.statusCode = result.status
               res.setHeader('Content-Type', 'application/json')
               res.end(JSON.stringify(result.body))
-            } catch (parseErr) {
+            } catch {
               res.statusCode = 400
               res.setHeader('Content-Type', 'application/json')
               res.end(JSON.stringify({ error: 'Bad request' }))
@@ -256,7 +278,7 @@ function previewAuthPlugin() {
           logger.error('[realtime/ticket] error', { error: err.message })
           res.statusCode = 500
           res.setHeader('Content-Type', 'application/json')
-          res.end(JSON.stringify({ error: err.message }))
+          res.end(JSON.stringify({ error: 'Internal server error' }))
         }
       })
     },
@@ -322,7 +344,8 @@ function menuApiPlugin() {
             // GET /api/menu/items/:restaurantId/published
             const pubMatch = pathname.match(/^\/items\/([^/]+)\/published$/)
             if (pubMatch) {
-              const result = await menuService.getPublishedItems(pubMatch[1])
+              const result = await menuService.getPublishedItems(pubMatch[1], req)
+              if (result.retryAfter) setRetryAfter(res, result)
               return json(res, result.status, result.body)
             }
 
@@ -535,6 +558,15 @@ function menuApiPlugin() {
             if (!idempotencyKey || typeof idempotencyKey !== 'string' || idempotencyKey.length < 16) {
               return json(res, 400, { error: 'Idempotency-Key header is required (min 16 characters).' })
             }
+            const ipResult = resolveClientIp(req)
+            if (ipResult.state !== 'resolved') return json(res, 503, { error: 'Service temporarily unavailable. Please try again.' })
+            const bookingRl = await rateLimit(`rl:booking-create:ip:${ipResult.ip}`, 5, 60)
+            if (!bookingRl.available) return json(res, 503, { error: 'Service temporarily unavailable. Please try again.' })
+            if (!bookingRl.allowed) {
+              const retryAfter = retryAfterSeconds(bookingRl.reset, 60)
+              setRetryAfter(res, { retryAfter })
+              return json(res, 429, { error: 'Too many booking requests. Please wait.', retryAfter })
+            }
             const saved = await createBookingAtomic({
               restaurantId: body.restaurant_id,
               date: body.date,
@@ -557,21 +589,39 @@ function menuApiPlugin() {
           const statusMatch = pathname.match(/^\/([^/]+)\/status$/)
           if (req.method === 'PATCH' && statusMatch) {
             const id = statusMatch[1]
-            const result = await updateBookingStatusService({
-              req,
-              bookingId: id,
-              nextStatus: body?.status,
-            })
-            if (result.status === 200 && result.restaurantId) {
-              writeAuditLog({
-                restaurantId: result.restaurantId,
-                action: 'update_status',
-                entityType: 'booking',
-                entityId: id,
-                newData: { status: body?.status },
-              })
+            const ipResult = resolveClientIp(req)
+            if (ipResult.state !== 'resolved') return json(res, 503, { error: 'Service temporarily unavailable. Please try again later.' })
+            const statusRl = await rateLimit(`rl:booking-status:ip:${ipResult.ip}`, 30, 60)
+            if (!statusRl.available) return json(res, 503, { error: 'Service temporarily unavailable. Please try again later.' })
+            if (!statusRl.allowed) {
+              const retryAfter = retryAfterSeconds(statusRl.reset, 60)
+              setRetryAfter(res, { retryAfter })
+              return json(res, 429, { error: 'Too many booking status updates.', retryAfter })
             }
-            return json(res, result.status, result.body)
+            const authorization = await authorizeBookingStatusRequest({ req, bookingId: id })
+            if (authorization.status !== 200) return json(res, authorization.status, authorization.body)
+            const statusLock = await acquireLock(`lock:booking-status:${id}`, 5)
+            if (!statusLock.available) return json(res, 503, { error: 'Service temporarily unavailable. Please try again later.' })
+            if (!statusLock.acquired) return json(res, 409, { error: 'Status update already in progress.' })
+            try {
+              const result = await updateBookingStatusService({
+                req,
+                bookingId: id,
+                nextStatus: body?.status,
+              })
+              if (result.status === 200 && result.restaurantId) {
+                writeAuditLog({
+                  restaurantId: result.restaurantId,
+                  action: 'update_status',
+                  entityType: 'booking',
+                  entityId: id,
+                  newData: { status: body?.status },
+                })
+              }
+              return json(res, result.status, result.body)
+            } finally {
+              await releaseLock(`lock:booking-status:${id}`, statusLock.token)
+            }
           }
         } catch (e) {
           if (e.code === 'IDEMPOTENCY_KEY_REQUIRED') return json(res, 400, { error: e.message, code: e.code })
@@ -787,6 +837,8 @@ function aboutApiPlugin() {
         const restaurantId = (req.url || '/').split('?')[0].replace(/^\//, '')
         if (!restaurantId || restaurantId.length < 10) return next()
         try {
+          const protection = await enforcePublicRateLimit(req, PUBLIC_RATE_LIMITS.restaurantLookup, { tenantId: restaurantId })
+          if (writeRateLimitFailure(res, protection, 'Too many restaurant-lookup requests. Please slow down.')) return
           const neonRow = await getNeonRestaurantById(restaurantId)
           return json(res, 200, neonRow ? toPublicRestaurant(neonRow) : null)
         } catch (e) { return json(res, 500, { error: e.message }) }
@@ -867,6 +919,8 @@ function neonRestaurantPlugin() {
         const { getNeonRestaurants, toPublicRestaurant } = await import('./src/db/neon-restaurants.js')
 
         try {
+          const protection = await enforcePublicRateLimit(req, PUBLIC_RATE_LIMITS.restaurantList)
+          if (writeRateLimitFailure(res, protection, 'Too many restaurant-list requests. Please slow down.')) return
           const qs = new URLSearchParams((req.url || '').split('?')[1] || '')
           const rawIds = qs.get('ids')
           const ids = rawIds
@@ -920,6 +974,8 @@ function neonRestaurantPlugin() {
           if (method === 'GET' && url.startsWith('/by-slug/')) {
             const slug = decodeURIComponent(url.replace('/by-slug/', ''))
             if (!slug) return json(400, { error: 'slug required' })
+            const protection = await enforcePublicRateLimit(req, PUBLIC_RATE_LIMITS.restaurantLookup, { tenantId: slug })
+            if (writeRateLimitFailure(res, protection, 'Too many restaurant-lookup requests. Please slow down.')) return
             const row = await getNeonRestaurantBySlug(slug)
             return row ? json(200, toPublicRestaurant(row)) : json(404, { error: 'Not found' })
           }
@@ -927,6 +983,8 @@ function neonRestaurantPlugin() {
           // GET /api/neon/restaurant/by-uid/:uid — public
           if (method === 'GET' && url.startsWith('/by-uid/')) {
             const uid = decodeURIComponent(url.replace('/by-uid/', ''))
+            const protection = await enforcePublicRateLimit(req, PUBLIC_RATE_LIMITS.restaurantLookup, { tenantId: uid })
+            if (writeRateLimitFailure(res, protection, 'Too many restaurant-lookup requests. Please slow down.')) return
             const result = await lookupRestaurantByUid(uid)
             return json(result.status, result.body)
           }
@@ -935,13 +993,11 @@ function neonRestaurantPlugin() {
           if (method === 'POST' && url === '/create') {
             let ownerUserId = null
             let ownerEmail  = null
-            if (!isAuthDisabled) {
-              const session = await getSessionEmail(req)
-              if (!session) return json(401, { error: 'Not authenticated' })
-              if (!isSuperadminEmail(session.email)) return json(403, { error: 'Superadmin access required' })
-              ownerUserId = session.userId
-              ownerEmail  = session.email
-            }
+            const session = await getSessionEmail(req)
+            if (!session) return json(401, { error: 'Not authenticated' })
+            if (!isSuperadminEmail(session.email)) return json(403, { error: 'Superadmin access required' })
+            ownerUserId = session.userId
+            ownerEmail  = session.email
             const body = await readBody()
             const payload = body ?? {}
             if (!payload.slug || !payload.name) return json(400, { error: 'slug and name required' })
@@ -996,13 +1052,11 @@ function neonRestaurantPlugin() {
             const id = decodeURIComponent(url.replace(/^\//, ''))
             if (!id) return json(400, { error: 'id required' })
             const body = await readBody()
-            if (!isAuthDisabled) {
-              const access = await checkRestaurantAccess(req, id)
-              if (access.error === 'Not authenticated') return json(401, { error: 'Not authenticated' })
-              if (!access.allowed) return json(403, { error: 'Access denied' })
-              if (!access.isSuperadmin && !SETTINGS_ROLES.includes(access.role)) {
-                return json(403, { error: 'Patching restaurant requires owner or admin role' })
-              }
+            const access = await checkRestaurantAccess(req, id)
+            if (access.error === 'Not authenticated') return json(401, { error: 'Not authenticated' })
+            if (!access.allowed) return json(403, { error: 'Access denied' })
+            if (!access.isSuperadmin && !SETTINGS_ROLES.includes(access.role)) {
+              return json(403, { error: 'Patching restaurant requires owner or admin role' })
             }
             // Profile fields only — platform fields are rejected regardless of role.
             const row = await patchNeonRestaurantProfile(id, body)
@@ -1013,6 +1067,8 @@ function neonRestaurantPlugin() {
           if (method === 'GET' && url.length > 1) {
             const id = decodeURIComponent(url.replace(/^\//, ''))
             if (!id) return json(400, { error: 'id required' })
+            const protection = await enforcePublicRateLimit(req, PUBLIC_RATE_LIMITS.restaurantLookup, { tenantId: id })
+            if (writeRateLimitFailure(res, protection, 'Too many restaurant-lookup requests. Please slow down.')) return
             const row = await getNeonRestaurantById(id)
             return row ? json(200, toPublicRestaurant(row)) : json(404, { error: 'Not found' })
           }
@@ -1102,6 +1158,63 @@ function healthPlugin() {
         res.statusCode = result.statusCode
         res.setHeader('Content-Type', 'application/json')
         res.end(JSON.stringify(result.body))
+      })
+    },
+  }
+}
+
+function queryApiPlugin() {
+  const handlerPaths = new Map([
+    ['/api/restaurants', './api/restaurants.js'],
+    ['/api/settings', './api/settings.js'],
+    ['/api/notifications', './api/notifications.js'],
+    ['/api/restaurant-notifications', './api/notifications.js'],
+    ['/api/system', './api/system.js'],
+    ['/api/team', './api/team.js'],
+  ])
+
+  return {
+    name: 'query-api',
+    configureServer(server) {
+      server.middlewares.use(async (req, res, next) => {
+        const requestUrl = new URL(req.url || '/', 'http://vite.local')
+        const handlerPath = handlerPaths.get(requestUrl.pathname)
+        if (!handlerPath) return next()
+
+        // Vite's raw Node request does not populate req.query like Express or
+        // Vercel. Keep the shared handlers on the same contract in dev.
+        req.query = Object.fromEntries(requestUrl.searchParams.entries())
+
+        if (!res.status) {
+          res.status = (code) => {
+            res.statusCode = code
+            return res
+          }
+        }
+        if (!res.json) {
+          res.json = (body) => {
+            if (!res.getHeader('Content-Type')) {
+              res.setHeader('Content-Type', 'application/json')
+            }
+            res.end(JSON.stringify(body))
+          }
+        }
+
+        try {
+          const handlerUrl = pathToFileURL(path.resolve(__dirname, handlerPath)).href
+          const { default: handler } = await import(handlerUrl)
+          await handler(req, res)
+        } catch (err) {
+          logger.error('[query-api] handler error', {
+            path: requestUrl.pathname,
+            error: err.message,
+          })
+          if (!res.headersSent) {
+            res.statusCode = 500
+            res.setHeader('Content-Type', 'application/json')
+            res.end(JSON.stringify({ error: 'Internal server error' }))
+          }
+        }
       })
     },
   }
@@ -1255,7 +1368,7 @@ export default defineConfig(({ mode, command }) => {
     validateServerEnv('vite')
   }
   return {
-    plugins: [securityPlugin(), react(), previewAuthPlugin(), menuApiPlugin(), aboutApiPlugin(), tableValidationPlugin(), neonRestaurantPlugin(), analyticsPlugin(), healthPlugin(), spaFallbackPlugin(), realtimeOutboxPlugin()],
+    plugins: [securityPlugin(), react(), previewAuthPlugin(), mobileAndRealtimeApiPlugin(), queryApiPlugin(), menuApiPlugin(), aboutApiPlugin(), tableValidationPlugin(), neonRestaurantPlugin(), analyticsPlugin(), healthPlugin(), spaFallbackPlugin(), realtimeOutboxPlugin()],
     appType: 'spa',
     define: {},
     resolve: {

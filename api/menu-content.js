@@ -2,6 +2,7 @@ import { setCors } from './_lib/cors.js'
 import { authorizeRestaurantRole, MANAGEMENT_ROLES } from './_lib/authz.js'
 import { vercelWrapper } from './_lib/security-middleware.js'
 import { getClientIp, resolveClientIp, send503Protection } from '../src/lib/upstash.server.js'
+import { setRetryAfter } from '../src/services/publicApiProtectionService.js'
 import * as menuService from '../src/services/menuService.js'
 import * as contentService from '../src/services/restaurantContentService.js'
 
@@ -60,7 +61,8 @@ export default vercelWrapper(async function handler(req, res) {
       const result =
         action === 'getCategories' ? await menuService.getCategories(restaurantId) :
         action === 'getItems' ? await menuService.getItems(restaurantId) :
-        await menuService.getPublishedItems(restaurantId)
+        await menuService.getPublishedItems(restaurantId, req)
+      if (result.retryAfter) setRetryAfter(res, result)
       return res.status(result.status).json(result.body)
     }
 

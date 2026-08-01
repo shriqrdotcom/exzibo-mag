@@ -76,16 +76,36 @@ export async function getNeonBookingRestaurantId(bookingId) {
   return rows[0]?.restaurant_id ?? null
 }
 
-// ── updateNeonBookingStatus ───────────────────────────────────────────────
-// Partial update — only touches status + updated_at. Returns updated row.
-export async function updateNeonBookingStatus(id, status) {
-  if (!id) throw new Error('updateNeonBookingStatus: id is required')
+// Returns the current lifecycle state for a booking, or null when absent.
+export async function getNeonBookingStatus(bookingId) {
+  if (!bookingId) return null
   const rows = await sql`
-    UPDATE bookings
-    SET status = ${status}, updated_at = now()
-    WHERE id = ${id}
-    RETURNING id, restaurant_id, status
+    SELECT id, restaurant_id, status
+    FROM bookings
+    WHERE id = ${bookingId}
+    LIMIT 1
   `
+  return rows[0] ?? null
+}
+
+// ── updateNeonBookingStatus ───────────────────────────────────────────────
+// Partial update — only touches status + updated_at. When expectedStatus is
+// provided, the conditional predicate prevents stale concurrent writes.
+export async function updateNeonBookingStatus(id, status, expectedStatus = null) {
+  if (!id) throw new Error('updateNeonBookingStatus: id is required')
+  const rows = expectedStatus === null
+    ? await sql`
+        UPDATE bookings
+        SET status = ${status}, updated_at = now()
+        WHERE id = ${id}
+        RETURNING id, restaurant_id, status
+      `
+    : await sql`
+        UPDATE bookings
+        SET status = ${status}, updated_at = now()
+        WHERE id = ${id} AND status = ${expectedStatus}
+        RETURNING id, restaurant_id, status
+      `
   return rows[0] ?? null
 }
 

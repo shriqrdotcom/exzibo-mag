@@ -26,7 +26,7 @@ import {
   getNeonBookingsPaginated,
 } from './src/db/neon-bookings.js'
 import { createBookingAtomic } from './src/services/bookingCreationService.js'
-import { updateBookingStatusService } from './api/_lib/booking-status-service.js'
+import { authorizeBookingStatusRequest, updateBookingStatusService } from './api/_lib/booking-status-service.js'
 import {
   getNeonOrders,
   getNeonOrdersPaginated,
@@ -80,6 +80,12 @@ import { expressSecurityMiddleware, expressErrorHandler } from './api/_lib/secur
 import { applyDocumentSecurityHeaders, isHtmlDocumentRequest } from './api/_lib/browser-security.js'
 import { logger } from './src/monitoring/logger.js'
 import { issueRealtimeTicket } from './src/services/realtimeTicketService.js'
+import {
+  enforcePublicRateLimit,
+  PUBLIC_RATE_LIMITS,
+  retryAfterSeconds,
+  setRetryAfter,
+} from './src/services/publicApiProtectionService.js'
 import { structuredLogger } from './src/monitoring/structuredLogger.js'
 import { validateServerEnv } from './src/config/serverEnv.js'
 
@@ -297,6 +303,7 @@ app.post('/api/realtime/ticket', async (req, res) => {
       orderId: req.body?.orderId,
       orderToken: req.body?.orderToken,
     })
+    if (result.retryAfter) setRetryAfter(res, result)
     return res.status(result.status).json(result.body)
   } catch (err) {
     logger.error('[realtime/ticket] error', { error: err.message })
@@ -577,7 +584,8 @@ app.get('/api/menu/categories/:restaurantId', requireRestaurantRole(req => req.p
 
 app.get('/api/menu/items/:restaurantId/published', async (req, res) => {
   try {
-    const result = await menuService.getPublishedItems(req.params.restaurantId)
+      const result = await menuService.getPublishedItems(req.params.restaurantId, req)
+      if (result.retryAfter) setRetryAfter(res, result)
     return res.status(result.status).json(result.body)
   } catch (err) {
     logger.error('[menu/items/published/get] error', { error: err.message })
@@ -609,7 +617,9 @@ app.post('/api/bookings', async (req, res) => {
     if (bookingIpResult.state !== 'resolved') return send503Protection(res)
     const bookingRl = await rateLimit(`rl:booking-create:ip:${bookingIpResult.ip}`, 5, 60)
     if (!bookingRl.available) return send503Protection(res)
-    if (!bookingRl.allowed) return send429(res, 'Too many booking requests. Please wait a moment.')
+    if (!bookingRl.allowed) {
+      return send429(res, 'Too many booking requests. Please wait a moment.', retryAfterSeconds(bookingRl.reset, 60))
+    }
 
     const saved = await createBookingAtomic({
       restaurantId: body.restaurant_id,
@@ -663,7 +673,11 @@ app.patch('/api/bookings/:id/status', async (req, res) => {
   if (bkIpResult.state !== 'resolved') return send503Protection(res)
   const bkStatusRl = await rateLimit(`rl:booking-status:ip:${bkIpResult.ip}`, 30, 60)
   if (!bkStatusRl.available) return send503Protection(res)
-  if (!bkStatusRl.allowed) return send429(res, 'Too many booking status updates. Please slow down.')
+  if (!bkStatusRl.allowed) {
+    return send429(res, 'Too many booking status updates. Please slow down.', retryAfterSeconds(bkStatusRl.reset, 60))
+  }
+  const authorization = await authorizeBookingStatusRequest({ req, bookingId: id })
+  if (authorization.status !== 200) return res.status(authorization.status).json(authorization.body)
   const bkStatusLock = await acquireLock(`lock:booking-status:${id}`, 5)
   if (!bkStatusLock.available) return send503Protection(res)
   if (!bkStatusLock.acquired) return res.status(409).json({ error: 'Booking status update already in progress.' })
@@ -869,11 +883,32 @@ app.post('/api/restaurant/upload-carousel', async (req, res) => {
   return res.status(result.status).json(result.body)
 })
 
+async function enforcePublicRestaurantLookup(req, res, tenantId) {
+  const protection = await enforcePublicRateLimit(req, PUBLIC_RATE_LIMITS.restaurantLookup, { tenantId })
+  if (protection.allowed) return null
+
+  setRetryAfter(res, protection)
+  return res.status(protection.available ? 429 : 503).json({
+    error: protection.available
+      ? 'Too many restaurant-lookup requests. Please slow down.'
+      : 'Service temporarily unavailable. Please try again later.',
+    ...(protection.available ? { retryAfter: protection.retryAfter } : {}),
+  })
+}
+
 // Public endpoint — returns only safe public fields.
 app.get('/api/restaurant/:id', async (req, res) => {
   try {
     const { id } = req.params
     if (!id) return res.status(400).json({ error: 'id required' })
+    const protection = await enforcePublicRateLimit(req, PUBLIC_RATE_LIMITS.restaurantLookup, { tenantId: id })
+    if (!protection.allowed) {
+      setRetryAfter(res, protection)
+      return res.status(protection.available ? 429 : 503).json({
+        error: protection.available ? 'Too many restaurant-lookup requests. Please slow down.' : 'Service temporarily unavailable. Please try again later.',
+        ...(protection.available ? { retryAfter: protection.retryAfter } : {}),
+      })
+    }
     const row = await getNeonRestaurantById(id)
     return row ? res.json(toPublicRestaurant(row)) : res.status(404).json({ error: 'Not found' })
   } catch (err) {
@@ -928,6 +963,14 @@ app.post('/api/neon/restaurant-settings/shadow-upsert', requireRestaurantRole(re
 // Public endpoint — returns only safe public fields.
 app.get('/api/neon/restaurants', async (req, res) => {
   try {
+    const protection = await enforcePublicRateLimit(req, PUBLIC_RATE_LIMITS.restaurantList)
+    if (!protection.allowed) {
+      setRetryAfter(res, protection)
+      return res.status(protection.available ? 429 : 503).json({
+        error: protection.available ? 'Too many restaurant-list requests. Please slow down.' : 'Service temporarily unavailable. Please try again later.',
+        ...(protection.available ? { retryAfter: protection.retryAfter } : {}),
+      })
+    }
     const rawIds = req.query.ids
     const ids = rawIds
       ? String(rawIds).split(',').map(s => s.trim()).filter(Boolean)
@@ -943,6 +986,14 @@ app.get('/api/neon/restaurants', async (req, res) => {
 // GET /api/neon/restaurant/by-slug/:slug — public, used by restaurant website
 app.get('/api/neon/restaurant/by-slug/:slug', async (req, res) => {
   try {
+    const protection = await enforcePublicRateLimit(req, PUBLIC_RATE_LIMITS.restaurantLookup, { tenantId: req.params.slug })
+    if (!protection.allowed) {
+      setRetryAfter(res, protection)
+      return res.status(protection.available ? 429 : 503).json({
+        error: protection.available ? 'Too many restaurant-lookup requests. Please slow down.' : 'Service temporarily unavailable. Please try again later.',
+        ...(protection.available ? { retryAfter: protection.retryAfter } : {}),
+      })
+    }
     const row = await getNeonRestaurantBySlug(req.params.slug)
     return row ? res.json(toPublicRestaurant(row)) : res.status(404).json({ error: 'Not found' })
   } catch (err) { return res.status(500).json({ error: err.message }) }
@@ -950,6 +1001,14 @@ app.get('/api/neon/restaurant/by-slug/:slug', async (req, res) => {
 
 // GET /api/neon/restaurant/by-uid/:uid — public
 app.get('/api/neon/restaurant/by-uid/:uid', async (req, res) => {
+  const protection = await enforcePublicRateLimit(req, PUBLIC_RATE_LIMITS.restaurantLookup, { tenantId: req.params.uid })
+  if (!protection.allowed) {
+    setRetryAfter(res, protection)
+    return res.status(protection.available ? 429 : 503).json({
+      error: protection.available ? 'Too many restaurant-lookup requests. Please slow down.' : 'Service temporarily unavailable. Please try again later.',
+      ...(protection.available ? { retryAfter: protection.retryAfter } : {}),
+    })
+  }
   const result = await lookupRestaurantByUid(req.params.uid)
   return res.status(result.status).json(result.body)
 })
@@ -1022,6 +1081,8 @@ app.patch('/api/neon/restaurant/:id', requireRestaurantRole(req => req.params.id
 // Returns full row (admin-gated via restaurant membership in practice via dashboard).
 app.get('/api/neon/restaurant/:id', async (req, res) => {
   try {
+    const blocked = await enforcePublicRestaurantLookup(req, res, req.params.id)
+    if (blocked) return blocked
     const row = await getNeonRestaurantById(req.params.id)
     return row ? res.json(toPublicRestaurant(row)) : res.status(404).json({ error: 'Not found' })
   } catch (err) { return res.status(500).json({ error: err.message }) }

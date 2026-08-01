@@ -1,10 +1,11 @@
 import { setPublicCors } from './_lib/cors.js'
 import { authorizeRestaurantRole, ALL_ROLES } from './_lib/authz.js'
 import { vercelWrapper } from './_lib/security-middleware.js'
-import { rateLimit, getClientIp, resolveClientIp, send429, send503Protection } from '../src/lib/upstash.server.js'
+import { rateLimit, acquireLock, releaseLock, getClientIp, resolveClientIp, send429, send503Protection } from '../src/lib/upstash.server.js'
 import { getNeonBookingsPaginated } from '../src/db/neon-bookings.js'
 import { createBookingAtomic } from '../src/services/bookingCreationService.js'
-import { updateBookingStatusService } from './_lib/booking-status-service.js'
+import { authorizeBookingStatusRequest, updateBookingStatusService } from './_lib/booking-status-service.js'
+import { retryAfterSeconds } from '../src/services/publicApiProtectionService.js'
 import {
   generateRequestId,
   safeError,
@@ -74,21 +75,39 @@ export default vercelWrapper(async function handler(req, res) {
       const bookingId = req.query.id || req.body?.id
       const nextStatus = req.body?.status
 
-      const result = await updateBookingStatusService({ req, bookingId, nextStatus })
-      if (result.status === 200 && result.restaurantId) {
-        // Fire-and-forget audit log — do not leak errors to client
-        try {
-          const { writeAuditLog } = await import('../src/db/neon-audit-logs.js')
-          writeAuditLog({
-            restaurantId: result.restaurantId,
-            action: 'update_status',
-            entityType: 'booking',
-            entityId: bookingId,
-            newData: { status: nextStatus },
-          })
-        } catch { /* audit log is non-critical */ }
+      const ipResult = resolveClientIp(req)
+      if (ipResult.state !== 'resolved') return send503Protection(res)
+      const statusRl = await rateLimit(`rl:booking-status:ip:${ipResult.ip}`, 30, 60)
+      if (!statusRl.available) return send503Protection(res)
+      if (!statusRl.allowed) {
+        return send429(res, 'Too many booking status updates.', retryAfterSeconds(statusRl.reset, 60))
       }
-      return res.status(result.status).json(result.body)
+
+      const authorization = await authorizeBookingStatusRequest({ req, bookingId })
+      if (authorization.status !== 200) return res.status(authorization.status).json(authorization.body)
+      const statusLock = await acquireLock(`lock:booking-status:${bookingId}`, 5)
+      if (!statusLock.available) return send503Protection(res)
+      if (!statusLock.acquired) return conflict(res, 'Status update already in progress.', requestId)
+
+      try {
+        const result = await updateBookingStatusService({ req, bookingId, nextStatus })
+        if (result.status === 200 && result.restaurantId) {
+          // Fire-and-forget audit log — do not leak errors to client
+          try {
+            const { writeAuditLog } = await import('../src/db/neon-audit-logs.js')
+            writeAuditLog({
+              restaurantId: result.restaurantId,
+              action: 'update_status',
+              entityType: 'booking',
+              entityId: bookingId,
+              newData: { status: nextStatus },
+            })
+          } catch { /* audit log is non-critical */ }
+        }
+        return res.status(result.status).json(result.body)
+      } finally {
+        await releaseLock(`lock:booking-status:${bookingId}`, statusLock.token)
+      }
     }
 
     // ── POST: create booking — public customer flow ───────────────────────────
@@ -105,9 +124,11 @@ export default vercelWrapper(async function handler(req, res) {
       const ipResult = resolveClientIp(req)
       if (ipResult.state !== 'resolved') return send503Protection(res)
       const ip = ipResult.ip
-      const rl = await rateLimit(`rl:booking:ip:${ip}`, 10, 60)
+      const rl = await rateLimit(`rl:booking-create:ip:${ip}`, 5, 60)
       if (!rl.available) return send503Protection(res)
-      if (!rl.allowed) return send429(res, 'Too many booking requests. Please wait.')
+      if (!rl.allowed) {
+        return send429(res, 'Too many booking requests. Please wait.', retryAfterSeconds(rl.reset, 60))
+      }
 
       try {
         const saved = await createBookingAtomic({

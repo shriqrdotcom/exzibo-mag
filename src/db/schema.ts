@@ -174,7 +174,7 @@ export const menuItems = pgTable(
 export const orders = pgTable(
   'orders',
   {
-    id:               text('id').primaryKey(),           // 9-digit string from client
+    id:               text('id').primaryKey(),           // 9-digit server-generated display identifier
     restaurantId:     uuid('restaurant_id').notNull().references(() => restaurants.id, { onDelete: 'cascade' }),
     orderNumber:      text('order_number').notNull(),    // mirrors id for clarity
     tableNumber:      text('table_number'),

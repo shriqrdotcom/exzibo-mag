@@ -23,6 +23,11 @@ import { getSessionEmail } from '../_lib/authz.js'
 import { vercelWrapper } from '../_lib/security-middleware.js'
 import { createSafeError } from '../_lib/errors.js'
 import pg from 'pg'
+import {
+  enforcePublicRateLimit,
+  PUBLIC_RATE_LIMITS,
+  setRetryAfter,
+} from '../../src/services/publicApiProtectionService.js'
 
 const { Pool } = pg
 
@@ -73,6 +78,19 @@ export default vercelWrapper(async function handler(req, res) {
   // ── Method guard ──────────────────────────────────────────────────────────
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' })
+  }
+
+  const protection = await enforcePublicRateLimit(req, PUBLIC_RATE_LIMITS.mobileBootstrap)
+  if (!protection.allowed) {
+    setRetryAfter(res, protection)
+    return sendMobileError(res, {
+      status: protection.available ? 429 : 503,
+      code: protection.available ? 'RATE_LIMITED' : 'PROTECTION_UNAVAILABLE',
+      message: protection.available
+        ? 'Too many mobile bootstrap requests. Please slow down.'
+        : 'Service temporarily unavailable. Please try again later.',
+      requestId: req.requestId,
+    })
   }
 
   // ── Session validation ────────────────────────────────────────────────────
