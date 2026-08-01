@@ -213,6 +213,29 @@ describe('private authentication host policy', () => {
     )
   })
 
+  it('does not derive production auth origins from deployment metadata', () => {
+    const env = {
+      ...productionEnv,
+      BETTER_AUTH_BASE_URL: 'https://dashboard.exzibo.online',
+      // These values are automatically present on Vercel/Replit deployments.
+      // They must not override the explicitly configured production origin.
+      VERCEL_URL: 'exzibo-git-feature-preview.vercel.app',
+      VERCEL_BRANCH_URL: 'exzibo-git-feature-preview.vercel.app',
+      VERCEL_PROJECT_PRODUCTION_URL: 'dashboard.exzibo.online',
+      REPLIT_DEV_DOMAIN: 'exzibo-preview.replit.dev',
+      REPLIT_DOMAINS: 'exzibo-preview.replit.dev',
+    }
+
+    const config = validateAuthConfig(env)
+    const baseUrlConfig = getAuthBaseUrlConfig(config.authBaseUrl, env)
+
+    assert.equal(config.authBaseUrl, 'https://dashboard.exzibo.online')
+    assert.deepEqual(getTrustedAuthOrigins(env), AUTH_WEB_ORIGINS)
+    assert.deepEqual(baseUrlConfig.allowedHosts, [...AUTH_WEB_HOSTS])
+    assert.equal(baseUrlConfig.allowedHosts.includes('exzibo-git-feature-preview.vercel.app'), false)
+    assert.equal(baseUrlConfig.allowedHosts.includes('exzibo-preview.replit.dev'), false)
+  })
+
   it('keeps preview origins available only in non-production environments', () => {
     const previewEnv = {
       // Vercel preview deployments commonly use NODE_ENV=production.
