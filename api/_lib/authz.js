@@ -55,8 +55,32 @@ const _ELEVATED_ROLES = new Set(['superadmin'])
 import { auth } from '../../src/lib/auth.server.js'
 import { fromNodeHeaders } from 'better-auth/node'
 import pg from 'pg'
+import { logSecurityEvent, SECURITY_EVENTS } from '../../src/monitoring/securityLogger.js'
 
 const { Pool } = pg
+
+function logAuthorizationDecision(req, {
+  event = SECURITY_EVENTS.AUTHORIZATION_DENIAL,
+  outcome = 'denied',
+  reasonCode = 'not_member',
+  status,
+  actorUserId,
+  actorRole,
+  tenantId,
+} = {}) {
+  logSecurityEvent({
+    event,
+    severity: status >= 500 ? 'error' : 'warn',
+    outcome,
+    requestId: req?.requestId,
+    actorUserId,
+    actorRole,
+    tenantId,
+    route: req?.path || req?.url,
+    reasonCode,
+    metadata: { status },
+  })
+}
 
 export const MEMBERSHIP_IDENTITY_CONFLICT = 'MEMBERSHIP_IDENTITY_CONFLICT'
 
@@ -206,12 +230,24 @@ export async function checkRestaurantAccess(req, restaurantId) {
 export async function requireSession(req, res, next) {
   try {
     const session = await getSessionEmail(req)
-    if (!session) return res.status(401).json({ error: 'Not authenticated' })
+    if (!session) {
+      logAuthorizationDecision(req, {
+        event: SECURITY_EVENTS.AUTHENTICATION_FAILURE,
+        reasonCode: 'no_session',
+        status: 401,
+      })
+      return res.status(401).json({ error: 'Not authenticated' })
+    }
     req.authEmail = session.email
     req.authUserId = session.userId
     req.authUser = session.user
     next()
   } catch (e) {
+    logAuthorizationDecision(req, {
+      event: SECURITY_EVENTS.AUTHENTICATION_FAILURE,
+      reasonCode: 'auth_unavailable',
+      status: 401,
+    })
     return res.status(401).json({ error: 'Session error', detail: e.message })
   }
 }
@@ -230,15 +266,35 @@ export function requireRestaurantAccess(getRestaurantId) {
 
     try {
       const result = await checkRestaurantAccess(req, restaurantId)
-      if (result.error === 'Not authenticated') return res.status(401).json({ error: 'Not authenticated' })
+      if (result.error === 'Not authenticated') {
+        logAuthorizationDecision(req, { event: SECURITY_EVENTS.AUTHENTICATION_FAILURE, reasonCode: 'no_session', status: 401 })
+        return res.status(401).json({ error: 'Not authenticated' })
+      }
       if (result.error === 'restaurantId required') return res.status(400).json({ error: 'restaurantId required' })
       // Conflicting duplicate memberships are a data-integrity issue that should
       // fail closed with 409, not be silently treated as 500 or access-denied.
       if (result.error && (result.error.includes('duplicate') || result.error.includes('conflict'))) {
+        logAuthorizationDecision(req, {
+          reasonCode: 'membership_conflict',
+          status: 409,
+          actorUserId: result.userId,
+          tenantId: restaurantId,
+        })
         return res.status(409).json({ error: result.error })
       }
-      if (result.error) return res.status(500).json({ error: result.error })
-      if (!result.allowed) return res.status(403).json({ error: 'Access denied' })
+      if (result.error) {
+        logAuthorizationDecision(req, { reasonCode: 'auth_unavailable', status: 500 })
+        return res.status(500).json({ error: result.error })
+      }
+      if (!result.allowed) {
+        logAuthorizationDecision(req, {
+          reasonCode: result.code === MEMBERSHIP_IDENTITY_CONFLICT ? 'cross_tenant' : 'not_member',
+          status: 403,
+          actorUserId: result.userId,
+          tenantId: restaurantId,
+        })
+        return res.status(403).json({ error: 'Access denied' })
+      }
       req.authEmail = result.email
       req.authUserId = result.userId
       req.authIsSuperadmin = result.isSuperadmin
@@ -256,9 +312,23 @@ export function requireRestaurantAccess(getRestaurantId) {
 export async function requireSuperadmin(req, res, next) {
   try {
     const result = await checkSuperadmin(req)
-    if (result.error === 'Not authenticated') return res.status(401).json({ error: 'Not authenticated' })
-    if (result.error) return res.status(500).json({ error: result.error })
-    if (!result.allowed) return res.status(403).json({ error: 'Superadmin access required' })
+      if (result.error === 'Not authenticated') {
+        logAuthorizationDecision(req, { event: SECURITY_EVENTS.AUTHENTICATION_FAILURE, reasonCode: 'no_session', status: 401 })
+        return res.status(401).json({ error: 'Not authenticated' })
+      }
+      if (result.error) {
+        logAuthorizationDecision(req, { reasonCode: 'auth_unavailable', status: 500 })
+        return res.status(500).json({ error: result.error })
+      }
+      if (!result.allowed) {
+        logAuthorizationDecision(req, {
+          event: SECURITY_EVENTS.SUPERADMIN_DENIAL,
+          reasonCode: 'superadmin_not_allowed',
+          status: 403,
+          actorUserId: result.userId,
+        })
+        return res.status(403).json({ error: 'Superadmin access required' })
+      }
     req.authEmail = result.email
     req.authIsSuperadmin = true
     req.authRole = 'superadmin'
@@ -297,10 +367,20 @@ export async function authorizeSession(req, res) {
   try {
     session = await getSessionEmail(req)
   } catch (e) {
+    logAuthorizationDecision(req, {
+      event: SECURITY_EVENTS.AUTHENTICATION_FAILURE,
+      reasonCode: 'auth_unavailable',
+      status: 500,
+    })
     res.status(500).json({ error: 'Authorization error' })
     return { ok: false }
   }
   if (!session) {
+    logAuthorizationDecision(req, {
+      event: SECURITY_EVENTS.AUTHENTICATION_FAILURE,
+      reasonCode: 'no_session',
+      status: 401,
+    })
     res.status(401).json({ error: 'Not authenticated' })
     return { ok: false }
   }
@@ -323,18 +403,27 @@ export async function authorizeSuperadmin(req, res) {
   try {
     result = await checkSuperadmin(req)
   } catch (e) {
+    logAuthorizationDecision(req, { reasonCode: 'auth_unavailable', status: 500 })
     res.status(500).json({ error: 'Authorization error' })
     return { ok: false }
   }
   if (result.error === 'Not authenticated') {
+    logAuthorizationDecision(req, { event: SECURITY_EVENTS.AUTHENTICATION_FAILURE, reasonCode: 'no_session', status: 401 })
     res.status(401).json({ error: 'Not authenticated' })
     return { ok: false }
   }
   if (result.error) {
+    logAuthorizationDecision(req, { reasonCode: 'auth_unavailable', status: 500 })
     res.status(500).json({ error: 'Authorization error' })
     return { ok: false }
   }
   if (!result.allowed) {
+    logAuthorizationDecision(req, {
+      event: SECURITY_EVENTS.SUPERADMIN_DENIAL,
+      reasonCode: 'superadmin_not_allowed',
+      status: 403,
+      actorUserId: result.userId,
+    })
     res.status(403).json({ error: 'Superadmin access required' })
     return { ok: false }
   }
@@ -360,10 +449,12 @@ export async function authorizeRestaurantAccess(req, res, restaurantId) {
   try {
     access = await checkRestaurantAccess(req, restaurantId)
   } catch (e) {
+    logAuthorizationDecision(req, { reasonCode: 'auth_unavailable', status: 500 })
     res.status(500).json({ error: 'Authorization error' })
     return { ok: false }
   }
   if (access.error === 'Not authenticated') {
+    logAuthorizationDecision(req, { event: SECURITY_EVENTS.AUTHENTICATION_FAILURE, reasonCode: 'no_session', status: 401 })
     res.status(401).json({ error: 'Not authenticated' })
     return { ok: false }
   }
@@ -372,14 +463,27 @@ export async function authorizeRestaurantAccess(req, res, restaurantId) {
     return { ok: false }
   }
   if (access.error && (access.error.includes('duplicate') || access.error.includes('conflict'))) {
+    logAuthorizationDecision(req, {
+      reasonCode: 'membership_conflict',
+      status: 409,
+      actorUserId: access.userId,
+      tenantId: restaurantId,
+    })
     res.status(409).json({ error: access.error })
     return { ok: false }
   }
   if (access.error) {
+    logAuthorizationDecision(req, { reasonCode: 'auth_unavailable', status: 500, tenantId: restaurantId })
     res.status(500).json({ error: 'Authorization error' })
     return { ok: false }
   }
   if (!access.allowed) {
+    logAuthorizationDecision(req, {
+      reasonCode: access.code === MEMBERSHIP_IDENTITY_CONFLICT ? 'cross_tenant' : 'not_member',
+      status: 403,
+      actorUserId: access.userId,
+      tenantId: restaurantId,
+    })
     res.status(403).json({ error: 'Access denied' })
     return { ok: false }
   }
@@ -403,6 +507,13 @@ export async function authorizeRestaurantRole(req, res, restaurantId, allowedRol
   // Superadmin (email allowlist) and elevated roles always pass.
   const isElevated = result.access.isSuperadmin || _ELEVATED_ROLES.has(result.access.role)
   if (!isElevated && allowedRoles && !allowedRoles.includes(result.access.role)) {
+    logAuthorizationDecision(req, {
+      reasonCode: 'insufficient_role',
+      status: 403,
+      actorUserId: result.access.userId,
+      actorRole: result.access.role,
+      tenantId: restaurantId,
+    })
     res.status(403).json({ error: 'Insufficient role for this action' })
     return { ok: false }
   }

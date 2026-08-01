@@ -152,7 +152,12 @@ export default vercelWrapper(async function handler(req, res) {
       if (!lock.available) return send503Protection(res)
       if (!lock.acquired) return conflict(res, 'Status update already in progress.', requestId)
       try {
-        const updatedRow = await applyOrderStatusTransition(orderId, status)
+        const updatedRow = await applyOrderStatusTransition(orderId, status, {
+          actorUserId: auth.access.userId,
+          actorRole: auth.access.role,
+          requestId,
+          route: req.path || req.url,
+        })
         return res.json({ success: true, orderId, status, restaurant_id: updatedRow.restaurant_id, requestId })
       } catch (transitionErr) {
         if (transitionErr.code === 'TERMINAL' || transitionErr.code === 'INVALID_TRANSITION') {

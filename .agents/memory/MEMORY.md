@@ -24,3 +24,5 @@
 - [Runtime route parity refactoring](runtime-route-parity-refactoring.md) — ~595 lines of duplicated business logic eliminated across Vercel/Express/Vite by extracting shared table-validation.js, preview-auth.js modules; DISABLE_AUTH bypass removed, health check canonicalized.
 - [Conditional outbox worker](conditional-outbox-worker.md) — only start realtime outbox polling when endpoint and publish credentials are configured.
 - [Migration validation](migration-validation.md) — schema-qualified `public.*` migration SQL cannot be tested by search_path-only isolation.
+- [Security event monitoring](security-event-monitoring.md) — use registered, redacted events for application signals; keep provider-dependent alerting and recovery claims explicit.
+- [Test inventory isolation](test-inventory-isolation.md) — database-backed test files must run in separate processes to avoid shared-table teardown races.

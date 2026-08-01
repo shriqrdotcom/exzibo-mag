@@ -29,6 +29,7 @@ import {
   normalizeEmail,
   hasConflictingNeonRestaurantMembership,
 } from '../../src/db/neon-restaurant-members.js'
+import { logSecurityEvent, SECURITY_EVENTS } from '../../src/monitoring/securityLogger.js'
 
 // Allowed fields for team member mutations (create/update).
 // Reject unknown and sensitive fields to prevent callers from setting
@@ -137,6 +138,20 @@ export async function executeTeamUpsert({ restaurantId, member, caller }) {
         callerIsSuperadmin: caller.isSuperadmin,
       })
     } catch (err) {
+      if (err.code === 'LAST_OWNER_REQUIRED') {
+        logSecurityEvent({
+          event: SECURITY_EVENTS.LAST_OWNER_PROTECTION,
+          severity: 'warn',
+          outcome: 'blocked',
+          actorUserId: caller.userId,
+          actorRole: caller.role,
+          tenantId: authRestaurantId,
+          targetResourceType: 'team_member',
+          targetResourceId: member.id,
+          reasonCode: 'last_owner',
+          metadata: { action: 'update', errorCode: err.code },
+        })
+      }
       return { status: err.status || 500, body: { error: err.message, code: err.code } }
     }
   } else {
@@ -147,6 +162,31 @@ export async function executeTeamUpsert({ restaurantId, member, caller }) {
     }
   }
 
+  const event = !existing
+    ? SECURITY_EVENTS.MEMBER_ADDED
+    : member.active === false
+      ? SECURITY_EVENTS.MEMBER_REMOVED
+      : member.role !== existing.role
+        ? SECURITY_EVENTS.ROLE_CHANGED
+        : null
+  if (event) {
+    logSecurityEvent({
+      event,
+      severity: 'info',
+      outcome: 'success',
+      actorUserId: caller.userId,
+      actorRole: caller.role,
+      tenantId: authRestaurantId,
+      targetResourceType: 'team_member',
+      targetResourceId: member.id,
+      metadata: {
+        action: !existing ? 'create' : 'update',
+        ...(existing && member.role !== existing.role
+          ? { fromStatus: existing.role, toStatus: member.role }
+          : {}),
+      },
+    })
+  }
   return { status: 200, body: { success: true } }
 }
 
@@ -189,9 +229,34 @@ export async function executeTeamDelete({ id, caller }) {
       callerIsSuperadmin: caller.isSuperadmin,
     })
   } catch (err) {
+    if (err.code === 'LAST_OWNER_REQUIRED') {
+      logSecurityEvent({
+        event: SECURITY_EVENTS.LAST_OWNER_PROTECTION,
+        severity: 'warn',
+        outcome: 'blocked',
+        actorUserId: caller.userId,
+        actorRole: caller.role,
+        tenantId: target.restaurant_id,
+        targetResourceType: 'team_member',
+        targetResourceId: id,
+        reasonCode: 'last_owner',
+        metadata: { action: 'delete', errorCode: err.code },
+      })
+    }
     return { status: err.status || 500, body: { error: err.message, code: err.code } }
   }
 
+  logSecurityEvent({
+    event: SECURITY_EVENTS.MEMBER_REMOVED,
+    severity: 'info',
+    outcome: 'success',
+    actorUserId: caller.userId,
+    actorRole: caller.role,
+    tenantId: target.restaurant_id,
+    targetResourceType: 'team_member',
+    targetResourceId: id,
+    metadata: { action: 'delete' },
+  })
   return { status: 200, body: { success: true } }
 }
 

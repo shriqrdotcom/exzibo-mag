@@ -88,8 +88,22 @@ import {
 } from './src/services/publicApiProtectionService.js'
 import { structuredLogger } from './src/monitoring/structuredLogger.js'
 import { validateServerEnv } from './src/config/serverEnv.js'
+import { logSecurityEvent, SECURITY_EVENTS } from './src/monitoring/securityLogger.js'
 
-const validatedEnv = validateServerEnv('express')
+let validatedEnv
+try {
+  validatedEnv = validateServerEnv('express')
+} catch (error) {
+  logSecurityEvent({
+    event: SECURITY_EVENTS.STARTUP_CONFIGURATION_FAILURE,
+    severity: 'error',
+    outcome: 'unavailable',
+    route: 'server-startup',
+    reasonCode: 'invalid_configuration',
+    metadata: { runtime: 'express' },
+  })
+  throw error
+}
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const app = express()
 const PORT = validatedEnv.port
@@ -476,7 +490,12 @@ app.post('/api/orders/update-status', async (req, res) => {
     // ── Apply validated transition — enforces rules and stamps terminal timestamp ─
     let updatedRow
     try {
-      updatedRow = await applyOrderStatusTransition(orderId, status)
+      updatedRow = await applyOrderStatusTransition(orderId, status, {
+        actorUserId: authResult.userId,
+        actorRole: authResult.role,
+        requestId: req.requestId,
+        route: req.path || req.url,
+      })
     } catch (transitionErr) {
       if (transitionErr.code === 'NOT_FOUND') return res.status(404).json({ error: transitionErr.message, code: transitionErr.code })
       if (transitionErr.code === 'TERMINAL' || transitionErr.code === 'INVALID_TRANSITION') {

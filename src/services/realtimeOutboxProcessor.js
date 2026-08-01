@@ -29,6 +29,7 @@ import {
   rescheduleRealtimeEvent,
   getWorkerId,
 } from './outboxClaimService.js'
+import { logSecurityEvent, SECURITY_EVENTS } from '../monitoring/securityLogger.js'
 
 const POLL_INTERVAL_MS = 2_000     // 2 seconds between polls
 const CLAIM_BATCH_SIZE = 50
@@ -67,6 +68,13 @@ async function publishToWorker(row) {
   const publishSecret = process.env.REALTIME_PUBLISH_SECRET
 
   if (!realtimeUrl || !publishSecret) {
+    logSecurityEvent({
+      event: SECURITY_EVENTS.OUTBOX_FAILURE,
+      severity: 'error',
+      outcome: 'unavailable',
+      reasonCode: 'realtime_publish_config_missing',
+      metadata: { runtime: 'outbox', action: 'publish' },
+    })
     return { ok: false, error: 'REALTIME_URL or REALTIME_PUBLISH_SECRET not configured' }
   }
 
@@ -122,6 +130,13 @@ async function processBatch(pool) {
       leaseDurationSec: CLAIM_LEASE_SEC,
     })
   } catch (err) {
+    logSecurityEvent({
+      event: SECURITY_EVENTS.OUTBOX_FAILURE,
+      severity: 'error',
+      outcome: 'unavailable',
+      reasonCode: 'outbox_claim_failed',
+      metadata: { runtime: 'outbox', errorCode: err.code || 'database_error' },
+    })
     console.error('[outbox] claim batch error:', err.message)
     return { claimed: 0, published: 0, retryScheduled: 0, staleClaims: 0, validationFailures: 0 }
   }
@@ -180,6 +195,15 @@ async function processBatch(pool) {
       }
     } catch (err) {
       // Database error during ack/reschedule — log and move on
+      logSecurityEvent({
+        event: SECURITY_EVENTS.OUTBOX_FAILURE,
+        severity: 'error',
+        outcome: 'failure',
+        reasonCode: 'outbox_database_error',
+        targetResourceType: 'outbox_event',
+        targetResourceId: row.id,
+        metadata: { runtime: 'outbox', errorCode: err.code || 'database_error' },
+      })
       console.error(`[outbox] DB error processing row ${row.id}:`, err.message)
     }
   }

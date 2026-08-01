@@ -2,6 +2,7 @@ import { Redis } from '@upstash/redis'
 import { Ratelimit } from '@upstash/ratelimit'
 import { createHash, randomBytes } from 'crypto'
 import { resolveClientIp, getClientIp as _getClientIp } from './client-ip.js'
+import { logSecurityEvent, SECURITY_EVENTS } from '../monitoring/securityLogger.js'
 
 // ── Upstash Redis — server-only protection layer ──────────────────────────────
 //
@@ -105,6 +106,13 @@ export async function rateLimit(key, limit, windowSec) {
     console[prod ? 'error' : 'warn'](
       `[upstash][rateLimit] Redis not available — ${prod ? 'failing closed (production)' : 'no protection active (dev/test)'}`
     )
+    logSecurityEvent({
+      event: SECURITY_EVENTS.REDIS_LIMITER_FAILURE,
+      severity: prod ? 'error' : 'warn',
+      outcome: 'unavailable',
+      reasonCode: 'redis_unavailable',
+      metadata: { action: 'rate_limit' },
+    })
     return { allowed: !prod, available: false }
   }
   try {
@@ -124,6 +132,13 @@ export async function rateLimit(key, limit, windowSec) {
     console[prod ? 'error' : 'warn'](
       `[upstash][rateLimit] Redis error — ${prod ? 'failing closed (production)' : 'passing through (dev/test)'}: ${err.message}`
     )
+    logSecurityEvent({
+      event: SECURITY_EVENTS.REDIS_LIMITER_FAILURE,
+      severity: prod ? 'error' : 'warn',
+      outcome: 'unavailable',
+      reasonCode: 'redis_unavailable',
+      metadata: { action: 'rate_limit' },
+    })
     return { allowed: !prod, available: false }
   }
 }

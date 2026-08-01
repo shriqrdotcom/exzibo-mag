@@ -25,6 +25,7 @@ import {
   enforcePublicRateLimit,
   PUBLIC_RATE_LIMITS,
 } from './publicApiProtectionService.js'
+import { logSecurityEvent, SECURITY_EVENTS } from '../monitoring/securityLogger.js'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -53,7 +54,15 @@ export async function issueRealtimeTicket(session, req, { restaurantId, role, or
   const ticketConfig = validateRealtimeTicketConfig(process.env, { required: false })
   const ticketSecret = ticketConfig.realtimeTicketSecret
   if (!ticketSecret) {
-    console.error('[realtimeTicketService] REALTIME_TICKET_SECRET not configured — fail closed')
+    logSecurityEvent({
+      event: SECURITY_EVENTS.REALTIME_TICKET_REJECTED,
+      severity: 'error',
+      outcome: 'unavailable',
+      requestId: req?.requestId,
+      route: req?.path || req?.url,
+      reasonCode: 'auth_unavailable',
+      metadata: { reason: 'ticket_secret_missing' },
+    })
     return bad(500, 'Realtime ticket secret not configured')
   }
 
@@ -78,6 +87,14 @@ export async function issueRealtimeTicket(session, req, { restaurantId, role, or
 
   // ── Validate inputs ───────────────────────────────────────────────────────
   if (!session || !session.userId) {
+    logSecurityEvent({
+      event: SECURITY_EVENTS.REALTIME_TICKET_REJECTED,
+      severity: 'warn',
+      outcome: 'denied',
+      requestId: req?.requestId,
+      route: req?.path || req?.url,
+      reasonCode: 'no_session',
+    })
     return bad(401, 'Not authenticated')
   }
 
@@ -93,6 +110,16 @@ export async function issueRealtimeTicket(session, req, { restaurantId, role, or
   if (role === 'staff') {
     const authResult = await checkRestaurantAccess(req, restaurantId)
     if (!authResult.allowed) {
+      logSecurityEvent({
+        event: SECURITY_EVENTS.REALTIME_TICKET_REJECTED,
+        severity: 'warn',
+        outcome: 'denied',
+        requestId: req?.requestId,
+        actorUserId: session.userId,
+        tenantId: restaurantId,
+        route: req?.path || req?.url,
+        reasonCode: 'not_member',
+      })
       if (authResult.error === 'Not authenticated') return bad(401, 'Not authenticated')
       return bad(403, 'Not a member of this restaurant')
     }
@@ -105,6 +132,16 @@ export async function issueRealtimeTicket(session, req, { restaurantId, role, or
     // Customer tickets are DISABLED until a secure order-tracking token exists.
     // No existing order-tracking token or proof-of-access mechanism is wired in.
     // Returning 403 with a clear reason prevents weak orderId-only fallback.
+    logSecurityEvent({
+      event: SECURITY_EVENTS.REALTIME_TICKET_REJECTED,
+      severity: 'warn',
+      outcome: 'denied',
+      requestId: req?.requestId,
+      actorUserId: session.userId,
+      tenantId: restaurantId,
+      route: req?.path || req?.url,
+      reasonCode: 'ownership_required',
+    })
     return bad(403, 'Customer realtime access requires a secure order-tracking token, which is not yet available')
   }
 
@@ -128,6 +165,17 @@ export async function issueRealtimeTicket(session, req, { restaurantId, role, or
   const sig = createHmac('sha256', ticketSecret).update(payload).digest('hex')
   const ticket = Buffer.from(payload).toString('base64url') + '.' + sig
 
+  logSecurityEvent({
+    event: SECURITY_EVENTS.REALTIME_TICKET_ISSUED,
+    severity: 'info',
+    outcome: 'success',
+    requestId: req?.requestId,
+    actorUserId: session.userId,
+    tenantId: restaurantId,
+    route: req?.path || req?.url,
+    targetResourceType: 'realtime_ticket',
+    reasonCode: 'staff_ticket',
+  })
   return ok({
     ticket,
     expiresAt: expiry,

@@ -7,6 +7,7 @@
  */
 
 import { rateLimit, resolveClientIp } from '../lib/upstash.server.js'
+import { logSecurityEvent, SECURITY_EVENTS } from '../monitoring/securityLogger.js'
 
 export const PUBLIC_RATE_LIMITS = Object.freeze({
   restaurantList: Object.freeze({ scope: 'public-restaurant-list', limit: 60, windowSeconds: 60 }),
@@ -63,12 +64,25 @@ export async function enforcePublicRateLimit(
 
   const key = buildPublicRateLimitKey(scope, ipResult.ip, tenantId)
   const result = await limiter(key, limit, windowSeconds)
-  return {
+  const output = {
     ...result,
     key,
     ip: ipResult.ip,
     retryAfter: retryAfterSeconds(result.reset, windowSeconds),
   }
+  if (!output.allowed) {
+    logSecurityEvent({
+      event: SECURITY_EVENTS.RATE_LIMIT_TRIGGERED,
+      severity: output.available ? 'warn' : 'error',
+      outcome: output.available ? 'blocked' : 'unavailable',
+      requestId: req?.requestId,
+      route: req?.path || req?.url,
+      clientIp: ipResult.ip,
+      reasonCode: output.available ? 'route_limit' : 'redis_unavailable',
+      metadata: { routeFamily: scope, windowSeconds },
+    })
+  }
+  return output
 }
 
 export function setRetryAfter(res, result) {

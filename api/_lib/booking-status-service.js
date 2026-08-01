@@ -23,6 +23,7 @@ import {
   getNeonBookingStatus,
   updateNeonBookingStatus,
 } from '../../src/db/neon-bookings.js'
+import { logSecurityEvent, SECURITY_EVENTS } from '../../src/monitoring/securityLogger.js'
 
 // ── Status allowlist ──────────────────────────────────────────────────────────
 // Derived from the booking lifecycle used across this codebase:
@@ -125,15 +126,50 @@ export async function authorizeBookingStatusRequest({ req, bookingId }) {
   }
 
   if (access.error === 'Not authenticated') {
+    logSecurityEvent({
+      event: SECURITY_EVENTS.AUTHENTICATION_FAILURE,
+      severity: 'warn',
+      outcome: 'failure',
+      requestId: req?.requestId,
+      route: req?.path || req?.url,
+      targetResourceType: 'booking',
+      targetResourceId: bookingId,
+      reasonCode: 'no_session',
+    })
     return { status: 401, body: { error: 'Not authenticated' } }
   }
   if (access.error) {
     return { status: 500, body: { error: 'Internal server error' } }
   }
   if (!access.allowed) {
+    logSecurityEvent({
+      event: SECURITY_EVENTS.AUTHORIZATION_DENIAL,
+      severity: 'warn',
+      outcome: 'denied',
+      requestId: req?.requestId,
+      actorUserId: access.userId,
+      tenantId: restaurantId,
+      route: req?.path || req?.url,
+      targetResourceType: 'booking',
+      targetResourceId: bookingId,
+      reasonCode: 'not_member',
+    })
     return { status: 403, body: { error: 'Access denied' } }
   }
   if (!access.isSuperadmin && !MANAGEMENT_ROLES.includes(access.role)) {
+    logSecurityEvent({
+      event: SECURITY_EVENTS.AUTHORIZATION_DENIAL,
+      severity: 'warn',
+      outcome: 'denied',
+      requestId: req?.requestId,
+      actorUserId: access.userId,
+      actorRole: access.role,
+      tenantId: restaurantId,
+      route: req?.path || req?.url,
+      targetResourceType: 'booking',
+      targetResourceId: bookingId,
+      reasonCode: 'insufficient_role',
+    })
     return {
       status: 403,
       body: { error: 'Updating booking status requires manager role or above' },
@@ -258,6 +294,24 @@ export async function updateBookingStatusService({ req, bookingId, nextStatus })
     }
   }
 
+  logSecurityEvent({
+    event: SECURITY_EVENTS.BOOKING_STATUS_CHANGED,
+    severity: 'info',
+    outcome: 'success',
+    requestId: req?.requestId,
+    actorUserId: access.userId,
+    actorRole: access.role,
+    tenantId: updated.restaurant_id,
+    route: req?.path || req?.url,
+    targetResourceType: 'booking',
+    targetResourceId: bookingId,
+    reasonCode: 'status_transition',
+    metadata: {
+      fromStatus: currentStatus,
+      toStatus: nextStatus,
+    },
+  })
+
   // ── 6. Safe response DTO — no raw row exposure ─────────────────────────────
   // restaurant_id is returned separately for audit logging only; it is NOT
   // included in `body` so it never reaches the client.
@@ -265,5 +319,12 @@ export async function updateBookingStatusService({ req, bookingId, nextStatus })
     status: 200,
     body: { id: updated.id, status: updated.status },
     restaurantId: updated.restaurant_id,
+    securityContext: {
+      actorUserId: access.userId,
+      actorRole: access.role,
+      requestId: req?.requestId,
+      route: req?.path || req?.url,
+      fromStatus: currentStatus,
+    },
   }
 }

@@ -15,6 +15,7 @@
 import crypto from 'node:crypto'
 import { getPool } from '../db/pg-sql.js'
 import { buildCanonicalEnvelope } from './eventEnvelope.js'
+import { logSecurityEvent, SECURITY_EVENTS } from '../monitoring/securityLogger.js'
 
 // ── Transition table ────────────────────────────────────────────────────────
 
@@ -95,7 +96,7 @@ export function validateTransition(currentStatus, newStatus) {
  *   'VALIDATION'  — missing orderId / newStatus argument
  *   'NOT_FOUND'   — order does not exist
  */
-export async function applyOrderStatusTransition(orderId, newStatus) {
+export async function applyOrderStatusTransition(orderId, newStatus, securityContext = {}) {
   if (!orderId)   { const e = new Error('orderId is required');   e.code = 'VALIDATION'; throw e }
   if (!newStatus) { const e = new Error('newStatus is required'); e.code = 'VALIDATION'; throw e }
 
@@ -161,6 +162,23 @@ export async function applyOrderStatusTransition(orderId, newStatus) {
     )
 
     await client.query('COMMIT')
+    logSecurityEvent({
+      event: SECURITY_EVENTS.ORDER_STATUS_CHANGED,
+      severity: 'info',
+      outcome: 'success',
+      requestId: securityContext.requestId,
+      actorUserId: securityContext.actorUserId,
+      actorRole: securityContext.actorRole,
+      tenantId: updatedRow.restaurant_id,
+      route: securityContext.route,
+      targetResourceType: 'order',
+      targetResourceId: orderId,
+      reasonCode: 'status_transition',
+      metadata: {
+        fromStatus: currentStatus,
+        toStatus: newStatus,
+      },
+    })
     return updatedRow
   } catch (e) {
     await client.query('ROLLBACK').catch(() => {})

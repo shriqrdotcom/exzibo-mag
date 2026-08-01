@@ -4,6 +4,7 @@ import path from 'path'
 import fs from 'fs'
 import { pathToFileURL } from 'node:url'
 import { validateServerEnv } from './src/config/serverEnv.js'
+import { logSecurityEvent, SECURITY_EVENTS } from './src/monitoring/securityLogger.js'
 // crypto is imported by api/_lib/preview-auth.js (shared module)
 import {
   patchNeonRestaurant,
@@ -1371,7 +1372,19 @@ function securityPlugin() {
 
 export default defineConfig(({ mode, command }) => {
   if (command === 'serve') {
-    validateServerEnv('vite')
+    try {
+      validateServerEnv('vite')
+    } catch (error) {
+      logSecurityEvent({
+        event: SECURITY_EVENTS.STARTUP_CONFIGURATION_FAILURE,
+        severity: 'error',
+        outcome: 'unavailable',
+        route: 'vite-startup',
+        reasonCode: 'invalid_configuration',
+        metadata: { runtime: 'vite' },
+      })
+      throw error
+    }
   }
   return {
     plugins: [securityPlugin(), react(), previewAuthPlugin(), mobileAndRealtimeApiPlugin(), queryApiPlugin(), menuApiPlugin(), aboutApiPlugin(), tableValidationPlugin(), neonRestaurantPlugin(), analyticsPlugin(), healthPlugin(), spaFallbackPlugin(), realtimeOutboxPlugin()],
