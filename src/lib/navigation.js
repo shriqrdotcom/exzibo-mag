@@ -1,6 +1,8 @@
 import { getSubdomain } from './subdomain'
-
-const DASHBOARD_DOMAIN = 'dashboard.exzibo.online'
+import {
+  buildDashboardHandoffUrl,
+  issueDashboardHandoff,
+} from './auth-handoff'
 
 // Map every incoming role key to its canonical role value for localStorage
 const ROLE_TO_NORMALIZED = {
@@ -25,7 +27,7 @@ const ROLE_TO_NORMALIZED = {
  * @param {Object|null} restaurant  Restaurant object (needs .id and .slug)
  * @param {string} roleKey        'menuStudio'|'menu_studio'|'owner'|'admin'|'staff'|'employee'|'master'
  */
-export function openRoleDashboard(navigate, restaurant, roleKey) {
+export async function openRoleDashboard(navigate, restaurant, roleKey) {
   const normalizedRole = ROLE_TO_NORMALIZED[roleKey] || 'admin'
 
   // 'master' always goes to the Master Control panel — no role param needed
@@ -37,10 +39,26 @@ export function openRoleDashboard(navigate, restaurant, roleKey) {
 
   // On the superadmin subdomain: always open the dashboard subdomain in a new tab
   if (getSubdomain() === 'superadmin') {
-    const url = restaurant?.slug
-      ? `https://${DASHBOARD_DOMAIN}/${restaurant.slug}/orders?role=${normalizedRole}`
-      : `https://${DASHBOARD_DOMAIN}/admin/default`
-    window.open(url, '_blank', 'noopener,noreferrer')
+    const path = restaurant?.slug
+      ? `/${restaurant.slug}/orders?role=${normalizedRole}`
+      : '/admin/default'
+
+    // Open synchronously to preserve the user gesture and avoid popup
+    // blockers, then fill the blank tab after the server issues the token.
+    const child = window.open('about:blank', '_blank')
+    if (child) child.opener = null
+    try {
+      const token = await issueDashboardHandoff()
+      const url = buildDashboardHandoffUrl(
+        path,
+        token
+      )
+      if (child && !child.closed) child.location.replace(url)
+      else window.location.assign(url)
+    } catch (error) {
+      if (child && !child.closed) child.close()
+      console.warn('[auth] Dashboard handoff failed:', error.message)
+    }
     return
   }
 

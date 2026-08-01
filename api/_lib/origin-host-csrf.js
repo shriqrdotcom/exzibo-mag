@@ -11,6 +11,9 @@
  */
 
 import { sendSafeError } from './errors.js'
+import {
+  getTrustedAuthOrigins,
+} from '../../src/lib/auth-origins.js'
 
 export { sendSafeError }
 
@@ -21,16 +24,14 @@ const STATIC_TRUSTED_HOSTS = Object.freeze([
   'exzibo.online',
 ])
 
-const STATIC_TRUSTED_ORIGINS = Object.freeze([
-  'https://superadmin.exzibo.online',
-  'https://dashboard.exzibo.online',
-])
-
 const LOCALHOST_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]', '::1'])
 const UNSAFE_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
 
 // ── Environment classification ───────────────────────────────────────────────
 function isProduction(env = process.env) {
+  // This middleware protects all API runtimes, including a non-Vercel
+  // Express production server. Keep its established strict runtime policy;
+  // Better Auth's preview-origin classification is intentionally separate.
   return env.VERCEL_ENV === 'production' || env.NODE_ENV === 'production'
 }
 
@@ -90,10 +91,7 @@ function buildTrustedHosts(env = process.env) {
 }
 
 function buildTrustedOrigins(env = process.env) {
-  const origins = new Set([...STATIC_TRUSTED_ORIGINS])
-  parseOriginList(env.BETTER_AUTH_TRUSTED_ORIGINS).forEach(o => origins.add(o))
-  parseOriginList(env.MOBILE_APP_TRUSTED_ORIGINS).forEach(o => origins.add(o))
-  return origins
+  return new Set(getTrustedAuthOrigins(env))
 }
 
 // ── Host classification ──────────────────────────────────────────────────────
@@ -134,6 +132,16 @@ export function isTrustedHost(host, env = process.env) {
 export function isTrustedOrigin(origin, env = process.env) {
   if (!origin || typeof origin !== 'string') return false
   if (isDevelopmentOrTest(env) && isLocalhostOrigin(origin)) return true
+  if (isDevelopmentOrTest(env)) {
+    try {
+      const hostname = new URL(origin).hostname.toLowerCase()
+      if (
+        hostname.endsWith('.replit.dev') ||
+        hostname.endsWith('.replit.app') ||
+        hostname.endsWith('.repl.co')
+      ) return true
+    } catch {}
+  }
   return buildTrustedOrigins(env).has(origin)
 }
 

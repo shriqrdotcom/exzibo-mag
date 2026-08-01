@@ -1,8 +1,23 @@
 import { betterAuth } from 'better-auth'
+import { createAuthEndpoint, sessionMiddleware } from 'better-auth/api'
+import { setSessionCookie } from 'better-auth/cookies'
 import { expo } from '@better-auth/expo'
 import pg from 'pg'
 import crypto from 'node:crypto'
 import { validateAuthConfig, validateDatabaseConfig } from '../config/serverEnv.js'
+import {
+  getAuthBaseUrlConfig,
+  getTrustedAuthOrigins,
+} from './auth-origins.js'
+import {
+  DASHBOARD_HANDOFF_EXPIRES_IN_MINUTES,
+  DASHBOARD_HANDOFF_IDENTIFIER_PREFIX,
+  hashDashboardHandoffToken,
+  isDashboardHandoffHost,
+  isDashboardHandoffOrigin,
+  isDashboardHandoffAllowedEmail,
+  isSafeDashboardHandoffToken,
+} from './auth-handoff-server.js'
 
 const { Pool } = pg
 
@@ -16,21 +31,11 @@ const pool = new Pool({
   max: 2,
 })
 
-// Extra origins added via BETTER_AUTH_TRUSTED_ORIGINS env var (comma-separated).
-// On Vercel: add your *.vercel.app deployment URLs here so CSRF checks pass.
-// Example: BETTER_AUTH_TRUSTED_ORIGINS=https://exzibo-abc123.vercel.app,https://exzibo.vercel.app
-const extraTrustedOrigins = (process.env.BETTER_AUTH_TRUSTED_ORIGINS || '')
-  .split(',').map(s => s.trim()).filter(Boolean)
-
-// Mobile app origins added via MOBILE_APP_TRUSTED_ORIGINS (comma-separated).
-// Add your Expo / React Native app bundle IDs or custom-scheme origins here.
-// Example: MOBILE_APP_TRUSTED_ORIGINS=exzibo://,exp+exzibo://
-const mobileAppTrustedOrigins = (process.env.MOBILE_APP_TRUSTED_ORIGINS || '')
-  .split(',').map(s => s.trim()).filter(Boolean)
-
 // BETTER_AUTH_BASE_URL is canonical. validateAuthConfig retains a temporary,
 // warned fallback for BETTER_AUTH_URL and rejects conflicting values.
 const { authBaseUrl: configuredBaseUrl } = validateAuthConfig()
+const authBaseUrl = getAuthBaseUrlConfig(configuredBaseUrl)
+const trustedAuthOrigins = getTrustedAuthOrigins()
 
 // ── BETTER_AUTH_SECRET startup guard ────────────────────────────────────────
 // In deployed Vercel environments (VERCEL_ENV set) the secret is mandatory —
@@ -55,9 +60,103 @@ if (!_authSecret && process.env.VERCEL_ENV) {
 const googleClientId = process.env.GOOGLE_CLIENT_ID || ''
 const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET || ''
 
+function requestHeader(context, name) {
+  const requestHeader = context.request?.headers?.get?.(name)
+  if (requestHeader) return requestHeader
+  const contextHeader = context.headers?.get?.(name)
+  if (contextHeader) return contextHeader
+  return context.getHeader?.(name) || ''
+}
+
+function requestHost(context) {
+  const headerHost = requestHeader(context, 'host')
+  if (headerHost) return headerHost
+  try {
+    return new URL(context.request?.url || '').host
+  } catch {
+    return ''
+  }
+}
+
+function isDashboardHandoffRequest(context, target) {
+  return isDashboardHandoffHost(requestHost(context), target) &&
+    isDashboardHandoffOrigin(requestHeader(context, 'origin'), target)
+}
+
+function dashboardHandoffPlugin() {
+  return {
+    id: 'dashboard-handoff',
+    version: '1.0.0',
+    endpoints: {
+      generateDashboardHandoff: createAuthEndpoint('/one-time-token/generate', {
+        method: 'POST',
+        use: [sessionMiddleware],
+        requireHeaders: true,
+      }, async (context) => {
+        if (!isDashboardHandoffRequest(context, 'superadmin')) {
+          throw context.error('FORBIDDEN', { message: 'Dashboard handoff is unavailable' })
+        }
+
+        const session = context.context.session
+        if (!isDashboardHandoffAllowedEmail(session?.user?.email)) {
+          throw context.error('FORBIDDEN', { message: 'Dashboard handoff is unavailable' })
+        }
+
+        const token = crypto.randomBytes(32).toString('base64url')
+        const expiresAt = new Date(
+          Date.now() + DASHBOARD_HANDOFF_EXPIRES_IN_MINUTES * 60 * 1000
+        )
+        const identifier = `${DASHBOARD_HANDOFF_IDENTIFIER_PREFIX}${hashDashboardHandoffToken(token)}`
+
+        await context.context.internalAdapter.createVerificationValue({
+          identifier,
+          value: session.session.token,
+          expiresAt,
+        })
+
+        return context.json({ token })
+      }),
+
+      verifyDashboardHandoff: createAuthEndpoint('/one-time-token/verify', {
+        method: 'POST',
+        requireHeaders: true,
+      }, async (context) => {
+        if (!isDashboardHandoffRequest(context, 'dashboard')) {
+          throw context.error('FORBIDDEN', { message: 'Dashboard handoff is unavailable' })
+        }
+
+        const token = context.body?.token
+        if (!isSafeDashboardHandoffToken(token)) {
+          throw context.error('BAD_REQUEST', { message: 'Invalid dashboard handoff' })
+        }
+
+        const identifier = `${DASHBOARD_HANDOFF_IDENTIFIER_PREFIX}${hashDashboardHandoffToken(token)}`
+        const verification = await context.context.internalAdapter.consumeVerificationValue(identifier)
+        if (!verification) {
+          throw context.error('BAD_REQUEST', { message: 'Invalid dashboard handoff' })
+        }
+
+        const session = await context.context.internalAdapter.findSession(verification.value)
+        if (!session || session.session.expiresAt <= new Date()) {
+          throw context.error('BAD_REQUEST', { message: 'Dashboard session expired' })
+        }
+
+        // Reuse the verified Better Auth session token. Logout on either
+        // private host deletes this shared DB session and invalidates both
+        // host-only cookies.
+        await setSessionCookie(context, session)
+        return context.json({ success: true })
+      }),
+    },
+  }
+}
+
 export const auth = betterAuth({
   database: pool,
-  baseURL: configuredBaseUrl,
+  // Resolve the request host from the exact private-host allowlist. This keeps
+  // sessions host-only while allowing each private web app to run its own
+  // OAuth callback and session. Public menu/marketing hosts are not allowed.
+  baseURL: authBaseUrl,
   basePath: '/api/auth',
   // _authSecret is guaranteed non-null in production by the guard above.
   // In local dev / test without the secret, an ephemeral UUID stands in so
@@ -106,6 +205,9 @@ export const auth = betterAuth({
       createdAt: 'created_at',
       updatedAt: 'updated_at',
     },
+    // The handoff must be consumed from the database so expiry and replay
+    // protection are shared across Vercel instances.
+    storeInDatabase: true,
   },
   socialProviders: {
     google: {
@@ -120,21 +222,20 @@ export const auth = betterAuth({
       prompt: 'select_account',
     },
   },
-  // Core production domains + any extra origins from env (e.g. Vercel preview URLs).
-  // To add origins without a code deploy, set BETTER_AUTH_TRUSTED_ORIGINS in Vercel.
-  // Mobile app origins are added via MOBILE_APP_TRUSTED_ORIGINS (Expo custom schemes).
-  trustedOrigins: [
-    'https://superadmin.exzibo.online',
-    'https://dashboard.exzibo.online',
-    ...extraTrustedOrigins,
-    ...mobileAppTrustedOrigins,
-  ],
+  // Exact private web origins plus explicitly configured mobile/preview
+  // origins. Production preview origins are rejected by serverEnv validation.
+  trustedOrigins: trustedAuthOrigins,
   plugins: [
     // expo() enables Better Auth to accept requests from Expo / React Native
     // clients: it relaxes the CSRF origin check for mobile app custom-scheme
     // origins (listed in MOBILE_APP_TRUSTED_ORIGINS) while keeping all web
     // origins subject to the normal CSRF policy.
     expo(),
+    // A superadmin can open the dashboard without sharing a cookie domain.
+    // This custom, host-bound endpoint stores only a SHA-256 token digest in
+    // Better Auth's verification table, consumes it atomically, and sets the
+    // normal host-only session cookie when it is verified.
+    dashboardHandoffPlugin(),
   ],
   advanced: {
     // Generate real UUIDs for user/session/account/verification ids instead of
@@ -144,11 +245,9 @@ export const auth = betterAuth({
     // "invalid input syntax for type uuid" on insert. The "user" table's `id`
     // column itself is TEXT, so switching to UUID strings needs no migration.
     generateId: () => crypto.randomUUID(),
-    // Share session cookie across both *.exzibo.online subdomains
-    crossSubDomainCookies: {
-      enabled: true,
-      domain: '.exzibo.online',
-    },
+    // Do not enable crossSubDomainCookies. Better Auth therefore emits
+    // host-only cookies, so menu/marketing/unknown subdomains never receive
+    // dashboard or superadmin sessions.
     defaultCookieAttributes: {
       sameSite: 'lax',
       secure: true,

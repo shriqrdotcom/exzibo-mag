@@ -19,6 +19,14 @@ description: Key decisions and pitfalls from the DISABLE_AUTH removal and CORS/p
 
 - `api/auth-check.js` previously reflected arbitrary `req.headers.origin` back with `Access-Control-Allow-Credentials: true` — classic CORS credential-reflection. Fixed to use `setCredentialedCors`.
 
+## Cross-subdomain dashboard handoff
+
+- Keep Better Auth cookies host-only. Superadmin-to-dashboard navigation uses a short-lived opaque token in the URL fragment; issuance and redemption are limited to the exact private host and origin, the token digest is stored in the Better Auth verification table, and consumption is atomic and single-use. Redemption sets the existing server session cookie on the dashboard host. Validate the final parsed destination origin because URL parsers normalize backslashes.
+
+**Why:** A broad `.exzibo.online` cookie would expose private sessions to public restaurant and unknown subdomains, while a browser-visible session token would weaken logout and expiry invalidation.
+
+**How to apply:** Preserve the host-only cookie policy and server-derived session identity. Do not move the token into a query string, browser storage, or a client-supplied user/role/restaurant field; logout must continue deleting the shared server session. After parsing any dashboard path, require the origin to remain the exact dashboard origin.
+
 ## Branch
 
 `fix/auth-boundary-hardening` — committed locally, not yet pushed (GitHub credentials not connected to Replit at time of completion).

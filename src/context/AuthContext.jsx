@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react'
 import { IS_PREVIEW } from '../lib/env'
 import { verifyPreviewSession, clearPreviewSession } from '../lib/previewAuth'
 import { authClient } from '../lib/auth-client'
+import { redeemDashboardHandoff } from '../lib/auth-handoff'
 import { ACTIVE_SUBDOMAIN } from '../lib/subdomain'
 import { setCurrentAuthUser } from '../lib/current-user'
 
@@ -46,6 +47,12 @@ export function AuthProvider({ children }) {
 
     async function initSession() {
       try {
+        // A cross-subdomain navigation cannot carry a host-only cookie. On
+        // dashboard, redeem the short-lived one-time handoff before asking
+        // Better Auth for the current session.
+        await redeemDashboardHandoff()
+        if (!mounted) return
+
         const result = await authClient.getSession()
         if (!mounted) return
 

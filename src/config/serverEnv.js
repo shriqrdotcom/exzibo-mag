@@ -18,6 +18,14 @@
 //   - 'outbox'      — Dedicated outbox consumer runtime
 //   - 'test'        — Test runtime with relaxed requirements
 
+import {
+  getRejectedProductionPreviewOrigins,
+  isAuthProductionEnvironment,
+  isKnownPreviewOrigin,
+  isProductionEnvironment,
+  parseConfiguredOrigins,
+} from '../lib/auth-origins.js'
+
 const MAX_SECRET_LENGTH = 4_000
 const MIN_PREVIEW_SECRET_LENGTH = 32
 const MIN_BETTER_AUTH_SECRET_LENGTH = 32
@@ -31,7 +39,7 @@ export class ConfigError extends Error {
 }
 
 function isProductionEnv(env) {
-  return env.VERCEL_ENV === 'production' || env.NODE_ENV === 'production'
+  return isProductionEnvironment(env)
 }
 
 function isDeployedEnv(env) {
@@ -199,11 +207,22 @@ export function validateAuthConfig(env = process.env) {
     'https://superadmin.exzibo.online',
   )
   requireUrl(baseUrl, 'BETTER_AUTH_BASE_URL', { httpsOnly: true })
+
+  const rejectedPreviewOrigins = getRejectedProductionPreviewOrigins(env)
+  if (isAuthProductionEnvironment(env) && isKnownPreviewOrigin(baseUrl)) {
+    rejectedPreviewOrigins.push(baseUrl)
+  }
+  if (rejectedPreviewOrigins.length > 0) {
+    throw new ConfigError(
+      'Preview origins and preview base URLs are not allowed in production authentication configuration'
+    )
+  }
+
   return {
     authSecret: nonEmpty(authSecret) ? authSecret : undefined,
     authBaseUrl: baseUrl,
-    trustedOrigins: parseOrigins(env.BETTER_AUTH_TRUSTED_ORIGINS),
-    mobileAppTrustedOrigins: parseOrigins(env.MOBILE_APP_TRUSTED_ORIGINS),
+    trustedOrigins: parseConfiguredOrigins(env.BETTER_AUTH_TRUSTED_ORIGINS),
+    mobileAppTrustedOrigins: parseConfiguredOrigins(env.MOBILE_APP_TRUSTED_ORIGINS),
   }
 }
 

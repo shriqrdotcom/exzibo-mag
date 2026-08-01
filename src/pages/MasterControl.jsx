@@ -8,6 +8,10 @@ import { useAuth } from '../context/AuthContext'
 import { getRouteConfig } from '../lib/routeConfig'
 import { getSubdomain } from '../lib/subdomain'
 import { stripRoleSuffix } from '../lib/uid'
+import {
+  buildDashboardHandoffUrl,
+  issueDashboardHandoff,
+} from '../lib/auth-handoff'
 
 const LAST_UID_KEY = 'exzibo_master_last_uid'
 const DEFAULT_SUPER_ADMIN_UID = '0000000001'
@@ -118,14 +122,14 @@ export default function MasterControl() {
     console.log('[MasterControl] Auto-opening UID from URL param:', trimmed)
     setAutoLoading(true)
     setAutoError('')
-    resolveAdminTargetByUID(trimmed).then(target => {
+    resolveAdminTargetByUID(trimmed).then(async target => {
       if (!target) {
         setAutoLoading(false)
         setAutoError(`Restaurant UID "${trimmed}" not found. It may not exist in the database.`)
         return
       }
       localStorage.setItem(LAST_UID_KEY, trimmed)
-      const dest = buildNavTarget(target)
+      const dest = await buildNavTarget(target)
       console.log('[MasterControl] Auto-navigating to:', dest)
       goToDest(dest, { replace: true })
     }).catch(err => {
@@ -142,7 +146,7 @@ export default function MasterControl() {
   // All slug-based URLs include ?role=menu_studio so RestaurantDashboard
   // activates the correct role on load (instead of inheriting whatever was
   // previously stored in localStorage).
-  function buildNavTarget(target) {
+  async function buildNavTarget(target) {
     const sub = getSubdomain()
 
     // dashboard.exzibo.online — use canonical slug URL with from=master so
@@ -161,7 +165,8 @@ export default function MasterControl() {
         : target.slug
           ? `/${target.slug}/orders?role=menu_studio&from=master`
           : `/admin/${target.id}?from=master`
-      return `https://dashboard.exzibo.online${path}`
+      const token = await issueDashboardHandoff()
+      return buildDashboardHandoffUrl(path, token)
     }
 
     // Default (dev / Replit preview / bare domain)
@@ -196,7 +201,7 @@ export default function MasterControl() {
         return
       }
       localStorage.setItem(LAST_UID_KEY, trimmed)
-      const dest = buildNavTarget(target)
+      const dest = await buildNavTarget(target)
       console.log('[MasterControl] Navigating to:', dest)
       goToDest(dest)
     } catch (err) {

@@ -38,21 +38,13 @@
 
 // ── Static trusted origins ────────────────────────────────────────────────────
 import { applyBrowserSecurityHeaders } from './browser-security.js'
-
-const STATIC_TRUSTED_ORIGINS = Object.freeze([
-  'https://superadmin.exzibo.online',
-  'https://dashboard.exzibo.online',
-])
+import { getTrustedAuthOrigins } from '../../src/lib/auth-origins.js'
 
 // ── Build the trusted-origin Set (called per-request so env changes are picked
 //    up without a restart — low cost since buildTrustedOrigins parses a short
 //    comma-separated string and sets are cheap to construct).
 function buildTrustedOrigins() {
-  const extra = (process.env.BETTER_AUTH_TRUSTED_ORIGINS || '')
-    .split(',').map(s => s.trim()).filter(Boolean)
-  const mobile = (process.env.MOBILE_APP_TRUSTED_ORIGINS || '')
-    .split(',').map(s => s.trim()).filter(Boolean)
-  return new Set([...STATIC_TRUSTED_ORIGINS, ...extra, ...mobile])
+  return new Set(getTrustedAuthOrigins())
 }
 
 /**
