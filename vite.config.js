@@ -16,18 +16,15 @@ import {
   getNeonRestaurantBySlug,
 } from './src/db/neon-restaurants.js'
 import { getNeonBookings, getNeonBookingsPaginated } from './src/db/neon-bookings.js'
-import { authorizeBookingStatusRequest, updateBookingStatusService } from './api/_lib/booking-status-service.js'
 import { createBookingAtomic } from './src/services/bookingCreationService.js'
 import { getNeonOrders, getNeonOrdersPaginated, deleteOldNeonOrders } from './src/db/neon-orders.js'
 import { createOrderAtomic } from './src/services/orderCreationService.js'
 import { applyOrderStatusTransition } from './src/services/orderStatusService.js'
 import { startOutboxProcessor } from './src/services/realtimeOutboxProcessor.js'
 import { upsertNeonRestaurantMember, deleteNeonRestaurantMember, getNeonRestaurantMembers, filterNeonRestaurantMembersForRole } from './src/db/neon-restaurant-members.js'
-import { checkRestaurantAccess } from './api/_lib/authz.js'
 import { executeTeamList, executeTeamUpsert, executeTeamDelete } from './api/_lib/team-service.js'
 import { patchRestaurantGlobalConfig } from './src/services/restaurantSettingsService.js'
 import { writeAuditLog } from './src/db/neon-audit-logs.js'
-import * as mediaService from './src/services/mediaService.js'
 import {
   getClientIp,
   resolveClientIp,
@@ -43,8 +40,6 @@ import { generateRequestId, parsePagination } from './api/_lib/validate.js'
 import { viteWrapper, sendSafeError, viteGlobalSecurityMiddleware } from './api/_lib/security-middleware.js'
 import { applyDocumentSecurityHeaders } from './api/_lib/browser-security.js'
 import { logger } from './src/monitoring/logger.js'
-import * as menuService from './src/services/menuService.js'
-import * as contentService from './src/services/restaurantContentService.js'
 import { lookupRestaurantByUid } from './api/_lib/restaurant-lookup.js'
 import {
   enforcePublicRateLimit,
@@ -308,6 +303,7 @@ function menuApiPlugin() {
       // Delegates to shared mediaService.
       server.middlewares.use('/api/menu/upload-image', async (req, res, next) => {
         if (req.method !== 'POST') return next()
+        const mediaService = await import('./src/services/mediaService.js')
         const body = await readBody(req)
         const result = await mediaService.uploadImage({
           req,
@@ -324,6 +320,7 @@ function menuApiPlugin() {
       // src/services/menuService.js — the same service api/menu-content.js
       // and server.js call, so dev/Express/Vercel behavior stays identical.
       server.middlewares.use('/api/menu', async (req, res, next) => {
+        const menuService = await import('./src/services/menuService.js')
         const pathname = (req.url || '/').split('?')[0].replace(/\/$/, '')
         const ipResult = resolveClientIp(req)
         if (ipResult.state !== 'resolved') {
@@ -426,6 +423,7 @@ function menuApiPlugin() {
         if (req.method === 'OPTIONS') return json(res, 200, {})
         if (req.method !== 'POST') return json(res, 405, { error: 'Method not allowed' })
         try {
+          const contentService = await import('./src/services/restaurantContentService.js')
           const body = await readBody(req)
           const ipResult = resolveClientIp(req)
           if (ipResult.state !== 'resolved') return json(res, 503, { error: 'Service temporarily unavailable. Please try again later.' })
@@ -588,6 +586,8 @@ function menuApiPlugin() {
 
           const statusMatch = pathname.match(/^\/([^/]+)\/status$/)
           if (req.method === 'PATCH' && statusMatch) {
+            const { authorizeBookingStatusRequest, updateBookingStatusService } =
+              await import('./api/_lib/booking-status-service.js')
             const id = statusMatch[1]
             const ipResult = resolveClientIp(req)
             if (ipResult.state !== 'resolved') return json(res, 503, { error: 'Service temporarily unavailable. Please try again later.' })
@@ -635,6 +635,7 @@ function menuApiPlugin() {
 
       // ── Team Member routes ────────────────────────────────────────────────────
       server.middlewares.use('/api/team-members', async (req, res, next) => {
+        const { checkRestaurantAccess } = await import('./api/_lib/authz.js')
         const pathname = (req.url || '').split('?')[0].replace(/\/$/, '')
 
         async function getCaller(body) {
@@ -788,6 +789,7 @@ function aboutApiPlugin() {
       // Delegates to shared mediaService.
       server.middlewares.use('/api/about/upload-image', async (req, res, next) => {
         if (req.method !== 'POST') return next()
+        const mediaService = await import('./src/services/mediaService.js')
         const body = await readBody(req)
         const result = await mediaService.uploadImage({
           req,
@@ -803,6 +805,7 @@ function aboutApiPlugin() {
       // Delegates to shared mediaService (atomic replacement: upload → DB → delete old).
       server.middlewares.use('/api/restaurant/upload-logo', async (req, res, next) => {
         if (req.method !== 'POST') return next()
+        const mediaService = await import('./src/services/mediaService.js')
         const body = await readBody(req)
         const result = await mediaService.replaceImage({
           req,
@@ -821,6 +824,7 @@ function aboutApiPlugin() {
       // Delegates to shared mediaService.
       server.middlewares.use('/api/restaurant/upload-carousel', async (req, res, next) => {
         if (req.method !== 'POST') return next()
+        const mediaService = await import('./src/services/mediaService.js')
         const body = await readBody(req)
         const result = await mediaService.uploadImage({
           req,
@@ -850,6 +854,7 @@ function aboutApiPlugin() {
         const restaurantId = (req.url || '/').split('?')[0].replace(/^\//, '')
         if (!restaurantId) return next()
         try {
+          const contentService = await import('./src/services/restaurantContentService.js')
           const result = await contentService.getAbout(restaurantId)
           return json(res, result.status, result.body)
         } catch (e) { return json(res, 500, { error: e.message }) }
@@ -860,6 +865,7 @@ function aboutApiPlugin() {
       server.middlewares.use('/api/about/save', async (req, res, next) => {
         if (req.method !== 'POST') return next()
         try {
+          const contentService = await import('./src/services/restaurantContentService.js')
           const body = await readBody(req)
           const ipResult = resolveClientIp(req)
           if (ipResult.state !== 'resolved') return json(res, 503, { error: 'Service temporarily unavailable. Please try again later.' })
