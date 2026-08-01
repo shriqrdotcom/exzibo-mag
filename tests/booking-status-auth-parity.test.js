@@ -320,7 +320,9 @@ describe('20. Express uses the shared booking status service', async () => {
 describe('21. Vite uses the shared booking status service', async () => {
   it('vite.config.js imports updateBookingStatusService', async () => {
     const src = await read('vite.config.js')
-    assert.match(src, new RegExp(`import.*${SERVICE_FN}.*booking-status-service`))
+    // Vite loads auth-dependent server modules at request time so production
+    // client builds do not execute Better Auth runtime validation.
+    assert.match(src, /await import\(['"]\.\/api\/_lib\/booking-status-service\.js['"]\)/)
   })
 
   it('Vite handler calls updateBookingStatusService', async () => {
