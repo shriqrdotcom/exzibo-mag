@@ -1,0 +1,742 @@
+Execute this task inside the current exzibo-mag repository.
+
+Do not only explain the task. Inspect the current code, fix only confirmed operational-security gaps, run focused tests, and create one local commit.
+
+Do not push, merge, deploy, rotate real credentials, or create another pull request.
+
+TASK
+Security Prompt 5 of 6 — Add security-event logging, monitoring readiness, key-rotation procedures, session invalidation procedures, backup/restore guidance, and incident-response documentation
+
+REPOSITORY
+https://github.com/shriqrdotcom/exzibo-mag.git
+
+MAIN GOAL
+
+Improve the project’s ability to detect, investigate, contain, and recover from security incidents.
+
+The previous audit scored monitoring at 4/10 and incident readiness at 3/10 because the repository lacked structured security-event logging, alerting guidance, key-rotation procedures, session invalidation procedures, and incident-response runbooks. 0
+
+Do not assume every gap still exists.
+
+First inspect the latest repository and prove the current state.
+
+Fix only confirmed missing or incomplete controls.
+
+==================================================
+1. CHECK THE CURRENT REPOSITORY STATE
+==================================================
+
+Run:
+
+git fetch origin --prune
+git status --short
+git branch --show-current
+git rev-parse HEAD
+git rev-parse origin/main
+git log --oneline --decorate -8
+
+Record:
+
+- current branch;
+- current commit;
+- origin/main commit;
+- working-tree condition;
+- whether Security Prompts 1–4 are already present.
+
+If an untracked Pasted-* instruction file exists, remove only that temporary file.
+
+Do not reset valid commits or overwrite unrelated work.
+
+==================================================
+2. MAP EXISTING LOGGING AND AUDIT CONTROLS
+==================================================
+
+Inspect all current logging and audit mechanisms.
+
+Search for:
+
+console.log
+console.warn
+console.error
+logger
+audit
+securityEvent
+requestId
+correlationId
+role change
+membership
+superadmin
+rate limit
+403
+401
+login
+logout
+session
+booking status
+order status
+incident
+runbook
+rotation
+backup
+restore
+
+Identify:
+
+- logging helpers;
+- request-ID generation;
+- audit tables;
+- booking audit events;
+- order audit events;
+- superadmin logs;
+- role-change logs;
+- rate-limit logs;
+- authentication failure logs;
+- deployment and migration logs;
+- Worker logs;
+- Durable Object logs;
+- Cloudflare logs;
+- Vercel logs;
+- runbooks and recovery documents.
+
+Create a simple current-state matrix:
+
+- event;
+- logged: YES / NO;
+- actor recorded;
+- tenant recorded;
+- request ID recorded;
+- result recorded;
+- sensitive data risk;
+- alerting available;
+- retention known.
+
+==================================================
+3. DEFINE THE SECURITY-EVENT MODEL
+==================================================
+
+Create or reuse one canonical security-event logger.
+
+Prefer a small shared helper such as:
+
+src/lib/securityLogger.js
+
+or the repository’s existing logging location.
+
+The logger must produce structured JSON suitable for Vercel and Cloudflare stdout collection.
+
+Each event should support:
+
+- timestamp;
+- event name;
+- severity;
+- outcome;
+- request ID;
+- actor user ID or safe identifier;
+- actor role;
+- restaurant or tenant ID;
+- source runtime;
+- route or action;
+- target resource type;
+- target resource ID when safe;
+- client IP in minimized or hashed form when appropriate;
+- user agent summary when appropriate;
+- reason code;
+- safe metadata.
+
+Do not log:
+
+- passwords;
+- cookies;
+- session tokens;
+- OAuth codes;
+- authorization headers;
+- database URLs;
+- API keys;
+- recovery codes;
+- full request bodies;
+- raw personal data;
+- card or payment details;
+- private R2 credentials;
+- full stack traces in normal security events.
+
+Use allowlisted metadata fields.
+
+Unknown metadata must be rejected or sanitized.
+
+==================================================
+4. DEFINE SECURITY EVENT CATEGORIES
+==================================================
+
+Add structured events for confirmed important actions.
+
+At minimum evaluate:
+
+Authentication:
+- login success;
+- login failure;
+- OAuth callback failure;
+- logout;
+- expired session;
+- invalid session;
+- repeated authentication failure.
+
+Authorization:
+- 401;
+- 403;
+- cross-tenant access attempt;
+- role mismatch;
+- removed-member access attempt;
+- superadmin denial.
+
+Membership and roles:
+- member added;
+- role changed;
+- member removed;
+- last-owner protection triggered;
+- owner transfer;
+- superadmin change attempt.
+
+Rate limiting and abuse:
+- rate limit triggered;
+- Redis limiter failure;
+- suspicious repeated endpoint access;
+- upload rejection;
+- oversized payload rejection;
+- duplicate-order abuse;
+- repeated invalid booking request.
+
+Sensitive operations:
+- restaurant creation;
+- restaurant soft deletion;
+- global settings change;
+- menu bulk change;
+- booking status change;
+- order status change;
+- media delete;
+- realtime ticket issue;
+- realtime ticket rejection.
+
+Operational events:
+- startup configuration failure;
+- migration failure;
+- readiness failure;
+- Worker publish failure;
+- outbox delivery failure;
+- external service failure;
+- backup failure;
+- restore test result.
+
+Do not add excessive high-volume logs to public menu reads unless sampled or clearly abuse-related.
+
+==================================================
+5. IMPLEMENT SAFE LOGGING
+==================================================
+
+Use one consistent interface, for example:
+
+securityLogger.info(...)
+securityLogger.warn(...)
+securityLogger.error(...)
+
+or:
+
+logSecurityEvent({
+  event,
+  severity,
+  outcome,
+  requestId,
+  ...
+})
+
+Requirements:
+
+- JSON output;
+- stable event names;
+- no secret leakage;
+- errors sanitized;
+- event logging must never break the request;
+- logging failure must not expose internals;
+- request ID included when available;
+- tenant identity included only when authoritative;
+- actor identity derived from server-side session;
+- no client-provided role trusted;
+- no logging of raw headers;
+- no duplicate events for the same action unless intentional;
+- no fire-and-forget promise rejection.
+
+If asynchronous logging is used:
+
+- catch all failures;
+- do not delay critical requests excessively;
+- do not lose security events silently when avoidable.
+
+==================================================
+6. ADD ONLY HIGH-VALUE INTEGRATIONS
+==================================================
+
+Integrate the logger into the smallest high-value set of confirmed locations.
+
+At minimum inspect and add events where currently missing:
+
+- authentication failure path;
+- authorization denial helper;
+- superadmin operations;
+- role or membership mutation;
+- last-owner protection;
+- rate-limit rejection;
+- startup configuration failure;
+- booking status mutation;
+- order status mutation;
+- realtime ticket rejection.
+
+Do not spread ad hoc logging across dozens of files.
+
+Prefer integration through shared helpers so all runtimes behave consistently.
+
+Do not log every successful public GET.
+
+==================================================
+7. ADD ALERTING RULES AS DOCUMENTATION
+==================================================
+
+Do not configure production alerting directly.
+
+Create a concise operational alerting guide.
+
+Recommended alert conditions:
+
+Critical:
+- repeated superadmin authorization failures;
+- production startup with unsafe configuration;
+- migration failure;
+- database connectivity outage;
+- suspected cross-tenant access;
+- secret exposure alert;
+- repeated failed restore.
+
+High:
+- unusual rate-limit spikes;
+- many failed logins from one source;
+- many 403s for one actor;
+- role-change bursts;
+- repeated Worker or outbox failures;
+- multiple realtime ticket verification failures.
+
+Medium:
+- upload rejection spikes;
+- booking/order abuse spikes;
+- Redis limiter degradation;
+- authentication callback failures;
+- repeated stale-session use.
+
+For each alert document:
+
+- event name;
+- threshold;
+- time window;
+- severity;
+- first response;
+- escalation owner;
+- false-positive notes.
+
+Do not hard-code vendor-specific alert integrations unless already used.
+
+==================================================
+8. CREATE INCIDENT-RESPONSE RUNBOOK
+==================================================
+
+Create or update a repository document such as:
+
+docs/security/incident-response.md
+
+It must cover:
+
+1. Detection
+2. Triage
+3. Containment
+4. Evidence preservation
+5. Credential rotation
+6. Session invalidation
+7. Tenant notification decision
+8. Recovery
+9. Post-incident review
+
+Include incident types:
+
+- GitHub token exposure;
+- Better Auth secret exposure;
+- Google OAuth secret exposure;
+- Neon database credential exposure;
+- Upstash token exposure;
+- Cloudflare R2 key exposure;
+- realtime publish or ticket secret exposure;
+- session hijacking;
+- cross-tenant data exposure;
+- malicious dependency;
+- compromised Vercel deployment;
+- compromised Cloudflare Worker;
+- unauthorized superadmin action;
+- data deletion or corruption.
+
+Do not include real credentials or private contact details.
+
+==================================================
+9. CREATE KEY-ROTATION PROCEDURE
+==================================================
+
+Create or update:
+
+docs/security/key-rotation.md
+
+Cover at minimum:
+
+- BETTER_AUTH_SECRET;
+- GOOGLE_CLIENT_SECRET;
+- DATABASE_URL credentials;
+- UPSTASH_REDIS_REST_TOKEN;
+- R2 access keys;
+- Cloudflare API token;
+- REALTIME_PUBLISH_SECRET;
+- REALTIME_TICKET_SECRET;
+- GitHub personal access tokens;
+- Vercel tokens if used;
+- preview credentials;
+- internal server-to-server secrets from Prompt 1.
+
+For each secret document:
+
+- impact if compromised;
+- rotation order;
+- dependent services;
+- dual-key overlap possibility;
+- expected downtime;
+- validation after rotation;
+- rollback;
+- session invalidation requirement;
+- log review requirement.
+
+Do not rotate real secrets during this task.
+
+==================================================
+10. CREATE SESSION INVALIDATION PROCEDURE
+==================================================
+
+Create or update:
+
+docs/security/session-invalidation.md
+
+Document how to invalidate:
+
+- one user’s sessions;
+- one restaurant’s user sessions;
+- all superadmin sessions;
+- all sessions globally;
+- sessions after role change;
+- sessions after member removal;
+- sessions after Better Auth secret rotation;
+- mobile sessions;
+- browser sessions.
+
+If the current application lacks a technical method for required invalidation:
+
+- report the gap;
+- add only a safe administrative helper when clearly supported;
+- do not create a dangerous unauthenticated endpoint;
+- require superadmin authorization;
+- require audit logging;
+- require confirmation for global invalidation.
+
+==================================================
+11. CREATE BACKUP AND RESTORE RUNBOOK
+==================================================
+
+Create or update:
+
+docs/security/backup-restore.md
+
+Cover:
+
+- Neon backup availability;
+- logical backups;
+- backup schedule;
+- retention;
+- encryption;
+- access control;
+- restore testing;
+- point-in-time recovery when available;
+- migration compatibility;
+- R2 object recovery;
+- Redis data expectations;
+- Worker and Durable Object recovery limitations;
+- recovery time objective;
+- recovery point objective;
+- rollback after failed deployment.
+
+Do not claim a backup exists unless evidence confirms it.
+
+Clearly separate:
+
+- confirmed current capability;
+- required manual configuration;
+- recommended future control.
+
+==================================================
+12. CREATE SECURITY OPERATIONS CHECKLIST
+==================================================
+
+Create or update:
+
+docs/security/production-security-checklist.md
+
+Include:
+
+Daily:
+- failed login spikes;
+- authorization-denial spikes;
+- superadmin events;
+- database errors;
+- Worker failures.
+
+Weekly:
+- dependency advisories;
+- unexpected role changes;
+- failed backup jobs;
+- unusual API traffic;
+- inactive or unknown subdomains.
+
+Monthly:
+- key inventory;
+- access review;
+- restore test;
+- incident drill;
+- branch protection review;
+- GitHub app review;
+- Vercel and Cloudflare access review.
+
+Before every release:
+- four CI jobs green;
+- no secrets;
+- migrations validated;
+- security tests pass;
+- CSP and HSTS verified;
+- no new public unauthenticated endpoint without review.
+
+==================================================
+13. ADD FOCUSED TESTS
+==================================================
+
+Add tests proving:
+
+- security events are valid JSON;
+- required fields are present;
+- secrets are redacted;
+- cookies and Authorization headers are never logged;
+- request IDs are preserved;
+- actor and tenant data come from authoritative server context;
+- unsupported metadata is sanitized;
+- logger failures do not break requests;
+- authorization denials produce the expected event;
+- rate-limit rejection produces the expected event;
+- role or membership mutation produces the expected event;
+- superadmin action produces the expected event;
+- duplicate event emission is controlled;
+- error objects do not expose stack traces to logs by default.
+
+Use mocks.
+
+Do not send logs to production services.
+
+==================================================
+14. ALLOWED FILES
+==================================================
+
+Potentially allowed:
+
+- one shared security logger;
+- shared auth or authorization helpers for logging hooks;
+- shared rate-limit helper for logging hook;
+- membership or role service;
+- booking/order status services;
+- startup configuration handler;
+- directly related tests;
+- docs/security/*
+
+Do not modify:
+
+- migrations;
+- CSP/HSTS from Prompt 2;
+- rate-limit policies from Prompt 3 except adding logging hooks;
+- cookie architecture from Prompt 4;
+- business rules;
+- UI;
+- CI workflow unless a current logging test command genuinely requires it;
+- production secrets;
+- attached_assets;
+- Pasted-* files;
+- generated reports.
+
+==================================================
+15. VALIDATION
+==================================================
+
+Run focused tests for:
+
+- security logger;
+- secret redaction;
+- auth and authorization logging;
+- membership changes;
+- superadmin operations;
+- rate-limit events;
+- booking/order events;
+- environment/startup errors.
+
+Then run:
+
+- complete application-test inventory once;
+- production build;
+- repository-integrity checks.
+
+Use Node 22 or remote CI when local Node 20 cannot validate Worker code.
+
+Do not weaken version requirements.
+
+==================================================
+16. SECURITY REVIEW
+==================================================
+
+Before committing, check:
+
+- Can any secret appear in logs?
+- Can a user inject fake tenant or actor data into logs?
+- Can logging failure break authentication?
+- Can high-volume public traffic flood logs?
+- Are superadmin actions visible?
+- Are role changes visible?
+- Are repeated 401/403 events visible?
+- Can sessions be invalidated after compromise?
+- Is key rotation documented in the correct dependency order?
+- Is backup capability stated honestly?
+- Did any new admin endpoint create a security risk?
+- Did any unrelated behavior change?
+
+Run:
+
+git status --short
+git diff --stat
+git diff --name-only
+git diff --check
+git diff
+
+==================================================
+17. COMMIT LOCALLY
+==================================================
+
+When all supported tests pass, stage only the intended files.
+
+Verify:
+
+git diff --cached --name-only
+git diff --cached --check
+
+Create one commit:
+
+git commit -m "security: add monitoring and incident readiness"
+
+Do not push.
+
+After committing:
+
+git status --short
+git rev-parse HEAD
+git log --oneline --decorate -6
+
+The working tree must be clean.
+
+==================================================
+FINAL RESPONSE
+==================================================
+
+Return exactly:
+
+SECURITY REMEDIATION PROMPT 5 SUMMARY
+
+Branch:
+- exact branch
+
+Starting SHA:
+- exact SHA
+
+Ending SHA:
+- exact SHA
+
+Existing monitoring:
+- confirmed controls
+- confirmed gaps
+
+Security logger:
+- exact file
+- event format
+- redaction behavior
+- authoritative actor and tenant handling
+- failure behavior
+
+Events implemented:
+- authentication
+- authorization
+- superadmin
+- membership and roles
+- rate limits
+- order and booking
+- realtime
+- startup and operations
+
+Operational documents:
+- incident response
+- key rotation
+- session invalidation
+- backup and restore
+- production security checklist
+
+Alerting plan:
+- critical alerts
+- high alerts
+- medium alerts
+
+Validation:
+- logger tests
+- redaction tests
+- auth logging tests
+- role/membership tests
+- superadmin tests
+- rate-limit logging tests
+- application inventory
+- production build
+- local limitations
+
+Security verification:
+- secrets can appear in logs: YES / NO
+- client can forge actor or tenant fields: YES / NO
+- logger failure can break requests: YES / NO
+- high-volume public logs uncontrolled: YES / NO
+- session invalidation procedure complete: YES / NO
+- key rotation procedure complete: YES / NO
+- backup capability overstated: YES / NO
+- authentication weakened: YES / NO
+- authorization weakened: YES / NO
+- tests skipped: YES / NO
+
+Files modified:
+- exact list
+
+Commit:
+- exact SHA
+- security: add monitoring and incident readiness
+
+Push performed:
+- No
+
+Working tree:
+- clean / not clean
+
+Ready for Security Prompt 6:
+- YES / NO
