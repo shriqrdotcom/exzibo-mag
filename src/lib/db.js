@@ -41,11 +41,13 @@ export async function getDeletedRestaurants() {
 }
 
 export async function softDeleteRestaurant(id) {
-  const deletedAt = new Date().toISOString()
-  const res = await fetch(`/api/neon/restaurant/${encodeURIComponent(id)}`, {
-    method: 'PATCH',
+  // Must use the superadmin-gated softDelete action — the profile-patch route
+  // (/api/neon/restaurant/:id PATCH → patchNeonRestaurantProfile) strips
+  // is_deleted/deleted_at as platform fields and silently no-ops.
+  const res = await fetch(`/api/restaurants?action=softDelete`, {
+    method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ is_deleted: true, deleted_at: deletedAt }),
+    body: JSON.stringify({ id }),
   })
   if (!res.ok) {
     const err = await res.json().catch(() => ({}))
