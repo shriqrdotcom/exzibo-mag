@@ -1,0 +1,189 @@
+DETAILED BACKEND PROCESS THAT MUST BE TRACED
+
+Do not reimplement Better Auth manually. Inspect the installed Better Auth version and verify how it performs every applicable stage below.
+
+STAGE 1 — LOGIN REQUEST
+
+1. The button calls the real Better Auth client.
+2. The client sends the social-login request with:
+   - provider: google
+   - a fixed, trusted callback destination
+   - a safe error destination
+3. The request reaches the actual Better Auth social-sign-in endpoint.
+4. The backend validates:
+   - Request Origin
+   - Host and protocol
+   - Trusted-origin policy
+   - Request body
+   - Provider name
+   - Callback destination
+5. User-controlled absolute callback URLs and open redirects must be rejected.
+
+STAGE 2 — AUTHORIZATION REQUEST CREATION
+
+6. The backend loads the Google provider configuration.
+7. Confirm the required Google client ID and client secret are present without printing them.
+8. Confirm the production Better Auth base URL is valid.
+9. Better Auth generates a cryptographically secure OAuth state value.
+10. Verify whether the installed version also uses PKCE and nonce for this flow.
+11. Any state, PKCE verifier, nonce, and callback information must be temporarily stored securely and must not be exposed through logs.
+12. The backend creates the Google authorization URL using the exact production callback URI.
+13. The sign-in endpoint returns either:
+    - A safe redirect response, or
+    - A validated Google URL that the client must navigate to.
+14. Determine which behavior this repository and installed Better Auth version expect.
+
+STAGE 3 — GOOGLE AUTHORIZATION
+
+15. The browser must navigate to "accounts.google.com".
+16. Google validates:
+    - OAuth client ID
+    - Authorized redirect URI
+    - Requested scopes
+    - Consent-screen status
+    - Test-user restrictions, if the OAuth application is in testing
+17. Google displays the account chooser.
+18. The user selects an account and approves the requested basic identity scopes.
+19. Google redirects to the exact configured callback with either:
+    - Authorization code and state, or
+    - A sanitized OAuth error
+
+STAGE 4 — CALLBACK SECURITY
+
+20. The callback route must validate:
+    - State matches the original request
+    - State has not expired
+    - State is single-use
+    - PKCE verifier, when used
+    - Nonce, when used
+    - Callback host and path
+21. Missing, incorrect, expired, or replayed values must be rejected.
+22. Authorization codes, state values, tokens, and callback query values must never be logged.
+23. A user cancelling Google login must be distinguished from an internal server failure.
+
+STAGE 5 — SERVER-SIDE TOKEN EXCHANGE
+
+24. The backend exchanges the authorization code directly with Google.
+25. The Google client secret must remain server-side.
+26. Validate all applicable returned identity claims:
+    - Issuer
+    - Audience
+    - Expiration
+    - Nonce
+    - Subject identifier
+    - Email
+    - Email verification status
+27. Do not trust an email supplied by the browser or callback URL.
+28. Do not expose Google access tokens, refresh tokens, or ID tokens to client-side storage or application URLs.
+
+STAGE 6 — USER AND ACCOUNT HANDLING
+
+29. Determine whether the Google account is:
+    - An existing linked account
+    - An existing user requiring safe account linking
+    - A genuinely new user
+30. Prevent duplicate users and duplicate Google accounts.
+31. Prevent an attacker from linking to another user merely by supplying the same email.
+32. Preserve the existing project policy for verified Google emails and account linking.
+33. Confirm Better Auth database writes for the user, provider account, and session complete safely.
+34. Identify whether these writes are transactional or otherwise protected against partial failures.
+
+STAGE 7 — SESSION CREATION
+
+35. After successful authentication, create a new server-controlled session.
+36. Prevent session fixation by ensuring an old anonymous or login-attempt session cannot become the authenticated session unchanged.
+37. Store only the required session information.
+38. Set the session cookie with the repository’s intentional production settings:
+    - HttpOnly
+    - Secure
+    - Appropriate SameSite
+    - Correct Domain
+    - Path "/"
+    - Defined expiration
+39. Confirm whether ".exzibo.online" cross-subdomain scope is intentional and safe.
+40. Do not store authentication state as a forgeable user ID, email, or role in local storage.
+
+STAGE 8 — SAFE POST-LOGIN REDIRECT
+
+41. Recover the original callback destination only from securely validated state.
+42. Redirect only to an allowlisted Exzibo destination.
+43. Never redirect to a URL supplied without server validation.
+44. Remove authorization codes, OAuth errors, and state values from the final browser URL.
+45. The successful destination must be the intended superadmin landing page.
+
+STAGE 9 — SERVER-SIDE SUPERADMIN AUTHORIZATION
+
+46. The protected superadmin layout or API reads the newly created session server-side.
+47. It obtains the user identity only from that verified session.
+48. It checks the existing server-side superadmin policy separately from restaurant roles.
+49. The result must be:
+    - No valid session: 401 or redirect to sign-in
+    - Valid session but unauthorized user: 403 Access Denied
+    - Approved superadmin: dashboard access
+50. Owner, Admin, Manager, and Staff restaurant roles must never grant superadmin access.
+51. Client-side navigation checks may improve the UI but must not be treated as security enforcement.
+
+STAGE 10 — SESSION RESTORATION AND LOGOUT
+
+52. Refreshing or reopening the dashboard must restore a valid unexpired session.
+53. Expired or revoked sessions must be rejected.
+54. Logout must invalidate the real server session.
+55. Logout must expire the production cookie.
+56. After logout, protected superadmin routes must no longer be accessible.
+
+FAILURE-STAGE CLASSIFICATION
+
+Report the first failed stage using one of these exact classifications:
+
+- BUTTON_NOT_TRIGGERED
+- SIGN_IN_REQUEST_FAILED
+- AUTH_INITIALIZATION_FAILED
+- GOOGLE_REDIRECT_NOT_FOLLOWED
+- GOOGLE_CONFIGURATION_REJECTED
+- CALLBACK_VALIDATION_FAILED
+- TOKEN_EXCHANGE_FAILED
+- IDENTITY_VALIDATION_FAILED
+- ACCOUNT_LINKING_FAILED
+- SESSION_CREATION_FAILED
+- COOKIE_NOT_ACCEPTED
+- SESSION_NOT_RESTORED
+- SUPERADMIN_AUTHORIZATION_DENIED
+- POST_LOGIN_REDIRECT_FAILED
+
+Do not call the problem “Access Denied” until confirming that authentication and session creation succeeded and only superadmin authorization failed.
+
+SAFE DIAGNOSTICS
+
+For every stage, record only:
+
+- Stage name
+- Route name
+- HTTP status
+- Redirect hostname
+- Sanitized error code
+- Correlation/request ID
+- Pass or fail
+
+Never record:
+
+- OAuth codes
+- State values
+- PKCE values
+- Nonces
+- Tokens
+- Cookies
+- Sessions
+- Google client credentials
+- User email addresses
+
+IMPORTANT EXIT RULE
+
+Because this task does not authorize deployment, passing local tests alone does not prove that production login is fixed.
+
+The final report must separately state:
+
+- CODE STATUS: FIX READY / NO CODE DEFECT / BLOCKED
+- EXTERNAL CONFIGURATION STATUS: READY / ACTION REQUIRED
+- PRODUCTION LOGIN STATUS: RUNTIME VERIFICATION REQUIRED / VERIFIED
+
+Do not claim “production login fixed” until a deployed physical-browser test confirms the complete flow.

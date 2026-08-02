@@ -311,4 +311,12 @@ describe('logout and session enforcement contracts', () => {
     assert.doesNotMatch(authContext, /localStorage\.(setItem|getItem|removeItem)\([^)]*(token|session)/i)
     assert.doesNotMatch(authClient, /(token|session)[^\\n]*(searchParams|URLSearchParams|localStorage)/i)
   })
+
+  it('uses fixed same-origin OAuth callback and error destinations', async () => {
+    const fs = await import('node:fs/promises')
+    const authContext = await fs.readFile(new URL('../src/context/AuthContext.jsx', import.meta.url), 'utf8')
+    assert.match(authContext, /provider:\s*['"]google['"][\s\S]*callbackURL:\s*['"]\/['"]/)
+    assert.match(authContext, /errorCallbackURL:\s*['"]\/auth['"]/)
+    assert.doesNotMatch(authContext, /callbackURL:\s*`\$\{window\.location\.origin\}/)
+  })
 })

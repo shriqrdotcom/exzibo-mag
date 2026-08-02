@@ -4,7 +4,11 @@ import { setSessionCookie } from 'better-auth/cookies'
 import { expo } from '@better-auth/expo'
 import pg from 'pg'
 import crypto from 'node:crypto'
-import { validateAuthConfig, validateDatabaseConfig } from '../config/serverEnv.js'
+import {
+  validateAuthConfig,
+  validateDatabaseConfig,
+  validateGoogleOAuthConfig,
+} from '../config/serverEnv.js'
 import {
   getAuthBaseUrlConfig,
   getTrustedAuthOrigins,
@@ -57,8 +61,10 @@ if (!_authSecret && process.env.VERCEL_ENV) {
   )
 }
 
-const googleClientId = process.env.GOOGLE_CLIENT_ID || ''
-const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET || ''
+const {
+  googleClientId,
+  googleClientSecret,
+} = validateGoogleOAuthConfig()
 
 function requestHeader(context, name) {
   const requestHeader = context.request?.headers?.get?.(name)

@@ -155,7 +155,12 @@ export function AuthProvider({ children }) {
       // Always destructure the result; never assume success from absence of an exception.
       const result = await authClient.signIn.social({
         provider: 'google',
-        callbackURL: `${window.location.origin}/`,
+        // Keep both destinations relative and fixed. Better Auth validates
+        // them against its trusted-origin policy before storing them in the
+        // encrypted/signed OAuth state; do not derive a redirect from a
+        // mutable browser origin.
+        callbackURL: '/',
+        errorCallbackURL: '/auth',
       })
       if (result?.error) {
         const msg = result.error.message || result.error.statusText || 'Sign-in failed. Please try again.'
