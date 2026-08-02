@@ -11,6 +11,12 @@ description: Key decisions and pitfalls from the DISABLE_AUTH removal and CORS/p
 
 - Vite middleware is server-side code even though it runs during local development. It must authenticate through Better Auth rather than reading the client-only `VITE_DISABLE_AUTH` flag; document any separate development bootstrap flag in `.env.example`.
 
+- When mounting Better Auth in Vite, preserve the full `/api/auth/*` request URL; a Connect middleware mounted with `/api/auth` strips the base path and makes `/dev-bootstrap` return 404.
+
+**Why:** Better Auth routes against its configured `/api/auth` base path, while Connect prefix mounts rewrite `req.url` before the handler sees it.
+
+**How to apply:** Use a root middleware with an `/api/auth/` pathname guard when adapting Better Auth to Vite’s Connect stack.
+
 **Why:** The environment-contract tests scan Vite configuration alongside API/server files, and allowing a public client flag to select a server identity would recreate an authorization bypass.
 
 **How to apply:** Keep development UI conveniences in `import.meta.env` client code only. Any Vite middleware mutation route must derive identity from the verified session and use a separately gated, documented bootstrap mechanism only for session setup.

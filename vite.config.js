@@ -1,10 +1,12 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import { toNodeHandler } from 'better-auth/node'
 import path from 'path'
 import fs from 'fs'
 import { pathToFileURL } from 'node:url'
 import { validateServerEnv } from './src/config/serverEnv.js'
 import { logSecurityEvent, SECURITY_EVENTS } from './src/monitoring/securityLogger.js'
+import { auth } from './src/lib/auth.server.js'
 // crypto is imported by api/_lib/preview-auth.js (shared module)
 import {
   patchNeonRestaurant,
@@ -197,6 +199,31 @@ function previewAuthPlugin() {
         res.end(JSON.stringify({ success: true }))
       })
 
+    },
+  }
+}
+
+// Better Auth must be available in the Vite/Replit runtime too. The client
+// development bootstrap uses this route to create a real session cookie; the
+// restaurant creation handler then verifies that cookie normally.
+function betterAuthApiPlugin() {
+  const betterAuthHandler = toNodeHandler(auth)
+  return {
+    name: 'better-auth-api',
+    configureServer(server) {
+      // Do not mount with a path prefix: Connect strips that prefix from
+      // req.url, but Better Auth routes against its full /api/auth basePath.
+      server.middlewares.use((req, res, next) => {
+        if (!(req.url || '').split('?')[0].startsWith('/api/auth/')) return next()
+        betterAuthHandler(req, res).catch(error => {
+          logger.error('[dev] Better Auth handler error', { error: error.message })
+          if (!res.headersSent) {
+            res.statusCode = 500
+            res.setHeader('Content-Type', 'application/json')
+            res.end(JSON.stringify({ error: 'Auth handler error' }))
+          }
+        })
+      })
     },
   }
 }
@@ -1388,7 +1415,7 @@ export default defineConfig(({ mode, command }) => {
     }
   }
   return {
-    plugins: [securityPlugin(), react(), previewAuthPlugin(), mobileAndRealtimeApiPlugin(), queryApiPlugin(), menuApiPlugin(), aboutApiPlugin(), tableValidationPlugin(), neonRestaurantPlugin(), analyticsPlugin(), healthPlugin(), spaFallbackPlugin(), realtimeOutboxPlugin()],
+    plugins: [securityPlugin(), react(), previewAuthPlugin(), betterAuthApiPlugin(), mobileAndRealtimeApiPlugin(), queryApiPlugin(), menuApiPlugin(), aboutApiPlugin(), tableValidationPlugin(), neonRestaurantPlugin(), analyticsPlugin(), healthPlugin(), spaFallbackPlugin(), realtimeOutboxPlugin()],
     appType: 'spa',
     define: {},
     resolve: {
