@@ -213,6 +213,29 @@ describe('private authentication host policy', () => {
     )
   })
 
+  it('does not derive production auth origins from deployment metadata', () => {
+    const env = {
+      ...productionEnv,
+      BETTER_AUTH_BASE_URL: 'https://dashboard.exzibo.online',
+      // These values are automatically present on Vercel/Replit deployments.
+      // They must not override the explicitly configured production origin.
+      VERCEL_URL: 'exzibo-git-feature-preview.vercel.app',
+      VERCEL_BRANCH_URL: 'exzibo-git-feature-preview.vercel.app',
+      VERCEL_PROJECT_PRODUCTION_URL: 'dashboard.exzibo.online',
+      REPLIT_DEV_DOMAIN: 'exzibo-preview.replit.dev',
+      REPLIT_DOMAINS: 'exzibo-preview.replit.dev',
+    }
+
+    const config = validateAuthConfig(env)
+    const baseUrlConfig = getAuthBaseUrlConfig(config.authBaseUrl, env)
+
+    assert.equal(config.authBaseUrl, 'https://dashboard.exzibo.online')
+    assert.deepEqual(getTrustedAuthOrigins(env), AUTH_WEB_ORIGINS)
+    assert.deepEqual(baseUrlConfig.allowedHosts, [...AUTH_WEB_HOSTS])
+    assert.equal(baseUrlConfig.allowedHosts.includes('exzibo-git-feature-preview.vercel.app'), false)
+    assert.equal(baseUrlConfig.allowedHosts.includes('exzibo-preview.replit.dev'), false)
+  })
+
   it('keeps preview origins available only in non-production environments', () => {
     const previewEnv = {
       // Vercel preview deployments commonly use NODE_ENV=production.
@@ -287,5 +310,13 @@ describe('logout and session enforcement contracts', () => {
     const authClient = await fs.readFile(new URL('../src/lib/auth-client.js', import.meta.url), 'utf8')
     assert.doesNotMatch(authContext, /localStorage\.(setItem|getItem|removeItem)\([^)]*(token|session)/i)
     assert.doesNotMatch(authClient, /(token|session)[^\\n]*(searchParams|URLSearchParams|localStorage)/i)
+  })
+
+  it('uses fixed same-origin OAuth callback and error destinations', async () => {
+    const fs = await import('node:fs/promises')
+    const authContext = await fs.readFile(new URL('../src/context/AuthContext.jsx', import.meta.url), 'utf8')
+    assert.match(authContext, /provider:\s*['"]google['"][\s\S]*callbackURL:\s*['"]\/['"]/)
+    assert.match(authContext, /errorCallbackURL:\s*['"]\/auth['"]/)
+    assert.doesNotMatch(authContext, /callbackURL:\s*`\$\{window\.location\.origin\}/)
   })
 })
