@@ -133,10 +133,6 @@ export default function CreateWebsite() {
 
   const handleGenerate = async () => {
     if (!validate()) return
-    if (linkStatus === 'taken') {
-      setSubmitError('This link name is already taken. Please choose a different one.')
-      return
-    }
     setSubmitting(true)
     setSubmitError('')
     try {
@@ -152,6 +148,17 @@ export default function CreateWebsite() {
       } catch { /* first restaurant — no existing rows */ }
 
       const baseSlug = linkName && linkName.trim() ? linkName.trim() : slugify(form.restaurantName)
+      // The availability indicator is only a convenience check. Do not make
+      // the button depend on its debounced request finishing: an interrupted
+      // lookup must never make GENERATE WEBSITE look unclickable. Re-check
+      // immediately before creating so duplicate links remain blocked.
+      const linkTaken = await checkLinkNameTakenInDB(baseSlug)
+      if (linkTaken) {
+        setLinkStatus('taken')
+        setSubmitError('This link name is already taken. Please choose a different one.')
+        return
+      }
+      setLinkStatus('available')
       const slug = generateSlug(baseSlug, existingSlugs)
 
       // ── Step 1: Insert restaurant with text/metadata only ──────
@@ -902,7 +909,10 @@ function AdditionalSection({ form, set }) {
 
 function FooterCTA({ onGenerate, submitting, linkStatus }) {
   const [hovered, setHovered] = useState(false)
-  const blocked = submitting || linkStatus === 'taken' || linkStatus === 'checking'
+  // A background availability check is advisory only. The click handler
+  // performs its own final check, so a slow/stalled check must not disable
+  // the primary action.
+  const blocked = submitting || linkStatus === 'taken'
   return (
     <div style={{
       position: 'fixed',
