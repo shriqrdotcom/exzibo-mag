@@ -19,11 +19,11 @@ const ROLES = ['Owner', 'Admin', 'Manager', 'Staff']
 const STATUSES = ['Active', 'Pending', 'Suspended']
 
 const INITIAL_MEMBERS = [
-  { id: 1, name: 'Maya Chen', email: 'maya.chen@gmail.com', phone: '+1 (415) 555-0182', role: 'Owner', status: 'Active', lastActive: 'Just now' },
-  { id: 2, name: 'Jordan Ellis', email: 'jordan.ellis@gmail.com', phone: '+1 (628) 555-0147', role: 'Admin', status: 'Active', lastActive: '12 min ago' },
-  { id: 3, name: 'Priya Nair', email: 'priya.nair@gmail.com', phone: '+1 (510) 555-0168', role: 'Manager', status: 'Pending', lastActive: 'Invitation sent' },
-  { id: 4, name: 'Theo Martin', email: 'theo.martin@gmail.com', phone: '+1 (415) 555-0124', role: 'Staff', status: 'Active', lastActive: 'Yesterday, 8:42 PM' },
-  { id: 5, name: 'Lena Ortiz', email: 'lena.ortiz@gmail.com', phone: '+1 (650) 555-0193', role: 'Staff', status: 'Suspended', lastActive: 'Mar 14, 2025' },
+  { id: 1, name: 'Maya Chen', email: 'maya.chen@gmail.com', phone: '+91 98765 43210', role: 'Owner', status: 'Active', lastActive: 'Just now' },
+  { id: 2, name: 'Jordan Ellis', email: 'jordan.ellis@gmail.com', phone: '+91 87654 32109', role: 'Admin', status: 'Active', lastActive: '12 min ago' },
+  { id: 3, name: 'Priya Nair', email: 'priya.nair@gmail.com', phone: '+91 76543 21098', role: 'Manager', status: 'Pending', lastActive: 'Invitation sent' },
+  { id: 4, name: 'Theo Martin', email: 'theo.martin@gmail.com', phone: '+91 65432 10987', role: 'Staff', status: 'Active', lastActive: 'Yesterday, 8:42 PM' },
+  { id: 5, name: 'Lena Ortiz', email: 'lena.ortiz@gmail.com', phone: '+91 98760 12345', role: 'Staff', status: 'Suspended', lastActive: 'Mar 14, 2025' },
 ]
 
 const emptyForm = { name: '', email: '', phone: '', role: 'Staff', status: 'Pending' }
@@ -38,7 +38,7 @@ function validate(form) {
   if (!form.email.trim()) errors.email = 'Gmail ID is required.'
   else if (!/^[^\s@]+@gmail\.com$/i.test(form.email.trim())) errors.email = 'Enter a valid Gmail address.'
   if (!form.phone.trim()) errors.phone = 'Phone number is required.'
-  else if (!/^\+?[0-9 ()-]{8,}$/.test(form.phone.trim())) errors.phone = 'Enter a valid phone number with country code.'
+  else if (!/^\+91[\s-]?[6-9]\d{4}[\s-]?\d{5}$/.test(form.phone.trim())) errors.phone = 'Enter a valid Indian mobile number starting with +91.'
   if (!ROLES.includes(form.role)) errors.role = 'Select a role.'
   return errors
 }
@@ -71,7 +71,7 @@ function MemberForm({ form, setForm, errors, onSubmit, onCancel, isEditing }) {
       </div>
       <div className="am-field">
         <label htmlFor="member-phone">Phone Noumber</label>
-        <div className="am-input-icon"><Phone size={16} /><input id="member-phone" data-testid="member-phone-input" value={form.phone} onChange={update('phone')} placeholder="+1 (415) 555-0100" inputMode="tel" /></div>
+        <div className="am-input-icon"><Phone size={16} /><input id="member-phone" data-testid="member-phone-input" value={form.phone} onChange={update('phone')} placeholder="+91 98765 43210" inputMode="tel" /></div>
         {errors.phone && <span className="am-error">{errors.phone}</span>}
       </div>
       <div className="am-form-grid">
