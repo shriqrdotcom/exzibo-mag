@@ -407,27 +407,11 @@ export default vercelWrapper(async function handler(req, res) {
     }
 
     if (action === 'permanentDelete') {
-      const guard = await assertSuperadmin(req, res)
-      if (!guard.ok) return
-      const { id } = req.body
-      if (!id) return badInput(res, 'id required', requestId)
-      rejectUnknownFields(req.body, ['id'])
-      const sql = getSql()
-      // Safety: only allow deletion of already-soft-deleted restaurants.
-      // All child rows (menu items, orders, bookings, team members, etc.)
-      // are wiped automatically via ON DELETE CASCADE FK constraints.
-      const rows = await sql`
-        DELETE FROM restaurants
-        WHERE id = ${id} AND is_deleted = true
-        RETURNING id, name
-      `
-      if (!rows.length) {
-        return res.status(404).json({
-          error: 'Restaurant not found or not soft-deleted. Soft-delete it first before permanent deletion.',
-          requestId,
-        })
-      }
-      return res.json({ success: true, deleted: rows[0], requestId })
+      return res.status(501).json({
+        error: 'Permanent restaurant deletion is disabled',
+        code: 'PERMANENT_DELETE_DISABLED',
+        requestId,
+      })
     }
 
     return badInput(res, `Unknown action: ${action}`, requestId)

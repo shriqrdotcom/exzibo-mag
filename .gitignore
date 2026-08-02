@@ -5,3 +5,4 @@ dist/
 attached_assets/Pasted-TASK-*.txt
 attached_assets/Pasted-REPOSITORY-*.txt
 backups/
+/attached_assets/

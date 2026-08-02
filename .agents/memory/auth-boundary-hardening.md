@@ -9,6 +9,12 @@ description: Key decisions and pitfalls from the DISABLE_AUTH removal and CORS/p
 
 - `DISABLE_AUTH` / `VITE_DISABLE_AUTH` now control **client-side UI only**. They must never appear in executable paths of any server-side handler, middleware, or service. Tests in `tests/auth-boundary-hardening.test.js` test 17 verifies this statically.
 
+- Vite middleware is server-side code even though it runs during local development. It must authenticate through Better Auth rather than reading the client-only `VITE_DISABLE_AUTH` flag; document any separate development bootstrap flag in `.env.example`.
+
+**Why:** The environment-contract tests scan Vite configuration alongside API/server files, and allowing a public client flag to select a server identity would recreate an authorization bypass.
+
+**How to apply:** Keep development UI conveniences in `import.meta.env` client code only. Any Vite middleware mutation route must derive identity from the verified session and use a separately gated, documented bootstrap mechanism only for session setup.
+
 - `BETTER_AUTH_SECRET` startup guard in `src/lib/auth.server.js` must check `process.env.VERCEL_ENV` (not `NODE_ENV === 'production'`). Vite's `npm run build` sets `NODE_ENV=production`, which caused the build to crash when the guard used `NODE_ENV`.
 
 - Preview auth (`previewLogin` / `previewVerify`) lives **only** in `vite.config.js` middleware. It was removed from `api/system.js` and `vercel.json`. The routes must never appear in production.
