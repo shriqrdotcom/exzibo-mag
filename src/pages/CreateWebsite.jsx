@@ -6,7 +6,7 @@ import {
   ChefHat, Users, Zap, Bell
 } from 'lucide-react'
 import PlanSelector from '../components/PlanSelector'
-import { createRestaurant, getRestaurants, updateRestaurant, generateRestaurantUID, uploadLogoFileViaApi, uploadCarouselImageViaApi, checkLinkNameTakenInDB } from '../lib/db'
+import { createRestaurant, getRestaurants, updateRestaurant, uploadLogoFileViaApi, uploadCarouselImageViaApi, checkLinkNameTakenInDB } from '../lib/db'
 import { processImageFile, isAcceptedImageType } from '../lib/processImage'
 
 export default function CreateWebsite() {
@@ -46,6 +46,7 @@ export default function CreateWebsite() {
   const [submitting, setSubmitting] = useState(false)
   const [success, setSuccess] = useState(false)
   const [createdSlug, setCreatedSlug] = useState('')
+  const [createdUid, setCreatedUid] = useState('')
   const [submitError, setSubmitError] = useState('')
   const [logoDragging, setLogoDragging] = useState(false)
   const [imgDragging, setImgDragging] = useState(false)
@@ -130,18 +131,6 @@ export default function CreateWebsite() {
     return slug
   }
 
-  const generateUID = (existingRestaurants) => {
-    const usedUIDs = new Set(existingRestaurants.map(r => r.uid).filter(Boolean))
-    let uid
-    do {
-      const firstDigit = [6, 7, 8, 9][Math.floor(Math.random() * 4)]
-      const rest = Math.floor(Math.random() * 1_000_000_000).toString().padStart(9, '0')
-      uid = `${firstDigit}${rest}`
-    } while (usedUIDs.has(uid))
-    return uid
-  }
-
-
   const handleGenerate = async () => {
     if (!validate()) return
     if (linkStatus === 'taken') {
@@ -164,17 +153,15 @@ export default function CreateWebsite() {
 
       const baseSlug = linkName && linkName.trim() ? linkName.trim() : slugify(form.restaurantName)
       const slug = generateSlug(baseSlug, existingSlugs)
-      // UID is generated server-side: globally unique, 10 digits, starts 6-9
-      const uid = await generateRestaurantUID()
 
       // ── Step 1: Insert restaurant with text/metadata only ──────
-      // Images are NOT included here — base64 blobs exceed API
-      // body limits (5 MB). They are uploaded to Storage below.
+      // Images are NOT included here — base64 blobs exceed API body limits.
+      // uid, owner_id, status, plan, plan_limits are all server-controlled:
+      // createRestaurantAtomic generates uid via crypto.randomInt and resolves
+      // ownerUserId from the verified session — never from this payload.
       const corePayload = {
-        uid,
         slug,
         name:                 form.restaurantName,
-        tables:               tableNumbers.length.toString(),
         table_numbers:        tableNumbers,
         phone:                form.phoneNumber   || null,
         gst:                  form.gstDetails    || null,
@@ -187,9 +174,6 @@ export default function CreateWebsite() {
         additional_info:      form.additionalInfo || null,
         digital_menu_link:    form.digitalMenuLink || null,
         digital_service_bell: form.digitalServiceBell,
-        status:               'active',
-        plan:                 form.selectedPlan,
-        plan_limits:          form.planLimits,
       }
 
       const created = await createRestaurant(corePayload)
@@ -223,6 +207,7 @@ export default function CreateWebsite() {
       }
 
       setCreatedSlug(slug)
+      setCreatedUid(created.uid || '')
       setSuccess(true)
     } catch (err) {
       console.error('[CreateRestaurant] Fatal error:', err)
@@ -258,6 +243,20 @@ export default function CreateWebsite() {
           <div style={{ fontSize: '14px', color: '#555', marginBottom: '28px', lineHeight: 1.6 }}>
             Your restaurant website is live. The details you filled in are now connected to your customer page.
           </div>
+
+          {/* UID */}
+          {createdUid && (
+            <div style={{
+              background: 'rgba(74,222,128,0.05)', border: '1px solid rgba(74,222,128,0.2)',
+              borderRadius: '10px', padding: '10px 14px', marginBottom: '12px',
+              display: 'flex', alignItems: 'center', gap: '8px',
+            }}>
+              <span style={{ fontSize: '11px', color: '#555' }}>Restaurant UID:</span>
+              <span style={{ fontSize: '14px', color: '#4ade80', fontFamily: 'monospace', fontWeight: 700, letterSpacing: '0.08em' }}>
+                {createdUid}
+              </span>
+            </div>
+          )}
 
           {/* URL Preview */}
           <div style={{

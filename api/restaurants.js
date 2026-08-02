@@ -94,6 +94,17 @@ const ALLOWED_CREATE_FIELDS = [
   'images', 'logo', 'table_numbers',
 ]
 
+// Fields that callers sometimes include but createRestaurantAtomic always
+// controls server-side. Strip silently so rejectUnknownFields doesn't block.
+const STRIP_FROM_CREATE = new Set([
+  'uid',        // server generates via crypto.randomInt — never from browser
+  'owner_id',   // resolved from the verified auth session, not caller body
+  'tables',     // legacy count field; table_numbers is canonical
+  'status',     // always 'active' on creation
+  'plan',       // always 'STARTER' on creation; billing changes go elsewhere
+  'plan_limits',// always {} on creation
+])
+
 const ALLOWED_UPDATE_FIELDS = ['id']
 const ALLOWED_PLATFORM_FIELDS = ['restaurantId', 'patch']
 
@@ -274,10 +285,23 @@ export default vercelWrapper(async function handler(req, res) {
     // ── POST actions ───────────────────────────────────────────────────────────
     if (req.method !== 'POST' && req.method !== 'PATCH') return safeError(res, 405, 'Method not allowed', requestId)
 
+    if (action === 'generateUid') {
+      const guard = await assertSuperadmin(req, res)
+      if (!guard.ok) return
+      const { generateUid } = await import('../src/lib/slug-utils.js')
+      return res.json({ uid: generateUid() })
+    }
+
     if (action === 'create') {
       const createGuard = await assertSuperadmin(req, res)
       if (!createGuard.ok) return
-      const payload = req.body
+      // Strip server-controlled fields so rejectUnknownFields doesn't block them.
+      // createRestaurantAtomic always generates uid via crypto.randomInt and
+      // derives ownerUserId from the verified session — never from caller body.
+      const rawPayload = req.body
+      const payload = Object.fromEntries(
+        Object.entries(rawPayload).filter(([k]) => !STRIP_FROM_CREATE.has(k))
+      )
       if (!payload?.slug || !payload?.name) return badInput(res, 'slug and name required', requestId)
       rejectUnknownFields(payload, ALLOWED_CREATE_FIELDS)
       const slugCheck = normalizeAndValidateSlug(payload.slug)

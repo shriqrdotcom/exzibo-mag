@@ -12,9 +12,15 @@ async function apiFetch(url, opts = {}) {
   return res.json()
 }
 
-// ── Restaurant UID — local generator ─────────────────────────────────────────
-export function generateRestaurantUID() {
-  return String(Math.floor(1000000000 + Math.random() * 9000000000))
+// ── Restaurant UID — server-side generator ────────────────────────────────────
+// Calls the superadmin-gated /api/restaurants?action=generateUid endpoint which
+// uses node:crypto.randomInt — never Math.random. Returns a 10-digit string
+// where the first digit is 1-9.  The server ALSO generates its own UID during
+// createRestaurantAtomic (and ignores any uid in the create body), so this
+// function is safe to call for display purposes; it never determines the stored value.
+export async function generateRestaurantUID() {
+  const data = await apiFetch('/api/restaurants?action=generateUid')
+  return data.uid
 }
 
 // ── Restaurants ───────────────────────────────────────────────────────────────
@@ -56,11 +62,20 @@ export async function softDeleteRestaurant(id) {
 }
 
 export async function createRestaurant(payload) {
-  const { data: { user }, error: authError } = getAuthUser()
-  if (authError || !user) throw new Error('Not authenticated — please log in and try again')
-
-  const uid = generateRestaurantUID()
-  const body = { ...payload, owner_id: user.id, uid, table_numbers: payload.table_numbers ?? [1] }
+  // uid is always generated server-side (crypto.randomInt) inside
+  // createRestaurantAtomic — never send one from the browser.
+  // owner_id / ownerUserId comes from the verified session on the server.
+  // Strip both here so rejectUnknownFields doesn't 400-block the request.
+  const {
+    uid: _uid,
+    owner_id: _ownerId,
+    tables: _tables,
+    status: _status,
+    plan: _plan,
+    plan_limits: _planLimits,
+    ...rest
+  } = payload
+  const body = { ...rest, table_numbers: rest.table_numbers ?? [1] }
 
   const res = await fetch('/api/neon/restaurant/create', {
     method: 'POST',
@@ -72,7 +87,7 @@ export async function createRestaurant(payload) {
     throw new Error(err?.error || 'Failed to create restaurant')
   }
   const data = await res.json()
-  console.log('[createRestaurant] created id:', data.id)
+  console.log('[createRestaurant] created id:', data.id, 'uid:', data.uid)
 
   return data
 }
