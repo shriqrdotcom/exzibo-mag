@@ -1,12 +1,29 @@
 import React, { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { Mail, Lock, Eye, EyeOff, Loader2, AlertCircle, FlaskConical, ShieldOff } from 'lucide-react'
 import { IS_PREVIEW } from '../lib/env'
 import { previewLogin } from '../lib/previewAuth'
 
+// Map Better Auth errorCallbackURL error codes to safe, user-friendly messages.
+// Never expose internal codes, tokens, or OAuth query values.
+function oauthErrorMessage(code) {
+  if (!code) return null
+  const c = String(code).toLowerCase()
+  if (c === 'access_denied')                    return 'Google sign-in was cancelled. Try again.'
+  if (c.includes('config') || c.includes('client'))
+                                                return 'Google sign-in is not configured correctly. Contact the system administrator.'
+  if (c.includes('callback') || c.includes('state') || c.includes('verif'))
+                                                return 'The sign-in could not be completed (verification failed). Please try again.'
+  if (c.includes('session') || c.includes('token'))
+                                                return 'A session error occurred. Please try again.'
+  // Generic fallback — intentionally vague to avoid leaking internal detail.
+  return 'Google sign-in failed. Please try again.'
+}
+
 export default function Auth() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { user, signInWithGoogle, setPreviewUser, accessDenied, deniedEmail } = useAuth()
 
   const [email, setEmail]   = useState('')
@@ -14,6 +31,23 @@ export default function Auth() {
   const [showPwd, setShowPwd]   = useState(false)
   const [loading, setLoading]   = useState(false)
   const [error, setError]       = useState('')
+
+  // On mount: read ?error= query param appended by Better Auth's errorCallbackURL
+  // redirect and surface it as a generic (non-"Access Denied") message.
+  useEffect(() => {
+    const params = new URLSearchParams(location.search)
+    const code = params.get('error')
+    const msg  = oauthErrorMessage(code)
+    if (msg) {
+      setError(msg)
+      // Remove the param so a page refresh doesn't re-show the stale message.
+      const next = new URL(window.location.href)
+      next.searchParams.delete('error')
+      next.searchParams.delete('error_description')
+      window.history.replaceState({}, '', next.pathname + (next.search || ''))
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Redirect already-authenticated users — go to saved path or /dashboard
   useEffect(() => {
@@ -183,8 +217,8 @@ export default function Auth() {
           </div>
         </div>
 
-        {/* Access denied error */}
-        {(accessDenied || error) && (
+        {/* Access denied — authenticated account is not an approved superadmin */}
+        {accessDenied && (
           <div style={{
             display: 'flex', alignItems: 'flex-start', gap: '10px',
             padding: '14px 16px', borderRadius: '12px',
@@ -197,11 +231,26 @@ export default function Auth() {
               <div style={{ fontSize: '12px', color: '#EF4444', opacity: 0.8 }}>
                 Your account is not authorized. Contact the system administrator.
               </div>
-              {accessDenied && deniedEmail && (
+              {deniedEmail && (
                 <div style={{ marginTop: '8px', fontSize: '11px', color: '#EF4444', opacity: 0.7, wordBreak: 'break-all' }}>
                   Checked email: <span style={{ fontFamily: 'monospace', userSelect: 'all' }}>{deniedEmail}</span>
                 </div>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* Generic sign-in error — OAuth failure, cancellation, timeout, config issue */}
+        {!accessDenied && error && (
+          <div style={{
+            display: 'flex', alignItems: 'flex-start', gap: '10px',
+            padding: '14px 16px', borderRadius: '12px',
+            background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.2)',
+            marginBottom: '20px',
+          }}>
+            <AlertCircle size={16} color="#EF4444" style={{ flexShrink: 0, marginTop: '1px' }} />
+            <div style={{ fontSize: '13px', color: '#EF4444', fontWeight: 500 }}>
+              {error}
             </div>
           </div>
         )}
