@@ -27,3 +27,4 @@
 - [Migration validation](migration-validation.md) — schema-qualified `public.*` migration SQL cannot be tested by search_path-only isolation.
 - [Security event monitoring](security-event-monitoring.md) — use registered, redacted events for application signals; keep provider-dependent alerting and recovery claims explicit.
 - [Test inventory isolation](test-inventory-isolation.md) — database-backed test files must run in separate processes to avoid shared-table teardown races.
+- [Creation submit flow](creation-submit-flow.md) — the create form submits directly; the authenticated create endpoint owns validation and duplicate conflicts.
