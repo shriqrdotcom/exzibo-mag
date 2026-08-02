@@ -4,7 +4,6 @@ import { Check, ChevronDown, Copy, Plus, Search, Store, Trash2, UserPlus, X } fr
 import './AppMembers.css'
 
 const ROLES = ['Owner', 'Admin', 'Manager', 'Staff']
-const STATUSES = ['Pending', 'Active', 'Suspended']
 
 const INITIAL_RESTAURANTS = [
   { id: 1, name: 'The Bombay Canteen', uid: '4827193056', members: 5, mark: 'BC' },
@@ -48,7 +47,6 @@ const emptyForm = {
   email: '',
   phone: '',
   role: 'Staff',
-  status: 'Pending',
 }
 
 function validate(form, selectedRestaurant) {
@@ -59,7 +57,6 @@ function validate(form, selectedRestaurant) {
   if (!/^[^\s@]+@gmail\.com$/i.test(form.email.trim())) errors.email = 'Enter a valid Gmail address.'
   if (!/^\+91[\s-]?[6-9]\d{4}[\s-]?\d{5}$/.test(form.phone.trim())) errors.phone = 'Enter a valid Indian mobile number starting with +91.'
   if (!ROLES.includes(form.role)) errors.role = 'Select a role.'
-  if (!STATUSES.includes(form.status)) errors.status = 'Select a status.'
   return errors
 }
 
@@ -148,14 +145,9 @@ function AddMemberModal({ restaurants, form, setForm, onClose, onSubmit }) {
             <input id="member-phone" data-testid="member-phone-input" value={form.phone} onChange={update('phone')} placeholder="+91 98765 43210" inputMode="tel" />
           </Field>
 
-          <div className="am-form-grid">
-            <Field label="Role" id="member-role" error={errors.role}>
-              <div className="am-select-wrap"><select id="member-role" data-testid="member-role-select" value={form.role} onChange={update('role')}>{ROLES.map((role) => <option key={role}>{role}</option>)}</select><ChevronDown size={15} /></div>
-            </Field>
-            <Field label="Status" id="member-status" error={errors.status}>
-              <div className="am-select-wrap"><select id="member-status" data-testid="member-status-select" value={form.status} onChange={update('status')}>{STATUSES.map((status) => <option key={status}>{status}</option>)}</select><ChevronDown size={15} /></div>
-            </Field>
-          </div>
+          <Field label="Role" id="member-role" error={errors.role}>
+            <div className="am-select-wrap"><select id="member-role" data-testid="member-role-select" value={form.role} onChange={update('role')}>{ROLES.map((role) => <option key={role}>{role}</option>)}</select><ChevronDown size={15} /></div>
+          </Field>
 
           <div className="am-modal-actions">
             <button type="button" className="am-button am-button-muted" onClick={onClose} data-testid="cancel-member-button">Cancel</button>
@@ -168,7 +160,7 @@ function AddMemberModal({ restaurants, form, setForm, onClose, onSubmit }) {
 }
 
 function MemberStatus({ status }) {
-  return <span className="am-status"><span />{status}</span>
+  return <span className={`am-status am-status-${status.toLowerCase()}`}><span />{status}</span>
 }
 
 function DeleteMemberDialog({ member, restaurant, onClose, onConfirm }) {
@@ -227,6 +219,7 @@ export default function AppMembers() {
       name: form.name.trim(),
       email: form.email.trim().toLowerCase(),
       phone: form.phone.trim(),
+      status: 'Pending',
     }
     nextMemberId.current += 1
     setMembersByRestaurant((current) => ({

@@ -416,6 +416,18 @@
   border-radius: 50%;
 }
 
+.am-status-active > span {
+  background: #79b887;
+}
+
+.am-status-pending > span {
+  background: #d8a04a;
+}
+
+.am-status-suspended > span {
+  background: #8b8b8b;
+}
+
 .am-member-delete {
   display: flex;
   align-items: center;
@@ -721,12 +733,6 @@
   border-radius: 50%;
 }
 
-.am-form-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-}
-
 .am-modal-actions {
   display: flex;
   justify-content: flex-end;
@@ -932,10 +938,6 @@
     align-items: flex-start;
     gap: 7px;
     padding: 14px 16px;
-  }
-
-  .am-form-grid {
-    grid-template-columns: 1fr;
   }
 
   .am-modal {
