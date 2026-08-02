@@ -6,7 +6,7 @@ import {
   ChefHat, Users, Zap, Bell
 } from 'lucide-react'
 import PlanSelector from '../components/PlanSelector'
-import { createRestaurant, getRestaurants, updateRestaurant, uploadLogoFileViaApi, uploadCarouselImageViaApi, checkLinkNameTakenInDB } from '../lib/db'
+import { createRestaurant, updateRestaurant, uploadLogoFileViaApi, uploadCarouselImageViaApi } from '../lib/db'
 import { processImageFile, isAcceptedImageType } from '../lib/processImage'
 
 export default function CreateWebsite() {
@@ -66,26 +66,6 @@ export default function CreateWebsite() {
     }
   }, [form.restaurantName, linkNameManual])
 
-  // Debounced real-time slug availability check
-  useEffect(() => {
-    if (linkDebounceRef.current) clearTimeout(linkDebounceRef.current)
-    if (!linkName || !linkName.trim()) {
-      setLinkStatus('idle')
-      return
-    }
-    setLinkStatus('checking')
-    linkDebounceRef.current = setTimeout(async () => {
-      try {
-        const taken = await checkLinkNameTakenInDB(linkName.trim())
-        setLinkStatus(taken ? 'taken' : 'available')
-      } catch {
-        setLinkStatus('idle')
-      }
-    }, 400)
-    return () => clearTimeout(linkDebounceRef.current)
-  }, [linkName])
-
-
   const set = (field, value) => setForm(p => ({ ...p, [field]: value }))
   const setSocial = (field, value) => setForm(p => ({ ...p, socialLinks: { ...p.socialLinks, [field]: value } }))
 
@@ -138,28 +118,11 @@ export default function CreateWebsite() {
     try {
       const tableNumbers = form.tableNumbers.length === 0 ? ['1'] : form.tableNumbers
 
-      // ── Fetch existing slugs/UIDs to avoid collisions ──────────
-      let existingSlugs = []
-      let existingUIDs  = []
-      try {
-        const rows = await getRestaurants()
-        existingSlugs = rows.map(r => r.slug).filter(Boolean)
-        existingUIDs  = rows.map(r => r.uid).filter(Boolean)
-      } catch { /* first restaurant — no existing rows */ }
-
       const baseSlug = linkName && linkName.trim() ? linkName.trim() : slugify(form.restaurantName)
-      // The availability indicator is only a convenience check. Do not make
-      // the button depend on its debounced request finishing: an interrupted
-      // lookup must never make GENERATE WEBSITE look unclickable. Re-check
-      // immediately before creating so duplicate links remain blocked.
-      const linkTaken = await checkLinkNameTakenInDB(baseSlug)
-      if (linkTaken) {
-        setLinkStatus('taken')
-        setSubmitError('This link name is already taken. Please choose a different one.')
-        return
-      }
-      setLinkStatus('available')
-      const slug = generateSlug(baseSlug, existingSlugs)
+      // Do not preflight with separate list/availability requests. Those
+      // requests can stall and leave the button spinning forever. The create
+      // endpoint validates the slug and returns a clear conflict response.
+      const slug = generateSlug(baseSlug, [])
 
       // ── Step 1: Insert restaurant with text/metadata only ──────
       // Images are NOT included here — base64 blobs exceed API body limits.
@@ -218,7 +181,11 @@ export default function CreateWebsite() {
       setSuccess(true)
     } catch (err) {
       console.error('[CreateRestaurant] Fatal error:', err)
-      setSubmitError(err.message || 'Failed to create restaurant. Please check your connection and try again.')
+      setSubmitError(
+        err.message === 'Failed to create restaurant'
+          ? 'Could not create the restaurant. Please confirm you are signed in as a superadmin and try again.'
+          : err.message || 'Failed to create restaurant. Please check your connection and try again.'
+      )
     } finally {
       setSubmitting(false)
     }
@@ -909,10 +876,7 @@ function AdditionalSection({ form, set }) {
 
 function FooterCTA({ onGenerate, submitting, linkStatus }) {
   const [hovered, setHovered] = useState(false)
-  // A background availability check is advisory only. The click handler
-  // performs its own final check, so a slow/stalled check must not disable
-  // the primary action.
-  const blocked = submitting || linkStatus === 'taken'
+  const blocked = submitting
   return (
     <div style={{
       position: 'fixed',
@@ -951,21 +915,6 @@ function FooterCTA({ onGenerate, submitting, linkStatus }) {
               animation: 'spin 0.8s linear infinite', display: 'inline-block',
             }} />
             GENERATING...
-          </>
-        ) : linkStatus === 'taken' ? (
-          <>
-            <span style={{ fontSize: '16px', lineHeight: 1 }}>✖</span>
-            LINK NAME TAKEN
-          </>
-        ) : linkStatus === 'checking' ? (
-          <>
-            <span style={{
-              width: '16px', height: '16px',
-              border: '2px solid rgba(255,255,255,0.2)',
-              borderTopColor: 'rgba(255,255,255,0.6)', borderRadius: '50%',
-              animation: 'spin 0.8s linear infinite', display: 'inline-block',
-            }} />
-            CHECKING...
           </>
         ) : (
           <>
