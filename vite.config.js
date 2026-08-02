@@ -1000,11 +1000,18 @@ function neonRestaurantPlugin() {
           if (method === 'POST' && url === '/create') {
             let ownerUserId = null
             let ownerEmail  = null
-            const session = await getSessionEmail(req)
-            if (!session) return json(401, { error: 'Not authenticated' })
-            if (!isSuperadminEmail(session.email)) return json(403, { error: 'Superadmin access required' })
-            ownerUserId = session.userId
-            ownerEmail  = session.email
+            if (process.env.VITE_DISABLE_AUTH === 'true') {
+              // Dev-only bypass — mirrors the mock superadmin injected by AuthContext.jsx.
+              // VITE_DISABLE_AUTH is never set in production builds.
+              ownerUserId = '00000000-0000-0000-0000-000000000001'
+              ownerEmail  = 'dev@exzibo.local'
+            } else {
+              const session = await getSessionEmail(req)
+              if (!session) return json(401, { error: 'Not authenticated' })
+              if (!isSuperadminEmail(session.email)) return json(403, { error: 'Superadmin access required' })
+              ownerUserId = session.userId
+              ownerEmail  = session.email
+            }
             const body = await readBody()
             const payload = body ?? {}
             if (!payload.slug || !payload.name) return json(400, { error: 'slug and name required' })
