@@ -16,6 +16,7 @@ import {
 import './AppMembers.css'
 
 const ROLES = ['Owner', 'Admin', 'Manager', 'Staff']
+const MEMBER_FORM_ROLES = ['Owner', 'Admin', 'Staff']
 const STATUSES = ['Active', 'Pending', 'Suspended']
 
 const INITIAL_MEMBERS = [
@@ -77,7 +78,7 @@ function MemberForm({ form, setForm, errors, onSubmit, onCancel, isEditing }) {
       <div className="am-form-grid">
         <div className="am-field">
           <label htmlFor="member-role">Role</label>
-          <select id="member-role" data-testid="member-role-select" value={form.role} onChange={update('role')}>{ROLES.map((role) => <option key={role}>{role}</option>)}</select>
+          <select id="member-role" data-testid="member-role-select" value={form.role} onChange={update('role')}>{MEMBER_FORM_ROLES.map((role) => <option key={role}>{role}</option>)}</select>
           {errors.role && <span className="am-error">{errors.role}</span>}
         </div>
         <div className="am-field">
