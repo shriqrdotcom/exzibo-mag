@@ -1,6 +1,6 @@
 import React, { Fragment, useMemo, useRef, useState } from 'react'
 import Sidebar from '../components/Sidebar'
-import { Check, ChevronDown, Copy, Plus, Search, Store, Trash2, X } from 'lucide-react'
+import { Check, ChevronDown, Copy, Plus, Search, Store, Trash2, UserPlus, X } from 'lucide-react'
 import './AppMembers.css'
 
 const ROLES = ['Owner', 'Admin', 'Manager', 'Staff']
@@ -195,7 +195,7 @@ export default function AppMembers() {
   const [membersByRestaurant, setMembersByRestaurant] = useState(INITIAL_MEMBERS_BY_RESTAURANT)
   const [query, setQuery] = useState('')
   const [sort, setSort] = useState('name')
-  const [modalRestaurant, setModalRestaurant] = useState(null)
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [form, setForm] = useState(emptyForm)
   const [expandedRestaurantId, setExpandedRestaurantId] = useState(null)
   const [pendingDelete, setPendingDelete] = useState(null)
@@ -214,10 +214,12 @@ export default function AppMembers() {
   }, [restaurants, query, sort, membersByRestaurant])
 
   const openAdd = (restaurant = null) => {
-    setModalRestaurant(restaurant)
     setForm({ ...emptyForm, uid: restaurant?.uid || '' })
+    setIsAddModalOpen(true)
   }
-  const closeModal = () => setModalRestaurant(null)
+  const closeModal = () => {
+    setIsAddModalOpen(false)
+  }
   const submit = (restaurant) => {
     const newMember = {
       ...form,
@@ -264,7 +266,10 @@ export default function AppMembers() {
       <main className="am-main" aria-label="App members workspace">
         <div className="am-content">
           <header className="am-header">
-            <div><p className="am-kicker">Restaurant access</p><h1>App Members</h1><p className="am-subtitle">Connect mobile app members to a restaurant using its permanent UID.</p></div>
+            <div className="am-header-main">
+              <div><p className="am-kicker">Restaurant access</p><h1>App Members</h1><p className="am-subtitle">Connect mobile app members to a restaurant using its permanent UID.</p></div>
+              <button type="button" className="am-button am-button-header" onClick={() => openAdd()} aria-label="Add member manually" data-testid="header-add-member-button"><UserPlus size={19} strokeWidth={1.8} /><span>Add Member</span></button>
+            </div>
           </header>
 
           <section className="am-directory" aria-label="Restaurants">
@@ -313,7 +318,7 @@ export default function AppMembers() {
           </section>
         </div>
       </main>
-      {modalRestaurant !== null && <AddMemberModal restaurants={restaurants} form={form} setForm={setForm} onClose={closeModal} onSubmit={submit} />}
+      {isAddModalOpen && <AddMemberModal restaurants={restaurants} form={form} setForm={setForm} onClose={closeModal} onSubmit={submit} />}
       {pendingDelete && <DeleteMemberDialog member={pendingDelete.member} restaurant={pendingDelete.restaurant} onClose={() => setPendingDelete(null)} onConfirm={confirmDelete} />}
     </div>
   )
