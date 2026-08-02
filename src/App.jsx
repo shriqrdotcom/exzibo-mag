@@ -37,6 +37,7 @@ const RestaurantDashboard  = lazy(() => import('./pages/RestaurantDashboard'))
 const TeamMembers          = lazy(() => import('./pages/TeamMembers'))
 const SuperAdminDashboard  = lazy(() => import('./pages/SuperAdminDashboard'))
 const TeamMembersAdmin     = lazy(() => import('./pages/TeamMembersAdmin'))
+const AppMembers           = lazy(() => import('./pages/AppMembers'))
 const LiveOrder            = lazy(() => import('./pages/LiveOrder'))
 const TablePage            = lazy(() => import('./pages/TablePage'))
 const MenuLinkRoute        = lazy(() => import('./pages/MenuLinkRoute'))
@@ -261,6 +262,8 @@ function SuperAdminApp() {
           element={<SuperAdminRoute><LiveOrder /></SuperAdminRoute>} />
         <Route path="/team-members"
           element={<SuperAdminRoute><TeamMembersAdmin /></SuperAdminRoute>} />
+        <Route path="/app-members"
+          element={<SuperAdminRoute><AppMembers /></SuperAdminRoute>} />
         <Route path="/table"
           element={<SuperAdminRoute><TablePage /></SuperAdminRoute>} />
         <Route path="/settings"
@@ -494,6 +497,7 @@ function DefaultApp() {
       <Route path="/super-admin"             element={<ProtectedRoute><SuperAdminDashboard /></ProtectedRoute>} />
       <Route path="/live-order"              element={<ProtectedRoute><LiveOrder /></ProtectedRoute>} />
       <Route path="/team-members"            element={<ProtectedRoute><TeamMembersAdmin /></ProtectedRoute>} />
+      <Route path="/app-members"             element={<ProtectedRoute><AppMembers /></ProtectedRoute>} />
       <Route path="/settings"               element={<ProtectedRoute><Settings /></ProtectedRoute>} />
       <Route path="/create-website"          element={<ProtectedRoute><CreateWebsite /></ProtectedRoute>} />
       <Route path="/restaurants"             element={<ProtectedRoute><Restaurants /></ProtectedRoute>} />
