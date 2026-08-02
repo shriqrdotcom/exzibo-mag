@@ -70,7 +70,7 @@ function MemberForm({ form, setForm, errors, onSubmit, onCancel, isEditing }) {
         {errors.email && <span className="am-error">{errors.email}</span>}
       </div>
       <div className="am-field">
-        <label htmlFor="member-phone">Phone with country code</label>
+        <label htmlFor="member-phone">Phone Noumber</label>
         <div className="am-input-icon"><Phone size={16} /><input id="member-phone" data-testid="member-phone-input" value={form.phone} onChange={update('phone')} placeholder="+1 (415) 555-0100" inputMode="tel" /></div>
         {errors.phone && <span className="am-error">{errors.phone}</span>}
       </div>
