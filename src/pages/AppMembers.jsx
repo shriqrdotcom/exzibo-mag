@@ -126,7 +126,7 @@ function AddMemberModal({ restaurants, form, setForm, onClose, onSubmit }) {
             <input id="member-email" data-testid="member-email-input" value={form.email} onChange={update('email')} placeholder="name@gmail.com" inputMode="email" />
           </Field>
 
-          <Field label="Phone Noumber" id="member-phone" error={errors.phone}>
+          <Field label="Phone Number" id="member-phone" error={errors.phone}>
             <input id="member-phone" data-testid="member-phone-input" value={form.phone} onChange={update('phone')} placeholder="+91 98765 43210" inputMode="tel" />
           </Field>
 
