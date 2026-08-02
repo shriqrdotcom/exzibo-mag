@@ -45,7 +45,7 @@ See `.env.example` for the full reference (that file also lists Vercel-specific 
 ## Running
 - Dev server: `npm run dev` (Vite, port 5000, host 0.0.0.0) — bound to the "Start application" workflow
 - Build: `npm run build`
-- Production: `npm start` (Express server serves built `dist/` + API routes)
+- Production/developer runtime: `npm start` (Express server serves built `dist/` + API routes)
 - DB schema sync: `npm run db:migrate` — applies reviewed SQL migrations from `drizzle/migrations/`
 - Vite config: `allowedHosts: true` for Replit proxy compatibility
 

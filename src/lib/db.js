@@ -84,7 +84,10 @@ export async function createRestaurant(payload) {
   })
   if (!res.ok) {
     const err = await res.json().catch(() => ({}))
-    throw new Error(err?.error || 'Failed to create restaurant')
+    const error = new Error(err?.error || 'Failed to create restaurant')
+    error.status = res.status
+    error.code = err?.code
+    throw error
   }
   const data = await res.json()
   console.log('[createRestaurant] created id:', data.id, 'uid:', data.uid)

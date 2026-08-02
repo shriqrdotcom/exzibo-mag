@@ -89,6 +89,58 @@ function isDashboardHandoffRequest(context, target) {
     isDashboardHandoffOrigin(requestHeader(context, 'origin'), target)
 }
 
+function isDevelopmentAuthBootstrapRequest(context) {
+  if (process.env.DEV_AUTH_BOOTSTRAP !== 'true') return false
+  if (process.env.NODE_ENV === 'production' || process.env.VERCEL_ENV) return false
+
+  const host = requestHost(context).split(':')[0].toLowerCase()
+  return host === 'localhost' ||
+    host === '127.0.0.1' ||
+    host === '[::1]' ||
+    host.endsWith('.replit.dev') ||
+    host.endsWith('.replit.app') ||
+    host.endsWith('.repl.co')
+}
+
+function developmentAuthPlugin() {
+  return {
+    id: 'development-auth',
+    version: '1.0.0',
+    endpoints: {
+      bootstrapDevelopmentSession: createAuthEndpoint('/dev-bootstrap', {
+        method: 'POST',
+        requireHeaders: true,
+      }, async (context) => {
+        if (!isDevelopmentAuthBootstrapRequest(context)) {
+          throw context.error('NOT_FOUND', { message: 'Not found' })
+        }
+
+        const id = '00000000-0000-0000-0000-000000000001'
+        const email = 'dev@exzibo.local'
+        const existing = await context.context.internalAdapter.findUserByEmail(email)
+        const user = existing?.user || await context.context.internalAdapter.createUser({
+          id,
+          name: 'Dev SuperAdmin',
+          email,
+          emailVerified: true,
+          image: null,
+        })
+        const session = await context.context.internalAdapter.createSession(user.id)
+        await setSessionCookie(context, { session, user })
+
+        return context.json({
+          user: {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            emailVerified: user.emailVerified,
+          },
+        })
+      }),
+    },
+  }
+}
+
 function dashboardHandoffPlugin() {
   return {
     id: 'dashboard-handoff',
@@ -237,6 +289,7 @@ export const auth = betterAuth({
     // origins (listed in MOBILE_APP_TRUSTED_ORIGINS) while keeping all web
     // origins subject to the normal CSRF policy.
     expo(),
+    developmentAuthPlugin(),
     // A superadmin can open the dashboard without sharing a cookie domain.
     // This custom, host-bound endpoint stores only a SHA-256 token digest in
     // Better Auth's verification table, consumes it atomically, and sets the

@@ -119,39 +119,49 @@ export default function CreateWebsite() {
       const tableNumbers = form.tableNumbers.length === 0 ? ['1'] : form.tableNumbers
 
       const baseSlug = linkName && linkName.trim() ? linkName.trim() : slugify(form.restaurantName)
-      // Do not preflight with separate list/availability requests. Those
-      // requests can stall and leave the button spinning forever. The create
-      // endpoint validates the slug and returns a clear conflict response.
-      const slug = generateSlug(baseSlug, [])
 
-      // ── Step 1: Insert restaurant with text/metadata only ──────
-      // Images are NOT included here — base64 blobs exceed API body limits.
-      // uid, owner_id, status, plan, plan_limits are all server-controlled:
-      // createRestaurantAtomic generates uid via crypto.randomInt and resolves
-      // ownerUserId from the verified session — never from this payload.
-      const corePayload = {
-        slug,
-        name:                 form.restaurantName,
-        table_numbers:        tableNumbers,
-        phone:                form.phoneNumber   || null,
-        gst:                  form.gstDetails    || null,
-        description:          form.description   || null,
-        chef_info:            form.chefInfo      || null,
-        servant_info:         form.servantInfo   || null,
-        social_links:         form.socialLinks,
-        rating:               form.rating        || null,
-        location:             form.location      || null,
-        additional_info:      form.additionalInfo || null,
-        digital_menu_link:    form.digitalMenuLink || null,
-        digital_service_bell: form.digitalServiceBell,
+      // The database unique constraint is the source of truth for slugs.
+      // Retry a conflict with a readable suffix instead of failing on the
+      // second click when the first click already created the restaurant.
+      let slug = generateSlug(baseSlug, [])
+      let created = null
+      for (let attempt = 0; attempt < 20; attempt += 1) {
+        try {
+          created = await createRestaurant({
+            slug,
+            name:                 form.restaurantName,
+            table_numbers:        tableNumbers,
+            phone:                form.phoneNumber   || null,
+            gst:                  form.gstDetails    || null,
+            description:          form.description   || null,
+            chef_info:            form.chefInfo      || null,
+            servant_info:         form.servantInfo    || null,
+            social_links:         form.socialLinks,
+            rating:               form.rating        || null,
+            location:             form.location      || null,
+            additional_info:      form.additionalInfo || null,
+            digital_menu_link:    form.digitalMenuLink || null,
+            digital_service_bell: form.digitalServiceBell,
+          })
+          break
+        } catch (err) {
+          if (err.status !== 409 || attempt === 19) throw err
+          slug = `${baseSlug || 'restaurant'}-${attempt + 2}`
+        }
       }
 
-      const created = await createRestaurant(corePayload)
+      if (!created) throw new Error('Restaurant was not created')
+      slug = created.slug || slug
+
+      // The database commit is the actual website creation. Do not keep the
+      // primary action spinning while optional image storage is attempted.
+      setCreatedSlug(slug)
+      setCreatedUid(created.uid || '')
+      setSuccess(true)
 
       // ── Step 2: Upload images to Storage (optional) ─────────────
-      // If the image bucket doesn't exist yet, this block is skipped
-      // and the restaurant still saves successfully.
-      try {
+      // If storage is unavailable, the restaurant remains successfully created.
+      void (async () => {
         // Upload all carousel images in parallel, then the logo alongside them
         const [imageUrls, logoUrl] = await Promise.all([
           Promise.all(
@@ -170,15 +180,11 @@ export default function CreateWebsite() {
             ...(logoUrl           && { logo: logoUrl }),
           })
         }
-      } catch (imgErr) {
+      })().catch(imgErr => {
         // Storage upload failed — restaurant still created; images can
         // be added later once the storage bucket is configured.
         console.warn('[CreateRestaurant] Image upload skipped:', imgErr.message)
-      }
-
-      setCreatedSlug(slug)
-      setCreatedUid(created.uid || '')
-      setSuccess(true)
+      })
     } catch (err) {
       console.error('[CreateRestaurant] Fatal error:', err)
       setSubmitError(
@@ -192,7 +198,16 @@ export default function CreateWebsite() {
   }
 
   if (success) {
-    const websiteUrl = `https://menu.exzibo.online/${createdSlug}/home/1`
+    const isLocalPreview = typeof window !== 'undefined' && (
+      window.location.hostname === 'localhost' ||
+      window.location.hostname === '127.0.0.1' ||
+      window.location.hostname.endsWith('.replit.dev') ||
+      window.location.hostname.endsWith('.replit.app') ||
+      window.location.hostname.endsWith('.repl.co')
+    )
+    const websiteUrl = isLocalPreview
+      ? `${window.location.origin}/${createdSlug}/home/1`
+      : `https://menu.exzibo.online/${createdSlug}/home/1`
     return (
       <div style={{
         minHeight: '100vh', background: '#0B0B0B',

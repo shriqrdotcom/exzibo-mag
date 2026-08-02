@@ -106,6 +106,13 @@
       "when": 1785184360000,
       "tag": "0014_restaurant_notifications",
       "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1785260000000,
+      "tag": "0015_better_auth_tables",
+      "breakpoints": true
     }
   ]
 }

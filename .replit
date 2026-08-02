@@ -33,6 +33,10 @@ args = "npm run dev"
 waitForPort = 5000
 
 [[ports]]
+localPort = 3000
+externalPort = 8000
+
+[[ports]]
 localPort = 5000
 externalPort = 80
 
@@ -78,6 +82,8 @@ run = ["node", "server.js"]
 
 [userenv.development]
 VITE_DISABLE_AUTH = "true"
+DEV_AUTH_BOOTSTRAP = "true"
+SUPERADMIN_ALLOWED_EMAILS = "dev@exzibo.local"
 
 [userenv.shared]
 REALTIME_URL = "https://rt.exzibo.online"

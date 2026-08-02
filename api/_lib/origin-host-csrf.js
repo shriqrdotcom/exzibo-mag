@@ -36,7 +36,9 @@ function isProduction(env = process.env) {
 }
 
 function isDevelopmentOrTest(env = process.env) {
-  return env.NODE_ENV === 'development' || env.NODE_ENV === 'test'
+  return env.NODE_ENV === 'development' ||
+    env.NODE_ENV === 'test' ||
+    (env.DEV_AUTH_BOOTSTRAP === 'true' && !env.VERCEL_ENV)
 }
 
 function isPreview(env = process.env) {

@@ -28,7 +28,19 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     // ── Dev bypass — VITE_DISABLE_AUTH=true (Replit dev only) ────────────
     if (DISABLE_AUTH) {
-      setCurrentAuthUser(DEV_MOCK_USER)
+      // Express developer runtime provisions a real Better Auth session for
+      // this identity. Vite has the existing middleware-only development
+      // path, so a missing bootstrap endpoint there is harmless.
+      fetch('/api/auth/dev-bootstrap', {
+        method: 'POST',
+        credentials: 'include',
+      }).then(() => {
+        setCurrentAuthUser(DEV_MOCK_USER)
+      }).catch(() => {
+        // Keep the existing Vite development experience when this endpoint
+        // is not registered by the Vite middleware.
+        setCurrentAuthUser(DEV_MOCK_USER)
+      })
       return
     }
 

@@ -1,6 +1,8 @@
 import express from 'express'
 import path from 'path'
 import { fileURLToPath } from 'url'
+import { toNodeHandler } from 'better-auth/node'
+import { auth } from './src/lib/auth.server.js'
 import { neonHealthCheck } from './src/db/index.js'
 import { getState, markReady, startShutdown, markStopped, isReady, isShuttingDown } from './src/monitoring/lifecycle.js'
 import { handleLiveness, handleReadiness, handleNeonHealth } from './api/_lib/health.js'
@@ -107,6 +109,7 @@ try {
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const app = express()
 const PORT = validatedEnv.port
+const betterAuthHandler = toNodeHandler(auth)
 
 // ── Trust proxy configuration ───────────────────────────────────────────────
 // Express req.ip must match the canonical resolver. The mode is derived from
@@ -125,6 +128,16 @@ import { INVALID_TABLE_HTML, extractTableParams, isTableValid } from './api/_lib
 
 // ── Core security boundary (request ID, security headers, method/body limits)
 app.use(expressSecurityMiddleware({ apiPrefix: '/api', jsonLimit: 1024 * 1024 }))
+
+// Better Auth must receive the raw request stream, so mount it before
+// express.json(). This also makes npm start use the same session API as the
+// Vercel handler rather than leaving the developer runtime unable to sign in.
+app.all('/api/auth/{*splat}', (req, res) => {
+  betterAuthHandler(req, res).catch(error => {
+    logger.error('[auth] handler error', { error: error.message })
+    if (!res.headersSent) res.status(500).json({ error: 'Auth handler error' })
+  })
+})
 
 app.use(express.json({ limit: '15mb' }))
 
