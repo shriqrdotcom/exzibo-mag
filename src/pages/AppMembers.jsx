@@ -1,6 +1,6 @@
-import React, { useMemo, useState } from 'react'
+import React, { Fragment, useMemo, useRef, useState } from 'react'
 import Sidebar from '../components/Sidebar'
-import { ChevronDown, Plus, Search, Store, X } from 'lucide-react'
+import { ChevronDown, Plus, Search, Store, Trash2, X } from 'lucide-react'
 import './AppMembers.css'
 
 const ROLES = ['Owner', 'Admin', 'Manager', 'Staff']
@@ -14,6 +14,33 @@ const INITIAL_RESTAURANTS = [
   { id: 5, name: 'Saffron Social', uid: '6284901731', members: 6, mark: 'SS' },
   { id: 6, name: 'Juniper House', uid: '8437162059', members: 4, mark: 'JH' },
 ]
+
+const MOCK_MEMBER_SEEDS = [
+  { name: 'Maya Chen', email: 'maya.chen@gmail.com', phone: '+91 98765 43210', role: 'Owner', status: 'Active' },
+  { name: 'Jordan Ellis', email: 'jordan.ellis@gmail.com', phone: '+91 87654 32109', role: 'Admin', status: 'Active' },
+  { name: 'Priya Nair', email: 'priya.nair@gmail.com', phone: '+91 76543 21098', role: 'Manager', status: 'Pending' },
+  { name: 'Theo Martin', email: 'theo.martin@gmail.com', phone: '+91 65432 10987', role: 'Staff', status: 'Active' },
+  { name: 'Lena Ortiz', email: 'lena.ortiz@gmail.com', phone: '+91 98760 12345', role: 'Staff', status: 'Suspended' },
+  { name: 'Aarav Kapoor', email: 'aarav.kapoor@gmail.com', phone: '+91 99887 66554', role: 'Admin', status: 'Active' },
+  { name: 'Ananya Rao', email: 'ananya.rao@gmail.com', phone: '+91 88776 55443', role: 'Staff', status: 'Active' },
+  { name: 'Rohan Shah', email: 'rohan.shah@gmail.com', phone: '+91 77665 44332', role: 'Manager', status: 'Pending' },
+  { name: 'Neha Iyer', email: 'neha.iyer@gmail.com', phone: '+91 66554 33221', role: 'Staff', status: 'Active' },
+  { name: 'Kabir Mehta', email: 'kabir.mehta@gmail.com', phone: '+91 99876 54321', role: 'Staff', status: 'Suspended' },
+]
+
+function createInitialMembers(restaurantId, count, startIndex) {
+  return Array.from({ length: count }, (_, index) => ({
+    ...MOCK_MEMBER_SEEDS[(startIndex + index) % MOCK_MEMBER_SEEDS.length],
+    id: `restaurant-${restaurantId}-member-${index + 1}`,
+  }))
+}
+
+const INITIAL_MEMBERS_BY_RESTAURANT = Object.fromEntries(
+  INITIAL_RESTAURANTS.map((restaurant, index) => [
+    restaurant.id,
+    createInitialMembers(restaurant.id, restaurant.members, index * 2),
+  ]),
+)
 
 const emptyForm = {
   uid: '',
@@ -122,19 +149,50 @@ function AddMemberModal({ restaurants, form, setForm, onClose, onSubmit }) {
   )
 }
 
+function MemberStatus({ status }) {
+  return <span className="am-status"><span />{status}</span>
+}
+
+function DeleteMemberDialog({ member, restaurant, onClose, onConfirm }) {
+  return (
+    <div className="am-overlay" role="dialog" aria-modal="true" aria-labelledby="remove-member-title">
+      <div className="am-modal am-confirm-modal">
+        <div className="am-confirm-content">
+          <p className="am-eyebrow">Remove access</p>
+          <h2 id="remove-member-title">Remove member?</h2>
+          <p className="am-confirm-message">Remove this member from <strong>{restaurant.name}</strong>?</p>
+          <p className="am-confirm-detail">{member.name} will be removed from this temporary workspace list.</p>
+          <div className="am-modal-actions">
+            <button type="button" className="am-button am-button-muted" onClick={onClose} data-testid="cancel-remove-member">Cancel</button>
+            <button type="button" className="am-button am-button-danger" onClick={onConfirm} data-testid="confirm-remove-member"><Trash2 size={15} />Remove Member</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function AppMembers() {
   const [restaurants, setRestaurants] = useState(INITIAL_RESTAURANTS)
+  const [membersByRestaurant, setMembersByRestaurant] = useState(INITIAL_MEMBERS_BY_RESTAURANT)
   const [query, setQuery] = useState('')
   const [sort, setSort] = useState('name')
   const [modalRestaurant, setModalRestaurant] = useState(null)
   const [form, setForm] = useState(emptyForm)
+  const [expandedRestaurantId, setExpandedRestaurantId] = useState(null)
+  const [pendingDelete, setPendingDelete] = useState(null)
+  const nextMemberId = useRef(1)
+
+  const memberCount = (restaurant) => membersByRestaurant[restaurant.id]?.length ?? restaurant.members
 
   const visibleRestaurants = useMemo(() => {
     const needle = query.trim().toLowerCase()
     return restaurants
       .filter((restaurant) => !needle || restaurant.name.toLowerCase().includes(needle) || restaurant.uid.includes(needle))
-      .sort((a, b) => sort === 'members' ? b.members - a.members || a.name.localeCompare(b.name) : a.name.localeCompare(b.name))
-  }, [restaurants, query, sort])
+      .sort((a, b) => sort === 'members'
+        ? memberCount(b) - memberCount(a) || a.name.localeCompare(b.name)
+        : a.name.localeCompare(b.name))
+  }, [restaurants, query, sort, membersByRestaurant])
 
   const openAdd = (restaurant = null) => {
     setModalRestaurant(restaurant)
@@ -142,8 +200,32 @@ export default function AppMembers() {
   }
   const closeModal = () => setModalRestaurant(null)
   const submit = (restaurant) => {
-    setRestaurants((current) => current.map((item) => item.id === restaurant.id ? { ...item, members: item.members + 1 } : item))
+    const newMember = {
+      ...form,
+      id: `new-member-${nextMemberId.current}`,
+      name: form.name.trim(),
+      email: form.email.trim().toLowerCase(),
+      phone: form.phone.trim(),
+    }
+    nextMemberId.current += 1
+    setMembersByRestaurant((current) => ({
+      ...current,
+      [restaurant.id]: [...(current[restaurant.id] || []), newMember],
+    }))
+    setExpandedRestaurantId(restaurant.id)
     closeModal()
+  }
+  const toggleRestaurant = (restaurantId) => {
+    setExpandedRestaurantId((current) => current === restaurantId ? null : restaurantId)
+  }
+  const confirmDelete = () => {
+    if (!pendingDelete) return
+    const { member, restaurant } = pendingDelete
+    setMembersByRestaurant((current) => ({
+      ...current,
+      [restaurant.id]: (current[restaurant.id] || []).filter((item) => item.id !== member.id),
+    }))
+    setPendingDelete(null)
   }
 
   return (
@@ -160,15 +242,41 @@ export default function AppMembers() {
               <div className="am-search"><Search size={17} /><input aria-label="Search restaurants" data-testid="restaurant-search-input" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search restaurant name or UID" /></div>
               <div className="am-sort-wrap"><span>Sort by</span><div className="am-select-wrap"><select aria-label="Sort restaurants" data-testid="restaurant-sort-select" value={sort} onChange={(event) => setSort(event.target.value)}><option value="name">Restaurant name</option><option value="members">Number of members</option></select><ChevronDown size={15} /></div></div>
             </div>
-            <div className="am-list-heading"><span>Restaurant</span><span>Members</span><span aria-hidden="true" /></div>
+            <div className="am-list-heading"><span>Restaurant</span><span>Members</span><span aria-hidden="true" /><span aria-hidden="true" /></div>
             <div className="am-restaurant-list">
-              {visibleRestaurants.map((restaurant) => (
-                <article className="am-restaurant-row" key={restaurant.id} data-testid={`restaurant-row-${restaurant.id}`}>
-                  <div className="am-restaurant-identity"><RestaurantMark restaurant={restaurant} /><div><strong>{restaurant.name}</strong><code data-testid={`restaurant-uid-${restaurant.id}`}>{restaurant.uid}</code></div></div>
-                  <span className="am-member-count">{restaurant.members} {restaurant.members === 1 ? 'Member' : 'Members'}</span>
-                  <button className="am-add-circle" onClick={() => openAdd(restaurant)} title="Add member to this restaurant" aria-label={`Add member to ${restaurant.name}`} data-testid={`add-member-${restaurant.id}`}><Plus size={17} /></button>
-                </article>
-              ))}
+              {visibleRestaurants.map((restaurant) => {
+                const restaurantMembers = membersByRestaurant[restaurant.id] || []
+                const isExpanded = expandedRestaurantId === restaurant.id
+                const memberListId = `restaurant-members-${restaurant.id}`
+                return (
+                  <Fragment key={restaurant.id}>
+                    <article className="am-restaurant-row" data-testid={`restaurant-row-${restaurant.id}`}>
+                      <div className="am-restaurant-identity"><RestaurantMark restaurant={restaurant} /><div><strong>{restaurant.name}</strong><code data-testid={`restaurant-uid-${restaurant.id}`}>{restaurant.uid}</code></div></div>
+                      <span className="am-member-count">{memberCount(restaurant)} {memberCount(restaurant) === 1 ? 'Member' : 'Members'}</span>
+                      <button type="button" className={`am-expand-circle ${isExpanded ? 'is-open' : ''}`} onClick={() => toggleRestaurant(restaurant.id)} title={`${isExpanded ? 'Collapse' : 'Expand'} members for ${restaurant.name}`} aria-label={`${isExpanded ? 'Collapse' : 'Expand'} members for ${restaurant.name}`} aria-expanded={isExpanded} aria-controls={memberListId} data-testid={`toggle-members-${restaurant.id}`}><ChevronDown size={15} /></button>
+                      <button type="button" className="am-add-circle" onClick={() => openAdd(restaurant)} title="Add member to this restaurant" aria-label={`Add member to ${restaurant.name}`} data-testid={`add-member-${restaurant.id}`}><Plus size={17} /></button>
+                    </article>
+                    <div id={memberListId} className={`am-member-list-shell ${isExpanded ? 'is-open' : ''}`} aria-hidden={!isExpanded}>
+                      <div className="am-member-list-inner">
+                        <div className="am-member-list">
+                          {restaurantMembers.length > 0 && <div className="am-member-list-heading"><span>Member</span><span>Gmail ID</span><span>Phone</span><span>Role</span><span>Status</span><span aria-hidden="true" /></div>}
+                          {restaurantMembers.map((member) => (
+                            <div className="am-member-row" key={member.id} data-testid={`member-row-${member.id}`}>
+                              <div className="am-member-name" data-label="Member"><span className="am-member-avatar">{member.name.split(' ').map((part) => part[0]).join('').slice(0, 2).toUpperCase()}</span><strong>{member.name}</strong></div>
+                              <span className="am-member-cell" data-label="Gmail ID">{member.email}</span>
+                              <span className="am-member-cell" data-label="Phone">{member.phone}</span>
+                              <span className="am-member-cell" data-label="Role">{member.role}</span>
+                              <span className="am-member-cell" data-label="Status"><MemberStatus status={member.status} /></span>
+                              <button type="button" className="am-member-delete" onClick={() => setPendingDelete({ member, restaurant })} title={`Remove ${member.name} from ${restaurant.name}`} aria-label={`Remove ${member.name} from ${restaurant.name}`} data-testid={`delete-member-${member.id}`}><Trash2 size={15} /></button>
+                            </div>
+                          ))}
+                          {restaurantMembers.length === 0 && <div className="am-member-empty"><div className="am-member-empty-icon"><Store size={17} /></div><div><strong>No members added yet</strong><p>Add a member to connect someone to this restaurant.</p></div></div>}
+                        </div>
+                      </div>
+                    </div>
+                  </Fragment>
+                )
+              })}
             </div>
             {visibleRestaurants.length === 0 && <div className="am-empty"><div className="am-empty-icon"><Search size={20} /></div><h3>No restaurants found</h3><p>Try a different restaurant name or permanent UID.</p><button className="am-button am-button-muted" onClick={() => setQuery('')} data-testid="clear-restaurant-search">Clear search</button></div>}
             <div className="am-list-footer"><span>Showing {visibleRestaurants.length} of {restaurants.length} restaurants</span><span>Changes are temporary in this workspace</span></div>
@@ -176,6 +284,7 @@ export default function AppMembers() {
         </div>
       </main>
       {modalRestaurant !== null && <AddMemberModal restaurants={restaurants} form={form} setForm={setForm} onClose={closeModal} onSubmit={submit} />}
+      {pendingDelete && <DeleteMemberDialog member={pendingDelete.member} restaurant={pendingDelete.restaurant} onClose={() => setPendingDelete(null)} onConfirm={confirmDelete} />}
     </div>
   )
 }
