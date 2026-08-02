@@ -175,11 +175,42 @@
 
 .am-restaurant-identity code {
   display: block;
-  margin-top: 5px;
   color: #686868;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 11px;
   letter-spacing: .08em;
+}
+
+.am-uid-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 5px;
+}
+
+.am-copy-uid {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 21px;
+  height: 21px;
+  padding: 0;
+  color: #686868;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: color .18s ease, background .18s ease, border-color .18s ease;
+}
+
+.am-copy-uid:hover {
+  color: #d2d2d2;
+  background: #252525;
+  border-color: #3b3b3b;
+}
+
+.am-copy-uid.is-copied {
+  color: #a8c0a0;
 }
 
 .am-restaurant-mark {
@@ -683,6 +714,7 @@
 
 .am-add-circle:focus-visible,
 .am-expand-circle:focus-visible,
+.am-copy-uid:focus-visible,
 .am-member-delete:focus-visible,
 .am-button:focus-visible,
 .am-icon-button:focus-visible,

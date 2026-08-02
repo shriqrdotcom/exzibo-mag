@@ -1,6 +1,6 @@
 import React, { Fragment, useMemo, useRef, useState } from 'react'
 import Sidebar from '../components/Sidebar'
-import { ChevronDown, Plus, Search, Store, Trash2, X } from 'lucide-react'
+import { Check, ChevronDown, Copy, Plus, Search, Store, Trash2, X } from 'lucide-react'
 import './AppMembers.css'
 
 const ROLES = ['Owner', 'Admin', 'Manager', 'Staff']
@@ -70,6 +70,24 @@ function RestaurantMark({ restaurant }) {
       <span>{restaurant.mark}</span>
     </div>
   )
+}
+
+async function copyText(text) {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(text)
+    return
+  }
+
+  const textarea = document.createElement('textarea')
+  textarea.value = text
+  textarea.setAttribute('readonly', '')
+  textarea.style.position = 'fixed'
+  textarea.style.opacity = '0'
+  document.body.appendChild(textarea)
+  textarea.select()
+  const copied = document.execCommand('copy')
+  textarea.remove()
+  if (!copied) throw new Error('Unable to copy text')
 }
 
 function Field({ label, id, error, children, hint }) {
@@ -181,6 +199,7 @@ export default function AppMembers() {
   const [form, setForm] = useState(emptyForm)
   const [expandedRestaurantId, setExpandedRestaurantId] = useState(null)
   const [pendingDelete, setPendingDelete] = useState(null)
+  const [copiedRestaurantId, setCopiedRestaurantId] = useState(null)
   const nextMemberId = useRef(1)
 
   const memberCount = (restaurant) => membersByRestaurant[restaurant.id]?.length ?? restaurant.members
@@ -218,6 +237,17 @@ export default function AppMembers() {
   const toggleRestaurant = (restaurantId) => {
     setExpandedRestaurantId((current) => current === restaurantId ? null : restaurantId)
   }
+  const copyRestaurantUid = async (restaurant) => {
+    try {
+      await copyText(restaurant.uid)
+      setCopiedRestaurantId(restaurant.id)
+      window.setTimeout(() => {
+        setCopiedRestaurantId((current) => current === restaurant.id ? null : current)
+      }, 1600)
+    } catch {
+      setCopiedRestaurantId(null)
+    }
+  }
   const confirmDelete = () => {
     if (!pendingDelete) return
     const { member, restaurant } = pendingDelete
@@ -251,7 +281,7 @@ export default function AppMembers() {
                 return (
                   <Fragment key={restaurant.id}>
                     <article className="am-restaurant-row" data-testid={`restaurant-row-${restaurant.id}`}>
-                      <div className="am-restaurant-identity"><RestaurantMark restaurant={restaurant} /><div><strong>{restaurant.name}</strong><code data-testid={`restaurant-uid-${restaurant.id}`}>{restaurant.uid}</code></div></div>
+                      <div className="am-restaurant-identity"><RestaurantMark restaurant={restaurant} /><div><strong>{restaurant.name}</strong><div className="am-uid-line"><code data-testid={`restaurant-uid-${restaurant.id}`}>{restaurant.uid}</code><button type="button" className={`am-copy-uid ${copiedRestaurantId === restaurant.id ? 'is-copied' : ''}`} onClick={() => copyRestaurantUid(restaurant)} title={copiedRestaurantId === restaurant.id ? 'Restaurant UID copied' : 'Copy restaurant UID'} aria-label={copiedRestaurantId === restaurant.id ? `Restaurant UID copied for ${restaurant.name}` : `Copy restaurant UID for ${restaurant.name}`} data-testid={`copy-restaurant-uid-${restaurant.id}`}>{copiedRestaurantId === restaurant.id ? <Check size={13} /> : <Copy size={13} />}</button></div></div></div>
                       <span className="am-member-count">{memberCount(restaurant)} {memberCount(restaurant) === 1 ? 'Member' : 'Members'}</span>
                       <button type="button" className={`am-expand-circle ${isExpanded ? 'is-open' : ''}`} onClick={() => toggleRestaurant(restaurant.id)} title={`${isExpanded ? 'Collapse' : 'Expand'} members for ${restaurant.name}`} aria-label={`${isExpanded ? 'Collapse' : 'Expand'} members for ${restaurant.name}`} aria-expanded={isExpanded} aria-controls={memberListId} data-testid={`toggle-members-${restaurant.id}`}><ChevronDown size={15} /></button>
                       <button type="button" className="am-add-circle" onClick={() => openAdd(restaurant)} title="Add member to this restaurant" aria-label={`Add member to ${restaurant.name}`} data-testid={`add-member-${restaurant.id}`}><Plus size={17} /></button>
