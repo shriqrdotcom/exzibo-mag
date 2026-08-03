@@ -15,6 +15,10 @@ import {
 } from '../src/db/neon-restaurants.js'
 import { lookupRestaurantByUid } from './_lib/restaurant-lookup.js'
 import { createRestaurantAtomic } from '../src/services/restaurantCreationService.js'
+import {
+  permanentlyDeleteRestaurant,
+  PermanentRestaurantDeletionError,
+} from '../src/services/permanentRestaurantDeletionService.js'
 import { getRestaurantAnalytics, authorizeAnalyticsAccess } from '../src/services/analyticsService.js'
 import { neon } from '../src/db/pg-sql.js'
 import { normalizeAndValidateSlug } from '../src/lib/slug-utils.js'
@@ -109,7 +113,10 @@ const ALLOWED_UPDATE_FIELDS = ['id']
 const ALLOWED_PLATFORM_FIELDS = ['restaurantId', 'patch']
 
 export default vercelWrapper(async function handler(req, res) {
-  setPublicCors(res)
+  const requestedAction = typeof req.query?.action === 'string' ? req.query.action : ''
+  const adminActions = new Set(['listDeleted', 'generateUid', 'create', 'platformUpdate', 'softDelete', 'restore', 'permanentDelete'])
+  if (adminActions.has(requestedAction)) setAdminCors(req, res)
+  else setPublicCors(res)
   if (req.method === 'OPTIONS') return res.status(200).end()
 
   // ── Shared validation definitions ────────────────────────────────────────────
@@ -148,7 +155,7 @@ export default vercelWrapper(async function handler(req, res) {
       const sql = getSql()
       const rows = await sql`
         SELECT * FROM restaurants
-        WHERE is_deleted = true
+        WHERE is_deleted = true OR lower(status) = 'paused'
         ORDER BY deleted_at DESC NULLS LAST
       `
       return res.json(rows.map(toSuperadminRestaurant))
@@ -407,11 +414,51 @@ export default vercelWrapper(async function handler(req, res) {
     }
 
     if (action === 'permanentDelete') {
-      return res.status(501).json({
-        error: 'Permanent restaurant deletion is disabled',
-        code: 'PERMANENT_DELETE_DISABLED',
-        requestId,
-      })
+      const guard = await authorizeSuperadmin(req, res)
+      if (!guard.ok) return
+
+      const { id, uid, name } = req.body || {}
+      if (!id || typeof uid !== 'string' || typeof name !== 'string') {
+        return badInput(res, 'id, uid and name are required', requestId)
+      }
+      rejectUnknownFields(req.body, ['id', 'uid', 'name'])
+
+      const protection = await enforcePublicRateLimit(
+        req,
+        PUBLIC_RATE_LIMITS.permanentRestaurantDelete,
+        { tenantId: id },
+      )
+      if (!protection.allowed) {
+        setRetryAfter(res, protection)
+        return res.status(protection.available ? 429 : 503).json({
+          error: protection.available
+            ? 'Too many permanent-delete attempts. Please wait before trying again.'
+            : 'Service temporarily unavailable. Please try again later.',
+          ...(protection.available ? { retryAfter: protection.retryAfter } : {}),
+          requestId,
+        })
+      }
+
+      try {
+        const result = await permanentlyDeleteRestaurant({
+          restaurantId: id,
+          typedUid: uid,
+          targetName: name,
+          actorUserId: guard.userId,
+          ipAddress: getClientIp(req),
+          requestId,
+        })
+        return res.status(200).json({ success: true, restaurantId: result.id, requestId })
+      } catch (err) {
+        if (err instanceof PermanentRestaurantDeletionError) {
+          return res.status(err.status).json({
+            error: err.message,
+            code: err.code,
+            requestId,
+          })
+        }
+        throw err
+      }
     }
 
     return badInput(res, `Unknown action: ${action}`, requestId)

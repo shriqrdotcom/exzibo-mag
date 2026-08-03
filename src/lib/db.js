@@ -7,7 +7,11 @@ async function apiFetch(url, opts = {}) {
   const res = await fetch(url, opts)
   if (!res.ok) {
     const body = await res.json().catch(() => ({}))
-    throw new Error(body?.error || `API ${res.status}: ${url}`)
+    const error = new Error(body?.error || `API ${res.status}: ${url}`)
+    error.status = res.status
+    error.code = body?.code
+    error.requestId = body?.requestId
+    throw error
   }
   return res.json()
 }
@@ -144,12 +148,11 @@ export async function deleteRestaurant(id) {
   })
 }
 
-export async function permanentDeleteRestaurant(restaurant) {
-  const id = restaurant.id
+export async function permanentDeleteRestaurant(restaurant, typedUid) {
   await apiFetch('/api/restaurants?action=permanentDelete', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ id }),
+    body: JSON.stringify({ id: restaurant.id, uid: typedUid, name: restaurant.name }),
   })
 }
 
