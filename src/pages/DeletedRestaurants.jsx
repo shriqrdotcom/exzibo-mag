@@ -99,6 +99,8 @@ export default function DeletedRestaurants() {
           ? 'Only paused or deleted restaurants can be permanently deleted.'
           : err.code === 'PERMANENT_DELETE_EXTERNAL_CLEANUP_REQUIRED'
             ? 'This restaurant still owns managed media. Clean up those files before permanent deletion.'
+            : err.code === 'PERMANENT_DELETE_UNKNOWN_DEPENDENCY'
+              ? 'Deletion is blocked because the restaurant dependencies could not be safely verified. No data was removed.'
             : 'The restaurant changed or could not be safely deleted. Refresh and try again.',
         429: 'Too many attempts. Please wait and try again.',
         500: 'The deletion could not be completed. No data was removed.',

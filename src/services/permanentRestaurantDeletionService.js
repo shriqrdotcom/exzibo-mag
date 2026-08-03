@@ -17,6 +17,11 @@ import { r2KeyFromUrl } from '../lib/r2.js'
 const UID_RE = /^\d{10}$/
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const ALLOWED_STATUSES = new Set(['paused', 'deleted'])
+const OPTIONAL_CLEANUP_TABLES = new Set([
+  'realtime_outbox',
+  'idempotency_records',
+  'restaurant_notifications',
+])
 
 // These are the tables owned by a restaurant in the current schema. The
 // pg_catalog check below makes a newly-added FK dependency fail closed rather
@@ -244,10 +249,10 @@ export async function permanentlyDeleteRestaurant({
     ])
 
     for (const [table, column, parent] of EXPLICIT_DELETE_ORDER) {
-      // This is the only optional legacy table. It was never part of the
-      // current schema, but older deployments may still have it.
-      if (!existingTables.has(table) &&
-          (table === 'restaurant_databases' || table === 'restaurant_notifications')) continue
+      // These auxiliary tables are not present in every deployed schema. They
+      // are safe to skip when absent, but any other missing cleanup table must
+      // still fail closed.
+      if (!existingTables.has(table) && OPTIONAL_CLEANUP_TABLES.has(table)) continue
       if (!existingTables.has(table)) {
         fail(PERMANENT_DELETION_CODES.UNKNOWN_DEPENDENCY, 'Restaurant dependencies could not be safely verified')
       }
@@ -302,6 +307,7 @@ export const _private = Object.freeze({
   UID_RE,
   UUID_RE,
   ALLOWED_STATUSES,
+  OPTIONAL_CLEANUP_TABLES,
   KNOWN_RESTAURANT_FK_TABLES,
   EXPLICIT_DELETE_ORDER,
 })
