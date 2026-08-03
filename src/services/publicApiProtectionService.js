@@ -12,6 +12,7 @@ import { logSecurityEvent, SECURITY_EVENTS } from '../monitoring/securityLogger.
 export const PUBLIC_RATE_LIMITS = Object.freeze({
   restaurantList: Object.freeze({ scope: 'public-restaurant-list', limit: 60, windowSeconds: 60 }),
   restaurantLookup: Object.freeze({ scope: 'public-restaurant-lookup', limit: 60, windowSeconds: 60 }),
+  permanentRestaurantDelete: Object.freeze({ scope: 'admin-permanent-restaurant-delete', limit: 5, windowSeconds: 60 }),
   publishedMenu: Object.freeze({ scope: 'public-published-menu', limit: 120, windowSeconds: 60 }),
   mobileBootstrap: Object.freeze({ scope: 'mobile-bootstrap', limit: 30, windowSeconds: 60 }),
   realtimeTicket: Object.freeze({ scope: 'realtime-ticket', limit: 30, windowSeconds: 60 }),

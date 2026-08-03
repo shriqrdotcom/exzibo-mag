@@ -22,6 +22,10 @@ function timeAgo(iso) {
   return `${Math.floor(hrs / 24)}d ago`
 }
 
+function hasPermanentUid(restaurant) {
+  return /^\d{10}$/.test(String(restaurant?.uid || ''))
+}
+
 export default function DeletedRestaurants() {
   const navigate = useNavigate()
   const [restaurants, setRestaurants] = useState([])
@@ -74,20 +78,32 @@ export default function DeletedRestaurants() {
 
   async function handlePermanentDelete() {
     if (!deleteTarget) return
-    const uid = deleteTarget.uid || deleteTarget.id
-    if (confirmUidInput.trim() !== String(uid)) {
+    const uid = String(deleteTarget.uid || '')
+    if (confirmUidInput !== uid) {
       setDeleteError('UID does not match. Please try again.')
       return
     }
     setDeleting(true)
     try {
-      await permanentDeleteRestaurant(deleteTarget)
+      await permanentDeleteRestaurant(deleteTarget, confirmUidInput)
       closeDeleteModal()
-      fetchDeleted()
-      setToast('Restaurant permanently deleted — all data and files removed')
+      await fetchDeleted()
+      setToast('Restaurant permanently deleted — all database data removed')
       setTimeout(() => setToast(''), 3200)
     } catch (err) {
-      setDeleteError('Failed to delete: ' + (err.message || 'Unknown error'))
+      const messages = {
+        401: 'Your session has expired. Please sign in again.',
+        403: 'Only an approved superadmin can permanently delete restaurants.',
+        404: 'This restaurant no longer exists.',
+        409: err.code === 'PERMANENT_DELETE_ACTIVE'
+          ? 'Only paused or deleted restaurants can be permanently deleted.'
+          : err.code === 'PERMANENT_DELETE_EXTERNAL_CLEANUP_REQUIRED'
+            ? 'This restaurant still owns managed media. Clean up those files before permanent deletion.'
+            : 'The restaurant changed or could not be safely deleted. Refresh and try again.',
+        429: 'Too many attempts. Please wait and try again.',
+        500: 'The deletion could not be completed. No data was removed.',
+      }
+      setDeleteError(messages[err.status] || 'The deletion could not be completed safely. No data was removed.')
     } finally {
       setDeleting(false)
     }
@@ -112,11 +128,11 @@ export default function DeletedRestaurants() {
                   <Trash2 size={16} color="#E8321A" />
                 </div>
                 <h1 style={{ fontSize: '20px', fontWeight: 800, letterSpacing: '-0.01em', color: '#fff' }}>
-                  Deleted Restaurants
+                 Paused & Deleted Restaurants
                 </h1>
               </div>
               <p style={{ fontSize: '13px', color: '#555', fontWeight: 500 }}>
-                Restaurants moved here are not deleted permanently yet. Use "DELETE PERMANENTLY" to remove all data.
+                 Paused or deleted restaurants are held here until they are restored or permanently removed.
               </p>
             </div>
             <button
@@ -167,7 +183,7 @@ export default function DeletedRestaurants() {
           }}>
             <div style={{ padding: '24px 28px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
               <h2 style={{ fontSize: '16px', fontWeight: 700, color: '#fff' }}>
-                {loading ? 'Loading…' : `${restaurants.length} Restaurant${restaurants.length !== 1 ? 's' : ''} in Trash`}
+                 {loading ? 'Loading…' : `${restaurants.length} Paused/Deleted Restaurant${restaurants.length !== 1 ? 's' : ''}`}
               </h2>
             </div>
 
@@ -196,10 +212,10 @@ export default function DeletedRestaurants() {
                   <Trash2 size={24} color="#444" />
                 </div>
                 <div style={{ fontSize: '16px', fontWeight: 700, marginBottom: '8px', color: '#fff' }}>
-                  No Deleted Restaurants
+                  No Paused or Deleted Restaurants
                 </div>
                 <p style={{ fontSize: '13px', color: '#555', maxWidth: '260px', lineHeight: 1.6 }}>
-                  When you delete a restaurant from the dashboard, it will appear here first.
+                  Paused or deleted restaurants will appear here before permanent removal.
                 </p>
               </div>
             ) : (
@@ -227,7 +243,7 @@ export default function DeletedRestaurants() {
                     >
                       <td style={{ padding: '20px 28px' }}>
                         <div style={{ fontSize: '13px', fontWeight: 700, fontFamily: 'monospace', color: '#ccc' }}>
-                          {r.uid || r.id}
+                           {r.uid || 'Unavailable'}
                         </div>
                       </td>
                       <td style={{ padding: '20px 28px' }}>
@@ -284,6 +300,8 @@ export default function DeletedRestaurants() {
                           </button>
                           <button
                             onClick={() => openDeleteModal(r)}
+                             disabled={!hasPermanentUid(r)}
+                             title={!hasPermanentUid(r) ? 'Permanent deletion unavailable: this restaurant has no valid 10-digit UID' : undefined}
                             style={{
                               display: 'inline-flex', alignItems: 'center', gap: '7px',
                               padding: '9px 14px',
@@ -292,7 +310,8 @@ export default function DeletedRestaurants() {
                               borderRadius: '9px',
                               color: '#E8321A',
                               fontSize: '11px', fontWeight: 800, letterSpacing: '0.06em',
-                              cursor: 'pointer',
+                               cursor: hasPermanentUid(r) ? 'pointer' : 'not-allowed',
+                               opacity: hasPermanentUid(r) ? 1 : 0.45,
                               transition: 'all 0.2s',
                             }}
                             onMouseEnter={e => {
@@ -377,7 +396,7 @@ export default function DeletedRestaurants() {
             }}>
               <div style={{ display: 'flex', gap: '8px', marginBottom: '8px', fontSize: '12px' }}>
                 <span style={{ color: '#666', fontWeight: 700, letterSpacing: '0.04em', minWidth: '120px' }}>UID:</span>
-                <span style={{ color: '#fff', fontFamily: 'monospace', fontWeight: 700 }}>{deleteTarget.uid || deleteTarget.id}</span>
+                <span style={{ color: '#fff', fontFamily: 'monospace', fontWeight: 700 }}>{deleteTarget.uid || 'Unavailable'}</span>
               </div>
               <div style={{ display: 'flex', gap: '8px', fontSize: '12px' }}>
                 <span style={{ color: '#666', fontWeight: 700, letterSpacing: '0.04em', minWidth: '120px' }}>Restaurant Name:</span>
@@ -411,7 +430,7 @@ export default function DeletedRestaurants() {
                   value={confirmUidInput}
                   onChange={e => { setConfirmUidInput(e.target.value); setDeleteError('') }}
                   onKeyDown={e => { if (e.key === 'Enter') handlePermanentDelete() }}
-                  placeholder={String(deleteTarget.uid || deleteTarget.id)}
+                   placeholder={String(deleteTarget.uid || '10-digit UID')}
                   style={{
                     width: '100%', padding: '12px 14px',
                     background: 'rgba(255,255,255,0.05)',
@@ -429,7 +448,7 @@ export default function DeletedRestaurants() {
                 )}
                 <button
                   onClick={handlePermanentDelete}
-                  disabled={deleting}
+                  disabled={deleting || confirmUidInput !== String(deleteTarget.uid || '')}
                   style={{
                     width: '100%', padding: '13px',
                     background: deleting ? 'rgba(232,50,26,0.5)' : '#E8321A',
