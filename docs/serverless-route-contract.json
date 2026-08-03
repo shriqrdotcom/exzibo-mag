@@ -145,7 +145,7 @@
       "unknownAction": "400-safe"
     },
     "system.js": {
-      "actions": ["liveness", "readiness"],
+      "actions": ["liveness", "readiness", "appMembers"],
       "methods": ["GET", "POST", "OPTIONS"],
       "access": "mixed",
       "cors": "mixed",
@@ -206,6 +206,7 @@
     {"publicPath": "/api/team-members/:restaurantId", "handler": "team.js", "action": "list", "methods": ["GET"], "access": "restaurant-role", "cors": "admin", "bodySize": "none", "noStore": false, "requestId": true, "unsupportedMethod": "405", "unknownAction": "400-safe"},
     {"publicPath": "/api/realtime/ticket", "handler": "auth-check.js", "action": "issueTicket", "methods": ["POST"], "access": "authenticated", "cors": "credentialed", "bodySize": "small", "noStore": true, "requestId": true, "unsupportedMethod": "405", "unknownAction": "400-safe"},
     {"publicPath": "/api/system", "handler": "system.js", "action": null, "methods": ["GET", "POST"], "access": "mixed", "cors": "mixed", "bodySize": "none", "noStore": false, "requestId": true, "unsupportedMethod": "405", "unknownAction": "400-safe"},
+    {"publicPath": "/api/app-members", "handler": "system.js", "action": "appMembers", "methods": ["GET", "POST"], "access": "superadmin", "cors": "admin", "bodySize": "small", "noStore": true, "requestId": true, "unsupportedMethod": "405", "unknownAction": "400-safe"},
     {"publicPath": "/api/restaurant-notifications", "handler": "notifications.js", "action": null, "methods": ["GET", "POST"], "access": "mixed", "cors": "public", "bodySize": "small", "noStore": false, "requestId": true, "unsupportedMethod": "405", "unknownAction": "400-safe"}
   ]
 }

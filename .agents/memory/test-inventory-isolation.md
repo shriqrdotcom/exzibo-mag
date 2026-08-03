@@ -7,4 +7,4 @@ The complete test inventory runs one test file per Node process because several 
 
 **Why:** File-level Node test workers can overlap even when the application code is correct, producing false missing-table failures and misleading release results.
 
-**How to apply:** Use the repository test-inventory runner for local and CI-wide validation. Keep focused suites runnable directly, and provide temporary valid realtime configuration only when exercising realtime integration tests.
+**How to apply:** Use the repository test-inventory runner for local and CI-wide validation. Keep focused suites runnable directly. When running the full inventory against disposable PostgreSQL, provide temporary non-production values that satisfy the strict validators: HTTPS auth/realtime URLs and secrets of the required minimum length.

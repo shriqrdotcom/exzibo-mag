@@ -10,6 +10,7 @@ import pg from 'pg'
 const { Pool } = pg
 
 const pools = new Map()
+const transactionPools = new Map()
 
 export function getPool(url = process.env.DATABASE_URL) {
   if (!url) {
@@ -25,6 +26,23 @@ export async function closePool(url = process.env.DATABASE_URL) {
   const pool = pools.get(url)
   if (!pool) return
   pools.delete(url)
+  await pool.end()
+}
+
+export function getTxPool(url = process.env.DATABASE_URL) {
+  if (!url) {
+    throw new Error('[pg-sql] DATABASE_URL is not set — provide a connection string or set DATABASE_URL')
+  }
+  if (!transactionPools.has(url)) {
+    transactionPools.set(url, new Pool({ connectionString: url, max: 4 }))
+  }
+  return transactionPools.get(url)
+}
+
+export async function closeTxPool(url = process.env.DATABASE_URL) {
+  const pool = transactionPools.get(url)
+  if (!pool) return
+  transactionPools.delete(url)
   await pool.end()
 }
 

@@ -58,7 +58,7 @@ describe('Canonical serverless route contract', () => {
 
   it('keeps system DDL/migration actions outside the contract', () => {
     const system = contract.handlers['system.js']
-    assert.deepEqual(system.actions, ['liveness', 'readiness'])
+    assert.deepEqual(system.actions, ['liveness', 'readiness', 'appMembers'])
     assert.ok(!system.actions.some(action => /migrat|schema|ddl|database/i.test(action)))
   })
 

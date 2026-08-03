@@ -122,8 +122,8 @@ async function handler(req, res) {
         })
       }
       return res.status(body.action === 'create' ? 201 : 200).json(result)
-    } catch (err) {
-      const status = Number.isInteger(err?.status) ? err.status : 500
+    } catch (error) {
+      const status = Number.isInteger(error?.status) ? error.status : 500
       const code = status === 400
         ? 'BAD_REQUEST'
         : status === 403
@@ -133,11 +133,14 @@ async function handler(req, res) {
             : status === 409
               ? 'CONFLICT'
               : 'INTERNAL_ERROR'
-      if (status >= 500) console.error('[app-members] mutation error:', err.message)
+      const clientMessage = typeof error?.message === 'string'
+        ? error.message
+        : 'Request failed'
+      if (status >= 500) console.error('[app-members] mutation error:', clientMessage)
       return sendSafeError(res, {
         status,
         code,
-        message: status >= 500 ? 'Internal server error' : err.message,
+        message: status >= 500 ? 'Internal server error' : clientMessage,
         requestId,
       })
     }

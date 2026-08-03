@@ -1,4 +1,4 @@
-import { neon, getPool } from './pg-sql.js'
+import { neon, getPool, getTxPool } from './pg-sql.js'
 
 const sql = neon(process.env.DATABASE_URL)
 
@@ -21,7 +21,7 @@ function pick(obj, keys) {
 }
 
 export async function withRestaurantMemberTransaction(restaurantId, callback) {
-  const client = await getPool(process.env.DATABASE_URL).connect()
+  const client = await getTxPool(process.env.DATABASE_URL).connect()
   try {
     await client.query('BEGIN')
     // Lock the parent restaurant row to serialize all owner-sensitive mutations

@@ -17,7 +17,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { randomBytes } from 'node:crypto'
 import pg from 'pg'
-import { closePool } from '../../../src/db/pg-sql.js'
+import { closePool, closeTxPool } from '../../../src/db/pg-sql.js'
 
 let _instance = null
 
@@ -289,6 +289,11 @@ export class DisposablePostgres {
       await closePool(this.databaseUrl)
     } catch {
       // ignore if pool was never created
+    }
+    try {
+      await closeTxPool(this.databaseUrl)
+    } catch {
+      // ignore if the transaction pool was never created
     }
     if (this.process && !this.process.killed) {
       this.process.kill('SIGTERM')
