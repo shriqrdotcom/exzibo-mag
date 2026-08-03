@@ -3,7 +3,7 @@
  *
  * Secure mobile bootstrap endpoint. Validates the Better Auth session, then
  * returns the authenticated user's active restaurant memberships (owner, admin,
- * manager, staff only — menu_studio and superadmin info are never included).
+ * staff only — manager remains a legacy web role and is never included).
  *
  * Security rules:
  *  - User identity comes exclusively from the validated session (never from
@@ -16,10 +16,12 @@
  *  200  { apiVersion, user, restaurants }
  *  401  { error }   — missing or invalid session
  *  405  { error }   — unsupported HTTP method
+ *  403  { error }   — authenticated user has no active mobile membership
  *  500  { error }   — unexpected server error
  */
 
 import { getSessionEmail } from '../_lib/authz.js'
+import { APP_MEMBER_ROLES, claimPendingAppMemberships } from '../_lib/app-members-service.js'
 import { vercelWrapper } from '../_lib/security-middleware.js'
 import { createSafeError } from '../_lib/errors.js'
 import pg from 'pg'
@@ -32,9 +34,9 @@ import {
 const { Pool } = pg
 
 // ── Role constants ───────────────────────────────────────────────────────────
-// Only these four roles are surfaced to mobile clients.
+// Only these three roles are surfaced to mobile clients.
 // menu_studio and superadmin are deliberately omitted.
-const MOBILE_ROLES = Object.freeze(['owner', 'admin', 'manager', 'staff'])
+const MOBILE_ROLES = APP_MEMBER_ROLES
 
 // ── Centralized role-to-permissions mapping ──────────────────────────────────
 // All permission strings are generated server-side — never supplied by the
@@ -42,7 +44,6 @@ const MOBILE_ROLES = Object.freeze(['owner', 'admin', 'manager', 'staff'])
 const ROLE_PERMISSIONS = Object.freeze({
   owner:   Object.freeze(['manage:restaurant', 'manage:menu', 'manage:orders', 'manage:bookings', 'manage:team', 'view:analytics']),
   admin:   Object.freeze(['manage:menu', 'manage:orders', 'manage:bookings', 'manage:team', 'view:analytics']),
-  manager: Object.freeze(['manage:orders', 'manage:bookings', 'view:analytics']),
   staff:   Object.freeze(['manage:orders', 'manage:bookings']),
 })
 
@@ -113,31 +114,33 @@ export default vercelWrapper(async function handler(req, res) {
     })
   }
 
-  const { userId, email, user } = session
+  const { userId, user, emailVerified } = session
+
+  // Email-only invitations remain pending until Better Auth confirms the
+  // email. This transaction is the only path that links user_id.
+  await claimPendingAppMemberships({ userId, email: user.email, emailVerified })
 
   // ── Membership lookup ─────────────────────────────────────────────────────
-  // Match by user_id (primary) OR email (fallback for members added before
-  // user_id was populated). Only active rows with mobile-visible roles.
+  // Pending email-only rows are never returned directly. They must first be
+  // claimed by the verified-email transaction above.
   let rows
   try {
     const result = await getPool().query(
       `SELECT
          rm.role,
-         r.id,
+          r.uid,
          r.name,
          r.slug,
          r.logo
        FROM restaurant_members rm
        JOIN restaurants r ON r.id = rm.restaurant_id
-       WHERE (
-           (rm.user_id IS NOT NULL AND rm.user_id = $1)
-           OR (rm.user_id IS NULL AND lower(trim(rm.email)) = $2)
-         )
+       WHERE rm.user_id IS NOT NULL
+         AND rm.user_id = $1
          AND rm.active = true
-         AND rm.role = ANY($3::text[])
+           AND rm.role = ANY($2::text[])
          AND r.is_deleted = false
        ORDER BY r.name`,
-      [userId, email.toLowerCase().trim(), MOBILE_ROLES]
+       [userId, MOBILE_ROLES]
     )
     rows = result.rows
   } catch (err) {
@@ -146,13 +149,22 @@ export default vercelWrapper(async function handler(req, res) {
 
   // ── Build response ────────────────────────────────────────────────────────
   const restaurants = rows.map(row => ({
-    id:          row.id,
+    uid:         row.uid,
     name:        row.name,
     slug:        row.slug,
     logoUrl:     row.logo ?? null,
     role:        row.role,
     permissions: [...(ROLE_PERMISSIONS[row.role] ?? [])],
   }))
+
+  if (restaurants.length === 0) {
+    return sendMobileError(res, {
+      status: 403,
+      code: 'FORBIDDEN',
+      message: 'No active mobile membership found',
+      requestId: req.requestId,
+    })
+  }
 
   return res.status(200).json({
     apiVersion: 'v1',

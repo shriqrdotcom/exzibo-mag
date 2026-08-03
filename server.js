@@ -1171,6 +1171,10 @@ app.all('/api/settings',    (req, res) => delegateToHandler('./api/settings.js',
 app.all('/api/notifications', (req, res) => delegateToHandler('./api/notifications.js', req, res))
 app.all('/api/restaurant-notifications', (req, res) => delegateToHandler('./api/notifications.js', req, res))
 app.all('/api/system',       (req, res) => delegateToHandler('./api/system.js',       req, res))
+app.all('/api/app-members',  (req, res) => {
+  req.query = { ...(req.query || {}), action: 'appMembers' }
+  return delegateToHandler('./api/system.js', req, res)
+})
 app.all('/api/team',         (req, res) => delegateToHandler('./api/team.js',        req, res))
 app.all('/api/mobile/v1/bootstrap', (req, res) => delegateToHandler('./api/mobile/bootstrap.js', req, res))
 app.all('/api/analytics/:restaurantId', (req, res) => {

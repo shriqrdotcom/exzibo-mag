@@ -1205,6 +1205,7 @@ function queryApiPlugin() {
     ['/api/notifications', './api/notifications.js'],
     ['/api/restaurant-notifications', './api/notifications.js'],
     ['/api/system', './api/system.js'],
+    ['/api/app-members', './api/system.js'],
     ['/api/team', './api/team.js'],
   ])
 
@@ -1219,6 +1220,7 @@ function queryApiPlugin() {
         // Vite's raw Node request does not populate req.query like Express or
         // Vercel. Keep the shared handlers on the same contract in dev.
         req.query = Object.fromEntries(requestUrl.searchParams.entries())
+        if (requestUrl.pathname === '/api/app-members') req.query.action = 'appMembers'
 
         if (!res.status) {
           res.status = (code) => {

@@ -12,6 +12,56 @@
   background: #000;
 }
 
+.am-alert {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-top: 22px;
+  padding: 12px 14px;
+  color: #e6b8b8;
+  background: #241717;
+  border: 1px solid #593030;
+  border-radius: 7px;
+  font-size: 12px;
+}
+
+.am-alert button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  flex: 0 0 auto;
+  padding: 5px 0;
+  color: #f0d3d3;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.am-alert button:hover { color: #fff; }
+
+.am-loading {
+  padding: 18px 20px;
+}
+
+.am-loading span {
+  display: block;
+  height: 56px;
+  margin-bottom: 10px;
+  background: linear-gradient(90deg, #191919 25%, #222 50%, #191919 75%);
+  background-size: 200% 100%;
+  border-radius: 6px;
+  animation: am-shimmer 1.3s ease-in-out infinite;
+}
+
+.am-member-loading {
+  padding: 24px 0;
+  color: #777;
+  font-size: 11px;
+}
+
 .am-content {
   max-width: 1180px;
   margin: 0 auto;
@@ -251,6 +301,13 @@
   border-radius: 8px;
 }
 
+.am-restaurant-mark img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 7px;
+}
+
 .am-restaurant-mark svg {
   position: absolute;
   top: 7px;
@@ -447,6 +504,36 @@
   background: #2a1717;
   border-color: #5a2c2c;
 }
+
+.am-member-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 3px;
+}
+
+.am-member-actions button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  color: #777;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.am-member-actions button:hover:not(:disabled) {
+  color: #ddd;
+  background: #252525;
+  border-color: #3b3b3b;
+}
+
+.am-member-actions button:disabled { cursor: wait; opacity: .45; }
+.am-pause { font-size: 12px; letter-spacing: -3px; margin-right: 3px; }
 
 .am-member-empty {
   display: flex;
@@ -764,6 +851,11 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
+@keyframes am-shimmer {
+  from { background-position: 100% 0; }
+  to { background-position: -100% 0; }
+}
+
 @media (max-width: 900px) {
   .am-content {
     padding: 40px 28px 58px;
@@ -778,6 +870,11 @@
   .am-member-row {
     grid-template-columns: minmax(125px, 1.2fr) minmax(145px, 1.4fr) minmax(110px, 1fr) 62px 78px 30px;
     gap: 10px;
+  }
+
+  .am-member-actions {
+    grid-column: 2;
+    grid-row: 1;
   }
 }
 
@@ -924,8 +1021,6 @@
   }
 
   .am-member-delete {
-    grid-column: 2;
-    grid-row: 1;
     align-self: start;
   }
 

@@ -36,11 +36,10 @@ describe('A — ROLE_PERMISSIONS mapping', async () => {
   // since the handler doesn't export ROLE_PERMISSIONS we derive expected values
   // from the documented contract and verify they are consistent.
 
-  const MOBILE_ROLES = ['owner', 'admin', 'manager', 'staff']
+  const MOBILE_ROLES = ['owner', 'admin', 'staff']
   const ROLE_PERMISSIONS = {
     owner:   ['manage:restaurant', 'manage:menu', 'manage:orders', 'manage:bookings', 'manage:team', 'view:analytics'],
     admin:   ['manage:menu', 'manage:orders', 'manage:bookings', 'manage:team', 'view:analytics'],
-    manager: ['manage:orders', 'manage:bookings', 'view:analytics'],
     staff:   ['manage:orders', 'manage:bookings'],
   }
 
@@ -63,23 +62,23 @@ describe('A — ROLE_PERMISSIONS mapping', async () => {
 
   it('owner has the widest permission set', () => {
     const ownerPerms = new Set(ROLE_PERMISSIONS.owner)
-    for (const role of ['admin', 'manager', 'staff']) {
+    for (const role of ['admin', 'staff']) {
       for (const perm of ROLE_PERMISSIONS[role]) {
         assert.ok(ownerPerms.has(perm), `owner should have ${perm} (also in ${role})`)
       }
     }
   })
 
-  it('staff is a strict subset of manager permissions', () => {
-    const managerPerms = new Set(ROLE_PERMISSIONS.manager)
+  it('staff is a strict subset of admin permissions', () => {
+    const adminPerms = new Set(ROLE_PERMISSIONS.admin)
     for (const perm of ROLE_PERMISSIONS.staff) {
-      assert.ok(managerPerms.has(perm), `manager should have ${perm} (also in staff)`)
+      assert.ok(adminPerms.has(perm), `admin should have ${perm} (also in staff)`)
     }
   })
 
   it('manage:restaurant is exclusively an owner permission', () => {
     assert.ok(ROLE_PERMISSIONS.owner.includes('manage:restaurant'))
-    for (const role of ['admin', 'manager', 'staff']) {
+    for (const role of ['admin', 'staff']) {
       assert.equal(
         ROLE_PERMISSIONS[role].includes('manage:restaurant'),
         false,
@@ -210,9 +209,9 @@ describe('C — authenticated data contract (BLOCKED in dev)', () => {
     )
   })
 
-  it('a user with no active memberships receives an empty array', () => {
+  it('a user with no active memberships receives 403', () => {
     blockedMsg(
-      'authenticated user with zero active memberships → { restaurants: [] }'
+      'authenticated user with zero active mobile memberships → 403 NO_MOBILE_MEMBERSHIP'
     )
   })
 
@@ -226,7 +225,7 @@ describe('C — authenticated data contract (BLOCKED in dev)', () => {
   it('response matches the documented contract shape', () => {
     blockedMsg(
       'response has { apiVersion, user: { id, name, email, image }, ' +
-      'restaurants: [{ id, name, slug, logoUrl, role, permissions }] }'
+      'restaurants: [{ uid, name, slug, logoUrl, role, permissions }] }'
     )
   })
 

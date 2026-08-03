@@ -133,6 +133,29 @@ export async function lookupUserIdByEmail(email) {
   return rows[0]?.id ?? null
 }
 
+/**
+ * Resolve the Better Auth identity and verification state for an email.
+ *
+ * This is intentionally separate from lookupUserIdByEmail(): an email-only
+ * App Member invitation must remain unclaimed when the account exists but its
+ * Google-provided email has not been verified.
+ */
+export async function lookupUserIdentityByEmail(email) {
+  if (!email) return null
+  const normalizedEmail = email.toLowerCase().trim()
+  const rows = await sql`
+    SELECT id, email_verified
+    FROM "user"
+    WHERE lower(trim(email)) = ${normalizedEmail}
+    LIMIT 1
+  `
+  if (!rows[0]) return null
+  return {
+    id: rows[0].id,
+    emailVerified: rows[0].email_verified === true,
+  }
+}
+
 // ── upsertNeonRestaurantMember ────────────────────────────────────────────────
 // INSERT … ON CONFLICT (id) DO UPDATE — safe for create and re-sync.
 // Supabase table is `team_members`; Neon table is `restaurant_members`.
@@ -271,7 +294,12 @@ export async function hasConflictingNeonRestaurantMembership(restaurantId, ident
 // to bypass the email-based lookup for tests or known-identity contexts.
 // When both resolvedUserId and member.email are provided, lookup is performed
 // by user_id (authoritative) then email-only path (fallback).
-export async function createNeonRestaurantMemberSafe(restaurantId, member, resolvedUserId) {
+export async function createNeonRestaurantMemberSafe(
+  restaurantId,
+  member,
+  resolvedUserId,
+  identityResolution = 'auto',
+) {
   if (!member?.id) throw new Error('createNeonRestaurantMemberSafe: member.id is required')
   if (!member.role || !VALID_RESTAURANT_ROLES.has(member.role)) {
     throw Object.assign(new Error(`Invalid role: ${member.role}`), { code: 'INVALID_ROLE', status: 400 })
@@ -279,7 +307,7 @@ export async function createNeonRestaurantMemberSafe(restaurantId, member, resol
 
   // Server-side identity resolution: resolvedUserId is trusted (comes from server),
   // otherwise look up from Better Auth by email. Never trust caller-supplied user_id.
-  if (!resolvedUserId && member.email) {
+  if (identityResolution !== 'skip' && !resolvedUserId && member.email) {
     resolvedUserId = await lookupUserIdByEmail(member.email)
   }
 
@@ -302,14 +330,24 @@ export async function createNeonRestaurantMemberSafe(restaurantId, member, resol
 //
 // Last-owner protection covers both role demotion (owner → non-owner) and
 // deactivation (active → false while keeping owner role).
-export async function updateNeonRestaurantMemberSafe(restaurantId, member, { callerRole, callerIsSuperadmin }) {
+export async function updateNeonRestaurantMemberSafe(restaurantId, member, options = {}) {
+  const {
+    callerRole,
+    callerIsSuperadmin,
+    resolvedUserId: suppliedResolvedUserId,
+  } = options
   if (!member?.id) throw new Error('updateNeonRestaurantMemberSafe: member.id is required')
   if (!member.role || !VALID_RESTAURANT_ROLES.has(member.role)) {
     throw Object.assign(new Error(`Invalid role: ${member.role}`), { code: 'INVALID_ROLE', status: 400 })
   }
 
   // Server-side identity resolution: caller-supplied user_id is ignored.
-  const resolvedUserId = await lookupUserIdByEmail(member.email)
+  // App Members passes an explicit resolvedUserId so an unverified account
+  // cannot be linked merely because its email exists in Better Auth.
+  const hasResolvedIdentity = Object.prototype.hasOwnProperty.call(options, 'resolvedUserId')
+  const resolvedUserId = hasResolvedIdentity
+    ? suppliedResolvedUserId
+    : await lookupUserIdByEmail(member.email)
 
   const result = await mutateRestaurantMemberWithOwnerInvariant(
     restaurantId, member.id, { callerRole, callerIsSuperadmin },
@@ -325,8 +363,12 @@ export async function updateNeonRestaurantMemberSafe(restaurantId, member, { cal
       // Identity-alignment duplicate detection: if the updated email resolves to
       // a different identity than the current row, ensure no other active membership
       // already uses that identity. Email alone must never override a different user_id.
-      const currentResolvedUserId = await lookupUserIdByEmail(target.email)
-      const identityUserId = resolvedUserId ?? currentResolvedUserId ?? null
+      const currentResolvedUserId = hasResolvedIdentity
+        ? null
+        : await lookupUserIdByEmail(target.email)
+      const identityUserId = hasResolvedIdentity
+        ? resolvedUserId
+        : (resolvedUserId ?? currentResolvedUserId ?? null)
       const identity = {
         userId: identityUserId,
         email: identityUserId ? null : normalizeEmail(member.email),

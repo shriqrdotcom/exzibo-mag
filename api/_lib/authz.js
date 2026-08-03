@@ -117,7 +117,12 @@ export async function getSessionEmail(req) {
   if (!session?.user) return null
   const email = (session.user.email || '').toLowerCase().trim()
   if (!email) return null
-  return { email, userId: session.user.id, user: session.user }
+  return {
+    email,
+    userId: session.user.id,
+    user: session.user,
+    emailVerified: session.user.emailVerified === true || session.user.email_verified === true,
+  }
 }
 
 // ── isSuperadminEmail ────────────────────────────────────────────────────────
@@ -136,14 +141,14 @@ export async function checkSuperadmin(req) {
     return { allowed: false, role: null, isSuperadmin: false, email: null, error: 'Session error: ' + e.message }
   }
   if (!session) {
-    return { allowed: false, role: null, isSuperadmin: false, email: null, error: 'Not authenticated' }
+    return { allowed: false, role: null, isSuperadmin: false, email: null, userId: null, error: 'Not authenticated' }
   }
 
   const { email } = session
   const emailSet = getSuperadminEmailSet()
   const allowed = emailSet.has(email)
 
-  return { allowed, role: allowed ? 'superadmin' : null, isSuperadmin: allowed, email }
+  return { allowed, role: allowed ? 'superadmin' : null, isSuperadmin: allowed, email, userId: session.userId }
 }
 
 // ── checkRestaurantAccess ────────────────────────────────────────────────────

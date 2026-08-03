@@ -5,6 +5,14 @@ import { createSafeError, sendSafeError } from './_lib/errors.js'
 import { vercelWrapper } from './_lib/security-middleware.js'
 import { defineValidation, validateRequest } from './_lib/validate.js'
 import { handleLiveness } from './_lib/health.js'
+import {
+  createAppMember,
+  listAppMembers,
+  listAppRestaurants,
+  revokeAppMember,
+  setAppMemberStatus,
+  updateAppMember,
+} from './_lib/app-members-service.js'
 
 // ── /api/system — System Handler ────────────────────────────────────────────
 //
@@ -74,6 +82,65 @@ async function handler(req, res) {
       timestamp: new Date().toISOString(),
       checks,
     })
+  }
+
+  if (action === 'appMembers') {
+    const auth = await authorizeSuperadmin(req, res)
+    if (!auth.ok) return
+
+    try {
+      if (req.method === 'GET') {
+        const uid = typeof req.query.uid === 'string' ? req.query.uid : ''
+        const body = uid
+          ? await listAppMembers(uid)
+          : { restaurants: await listAppRestaurants() }
+        return res.status(200).json(body)
+      }
+
+      if (req.method !== 'POST') {
+        return sendSafeError(res, {
+          status: 405,
+          code: 'METHOD_NOT_ALLOWED',
+          message: 'Method not allowed',
+          requestId,
+        })
+      }
+
+      const body = req.body && typeof req.body === 'object' ? req.body : {}
+      const caller = { userId: auth.userId, email: auth.email }
+      let result
+      if (body.action === 'create') result = await createAppMember(body, caller)
+      else if (body.action === 'update') result = await updateAppMember(body, caller)
+      else if (body.action === 'status') result = await setAppMemberStatus(body, caller)
+      else if (body.action === 'revoke') result = await revokeAppMember(body, caller)
+      else {
+        return sendSafeError(res, {
+          status: 400,
+          code: 'BAD_REQUEST',
+          message: 'A valid member action is required',
+          requestId,
+        })
+      }
+      return res.status(body.action === 'create' ? 201 : 200).json(result)
+    } catch (err) {
+      const status = Number.isInteger(err?.status) ? err.status : 500
+      const code = status === 400
+        ? 'BAD_REQUEST'
+        : status === 403
+          ? 'FORBIDDEN'
+          : status === 404
+            ? 'NOT_FOUND'
+            : status === 409
+              ? 'CONFLICT'
+              : 'INTERNAL_ERROR'
+      if (status >= 500) console.error('[app-members] mutation error:', err.message)
+      return sendSafeError(res, {
+        status,
+        code,
+        message: status >= 500 ? 'Internal server error' : err.message,
+        requestId,
+      })
+    }
   }
 
   return sendSafeError(res, { status: 400, code: 'BAD_REQUEST', message: `Unknown action: ${action}`, requestId })
