@@ -19,6 +19,7 @@ export default function Sidebar() {
   const navigate = useNavigate()
   const location = useLocation()
   const [searchParams] = useSearchParams()
+  const isOnboardingSidebar = location.pathname === '/create-restaurant' || location.pathname === '/subscription'
   const [unreadCount, setUnreadCount] = useState(0)
   const isDemoActive = location.pathname === '/dashboard' && searchParams.get('section') === 'demo'
   const isCompressorActive = location.pathname === '/dashboard' && searchParams.get('section') === 'image-compressor'
@@ -65,7 +66,9 @@ export default function Sidebar() {
 
       {/* Nav items */}
       <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
-        {navItems.map(({ icon: Icon, label, path, permission }) => {
+        {navItems
+          .filter(({ path }) => !isOnboardingSidebar || path === '/create-restaurant' || path === '/subscription')
+          .map(({ icon: Icon, label, path, permission }) => {
           const isActive = location.pathname === path && !searchParams.get('section')
           return (
             <PermissionGate key={path} permission={permission}>
@@ -108,8 +111,8 @@ export default function Sidebar() {
           )
         })}
 
-        {/* DEMO nav item */}
-        <button
+        {/* Secondary dashboard navigation is intentionally hidden during onboarding. */}
+        {!isOnboardingSidebar && <button
           onClick={() => navigate('/dashboard?section=demo')}
           style={{
             display: 'flex',
@@ -143,10 +146,10 @@ export default function Sidebar() {
         >
           <Play size={16} />
           DEMO
-        </button>
+        </button>}
 
         {/* IMAGE COMPRESSOR nav item */}
-        <button
+        {!isOnboardingSidebar && <button
           onClick={() => navigate('/dashboard?section=image-compressor')}
           style={{
             display: 'flex',
@@ -180,10 +183,10 @@ export default function Sidebar() {
         >
           <ImageDown size={16} />
           Image Compressor
-        </button>
+        </button>}
 
         {/* Notifications nav item */}
-        <button
+        {!isOnboardingSidebar && <button
           onClick={() => navigate('/notifications')}
           style={{
             display: 'flex',
@@ -254,10 +257,10 @@ export default function Sidebar() {
               {unreadCount} new
             </span>
           )}
-        </button>
+        </button>}
 
         {/* Deleted Restaurants nav item */}
-        {(() => {
+        {!isOnboardingSidebar && (() => {
           const isActive = location.pathname === '/deleted-restaurants'
           return (
             <button
@@ -280,7 +283,7 @@ export default function Sidebar() {
         })()}
 
         {/* Dynamic Route nav item */}
-        {(() => {
+        {!isOnboardingSidebar && (() => {
           const isActive = location.pathname === '/dynamic-route'
           return (
             <button
@@ -303,7 +306,7 @@ export default function Sidebar() {
         })()}
 
         {/* Add Role nav item */}
-        {(() => {
+        {!isOnboardingSidebar && (() => {
           const isActive = location.pathname === '/add-role'
           return (
             <button
@@ -326,7 +329,7 @@ export default function Sidebar() {
         })()}
 
         {/* Order Time nav item */}
-        {(() => {
+        {!isOnboardingSidebar && (() => {
           const isActive = location.pathname === '/order-time'
           return (
             <button
@@ -349,7 +352,7 @@ export default function Sidebar() {
         })()}
 
         {/* ── INFORMATION section ── */}
-        <div style={{ marginTop: '12px' }}>
+        {!isOnboardingSidebar && <div style={{ marginTop: '12px' }}>
           <div style={{
             display: 'flex', alignItems: 'center', gap: '10px',
             padding: '8px 14px 6px',
@@ -385,11 +388,11 @@ export default function Sidebar() {
               </button>
             )
           })()}
-        </div>
+        </div>}
       </nav>
 
       {/* Go Live button */}
-      <button
+      {!isOnboardingSidebar && <button
         onClick={() => navigate('/')}
         style={{
           display: 'flex',
@@ -422,7 +425,7 @@ export default function Sidebar() {
       >
         <Zap size={14} />
         GO LIVE
-      </button>
+      </button>}
     </aside>
   )
 }
