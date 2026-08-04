@@ -33,6 +33,7 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const MAX_NAME_LENGTH = 120
 const MAX_PHONE_LENGTH = 40
+const MEMBER_LIMIT_KEYS = Object.freeze(['ownerPanelUsers', 'managerPanelUsers', 'employeeSectionUsers'])
 
 function appError(message, status = 400, code = 'VALIDATION') {
   return Object.assign(new Error(message), { status, code })
@@ -86,12 +87,36 @@ async function restaurantForUid(uid) {
   return restaurant
 }
 
+function parsePlanLimits(value) {
+  if (value && typeof value === 'object' && !Array.isArray(value)) return value
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value)
+      return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {}
+    } catch {
+      return {}
+    }
+  }
+  return {}
+}
+
+function memberAddOnLimit(row) {
+  const plan = typeof row.plan === 'string' ? row.plan.trim().toUpperCase() : ''
+  const limits = parsePlanLimits(row.plan_limits)[plan] || {}
+  return MEMBER_LIMIT_KEYS.reduce((total, key) => {
+    const value = Number(limits[key])
+    return total + (Number.isFinite(value) && value > 0 ? value : 0)
+  }, 0)
+}
+
 function restaurantDto(row, memberCount = 0) {
   return {
     uid: row.uid,
     name: row.name,
     logoUrl: row.logo ?? null,
     memberCount: Number(memberCount) || 0,
+    plan: row.plan ?? null,
+    memberAddOnLimit: memberAddOnLimit(row),
   }
 }
 
@@ -146,7 +171,7 @@ async function verifiedIdentity(email) {
  */
 export async function listAppRestaurants() {
   const { rows } = await getPool().query(
-    `SELECT r.uid, r.name, r.logo,
+    `SELECT r.uid, r.name, r.logo, r.plan, r.plan_limits,
             COUNT(rm.id) FILTER (
               WHERE rm.role = ANY($1::text[])
             ) AS member_count

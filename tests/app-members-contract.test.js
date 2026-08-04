@@ -68,6 +68,14 @@ describe('App Members UI contract', () => {
     assert.doesNotMatch(page, /INITIAL_RESTAURANTS|MOCK_MEMBER_SEEDS|temporary workspace/)
   })
 
+  it('renders UID-scoped restaurant information from the persisted response', () => {
+    assert.match(page, /Number of Total Members/)
+    assert.match(page, /Current Plan/)
+    assert.match(page, /Total Member Add-on Limit/)
+    assert.match(service, /memberAddOnLimit/)
+    assert.match(service, /plan_limits/)
+  })
+
   it('submits only OWNER, ADMIN, and STAFF roles', () => {
     assert.match(page, /const ROLES = \['OWNER', 'ADMIN', 'STAFF'\]/)
     assert.doesNotMatch(page, />Manager</)

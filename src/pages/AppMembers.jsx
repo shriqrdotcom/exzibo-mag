@@ -1,6 +1,6 @@
 import React, { Fragment, useEffect, useMemo, useState } from 'react'
 import Sidebar from '../components/Sidebar'
-import { Check, ChevronDown, Copy, Pencil, Plus, RefreshCw, Search, Store, Trash2, UserPlus, X } from 'lucide-react'
+import { Check, ChevronDown, Copy, Pencil, Plus, RefreshCw, Search, Store, Trash2, X } from 'lucide-react'
 import './AppMembers.css'
 
 const ROLES = ['OWNER', 'ADMIN', 'STAFF']
@@ -81,6 +81,7 @@ export default function AppMembers() {
   const [membersByUid, setMembersByUid] = useState({})
   const [uidInput, setUidInput] = useState('')
   const [selectedUid, setSelectedUid] = useState('')
+  const [selectedRestaurant, setSelectedRestaurant] = useState(null)
   const [expandedUid, setExpandedUid] = useState(null)
   const [loading, setLoading] = useState(true)
   const [loadingMembers, setLoadingMembers] = useState({})
@@ -96,20 +97,30 @@ export default function AppMembers() {
   }
   const loadMembers = async (uid) => {
     setLoadingMembers((current) => ({ ...current, [uid]: true }))
-    try { const body = await request(`/api/app-members?uid=${encodeURIComponent(uid)}`); setMembersByUid((current) => ({ ...current, [uid]: body.members || [] })); setRestaurants((current) => current.map((item) => item.uid === uid ? { ...item, ...(body.restaurant || {}), memberCount: (body.members || []).length } : item)) } catch (err) { setError(errorMessage(err)) } finally { setLoadingMembers((current) => ({ ...current, [uid]: false })) }
+    try {
+      const body = await request(`/api/app-members?uid=${encodeURIComponent(uid)}`)
+      const restaurant = { ...(body.restaurant || {}), memberCount: (body.members || []).length }
+      setMembersByUid((current) => ({ ...current, [uid]: body.members || [] }))
+      setRestaurants((current) => current.map((item) => item.uid === uid ? { ...item, ...restaurant } : item))
+      setSelectedRestaurant(restaurant)
+      return restaurant
+    } catch (err) {
+      setError(errorMessage(err))
+      return null
+    } finally { setLoadingMembers((current) => ({ ...current, [uid]: false })) }
   }
   useEffect(() => { loadRestaurants() }, [])
 
   const visibleRestaurants = useMemo(() => {
-    if (!selectedUid) return []
-    const restaurant = restaurants.find((item) => item.uid.toLowerCase() === selectedUid.toLowerCase())
-    return restaurant ? [restaurant] : []
-  }, [restaurants, selectedUid])
-  const submitUid = (event) => {
+    return selectedRestaurant ? [selectedRestaurant] : []
+  }, [selectedRestaurant])
+  const submitUid = async (event) => {
     event.preventDefault()
     const nextUid = uidInput.trim()
     setSelectedUid(nextUid)
+    setSelectedRestaurant(null)
     setExpandedUid(null)
+    if (nextUid) await loadMembers(nextUid)
   }
   const openAdd = (restaurant) => setModal({ editing: null, form: { ...emptyForm, uid: restaurant?.uid || '' } })
   const toggle = (restaurant) => {
@@ -136,15 +147,16 @@ export default function AppMembers() {
   }
   const edit = (member, restaurant) => setModal({ editing: member, form: { uid: restaurant.uid, name: member.name, email: member.email, phone: member.phone || '', role: member.role } })
   const copyUid = async (restaurant) => { try { await copyText(restaurant.uid); setCopiedUid(restaurant.uid); window.setTimeout(() => setCopiedUid(null), 1500) } catch (err) { setError(errorMessage(err)) } }
+  const selectedLoading = Boolean(selectedUid && loadingMembers[selectedUid])
 
   return <div className="am-shell"><Sidebar /><main className="am-main" aria-label="App members directory"><div className="am-content">
-    <header className="am-header"><div className="am-header-main"><div><p className="am-kicker">Platform access</p><h1>App Members</h1><p className="am-subtitle">Manage mobile access across every restaurant in one precise directory.</p></div><button className="am-button am-button-header" onClick={() => openAdd()} data-testid="header-add-member-button"><UserPlus size={19} /><span>Add member</span></button></div></header>
     {error && <div className="am-alert" role="alert"><span>{error}</span><button onClick={() => { setError(''); loadRestaurants() }}><RefreshCw size={14} />Try again</button></div>}
+    <section className="am-summary" aria-label="Restaurant information"><table className="am-info-table"><caption><span className="am-eyebrow">Restaurant information</span><strong>{selectedRestaurant ? selectedRestaurant.name : 'No restaurant selected'}</strong>{selectedRestaurant && <code>UID {selectedRestaurant.uid}</code>}</caption><thead><tr><th scope="col">Number of Total Members</th><th scope="col">Current Plan</th><th scope="col">Total Member Add-on Limit</th></tr></thead><tbody><tr><td data-label="Number of Total Members">{selectedRestaurant ? selectedRestaurant.memberCount : '—'}</td><td data-label="Current Plan">{selectedRestaurant?.plan || '—'}</td><td data-label="Total Member Add-on Limit">{selectedRestaurant ? selectedRestaurant.memberAddOnLimit : '—'}</td></tr></tbody></table></section>
      <section className="am-directory" aria-label="Restaurants"><form className="am-toolbar" onSubmit={submitUid}><div className="am-search"><Search size={17} /><input aria-label="Restaurant UID" data-testid="restaurant-uid-entry-input" value={uidInput} onChange={(event) => setUidInput(event.target.value)} placeholder="Enter restaurant UID" /></div><button type="submit" className="am-button am-button-primary am-toolbar-action" data-testid="add-member-by-uid-button" disabled={!uidInput.trim()}>Add Member</button></form>
       <div className="am-list-heading"><span>Restaurant</span><span>Members</span><span /><span /></div><div className="am-restaurant-list">
-         {loading && selectedUid ? <div className="am-loading"><span /><span /><span /><span /></div> : visibleRestaurants.map((restaurant) => { const members = membersByUid[restaurant.uid] || []; const expanded = expandedUid === restaurant.uid; return <Fragment key={restaurant.uid}><article className="am-restaurant-row" data-testid={`restaurant-row-${restaurant.uid}`}><div className="am-restaurant-identity"><div className="am-restaurant-mark">{restaurant.logoUrl ? <img src={restaurant.logoUrl} alt="" /> : <><Store size={18} /><span>{initials(restaurant.name)}</span></>}</div><div><strong>{restaurant.name}</strong><div className="am-uid-line"><code>{restaurant.uid}</code><button className={`am-copy-uid ${copiedUid === restaurant.uid ? 'is-copied' : ''}`} onClick={() => copyUid(restaurant)} aria-label="Copy restaurant UID">{copiedUid === restaurant.uid ? <Check size={13} /> : <Copy size={13} />}</button></div></div></div><span className="am-member-count">{restaurant.memberCount || 0} {(restaurant.memberCount || 0) === 1 ? 'Member' : 'Members'}</span><button className={`am-expand-circle ${expanded ? 'is-open' : ''}`} onClick={() => toggle(restaurant)} aria-expanded={expanded} aria-label={`${expanded ? 'Collapse' : 'Expand'} members`}><ChevronDown size={15} /></button><button className="am-add-circle" onClick={() => openAdd(restaurant)} aria-label={`Add member to ${restaurant.name}`}><Plus size={17} /></button></article>
+          {((loading && selectedUid) || selectedLoading) ? <div className="am-loading"><span /><span /><span /><span /></div> : visibleRestaurants.map((restaurant) => { const members = membersByUid[restaurant.uid] || []; const expanded = expandedUid === restaurant.uid; return <Fragment key={restaurant.uid}><article className="am-restaurant-row" data-testid={`restaurant-row-${restaurant.uid}`}><div className="am-restaurant-identity"><div className="am-restaurant-mark">{restaurant.logoUrl ? <img src={restaurant.logoUrl} alt="" /> : <><Store size={18} /><span>{initials(restaurant.name)}</span></>}</div><div><strong>{restaurant.name}</strong><div className="am-uid-line"><code>{restaurant.uid}</code><button className={`am-copy-uid ${copiedUid === restaurant.uid ? 'is-copied' : ''}`} onClick={() => copyUid(restaurant)} aria-label="Copy restaurant UID">{copiedUid === restaurant.uid ? <Check size={13} /> : <Copy size={13} />}</button></div></div></div><span className="am-member-count">{restaurant.memberCount || 0} {(restaurant.memberCount || 0) === 1 ? 'Member' : 'Members'}</span><button className={`am-expand-circle ${expanded ? 'is-open' : ''}`} onClick={() => toggle(restaurant)} aria-expanded={expanded} aria-label={`${expanded ? 'Collapse' : 'Expand'} members`}><ChevronDown size={15} /></button><button className="am-add-circle" onClick={() => openAdd(restaurant)} aria-label={`Add member to ${restaurant.name}`}><Plus size={17} /></button></article>
           <div className={`am-member-list-shell ${expanded ? 'is-open' : ''}`} aria-hidden={!expanded}><div className="am-member-list-inner"><div className="am-member-list">{loadingMembers[restaurant.uid] ? <div className="am-member-loading">Loading members…</div> : members.length ? <><div className="am-member-list-heading"><span>Member</span><span>Email</span><span>Phone</span><span>Role</span><span>Status</span><span /></div>{members.map((member) => <div className="am-member-row" key={member.id} data-testid={`member-row-${member.id}`}><div className="am-member-name"><span className="am-member-avatar">{initials(member.name)}</span><strong>{member.name}</strong></div><span className="am-member-cell" data-label="Email">{member.email}</span><span className="am-member-cell" data-label="Phone">{member.phone || '—'}</span><span className="am-member-cell" data-label="Role">{member.role}</span><span className="am-member-cell" data-label="Status"><MemberStatus status={member.status} /></span><div className="am-member-actions"><button onClick={() => updateStatus(member, restaurant.uid)} disabled={busy} title={member.status === 'Suspended' ? 'Reactivate member' : 'Suspend member'}>{member.status === 'Suspended' ? <Check size={14} /> : <span className="am-pause">Ⅱ</span>}</button><button onClick={() => edit(member, restaurant)} disabled={busy} title="Edit member"><Pencil size={14} /></button><button className="am-member-delete" onClick={() => setPendingDelete({ member, restaurant })} title="Revoke access"><Trash2 size={15} /></button></div></div>)}</> : <div className="am-member-empty"><div className="am-member-empty-icon"><Store size={17} /></div><div><strong>No members yet</strong><p>Add a member to grant mobile access.</p></div></div>}</div></div></div>
         </Fragment> })}
-       </div>{!loading && visibleRestaurants.length === 0 && <div className="am-empty"><div className="am-empty-icon"><Search size={20} /></div><h3>{selectedUid ? 'Restaurant not found' : 'Enter a restaurant UID'}</h3><p>{selectedUid ? `No restaurant matches “${selectedUid}”.` : 'Add a restaurant UID above to view its app members.'}</p>{selectedUid && <button className="am-button am-button-muted" onClick={() => { setUidInput(''); setSelectedUid('') }}>Clear UID</button>}</div>}<div className="am-list-footer"><span>{loading && selectedUid ? 'Loading directory…' : selectedUid ? `Showing ${visibleRestaurants.length} restaurant` : 'No restaurant selected'}</span><span>Live directory</span></div>
+        </div>{!loading && !selectedLoading && visibleRestaurants.length === 0 && <div className="am-empty"><div className="am-empty-icon"><Search size={20} /></div><h3>{selectedUid ? 'Restaurant not found' : 'Enter a restaurant UID'}</h3><p>{selectedUid ? `No restaurant matches “${selectedUid}”.` : 'Add a restaurant UID above to view its app members.'}</p>{selectedUid && <button className="am-button am-button-muted" onClick={() => { setUidInput(''); setSelectedUid(''); setSelectedRestaurant(null) }}>Clear UID</button>}</div>}<div className="am-list-footer"><span>{(loading && selectedUid) || selectedLoading ? 'Loading directory…' : selectedUid ? `Showing ${visibleRestaurants.length} restaurant` : 'No restaurant selected'}</span><span>Live directory</span></div>
     </section></div></main>{modal && <MemberModal restaurants={restaurants} initialForm={modal.form} editing={modal.editing} onClose={() => setModal(null)} onSubmit={submit} busy={busy} />}{pendingDelete && <ConfirmDialog member={pendingDelete.member} restaurant={pendingDelete.restaurant} onClose={() => setPendingDelete(null)} onConfirm={revoke} busy={busy} />}</div>
 }
