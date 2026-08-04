@@ -30,3 +30,4 @@
 - [Test inventory isolation](test-inventory-isolation.md) — database-backed test files must run in separate processes to avoid shared-table teardown races.
 - [Creation submit flow](creation-submit-flow.md) — the create form submits directly; the authenticated create endpoint owns validation and duplicate conflicts.
 - [Restaurant onboarding split](restaurant-onboarding-split.md) — creation details and plan selection share a browser draft; entitlement writes happen only after secure restaurant creation.
+- [Production readiness audit](../../docs/PRODUCTION_READINESS_AUDIT.md) — current structure rates 7/10; durable outbox deployment, outbox CAS race, dependency upgrades, body limits, and PII minimization lead remediation.
