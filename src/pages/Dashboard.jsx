@@ -553,7 +553,7 @@ export default function Dashboard() {
                   Add your first customer to see them appear in the active users list.
                 </p>
                 <button
-                  onClick={() => navigate('/create-website')}
+                  onClick={() => navigate('/create-restaurant')}
                   style={{
                     display: 'flex', alignItems: 'center', gap: '7px',
                     padding: '11px 22px',
@@ -707,7 +707,7 @@ export default function Dashboard() {
       </div>
 
       <button
-        onClick={() => navigate('/create-website')}
+        onClick={() => navigate('/create-restaurant')}
         style={{
           position: 'fixed', bottom: '28px', right: '28px',
           width: '52px', height: '52px', borderRadius: '50%',

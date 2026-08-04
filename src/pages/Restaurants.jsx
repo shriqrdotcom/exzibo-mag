@@ -88,7 +88,7 @@ export default function Restaurants() {
         </div>
 
         <button
-          onClick={() => navigate('/create-website')}
+          onClick={() => navigate('/create-restaurant')}
           style={{
             display: 'flex', alignItems: 'center', gap: '8px',
             padding: '10px 22px',
@@ -221,7 +221,7 @@ export default function Restaurants() {
             </div>
           </div>
         ) : restaurants.length === 0 ? (
-          <EmptyState onAdd={() => navigate('/create-website')} />
+          <EmptyState onAdd={() => navigate('/create-restaurant')} />
         ) : (
           <div style={{
             background: 'rgba(255,255,255,0.02)',

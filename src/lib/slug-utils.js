@@ -17,7 +17,7 @@ import { randomInt } from 'node:crypto'
 export const RESERVED_SLUGS = Object.freeze(new Set([
   // Core application routes (from server.js RESERVED_SLUGS array)
   'restaurant', 'admin', 'r', 'table',
-  'api', 'auth', 'settings', 'create-website', 'restaurants',
+  'api', 'auth', 'settings', 'create-website', 'create-restaurant', 'subscription', 'restaurants',
   // Explicit list from task spec
   'dashboard', 'superadmin', 'login', 'orders', 'bookings', 'menu',
   'mobile', 'system',

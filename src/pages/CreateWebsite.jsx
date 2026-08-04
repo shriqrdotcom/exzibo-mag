@@ -5,14 +5,16 @@ import {
   Link, Link2, Globe, MapPin,
   ChefHat, Users, Zap, Bell
 } from 'lucide-react'
-import PlanSelector from '../components/PlanSelector'
 import { createRestaurant, updateRestaurant, uploadLogoFileViaApi, uploadCarouselImageViaApi } from '../lib/db'
 import { processImageFile, isAcceptedImageType } from '../lib/processImage'
+import Sidebar from '../components/Sidebar'
+import AdminHeader from '../components/AdminHeader'
+import { readRestaurantDraft, persistRestaurantDraft, clearRestaurantDraft } from './restaurantDraft'
 
 export default function CreateWebsite() {
   const navigate = useNavigate()
 
-  const [form, setForm] = useState({
+  const initialForm = {
     restaurantName: '',
     phoneNumber: '',
     gstDetails: '',
@@ -36,7 +38,8 @@ export default function CreateWebsite() {
       SCALE:      { totalTables: 0, ownerPanelUsers: 0, managerPanelUsers: 0, employeeSectionUsers: 0 },
       CUSTOMISED: { totalTables: 0, ownerPanelUsers: 0, managerPanelUsers: 0, employeeSectionUsers: 0 },
     },
-  })
+  }
+  const [form, setForm] = useState(() => readRestaurantDraft(initialForm))
 
   const [linkName, setLinkName] = useState('')
   const [linkNameManual, setLinkNameManual] = useState(false)
@@ -48,6 +51,7 @@ export default function CreateWebsite() {
   const [createdSlug, setCreatedSlug] = useState('')
   const [createdUid, setCreatedUid] = useState('')
   const [submitError, setSubmitError] = useState('')
+  const [planError, setPlanError] = useState('')
   const [logoDragging, setLogoDragging] = useState(false)
   const [imgDragging, setImgDragging] = useState(false)
   const [logoSizeError, setLogoSizeError] = useState('')
@@ -56,6 +60,21 @@ export default function CreateWebsite() {
   const logoInputRef = useRef()
   const imgInputRef = useRef()
   const linkDebounceRef = useRef(null)
+
+  useEffect(() => { persistRestaurantDraft(form) }, [form])
+
+  const savePlatformPlan = async (restaurantId, patch) => {
+    const response = await fetch('/api/restaurants?action=platformUpdate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ restaurantId, patch }),
+    })
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({}))
+      throw new Error(body.error || `Platform update failed (${response.status})`)
+    }
+    return response.json()
+  }
 
   const slugify = (str) =>
     str.toLowerCase().trim().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '').replace(/-+/g, '-').replace(/^-|-$/g, '')
@@ -115,6 +134,7 @@ export default function CreateWebsite() {
     if (!validate()) return
     setSubmitting(true)
     setSubmitError('')
+    setPlanError('')
     try {
       const tableNumbers = form.tableNumbers.length === 0 ? ['1'] : form.tableNumbers
 
@@ -153,11 +173,21 @@ export default function CreateWebsite() {
       if (!created) throw new Error('Restaurant was not created')
       slug = created.slug || slug
 
+      try {
+        await savePlatformPlan(created.id, {
+          plan: form.selectedPlan,
+          plan_limits: form.planLimits?.[form.selectedPlan] || {},
+        })
+      } catch (planErr) {
+        setPlanError(`Restaurant created, but the ${form.selectedPlan} plan could not be saved. ${planErr.message || 'Please update it from the platform controls.'}`)
+      }
+
       // The database commit is the actual website creation. Do not keep the
       // primary action spinning while optional image storage is attempted.
       setCreatedSlug(slug)
       setCreatedUid(created.uid || '')
       setSuccess(true)
+      clearRestaurantDraft()
 
       // ── Step 2: Upload images to Storage (optional) ─────────────
       // If storage is unavailable, the restaurant remains successfully created.
@@ -232,6 +262,26 @@ export default function CreateWebsite() {
           <div style={{ fontSize: '14px', color: '#555', marginBottom: '28px', lineHeight: 1.6 }}>
             Your restaurant website is live. The details you filled in are now connected to your customer page.
           </div>
+
+          {planError && (
+            <div
+              role="alert"
+              style={{
+                textAlign: 'left',
+                background: 'rgba(245,158,11,0.1)',
+                border: '1px solid rgba(245,158,11,0.3)',
+                borderRadius: '10px',
+                padding: '12px 14px',
+                marginBottom: '16px',
+                color: '#fbbf24',
+                fontSize: '12px',
+                lineHeight: 1.5,
+              }}
+            >
+              <strong style={{ display: 'block', marginBottom: '3px' }}>Plan selection needs attention</strong>
+              {planError}
+            </div>
+          )}
 
           {/* UID */}
           {createdUid && (
@@ -361,7 +411,11 @@ export default function CreateWebsite() {
         }
       `}</style>
 
-      <div style={{ animation: 'fadeScale 0.35s ease' }}>
+      <div style={{ minHeight: '100vh', display: 'flex', background: '#0B0B0B', animation: 'fadeScale 0.35s ease' }}>
+        <Sidebar />
+        <main style={{ flex: 1, minWidth: 0 }}>
+          <AdminHeader title="Restaurant Operations" subtitle="Create Restaurant" />
+          <div style={{ paddingTop: '8px' }}>
         <FormHeader />
 
         <div style={{
@@ -397,7 +451,7 @@ export default function CreateWebsite() {
 
           <AdditionalSection form={form} set={set} />
 
-          {/* Plan Selection */}
+           {/* Subscription is intentionally a separate operational step. */}
           <div style={{
             marginBottom: '28px',
             background: 'rgba(255,255,255,0.02)',
@@ -416,12 +470,14 @@ export default function CreateWebsite() {
                 You can upgrade or change your plan at any time.
               </div>
             </div>
-            <PlanSelector
-              selected={form.selectedPlan}
-              onChange={val => set('selectedPlan', val)}
-              limits={form.planLimits}
-              onLimitsChange={val => set('planLimits', val)}
-            />
+             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap' }}>
+               <div style={{ fontSize: '13px', color: '#bbb' }}>
+                 Current selection: <strong style={{ color: '#FF3B30' }}>{form.selectedPlan}</strong>
+               </div>
+               <button type="button" data-testid="open-subscription" onClick={() => navigate('/subscription')} style={{ padding: '11px 16px', background: '#FF3B30', border: 0, borderRadius: '10px', color: '#fff', fontWeight: 800, cursor: 'pointer' }}>
+                 Review subscription
+               </button>
+             </div>
           </div>
         </div>
 
@@ -449,7 +505,14 @@ export default function CreateWebsite() {
             </div>
           </div>
         )}
+         {planError && (
+           <div style={{ maxWidth: '1120px', margin: '0 auto 24px', padding: '0 40px' }}>
+             <div role="alert" style={{ padding: '14px 18px', borderRadius: '14px', background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)', color: '#fbbf24', fontSize: '12px' }}>{planError}</div>
+           </div>
+         )}
         <FooterCTA onGenerate={handleGenerate} submitting={submitting} linkStatus={linkStatus} />
+          </div>
+        </main>
       </div>
     </div>
   )
@@ -903,6 +966,7 @@ function FooterCTA({ onGenerate, submitting, linkStatus }) {
       zIndex: 50,
     }}>
       <button
+        data-testid="create-restaurant-submit"
         onClick={onGenerate}
         disabled={blocked}
         onMouseEnter={() => setHovered(true)}

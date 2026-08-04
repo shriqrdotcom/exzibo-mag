@@ -179,7 +179,7 @@ export default function Landing() {
           <CTAButton onClick={() => navigate('/restaurants')} icon={<Store size={15} />}>
             MY RESTAURANTS
           </CTAButton>
-          <CTAButton onClick={() => navigate('/create-website')} icon={<Wrench size={15} />} dashed>
+          <CTAButton onClick={() => navigate('/create-restaurant')} icon={<Wrench size={15} />} dashed>
             CREATE YOUR WEBSITE
           </CTAButton>
           <CTAButton onClick={() => setShowThemes(true)} icon={<Palette size={15} />} dashed>

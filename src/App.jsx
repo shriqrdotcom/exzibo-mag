@@ -31,6 +31,7 @@ const Auth                 = lazy(() => import('./pages/Auth'))
 const Dashboard            = lazy(() => import('./pages/Dashboard'))
 const Settings             = lazy(() => import('./pages/Settings'))
 const CreateWebsite        = lazy(() => import('./pages/CreateWebsite'))
+const Subscription         = lazy(() => import('./pages/Subscription'))
 const Restaurants          = lazy(() => import('./pages/Restaurants'))
 const AdminDashboard       = lazy(() => import('./pages/AdminDashboard'))
 const RestaurantDashboard  = lazy(() => import('./pages/RestaurantDashboard'))
@@ -215,7 +216,9 @@ function SlugAdminRoute({ section }) {
 //   /deleted-restaurants      → Deleted restaurants (sidebar)
 //   /information              → Information page (sidebar)
 //   /restaurants              → Restaurants list
-//   /create-website           → Website builder
+//   /create-restaurant        → Restaurant creation
+//   /subscription             → Subscription plan selection
+//   /create-website           → Compatibility redirect to /create-restaurant
 //   /profile                  → Profile page
 //   /edit-profile             → Edit profile
 //   /restaurant/:slug         → Public restaurant website (preview only)
@@ -281,8 +284,12 @@ function SuperAdminApp() {
         {/* Other linked pages */}
         <Route path="/restaurants"
           element={<SuperAdminRoute><Restaurants /></SuperAdminRoute>} />
-        <Route path="/create-website"
+        <Route path="/create-restaurant"
           element={<SuperAdminRoute><CreateWebsite /></SuperAdminRoute>} />
+        <Route path="/subscription"
+          element={<SuperAdminRoute><Subscription /></SuperAdminRoute>} />
+        <Route path="/create-website"
+          element={<Navigate to="/create-restaurant" replace />} />
         <Route path="/profile"
           element={<SuperAdminRoute><ProfilePage /></SuperAdminRoute>} />
         <Route path="/edit-profile"
@@ -499,7 +506,9 @@ function DefaultApp() {
       <Route path="/team-members"            element={<ProtectedRoute><TeamMembersAdmin /></ProtectedRoute>} />
       <Route path="/app-members"             element={<ProtectedRoute><AppMembers /></ProtectedRoute>} />
       <Route path="/settings"               element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-      <Route path="/create-website"          element={<ProtectedRoute><CreateWebsite /></ProtectedRoute>} />
+      <Route path="/create-restaurant"       element={<ProtectedRoute><CreateWebsite /></ProtectedRoute>} />
+      <Route path="/subscription"            element={<ProtectedRoute><Subscription /></ProtectedRoute>} />
+      <Route path="/create-website"          element={<Navigate to="/create-restaurant" replace />} />
       <Route path="/restaurants"             element={<ProtectedRoute><Restaurants /></ProtectedRoute>} />
       <Route path="/edit-profile"            element={<ProtectedRoute><EditProfile /></ProtectedRoute>} />
       <Route path="/notifications"           element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />

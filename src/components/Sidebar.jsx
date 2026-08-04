@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom'
-import { LayoutDashboard, Settings, Zap, Users, UserRound, Table2, ShieldCheck, Bell, Info, Trash2, Play, ImageDown, Route, ShieldPlus, Clock, Radio } from 'lucide-react'
+import { LayoutDashboard, Settings, Zap, Users, UserRound, Table2, ShieldCheck, Bell, Info, Trash2, Play, ImageDown, Route, ShieldPlus, Clock, Radio, Store, CreditCard } from 'lucide-react'
 import PermissionGate from './PermissionGate'
 
 const navItems = [
   { icon: LayoutDashboard, label: 'Dashboard',      path: '/dashboard',       permission: 'dashboard' },
+  { icon: Store,          label: 'Create Restaurant', path: '/create-restaurant', permission: 'subscription' },
+  { icon: CreditCard,     label: 'Subscription',    path: '/subscription',    permission: 'subscription' },
   { icon: Radio,           label: 'Live Order',     path: '/live-order',      permission: 'dashboard' },
   { icon: Users,           label: 'Team Members',   path: '/team-members',    permission: 'teamManagement' },
   { icon: UserRound,       label: 'App members',    path: '/app-members',     permission: 'teamManagement' },

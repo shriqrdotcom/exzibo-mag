@@ -73,6 +73,7 @@ export default function PlanSelector({
       }}>
         <button
           type="button"
+          data-testid="edit-plan-limits"
           onClick={() => setEditOpen(true)}
           style={{
             display: 'inline-flex', alignItems: 'center', gap: '6px',
@@ -115,7 +116,17 @@ export default function PlanSelector({
           return (
             <div
               key={plan.key}
+              role="button"
+              tabIndex={0}
+              aria-pressed={isSelected}
+              data-testid={`plan-${plan.key.toLowerCase()}`}
               onClick={() => onChange && onChange(plan.key)}
+              onKeyDown={e => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  onChange && onChange(plan.key)
+                }
+              }}
               style={{
                 position: 'relative',
                 background: isSelected ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.02)',
