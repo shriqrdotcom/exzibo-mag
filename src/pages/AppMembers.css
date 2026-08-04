@@ -166,6 +166,16 @@
   color: #5e5e5e;
 }
 
+.am-toolbar-action {
+  flex: 0 0 auto;
+  min-width: 112px;
+}
+
+.am-toolbar-action:disabled {
+  cursor: not-allowed;
+  opacity: .35;
+}
+
 .am-sort-wrap {
   display: flex;
   align-items: center;
@@ -924,6 +934,11 @@
   .am-toolbar {
     display: block;
     padding: 12px;
+  }
+
+  .am-toolbar-action {
+    width: 100%;
+    margin-top: 10px;
   }
 
   .am-sort-wrap {
