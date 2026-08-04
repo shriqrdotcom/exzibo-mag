@@ -26,7 +26,9 @@ authentication bypass.
 
 ## Verification evidence
 
-- Fresh dependency scan: **2 high, 0 critical** advisories.
+- Fresh dependency scan after remediation: **0 high, 0 critical** advisories.
+  The two previously reported advisories are resolved: `postcss` is now
+  8.5.18 and the worker's transitive `undici` is now 7.29.0.
 - Fresh SAST scan: **3 critical-severity scanner findings** on parameterized
   `pool.query` calls in `src/services/outboxClaimService.js` (acknowledge,
   ownership read, and retry update). Source review confirms these are prepared
@@ -68,6 +70,11 @@ authentication bypass.
 - **Focused verification:** the claim/lease, consumer lifecycle, and realtime
   outbox suites pass when run one file at a time, as required by the repository
   database-test isolation contract.
+- **Dependency remediation:** completed. `postcss` was upgraded directly from
+  8.5.16 to 8.5.18 in the root pnpm manifest and lockfile. The worker's
+  `wrangler@4.110.0 → miniflare@4.20260708.1 → undici@7.28.0` edge was
+  retained and patched with a scoped npm override to `undici@7.29.0`; no
+  unrelated Wrangler refresh was performed.
 
 ## Prioritized debugging and remediation list
 
@@ -160,20 +167,29 @@ or an approved security review records the false-positive exception.
 
 **Owner:** backend/security.
 
-#### 5. Upgrade vulnerable dependencies and rerun the complete inventory
+#### 5. Upgrade vulnerable dependencies and rerun the complete inventory —
+completed in follow-up
 
 **Findings:**
 
-- `undici` 7.28.0 is reported high severity through the
-  `exzibo-realtime/package-lock.json` dependency tree; the scanner recommends
+- `undici` 7.28.0 was reported high severity through the
+  `exzibo-realtime/package-lock.json` dependency tree; the scanner recommended
   7.29.0 or newer compatible.
-- `postcss` 8.5.16 is reported high severity in `pnpm-lock.yaml`; the scanner
-  recommends 8.5.18 or newer compatible.
+- `postcss` 8.5.16 was reported high severity in `pnpm-lock.yaml`; the scanner
+  recommended 8.5.18 or newer compatible.
 
-**Required action:** upgrade the direct parent or affected package using the
-approved package manager, inspect lockfile changes, run worker checks, the
-production build, the full test inventory, and a fresh dependency scan. Do not
-work around the package firewall or silently ignore the advisories.
+**Resolution:** `postcss` was upgraded directly to 8.5.18. The available
+Wrangler releases inspected still pinned Miniflare versions whose manifests
+declared `undici@7.28.0`, so a narrow `miniflare`-scoped npm override installs
+`undici@7.29.0` without a broad framework refresh. The post-remediation
+dependency scan reports 0 HIGH and 0 CRITICAL advisories.
+
+The production build, worker TypeScript check, Wrangler dry-run, serverless
+governance, migration-ledger validation, release tests, and focused realtime
+regressions were run. The complete inventory still encounters the repository's
+known Neon migration test limitation: its zero-to-head test requests the
+unsupported `search_path` startup parameter, which is unrelated to these
+dependency changes.
 
 **Owner:** dependencies/build.
 
