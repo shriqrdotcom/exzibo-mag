@@ -11,6 +11,12 @@ When Vercel returns `FUNCTION_INVOCATION_FAILED` for multiple auth-backed API ro
 
 **How to apply:** Compare the affected route with another auth-backed Vercel route, inspect Vercel production runtime logs and environment-variable presence by name only, and avoid converting initialization/database failures into 401 responses. For the preview-origin error, the repository consumes only `BETTER_AUTH_BASE_URL`, `BETTER_AUTH_URL`, `BETTER_AUTH_TRUSTED_ORIGINS`, and `MOBILE_APP_TRUSTED_ORIGINS`; it does not derive auth origins from `VERCEL_URL`, `VERCEL_BRANCH_URL`, `VERCEL_PROJECT_PRODUCTION_URL`, or Replit variables. Only create a code fix after the logs identify a code defect.
 
+An external Vercel deployment can remain reachable while serving an older static frontend bundle than the source currently under review. A successful local build, route check, or unauthenticated API response does not establish frontend/backend version parity.
+
+**Why:** During a production audit, `/app-members` returned a valid Vercel page and protected APIs correctly returned `401`, but the deployed entry and lazy App Members chunks lacked distinctive strings from the current information-table and UID lookup implementation.
+
+**How to apply:** Fetch the production HTML and every referenced JavaScript chunk, compare distinctive feature strings or release markers with the reviewed build, and test authenticated APIs separately. Treat missing current UI strings as a deployment mismatch, not as evidence that the code path is broken.
+
 The Replit Vite workflow is not a complete Better Auth runtime: it registers selected API handlers but intentionally does not mount `/api/auth/*`. Auth-route probes against that workflow can therefore return SPA HTML or a route-level 404. Probe the Vercel adapter with the `_path` rewrite shape (or use the Express runtime) before classifying an auth failure.
 
 **Why:** A misleading local 200/404 can hide whether Better Auth itself ran; the direct adapter probe is the boundary that exercises the same `toNodeHandler(auth)` path used by Vercel.
