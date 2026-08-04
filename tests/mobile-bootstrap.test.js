@@ -224,7 +224,7 @@ describe('C — authenticated data contract (BLOCKED in dev)', () => {
 
   it('response matches the documented contract shape', () => {
     blockedMsg(
-      'response has { apiVersion, user: { id, name, email, image }, ' +
+      'response has { apiVersion, user: { name, email, image }, ' +
       'restaurants: [{ uid, name, slug, logoUrl, role, permissions }] }'
     )
   })

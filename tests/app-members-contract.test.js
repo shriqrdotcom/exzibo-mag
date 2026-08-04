@@ -54,6 +54,11 @@ describe('App Members authorization and role contract', () => {
     assert.match(mobile, /No active mobile membership found/)
     assert.doesNotMatch(mobile, /manager:\s+Object\.freeze/)
   })
+
+  it('does not expose the internal Better Auth user id in the mobile DTO', () => {
+    assert.doesNotMatch(mobile, /id:\s*user\.id/)
+    assert.doesNotMatch(mobile, /user:\s*\{[\s\S]*?\bid:\s*/)
+  })
 })
 
 describe('App Members UI contract', () => {

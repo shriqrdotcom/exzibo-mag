@@ -313,3 +313,10 @@ export const auth = betterAuth({
     },
   },
 })
+
+// Test/release harness cleanup for the module-level Better Auth pool.
+// Production runtimes do not call this; serverless instances own the pool
+// for their process lifetime.
+export async function closeAuthPool() {
+  await pool.end()
+}

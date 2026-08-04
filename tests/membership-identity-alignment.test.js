@@ -220,10 +220,13 @@ describe('A5 — mobile bootstrap source already uses the unified identity rule'
     )
   })
 
-  it('bootstrap query uses user_id IS NULL email fallback', () => {
+  it('claims verified pending rows before using linked-user bootstrap query', () => {
     assert.ok(
-      src.includes('user_id IS NULL') && src.includes('lower(trim(rm.email))'),
-      'mobile bootstrap must include email fallback when user_id IS NULL'
+      src.includes('claimPendingAppMemberships') &&
+      src.includes('emailVerified') &&
+      src.includes('user_id IS NOT NULL') &&
+      src.includes('user_id = $1'),
+      'mobile bootstrap must claim verified pending rows, then query only by linked user_id'
     )
   })
 })

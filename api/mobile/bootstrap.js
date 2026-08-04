@@ -13,7 +13,7 @@
  *  - Cache-Control: no-store on every response.
  *
  * Responses:
- *  200  { apiVersion, user, restaurants }
+ *  200  { apiVersion, user: { name, email, image }, restaurants }
  *  401  { error }   — missing or invalid session
  *  405  { error }   — unsupported HTTP method
  *  403  { error }   — authenticated user has no active mobile membership
@@ -52,6 +52,13 @@ let _pool = null
 function getPool() {
   if (!_pool) _pool = new Pool({ connectionString: process.env.DATABASE_URL, max: 2 })
   return _pool
+}
+
+export async function closeMobileBootstrapPool() {
+  if (!_pool) return
+  const pool = _pool
+  _pool = null
+  await pool.end()
 }
 
 function sendMobileError(res, { status, code, message, requestId }) {
@@ -169,7 +176,6 @@ export default vercelWrapper(async function handler(req, res) {
   return res.status(200).json({
     apiVersion: 'v1',
     user: {
-      id:    user.id,
       name:  user.name  ?? null,
       email: user.email,
       image: user.image ?? null,

@@ -92,6 +92,13 @@ function getPool() {
   return _pool
 }
 
+export async function closeAuthzPool() {
+  if (!_pool) return
+  const pool = _pool
+  _pool = null
+  await pool.end()
+}
+
 // ── SUPERADMIN_ALLOWED_EMAILS parser ─────────────────────────────────────────
 // Tolerates: surrounding quotes, newlines, semicolons, zero-width chars, commas.
 function getSuperadminEmailSet() {
