@@ -18,6 +18,7 @@ const MAX_LEASE_SEC = 300           // 5-minute maximum
 const MAX_BATCH_SIZE = 100
 const MAX_BACKOFF_CAP_SEC = 60      // same cap as original computeNextAttempt
 const MAX_ERROR_LENGTH = 500
+const PERMANENT_RETRY_AT = '2099-12-31T23:59:59.000Z'
 
 // ── Parameter validation ──────────────────────────────────────────────────────
 
@@ -70,6 +71,12 @@ function computeBackoff(attemptCount) {
   return new Date(Date.now() + delaySec * 1000)
 }
 
+function computeRetryTime(attemptCount) {
+  return attemptCount >= MAX_ATTEMPTS
+    ? new Date(PERMANENT_RETRY_AT)
+    : computeBackoff(attemptCount)
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // claimRealtimeOutboxBatch
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -103,21 +110,21 @@ export async function claimRealtimeOutboxBatch(pool, {
       `UPDATE realtime_outbox
        SET claimed_by = $1,
            claim_token = $2::uuid,
-           lease_until = now() + ($3 || ' seconds')::interval
+           lease_until = now() + make_interval(secs => $3::int)
        WHERE id IN (
          SELECT id
          FROM realtime_outbox
          WHERE published_at IS NULL
            AND next_attempt_time <= now()
-           AND attempt_count < ${MAX_ATTEMPTS}
+           AND attempt_count < $4::int
            AND (claimed_by IS NULL OR lease_until < now())
          ORDER BY next_attempt_time ASC
-         LIMIT ${batchSize}
+         LIMIT $5::int
          FOR UPDATE SKIP LOCKED
        )
        RETURNING id, restaurant_id, order_id, event_type, payload,
                  attempt_count, last_error, claimed_by, claim_token, lease_until`,
-      [workerId, claimToken, String(leaseDurationSec)]
+      [workerId, claimToken, leaseDurationSec, MAX_ATTEMPTS, batchSize]
     )
 
     await client.query('COMMIT')
@@ -194,8 +201,26 @@ export async function rescheduleRealtimeEvent(pool, {
 
   const sanitized = sanitizeError(error)
 
-  // Compute backoff based on the new attempt count
-  // We read the current attempt_count inside the subquery to get the real value
+  // Read the current attempt count only while we still own the claim. The
+  // retry time is calculated in application code, then the mutation below
+  // performs one ownership-checked update. If another worker reclaims the row
+  // between these statements, the update affects zero rows and returns false.
+  const current = await pool.query(
+    `SELECT attempt_count
+     FROM realtime_outbox
+     WHERE id = $1::uuid
+       AND claimed_by = $2
+       AND claim_token = $3::uuid
+       AND published_at IS NULL`,
+    [rowId, workerId, claimToken]
+  )
+  if (current.rowCount === 0) return false
+
+  const nextAttempt = computeRetryTime(current.rows[0].attempt_count + 1)
+
+  // Keep attempt increment, retry time, error, and lease cleanup in one
+  // compare-and-set update. A reclaimed row cannot be modified by the stale
+  // worker that originally claimed it.
   const result = await pool.query(
     `UPDATE realtime_outbox
      SET attempt_count = attempt_count + 1,
@@ -208,27 +233,11 @@ export async function rescheduleRealtimeEvent(pool, {
        AND claimed_by = $2
        AND claim_token = $3::uuid
        AND published_at IS NULL
-     RETURNING attempt_count`,
-    [rowId, workerId, claimToken, new Date(0).toISOString(), sanitized]
+      RETURNING attempt_count`,
+    [rowId, workerId, claimToken, nextAttempt.toISOString(), sanitized]
   )
 
-  if (result.rowCount === 0) return false
-
-  // Compute the real backoff from the updated attempt count
-  const newAttemptCount = result.rows[0].attempt_count
-  const nextAttempt = newAttemptCount >= MAX_ATTEMPTS
-    ? new Date('2099-12-31T23:59:59Z')
-    : computeBackoff(newAttemptCount)
-
-  // Set the correct next_attempt_time
-  await pool.query(
-    `UPDATE realtime_outbox
-     SET next_attempt_time = $2::timestamptz
-     WHERE id = $1::uuid`,
-    [rowId, nextAttempt.toISOString()]
-  )
-
-  return true
+  return result.rowCount === 1
 }
 
 // ── getWorkerId ───────────────────────────────────────────────────────────────

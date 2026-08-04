@@ -596,7 +596,53 @@ describe('4 — Failure rescheduling', () => {
     await pool.query('DELETE FROM realtime_outbox WHERE id = $1', [row.id])
   })
 
-  it('4.24 error storage is sanitized and bounded', async () => {
+  it('4.24 stale worker cannot overwrite a reclaimed row retry state', async () => {
+    const row = await insertOutboxEvent({ attemptCount: 3 })
+    const staleWorker = `fail-stale-${Date.now()}`
+    const reclaimedWorker = `fail-reclaimed-${Date.now()}`
+    const claimed = await claimRealtimeOutboxBatch(pool, {
+      workerId: staleWorker,
+      batchSize: 10,
+    })
+    assert.equal(claimed.length, 1)
+
+    const reclaimedToken = crypto.randomUUID()
+    await pool.query(
+      `UPDATE realtime_outbox
+       SET claimed_by = $1,
+           claim_token = $2::uuid,
+           lease_until = now() + interval '60 seconds',
+           attempt_count = 7,
+           next_attempt_time = now() + interval '45 seconds',
+           last_error = 'reclaimed worker state'
+       WHERE id = $3::uuid`,
+      [reclaimedWorker, reclaimedToken, row.id]
+    )
+
+    const rescheduled = await rescheduleRealtimeEvent(pool, {
+      rowId: row.id,
+      workerId: staleWorker,
+      claimToken: claimed[0].claim_token,
+      error: 'stale worker must not win',
+    })
+    assert.equal(rescheduled, false)
+
+    const check = await pool.query(
+      `SELECT claimed_by, claim_token, attempt_count, next_attempt_time, last_error
+       FROM realtime_outbox
+       WHERE id = $1::uuid`,
+      [row.id]
+    )
+    assert.equal(check.rows[0].claimed_by, reclaimedWorker)
+    assert.equal(check.rows[0].claim_token, reclaimedToken)
+    assert.equal(check.rows[0].attempt_count, 7)
+    assert.equal(check.rows[0].last_error, 'reclaimed worker state')
+    assert.ok(new Date(check.rows[0].next_attempt_time) > new Date())
+
+    await pool.query('DELETE FROM realtime_outbox WHERE id = $1', [row.id])
+  })
+
+  it('4.25 error storage is sanitized and bounded', async () => {
     const row = await insertOutboxEvent()
     const workerId = `fail-sanitize-${Date.now()}`
     const claimed = await claimRealtimeOutboxBatch(pool, { workerId, batchSize: 10 })

@@ -1,10 +1,10 @@
 # Exzibo Production-Readiness Audit
 
 **Audit date:** 2026-08-04  
-**Scope:** read-only source, configuration, test, dependency, static-analysis,
-privacy, and deployment-topology review of the SaaS.  
-**Change policy:** no runtime, schema, dependency, workflow, or environment
-changes were made as part of this audit.
+**Scope:** source, configuration, test, dependency, static-analysis, privacy,
+and deployment-topology review of the SaaS. The original audit snapshot was
+read-only; the follow-up remediation status below records the narrowly scoped
+outbox reliability changes made afterward.
 
 ## Executive assessment
 
@@ -14,7 +14,7 @@ changes were made as part of this audit.
 |---|---:|---|
 | Authentication, authorization, and tenant isolation | 8.5/10 | Strong server-side model with reviewed invariants, role checks, resource-tenant resolution, and regression coverage. |
 | Security architecture | 8/10 | Good fail-closed controls, DTO boundaries, media validation, audit signals, and runtime parity; a few scanner and policy ambiguities remain. |
-| Reliability and operations | 5.5/10 | Realtime consumer deployment and an outbox rescheduling race are material production risks. |
+| Reliability and operations | 6/10 | Lease-safe retry handling is fixed and documented; actual external consumer deployment remains unproven. |
 | Release/test hygiene | 6.5/10 | Focused checks are strong, but the default full test command is not green in the current environment because required OAuth build variables are absent. |
 | **Overall structure** | **7/10** | **A solid security-conscious foundation, but not ready for an unconditional production sign-off until the P0/P1 items below are closed and verified in the real deployment topology.** |
 
@@ -27,12 +27,12 @@ authentication bypass.
 ## Verification evidence
 
 - Fresh dependency scan: **2 high, 0 critical** advisories.
-- Fresh SAST scan: **3 critical-severity scanner findings**, all at internal
-  SQL-template interpolations in `src/services/outboxClaimService.js`.
-  Source review indicates the interpolated values are bounded internal
-  constants, so this is currently a scanner-ambiguity finding rather than a
-  confirmed remotely exploitable SQL injection. It still needs refactoring or
-  an explicit regression proof.
+- Fresh SAST scan: **3 critical-severity scanner findings** on parameterized
+  `pool.query` calls in `src/services/outboxClaimService.js` (acknowledge,
+  ownership read, and retry update). Source review confirms these are prepared
+  statements with all runtime values passed separately; no SQL interpolation
+  remains in the claim/reschedule path. The scanner still reports these as
+  false positives, so the security gate is not scanner-clean.
 - Fresh privacy scan: **2 medium** local-storage findings and **4 low** log
   findings involving email/phone values.
 - Full `npm test`: **39 passed, 1 failed**. The failed subtest is the
@@ -48,6 +48,26 @@ authentication bypass.
   is **not confirmed**: the shared service requires restaurant membership,
   generates keys server-side, and replacement cleanup only deletes a
   database-returned key with the expected restaurant prefix.
+
+## Follow-up remediation status
+
+- **Outbox retry ownership race:** fixed. Retry time calculation now happens in
+  application code and attempt increment, retry scheduling, error storage, and
+  lease cleanup happen in one ownership-checked update. A regression test proves
+  a stale worker cannot overwrite a reclaimed row.
+- **Outbox SQL construction:** code remediation is complete in the
+  claim/reschedule service. Bounded batch, attempt, lease, retry timestamp, and
+  error values are passed as query parameters; no internal numeric values are
+  interpolated into SQL syntax. The fresh SAST scan still flags the
+  parameterized calls themselves, so this remains a scanner-gate follow-up
+  rather than a claim that the scan is clean.
+- **Consumer deployment topology:** still unproven from this repository. The
+  exact required external deployment contract is now documented in
+  `docs/OUTBOX_CONSUMER_DEPLOYMENT.md`; no Vercel cron or production process
+  configuration was added.
+- **Focused verification:** the claim/lease, consumer lifecycle, and realtime
+  outbox suites pass when run one file at a time, as required by the repository
+  database-test isolation contract.
 
 ## Prioritized debugging and remediation list
 
@@ -104,41 +124,39 @@ negative test proving missing production OAuth configuration still fails.
 
 ### P1 — close before broad production use
 
-#### 3. Eliminate the outbox rescheduling race
+#### 3. Eliminate the outbox rescheduling race — completed in follow-up
 
-**Finding:** `rescheduleRealtimeEvent()` first clears the claim and sets a
-`next_attempt_time` placeholder, then performs a second update by row ID to set
-the calculated backoff. A different worker can reclaim the row between those
-updates because the second update does not re-check `workerId` and
-`claimToken`.
+**Finding:** The original implementation first cleared the claim and then
+performed a second update by row ID, allowing a reclaimed worker's retry time
+to be overwritten by a stale worker.
 
 **Impact:** a reclaimed row can have its retry time overwritten by the stale
 worker. This can cause premature retries, delayed delivery, duplicate
 publication attempts, or interference between workers.
 
-**Required action:** compute the backoff in application code and perform one
+**Resolution:** compute the backoff in application code and perform one
 compare-and-set update that writes `attempt_count`, `next_attempt_time`,
-`last_error`, and claim cleanup atomically. Add a concurrent-worker regression
-test that proves a stale worker cannot modify a reclaimed row.
+`last_error`, and claim cleanup atomically. A concurrent-worker regression test
+proves that a stale worker cannot modify a reclaimed row.
 
 **Owner:** backend/realtime.
 
-#### 4. Remove SAST ambiguity from outbox SQL construction
+#### 4. Parameterize outbox SQL values — code complete; scanner follow-up remains
 
-**Finding:** `MAX_ATTEMPTS` and `batchSize` are interpolated into SQL syntax in
-the claim query, and the second retry-time update is separately constructed.
-The values are currently internal and validated, so no client-controlled
-injection path was established, but the scanner reports three critical
-findings.
+**Finding:** The original claim query interpolated bounded internal values and
+the retry-time update was separately constructed. The code no longer does so,
+but the current SAST scanner still reports three critical findings on ordinary
+parameterized `pool.query` calls in the acknowledgement and reschedule paths.
 
-**Impact:** future refactoring could accidentally make a syntax fragment
-user-controlled; the current scan also obscures real findings and blocks
-security-gate confidence.
+**Impact:** no remotely exploitable SQL injection was established in source
+review. The scanner findings still obscure the security-gate result and need a
+scanner-aware resolution or documented exception based on source review.
 
-**Required action:** parameterize values where PostgreSQL permits it, use a
-small explicit internal SQL-fragment helper where it does not, and add
-regression tests that reject non-integer/non-bounded values. Prefer doing this
-alongside the single-update race fix.
+**Resolution:** all bounded values in the claim query are parameters, and the
+retry update uses an application-calculated timestamp with parameters. Existing
+input validation and claim tests remain in place. Keep the scanner finding open
+until the scanner is upgraded/configured to recognize these prepared statements
+or an approved security review records the false-positive exception.
 
 **Owner:** backend/security.
 
@@ -320,7 +338,8 @@ push-style schema mutation.
 1. Prove the durable production outbox consumer and monitoring.
 2. Make the clean build/test contract pass without weakening production
    environment validation.
-3. Fix the outbox single-update compare-and-set race and SQL scanner findings.
+3. Verify the externally deployed outbox consumer, keep the fixed single-update
+   compare-and-set path, and resolve the remaining SAST gate interpretation.
 4. Upgrade `undici` and `postcss`; rerun all tests and scans.
 5. Normalize body limits and add cross-runtime oversized-body tests.
 6. Remove/minimize PII in browser storage and logs.

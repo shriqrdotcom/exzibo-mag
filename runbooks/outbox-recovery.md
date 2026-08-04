@@ -1,6 +1,20 @@
 # Realtime Outbox Failure Recovery Runbook
 
-**Purpose:** Diagnose and recover from realtime outback processing failures.
+**Purpose:** Diagnose and recover from realtime outbox processing failures.
+
+## Production consumer prerequisite
+
+Vercel functions are ephemeral and do not run the background processor. Before
+declaring realtime delivery healthy, verify that a separately managed,
+long-lived process is running:
+
+```sh
+node scripts/runRealtimeOutboxConsumer.js
+```
+
+The exact deployment contract, required environment, health endpoints, and
+monitoring requirements are in `docs/OUTBOX_CONSUMER_DEPLOYMENT.md`. This
+repository does not silently add a Vercel cron or deploy that process.
 
 ## Symptoms
 
@@ -50,11 +64,19 @@ Look for patterns in server logs:
 
 ### Scenario B: Worker is Healthy but Events Are Stuck
 
-1. Check if the outbox poller is running:
-   - Look for `[outbox] processor started` in server logs
-   - Check server.js for the `startOutboxProcessor` call
-2. If the processor is not running, restart the server
-3. If the processor is running, check for SQL errors in logs
+1. Check the dedicated consumer, not only the API server:
+   ```sh
+   curl -s http://<consumer-host>:9090/healthz
+   curl -s http://<consumer-host>:9090/readyz
+   ```
+2. Confirm the consumer process is running and its heartbeat is fresh:
+   ```sh
+   ps aux | grep runRealtimeOutboxConsumer
+   node scripts/runRealtimeOutboxConsumer.js --check
+   ```
+3. If the process is not running, restart it through the deployment provider.
+4. If it is running, check for claim, publish, retry, and database errors in
+   consumer logs.
 
 ### Scenario C: Max Attempts Exceeded
 
