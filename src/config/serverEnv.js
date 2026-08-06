@@ -227,10 +227,13 @@ export function validateAuthConfig(env = process.env) {
 }
 
 export function validateGoogleOAuthConfig(env = process.env) {
-  const production = isProductionEnv(env)
+  // GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET are required only in actual deployed
+  // environments. Vite's `npm run build` sets NODE_ENV=production but is not a
+  // runtime, so we check VERCEL_ENV (set by Vercel) only — not NODE_ENV.
+  const deployed = !!env.VERCEL_ENV
   const clientId = env.GOOGLE_CLIENT_ID
   const clientSecret = env.GOOGLE_CLIENT_SECRET
-  if (production) {
+  if (deployed) {
     return {
       googleClientId: requireNonEmpty(clientId, 'GOOGLE_CLIENT_ID'),
       googleClientSecret: requireSecret(clientSecret, 'GOOGLE_CLIENT_SECRET', { minLength: 1 }),
