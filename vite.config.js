@@ -1207,6 +1207,7 @@ function queryApiPlugin() {
     ['/api/system', './api/system.js'],
     ['/api/app-members', './api/system.js'],
     ['/api/team', './api/team.js'],
+    ['/api/mobile/v1/menu', './api/menu-content.js'],
   ])
 
   return {
@@ -1221,6 +1222,10 @@ function queryApiPlugin() {
         // Vercel. Keep the shared handlers on the same contract in dev.
         req.query = Object.fromEntries(requestUrl.searchParams.entries())
         if (requestUrl.pathname === '/api/app-members') req.query.action = 'appMembers'
+        if (requestUrl.pathname === '/api/mobile/v1/menu') {
+          req.query.action = 'mobileMenu'
+          req.query.operation = req.query.operation || req.query.mobileAction
+        }
 
         if (!res.status) {
           res.status = (code) => {
@@ -1429,6 +1434,10 @@ export default defineConfig(({ mode, command }) => {
       host: '0.0.0.0',
       port: 5000,
       allowedHosts: true,
+      // Let the shared API handlers own CORS. Vite's generic preflight
+      // middleware otherwise answers OPTIONS before route-specific allowlists
+      // can emit the trusted-origin header.
+      cors: false,
       fs: {
         deny: ['exzibo-realtime/'], // Worker code uses cloudflare:workers — not for frontend
       },

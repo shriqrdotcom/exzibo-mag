@@ -64,6 +64,44 @@ function sanitizeError(error) {
   return str.slice(0, MAX_ERROR_LENGTH)
 }
 
+function isMissingMenuMetadataColumns(error) {
+  return error?.code === '42703' &&
+    /column "(?:entity_type|entity_id)" does not exist/.test(error.message || '')
+}
+
+async function claimBatchQuery(client, {
+  workerId,
+  claimToken,
+  batchSize,
+  leaseDurationSec,
+  includeMenuMetadata,
+}) {
+  const returnedColumns = includeMenuMetadata
+    ? 'id, restaurant_id, order_id, entity_type, entity_id, event_type, payload,'
+    : 'id, restaurant_id, order_id, event_type, payload,'
+
+  return client.query(
+    `UPDATE realtime_outbox
+     SET claimed_by = $1,
+         claim_token = $2::uuid,
+         lease_until = now() + ($3 || ' seconds')::interval
+     WHERE id IN (
+       SELECT id
+       FROM realtime_outbox
+       WHERE published_at IS NULL
+         AND next_attempt_time <= now()
+         AND attempt_count < ${MAX_ATTEMPTS}
+         AND (claimed_by IS NULL OR lease_until < now())
+       ORDER BY next_attempt_time ASC
+       LIMIT ${batchSize}
+       FOR UPDATE SKIP LOCKED
+     )
+     RETURNING ${returnedColumns}
+               attempt_count, last_error, claimed_by, claim_token, lease_until`,
+    [workerId, claimToken, String(leaseDurationSec)]
+  )
+}
+
 // ── Compute backoff ───────────────────────────────────────────────────────────
 function computeBackoff(attemptCount) {
   const delaySec = Math.min(Math.pow(2, attemptCount), MAX_BACKOFF_CAP_SEC)
@@ -99,30 +137,36 @@ export async function claimRealtimeOutboxBatch(pool, {
   try {
     await client.query('BEGIN')
 
-    const result = await client.query(
-      `UPDATE realtime_outbox
-       SET claimed_by = $1,
-           claim_token = $2::uuid,
-           lease_until = now() + ($3 || ' seconds')::interval
-       WHERE id IN (
-         SELECT id
-         FROM realtime_outbox
-         WHERE published_at IS NULL
-           AND next_attempt_time <= now()
-           AND attempt_count < ${MAX_ATTEMPTS}
-           AND (claimed_by IS NULL OR lease_until < now())
-         ORDER BY next_attempt_time ASC
-         LIMIT ${batchSize}
-         FOR UPDATE SKIP LOCKED
-       )
-       RETURNING id, restaurant_id, order_id, event_type, payload,
-                 attempt_count, last_error, claimed_by, claim_token, lease_until`,
-      [workerId, claimToken, String(leaseDurationSec)]
-    )
+    let result
+    try {
+      result = await claimBatchQuery(client, {
+        workerId,
+        claimToken,
+        batchSize,
+        leaseDurationSec,
+        includeMenuMetadata: true,
+      })
+    } catch (error) {
+      // Migration 0017 adds menu metadata to the legacy order outbox. Keep
+      // order realtime draining available while that additive migration is
+      // awaiting review/application; never synthesize menu metadata here.
+      if (!isMissingMenuMetadataColumns(error)) throw error
+      await client.query('ROLLBACK')
+      await client.query('BEGIN')
+      result = await claimBatchQuery(client, {
+        workerId,
+        claimToken,
+        batchSize,
+        leaseDurationSec,
+        includeMenuMetadata: false,
+      })
+    }
 
     await client.query('COMMIT')
     return result.rows.map(row => ({
       ...row,
+      entity_type: row.entity_type ?? 'order',
+      entity_id: row.entity_id ?? row.order_id ?? null,
       payload: typeof row.payload === 'string' ? JSON.parse(row.payload) : row.payload,
     }))
   } catch (err) {

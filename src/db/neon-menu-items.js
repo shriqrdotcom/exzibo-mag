@@ -1,7 +1,6 @@
 // ── Neon Menu Item Helper Functions ──────────────────────────────────────────
-// Used exclusively by /api/menu/items/* shadow-write routes.
-// Supabase remains the authoritative source of truth.
-// Neon writes are non-blocking mirrors — failures are logged but never thrown.
+// Legacy menu item adapter. The transactional menu service is canonical for
+// mutations; this adapter remains for compatibility with older route callers.
 
 import { neon } from './pg-sql.js'
 import { r2KeyFromUrl } from '../lib/r2.js'
@@ -25,8 +24,7 @@ function toJsonb(val) {
 // Mirror a single menu item create/update to Neon.
 // Uses INSERT ... ON CONFLICT (id) DO UPDATE to match Supabase on_conflict=id semantics.
 // Caller must already have the Supabase-assigned id in `item.id`.
-// Field coercions: price ?? 0, available ?? true, veg ?? true, is_published ?? false,
-//                  image_shape ?? 'vertical'.
+// Field coercions include the additive mobile-menu fields.
 // `image` stores the full public URL (Supabase Storage or Cloudflare R2).
 // `image_key` is derived automatically: non-null only when `image` is an R2 URL.
 export async function upsertNeonMenuItem(restaurantId, item) {
@@ -46,14 +44,21 @@ export async function upsertNeonMenuItem(restaurantId, item) {
     veg,
     tags,
     add_ons:      addOns,
+    variants,
     is_published: isPublished,
     image_shape:  imageShape,
+    position,
+    is_archived:  isArchived,
+    tax_rate:     taxRate,
+    preparation_time_minutes: preparationTimeMinutes,
+    food_type:    foodType,
+    visibility,
     created_at:   createdAt,
   } = item
 
   // Derive R2 object key from the image URL if it is an R2 URL.
   // Returns null for existing Supabase Storage URLs — those keep image_key NULL.
-  const imageKey = r2KeyFromUrl(image ?? null)
+  const imageKey = item.image_key ?? r2KeyFromUrl(image ?? null)
 
   const rows = await sql`
     INSERT INTO menu_items (
@@ -61,8 +66,9 @@ export async function upsertNeonMenuItem(restaurantId, item) {
       name, description, price,
       image, image_key,
       available, veg,
-      tags, add_ons,
-      is_published, image_shape,
+      tags, add_ons, variants,
+      is_published, image_shape, position, is_archived, tax_rate,
+      preparation_time_minutes, food_type, visibility, version,
       created_at
     )
     VALUES (
@@ -78,8 +84,16 @@ export async function upsertNeonMenuItem(restaurantId, item) {
       ${veg ?? true},
       ${toJsonb(tags)}::jsonb,
       ${toJsonb(addOns)}::jsonb,
+      ${toJsonb(variants)}::jsonb,
       ${isPublished ?? false},
       ${imageShape ?? 'vertical'},
+      ${Number.isInteger(Number(position)) ? Number(position) : 0},
+      ${isArchived ?? false},
+      ${taxRate ?? 0},
+      ${preparationTimeMinutes ?? null},
+      ${foodType ?? (item.veg === false ? 'non_veg' : 'veg')},
+      ${visibility ?? 'public'},
+      ${Number.isInteger(Number(item.version)) ? Number(item.version) : 1},
       COALESCE(${createdAt ?? null}::timestamptz, now())
     )
     ON CONFLICT (id) DO UPDATE SET
@@ -93,8 +107,16 @@ export async function upsertNeonMenuItem(restaurantId, item) {
       veg          = EXCLUDED.veg,
       tags         = EXCLUDED.tags,
       add_ons      = EXCLUDED.add_ons,
+      variants     = EXCLUDED.variants,
       is_published = EXCLUDED.is_published,
       image_shape  = EXCLUDED.image_shape,
+      position     = EXCLUDED.position,
+      is_archived  = EXCLUDED.is_archived,
+      tax_rate     = EXCLUDED.tax_rate,
+      preparation_time_minutes = EXCLUDED.preparation_time_minutes,
+      food_type    = EXCLUDED.food_type,
+      visibility   = EXCLUDED.visibility,
+      version      = EXCLUDED.version,
       updated_at   = now()
     RETURNING *
   `
@@ -135,7 +157,7 @@ export async function getNeonMenuItems(restaurantId) {
   const rows = await sql`
     SELECT * FROM menu_items
     WHERE restaurant_id = ${restaurantId}::uuid
-    ORDER BY created_at ASC
+    ORDER BY created_at ASC, id ASC
   `
   return rows
 }
@@ -147,7 +169,7 @@ export async function getNeonPublishedMenuItems(restaurantId) {
     SELECT * FROM menu_items
     WHERE restaurant_id = ${restaurantId}::uuid
       AND is_published = true
-    ORDER BY created_at ASC
+    ORDER BY created_at ASC, id ASC
   `
   return rows
 }

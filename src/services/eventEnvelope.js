@@ -19,6 +19,7 @@
 export const ALLOWED_EVENT_TYPES = new Set([
   'ORDER_CREATED',
   'ORDER_STATUS_CHANGED',
+  'MENU_CHANGED',
 ])
 
 export const SUPPORTED_EVENT_VERSIONS = new Set([1])
@@ -146,6 +147,10 @@ export function buildCanonicalEnvelope({
   orderId,
   status,
   time,
+  entityType,
+  entityId,
+  action,
+  resourceVersion,
 }) {
   // Validate all fields before building
   const validated = {
@@ -153,9 +158,26 @@ export function buildCanonicalEnvelope({
     type: validateEventType(type),
     version: validateEventVersion(version),
     restaurantId: validateRestaurantId(restaurantId),
-    orderId: validateOrderId(orderId),
-    status: validateStatus(status),
     time: validateOccurredAt(time),
+  }
+
+  if (type === 'MENU_CHANGED') {
+    if (!entityType || typeof entityType !== 'string' || entityType.length > 32) {
+      throw new EventValidationError('entityType is required for menu events', 'INVALID_ENTITY_TYPE')
+    }
+    if (!entityId || typeof entityId !== 'string' || entityId.length > 64) {
+      throw new EventValidationError('entityId is required for menu events', 'INVALID_ENTITY_ID')
+    }
+    if (!action || typeof action !== 'string' || action.length > 64) {
+      throw new EventValidationError('action is required for menu events', 'INVALID_ACTION')
+    }
+    validated.entityType = entityType
+    validated.entityId = entityId
+    validated.action = action
+    validated.resourceVersion = Number.isInteger(resourceVersion) ? resourceVersion : 1
+  } else {
+    validated.orderId = validateOrderId(orderId)
+    validated.status = validateStatus(status)
   }
 
   // Build the final envelope (no extra fields)
@@ -164,9 +186,16 @@ export function buildCanonicalEnvelope({
     type: validated.type,
     version: validated.version,
     restaurantId: validated.restaurantId,
-    orderId: validated.orderId,
-    status: validated.status,
     time: validated.time,
+  }
+  if (type === 'MENU_CHANGED') {
+    envelope.entityType = validated.entityType
+    envelope.entityId = validated.entityId
+    envelope.action = validated.action
+    envelope.resourceVersion = validated.resourceVersion
+  } else {
+    envelope.orderId = validated.orderId
+    envelope.status = validated.status
   }
 
   // Validate envelope size
@@ -188,13 +217,25 @@ export function validatePublishEnvelope(envelope) {
   validateEventType(envelope.type)
   validateEventVersion(envelope.version)
   validateRestaurantId(envelope.restaurantId)
-  validateOrderId(envelope.orderId)
-  validateStatus(envelope.status)
+  if (envelope.type === 'MENU_CHANGED') {
+    if (!envelope.entityType || !envelope.entityId || !envelope.action) {
+      throw new EventValidationError('Menu event metadata is incomplete', 'INVALID_MENU_EVENT')
+    }
+    if (envelope.resourceVersion !== undefined && !Number.isInteger(envelope.resourceVersion)) {
+      throw new EventValidationError('resourceVersion must be an integer', 'INVALID_RESOURCE_VERSION')
+    }
+  } else {
+    validateOrderId(envelope.orderId)
+    validateStatus(envelope.status)
+  }
   validateOccurredAt(envelope.time)
   validatePayloadSize(envelope)
 
   // Reject unknown top-level fields
-  const ALLOWED_FIELDS = new Set(['eventId', 'type', 'version', 'restaurantId', 'orderId', 'status', 'time'])
+  const ALLOWED_FIELDS = new Set([
+    'eventId', 'type', 'version', 'restaurantId', 'orderId', 'status', 'time',
+    'entityType', 'entityId', 'action', 'resourceVersion',
+  ])
   for (const key of Object.keys(envelope)) {
     if (!ALLOWED_FIELDS.has(key)) {
       throw new EventValidationError(`Unknown field in envelope: ${key}`, 'UNKNOWN_FIELD')

@@ -157,8 +157,16 @@ export const menuItems = pgTable(
     veg:          boolean('veg').notNull().default(true),
     tags:         jsonb('tags').default([]),
     addOns:       jsonb('add_ons').default([]),
+    variants:     jsonb('variants').default([]),
     isPublished:  boolean('is_published').notNull().default(false),
     imageShape:   text('image_shape').notNull().default('vertical'),
+    position:     integer('position').notNull().default(0),
+    isArchived:   boolean('is_archived').notNull().default(false),
+    taxRate:      numeric('tax_rate', { precision: 5, scale: 2 }).notNull().default('0'),
+    preparationTimeMinutes: integer('preparation_time_minutes'),
+    foodType:     text('food_type').notNull().default('veg'),
+    visibility:   text('visibility').notNull().default('public'),
+    version:      integer('version').notNull().default(1),
 
     ...timestamps,
   },
@@ -166,7 +174,32 @@ export const menuItems = pgTable(
     index('menu_items_restaurant_id_idx').on(t.restaurantId),
     index('menu_items_category_id_idx').on(t.categoryId),
     index('menu_items_is_published_idx').on(t.restaurantId, t.isPublished),
+    index('menu_items_restaurant_position_idx').on(t.restaurantId, t.position),
+    index('menu_items_archived_idx').on(t.restaurantId, t.isArchived),
     index('menu_items_created_at_idx').on(t.createdAt),
+  ]
+)
+
+// ── menu_item_gallery ─────────────────────────────────────────────────────────
+// Persistent R2 references for menu item galleries. The object key is unique so
+// retries cannot create duplicate references, and the restaurant/item foreign
+// keys keep cleanup and tenant isolation database-enforced.
+export const menuItemGallery = pgTable(
+  'menu_item_gallery',
+  {
+    id:          uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+    restaurantId: uuid('restaurant_id').notNull().references(() => restaurants.id, { onDelete: 'cascade' }),
+    menuItemId:  uuid('menu_item_id').notNull().references(() => menuItems.id, { onDelete: 'cascade' }),
+    objectKey:   text('object_key').notNull(),
+    publicUrl:   text('public_url').notNull(),
+    altText:     text('alt_text'),
+    position:    integer('position').notNull().default(0),
+    ...timestamps,
+  },
+  (t) => [
+    uniqueIndex('menu_item_gallery_object_key_unique').on(t.objectKey),
+    index('menu_item_gallery_item_position_idx').on(t.menuItemId, t.position),
+    index('menu_item_gallery_restaurant_id_idx').on(t.restaurantId),
   ]
 )
 
@@ -351,8 +384,10 @@ export const realtimeOutbox = pgTable(
   {
     id:               uuid('id').primaryKey().default(sql`gen_random_uuid()`),
     restaurantId:     uuid('restaurant_id').notNull().references(() => restaurants.id, { onDelete: 'cascade' }),
-    orderId:          text('order_id').notNull(),
-    eventType:        text('event_type').notNull(),     // ORDER_CREATED | ORDER_STATUS_CHANGED
+    orderId:          text('order_id'),                 // legacy order events only
+    entityType:       text('entity_type').notNull().default('order'),
+    entityId:         text('entity_id'),
+    eventType:        text('event_type').notNull(),     // ORDER_* | MENU_CHANGED
     payload:          jsonb('payload').notNull(),        // full event body sent to Worker
     attemptCount:     integer('attempt_count').notNull().default(0),
     nextAttemptTime:  timestamp('next_attempt_time', { withTimezone: true }).notNull().default(sql`now()`),

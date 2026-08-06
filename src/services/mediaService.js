@@ -232,7 +232,15 @@ export async function uploadImage({ req, restaurantId, dataUrl, mediaType, slot 
 //                                        old R2 object can be cleaned up.
 // @returns {Promise<{status: number, body: object}>}
 
-export async function replaceImage({ req, restaurantId, dataUrl, mediaType, slot, updateDb }) {
+export async function replaceImage({
+  req,
+  restaurantId,
+  dataUrl,
+  mediaType,
+  slot,
+  updateDb,
+  toResponse = null,
+}) {
   // ── Rate limit ──────────────────────────────────────────────────────────────
   const ipResult = resolveClientIp(req)
   if (ipResult.state !== 'resolved') return { status: 503, body: { error: 'Service temporarily unavailable. Please try again later.' } }
@@ -302,6 +310,14 @@ export async function replaceImage({ req, restaurantId, dataUrl, mediaType, slot
         `[mediaService][replaceImage] Skipping deletion of cross-restaurant key: ${oldKey}`
       )
     }
+  }
+
+  if (typeof toResponse === 'function') {
+    return toResponse({
+      dbResult,
+      uploadResult,
+      format: validation.format,
+    })
   }
 
   return {

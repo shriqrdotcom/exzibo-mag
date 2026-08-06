@@ -127,7 +127,7 @@ if (proxyMode === 'vercel' || proxyMode === 'cloudflare') {
 import { INVALID_TABLE_HTML, extractTableParams, isTableValid } from './api/_lib/table-validation.js'
 
 // ── Core security boundary (request ID, security headers, method/body limits)
-app.use(expressSecurityMiddleware({ apiPrefix: '/api', jsonLimit: 1024 * 1024 }))
+app.use(expressSecurityMiddleware({ apiPrefix: '/api', jsonLimit: 15 * 1024 * 1024 }))
 
 // Better Auth must receive the raw request stream, so mount it before
 // express.json(). This also makes npm start use the same session API as the
@@ -1177,6 +1177,14 @@ app.all('/api/app-members',  (req, res) => {
 })
 app.all('/api/team',         (req, res) => delegateToHandler('./api/team.js',        req, res))
 app.all('/api/mobile/v1/bootstrap', (req, res) => delegateToHandler('./api/mobile/bootstrap.js', req, res))
+app.all('/api/mobile/v1/menu', (req, res) => {
+  req.query = {
+    ...(req.query || {}),
+    operation: req.query?.operation || req.query?.action,
+    action: 'mobileMenu',
+  }
+  return delegateToHandler('./api/menu-content.js', req, res)
+})
 app.all('/api/analytics/:restaurantId', (req, res) => {
   req.query.action = 'analytics'
   req.query.id = req.params.restaurantId

@@ -18,10 +18,14 @@ type SocketMeta = {
 };
 
 type OrderEvent = {
-	type: "ORDER_CREATED" | "ORDER_STATUS_CHANGED" | "ORDER_CANCELLED";
+	type: "ORDER_CREATED" | "ORDER_STATUS_CHANGED" | "ORDER_CANCELLED" | "MENU_CHANGED";
 	restaurantId: string;
-	orderId: string;
+	orderId?: string;
 	status?: string;
+	entityType?: string;
+	entityId?: string;
+	action?: string;
+	resourceVersion?: number;
 	version: number;
 	eventId: string;
 	time: string;
@@ -218,7 +222,12 @@ export class MyDurableObject extends DurableObject<Env> {
 		if (url.pathname === "/publish" && request.method === "POST") {
 			const event = (await request.json()) as OrderEvent;
 
-			if (!event.restaurantId || !event.orderId || !event.eventId) {
+			if (!event.restaurantId || !event.eventId || (
+				event.type !== "MENU_CHANGED" && !event.orderId
+			) || (
+				event.type === "MENU_CHANGED" &&
+				(!event.entityType || !event.entityId || !event.action)
+			)) {
 				return new Response("Invalid event payload", { status: 400 });
 			}
 
@@ -239,6 +248,7 @@ export class MyDurableObject extends DurableObject<Env> {
 				// Customer receives only their own order event
 				if (
 					meta.role === "customer" &&
+					event.type !== "MENU_CHANGED" &&
 					meta.restaurantId === event.restaurantId &&
 					meta.orderId === event.orderId
 				) {
@@ -371,7 +381,12 @@ export default {
 
 			const event = (await request.json()) as OrderEvent;
 
-			if (!event.restaurantId || !event.orderId || !event.eventId) {
+			if (!event.restaurantId || !event.eventId || (
+				event.type !== "MENU_CHANGED" && !event.orderId
+			) || (
+				event.type === "MENU_CHANGED" &&
+				(!event.entityType || !event.entityId || !event.action)
+			)) {
 				return new Response("Invalid event payload", { status: 400 });
 			}
 

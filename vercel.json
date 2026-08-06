@@ -34,6 +34,7 @@
     { "source": "/api/orders/auto-cleanup",                 "destination": "/api/orders?action=autoCleanup"                               },
     { "source": "/api/orders/:restaurantId",                "destination": "/api/orders?restaurantId=:restaurantId"                       },
     { "source": "/api/mobile/v1/bootstrap",                 "destination": "/api/mobile/bootstrap"                                         },
+    { "source": "/api/mobile/v1/menu",                      "destination": "/api/menu-content?action=mobileMenu"                           },
     { "source": "/api/auth/:path*",                         "destination": "/api/auth?_path=:path*"                                        },
     { "source": "/api/neon/restaurants",                    "destination": "/api/restaurants?action=list"                                  },
     { "source": "/api/neon/restaurant/create",              "destination": "/api/restaurants?action=create"                                },

@@ -250,13 +250,23 @@ async function publishWithTimeout(row, cfg) {
       type: stored.type || row.event_type,
       version: stored.version ?? 1,
       restaurantId: stored.restaurantId || row.restaurant_id,
-      orderId: stored.orderId || row.order_id,
-      status: stored.status || '',
       time: stored.time || new Date().toISOString(),
+    }
+    if (envelope.type === 'MENU_CHANGED') {
+      envelope.entityType = stored.entityType || row.entity_type
+      envelope.entityId = stored.entityId || row.entity_id
+      envelope.action = stored.action || ''
+      envelope.resourceVersion = stored.resourceVersion ?? 1
+    } else {
+      envelope.orderId = stored.orderId || row.order_id
+      envelope.status = stored.status || ''
     }
 
     // Basic envelope validation
-    if (!envelope.eventId || !envelope.type || !envelope.restaurantId || !envelope.orderId) {
+    const missingMenuMetadata = envelope.type === 'MENU_CHANGED'
+      && (!envelope.entityType || !envelope.entityId || !envelope.action)
+    const missingOrderMetadata = envelope.type !== 'MENU_CHANGED' && !envelope.orderId
+    if (!envelope.eventId || !envelope.type || !envelope.restaurantId || missingMenuMetadata || missingOrderMetadata) {
       return { ok: false, error: `Event validation failed: missing required fields` }
     }
   } catch (err) {

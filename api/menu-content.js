@@ -1,10 +1,18 @@
-import { setCors } from './_lib/cors.js'
+import { setAdminCors, setCors } from './_lib/cors.js'
 import { authorizeRestaurantRole, MANAGEMENT_ROLES } from './_lib/authz.js'
 import { vercelWrapper } from './_lib/security-middleware.js'
 import { getClientIp, resolveClientIp, send503Protection } from '../src/lib/upstash.server.js'
 import { setRetryAfter } from '../src/services/publicApiProtectionService.js'
 import * as menuService from '../src/services/menuService.js'
 import * as contentService from '../src/services/restaurantContentService.js'
+
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: '10mb',
+    },
+  },
+}
 
 // ── /api/menu-content — Menu + Restaurant Content Handler (Neon-only) ─────────
 //
@@ -36,15 +44,85 @@ const MENU_POST_ACTIONS = new Set([
 ])
 const CONTENT_GET_ACTIONS = new Set(['getAbout'])
 const CONTENT_POST_ACTIONS = new Set(['saveAbout', 'updateSocial'])
+const MOBILE_MENU_GET_OPERATIONS = new Set(['getMenu', 'getItem'])
+const MOBILE_MENU_POST_OPERATIONS = new Set([
+  'createItem', 'updateItem', 'deleteItem', 'archiveItem', 'unarchiveItem',
+  'duplicateItem', 'setAvailability', 'reorderItems', 'createCategory',
+  'updateCategory', 'reorderCategories', 'deleteCategory', 'addGallery', 'replaceImage',
+  'deleteGallery',
+])
 
-export default vercelWrapper(async function handler(req, res) {
-  setCors(res)
-  if (req.method === 'OPTIONS') return res.status(200).end()
-
+async function handleMenuContent(req, res) {
   const action = req.query.action
   if (!action) return res.status(400).json({ error: 'action query param required' })
 
   try {
+    // ── Versioned mobile menu contract ──────────────────────────────────────
+    // The mobile rewrite targets this existing function to preserve the exact
+    // reviewed Vercel function baseline. `operation` is intentionally separate
+    // from the dispatcher action so legacy menu/content actions remain stable.
+    if (action === 'mobileMenu') {
+      setAdminCors(req, res)
+      res.setHeader('Cache-Control', 'no-store')
+
+      const operation = String(req.query.operation || req.query.mobileAction || '')
+      if (!operation) {
+        return res.status(400).json({ error: 'operation query param required', code: 'BAD_REQUEST' })
+      }
+      if (
+        !MOBILE_MENU_GET_OPERATIONS.has(operation) &&
+        !MOBILE_MENU_POST_OPERATIONS.has(operation)
+      ) {
+        return res.status(400).json({ error: `Unknown operation: ${operation}`, code: 'BAD_REQUEST' })
+      }
+      if (MOBILE_MENU_GET_OPERATIONS.has(operation) && req.method !== 'GET') {
+        return res.status(405).json({ error: 'Method not allowed', code: 'METHOD_NOT_ALLOWED' })
+      }
+      if (MOBILE_MENU_POST_OPERATIONS.has(operation) && req.method !== 'POST') {
+        return res.status(405).json({ error: 'Method not allowed', code: 'METHOD_NOT_ALLOWED' })
+      }
+
+      const ipResult = resolveClientIp(req)
+      if (ipResult.state !== 'resolved') return send503Protection(res)
+      const ip = ipResult.ip
+
+      if (operation === 'getMenu') {
+        const result = await menuService.getMobileMenu(req, req.query, ip)
+        if (result.retryAfter) setRetryAfter(res, result)
+        return res.status(result.status).json(result.body)
+      }
+      if (operation === 'getItem') {
+        const result = await menuService.getMobileMenuItem(req, req.query, req.query.itemId || req.query.id, ip)
+        if (result.retryAfter) setRetryAfter(res, result)
+        return res.status(result.status).json(result.body)
+      }
+
+      const body = req.body || {}
+      const itemId = req.query.itemId || req.query.id
+      const categoryId = req.query.categoryId || req.query.id
+      const galleryId = req.query.galleryId || req.query.id
+      const result =
+        operation === 'createItem' ? await menuService.createMobileMenuItem(req, ip, body) :
+        operation === 'updateItem' ? await menuService.updateMobileMenuItem(req, ip, body, itemId) :
+        operation === 'deleteItem' ? await menuService.deleteMobileMenuItem(req, ip, body, itemId) :
+        operation === 'archiveItem' ? await menuService.setMobileMenuItemArchive(req, ip, body, itemId, true) :
+        operation === 'unarchiveItem' ? await menuService.setMobileMenuItemArchive(req, ip, body, itemId, false) :
+        operation === 'duplicateItem' ? await menuService.duplicateMobileMenuItem(req, ip, body, itemId) :
+        operation === 'setAvailability' ? await menuService.setMobileMenuItemAvailability(req, ip, body, itemId) :
+        operation === 'reorderItems' ? await menuService.reorderMobileMenuItems(req, ip, body) :
+        operation === 'createCategory' ? await menuService.createMobileMenuCategory(req, ip, body) :
+        operation === 'updateCategory' ? await menuService.updateMobileMenuCategory(req, ip, body, categoryId) :
+        operation === 'reorderCategories' ? await menuService.reorderMobileMenuCategories(req, ip, body) :
+        operation === 'deleteCategory' ? await menuService.deleteMobileMenuCategory(req, ip, body, categoryId) :
+        operation === 'addGallery' ? await menuService.addMobileMenuGallery(req, ip, body, itemId) :
+        operation === 'replaceImage' ? await menuService.replaceMobileMenuImage(req, ip, body, itemId) :
+        await menuService.deleteMobileMenuGallery(req, ip, body, galleryId)
+
+      return res.status(result.status).json(result.body)
+    }
+
+    setCors(res)
+
     // ── Menu — reads ─────────────────────────────────────────────────────────
     if (MENU_GET_ACTIONS.has(action)) {
       if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' })
@@ -107,4 +185,20 @@ export default vercelWrapper(async function handler(req, res) {
     console.error(`[menu-content][${action}] Error:`, err.message)
     return res.status(500).json({ error: err.message })
   }
+}
+
+const wrappedMenuContent = vercelWrapper(handleMenuContent, {
+  allowedMethods: ['GET', 'POST', 'OPTIONS'],
+  jsonLimit: 10 * 1024 * 1024,
 })
+
+export default async function menuContentHandler(req, res) {
+  // The shared wrapper answers OPTIONS before the route handler runs. Apply
+  // the route's CORS policy here as well so browser preflights receive the
+  // allowlist headers.
+  if (req.method === 'OPTIONS') {
+    if (req.query?.action === 'mobileMenu') setAdminCors(req, res)
+    else setCors(res)
+  }
+  return wrappedMenuContent(req, res)
+}

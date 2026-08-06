@@ -42,22 +42,30 @@ const WORKER_ID = getWorkerId()
 //
 // The outbox row.id is the single authoritative event identity. Any eventId
 // stored in the payload is overwritten by row.id so retries never change the
-// event identity. The stored payload's type, restaurantId, orderId, status,
-// version, and time are preserved when valid.
+// event identity. The stored payload's type, restaurantId, order metadata,
+// menu metadata, version, and time are preserved when valid.
 function buildPublishEnvelope(row) {
   const stored = (typeof row.payload === 'object' && row.payload !== null)
     ? row.payload
     : (typeof row.payload === 'string' ? JSON.parse(row.payload) : {})
 
-  return {
+  const envelope = {
     eventId: row.id,                        // authoritative — overwrites stored
     type: stored.type || row.event_type,
     version: stored.version ?? 1,
     restaurantId: stored.restaurantId || row.restaurant_id,
-    orderId: stored.orderId || row.order_id,
-    status: stored.status || '',
     time: stored.time || new Date().toISOString(),
   }
+  if (envelope.type === 'MENU_CHANGED') {
+    envelope.entityType = stored.entityType || row.entity_type
+    envelope.entityId = stored.entityId || row.entity_id
+    envelope.action = stored.action || ''
+    envelope.resourceVersion = stored.resourceVersion ?? 1
+  } else {
+    envelope.orderId = stored.orderId || row.order_id
+    envelope.status = stored.status || ''
+  }
+  return envelope
 }
 
 // ── Publish a single outbox event to the Worker ──────────────────────────────
