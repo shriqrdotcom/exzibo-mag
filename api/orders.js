@@ -89,6 +89,7 @@ export default vercelWrapper(async function handler(req, res) {
   if (!action) {
     const body = req.body
     // Validate idempotency key header
+    const idempotencyKey = req.headers['idempotency-key']
     try { validateIdempotencyKey(req.headers['idempotency-key']) } catch (e) {
       return badInput(res, 'Idempotency-Key header is required (min 16 characters).', requestId)
     }
@@ -116,7 +117,9 @@ export default vercelWrapper(async function handler(req, res) {
       if (err.code === 'IDEMPOTENCY_KEY_REQUIRED') return badInput(res, err.message, requestId)
       if (err.code === 'IDEMPOTENCY_CONFLICT') return conflict(res, err.message, requestId)
       if (err.code === 'VALIDATION') return badInput(res, err.message, requestId)
-      if (err.code === 'INVALID_ITEM' || err.code === 'INVALID_OPTION') return safeError(res, 422, err.message, requestId)
+      if (err.code === 'INVALID_ITEM' || err.code === 'INVALID_OPTION' || err.code === 'INVALID_TABLE') {
+        return safeError(res, 422, err.message, requestId)
+      }
       if (err.code === 'DUPLICATE') return conflict(res, err.message, requestId)
       return internalError(res, requestId)
     }

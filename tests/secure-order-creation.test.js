@@ -125,6 +125,13 @@ describe('4 — Foreign, unavailable, or unpublished items are rejected', () => 
     assert(src.includes('!menuItem.available'), 'service checks available')
   })
 
+  it('service validates numeric customer tables from the restaurant configuration', async () => {
+    const src = await readFileText('src/services/orderCreationService.js')
+    assert(src.includes('FROM restaurants'), 'service resolves restaurant table configuration')
+    assert(src.includes('table_numbers'), 'service reads configured table numbers')
+    assert(src.includes("err.code = 'INVALID_TABLE'"), 'service rejects invalid configured tables')
+  })
+
   it('service rejects invalid quantities', async () => {
     const src = await readFileText('src/services/orderCreationService.js')
     assert(src.includes('qty < 1'), 'service rejects quantity < 1')
@@ -196,6 +203,24 @@ describe('8 — Vercel, Express, and Vite use the shared service', () => {
     assert(api.includes('await createOrderAtomic'), 'Vercel calls shared service')
     assert(server.includes('await createOrderAtomic'), 'Express calls shared service')
     assert(vite.includes('await createOrderAtomic'), 'Vite calls shared service')
+  })
+
+  it('all three runtimes return validation errors for invalid tables', async () => {
+    const api = await readFileText('api/orders.js')
+    const server = await readFileText('server.js')
+    const vite = await readFileText('vite.config.js')
+    assert(api.includes("'INVALID_TABLE'"), 'Vercel maps invalid tables')
+    assert(server.includes("'INVALID_TABLE'"), 'Express maps invalid tables')
+    assert(vite.includes("'INVALID_TABLE'"), 'Vite maps invalid tables')
+  })
+
+  it('Vercel create route captures and forwards the validated idempotency key', async () => {
+    const api = await readFileText('api/orders.js')
+    assert.match(
+      api,
+      /const idempotencyKey = req\.headers\['idempotency-key'\][\s\S]*?idempotencyKey,/,
+      'Vercel must pass the validated header value to createOrderAtomic',
+    )
   })
 })
 

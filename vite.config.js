@@ -554,7 +554,9 @@ function menuApiPlugin() {
           if (e.code === 'IDEMPOTENCY_KEY_REQUIRED') return json(res, 400, { error: e.message, code: e.code })
           if (e.code === 'IDEMPOTENCY_CONFLICT') return json(res, 409, { error: e.message, code: e.code })
           if (e.code === 'VALIDATION') return json(res, 400, { error: e.message, code: e.code })
-          if (e.code === 'INVALID_ITEM' || e.code === 'INVALID_OPTION') return json(res, 422, { error: e.message, code: e.code })
+          if (e.code === 'INVALID_ITEM' || e.code === 'INVALID_OPTION' || e.code === 'INVALID_TABLE') {
+            return json(res, 422, { error: e.message, code: e.code })
+          }
           if (e.code === 'DUPLICATE') return json(res, 409, { error: e.message, code: e.code })
           return json(res, 500, { error: e.message })
         }

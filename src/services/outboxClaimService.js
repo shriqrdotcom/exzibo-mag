@@ -103,11 +103,6 @@ async function claimBatchQuery(client, {
 }
 
 // ── Compute backoff ───────────────────────────────────────────────────────────
-function computeBackoff(attemptCount) {
-  const delaySec = Math.min(Math.pow(2, attemptCount), MAX_BACKOFF_CAP_SEC)
-  return new Date(Date.now() + delaySec * 1000)
-}
-
 // ═══════════════════════════════════════════════════════════════════════════════
 // claimRealtimeOutboxBatch
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -238,13 +233,20 @@ export async function rescheduleRealtimeEvent(pool, {
 
   const sanitized = sanitizeError(error)
 
-  // Compute backoff based on the new attempt count
-  // We read the current attempt_count inside the subquery to get the real value
+  // Compute and persist the bounded backoff in the same compare-and-set
+  // statement that clears ownership. This prevents a crash between releasing
+  // the lease and storing next_attempt_time from causing an immediate retry.
   const result = await pool.query(
     `UPDATE realtime_outbox
      SET attempt_count = attempt_count + 1,
-         next_attempt_time = $4::timestamptz,
-         last_error = $5,
+          next_attempt_time = CASE
+            WHEN attempt_count + 1 >= $4::integer THEN $5::timestamptz
+            ELSE now() + LEAST(
+              power(2::numeric, attempt_count + 1),
+              $6::numeric
+            ) * interval '1 second'
+          END,
+          last_error = $7,
          claimed_by = NULL,
          claim_token = NULL,
          lease_until = NULL
@@ -252,25 +254,19 @@ export async function rescheduleRealtimeEvent(pool, {
        AND claimed_by = $2
        AND claim_token = $3::uuid
        AND published_at IS NULL
-     RETURNING attempt_count`,
-    [rowId, workerId, claimToken, new Date(0).toISOString(), sanitized]
+      RETURNING attempt_count, next_attempt_time`,
+    [
+      rowId,
+      workerId,
+      claimToken,
+      MAX_ATTEMPTS,
+      new Date('2099-12-31T23:59:59Z').toISOString(),
+      MAX_BACKOFF_CAP_SEC,
+      sanitized,
+    ]
   )
 
   if (result.rowCount === 0) return false
-
-  // Compute the real backoff from the updated attempt count
-  const newAttemptCount = result.rows[0].attempt_count
-  const nextAttempt = newAttemptCount >= MAX_ATTEMPTS
-    ? new Date('2099-12-31T23:59:59Z')
-    : computeBackoff(newAttemptCount)
-
-  // Set the correct next_attempt_time
-  await pool.query(
-    `UPDATE realtime_outbox
-     SET next_attempt_time = $2::timestamptz
-     WHERE id = $1::uuid`,
-    [rowId, nextAttempt.toISOString()]
-  )
 
   return true
 }

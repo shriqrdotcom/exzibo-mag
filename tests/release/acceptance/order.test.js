@@ -50,6 +50,30 @@ describe('release acceptance — order', () => {
     assert.equal(Number(order.total), 300, 'total is recalculated from menu price')
   })
 
+  it('numeric customer tables must belong to the restaurant', async () => {
+    const { restaurant, item } = await createTestRestaurant({ table_numbers: ['7'] })
+      .then(async ({ restaurant, ...rest }) => ({
+        restaurant,
+        ...rest,
+        item: await createTestMenuItem(restaurant.id, { price: 150 }),
+      }))
+
+    await assert.rejects(
+      createOrderAtomic({
+        restaurantId: restaurant.id,
+        tableNumber: '8',
+        items: [{ menuItemId: item.id, quantity: 1 }],
+        idempotencyKey: generateIdempotencyKey(),
+      }),
+      err => err.code === 'INVALID_TABLE',
+    )
+    assert.equal(
+      await countRows('orders', `restaurant_id = '${restaurant.id}'`),
+      0,
+      'invalid table must not create an order',
+    )
+  })
+
   it('idempotent duplicate does not create a second order', async () => {
     const { restaurant, item } = await createRestaurantWithMenu()
     const idempotencyKey = generateIdempotencyKey()

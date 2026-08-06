@@ -578,7 +578,9 @@ app.post('/api/orders', async (req, res) => {
       if (err.code === 'IDEMPOTENCY_KEY_REQUIRED') return res.status(400).json({ error: err.message, code: err.code })
       if (err.code === 'IDEMPOTENCY_CONFLICT') return res.status(409).json({ error: err.message, code: err.code })
       if (err.code === 'VALIDATION') return res.status(400).json({ error: err.message, code: err.code })
-      if (err.code === 'INVALID_ITEM' || err.code === 'INVALID_OPTION') return res.status(422).json({ error: err.message, code: err.code })
+      if (err.code === 'INVALID_ITEM' || err.code === 'INVALID_OPTION' || err.code === 'INVALID_TABLE') {
+        return res.status(422).json({ error: err.message, code: err.code })
+      }
       if (err.code === 'DUPLICATE') return res.status(409).json({ error: err.message, code: err.code })
       return res.status(500).json({ error: err.message })
     }

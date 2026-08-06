@@ -524,6 +524,7 @@ describe('4 — Failure rescheduling', () => {
     const claimed = await claimRealtimeOutboxBatch(pool, { workerId, batchSize: 10 })
     assert.equal(claimed.length, 1)
 
+    const before = Date.now()
     await rescheduleRealtimeEvent(pool, {
       rowId: row.id,
       workerId,
@@ -532,10 +533,25 @@ describe('4 — Failure rescheduling', () => {
     })
 
     const check = await pool.query('SELECT next_attempt_time, attempt_count FROM realtime_outbox WHERE id = $1', [row.id])
-    assert.ok(check.rows[0].next_attempt_time > new Date(0), 'next_attempt_time should be set to a future time')
+    const nextAttemptMs = new Date(check.rows[0].next_attempt_time).getTime()
+    assert.ok(nextAttemptMs > before, 'next_attempt_time should be set to a future time')
+    assert.ok(nextAttemptMs <= Date.now() + 60_000, 'next_attempt_time should respect the backoff cap')
     assert.equal(check.rows[0].attempt_count, 1)
 
     await pool.query('DELETE FROM realtime_outbox WHERE id = $1', [row.id])
+  })
+
+  it('4.20a failure writes backoff and clears ownership atomically', async () => {
+    const src = await import('node:fs/promises').then(({ readFile }) =>
+      readFile(new URL('../src/services/outboxClaimService.js', import.meta.url), 'utf8')
+    )
+    const rescheduleBlock = src.slice(
+      src.indexOf('export async function rescheduleRealtimeEvent'),
+      src.indexOf('// ── getWorkerId', src.indexOf('export async function rescheduleRealtimeEvent')),
+    )
+    assert.match(rescheduleBlock, /next_attempt_time = CASE/)
+    assert.match(rescheduleBlock, /claimed_by = NULL/)
+    assert.doesNotMatch(rescheduleBlock, /Set the correct next_attempt_time/)
   })
 
   it('4.21 failure clears the lease', async () => {

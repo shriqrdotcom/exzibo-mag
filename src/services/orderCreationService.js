@@ -103,6 +103,7 @@ function validateSelectedOptions(menuItem, selectedOptions) {
 // Throws Error objects with .code set to:
 //   'VALIDATION'  — missing required fields or malformed input
 //   'INVALID_ITEM' — item does not exist, wrong restaurant, unavailable, etc.
+//   'INVALID_TABLE' — a numeric customer table is not configured for the restaurant
 //   'INVALID_OPTION' — selected option is not offered by the item
 //   'DUPLICATE'   — generated order id collided (extremely unlikely)
 //   any PG error   — transaction failure, rolled back
@@ -160,7 +161,32 @@ export async function createOrderAtomic(input) {
       return idempotency.response
     }
 
-    // 2. Resolve and lock menu items for this restaurant.
+    // 2. Validate numeric customer table references against the restaurant's
+    // server-side table configuration. Non-numeric values remain supported as
+    // legacy internal/service references (for example, "T1").
+    const tableReference = tableNumber == null ? '' : String(tableNumber).trim()
+    if (/^\d+$/.test(tableReference)) {
+      const tableNumberValue = Number(tableReference)
+      const restaurantResult = await client.query(
+        `SELECT table_numbers
+         FROM restaurants
+         WHERE id = $1::uuid AND status = 'active' AND is_deleted = false
+         FOR SHARE`,
+        [restaurantId],
+      )
+      const configuredTables = restaurantResult.rows.length > 0 &&
+        Array.isArray(restaurantResult.rows[0].table_numbers)
+        ? restaurantResult.rows[0].table_numbers.map(String)
+        : []
+      if (!Number.isSafeInteger(tableNumberValue) || tableNumberValue < 1 ||
+          !configuredTables.includes(String(tableNumberValue))) {
+        const err = new Error('Selected table does not belong to this restaurant')
+        err.code = 'INVALID_TABLE'
+        throw err
+      }
+    }
+
+    // 3. Resolve and lock menu items for this restaurant.
     const menuItemIds = items.map(i => i.menuItemId).filter(Boolean)
     if (menuItemIds.length !== items.length) {
       const err = new Error('Every order item must have a menuItemId')
@@ -229,7 +255,7 @@ export async function createOrderAtomic(input) {
 
     orderTotal = toNumericCents(orderTotal)
 
-    // 2. Generate a unique order id.
+    // 4. Generate a unique order id.
     let orderId = generateOrderId()
     let orderIdCollision = true
     for (let attempt = 0; attempt < 5 && orderIdCollision; attempt++) {
@@ -243,7 +269,7 @@ export async function createOrderAtomic(input) {
       throw err
     }
 
-    // 3. Insert order.
+    // 5. Insert order.
     const orderResult = await client.query(
       `INSERT INTO orders (
         id, restaurant_id, order_number,
@@ -276,7 +302,7 @@ export async function createOrderAtomic(input) {
 
     const orderRow = orderResult.rows[0]
 
-    // 5. Insert order_items.
+    // 6. Insert order_items.
     for (const li of lineItems) {
       await client.query(
         `INSERT INTO order_items (
@@ -301,10 +327,10 @@ export async function createOrderAtomic(input) {
       lineItems,
     }
 
-    // 6. Record the idempotency response in the same transaction as the order.
+    // 7. Record the idempotency response in the same transaction as the order.
     await recordIdempotencyResponse(client, restaurantId, OPERATION_ORDER_CREATE, idempotency.keyHash, idempotency.requestHash, canonicalResponse)
 
-    // 7. Insert a realtime outbox event in the SAME transaction.
+    // 8. Insert a realtime outbox event in the SAME transaction.
     // The outbox processor will publish asynchronously. This guarantees the
     // event is persisted even if the Worker is temporarily unavailable.
     // The outbox row id is the authoritative event id — eventId === row.id.
