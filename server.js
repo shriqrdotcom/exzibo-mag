@@ -1178,11 +1178,15 @@ app.all('/api/app-members',  (req, res) => {
 app.all('/api/team',         (req, res) => delegateToHandler('./api/team.js',        req, res))
 app.all('/api/mobile/v1/bootstrap', (req, res) => delegateToHandler('./api/mobile/bootstrap.js', req, res))
 app.all('/api/mobile/v1/menu', (req, res) => {
-  req.query = {
-    ...(req.query || {}),
-    operation: req.query?.operation || req.query?.action,
-    action: 'mobileMenu',
-  }
+  // Express 5 exposes req.query through a getter that returns a fresh parsed
+  // object on each access. Rewrite the URL so the shared handler receives the
+  // mobile dispatcher action without losing the operation or legacy alias.
+  const query = req.query || {}
+  const requestUrl = new URL(req.url || '/', 'http://express.local')
+  const operation = query.operation || query.action
+  requestUrl.searchParams.set('action', 'mobileMenu')
+  if (operation) requestUrl.searchParams.set('operation', operation)
+  req.url = `${requestUrl.pathname}${requestUrl.search}`
   return delegateToHandler('./api/menu-content.js', req, res)
 })
 app.all('/api/analytics/:restaurantId', (req, res) => {
