@@ -21,6 +21,7 @@ export { sendSafeError }
 const STATIC_TRUSTED_HOSTS = Object.freeze([
   'superadmin.exzibo.online',
   'dashboard.exzibo.online',
+  'menu.exzibo.online',
   'exzibo.online',
 ])
 

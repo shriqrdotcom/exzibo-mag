@@ -20,6 +20,7 @@
 - [Existing restaurant backfill safety](existing-restaurant-backfill.md) — runPreflight + runBackfill in src/services/restaurantBackfillService.js; dry-run default, aborts on ambiguous records, single transaction, no deletes, no migration run.
 - [Environment contract](environment-contract.md) — canonical validator is src/config/serverEnv.js; auth.server.js requires BETTER_AUTH_SECRET only under VERCEL_ENV, never NODE_ENV, to keep Vite builds passing locally.
 - [Vercel runtime debugging boundary](vercel-runtime-debugging.md) — healthy Replit and GitHub deployment checks do not prove Vercel function initialization; compare shared auth routes and inspect Vercel logs/env before changing handlers.
+- [Production data boundary](production-data-boundary.md) — live exzibo.online data is on a separate Vercel/Neon deployment; the Replit development DB cannot mutate it.
 - [PostgreSQL upsert RETURNING](postgres-upsert-returning.md) — EXCLUDED is not visible in RETURNING; use `xmax = 0` or a follow-up SELECT inside the same transaction.
 - [Vite dev server query parsing](vite-dev-query-parsing.md) — Vite middleware does not populate `req.query`; parse it explicitly before delegating to Vercel-style handlers.
 - [Notification expiry boundary](notification-expiry-boundary.md) — active notifications use `expires_at > now` (strict) so the 24-hour boundary is deterministic.

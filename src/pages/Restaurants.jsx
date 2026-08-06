@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Plus, Store, ExternalLink, Settings, Globe, Utensils } from 'lucide-react'
 import PlanBadge from '../components/PlanBadge'
-import { getRestaurants } from '../lib/db'
+import { activateAllPausedRestaurants, getRestaurants } from '../lib/db'
 import { openRoleDashboard } from '../lib/navigation'
 import { getSubdomain } from '../lib/subdomain'
 
@@ -12,28 +12,50 @@ export default function Restaurants() {
   const [activeFilter, setActiveFilter] = useState('live')
   const [loadError, setLoadError] = useState('')
   const [loading, setLoading] = useState(true)
+  const [activating, setActivating] = useState(false)
+  const [activationMessage, setActivationMessage] = useState('')
+
+  function fetchAll() {
+    return getRestaurants()
+      .then(rows => {
+        try { localStorage.setItem('exzibo_restaurants', JSON.stringify(rows)) } catch { }
+        setRestaurants(rows)
+        setLoadError('')
+        return rows
+      })
+      .catch(err => {
+        setLoadError(err.message || 'Failed to load restaurants')
+        throw err
+      })
+  }
 
   useEffect(() => {
-    function fetchAll() {
-      return getRestaurants()
-        .then(rows => {
-          try { localStorage.setItem('exzibo_restaurants', JSON.stringify(rows)) } catch { }
-          setRestaurants(rows)
-          setLoadError('')
-        })
-        .catch(err => setLoadError(err.message || 'Failed to load restaurants'))
-    }
-
     setLoading(true)
-    fetchAll().finally(() => setLoading(false))
+    fetchAll().catch(() => {}).finally(() => setLoading(false))
 
-    const poll = setInterval(fetchAll, 30_000)
+    const poll = setInterval(() => { fetchAll().catch(() => {}) }, 30_000)
     return () => clearInterval(poll)
   }, [])
 
   const liveList = restaurants.filter(r => r.status === 'active')
-  const pausedList = restaurants.filter(r => r.status !== 'active')
+  const pausedList = restaurants.filter(r => String(r.status || '').toLowerCase() === 'paused')
   const filtered = activeFilter === 'live' ? liveList : pausedList
+
+  async function activateAllPaused() {
+    if (pausedList.length === 0 || activating) return
+    setActivating(true)
+    setActivationMessage('')
+    try {
+      const result = await activateAllPausedRestaurants()
+      setActivationMessage(`${result.activatedCount ?? pausedList.length} website${result.activatedCount === 1 ? '' : 's'} activated`)
+      await fetchAll()
+      setActiveFilter('live')
+    } catch (err) {
+      setActivationMessage(err.message || 'Could not activate paused websites')
+    } finally {
+      setActivating(false)
+    }
+  }
 
   return (
     <div style={{
@@ -199,7 +221,35 @@ export default function Restaurants() {
               {pausedList.length}
             </span>
           </button>
+          {pausedList.length > 0 && (
+            <button
+              className="rest-filter-btn"
+              onClick={activateAllPaused}
+              disabled={activating}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '8px',
+                padding: '14px 20px',
+                background: 'rgba(34,197,94,0.1)',
+                border: '1.5px solid rgba(34,197,94,0.35)',
+                borderRadius: '14px',
+                color: '#4ade80',
+                fontSize: '12px', fontWeight: 800, letterSpacing: '0.08em',
+                cursor: activating ? 'wait' : 'pointer',
+                opacity: activating ? 0.6 : 1,
+              }}
+            >
+              {activating ? 'ACTIVATING…' : 'ACTIVATE ALL PAUSED'}
+            </button>
+          )}
         </div>
+        {activationMessage && (
+          <div style={{
+            marginTop: '-18px', marginBottom: '22px', fontSize: '12px',
+            color: activationMessage.includes('Could not') ? '#f87171' : '#4ade80',
+          }}>
+            {activationMessage}
+          </div>
+        )}
 
         {/* ── Table ── */}
         {loading ? (

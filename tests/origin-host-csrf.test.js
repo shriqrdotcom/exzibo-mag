@@ -107,6 +107,7 @@ describe('Host policy', () => {
     setProductionEnv()
     assert.equal(isTrustedHost('superadmin.exzibo.online'), true)
     assert.equal(isTrustedHost('dashboard.exzibo.online'), true)
+    assert.equal(isTrustedHost('menu.exzibo.online'), true)
     assert.equal(isTrustedHost('exzibo.online'), true)
   })
 

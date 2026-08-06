@@ -56,6 +56,7 @@ import {
 // POST ?action=update               body: { id, ...patch }
 // POST ?action=updateProfile        body: { restaurantId, patch }
 // POST ?action=softDelete           body: { id }
+// POST ?action=activatePaused       body: {}                    → activate all paused restaurants
 // POST ?action=permanentDelete      body: { id }
 //
 // Authorization is ALWAYS enforced — no environment-variable bypass.
@@ -114,7 +115,7 @@ const ALLOWED_PLATFORM_FIELDS = ['restaurantId', 'patch']
 
 export default vercelWrapper(async function handler(req, res) {
   const requestedAction = typeof req.query?.action === 'string' ? req.query.action : ''
-  const adminActions = new Set(['listDeleted', 'generateUid', 'create', 'platformUpdate', 'softDelete', 'restore', 'permanentDelete'])
+  const adminActions = new Set(['listDeleted', 'generateUid', 'create', 'platformUpdate', 'softDelete', 'restore', 'activatePaused', 'permanentDelete'])
   if (adminActions.has(requestedAction)) setAdminCors(req, res)
   else setPublicCors(res)
   if (req.method === 'OPTIONS') return res.status(200).end()
@@ -411,6 +412,27 @@ export default vercelWrapper(async function handler(req, res) {
       `
       if (!rows.length) return notFound(res, 'Restaurant not found', requestId)
       return res.json({ success: true, restaurant: toSuperadminRestaurant(rows[0]) })
+    }
+
+    if (action === 'activatePaused') {
+      const guard = await assertSuperadmin(req, res)
+      if (!guard.ok) return
+      rejectUnknownFields(req.body || {}, [])
+      const sql = getSql()
+      const rows = await sql`
+        UPDATE restaurants
+        SET status = 'active',
+            updated_at = now()
+        WHERE is_deleted = false
+          AND lower(status) = 'paused'
+        RETURNING id, slug, name
+      `
+      return res.json({
+        success: true,
+        activatedCount: rows.length,
+        restaurants: rows,
+        requestId,
+      })
     }
 
     if (action === 'permanentDelete') {

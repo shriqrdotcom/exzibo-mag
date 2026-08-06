@@ -50,6 +50,14 @@ export async function getDeletedRestaurants() {
   }
 }
 
+export async function activateAllPausedRestaurants() {
+  return apiFetch('/api/restaurants?action=activatePaused', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({}),
+  })
+}
+
 export async function softDeleteRestaurant(id) {
   // Must use the superadmin-gated softDelete action — the profile-patch route
   // (/api/neon/restaurant/:id PATCH → patchNeonRestaurantProfile) strips
