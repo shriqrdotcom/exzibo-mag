@@ -106,11 +106,21 @@ export function getTrustedAuthOrigins(env = process.env) {
     ...parseConfiguredOrigins(env.MOBILE_APP_TRUSTED_ORIGINS),
   ]
 
-  const origins = isAuthProductionEnvironment(env)
+  const filtered = isAuthProductionEnvironment(env)
     ? configured.filter(origin => !isKnownPreviewOrigin(origin))
     : configured
 
-  return [...new Set(origins)]
+  // In development, also trust localhost and the active Replit preview domain
+  // so the dev-bootstrap session cookie can be set from those origins.
+  const devOrigins = []
+  if (!isAuthProductionEnvironment(env)) {
+    devOrigins.push('http://localhost:5000', 'http://127.0.0.1:5000')
+    if (env.REPLIT_DEV_DOMAIN) {
+      devOrigins.push(`https://${env.REPLIT_DEV_DOMAIN}`)
+    }
+  }
+
+  return [...new Set([...filtered, ...devOrigins])]
 }
 
 function addHttpOriginHost(hosts, origin) {
